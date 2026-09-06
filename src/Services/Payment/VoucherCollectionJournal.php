@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Payment;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Model;
+use LBHurtado\XChange\Contracts\VoucherCollectionWalletResolverContract;
+use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Services\Cockpit\CockpitPosSaleReferenceService;
 use LBHurtado\XJournal\Data\ExecutionActorData;
 use LBHurtado\XJournal\Data\ExecutionJournalEntryData;
 use LBHurtado\XJournal\Data\ExecutionMoneyData;
@@ -17,6 +21,8 @@ final readonly class VoucherCollectionJournal
 {
     public function __construct(
         private ExecutionJournalRecorder $recorder,
+        private VoucherCollectionWalletResolverContract $collectionWallets,
+        private CockpitPosSaleReferenceService $posSaleReferences,
     ) {}
 
     public function record(VoucherCollection $collection): void
@@ -26,15 +32,21 @@ final readonly class VoucherCollectionJournal
             'authority',
             [],
         );
-        $eventType = $collection->execution_driver
-            === 'x_change_account_funding'
-                ? 'account_funding.pay_code.paid'
-                : 'voucher.collection.completed';
+        $isSucceeded = $collection->isSucceeded();
+        $eventType = match (true) {
+            ! $isSucceeded => 'voucher.collection.failed',
+            $collection->execution_driver === 'x_change_account_funding' => 'account_funding.pay_code.paid',
+            default => 'voucher.collection.completed',
+        };
+        $journalStatus = $isSucceeded ? 'completed' : 'failed';
+        $saleReference = $this->posSaleReferences->saleReferenceForVoucherId($collection->voucher_id);
 
         $this->recorder->record(new ExecutionJournalEntryData(
             eventType: $eventType,
             occurredAt: CarbonImmutable::parse(
-                $collection->completed_at ?? $collection->created_at,
+                $collection->completed_at
+                    ?? $collection->attempted_at
+                    ?? $collection->created_at,
             ),
             actor: new ExecutionActorData(
                 id: (string) ($authority['reference'] ?? ''),
@@ -56,9 +68,10 @@ final readonly class VoucherCollectionJournal
                     'execution_driver' => $collection->execution_driver,
                     'treasury_operation_reference' => $collection->treasury_operation_reference,
                     'provider_transaction_id' => $collection->provider_transaction_id,
+                    'sale_reference' => $saleReference,
                 ],
             ),
-            idempotencyKey: 'x-change:voucher-collection:completed:'
+            idempotencyKey: 'x-change:voucher-collection:'.$journalStatus.':'
                 .$collection->getKey(),
             payload: [
                 'status' => $collection->status,
@@ -75,10 +88,13 @@ final readonly class VoucherCollectionJournal
                     'posting.provider_inventory_changed',
                     false,
                 ),
+                'sale_reference' => $saleReference,
             ],
             money: new ExecutionMoneyData(
                 currency: $collection->currency,
-                minorAmount: $collection->collected_amount_minor,
+                minorAmount: $isSucceeded
+                    ? $collection->collected_amount_minor
+                    : $collection->requested_amount_minor,
             ),
             metadata: [
                 'schema' => 'x-change.voucher-collection-journal.v1',
@@ -92,5 +108,22 @@ final readonly class VoucherCollectionJournal
                     : 'treasury_position_operation',
             ],
         ));
+
+        if ($isSucceeded) {
+            $voucher = $collection->voucher()->firstOrFail();
+            $holder = $this->collectionWallets->resolve($voucher)->holder;
+
+            if ($holder instanceof Model) {
+                FundingProjectionChanged::dispatch(
+                    $holder::class,
+                    (string) $holder->getKey(),
+                    'voucher-collection:'.$collection->getKey(),
+                    CarbonImmutable::parse(
+                        $collection->completed_at ?? $collection->created_at,
+                    )->toIso8601String(),
+                    'voucher_collection_settled',
+                );
+            }
+        }
     }
 }

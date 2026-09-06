@@ -19,16 +19,16 @@ describe('Cockpit mobile tab bar', () => {
         expect(tabs.map((tab) => tab.text())).toEqual([
             'Funding',
             'Issuance',
-            'Campaigns',
-            'Pay Codes',
             'Overview',
+            'Pay Codes',
+            'Campaigns',
         ]);
         expect(tabs.map((tab) => tab.attributes('href'))).toEqual([
             '/x/cockpit/funding',
             '/x/cockpit/quick-generate',
-            '/x/cockpit/campaigns',
-            '/x/cockpit/pay-codes',
             '/x/cockpit/overview',
+            '/x/cockpit/pay-codes',
+            '/x/cockpit/campaigns',
         ]);
         expect(
             wrapper.get('[data-testid="cockpit-mobile-tab-bar"]').classes(),

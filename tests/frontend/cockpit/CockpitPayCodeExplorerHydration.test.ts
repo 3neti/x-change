@@ -71,6 +71,14 @@ const payCodesReadModel = {
             code: 'PC-HYDRATED-001',
             template: 'Money Changer',
             purpose: 'School transport allowance',
+            pos_reference: {
+                schema: 'x-change.cockpit.pos-sale-reference.v1',
+                sale_reference: 'POS-20260828-01HZZZZZZZZZZZZZZZZZZZZZZZ',
+                order_reference: 'ORDER-42',
+                purpose: 'Snacks',
+                legacy_reference: null,
+                reference_kind: 'canonical',
+            },
             amount: 1500.75,
             currency: 'PHP',
             status: 'issued',
@@ -99,6 +107,17 @@ const payCodesReadModel = {
                 expires_at: '2026-07-10T09:00:00+08:00',
                 redeemed_at: '2026-07-03T10:00:00+08:00',
                 terminal_at: '2026-07-03T10:00:00+08:00',
+            },
+            claim_summary: {
+                schema: 'x-change.cockpit.pay-code-claim-summary.v1',
+                status: 'paid',
+                claimed_at: '2026-07-03T10:00:00+08:00',
+                claimed_by_label: 'Leslie Chong',
+                claimed_mobile_masked: '•••• 4567',
+                amount_minor: 150075,
+                currency: 'PHP',
+                location_label: 'Makati counter',
+                evidence_count: 2,
             },
             terminal_control: {
                 can_expire: true,
@@ -186,12 +205,13 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         );
         expect(wrapper.text()).toContain('PC-HYDRATED-001');
         expect(wrapper.text()).toContain('PC-HYDRATED-002');
-        expect(wrapper.text()).toContain('School transport allowance');
+        expect(wrapper.text()).toContain('Snacks');
+        expect(wrapper.text()).toContain('POS-20260828-01HZZZZZZZZZZZZZZZZZZZZZZZ');
         expect(
             wrapper
                 .get('[data-testid="cockpit-pay-code-purpose"]')
                 .attributes('title'),
-        ).toBe('School transport allowance');
+        ).toBe('Snacks');
         expect(
             wrapper.findAll('[data-testid="cockpit-pay-code-copy-button"]'),
         ).toHaveLength(4);
@@ -221,6 +241,24 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         ).toBeDefined();
         expect(wrapper.text()).toContain('Created');
         expect(wrapper.text()).toContain('Claimed');
+        expect(
+            wrapper.get('[data-testid="cockpit-pay-code-claim-summary"]').text(),
+        ).toContain('Claimed');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-mobile-claim-summary"]')
+                .text(),
+        ).toContain('By Leslie Chong');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-mobile-claim-summary"]')
+                .text(),
+        ).toContain('₱1,500.75');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-pay-code-mobile-claim-summary"]')
+                .text(),
+        ).toContain('Makati counter');
         expect(wrapper.text()).toContain('₱1,500.75');
         expect(wrapper.text()).toContain('ready');
         expect(
@@ -829,6 +867,33 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(statusBadges[4].classes()).not.toContain('bg-rose-50');
     });
 
+    it('prefers canonical consumer status for collectible Pay Codes', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: {
+                    ...payCodesReadModel,
+                    records: [
+                        {
+                            ...payCodesReadModel.records[0],
+                            consumer_status: 'processing',
+                            collection: {
+                                currency: 'PHP',
+                                target_amount_minor: 10000,
+                                collected_total_minor: 2500,
+                                remaining_to_collect_minor: 7500,
+                                is_fully_collected: false,
+                            },
+                        },
+                    ],
+                },
+            },
+        });
+
+        expect(
+            wrapper.get('[data-testid="cockpit-pay-code-status-badge"]').text(),
+        ).toBe('Processing');
+    });
+
     it('keeps a rejected payout primary while surfacing destination attention', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {
@@ -958,7 +1023,8 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             '[data-testid="cockpit-pay-code-row-secondary-facts"]',
         );
         expect(secondaryFacts.text()).toContain('Created');
-        expect(secondaryFacts.text()).toContain('Expires');
+        expect(secondaryFacts.text()).toContain('Claimed');
+        expect(secondaryFacts.text()).not.toContain('Expires');
     });
 
     it('summarizes pay code result density before the rows', () => {

@@ -942,6 +942,24 @@ return [
             ],
         ],
 
+        'payment_voucher_collection' => [
+            'label' => 'Payment Voucher Collection',
+            'mode' => 'payment_voucher_collection',
+            'amount' => 0,
+            'target_amount' => 100,
+            'currency' => 'PHP',
+            'prefix' => 'PAY',
+            'mask' => '****',
+            'payment' => [
+                'provider' => env('X_CHANGE_PAYMENT_ATTEMPT_PROVIDER', 'netbank'),
+                'verify' => false,
+            ],
+            'meta' => [
+                'family' => 'payment',
+                'tags' => ['payable', 'collectible', 'payment-attempt', 'provider-qr'],
+            ],
+        ],
+
         /*
         |--------------------------------------------------------------------------
         | Contract-bridge lifecycle scenarios
@@ -2051,6 +2069,42 @@ return [
                 'mobile' => env('XCHANGE_LIFECYCLE_FEEDBACK_MOBILE'),
                 'subject' => 'X-Change lifecycle feedback test',
                 'message' => 'X-Change lifecycle feedback delivery is configured and working.',
+            ],
+        ],
+
+        'campaign_payroll_direct_transfer' => [
+            'label' => 'Payroll Direct Transfer Batch',
+            'description' => 'Imports an encrypted payroll batch and creates an independently approved direct-transfer fulfillment plan.',
+            'category' => 'campaigns',
+            'tags' => ['campaign', 'payroll', 'maker-checker', 'gcash'],
+            'mode' => 'campaign_batch',
+            'campaign' => [
+                'profile' => 'payroll',
+                'purpose' => 'Payroll',
+                'fulfillment_mode' => 'direct_bank_transfer',
+                'delivery_preference' => 'manual',
+                'failure_disposition' => 'same_pay_code_sms_recovery',
+                'default_wallet' => 'GCash',
+                'expiry_days' => 7,
+            ],
+            'execution_runtime' => [
+                'live_provider' => true,
+                'confirm_live_transfer' => true,
+            ],
+        ],
+
+        'campaign_payroll_pay_code_sms' => [
+            'label' => 'Payroll Pay Code SMS Batch',
+            'description' => 'Imports an encrypted payroll batch and creates an independently approved Pay Code and SMS fulfillment plan.',
+            'category' => 'campaigns',
+            'tags' => ['campaign', 'payroll', 'maker-checker', 'sms'],
+            'mode' => 'campaign_batch',
+            'campaign' => [
+                'profile' => 'payroll',
+                'purpose' => 'Payroll',
+                'fulfillment_mode' => 'pay_code_distribution',
+                'delivery_preference' => 'sms',
+                'expiry_days' => 7,
             ],
         ],
 

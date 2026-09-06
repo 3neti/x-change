@@ -127,6 +127,18 @@ Recommended deployment groups:
 
 ---
 
+# Evidence Snapshot Addendum
+
+Before migration-sensitive operations, include the keep-snapshot runbook as part of your evidence set:
+
+- `x-change:instance-keepsake:export` (dry run and create with strong operator references)
+- `x-change:instance-keepsake:verify` (offline checksum and manifest validation)
+
+Run this after operational checks, before environment handoff or destructive resets.
+See [instance keepsake export](./INSTANCE_KEEPSAKE_EXPORT.md) for exact command sequence.
+
+---
+
 # Recommended Smoke Validation
 
 The first deployment validation step should always be:

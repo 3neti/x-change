@@ -208,9 +208,11 @@ final class LifecycleScenarioEngine
             'treasury_live_basic_cash',
             'treasury_onboarding_grant',
             'feedback_delivery',
+            'payment_voucher_collection',
             'commercial_operations_simulation',
             'treasury_account_grant_simulation',
             'provisioning_governance_simulation',
+            'campaign_batch',
         ], true)) {
             return $this->runWithoutVoucherBootstrap(
                 scenarioKey: $scenarioKey,
@@ -291,6 +293,7 @@ final class LifecycleScenarioEngine
             'max_polls' => $bootstrap->maxPolls,
             'approval_pipeline' => $options->approvalPipeline,
             'live_feedback' => $options->liveFeedback,
+            'live_provider' => $options->liveProvider,
             'feedback_email' => $options->feedbackEmail,
             'feedback_mobile' => $options->feedbackMobile,
             'confirm_live_transfer' => $options->confirmLiveTransfer,
@@ -393,7 +396,20 @@ final class LifecycleScenarioEngine
             $output->info("Running scenario: {$scenarioKey}");
         }
 
-        $issuerId = (int) ($options->issuer ?: data_get($scenario, 'issuer_id', 1));
+        if ($mode === 'campaign_batch' && $options->maker === null) {
+            return $this->result(
+                exitCode: Command::FAILURE,
+                payload: [
+                    'success' => false,
+                    'scenario' => $scenarioKey,
+                    'mode' => $mode,
+                    'message' => 'Campaign batch lifecycle scenarios require --maker.',
+                ],
+            );
+        }
+
+        $issuerOption = $mode === 'campaign_batch' ? $options->maker : $options->issuer;
+        $issuerId = (int) ($issuerOption ?: data_get($scenario, 'issuer_id', 1));
         $issuer = $this->bootstrapper->resolveIssuerModel($issuerId);
         $baseClaimMobile = $this->bootstrapper->resolveScenarioMobile($scenario, $issuer);
 
@@ -404,12 +420,16 @@ final class LifecycleScenarioEngine
             'checker' => $options->checker,
             'approval_pipeline' => $options->approvalPipeline,
             'live_feedback' => $options->liveFeedback,
+            'live_provider' => $options->liveProvider,
             'feedback_email' => $options->feedbackEmail,
             'feedback_mobile' => $options->feedbackMobile,
             'confirm_live_transfer' => $options->confirmLiveTransfer,
             'run_reference' => $options->runReference,
             'amount' => $options->amount,
             'no_claim' => $options->noClaim,
+            'input' => $options->input,
+            'phase' => $options->phase,
+            'confirm_checker_approval' => $options->confirmCheckerApproval,
         ];
 
         $result = $runner->run(

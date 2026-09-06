@@ -82,4 +82,55 @@ describe('claim Success destination route rendering', () => {
 
         expect(wrapper.findAll('img').filter((img) => img.attributes('src')?.includes('payout-destinations'))).toHaveLength(0);
     });
+
+    it('renders onboarding success as a centered invitation completion page', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                rider: {
+                    success: {
+                        type: 'text',
+                        body: 'x-PayOut Maker onboarding invitation',
+                    },
+                },
+                destination: null,
+                success_presentation: {
+                    intent: 'commissioning_invitation',
+                    eyebrow: 'Welcome',
+                    title: 'Welcome to x-PayOut',
+                    account_message: 'Your Maker account is ready.',
+                    body: 'You can now prepare Pay Codes and submit payout work for checker approval.',
+                    receipt_label: 'Invitation accepted',
+                    receipt_code: 'MAKE-TEST',
+                    funds: {
+                        label: 'Client Funds',
+                        text: '₱1,000.00 available for instructions',
+                    },
+                },
+                success_action: {
+                    key: 'x-change.onboarding-success.enter-workspace',
+                    label: 'Go to my workspace',
+                    enabled: true,
+                    target: {
+                        url: '/x/cockpit/quick-generate',
+                        method: 'GET',
+                        redirectable: true,
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Welcome');
+        expect(wrapper.text()).toContain('Welcome to x-PayOut');
+        expect(wrapper.text()).toContain('Your Maker account is ready.');
+        expect(wrapper.text()).toContain('₱1,000.00 available for instructions');
+        expect(wrapper.text()).toContain('Client Funds');
+        expect(wrapper.text()).toContain('Go to my workspace');
+        expect(wrapper.text()).toContain('Invitation accepted');
+        expect(wrapper.text()).toContain('MAKE-TEST');
+        expect(wrapper.text()).not.toContain('x-PayOut Maker onboarding invitation');
+        expect(wrapper.get('[data-testid="claim-brand-header"]').classes()).toContain('justify-center');
+        expect(wrapper.find('[data-testid="claim-theme-picker"]').exists()).toBe(false);
+        expect(wrapper.get('[data-testid="claim-success-primary-action"]').attributes('href')).toBe('/x/cockpit/quick-generate');
+    });
 });

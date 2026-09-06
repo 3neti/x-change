@@ -4,6 +4,7 @@ import CockpitPayCodeEngineeringPreviewController from "@/actions/LBHurtado/XCha
 import BankEMISelect from "@/components/financial/BankEMISelect.vue";
 import CockpitPayCodeShareCard from "./CockpitPayCodeShareCard.vue";
 import CockpitPayCodeTerminalControls from "./CockpitPayCodeTerminalControls.vue";
+import CockpitManualCopyButton from "./CockpitManualCopyButton.vue";
 import { Form } from "@inertiajs/vue3";
 import {
   Activity,
@@ -53,6 +54,10 @@ type WorkspaceTab =
   | "audit"
   | "engineering";
 type DetailRecord = Record<string, unknown>;
+type LifecycleItem = {
+  label: string;
+  value: unknown;
+};
 
 const props = defineProps<{
   code: string;
@@ -81,6 +86,9 @@ const engineeringError = ref<string | null>(null);
 const engineeringCopied = ref(false);
 
 const overview = computed(() => record(props.voucher?.overview));
+const claimSummary = computed(() =>
+  record(props.voucher?.claim_summary ?? overview.value.claim_summary),
+);
 const instructions = computed(() => record(props.voucher?.instructions));
 const claims = computed(() => record(props.voucher?.claims));
 const slices = computed(() => record(props.voucher?.slices));
@@ -88,6 +96,13 @@ const sliceRows = computed(() => list(slices.value.rows));
 const hasSlices = computed(() => text(slices.value.schema) !== "");
 const settlement = computed(() => record(props.voucher?.settlement));
 const treasury = computed(() => record(props.voucher?.treasury));
+const collection = computed(() => record(props.voucher?.collection));
+const posReference = computed(() => record(props.voucher?.pos_reference));
+const hasPosReference = computed(
+  () => text(posReference.value.reference_kind) !== "none" && text(posReference.value.schema) !== "",
+);
+const hasCollection = computed(() => text(collection.value.schema) !== "");
+const consumerStatus = computed(() => text(collection.value.consumer_status));
 const backing = computed(() => record(treasury.value.backing));
 const party = computed(() => record(overview.value.party));
 const availability = computed(() => record(overview.value.availability));
@@ -97,6 +112,29 @@ const primaryAmount = computed(
     amounts.value.find((amount) => amount.primary === true) ??
     amounts.value[0] ??
     null,
+);
+const hasClaimSummary = computed(
+  () => text(claimSummary.value.claimed_at) !== "",
+);
+const lifecycleItems = computed<LifecycleItem[]>(() =>
+  [
+    { label: "Issued", value: record(overview.value.timing).issued_at },
+    {
+      label: "Available From",
+      value: record(overview.value.timing).starts_at,
+    },
+    {
+      label: "Expires",
+      value: hasClaimSummary.value
+        ? null
+        : record(overview.value.timing).expires_at,
+    },
+    {
+      label: hasClaimSummary.value ? "Claimed" : "Voucher Closed",
+      value:
+        record(overview.value.timing).redeemed_at ?? claimSummary.value.claimed_at,
+    },
+  ].filter((item) => text(item.value) !== ""),
 );
 const instructionGroups = computed(() => list(instructions.value.groups));
 const claimRecords = computed(() => list(claims.value.records));
@@ -793,9 +831,12 @@ function number(value: unknown): number {
           </div>
           <p class="mt-2 flex items-center gap-2 text-sm text-slate-300">
             <ShieldCheck class="h-4 w-4" />
-            <span>Availability:</span>
+            <span>{{ hasCollection ? "Collection status:" : "Availability:" }}</span>
             <strong class="text-white">{{
-              text(availability.label) || title(status) || "Not available"
+              (consumerStatus && title(consumerStatus)) ||
+              text(availability.label) ||
+              title(status) ||
+              "Not available"
             }}</strong>
           </p>
         </div>
@@ -945,9 +986,131 @@ function number(value: unknown): number {
                 </p>
               </article>
             </div>
+            <div
+              v-if="hasCollection"
+              class="mt-3 rounded-2xl border border-sky-200 bg-sky-50 p-4 dark:border-sky-900 dark:bg-sky-950/30"
+              data-testid="pay-code-overview-collection-progress"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <h4 class="text-xs font-semibold uppercase tracking-[0.14em] text-sky-800 dark:text-sky-200">
+                  Collection Progress
+                </h4>
+                <span
+                  v-if="collection.is_overpaid === true"
+                  class="rounded-full bg-amber-100 px-2 py-1 text-[0.65rem] font-semibold text-amber-800 dark:bg-amber-900/50 dark:text-amber-200"
+                >
+                  Overpaid
+                </span>
+              </div>
+              <dl class="mt-3 grid gap-3 sm:grid-cols-3">
+                <div>
+                  <dt class="text-[0.65rem] text-slate-500 dark:text-slate-400">Target</dt>
+                  <dd class="mt-1 font-semibold text-slate-950 dark:text-white">
+                    {{ formatMoney(collection.target_amount_minor, collection.currency) }}
+                  </dd>
+                </div>
+                <div>
+                  <dt class="text-[0.65rem] text-slate-500 dark:text-slate-400">Collected</dt>
+                  <dd class="mt-1 font-semibold text-slate-950 dark:text-white">
+                    {{ formatMoney(collection.collected_total_minor, collection.currency) }}
+                  </dd>
+                </div>
+                <div>
+                  <dt class="text-[0.65rem] text-slate-500 dark:text-slate-400">Remaining</dt>
+                  <dd class="mt-1 font-semibold text-slate-950 dark:text-white">
+                    {{ formatMoney(collection.remaining_to_collect_minor, collection.currency) }}
+                  </dd>
+                </div>
+              </dl>
+              <p
+                v-if="collection.is_overpaid === true"
+                class="mt-3 text-xs text-amber-800 dark:text-amber-200"
+              >
+                Overpaid by {{ formatMoney(collection.overpaid_amount_minor, collection.currency) }}
+              </p>
+            </div>
+            <article
+              v-if="hasClaimSummary"
+              class="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950/30"
+              data-testid="pay-code-overview-claim-summary"
+            >
+              <div class="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+                <BadgeCheck class="h-4 w-4" />
+                <span class="text-xs font-semibold">Claimed</span>
+              </div>
+              <dl class="mt-3 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <dt class="text-[0.65rem] uppercase tracking-wide text-slate-500">When</dt>
+                  <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
+                    {{ formatDate(claimSummary.claimed_at) }}
+                  </dd>
+                </div>
+                <div v-if="claimSummary.claimed_by_label || claimSummary.claimed_mobile_masked">
+                  <dt class="text-[0.65rem] uppercase tracking-wide text-slate-500">By whom</dt>
+                  <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
+                    {{
+                      text(claimSummary.claimed_by_label) ||
+                      text(claimSummary.claimed_mobile_masked)
+                    }}
+                  </dd>
+                </div>
+                <div v-if="claimSummary.amount_minor">
+                  <dt class="text-[0.65rem] uppercase tracking-wide text-slate-500">Amount</dt>
+                  <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
+                    {{ formatMoney(claimSummary.amount_minor, claimSummary.currency) }}
+                  </dd>
+                </div>
+                <div v-if="claimSummary.location_label">
+                  <dt class="text-[0.65rem] uppercase tracking-wide text-slate-500">Place</dt>
+                  <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
+                    {{ text(claimSummary.location_label) }}
+                  </dd>
+                </div>
+                <div v-if="claimSummary.evidence_count">
+                  <dt class="text-[0.65rem] uppercase tracking-wide text-slate-500">Evidence</dt>
+                  <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
+                    {{ number(claimSummary.evidence_count) }} item{{ number(claimSummary.evidence_count) === 1 ? "" : "s" }}
+                  </dd>
+                </div>
+              </dl>
+            </article>
           </div>
 
           <div class="grid gap-3 sm:grid-cols-2">
+            <article
+              v-if="hasPosReference"
+              class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 sm:col-span-2 dark:border-emerald-900 dark:bg-emerald-950/30"
+              data-testid="pay-code-overview-pos-reference"
+            >
+              <div class="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+                <Fingerprint class="h-4 w-4" />
+                <span class="text-xs font-semibold">Sale reference</span>
+              </div>
+              <dl class="mt-3 grid gap-3 sm:grid-cols-3">
+                <div v-if="posReference.sale_reference">
+                  <dt class="text-[0.65rem] uppercase tracking-wide text-slate-500">Canonical</dt>
+                  <dd class="mt-1 flex items-center gap-2 font-mono text-sm font-semibold text-slate-950 dark:text-white">
+                    <span class="min-w-0 truncate">{{ text(posReference.sale_reference) }}</span>
+                    <CockpitManualCopyButton :value="text(posReference.sale_reference)" label="Copy sale reference" />
+                  </dd>
+                </div>
+                <div v-if="posReference.order_reference">
+                  <dt class="text-[0.65rem] uppercase tracking-wide text-slate-500">Order number</dt>
+                  <dd class="mt-1 flex items-center gap-2 text-sm font-semibold text-slate-950 dark:text-white">
+                    <span class="min-w-0 truncate">{{ text(posReference.order_reference) }}</span>
+                    <CockpitManualCopyButton :value="text(posReference.order_reference)" label="Copy order number" />
+                  </dd>
+                </div>
+                <div v-if="posReference.purpose">
+                  <dt class="text-[0.65rem] uppercase tracking-wide text-slate-500">Purpose</dt>
+                  <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-white">{{ text(posReference.purpose) }}</dd>
+                </div>
+                <div v-if="posReference.legacy_reference">
+                  <dt class="text-[0.65rem] uppercase tracking-wide text-slate-500">Legacy POS reference</dt>
+                  <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-white">{{ text(posReference.legacy_reference) }}</dd>
+                </div>
+              </dl>
+            </article>
             <article
               class="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
             >
@@ -1056,18 +1219,7 @@ function number(value: unknown): number {
           </div>
           <ol class="mt-4 space-y-4">
             <li
-              v-for="item in [
-                { label: 'Issued', value: record(overview.timing).issued_at },
-                {
-                  label: 'Available From',
-                  value: record(overview.timing).starts_at,
-                },
-                { label: 'Expires', value: record(overview.timing).expires_at },
-                {
-                  label: 'Voucher Closed',
-                  value: record(overview.timing).redeemed_at,
-                },
-              ]"
+              v-for="item in lifecycleItems"
               :key="item.label"
               class="relative pl-6"
             >
@@ -1089,8 +1241,11 @@ function number(value: unknown): number {
           <p
             class="mt-4 text-[0.7rem] leading-5 text-slate-500 dark:text-slate-400"
           >
-            Voucher Closed marks the lifecycle transition. Payout completion is
-            recorded separately under Claim &amp; Evidence.
+            {{
+              hasClaimSummary
+                ? "Claimed marks the recipient-facing completion moment. Payout and evidence details remain available under Claim & Evidence."
+                : "Voucher Closed marks the lifecycle transition. Payout completion is recorded separately under Claim & Evidence."
+            }}
           </p>
         </aside>
         <div

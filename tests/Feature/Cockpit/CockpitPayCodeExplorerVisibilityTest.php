@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\DB;
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
+use LBHurtado\XChange\Models\PosSaleReference;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Cockpit\PayCodeTerminalControlReadModel;
 
 it('shows an account holder only their own Pay Codes', function () {
@@ -73,6 +75,35 @@ it('projects a claimed contact without exposing the full mobile number', functio
         ->and(json_encode($record))->not->toContain('09171234567');
 });
 
+it('surfaces claimed facts on the cockpit pay code list without exposing raw contact data', function () {
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher();
+    $voucher->forceFill(['redeemed_at' => now()])->save();
+
+    VoucherClaim::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'claim_number' => 1,
+        'claim_type' => 'claim',
+        'status' => 'paid',
+        'requested_amount_minor' => 3000,
+        'disbursed_amount_minor' => 3000,
+        'remaining_balance_minor' => 0,
+        'currency' => 'PHP',
+        'claimer_mobile' => '09173011987',
+        'completed_at' => now(),
+    ]);
+
+    $this->actingAs($issuer)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.index'))
+        ->assertOk()
+        ->assertJsonPath('props.pay_codes_read_model.records.0.code', $voucher->code)
+        ->assertJsonPath('props.pay_codes_read_model.records.0.claim_summary.schema', 'x-change.cockpit.pay-code-claim-summary.v1')
+        ->assertJsonPath('props.pay_codes_read_model.records.0.claim_summary.claimed_mobile_masked', '•••• 1987')
+        ->assertJsonPath('props.pay_codes_read_model.records.0.claim_summary.amount_minor', 3000)
+        ->assertJsonMissing(['09173011987']);
+});
+
 it('projects a rejected payout as the primary outcome with destination attention', function () {
     $issuer = actingAsTestUser();
     $voucher = issueVoucher();
@@ -119,6 +150,12 @@ it('projects capability instructions target and timing without raw instruction p
         'rider' => [
             'message' => 'School transport allowance',
         ],
+        'metadata' => [
+            'collection_wallet_id' => (string) $issuer->wallet()->where('slug', 'platform')->sole()->getKey(),
+            'custom' => [
+                'external_reference' => 'BPLS-TRANSPORT-2026-0042',
+            ],
+        ],
     ]));
 
     $record = collect(app(VoucherLifecycleServiceContract::class)->list([
@@ -150,7 +187,17 @@ it('projects capability instructions target and timing without raw instruction p
             'secondary' => null,
             'masked' => false,
         ],
-        'purpose' => 'School transport allowance',
+        'purpose' => 'BPLS-TRANSPORT-2026-0042',
+        'consumer_status' => 'payable',
+        'collection' => [
+            'currency' => 'PHP',
+            'target_amount_minor' => 25000,
+            'collected_total_minor' => 0,
+            'remaining_to_collect_minor' => 25000,
+            'is_fully_collected' => false,
+            'is_overpaid' => false,
+            'overpaid_amount_minor' => 0,
+        ],
     ])
         ->and($record['timing']['created_at'])->not->toBeNull()
         ->and(collect($record['instruction_badges'])->pluck('label')->duplicates())->toBeEmpty()
@@ -159,9 +206,162 @@ it('projects capability instructions target and timing without raw instruction p
 
     $this->actingAs($issuer)
         ->withHeader('X-Inertia', 'true')
-        ->get(route('x-change.cockpit.pay-codes.index', ['search' => 'transport allowance']))
+        ->get(route('x-change.cockpit.pay-codes.index', ['search' => 'bpls-transport-2026-0042']))
         ->assertOk()
         ->assertJsonPath('props.pay_codes_read_model.records.0.code', $voucher->code)
-        ->assertJsonPath('props.pay_codes_read_model.records.0.purpose', 'School transport allowance')
+        ->assertJsonPath('props.pay_codes_read_model.records.0.purpose', 'BPLS-TRANSPORT-2026-0042')
+        ->assertJsonPath('props.pay_codes_read_model.records.0.consumer_status', 'payable')
+        ->assertJsonPath('props.pay_codes_read_model.records.0.collection.remaining_to_collect_minor', 25000)
         ->assertJsonPath('props.pay_codes_read_model.records.0.terminal_control.status', 'blocked');
+
+    $this->actingAs($issuer)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code]))
+        ->assertOk()
+        ->assertJsonPath('props.read_model.voucher.collection.schema', 'x-change.cockpit.pay-code-collection.v1')
+        ->assertJsonPath('props.read_model.voucher.collection.consumer_status', 'payable')
+        ->assertJsonPath('props.read_model.voucher.collection.target_amount_minor', 25000);
+});
+
+it('projects amount presentation by Pay Code flow type', function () {
+    $issuer = actingAsTestUser();
+
+    $disbursable = issueVoucher(validVoucherInstructions(500));
+    $payable = issueVoucher(validVoucherInstructions(75, overrides: [
+        'voucher_type' => 'payable',
+        'target_amount' => 100,
+        'metadata' => [
+            'collection_wallet_id' => (string) $issuer->wallet()->where('slug', 'platform')->sole()->getKey(),
+        ],
+    ]));
+    $settlement = issueVoucher(validVoucherInstructions(100.50, overrides: [
+        'voucher_type' => 'settlement',
+        'target_amount' => 100,
+        'metadata' => [
+            'collection_wallet_id' => (string) $issuer->wallet()->where('slug', 'platform')->sole()->getKey(),
+            'flow_type' => 'settlement',
+        ],
+    ]));
+
+    $assertAmountPresentation = function (Voucher $voucher, array $expected) use ($issuer): void {
+        $this->actingAs($issuer)
+            ->withHeader('X-Inertia', 'true')
+            ->get(route('x-change.cockpit.pay-codes.index', ['search' => $voucher->code]))
+            ->assertOk()
+            ->assertJsonPath('props.pay_codes_read_model.records.0.code', $voucher->code)
+            ->assertJsonPath('props.pay_codes_read_model.records.0.amount_presentation.schema', 'x-change.cockpit.pay-code-amount-presentation.v1')
+            ->assertJsonPath('props.pay_codes_read_model.records.0.amount_presentation.flow_type', $expected['flow_type'])
+            ->assertJsonPath('props.pay_codes_read_model.records.0.amount_presentation.label', $expected['label'])
+            ->assertJsonPath('props.pay_codes_read_model.records.0.amount_presentation.amount_minor', $expected['amount_minor'])
+            ->assertJsonPath('props.pay_codes_read_model.records.0.amount_presentation.target_amount_minor', $expected['target_amount_minor'])
+            ->assertJsonPath('props.pay_codes_read_model.records.0.amount_presentation.amount', $expected['amount'])
+            ->assertJsonPath('props.pay_codes_read_model.records.0.amount_presentation.target_amount', $expected['target_amount'])
+            ->assertJsonPath('props.pay_codes_read_model.records.0.amount', $expected['display_amount']);
+    };
+
+    $assertAmountPresentation($disbursable, [
+        'flow_type' => 'disbursable',
+        'label' => 'Disbursable',
+        'amount_minor' => 50000,
+        'target_amount_minor' => null,
+        'amount' => 'PHP 500.00',
+        'target_amount' => null,
+        'display_amount' => 'PHP 500.00',
+    ]);
+    $assertAmountPresentation($payable, [
+        'flow_type' => 'payable',
+        'label' => 'Payable',
+        'amount_minor' => 7500,
+        'target_amount_minor' => 10000,
+        'amount' => 'PHP 75.00',
+        'target_amount' => 'PHP 100.00',
+        'display_amount' => 'PHP 100.00',
+    ]);
+    $assertAmountPresentation($settlement, [
+        'flow_type' => 'settlement',
+        'label' => 'Settlement',
+        'amount_minor' => 10050,
+        'target_amount_minor' => 10000,
+        'amount' => 'PHP 100.50',
+        'target_amount' => 'PHP 100.00',
+        'display_amount' => 'PHP 100.50 → PHP 100.00',
+    ]);
+});
+
+it('falls back to the rider message when no external reference is present', function (): void {
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => [
+            'message' => 'Community snacks collection',
+        ],
+    ]));
+
+    $record = collect(app(VoucherLifecycleServiceContract::class)->list([
+        'issuer_id' => $issuer->getKey(),
+        'issuer_type' => $issuer->getMorphClass(),
+    ]))->sole();
+
+    expect($record['code'])->toBe($voucher->code)
+        ->and($record['purpose'])->toBe('Community snacks collection');
+});
+
+it('searches and displays canonical POS sale facts from the lookup table', function (): void {
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'voucher_type' => 'payable',
+        'target_amount' => 75,
+        'metadata' => [
+            'collection_wallet_id' => (string) $issuer->wallet()->where('slug', 'platform')->sole()->getKey(),
+            'custom' => [
+                'cockpit' => ['builder' => 'pos', 'source' => 'cockpit.quick-generate'],
+            ],
+        ],
+    ]));
+    PosSaleReference::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'sale_reference' => 'POS-20260828-01HZZZZZZZZZZZZZZZZZZZZZZZ',
+        'order_reference' => 'ORDER-REPEATABLE-42',
+        'purpose' => 'Snacks',
+        'operator_type' => $issuer->getMorphClass(),
+        'operator_id' => $issuer->getKey(),
+    ]);
+
+    foreach (['POS-20260828-01HZZZ', 'ORDER-REPEATABLE-42'] as $search) {
+        $this->actingAs($issuer)
+            ->withHeader('X-Inertia', 'true')
+            ->get(route('x-change.cockpit.pay-codes.index', ['search' => $search]))
+            ->assertOk()
+            ->assertJsonPath('props.pay_codes_read_model.records.0.code', $voucher->code)
+            ->assertJsonPath('props.pay_codes_read_model.records.0.pos_reference.sale_reference', 'POS-20260828-01HZZZZZZZZZZZZZZZZZZZZZZZ')
+            ->assertJsonPath('props.pay_codes_read_model.records.0.pos_reference.order_reference', 'ORDER-REPEATABLE-42');
+    }
+
+    $this->actingAs($issuer)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code]))
+        ->assertOk()
+        ->assertJsonPath('props.read_model.voucher.pos_reference.reference_kind', 'canonical')
+        ->assertJsonPath('props.read_model.voucher.pos_reference.sale_reference', 'POS-20260828-01HZZZZZZZZZZZZZZZZZZZZZZZ')
+        ->assertJsonPath('props.read_model.voucher.pos_reference.order_reference', 'ORDER-REPEATABLE-42')
+        ->assertJsonPath('props.read_model.voucher.pos_reference.purpose', 'Snacks');
+});
+
+it('labels an old POS external reference as legacy without fabricating a sale reference', function (): void {
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'metadata' => [
+            'custom' => [
+                'external_reference' => 'OLD-POS-SNACKS',
+                'cockpit' => ['builder' => 'pos', 'source' => 'cockpit.quick-generate'],
+            ],
+        ],
+    ]));
+
+    $this->actingAs($issuer)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code]))
+        ->assertOk()
+        ->assertJsonPath('props.read_model.voucher.pos_reference.reference_kind', 'legacy')
+        ->assertJsonPath('props.read_model.voucher.pos_reference.legacy_reference', 'OLD-POS-SNACKS')
+        ->assertJsonPath('props.read_model.voucher.pos_reference.sale_reference', null);
 });

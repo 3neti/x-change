@@ -51,7 +51,7 @@ it('exposes a cockpit bridge marker on the legacy balances page', function () {
         ->assertJsonPath('props.cockpit_bridge.schema', 'x-change.balances.cockpit-bridge.v1')
         ->assertJsonPath('props.cockpit_bridge.status', 'available')
         ->assertJsonPath('props.cockpit_bridge.legacy_owner', 'BalancePageController')
-        ->assertJsonPath('props.cockpit_bridge.cockpit_route', '/x/cockpit')
+        ->assertJsonPath('props.cockpit_bridge.cockpit_route', '/x/cockpit/overview')
         ->assertJsonPath('props.cockpit_bridge.mutation.legacy_page_remains_owner', true)
         ->assertJsonPath('props.cockpit_bridge.mutation.cockpit_replaces_legacy_page', false)
         ->assertJsonPath('props.cockpit_bridge.mutation.funding_mutation_enabled', false)

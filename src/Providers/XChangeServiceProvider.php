@@ -44,11 +44,14 @@ use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
 use LBHurtado\PaymentGateway\Contracts\WalletProxy;
 use LBHurtado\PaymentGateway\Funding\NetbankReusableFundingAddressProvider;
 use LBHurtado\ReportRegistry\Contracts\ReportResolverInterface;
+use LBHurtado\Voucher\Contracts\PayableCollectionExecutionGateway;
 use LBHurtado\Voucher\Contracts\SettlementEnvelopeExecutionGateway;
 use LBHurtado\Voucher\Contracts\StoredValueExecutionGateway;
 use LBHurtado\Voucher\Events\VoucherDisbursementFailed;
 use LBHurtado\Voucher\Events\VoucherDisbursementSucceeded;
 use LBHurtado\Voucher\Services\ExecutionDriverRegistry;
+use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
+use LBHurtado\Wallet\Services\SystemUserResolverService;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
@@ -59,6 +62,8 @@ use LBHurtado\XChange\Actions\Auth\ResetMobileFirstPin;
 use LBHurtado\XChange\Console\Commands\AdoptCommissioningManifestCommand;
 use LBHurtado\XChange\Console\Commands\AdoptHostCommand;
 use LBHurtado\XChange\Console\Commands\AdoptXChangeCommand;
+use LBHurtado\XChange\Console\Commands\Campaigns\ProcessCampaignBatchFulfillmentOutboxCommand;
+use LBHurtado\XChange\Console\Commands\Campaigns\ShowCampaignPayoutRecoveryDeliveriesCommand;
 use LBHurtado\XChange\Console\Commands\Claim\ClaimWalkthroughCommand;
 use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionContextCommand;
 use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
@@ -77,6 +82,8 @@ use LBHurtado\XChange\Console\Commands\Commercial\ReconcilePendingPartnerCommiss
 use LBHurtado\XChange\Console\Commands\Commercial\RecordProviderCostBatchCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\RequestPartnerCommissionPayoutBatchCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\SubmitPartnerCommissionPayoutBatchCommand;
+use LBHurtado\XChange\Console\Commands\BootstrapXChangeFromManifestCommand;
+use LBHurtado\XChange\Console\Commands\CommissionFromManifestCommand;
 use LBHurtado\XChange\Console\Commands\CommissioningStatusCommand;
 use LBHurtado\XChange\Console\Commands\CommissionXChangeCommand;
 use LBHurtado\XChange\Console\Commands\ConfigureXChangeCommand;
@@ -117,6 +124,7 @@ use LBHurtado\XChange\Console\Commands\PartnerApi\CreatePartnerApiClientCommand;
 use LBHurtado\XChange\Console\Commands\PartnerApi\RunPartnerApiLifecycleCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\EstimatePayCodeCostCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\GeneratePayCodeCommand;
+use LBHurtado\XChange\Console\Commands\Payment\ResumeVerifiedPaymentAttemptsCommand;
 use LBHurtado\XChange\Console\Commands\Payment\VerifyOpenPaymentAttemptsCommand;
 use LBHurtado\XChange\Console\Commands\Provisioning\AuthorizeProvisioningOperatorCommand;
 use LBHurtado\XChange\Console\Commands\Provisioning\ExpireProvisioningOffersCommand;
@@ -135,6 +143,7 @@ use LBHurtado\XChange\Console\Commands\Treasury\BackfillDisbursementSettlementJo
 use LBHurtado\XChange\Console\Commands\Treasury\BackfillStandingFundingPositionsCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\CapitalizeTreasuryOpeningBalanceCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\CorrectLegacyPayCodeFeePostingCommand;
+use LBHurtado\XChange\Console\Commands\Treasury\CorrectVoucherCollectionTreasuryPostingCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\MigrateLegacyAccountBalanceCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\PreflightTreasuryCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\ProvisionSystemPrincipalCommand;
@@ -278,6 +287,7 @@ use LBHurtado\XChange\Contracts\XChangeProviderTopologyResolverContract;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Events\DisbursementRejected;
 use LBHurtado\XChange\Exceptions\CommercialPricingChanged;
+use LBHurtado\XChange\Exceptions\ExternalReferenceConflict;
 use LBHurtado\XChange\Exceptions\FundingIntentConflict;
 use LBHurtado\XChange\Exceptions\FundingIntentTransitionDenied;
 use LBHurtado\XChange\Exceptions\FundingProviderUnavailable;
@@ -344,7 +354,6 @@ use LBHurtado\XChange\Services\Cockpit\NullCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\OptionalCockpitIntegrationReadModels;
 use LBHurtado\XChange\Services\Cockpit\SystemPrincipalCockpitTreasuryAccess;
 use LBHurtado\XChange\Services\Cockpit\VoucherLifecycleCockpitReadModelProvider;
-use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 use LBHurtado\XChange\Services\Cockpit\WalletCockpitHeaderReadModelProvider;
 use LBHurtado\XChange\Services\Commercial\ConfigCommercialPartnerResolver;
 use LBHurtado\XChange\Services\Commercial\DatabaseCommercialComponentEconomicsResolver;
@@ -410,6 +419,7 @@ use LBHurtado\XChange\Services\Execution\NullExecutionResultHandoffSummaryJourna
 use LBHurtado\XChange\Services\Execution\NullExecutionResultJournalHandoff;
 use LBHurtado\XChange\Services\Execution\OnboardingAccountProvisioningExecutionDriver;
 use LBHurtado\XChange\Services\Execution\PartnerApiStoredValueDestinationAuthority;
+use LBHurtado\XChange\Services\Execution\WalletPayableCollectionExecutionGateway;
 use LBHurtado\XChange\Services\Execution\WalletStoredValueExecutionGateway;
 use LBHurtado\XChange\Services\Execution\XChangeLiveCashExecutionDriver;
 use LBHurtado\XChange\Services\Execution\XChangeSettlementEnvelopeExecutionGateway;
@@ -439,6 +449,7 @@ use LBHurtado\XChange\Services\NullWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\Onboarding\DefaultAccountProvisioningService;
 use LBHurtado\XChange\Services\Onboarding\XChangeContactUserProvisioner;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
+use LBHurtado\XChange\Services\PartnerApi\PartnerApiOperatorAuthority;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiRequestContext;
 use LBHurtado\XChange\Services\Payment\AccountFundingCollectionPosting;
 use LBHurtado\XChange\Services\Payment\ProviderFundingCollectionPosting;
@@ -458,6 +469,7 @@ use LBHurtado\XChange\Services\Publication\PublicationCatalog;
 use LBHurtado\XChange\Services\ReconciliationLifecycleService;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\SettlementEnvelopeReadinessService;
+use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 use LBHurtado\XChange\Services\StartProviderProvisioningFromOnboardingCompletion;
 use LBHurtado\XChange\Services\SystemWalletProxy;
 use LBHurtado\XChange\Services\Treasury\AdvisoryTreasuryVocabularyReadModel;
@@ -465,10 +477,12 @@ use LBHurtado\XChange\Services\Treasury\BavixTreasuryPositionLedgerResolver;
 use LBHurtado\XChange\Services\Treasury\ConfigTreasuryOpeningCapitalizationAuthorization;
 use LBHurtado\XChange\Services\Treasury\FederatedTreasuryPrincipalReferenceResolver;
 use LBHurtado\XChange\Services\Treasury\LegacyAccountBalanceMigrationService;
+use LBHurtado\XChange\Services\Treasury\RequestScopedSystemUserResolver;
 use LBHurtado\XChange\Services\Treasury\TreasuryAccountBalanceReadModel;
 use LBHurtado\XChange\Services\Treasury\TreasuryAccountPortfolioProvisioningService;
 use LBHurtado\XChange\Services\Treasury\TreasuryInventoryRegistrationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryOpeningBalanceReconciliationService;
+use LBHurtado\XChange\Services\Treasury\TreasuryOperatorAuthority;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
@@ -518,6 +532,7 @@ class XChangeServiceProvider extends ServiceProvider
             XChangeProvisioningAuthorityProjector::class,
         );
         $this->app->scoped(PartnerApiRequestContext::class);
+        $this->app->scoped(PartnerApiOperatorAuthority::class);
         $this->configureIdentityOtpGateway();
         $this->configureFormFlowSplashDefaults();
         $this->app->singleton(OtpChallengeGateway::class, function ($app): OtpChallengeGateway {
@@ -565,6 +580,12 @@ class XChangeServiceProvider extends ServiceProvider
             CommercialPartnerResolverContract::class,
             ConfigCommercialPartnerResolver::class,
         );
+        $this->app->scoped(
+            SystemUserResolverContract::class,
+            fn ($app): RequestScopedSystemUserResolver => new RequestScopedSystemUserResolver(
+                $app->make(SystemUserResolverService::class),
+            ),
+        );
         $this->app->singleton(
             CommercialOfferingResolverContract::class,
             DatabaseCommercialOfferingResolver::class,
@@ -581,10 +602,11 @@ class XChangeServiceProvider extends ServiceProvider
             CommercialSettlementAccountResolverContract::class,
             WalletCommercialSettlementAccountResolver::class,
         );
-        $this->app->singleton(
+        $this->app->scoped(
             CommercialOperatorAuthorityContract::class,
             DatabaseCommercialOperatorAuthority::class,
         );
+        $this->app->scoped(TreasuryOperatorAuthority::class);
         $this->app->singleton(
             CommercialLegalTraceResolverContract::class,
             OptionalXLegalCommercialTraceResolver::class,
@@ -719,7 +741,7 @@ class XChangeServiceProvider extends ServiceProvider
             TreasuryPositionLedgerResolverContract::class,
             BavixTreasuryPositionLedgerResolver::class,
         );
-        $this->app->singleton(
+        $this->app->scoped(
             AccountBalanceReadModelContract::class,
             TreasuryAccountBalanceReadModel::class,
         );
@@ -1242,6 +1264,11 @@ class XChangeServiceProvider extends ServiceProvider
             XChangeSettlementEnvelopeExecutionGateway::class,
         );
 
+        $this->app->bind(
+            PayableCollectionExecutionGateway::class,
+            WalletPayableCollectionExecutionGateway::class,
+        );
+
         $this->app->scoped(
             StoredValueExecutionGateway::class,
             WalletStoredValueExecutionGateway::class,
@@ -1252,7 +1279,7 @@ class XChangeServiceProvider extends ServiceProvider
             PartnerApiStoredValueDestinationAuthority::class,
         );
 
-        $this->app->singleton(
+        $this->app->scoped(
             StoredValueHolderAuthorityContract::class,
             AuthenticatedStoredValueHolderAuthority::class,
         );
@@ -1451,6 +1478,7 @@ class XChangeServiceProvider extends ServiceProvider
                 VerifyFundingRequestBackingCommand::class,
                 VerifyOpenFundingIntentsCommand::class,
                 VerifyOpenPaymentAttemptsCommand::class,
+                ResumeVerifiedPaymentAttemptsCommand::class,
                 SyncStandingFundingAddressesCommand::class,
                 ReconcilePendingDisbursementsCommand::class,
                 TestFeedbackEmailCommand::class,
@@ -1463,6 +1491,8 @@ class XChangeServiceProvider extends ServiceProvider
                 AuthorizeProvisioningOperatorCommand::class,
                 ExpireProvisioningOffersCommand::class,
                 DeliverVoucherSliceExecutionJournalCommand::class,
+                ProcessCampaignBatchFulfillmentOutboxCommand::class,
+                ShowCampaignPayoutRecoveryDeliveriesCommand::class,
 
                 PrepareLifecycleEnvironmentCommand::class,
                 RunLifecycleScenarioCommand::class,
@@ -1487,6 +1517,7 @@ class XChangeServiceProvider extends ServiceProvider
                 BackfillStandingFundingPositionsCommand::class,
                 CapitalizeTreasuryOpeningBalanceCommand::class,
                 CorrectLegacyPayCodeFeePostingCommand::class,
+                CorrectVoucherCollectionTreasuryPostingCommand::class,
                 MigrateLegacyAccountBalanceCommand::class,
                 PreflightTreasuryCommand::class,
                 RedactTreasurySensitiveMetadataCommand::class,
@@ -1504,6 +1535,8 @@ class XChangeServiceProvider extends ServiceProvider
                 SetupXChangeCommand::class,
                 ConfigureXChangeCommand::class,
                 CommissionXChangeCommand::class,
+                CommissionFromManifestCommand::class,
+                BootstrapXChangeFromManifestCommand::class,
                 CloudRecipeCommand::class,
                 DeployXChangeCommand::class,
                 GenerateDeploymentManifestCommand::class,
@@ -1632,6 +1665,15 @@ class XChangeServiceProvider extends ServiceProvider
                 ->everyMinute()
                 ->onOneServer()
                 ->withoutOverlapping(5);
+        });
+
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            $schedule
+                ->command('x-change:campaigns:process-batches --limit=10')
+                ->name('x-change:campaigns:process-batches')
+                ->everyMinute()
+                ->onOneServer()
+                ->withoutOverlapping(10);
         });
 
         if ((bool) config(
@@ -2111,6 +2153,7 @@ class XChangeServiceProvider extends ServiceProvider
 
         $this->publishes([
             $this->packagePath('stubs/resources/js/components/AppSidebar.vue.stub') => resource_path('js/components/AppSidebar.vue'),
+            $this->packagePath('stubs/resources/js/app.ts.stub') => resource_path('js/app.ts'),
         ], 'x-change-shell');
 
         $this->publishes([
@@ -2487,6 +2530,19 @@ class XChangeServiceProvider extends ServiceProvider
             return $this->apiResponses()->errorFromThrowable(
                 $e,
                 'IDEMPOTENCY_CONFLICT',
+                [],
+                409,
+            );
+        });
+
+        $exceptions->renderable(function (ExternalReferenceConflict $e, Request $request) {
+            if (! $request->expectsJson()) {
+                return null;
+            }
+
+            return $this->apiResponses()->errorFromThrowable(
+                $e,
+                'EXTERNAL_REFERENCE_CONFLICT',
                 [],
                 409,
             );

@@ -15,7 +15,7 @@ import type { RawRiderStage } from '@/components/x-rider/types';
 import { initializeTheme } from '@/composables/useTheme';
 import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
 import { useVoucherPreview } from '@/composables/useVoucherPreview';
-import { router, useForm, usePage } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { AlertCircle } from 'lucide-vue-next';
 import { ref, computed, onMounted, watch } from 'vue';
 import { resolveClaimWidgetExperienceStages } from '@/components/x-change/claimWidgetExperienceStages';
@@ -38,6 +38,12 @@ interface Props {
     claimSurface?: ClaimSurfaceLike | null;
     compiledFormSubmitted?: boolean;
     compiledFormSubmitError?: string | null;
+}
+
+interface XRayClaimPresentation {
+    title?: string | null;
+    primary_action_label?: string | null;
+    subject_label?: string | null;
 }
 
 const props = defineProps<Props>();
@@ -135,6 +141,26 @@ const serverResolvedXRay = computed<Record<string, unknown> | null>(() => {
 
 const resolvedXRay = computed<Record<string, unknown> | null>(
     () => serverResolvedXRay.value ?? xrayResult.value,
+);
+
+const xrayPresentation = computed<XRayClaimPresentation>(() => {
+    const presentation = resolvedXRay.value?.presentation;
+
+    return presentation && typeof presentation === 'object' && !Array.isArray(presentation)
+        ? (presentation as XRayClaimPresentation)
+        : {};
+});
+
+const claimTitle = computed(() =>
+    xrayPresentation.value.title?.trim() || 'Claim Pay Code',
+);
+
+const claimPrimaryActionLabel = computed(() =>
+    xrayPresentation.value.primary_action_label?.trim() || 'Start Claim',
+);
+
+const claimCodeLabel = computed(() =>
+    xrayPresentation.value.subject_label?.trim() || 'Pay Code',
 );
 
 const surfaceTakesOver = computed(
@@ -268,6 +294,7 @@ const submitViewModel = computed(() =>
         hasCompiledForm: Boolean(compiledForm.normalizedFlow.value),
         compiledFormValid: compiledForm.isValid.value,
         processing: form.processing,
+        label: claimPrimaryActionLabel.value,
     }),
 );
 
@@ -493,6 +520,8 @@ watch(
 
 <template>
     <div class="flex flex-col gap-6">
+        <Head :title="claimTitle" />
+
         <!-- Viewer-aware claim surface: issuer console takes over entirely
              once the backend has resolved the visitor as the issuer of an
              already-claimed Pay Code. -->
@@ -507,7 +536,7 @@ watch(
             v-if="!previewViewModel.isNonActive && !surfaceTakesOver"
             class="space-y-2 text-center"
         >
-            <h1 class="text-xl font-medium">Claim Pay Code</h1>
+            <h1 class="text-xl font-medium">{{ claimTitle }}</h1>
         </div>
 
         <!-- Form -->
@@ -517,7 +546,7 @@ watch(
             class="space-y-6"
         >
             <div class="flex flex-col gap-2">
-                <Label for="code">Pay Code</Label>
+                <Label for="code">{{ claimCodeLabel }}</Label>
                 <Input
                     id="code"
                     v-model="code"
@@ -533,7 +562,7 @@ watch(
             <Button
                 ref="submitButton"
                 type="submit"
-                class="fixed inset-x-0 z-30 mx-auto h-11 w-[calc(100%-2.5rem)] max-w-md rounded-full shadow-lg shadow-foreground/10"
+                class="fixed inset-x-0 z-30 mx-auto h-11 w-[calc(100%-2.5rem)] max-w-md rounded-full shadow-lg shadow-foreground/10 sm:static sm:inset-auto sm:w-full sm:max-w-none sm:shadow-none"
                 style="bottom: max(0.2in, calc(env(safe-area-inset-bottom) + 1rem))"
                 data-testid="claim-widget-submit-button"
                 :disabled="submitViewModel.disabled"
@@ -541,7 +570,7 @@ watch(
                 {{ submitViewModel.label }}
             </Button>
 
-            <div class="h-24 shrink-0" aria-hidden="true" />
+            <div class="h-24 shrink-0 sm:hidden" aria-hidden="true" />
 
             <p
                 v-if="claimExperienceLoading"

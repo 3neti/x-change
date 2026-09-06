@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import CockpitIssuedPayCodeDialog from '../../../resources/js/cockpit/components/CockpitIssuedPayCodeDialog.vue';
 import CockpitQuickGenerateSubmitPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateSubmitPanel.vue';
@@ -19,6 +19,91 @@ afterEach(() => {
 });
 
 describe('issued Pay Code dialog', () => {
+    it('loads a distinct payer QR for a payable Pay Code', async () => {
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            json: vi.fn().mockResolvedValue({
+                attempt: {
+                    reference: '01PAYMENT',
+                    status: 'awaiting_payment',
+                    qr_code: {
+                        mime_type: 'image/png',
+                        base64_payload: 'PAYMENTQR',
+                    },
+                },
+            }),
+        });
+        vi.stubGlobal('fetch', fetchMock);
+
+        const wrapper = mount(CockpitIssuedPayCodeDialog, {
+            props: {
+                open: true,
+                code: 'PAYABLE-7',
+                amount: '125.50',
+                currency: 'PHP',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'payable',
+                collectionAttemptUrl:
+                    '/x/cockpit/pay-codes/PAYABLE-7/collection-attempts',
+                paymentUrl: 'https://example.test/x/pay/PAYABLE-7',
+            },
+            global: { stubs: { Teleport: true } },
+        });
+
+        await flushPromises();
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-issued-pay-code-payment-qr"]')
+                .attributes('src'),
+        ).toBe('data:image/png;base64,PAYMENTQR');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-issued-pay-code-payment-link"]')
+                .attributes('href'),
+        ).toBe('https://example.test/x/pay/PAYABLE-7');
+        expect(wrapper.text()).toContain('separate from the claim QR');
+    });
+
+    it('keeps the public payment fallback when QR preparation fails', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn().mockResolvedValue({
+                ok: false,
+                json: vi.fn().mockResolvedValue({}),
+            }),
+        );
+
+        const wrapper = mount(CockpitIssuedPayCodeDialog, {
+            props: {
+                open: true,
+                code: 'SETTLE-8',
+                amount: '80',
+                currency: 'PHP',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'settlement',
+                collectionAttemptUrl:
+                    '/x/cockpit/pay-codes/SETTLE-8/collection-attempts',
+                paymentUrl: 'https://example.test/x/pay/SETTLE-8',
+            },
+            global: { stubs: { Teleport: true } },
+        });
+
+        await flushPromises();
+
+        expect(
+            wrapper.get(
+                '[data-testid="cockpit-issued-pay-code-payment-error"]',
+            ).text(),
+        ).toContain('temporarily unavailable');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-issued-pay-code-payment-link"]')
+                .exists(),
+        ).toBe(true);
+    });
+
     it('renders the finalized front and back canvas with safe share fallbacks', async () => {
         const clipboardWrite = vi.fn().mockResolvedValue(undefined);
 
@@ -70,6 +155,11 @@ describe('issued Pay Code dialog', () => {
             'true',
         );
         expect(wrapper.text()).toContain('Pay Code PAY-READY-7 Is Ready');
+        expect(
+            wrapper.find(
+                '[data-testid="cockpit-issued-pay-code-payment"]',
+            ).exists(),
+        ).toBe(false);
         expect(wrapper.text()).toContain('Issued Pay Code');
         expect(wrapper.text()).toContain('Final design ready to share.');
         expect(

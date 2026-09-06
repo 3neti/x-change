@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     claimWorkflowConfirmationLabel,
+    claimWorkflowConfirmationTitle,
     claimWorkflowLayoutClasses,
     claimWorkflowLayoutGuidance,
     claimWorkflowReviewItems,
@@ -22,6 +23,7 @@ describe('formFlowClaimWorkflow', () => {
             title: 'Campaign Officer Authorization',
             description: 'Review and authorize this campaign worksheet.',
             confirmation_label: 'Authorize Campaign',
+            confirmation_title: 'Review campaign',
             requires_authenticated_officer: true,
             review: {
                 authorization_reference: 'authorization-01',
@@ -34,6 +36,7 @@ describe('formFlowClaimWorkflow', () => {
 
         expect(workflow?.key).toBe('campaign.officer-authorization.v1');
         expect(claimWorkflowConfirmationLabel(workflow)).toBe('Authorize Campaign');
+        expect(claimWorkflowConfirmationTitle(workflow)).toBe('Review campaign');
         expect(claimWorkflowSummaryText(workflow)).toBe(
             'Authorization only. No beneficiary payout is sent by this form.',
         );

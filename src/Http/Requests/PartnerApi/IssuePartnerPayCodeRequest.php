@@ -12,6 +12,7 @@ class IssuePartnerPayCodeRequest extends GeneratePayCodeRequest
     {
         return [
             ...parent::rules(),
+            'external_reference' => ['required', 'string', 'max:190', 'regex:/^[\w.:-]+$/'],
             'issuer_id' => ['prohibited'],
             'metadata.issuer_id' => ['prohibited'],
             'metadata.issuer_email' => ['prohibited'],

@@ -2,8 +2,11 @@ import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PaymentPage from '../../resources/js/pages/x-change/claim/Payment.vue';
 
-const { routerPost } = vi.hoisted(() => ({
+const { routerPost, pollStart, pollStop, usePoll } = vi.hoisted(() => ({
     routerPost: vi.fn(),
+    pollStart: vi.fn(),
+    pollStop: vi.fn(),
+    usePoll: vi.fn(),
 }));
 
 vi.mock('@inertiajs/vue3', () => ({
@@ -13,6 +16,7 @@ vi.mock('@inertiajs/vue3', () => ({
     router: {
         post: routerPost,
     },
+    usePoll,
 }));
 
 const pendingPayment = {
@@ -22,15 +26,22 @@ const pendingPayment = {
     collected_amount_minor: 2500,
     amount_due_minor: 7500,
     is_fully_paid: false,
+    rider_message: 'Transportation payment for the August field visit.',
     provider: 'netbank',
     provider_available: true,
     can_create_attempt: true,
+    poll_interval_ms: 5000,
     attempt: null,
+    receipt: null,
 };
 
 describe('PaymentPage', () => {
     beforeEach(() => {
         routerPost.mockReset();
+        pollStart.mockReset();
+        pollStop.mockReset();
+        usePoll.mockReset();
+        usePoll.mockReturnValue({ start: pollStart, stop: pollStop });
     });
 
     it('starts one exact payment attempt through the generated route', async () => {
@@ -45,7 +56,21 @@ describe('PaymentPage', () => {
             'Creating instructions does not mark this Pay Code paid.',
         );
 
-        await wrapper.get('button').trigger('click');
+        expect(wrapper.get('[data-testid="payer-xray-step"]').text()).toContain(
+            'Transportation payment for the August field visit.',
+        );
+        expect(
+            wrapper.get('[data-testid="payer-invoice-step"]').text(),
+        ).toContain('₱100.00');
+        expect(
+            wrapper.get('[data-testid="payer-invoice-step"]').text(),
+        ).toContain('₱25.00');
+        expect(
+            wrapper.find('[data-testid="payer-print-receipt"]').exists(),
+        ).toBe(false);
+
+        await wrapper.get('[data-testid="payer-method-qr"]').trigger('click');
+        await wrapper.get('[data-testid="payer-create-qr"]').trigger('click');
 
         expect(routerPost).toHaveBeenCalledWith(
             '/x/pay/PAY-1234/attempts',
@@ -82,12 +107,77 @@ describe('PaymentPage', () => {
             },
         });
 
-        expect(wrapper.get('img').attributes('src')).toBe(
+        expect(wrapper.get('img[alt^="QR Ph code"]').attributes('src')).toBe(
             'data:image/png;base64,iVBORw0KGgo=',
         );
         expect(wrapper.text()).toContain('Pay exactly ₱75.00');
         expect(wrapper.text()).toContain('cannot fund your x-change Account');
-        expect(wrapper.text()).toContain('Check NetBank');
+        expect(wrapper.text()).toContain('Check payment status');
+        expect(usePoll).toHaveBeenCalledWith(
+            5000,
+            { only: ['payment', 'notice'] },
+            { autoStart: true, mode: 'rest' },
+        );
+    });
+
+    it('stops passive polling once the payment becomes fully paid', async () => {
+        const wrapper = mount(PaymentPage, {
+            props: {
+                payment: {
+                    ...pendingPayment,
+                    attempt: {
+                        reference: '01JTEST',
+                        status: 'awaiting_payment',
+                        provider: 'netbank',
+                        amount_minor: 7500,
+                        currency: 'PHP',
+                        expires_at: null,
+                        last_checked_at: null,
+                        can_check: true,
+                        qr_code: null,
+                    },
+                },
+            },
+        });
+
+        await wrapper.setProps({
+            payment: {
+                ...pendingPayment,
+                amount_due_minor: 0,
+                is_fully_paid: true,
+                can_create_attempt: false,
+                attempt: null,
+            },
+        });
+
+        expect(pollStop).toHaveBeenCalledOnce();
+    });
+
+    it('starts passive polling when a checkable attempt becomes available', async () => {
+        const wrapper = mount(PaymentPage, {
+            props: {
+                payment: pendingPayment,
+            },
+        });
+
+        await wrapper.setProps({
+            payment: {
+                ...pendingPayment,
+                attempt: {
+                    reference: '01JNEW',
+                    status: 'awaiting_payment',
+                    provider: 'netbank',
+                    amount_minor: 7500,
+                    currency: 'PHP',
+                    expires_at: null,
+                    last_checked_at: null,
+                    can_check: true,
+                    qr_code: null,
+                },
+            },
+        });
+
+        expect(pollStart).toHaveBeenCalledOnce();
     });
 
     it('checks authoritative NetBank history for the current attempt', async () => {
@@ -111,9 +201,8 @@ describe('PaymentPage', () => {
         });
 
         await wrapper
-            .findAll('button')
-            .find((button) => button.text().includes('Check NetBank'))
-            ?.trigger('click');
+            .get('[data-testid="payer-check-status"]')
+            .trigger('click');
 
         expect(routerPost).toHaveBeenCalledWith(
             '/x/pay/PAY-1234/attempts/01JTEST/checks',
@@ -136,9 +225,101 @@ describe('PaymentPage', () => {
             },
         });
 
-        expect(wrapper.get('button').attributes('disabled')).toBeDefined();
+        expect(
+            wrapper
+                .get('[data-testid="payer-method-qr"]')
+                .attributes('disabled'),
+        ).toBeDefined();
         expect(wrapper.text()).toContain(
-            'NetBank payment is not available in this environment.',
+            'QR Code payment is not available in this environment.',
         );
+    });
+
+    it('shows unavailable methods without issuing requests', async () => {
+        const wrapper = mount(PaymentPage, {
+            props: {
+                payment: pendingPayment,
+            },
+        });
+
+        const bank = wrapper.get('[data-testid="payer-method-bank"]');
+        const payCode = wrapper.get('[data-testid="payer-method-pay-code"]');
+
+        expect(bank.attributes('disabled')).toBeDefined();
+        expect(payCode.attributes('disabled')).toBeDefined();
+        expect(bank.text()).toContain('Not yet available');
+        expect(payCode.text()).toContain('Not yet available');
+
+        await bank.trigger('click');
+        await payCode.trigger('click');
+
+        expect(routerPost).not.toHaveBeenCalled();
+    });
+
+    it('renders a neutral X-Ray state when no rider message exists', () => {
+        const wrapper = mount(PaymentPage, {
+            props: {
+                payment: {
+                    ...pendingPayment,
+                    rider_message: null,
+                },
+            },
+        });
+
+        expect(wrapper.get('[data-testid="payer-xray-step"]').text()).toContain(
+            'The issuer did not include a payment message.',
+        );
+    });
+
+    it('prints the settled receipt and hides payment-method actions', async () => {
+        const print = vi.fn();
+        Object.defineProperty(window, 'print', {
+            configurable: true,
+            value: print,
+        });
+
+        const wrapper = mount(PaymentPage, {
+            props: {
+                payment: {
+                    ...pendingPayment,
+                    collected_amount_minor: 10000,
+                    amount_due_minor: 0,
+                    is_fully_paid: true,
+                    can_create_attempt: false,
+                    receipt: {
+                        pay_code: 'PAY-1234',
+                        amount_paid_minor: 10000,
+                        currency: 'PHP',
+                        completed_at: '2026-08-26T08:30:00+08:00',
+                        payments: [
+                            {
+                                collection_number: 1,
+                                amount_paid_minor: 10000,
+                                provider: 'netbank',
+                                receipt_reference: 'PAY-PAY-1234-01',
+                                completed_at: '2026-08-26T08:30:00+08:00',
+                            },
+                        ],
+                    },
+                },
+            },
+        });
+
+        const receipt = wrapper.get('[data-testid="payer-receipt"]');
+
+        expect(receipt.text()).toContain('Payment received');
+        expect(receipt.text()).toContain('₱100.00');
+        expect(receipt.text()).toContain('netbank');
+        expect(receipt.text()).toContain('PAY-PAY-1234-01');
+        expect(
+            wrapper.find('[data-testid="payer-funding-methods-step"]').exists(),
+        ).toBe(false);
+
+        await wrapper
+            .get('[data-testid="payer-print-receipt"]')
+            .trigger('click');
+
+        expect(print).toHaveBeenCalledOnce();
+        expect(routerPost).not.toHaveBeenCalled();
     });
 });

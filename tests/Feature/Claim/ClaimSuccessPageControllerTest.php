@@ -46,6 +46,12 @@ BLADE);
 
     Route::get('/x/claim/{code}/success', ClaimSuccessPageController::class)
         ->name('x-change.claim.success');
+    Route::get('/x/cockpit', fn () => response('cockpit'))
+        ->name('x-change.cockpit.entry');
+    Route::get('/x/cockpit/overview', fn () => response('overview'))
+        ->name('x-change.cockpit.dashboard');
+    Route::get('/x/cockpit/quick-generate', fn () => response('quick-generate'))
+        ->name('x-change.cockpit.quick-generate');
 });
 
 it('exposes claim experience redirect countdown metadata to the success page', function () {
@@ -171,7 +177,57 @@ it('does not apply a default Rider after an onboarding claim without authored Ri
         'code' => $voucher->code,
     ]))
         ->assertOk()
-        ->assertJsonPath('rider', null);
+        ->assertJsonPath('rider', null)
+        ->assertJsonPath('success_presentation.intent', 'commissioning_invitation')
+        ->assertJsonPath('success_presentation.source', 'x-ray')
+        ->assertJsonPath('success_presentation.eyebrow', 'Welcome')
+        ->assertJsonPath('success_presentation.title', 'Welcome to Laravel')
+        ->assertJsonPath('success_presentation.account_message', 'Your account is ready.')
+        ->assertJsonPath('success_presentation.receipt_label', 'Invitation accepted')
+        ->assertJsonPath('success_action.key', 'x-change.onboarding-success.enter-workspace')
+        ->assertJsonPath('success_action.label', 'Continue')
+        ->assertJsonPath('success_action.intent', 'enter_workspace')
+        ->assertJsonPath('success_action.target.url', route('x-change.cockpit.entry'));
+});
+
+it('uses the commissioning role in onboarding success presentation and action routing', function (): void {
+    config()->set('app.name', 'x-PayOut');
+
+    $voucher = issueVoucher(validVoucherInstructions(
+        overrides: [
+            'onboarding' => true,
+            'cash' => [
+                'amount' => 1000,
+                'currency' => 'PHP',
+            ],
+            'execution' => [
+                'driver' => 'onboarding_account_provisioning',
+            ],
+            'metadata' => [
+                'custom' => [
+                    'x_payout_commissioning' => [
+                        'role' => 'maker',
+                    ],
+                ],
+            ],
+            'rider' => [
+                'message' => 'x-PayOut Maker onboarding invitation',
+                'url' => null,
+                'splash' => null,
+            ],
+        ],
+    ));
+
+    $this->getJson(route('x-change.claim.success', [
+        'code' => $voucher->code,
+    ]))
+        ->assertOk()
+        ->assertJsonPath('success_presentation.title', 'Welcome to x-PayOut')
+        ->assertJsonPath('success_presentation.account_message', 'Your Maker account is ready.')
+        ->assertJsonPath('success_presentation.funds.label', 'Client Funds')
+        ->assertJsonPath('success_presentation.funds.text', '₱1,000.00 available for instructions')
+        ->assertJsonPath('success_action.label', 'Go to my workspace')
+        ->assertJsonPath('success_action.target.url', route('x-change.cockpit.quick-generate'));
 });
 
 it('passes compiled claim result to success page payload when present in session', function () {

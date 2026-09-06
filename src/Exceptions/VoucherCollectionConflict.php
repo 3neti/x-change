@@ -17,4 +17,9 @@ class VoucherCollectionConflict extends RuntimeException
     {
         return new self("Voucher collection provider reference conflict for [{$provider}:{$reference}].");
     }
+
+    public static function forProviderTransactionId(string $provider, string $transactionId): self
+    {
+        return new self("Voucher collection provider transaction conflict for [{$provider}:{$transactionId}].");
+    }
 }

@@ -69,7 +69,7 @@ it('renders a minimal owner-scoped depositor Account projection with encrypted I
     expect($response->getContent())->toContain('"encryptHistory":true');
 });
 
-it('updates only the owner QR merchant presentation behind confirmation', function () {
+it('updates the owner payer-visible merchant identity behind confirmation', function () {
     $owner = actingAsTestUser();
     $owner->forceFill(['email_verified_at' => now()])->save();
 
@@ -85,7 +85,7 @@ it('updates only the owner QR merchant presentation behind confirmation', functi
         ->assertRedirect()
         ->assertSessionHas(
             'funding_account_notice',
-            'QR presentation updated. Funding is refreshing the reusable QR.',
+            'Merchant identity updated. New Pay Codes and Funding QR codes will use it.',
         );
 
     $merchant = app(MerchantProfileRepositoryContract::class)->findForUser($owner);

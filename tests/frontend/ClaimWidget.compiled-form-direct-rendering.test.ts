@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import ClaimWidget from '../../resources/js/components/x-change/ClaimWidget.vue';
 
 vi.mock('@inertiajs/vue3', () => ({
+    Head: { template: '<div><slot /></div>' },
     router: {
         visit: vi.fn(),
     },

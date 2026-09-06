@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Actions\Redemption;
 
 use Illuminate\Contracts\Auth\Factory as AuthFactory;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Actions\Campaigns\SubmitCampaignPayoutRecoveryClaim;
 use LBHurtado\XChange\Actions\Claim\DispatchVoucherClaimOutcome;
 use LBHurtado\XChange\Data\Claims\ClaimApprovalInitiationResultData;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
@@ -22,6 +23,7 @@ class SubmitWebPayCodeClaim
         private readonly DispatchVoucherClaimOutcome $claimOutcomes,
         private readonly VoucherClaimPolicyResolver $claimPolicies,
         private readonly AuthFactory $auth,
+        private readonly SubmitCampaignPayoutRecoveryClaim $campaignPayoutRecoveries,
     ) {}
 
     /**
@@ -29,6 +31,10 @@ class SubmitWebPayCodeClaim
      */
     public function handle(Voucher $voucher, array $payload): SubmitPayCodeClaimResultData|ClaimApprovalInitiationResultData
     {
+        if ($this->isCampaignPayoutRecovery($voucher)) {
+            return $this->campaignPayoutRecoveries->handle($voucher, $payload);
+        }
+
         if ($this->claimPolicies->resolve($voucher)->defaultOutcome === 'account_funding') {
             $claim = $this->claimOutcomes->handle(
                 voucher: $voucher,
@@ -59,5 +65,13 @@ class SubmitWebPayCodeClaim
         return $this->deferredOtpResolver->run(
             fn () => $this->submitPayCodeClaim->handle($voucher, $payload)
         );
+    }
+
+    private function isCampaignPayoutRecovery(Voucher $voucher): bool
+    {
+        $metadata = $voucher->getAttribute('metadata');
+
+        return data_get($metadata, 'instructions.metadata.custom.campaign.claim_activation') === 'provider_rejection'
+            && data_get($metadata, 'treasury.pay_code_reservation.status') === 'recovery_pending';
     }
 }

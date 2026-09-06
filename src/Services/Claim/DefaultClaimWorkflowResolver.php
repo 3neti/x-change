@@ -16,6 +16,24 @@ final class DefaultClaimWorkflowResolver implements ClaimWorkflowResolverContrac
     {
         $driver = $this->executionDriver($voucher);
 
+        if ($this->isCampaignPayoutRecovery($voucher)) {
+            return new ClaimWorkflowDescriptorData(
+                key: 'campaign.payout-recovery.v1',
+                requires_mobile: true,
+                requires_destination: true,
+                requires_amount: false,
+                title: 'Claim Your Protected Pay Code',
+                description: 'Verify the beneficiary mobile and provide a corrected payout destination.',
+                confirmation_label: 'Send to Corrected Destination',
+                authentication_mode: ClaimAuthenticationMode::ClaimantHandoff,
+                required_claim_fields: ['mobile', 'otp'],
+                review: [
+                    'payout_recovery' => true,
+                    'fixed_amount' => true,
+                ],
+            );
+        }
+
         if ($driver === 'campaign_worksheet_authorization') {
             $metadata = $voucher->getAttribute('metadata');
 
@@ -103,9 +121,10 @@ final class DefaultClaimWorkflowResolver implements ClaimWorkflowResolverContrac
             requires_mobile: true,
             requires_destination: false,
             requires_amount: false,
-            title: 'Set Up Your Account',
-            description: 'Confirm your details to receive this Pay Code in your x-change Account.',
-            confirmation_label: 'Create My Account',
+            title: 'Accept Invitation',
+            description: 'Enter your details to create your account and continue to the workspace.',
+            confirmation_label: 'Create my account',
+            confirmation_title: 'Review your details',
             authentication_mode: ClaimAuthenticationMode::ClaimantHandoff,
             required_claim_fields: ['full_name', 'email', 'mobile'],
             review: [
@@ -126,6 +145,14 @@ final class DefaultClaimWorkflowResolver implements ClaimWorkflowResolverContrac
     private function defaultOutcome(Voucher $voucher): ?string
     {
         return data_get($voucher->getAttribute('metadata'), 'instructions.claim.default_outcome');
+    }
+
+    private function isCampaignPayoutRecovery(Voucher $voucher): bool
+    {
+        $metadata = $voucher->getAttribute('metadata');
+
+        return data_get($metadata, 'instructions.metadata.custom.campaign.claim_activation') === 'provider_rejection'
+            && data_get($metadata, 'treasury.pay_code_reservation.status') === 'recovery_pending';
     }
 
     private function campaignDescription(Voucher $voucher): string

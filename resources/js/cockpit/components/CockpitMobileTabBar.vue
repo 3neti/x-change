@@ -8,7 +8,7 @@ import {
     Megaphone,
 } from 'lucide-vue-next';
 import type { Component } from 'vue';
-import { cockpitPrimaryNavigation } from '../navigation';
+import { cockpitMobilePrimaryNavigation } from '../navigation';
 
 const props = withDefaults(
     defineProps<{
@@ -36,7 +36,7 @@ const navigationIcons: Record<string, Component> = {
     >
         <div class="mx-auto grid min-h-16 max-w-lg grid-cols-5 px-1">
             <Link
-                v-for="item in cockpitPrimaryNavigation"
+                v-for="item in cockpitMobilePrimaryNavigation"
                 :key="item.key"
                 :href="item.href"
                 prefetch

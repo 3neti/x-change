@@ -12,9 +12,11 @@ use LBHurtado\XCampaign\Contracts\CampaignWorksheetImportRepository;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
 use LBHurtado\XCampaign\Data\CampaignWorksheetData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetImportData;
+use LBHurtado\XCampaign\Models\CampaignWorksheet;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\ApplyCampaignWorksheetImportRequest;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\StageCampaignWorksheetCsvRequest;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\UpdateCampaignWorksheetImportMappingRequest;
+use LBHurtado\XChange\Services\Campaigns\CampaignLifecycleJournal;
 use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetImportNormalizer;
 use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetTabularReader;
 use Throwable;
@@ -26,6 +28,7 @@ class CockpitCampaignWorksheetImportController extends Controller
         private readonly CampaignWorksheetImportRepository $imports,
         private readonly CampaignWorksheetTabularReader $reader,
         private readonly CampaignWorksheetImportNormalizer $normalizer,
+        private readonly CampaignLifecycleJournal $journal,
     ) {}
 
     public function stage(StageCampaignWorksheetCsvRequest $request, string $worksheet): RedirectResponse
@@ -84,6 +87,17 @@ class CockpitCampaignWorksheetImportController extends Controller
 
         $validCount = count(array_filter($stagedRows, fn (array $row): bool => $row['status'] === 'valid'));
         $invalidCount = count($stagedRows) - $validCount;
+        $storedWorksheet = CampaignWorksheet::query()->where('reference', $worksheet)->first();
+        if ($storedWorksheet instanceof CampaignWorksheet) {
+            $this->journal->recordWorksheet('campaign.csv.staged', $storedWorksheet, $owner, [
+                'import_reference' => $import->reference,
+                'source_format' => $sourceFormat,
+                'row_count' => count($source['rows']),
+                'valid_count' => $validCount,
+                'invalid_count' => $invalidCount,
+            ]);
+        }
+
         $summary = $invalidCount === 0
             ? sprintf('%d rows are ready to add. Nothing has joined the draft yet.', $validCount)
             : sprintf('%d rows are ready and %d need attention. Valid rows may be added independently.', $validCount, $invalidCount);
@@ -177,6 +191,14 @@ class CockpitCampaignWorksheetImportController extends Controller
             $this->imports->apply($worksheet, $import, $this->ownerType($owner), (string) $owner->getAuthIdentifier());
         } catch (InvalidArgumentException $exception) {
             return to_route('x-change.cockpit.campaigns.show', $worksheet)->with('campaign_notice', $exception->getMessage());
+        }
+
+        $storedWorksheet = CampaignWorksheet::query()->where('reference', $worksheet)->first();
+        if ($storedWorksheet instanceof CampaignWorksheet) {
+            $this->journal->recordWorksheet('campaign.csv.applied', $storedWorksheet, $owner, [
+                'import_reference' => $import,
+                'applied_valid_count' => $validUnappliedCount,
+            ]);
         }
 
         return to_route('x-change.cockpit.campaigns.show', $worksheet)

@@ -187,6 +187,7 @@ it('reveals binary claim evidence only through a no-store audited endpoint', fun
 
 it('projects new evidence per claim and reveals its private content-addressed artifact', function (): void {
     Storage::fake('local');
+    config()->set('x-change.claim.evidence.disk', 'local');
     $owner = actingAsTestUser();
     $voucher = issueVoucher(validVoucherInstructions(20.00, overrides: [
         'inputs' => ['fields' => ['name', 'selfie', 'signature']],
@@ -250,6 +251,7 @@ it('projects new evidence per claim and reveals its private content-addressed ar
 
 it('retains an evidence record without offering a broken reveal when its private artifact is missing', function (): void {
     Storage::fake('local');
+    config()->set('x-change.claim.evidence.disk', 'local');
     $owner = actingAsTestUser();
     $voucher = issueVoucher(validVoucherInstructions(20.00, overrides: [
         'inputs' => ['fields' => ['selfie']],

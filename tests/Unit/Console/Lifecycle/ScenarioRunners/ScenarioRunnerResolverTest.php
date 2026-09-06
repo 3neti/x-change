@@ -6,6 +6,7 @@ use LBHurtado\XChange\Lifecycle\Runners\AccountManagementScenarioRunner;
 use LBHurtado\XChange\Lifecycle\Runners\CommercialOperationsSimulationScenarioRunner;
 use LBHurtado\XChange\Lifecycle\Runners\DefaultClaimScenarioRunner;
 use LBHurtado\XChange\Lifecycle\Runners\ExecutionEngineContractScenarioRunner;
+use LBHurtado\XChange\Lifecycle\Runners\PaymentVoucherCollectionScenarioRunner;
 use LBHurtado\XChange\Lifecycle\Runners\ProvisioningGovernanceSimulationScenarioRunner;
 use LBHurtado\XChange\Lifecycle\Runners\ScenarioRunnerResolver;
 use LBHurtado\XChange\Lifecycle\Runners\SequentialClaimsScenarioRunner;
@@ -112,6 +113,16 @@ it('resolves provisioning governance simulation mode', function () {
     expect($resolution->mode)->toBe('provisioning_governance_simulation')
         ->and($resolution->runner)
         ->toBeInstanceOf(ProvisioningGovernanceSimulationScenarioRunner::class);
+});
+
+it('resolves payment voucher collection mode', function () {
+    $resolution = app(ScenarioRunnerResolver::class)->resolve([
+        'mode' => 'payment_voucher_collection',
+    ]);
+
+    expect($resolution->mode)->toBe('payment_voucher_collection')
+        ->and($resolution->runner)
+        ->toBeInstanceOf(PaymentVoucherCollectionScenarioRunner::class);
 });
 
 it('throws when no runner is registered for mode', function () {

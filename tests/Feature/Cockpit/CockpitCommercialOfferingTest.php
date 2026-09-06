@@ -5,6 +5,7 @@ declare(strict_types=1);
 use LBHurtado\XChange\Enums\CommercialOfferingStatus;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
 use LBHurtado\XChange\Enums\CommercialPartnerRevisionStatus;
+use LBHurtado\XChange\Models\CommercialComponentEconomicsHead;
 use LBHurtado\XChange\Models\CommercialOffering;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
 use LBHurtado\XChange\Models\CommercialPartnerRevision;
@@ -234,10 +235,18 @@ it('keeps live commission submission inaccessible when the runtime gate is disab
 it('submits and independently publishes a new offering from the Cockpit', function (): void {
     $maker = actingAsTestUser();
     authorizeCommercialOperator($maker, CommercialOperatorCapability::ManageOfferings);
+    $payload = commercialOfferingFormPayload();
+    $payload['items'] = array_map(static function (array $item): array {
+        if (in_array($item['reference'], ['voucher_type.payable', 'voucher_type.settlement'], true)) {
+            $item['unit_price'] = '0.00';
+        }
+
+        return $item;
+    }, $payload['items']);
 
     $this->post(
         route('x-change.cockpit.commercial.offerings.store'),
-        commercialOfferingFormPayload(),
+        $payload,
     )->assertRedirect();
 
     $pending = CommercialOffering::query()
@@ -245,7 +254,12 @@ it('submits and independently publishes a new offering from the Cockpit', functi
         ->sole();
 
     expect($pending->status)->toBe(CommercialOfferingStatus::PendingApproval)
-        ->and($pending->created_by_id)->toBe($maker->getKey());
+        ->and($pending->created_by_id)->toBe($maker->getKey())
+        ->and($pending->offering()->catalog->version)->toBe(4)
+        ->and(collect($pending->offering()->catalog->items)
+            ->firstWhere('reference', 'voucher_type.payable')?->unitPriceMinor)->toBe(0)
+        ->and(collect($pending->offering()->catalog->items)
+            ->firstWhere('reference', 'voucher_type.settlement')?->unitPriceMinor)->toBe(0);
 
     $checker = actingAsTestUser();
     authorizeCommercialOperator($checker, CommercialOperatorCapability::ApproveOfferings);
@@ -262,7 +276,45 @@ it('submits and independently publishes a new offering from the Cockpit', functi
         'activation_reference' => 'deployment:commercial-offering:2026-08-07:001',
     ])->assertRedirect();
 
-    expect($pending->currentActivation()->exists())->toBeTrue();
+    $economics = CommercialComponentEconomicsHead::query()
+        ->with('currentActivation.economics')
+        ->findOrFail('pay_code')
+        ->currentActivation
+        ?->economics;
+
+    expect($pending->currentActivation()->exists())->toBeTrue()
+        ->and($economics?->commercial_offering_id)->toBe($pending->getKey())
+        ->and($economics?->economics()->catalogVersion)->toBe(4)
+        ->and(collect($economics?->economics()->components)
+            ->firstWhere('componentReference', 'voucher_type.payable')?->isBillable())->toBeFalse()
+        ->and(collect($economics?->economics()->components)
+            ->firstWhere('componentReference', 'voucher_type.settlement')?->isBillable())->toBeFalse();
+
+    $activationCount = $pending->currentActivation()->count();
+    $economicsActivationCount = $economics?->activations()->count();
+
+    $this->post(route('x-change.cockpit.commercial.offerings.activations.store', $pending), [
+        'activation_reference' => 'deployment:commercial-offering:2026-08-07:001',
+    ])->assertRedirect();
+
+    expect($pending->currentActivation()->count())->toBe($activationCount)
+        ->and($economics?->activations()->count())->toBe($economicsActivationCount);
+});
+
+it('retains the catalog version when a new offering does not change prices', function (): void {
+    $maker = actingAsTestUser();
+    authorizeCommercialOperator($maker, CommercialOperatorCapability::ManageOfferings);
+
+    $this->post(
+        route('x-change.cockpit.commercial.offerings.store'),
+        commercialOfferingFormPayload(),
+    )->assertRedirect();
+
+    $pending = CommercialOffering::query()
+        ->where('status', CommercialOfferingStatus::PendingApproval->value)
+        ->sole();
+
+    expect($pending->offering()->catalog->version)->toBe(3);
 });
 
 it('rejects Commercial Offering mutations without the matching authority', function (): void {

@@ -11,6 +11,17 @@ const voucher = {
   overview: {
     capability: { label: "Disbursement" },
     party: { label: "Claimed By", primary: "•••• 1987" },
+    claim_summary: {
+      schema: "x-change.cockpit.pay-code-claim-summary.v1",
+      status: "paid",
+      claimed_at: "2026-08-03T08:15:00+08:00",
+      claimed_by_label: "•••• 1987",
+      claimed_mobile_masked: "•••• 1987",
+      amount_minor: 2_000,
+      currency: "PHP",
+      location_label: "Makati counter",
+      evidence_count: 1,
+    },
     amounts: [
       {
         key: "reserved_principal",
@@ -77,6 +88,17 @@ const voucher = {
         legacy: false,
       },
     ],
+  },
+  claim_summary: {
+    schema: "x-change.cockpit.pay-code-claim-summary.v1",
+    status: "paid",
+    claimed_at: "2026-08-03T08:15:00+08:00",
+    claimed_by_label: "•••• 1987",
+    claimed_mobile_masked: "•••• 1987",
+    amount_minor: 2_000,
+    currency: "PHP",
+    location_label: "Makati counter",
+    evidence_count: 1,
   },
   settlement: {
     envelope: {
@@ -667,9 +689,12 @@ describe("Cockpit Pay Code record workspace", () => {
     const overview = wrapper
       .get('[data-testid="pay-code-overview-tab"]')
       .text();
-    expect(overview).toContain("Voucher Closed");
+    expect(overview).toContain("Claimed");
+    expect(overview).toContain("By whom");
+    expect(overview).toContain("Makati counter");
+    expect(overview).not.toContain("Expires");
     expect(overview).toContain(
-      "Voucher Closed marks the lifecycle transition. Payout completion is recorded separately under Claim & Evidence.",
+      "Claimed marks the recipient-facing completion moment. Payout and evidence details remain available under Claim & Evidence.",
     );
 
     await wrapper
@@ -853,5 +878,41 @@ describe("Cockpit Pay Code record workspace", () => {
     expect(audit).toContain("Sms");
     expect(audit).toContain("Accepted");
     expect(audit).toContain("Delivered");
+  });
+
+  it("renders canonical collection progress for a collectible Pay Code", () => {
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "CAMP-CB2L",
+        status: "processing",
+        voucher: {
+          ...voucher,
+          collection: {
+            schema: "x-change.cockpit.pay-code-collection.v1",
+            consumer_status: "processing",
+            currency: "PHP",
+            target_amount_minor: 10_000,
+            collected_total_minor: 4_000,
+            remaining_to_collect_minor: 6_000,
+            is_fully_collected: false,
+            is_overpaid: false,
+            overpaid_amount_minor: 0,
+          },
+        },
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+
+    const progress = wrapper.get(
+      '[data-testid="pay-code-overview-collection-progress"]',
+    );
+
+    expect(progress.text()).toContain("Collection Progress");
+    expect(progress.text()).toContain("₱100.00");
+    expect(progress.text()).toContain("₱40.00");
+    expect(progress.text()).toContain("₱60.00");
+    expect(wrapper.text()).toContain("Collection status:");
+    expect(wrapper.text()).toContain("Processing");
   });
 });

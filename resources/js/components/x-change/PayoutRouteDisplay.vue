@@ -72,7 +72,12 @@ function fallbackIconFor(index: number, segment: string) {
 }
 
 function shouldShowSegmentText(index: number): boolean {
-    return props.mode === 'operational' || index === 0 || index === routeSegments.value.length - 1;
+    const segment = routeSegments.value[index];
+
+    return props.mode === 'operational'
+        || index === 0
+        || segment === institution.value.shortLabel
+        || index === routeSegments.value.length - 1;
 }
 </script>
 

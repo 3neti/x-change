@@ -25,7 +25,7 @@ final readonly class ConvergeCampaignFeedbackDelivery
         }
 
         if ($attempt->events->contains(
-            fn ($event): bool => in_array($event->event_type, ['completed', 'failed'], true),
+            fn ($event): bool => in_array($event->event_type, CampaignDeliveryAttempt::TerminalEventTypes, true),
         )) {
             return true;
         }

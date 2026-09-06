@@ -27,6 +27,7 @@ final class ClaimWorkflowDescriptorData extends Data
         public array $required_claim_fields = [],
         public bool $skip_form_flow_splash = false,
         public array $review = [],
+        public ?string $confirmation_title = null,
     ) {
         $this->requires_authenticated_officer = $this->authentication_mode
             === ClaimAuthenticationMode::AuthenticatedOfficer;

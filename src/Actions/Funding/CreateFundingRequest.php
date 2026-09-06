@@ -111,6 +111,14 @@ final class CreateFundingRequest
                     );
                 }
 
+                $collectionWalletId = $requester->wallet?->id;
+
+                if (! $collectionWalletId) {
+                    throw new RuntimeException(
+                        'Funding Request Pay Code issuance requires an explicit collection wallet.',
+                    );
+                }
+
                 $isProviderVerifiableTransfer = $data->fundingType
                     === FundingRequestType::BankTransfer
                     && (bool) config(
@@ -168,6 +176,7 @@ final class CreateFundingRequest
                         'metadata' => [
                             'flow_type' => 'collectible',
                             'issuer_id' => (string) $requester->getAuthIdentifier(),
+                            'collection_wallet_id' => $collectionWalletId,
                             'settlement_driver' => (string) config(
                                 'x-change.funding.requests.envelope_driver',
                                 'account-funding-review',

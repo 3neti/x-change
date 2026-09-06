@@ -32,6 +32,7 @@ final class CockpitCommercialOfferingController extends Controller
         $profile = (string) $validated['profile'];
         $active = $this->offerings->resolve($profile);
         $catalog = $active->catalog->toArray();
+        $catalogChanged = false;
         $prices = collect($validated['items'])->mapWithKeys(
             fn (array $item): array => [
                 $item['reference'] => (int) round(((float) $item['unit_price']) * 100),
@@ -42,8 +43,15 @@ final class CockpitCommercialOfferingController extends Controller
             $reference = (string) $item['reference'];
 
             if ($prices->has($reference)) {
-                $catalog['items'][$index]['unit_price_minor'] = $prices->get($reference);
+                $price = (int) $prices->get($reference);
+                $catalogChanged = $catalogChanged
+                    || (int) $item['unit_price_minor'] !== $price;
+                $catalog['items'][$index]['unit_price_minor'] = $price;
             }
+        }
+
+        if ($catalogChanged) {
+            $catalog['version'] = (int) $catalog['version'] + 1;
         }
 
         $policy = $active->waterfallPolicy->toArray();

@@ -48,6 +48,17 @@ it('does not queue Payment Attempts for a disabled provider', function (): void 
     Queue::assertNotPushed(VerifyPaymentAttemptJob::class);
 });
 
+it('queues verified Payment Attempts for provider-free settlement retry', function (): void {
+    $attempt = scheduledPaymentAttempt(status: PaymentAttemptStatus::Verified);
+
+    $this->artisan('xchange:payments:verify-open')->assertSuccessful();
+
+    Queue::assertPushed(
+        VerifyPaymentAttemptJob::class,
+        fn (VerifyPaymentAttemptJob $job): bool => $job->paymentAttemptId === $attempt->getKey(),
+    );
+});
+
 it('registers the package-owned non-overlapping payment verification schedule', function (): void {
     $event = collect(app(Schedule::class)->events())
         ->first(fn ($event): bool => $event->description === 'xchange:payments:verify-open:netbank');

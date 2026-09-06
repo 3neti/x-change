@@ -4,13 +4,22 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\XRay;
 
+use BackedEnum;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Route;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
+use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
+use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 
 class VoucherXRayProjectionBuilder
 {
-    public function __construct(private readonly VoucherSlicePlanProjection $slicePlans) {}
+    public function __construct(
+        private readonly VoucherSlicePlanProjection $slicePlans,
+        private readonly VoucherFlowCapabilityResolverContract $capabilities,
+        private readonly VoucherCollectionProgressService $progress,
+    ) {}
 
     /**
      * @return array<string, mixed>
@@ -18,11 +27,19 @@ class VoucherXRayProjectionBuilder
     public function build(mixed $voucher, ?Voucher $sliceSource = null): array
     {
         $instructions = (array) data_get($voucher, 'instructions', []);
-        $status = $this->xrayStatus((string) data_get($voucher, 'status', 'unknown'), $voucher);
         $sliceVoucher = $voucher instanceof Voucher ? $voucher : $sliceSource;
+        $status = $sliceVoucher instanceof Voucher && $this->isCampaignPayoutRecovery($sliceVoucher)
+            ? 'claimable'
+            : $this->xrayStatus((string) data_get($voucher, 'status', 'unknown'), $voucher);
         $slicePlan = $sliceVoucher instanceof Voucher
             ? $this->slicePlans->forVoucher($sliceVoucher)
             : [];
+        $flowCapabilities = $sliceVoucher instanceof Voucher
+            ? $this->capabilities->resolve($sliceVoucher)
+            : null;
+        $collectionProgress = $sliceVoucher instanceof Voucher && $flowCapabilities?->can_collect === true
+            ? $this->collectionProgress($sliceVoucher)
+            : null;
 
         return [
             'status' => $status,
@@ -32,13 +49,15 @@ class VoucherXRayProjectionBuilder
             ),
             'issuer' => data_get($voucher, 'issuer_id'),
             'requirements' => $this->requirements($instructions),
+            'presentation' => $this->presentation($voucher, $instructions, $status, $sliceVoucher),
+            'collection_progress' => $collectionProgress,
             'slice_plan' => $slicePlan,
             'remaining_slices' => $sliceVoucher instanceof Voucher
                 ? data_get($slicePlan, 'rows', [])
                 : $this->remainingSlices($instructions),
             'redirect_url' => data_get($instructions, 'rider.url'),
             'stages' => $this->stages($voucher, $instructions),
-            'next_actions' => $this->nextActions($status, (string) data_get($voucher, 'code', '')),
+            'next_actions' => $this->nextActions($status, (string) data_get($voucher, 'code', ''), $sliceVoucher),
             'allow' => [
                 'amount' => false,
                 'issuer' => false,
@@ -51,6 +70,16 @@ class VoucherXRayProjectionBuilder
 
     protected function xrayStatus(string $status, mixed $voucher): string
     {
+        if ($voucher instanceof Voucher && $this->capabilities->canCollect($voucher)) {
+            $progress = $this->progress->compute($voucher);
+
+            if ($progress->is_fully_collected) {
+                return 'paid';
+            }
+
+            return 'payable';
+        }
+
         if ($status === 'redeemed' || (bool) data_get($voucher, 'fully_claimed', false) === true) {
             return 'redeemed';
         }
@@ -68,6 +97,184 @@ class VoucherXRayProjectionBuilder
         }
 
         return 'claimable';
+    }
+
+    /**
+     * @param  array<string, mixed>  $instructions
+     * @return array{title: string, primary_action_label: string, confirmation_title?: string, confirmation_label?: string, subtitle?: string, eyebrow?: string, subject_label?: string, intent: string, source: string, success?: array<string, mixed>}
+     */
+    protected function presentation(mixed $voucher, array $instructions, string $status, ?Voucher $sliceVoucher = null): array
+    {
+        $default = $this->defaultPresentation($voucher, $instructions, $status, $sliceVoucher);
+        $override = $this->presentationOverride($instructions);
+
+        if ($override === []) {
+            return $default;
+        }
+
+        return array_filter([
+            ...$default,
+            ...$override,
+            'source' => 'instructions',
+        ], static fn (mixed $value): bool => $value !== null && (! is_string($value) || trim($value) !== ''));
+    }
+
+    /**
+     * @param  array<string, mixed>  $instructions
+     * @return array<string, string>
+     */
+    protected function presentationOverride(array $instructions): array
+    {
+        $metadata = (array) data_get($instructions, 'metadata', []);
+        $presentation = data_get($metadata, 'presentation.claim')
+            ?? data_get($metadata, 'claim_presentation')
+            ?? data_get($metadata, 'custom.claim_presentation')
+            ?? data_get($metadata, 'custom.presentation.claim')
+            ?? [];
+
+        if (! is_array($presentation)) {
+            return [];
+        }
+
+        return collect($presentation)
+            ->only(['title', 'primary_action_label', 'confirmation_title', 'confirmation_label', 'subtitle', 'eyebrow', 'subject_label', 'intent'])
+            ->filter(static fn (mixed $value): bool => is_string($value) && trim($value) !== '')
+            ->map(static fn (string $value): string => trim($value))
+            ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $instructions
+     * @return array{title: string, primary_action_label: string, confirmation_title?: string, confirmation_label?: string, eyebrow: string, subject_label: string, intent: string, source: string, success?: array<string, mixed>}
+     */
+    protected function defaultPresentation(mixed $voucher, array $instructions, string $status, ?Voucher $sliceVoucher = null): array
+    {
+        if ($this->isOnboardingVoucher($voucher, $instructions, $sliceVoucher)) {
+            return [
+                'title' => 'Accept Invitation',
+                'primary_action_label' => 'Continue',
+                'confirmation_title' => 'Review your details',
+                'confirmation_label' => 'Create my account',
+                'eyebrow' => 'Invitation code',
+                'subject_label' => 'Invitation code',
+                'intent' => 'commissioning_invitation',
+                'source' => 'flow_default',
+                'success' => $this->onboardingSuccessPresentation($voucher, $instructions),
+            ];
+        }
+
+        if ($status === 'payable') {
+            return [
+                'title' => 'Pay with Pay Code',
+                'primary_action_label' => 'Pay now',
+                'eyebrow' => 'Payment code',
+                'subject_label' => 'Pay Code',
+                'intent' => 'payable_collection',
+                'source' => 'flow_default',
+            ];
+        }
+
+        return [
+            'title' => 'Claim Pay Code',
+            'primary_action_label' => 'Start Claim',
+            'eyebrow' => 'Pay Code',
+            'subject_label' => 'Pay Code',
+            'intent' => 'claim',
+            'source' => 'fallback',
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $instructions
+     * @return array<string, mixed>
+     */
+    protected function onboardingSuccessPresentation(mixed $voucher, array $instructions): array
+    {
+        $role = $this->onboardingRole($voucher, $instructions);
+        $accountLabel = $role === null ? 'account' : $role.' account';
+        $amount = $this->onboardingAmount($voucher, $instructions);
+        $currency = (string) (data_get($instructions, 'cash.currency')
+            ?? data_get($voucher, 'currency')
+            ?? 'PHP');
+        $formattedAmount = $this->formatAmount($amount, $currency);
+
+        return array_filter([
+            'schema' => 'x-change.onboarding-success-presentation.v1',
+            'eyebrow' => 'Welcome',
+            'title_template' => 'Welcome to {app_name}',
+            'account_label' => $accountLabel,
+            'account_message' => 'Your '.$accountLabel.' is ready.',
+            'body' => $this->onboardingSuccessBody($role),
+            'receipt_label' => 'Invitation accepted',
+            'receipt_code' => (string) data_get($voucher, 'code', ''),
+            'funds' => $formattedAmount === null ? null : [
+                'label' => 'Client Funds',
+                'amount' => $formattedAmount,
+                'text' => $formattedAmount.' available for instructions',
+            ],
+            'primary_action_intent' => 'enter_workspace',
+            'primary_action_role' => $role,
+        ], static fn (mixed $value): bool => $value !== null && $value !== '');
+    }
+
+    /**
+     * @param  array<string, mixed>  $instructions
+     */
+    protected function onboardingRole(mixed $voucher, array $instructions): ?string
+    {
+        $role = data_get($instructions, 'metadata.custom.x_payout_commissioning.role')
+            ?? data_get($voucher, 'metadata.instructions.metadata.custom.x_payout_commissioning.role');
+
+        return match (strtolower((string) $role)) {
+            'maker' => 'Maker',
+            'checker' => 'Checker',
+            default => null,
+        };
+    }
+
+    protected function onboardingAmount(mixed $voucher, array $instructions): ?float
+    {
+        $amount = data_get($instructions, 'cash.amount')
+            ?? data_get($voucher, 'cash.amount')
+            ?? data_get($voucher, 'amount');
+
+        if (! is_numeric($amount) || (float) $amount <= 0.0) {
+            return null;
+        }
+
+        return (float) $amount;
+    }
+
+    protected function onboardingSuccessBody(?string $role): string
+    {
+        return match ($role) {
+            'Maker' => 'You can now prepare Pay Codes and submit payout work for checker approval.',
+            'Checker' => 'You can now review payout work and monitor completed instructions.',
+            default => 'You can now use your account workspace and manage account funding activity.',
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $instructions
+     */
+    protected function isOnboardingVoucher(mixed $voucher, array $instructions, ?Voucher $sliceVoucher = null): bool
+    {
+        $driver = data_get($instructions, 'execution.driver')
+            ?? data_get($voucher, 'metadata.instructions.execution.driver')
+            ?? ($sliceVoucher instanceof Voucher
+                ? data_get($sliceVoucher->getAttribute('metadata'), 'instructions.execution.driver')
+                : null);
+
+        return (bool) data_get($instructions, 'onboarding', false) === true
+            || $driver === OnboardingVoucherInstructionPolicy::ExecutionDriver;
+    }
+
+    private function isCampaignPayoutRecovery(Voucher $voucher): bool
+    {
+        $metadata = $voucher->getAttribute('metadata');
+
+        return data_get($metadata, 'instructions.metadata.custom.campaign.claim_activation') === 'provider_rejection'
+            && data_get($metadata, 'treasury.pay_code_reservation.status') === 'recovery_pending';
     }
 
     protected function formatAmount(mixed $amount, string $currency): ?string
@@ -88,7 +295,8 @@ class VoucherXRayProjectionBuilder
     {
         $fields = Arr::wrap(data_get($instructions, 'inputs.fields', []));
         $requirements = collect($fields)
-            ->filter(fn (mixed $field): bool => is_string($field) && $field !== '')
+            ->map(fn (mixed $field): ?string => $this->fieldKey($field))
+            ->filter(fn (?string $field): bool => is_string($field) && $field !== '')
             ->map(fn (string $field): array => [
                 'key' => $field,
                 'label' => $this->label($field),
@@ -171,8 +379,22 @@ class VoucherXRayProjectionBuilder
     /**
      * @return array<int, array<string, string>>
      */
-    protected function nextActions(string $status, string $code): array
+    protected function nextActions(string $status, string $code, ?Voucher $voucher = null): array
     {
+        if (
+            $voucher instanceof Voucher
+            && $this->capabilities->canCollect($voucher)
+            && ! $this->progress->compute($voucher)->is_fully_collected
+        ) {
+            return [[
+                'key' => 'pay',
+                'label' => 'Pay now',
+                'url' => Route::has('x-change.pay.show')
+                    ? route('x-change.pay.show', ['code' => $code], false)
+                    : '/x/pay/'.rawurlencode($code),
+            ]];
+        }
+
         if ($status !== 'claimable' && $status !== 'partially_claimable') {
             return [];
         }
@@ -182,6 +404,19 @@ class VoucherXRayProjectionBuilder
             'label' => 'Start claim',
             'url' => '/x/claim?code='.rawurlencode($code),
         ]];
+    }
+
+    protected function fieldKey(mixed $field): ?string
+    {
+        if ($field instanceof BackedEnum) {
+            return is_string($field->value) ? $field->value : null;
+        }
+
+        if (is_string($field)) {
+            return trim($field);
+        }
+
+        return null;
     }
 
     protected function label(string $field): string
@@ -201,5 +436,26 @@ class VoucherXRayProjectionBuilder
             'signature' => 'Signature capture is required by the issuer.',
             default => null,
         };
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function collectionProgress(Voucher $voucher): array
+    {
+        $progress = $this->progress->compute($voucher);
+
+        return [
+            'currency' => $progress->currency,
+            'target_amount_minor' => $progress->target_amount_minor,
+            'collected_total_minor' => $progress->collected_total_minor,
+            'remaining_to_collect_minor' => $progress->remaining_to_collect_minor,
+            'overpaid_amount_minor' => $progress->overpaid_amount_minor,
+            'is_fully_collected' => $progress->is_fully_collected,
+            'is_overpaid' => $progress->is_overpaid,
+            'target_amount' => $progress->targetAmount(),
+            'collected_total' => $progress->collectedTotal(),
+            'remaining' => $progress->remaining(),
+        ];
     }
 }

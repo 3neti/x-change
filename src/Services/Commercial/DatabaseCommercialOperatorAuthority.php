@@ -12,17 +12,52 @@ use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
 
 final class DatabaseCommercialOperatorAuthority implements CommercialOperatorAuthorityContract
 {
+    /**
+     * @var array<string, array<string, true>>
+     */
+    private array $capabilityCache = [];
+
+    private ?bool $storageReady = null;
+
     public function allows(Model $operator, CommercialOperatorCapability $capability): bool
     {
-        if (! Schema::hasTable('x_change_commercial_operator_authorizations')) {
+        if (! $this->storageReady()) {
             return false;
         }
 
-        return CommercialOperatorAuthorization::query()
+        return isset($this->capabilitiesFor($operator)[$capability->value]);
+    }
+
+    private function storageReady(): bool
+    {
+        return $this->storageReady ??= Schema::hasTable('x_change_commercial_operator_authorizations');
+    }
+
+    /**
+     * @return array<string, true>
+     */
+    private function capabilitiesFor(Model $operator): array
+    {
+        $key = $this->operatorCacheKey($operator);
+
+        if (array_key_exists($key, $this->capabilityCache)) {
+            return $this->capabilityCache[$key];
+        }
+
+        return $this->capabilityCache[$key] = CommercialOperatorAuthorization::query()
             ->where('operator_type', $operator->getMorphClass())
             ->where('operator_id', $operator->getKey())
-            ->where('capability', $capability->value)
             ->currentlyValid()
-            ->exists();
+            ->pluck('capability')
+            ->mapWithKeys(fn (string $capability): array => [$capability => true])
+            ->all();
+    }
+
+    private function operatorCacheKey(Model $operator): string
+    {
+        return implode(':', [
+            $operator->getMorphClass(),
+            (string) $operator->getKey(),
+        ]);
     }
 }

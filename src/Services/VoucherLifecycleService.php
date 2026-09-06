@@ -18,6 +18,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Treasury\ReleasePayCodeTerminalReserve;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
+use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\VoucherOperationalStatusResolverContract;
 use LBHurtado\XChange\Data\PayCode\PayCodeOperationalStatusData;
@@ -39,6 +40,9 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         protected ?NamedVoucherSliceService $namedSlices = null,
         protected ?ReleasePayCodeTerminalReserve $terminalReleases = null,
         protected ?VoucherOperationalStatusResolverContract $operationalStatuses = null,
+        protected ?VoucherFlowCapabilityResolverContract $flowCapabilities = null,
+        protected ?VoucherCollectionProgressService $collectionProgress = null,
+        protected ?VoucherConsumerStatusResolver $consumerStatuses = null,
     ) {}
 
     public function list(array $filters = []): array
@@ -47,6 +51,48 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
 
         return collect($items)
             ->map(fn (Voucher $voucher) => $this->toSummaryArray($voucher))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<string,mixed>  $filters
+     * @return array<int, array<string,mixed>>
+     */
+    public function cockpitDashboardList(array $filters = []): array
+    {
+        $vouchers = collect($this->vouchers->list($filters))->values();
+
+        if ($vouchers->isEmpty()) {
+            return [];
+        }
+
+        $voucherIds = $vouchers
+            ->map(fn (Voucher $voucher): int => (int) $voucher->getKey())
+            ->all();
+
+        $claims = VoucherClaim::query()
+            ->withCount('evidence')
+            ->whereIn('voucher_id', $voucherIds)
+            ->orderByDesc('claim_number')
+            ->orderByDesc('id')
+            ->get()
+            ->unique('voucher_id')
+            ->keyBy('voucher_id');
+
+        $reconciliations = DisbursementReconciliation::query()
+            ->whereIn('voucher_id', $voucherIds)
+            ->orderByDesc('id')
+            ->get()
+            ->unique('voucher_id')
+            ->keyBy('voucher_id');
+
+        return $vouchers
+            ->map(fn (Voucher $voucher): array => $this->toDashboardSummaryArray(
+                $voucher,
+                $claims->get($voucher->getKey()),
+                $reconciliations->get($voucher->getKey()),
+            ))
             ->values()
             ->all();
     }
@@ -263,6 +309,9 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         $approval = $this->approvalSummary($voucher);
         $status = $this->operationalStatus($voucher, $approval);
         $operational = $this->operationalSummary($voucher);
+        $instructions = $this->instructionsArray($voucher);
+        $externalReference = $this->externalReference($voucher, $instructions);
+        $collectibleFacts = $this->collectibleFacts($voucher);
 
         return [
             'id' => $voucher->id,
@@ -282,9 +331,10 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             ],
             'instruction_badges' => $operational->instruction_badges,
             'purpose' => $this->nullableDisplayValue(
-                data_get($this->instructionsArray($voucher), 'rider.message'),
+                $externalReference ?? data_get($instructions, 'rider.message'),
             ),
             'party' => $this->partySummary($voucher),
+            'claim_summary' => $this->claimSummary($voucher, $status->key),
             'timing' => [
                 'created_at' => $voucher->created_at?->toIso8601String(),
                 'starts_at' => $voucher->starts_at?->toIso8601String(),
@@ -293,7 +343,250 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             ],
             'attention' => $this->payoutAttention($voucher),
             'approval' => $approval,
+            'external_reference' => $externalReference,
+            ...$collectibleFacts,
         ];
+    }
+
+    protected function toDashboardSummaryArray(
+        Voucher $voucher,
+        ?VoucherClaim $claim,
+        ?DisbursementReconciliation $reconciliation,
+    ): array {
+        $instructions = data_get($voucher->metadata, 'instructions');
+
+        if (! is_array($instructions)) {
+            $instructions = [];
+        }
+
+        $status = $this->dashboardStatus($voucher, $claim, $reconciliation);
+        $currency = $this->dashboardCurrency($voucher, $instructions);
+        $claimedAt = $claim?->completed_at
+            ?? $voucher->redeemed_at
+            ?? $claim?->attempted_at
+            ?? $claim?->created_at;
+
+        return [
+            'id' => $voucher->id,
+            'voucher_id' => $voucher->id,
+            'code' => $voucher->code,
+            'amount' => $this->dashboardAmount($voucher, $instructions),
+            'currency' => $currency,
+            'status' => $status,
+            'display_status' => $status,
+            'issuer_id' => $voucher->owner_id === null ? null : (int) $voucher->owner_id,
+            'purpose' => $this->nullableDisplayValue(
+                $this->externalReference($voucher, $instructions)
+                    ?? data_get($instructions, 'rider.message'),
+            ),
+            'party' => $this->dashboardParty($voucher, $claim, $status),
+            'claim_summary' => $this->dashboardClaimSummary($voucher, $claim, $status, $currency, $claimedAt),
+            'created_at' => $voucher->created_at?->toIso8601String(),
+            'starts_at' => $voucher->starts_at?->toIso8601String(),
+            'expires_at' => $voucher->expires_at?->toIso8601String(),
+            'redeemed_at' => $voucher->redeemed_at?->toIso8601String(),
+            'updated_at' => $voucher->updated_at?->toIso8601String(),
+            'attention' => $this->dashboardAttention($voucher),
+            'external_reference' => $this->externalReference($voucher, $instructions),
+        ];
+    }
+
+    /** @param array<string, mixed> $instructions */
+    protected function dashboardAmount(Voucher $voucher, array $instructions): float
+    {
+        $amount = data_get($voucher, 'cash.amount');
+
+        if ($amount instanceof Money) {
+            return $amount->getAmount()->toFloat();
+        }
+
+        if (is_numeric($amount)) {
+            return (float) $amount;
+        }
+
+        $instructionAmount = data_get($instructions, 'cash.amount');
+
+        return is_numeric($instructionAmount) ? (float) $instructionAmount : 0.0;
+    }
+
+    /** @param array<string, mixed> $instructions */
+    protected function dashboardCurrency(Voucher $voucher, array $instructions): string
+    {
+        $currency = data_get($voucher, 'cash.currency');
+
+        if (is_string($currency) && $currency !== '') {
+            return $currency;
+        }
+
+        $amount = data_get($voucher, 'cash.amount');
+
+        if ($amount instanceof Money) {
+            return $amount->getCurrency()->getCurrencyCode();
+        }
+
+        $instructionCurrency = data_get($instructions, 'cash.currency');
+
+        return is_string($instructionCurrency) && $instructionCurrency !== ''
+            ? $instructionCurrency
+            : 'PHP';
+    }
+
+    protected function dashboardStatus(
+        Voucher $voucher,
+        ?VoucherClaim $claim,
+        ?DisbursementReconciliation $reconciliation,
+    ): string {
+        $claimStatus = $this->normalizeStatus($claim?->status);
+        $payoutStatus = $this->normalizeStatus($reconciliation?->status);
+        $internalStatus = $this->normalizeStatus($reconciliation?->internal_status);
+        $voucherState = $this->normalizeStatus($voucher->state?->value) ?? 'active';
+        $requiresRecovery = data_get($voucher->metadata, 'disbursement.requires_recovery') === true;
+
+        if (
+            $requiresRecovery
+            || $claimStatus === 'payout_rejected'
+            || in_array($payoutStatus, ['failed', 'rejected'], true)
+            || $internalStatus === 'recovery_opened'
+        ) {
+            return 'payout_rejected';
+        }
+
+        if (
+            in_array($payoutStatus, ['pending', 'processing', 'queued', 'accepted', 'submitted'], true)
+            || in_array($internalStatus, ['pending', 'processing', 'submitted', 'provider_pending'], true)
+            || in_array($claimStatus, ['pending', 'processing', 'queued'], true)
+        ) {
+            return 'payout_pending';
+        }
+
+        if (
+            in_array($claimStatus, ['paid', 'succeeded', 'withdrawn'], true)
+            || in_array($payoutStatus, ['succeeded', 'completed', 'paid'], true)
+            || $internalStatus === 'finalized'
+        ) {
+            return 'paid';
+        }
+
+        if ($voucherState === 'cancelled') {
+            return 'cancelled';
+        }
+
+        if ($claim instanceof VoucherClaim || $voucher->redeemed_at !== null) {
+            return 'redeemed';
+        }
+
+        if ($voucher->isClosed() || $voucherState === 'closed') {
+            return 'closed';
+        }
+
+        if ($voucherState === 'expired' || $voucher->isExpired()) {
+            return 'expired';
+        }
+
+        if ($voucher->starts_at?->isFuture() === true) {
+            return 'scheduled';
+        }
+
+        if ($voucherState === 'locked') {
+            return 'locked';
+        }
+
+        return 'issued';
+    }
+
+    /**
+     * @return array{state: string, label: string, primary: string, secondary: string|null, masked: bool}
+     */
+    protected function dashboardParty(Voucher $voucher, ?VoucherClaim $claim, string $status): array
+    {
+        $mobile = $this->maskedMobile($claim?->claimer_mobile);
+
+        if ($mobile !== null) {
+            return [
+                'state' => 'claimed',
+                'label' => 'Claimed by',
+                'primary' => $mobile,
+                'secondary' => null,
+                'masked' => true,
+            ];
+        }
+
+        if (in_array($status, ['cancelled', 'closed', 'expired'], true)) {
+            $label = Str::headline($status);
+
+            return [
+                'state' => $status,
+                'label' => 'Availability',
+                'primary' => $label,
+                'secondary' => null,
+                'masked' => false,
+            ];
+        }
+
+        return [
+            'state' => 'open',
+            'label' => 'Availability',
+            'primary' => 'Open claim',
+            'secondary' => null,
+            'masked' => false,
+        ];
+    }
+
+    protected function dashboardClaimSummary(
+        Voucher $voucher,
+        ?VoucherClaim $claim,
+        string $status,
+        string $currency,
+        mixed $claimedAt,
+    ): ?array {
+        if (! $claim instanceof VoucherClaim && $claimedAt === null) {
+            return null;
+        }
+
+        $mobile = $this->maskedMobile($claim?->claimer_mobile);
+
+        return [
+            'schema' => 'x-change.cockpit.pay-code-claim-summary.v1',
+            'status' => in_array($status, ['paid', 'redeemed'], true) ? $status : 'partially_claimed',
+            'claimed_at' => $claimedAt?->toIso8601String(),
+            'claimed_by_label' => $mobile,
+            'claimed_mobile_masked' => $mobile,
+            'amount_minor' => $claim?->disbursed_amount_minor ?? $claim?->requested_amount_minor,
+            'currency' => $currency,
+            'location_label' => null,
+            'evidence_count' => $claim instanceof VoucherClaim ? (int) $claim->evidence_count : 0,
+            'latest_claim_reference' => $claim?->reference,
+        ];
+    }
+
+    /**
+     * @return array{key: string, label: string, message: string, tone: string}|null
+     */
+    protected function dashboardAttention(Voucher $voucher): ?array
+    {
+        if (data_get($voucher->metadata, 'disbursement.requires_recovery') !== true) {
+            return null;
+        }
+
+        return [
+            'key' => 'payout_rejected',
+            'label' => 'Payout rejected',
+            'message' => $this->nullableDisplayValue(
+                data_get($voucher->metadata, 'disbursement.rejection_reason'),
+            ) ?? 'The receiving institution rejected the payout destination.',
+            'tone' => 'critical',
+        ];
+    }
+
+    protected function normalizeStatus(mixed $value): ?string
+    {
+        if (! is_scalar($value)) {
+            return null;
+        }
+
+        $normalized = strtolower(trim((string) $value));
+
+        return $normalized !== '' ? $normalized : null;
     }
 
     /**
@@ -450,6 +743,89 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         return '•••• '.substr($digits, -4);
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected function claimSummary(Voucher $voucher, string $status): ?array
+    {
+        $claim = VoucherClaim::query()
+            ->withCount('evidence')
+            ->where('voucher_id', $voucher->getKey())
+            ->latest('claim_number')
+            ->latest('id')
+            ->first();
+
+        $claimedAt = $claim?->completed_at
+            ?? $voucher->redeemed_at
+            ?? $claim?->attempted_at
+            ?? $claim?->created_at;
+
+        if (! $claim instanceof VoucherClaim && $claimedAt === null) {
+            return null;
+        }
+
+        $party = $this->partySummary($voucher);
+        $mobile = $this->maskedMobile($claim?->claimer_mobile);
+        $claimedBy = $party['state'] === 'claimed'
+            ? $party['primary']
+            : $mobile;
+
+        return [
+            'schema' => 'x-change.cockpit.pay-code-claim-summary.v1',
+            'status' => $this->claimSummaryStatus($voucher, $status, $claim),
+            'claimed_at' => $claimedAt?->toIso8601String(),
+            'claimed_by_label' => $claimedBy,
+            'claimed_mobile_masked' => $mobile ?? ($party['masked'] ? $party['secondary'] ?? $party['primary'] : null),
+            'amount_minor' => $claim?->disbursed_amount_minor ?? $claim?->requested_amount_minor,
+            'currency' => $claim?->currency ?? $this->currency($voucher),
+            'location_label' => $this->claimLocationSummary($voucher),
+            'evidence_count' => $claim instanceof VoucherClaim ? (int) $claim->evidence_count : 0,
+            'latest_claim_reference' => $claim?->reference,
+        ];
+    }
+
+    protected function claimSummaryStatus(Voucher $voucher, string $status, ?VoucherClaim $claim): string
+    {
+        if ($claim instanceof VoucherClaim && in_array($claim->status, ['paid', 'succeeded', 'withdrawn'], true)) {
+            return 'paid';
+        }
+
+        if ($claim instanceof VoucherClaim && $claim->status === 'failed') {
+            return 'failed';
+        }
+
+        if (in_array($status, ['paid', 'completed'], true)) {
+            return $status;
+        }
+
+        if ($claim instanceof VoucherClaim) {
+            if ((bool) data_get($claim->meta, 'fully_claimed') === true) {
+                return 'claimed';
+            }
+
+            if ($claim->remaining_balance_minor !== null) {
+                return (int) $claim->remaining_balance_minor <= 0
+                    ? 'claimed'
+                    : 'partially_claimed';
+            }
+        }
+
+        return $this->isFullyClaimed($voucher) ? 'claimed' : 'partially_claimed';
+    }
+
+    protected function claimLocationSummary(Voucher $voucher): ?string
+    {
+        $evidence = VoucherClaimEvidence::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->where('requirement_key', 'location')
+            ->latest('id')
+            ->first();
+
+        return $evidence instanceof VoucherClaimEvidence
+            ? $this->nullableDisplayValue($evidence->summary)
+            : null;
+    }
+
     protected function nullableDisplayValue(mixed $value): ?string
     {
         if (! is_scalar($value)) {
@@ -466,6 +842,8 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         $approval = $this->approvalSummary($voucher);
         $status = $this->operationalStatus($voucher, $approval);
         $operational = $this->operationalSummary($voucher);
+        $instructions = $this->instructionsArray($voucher);
+        $collectibleFacts = $this->collectibleFacts($voucher);
 
         return [
             'id' => $voucher->id,
@@ -490,8 +868,9 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
                 'voucher_type_label' => $operational->voucher_type_label,
             ],
             'party' => $this->partySummary($voucher),
+            'claim_summary' => $this->claimSummary($voucher, $status->key),
             'amounts' => $this->amountFacts($voucher),
-            'instructions' => $this->instructionsArray($voucher),
+            'instructions' => $instructions,
             'claims' => $this->claimsArray($voucher),
             'claim_evidence' => $this->claimEvidenceArray($voucher),
             'redemption' => $this->redemptionSummary($voucher),
@@ -499,7 +878,42 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             'backing' => $this->backingSummary($voucher),
             'settlement_envelope' => $this->settlementEnvelopeSummary($voucher),
             'approval' => $approval,
+            'external_reference' => $this->externalReference($voucher, $instructions),
+            ...$collectibleFacts,
         ];
+    }
+
+    /**
+     * @return array{consumer_status: string|null, collection: array<string, mixed>|null}
+     */
+    protected function collectibleFacts(Voucher $voucher): array
+    {
+        if (! $this->flowCapabilitiesResolver()->resolve($voucher)->can_collect) {
+            return [
+                'consumer_status' => null,
+                'collection' => null,
+            ];
+        }
+
+        $progress = $this->collectionProgressService()->compute($voucher);
+
+        return [
+            'consumer_status' => $this->consumerStatusResolver()->resolveFromProgress($voucher, $progress),
+            'collection' => $progress->toArray(),
+        ];
+    }
+
+    /** @param array<string, mixed>|null $instructions */
+    protected function externalReference(Voucher $voucher, ?array $instructions = null): ?string
+    {
+        $rawExternalReference = data_get(
+            $instructions ?? $this->instructionsArray($voucher),
+            'metadata.custom.external_reference',
+        );
+
+        return is_string($rawExternalReference)
+            ? $this->nullableDisplayValue($rawExternalReference)
+            : null;
     }
 
     /**
@@ -1090,6 +1504,24 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
     {
         return $this->operationalStatuses
             ?? app(VoucherOperationalStatusResolverContract::class);
+    }
+
+    protected function flowCapabilitiesResolver(): VoucherFlowCapabilityResolverContract
+    {
+        return $this->flowCapabilities
+            ?? app(VoucherFlowCapabilityResolverContract::class);
+    }
+
+    protected function collectionProgressService(): VoucherCollectionProgressService
+    {
+        return $this->collectionProgress
+            ?? app(VoucherCollectionProgressService::class);
+    }
+
+    protected function consumerStatusResolver(): VoucherConsumerStatusResolver
+    {
+        return $this->consumerStatuses
+            ?? app(VoucherConsumerStatusResolver::class);
     }
 
     protected function isClaimed(Voucher $voucher): bool

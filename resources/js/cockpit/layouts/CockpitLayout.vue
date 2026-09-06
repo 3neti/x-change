@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { router } from '@inertiajs/vue3';
+import { useEcho } from '@laravel/echo-vue';
+import { computed, onUnmounted } from 'vue';
 import CockpitGlobalHeader from '../components/CockpitGlobalHeader.vue';
 import CockpitMobileTabBar from '../components/CockpitMobileTabBar.vue';
 import type {
@@ -17,11 +19,13 @@ const props = withDefaults(
         balances?: CockpitBalanceMetric[];
         cockpitHeaderReadModel?: CockpitHeaderReadModel;
         cockpitEntryNotice?: CockpitEntryNotice | null;
+        mobilePresentation?: 'contained' | 'edge';
     }>(),
     {
         activeNavigation: 'dashboard',
         institution: 'x-change Cockpit',
         connectivity: 'Online',
+        mobilePresentation: 'contained',
     },
 );
 
@@ -42,6 +46,63 @@ const headerOperatingIdentity = computed(
         props.cockpitHeaderReadModel?.operating_identity ??
         'Account holder',
 );
+
+type FundingProjectionChangedPayload = {
+    schema: string;
+    event_id: string;
+    reason: string;
+    occurred_at: string;
+};
+
+const processedFundingEvents = new Set<string>();
+let balanceRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+let balanceRefreshInFlight = false;
+const fundingRealtime = props.cockpitHeaderReadModel?.funding_realtime;
+
+if (fundingRealtime?.enabled === true) {
+    useEcho<FundingProjectionChangedPayload>(
+        fundingRealtime.channel,
+        fundingRealtime.event,
+        (event) => {
+            if (
+                event.schema !== 'x-change.funding-projection-changed.v1' ||
+                ![
+                    'account_funding_settled',
+                    'voucher_collection_settled',
+                ].includes(event.reason) ||
+                processedFundingEvents.has(event.event_id)
+            ) {
+                return;
+            }
+
+            processedFundingEvents.add(event.event_id);
+
+            if (balanceRefreshTimer !== null) {
+                clearTimeout(balanceRefreshTimer);
+            }
+
+            balanceRefreshTimer = setTimeout(() => {
+                if (! balanceRefreshInFlight) {
+                    balanceRefreshInFlight = true;
+                    router.reload({
+                        only: ['cockpit_header_read_model'],
+                        onFinish: () => {
+                            balanceRefreshInFlight = false;
+                        },
+                    });
+                }
+
+                balanceRefreshTimer = null;
+            }, 150);
+        },
+    );
+}
+
+onUnmounted(() => {
+    if (balanceRefreshTimer !== null) {
+        clearTimeout(balanceRefreshTimer);
+    }
+});
 </script>
 
 <template>
@@ -78,8 +139,12 @@ const headerOperatingIdentity = computed(
             </div>
 
             <main
-                class="flex-1 overflow-y-auto p-4 pb-24 md:pb-4 lg:p-6"
+                :class="[
+                    'flex-1 overflow-y-auto pb-24 md:p-4 md:pb-4 lg:p-6',
+                    mobilePresentation === 'edge' ? 'p-0' : 'p-4',
+                ]"
                 data-testid="cockpit-workspace"
+                :data-mobile-presentation="mobilePresentation"
             >
                 <slot />
             </main>

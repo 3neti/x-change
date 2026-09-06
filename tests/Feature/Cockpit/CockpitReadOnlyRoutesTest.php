@@ -46,11 +46,21 @@ it('renders the cockpit documentation hub without exposing operational secrets',
         ->get(route('x-change.cockpit.documentation'))
         ->assertOk()
         ->assertJsonPath('component', 'x-change/cockpit/Documentation')
-        ->assertJsonPath('props.documentation.schema', 'x-change.cockpit.documentation.v1')
-        ->assertJsonCount(3, 'props.documentation.sections')
-        ->assertJsonPath('props.documentation.sections.0.title', 'Use x-change')
-        ->assertJsonPath('props.documentation.sections.1.title', 'Operate x-change')
-        ->assertJsonPath('props.documentation.sections.2.title', 'Build with x-change')
+        ->assertJsonPath('props.documentation.schema', 'x-change.cockpit.documentation.v2')
+        ->assertJsonPath('props.documentation.hero.title', 'Run X-Change with confidence')
+        ->assertJsonPath('props.documentation.hero.primary_action.href', route('x-change.cockpit.quick-generate'))
+        ->assertJsonPath('props.documentation.hero.secondary_action.href', route('x-change.cockpit.pay-codes.index', ['status' => 'redeemed']))
+        ->assertJsonCount(3, 'props.documentation.start_here')
+        ->assertJsonPath('props.documentation.start_here.0.title', 'Pay Codes carry intent')
+        ->assertJsonCount(3, 'props.documentation.playbooks')
+        ->assertJsonFragment(['title' => 'Daily Operator Workflows'])
+        ->assertJsonFragment(['title' => 'Campaigns, Payroll, and Ayuda'])
+        ->assertJsonFragment(['title' => 'Evidence and Safety'])
+        ->assertJsonFragment(['label' => 'Claimed / Paid / Redeemed'])
+        ->assertJsonFragment(['title' => 'Journal every material event'])
+        ->assertJsonFragment(['label' => 'Getting Started'])
+        ->assertJsonFragment(['label' => 'BPLS QR Ph Developer Guide'])
+        ->assertJsonFragment(['href' => 'https://github.com/3neti/x-change/blob/main/docs/partner-api/bpls-qrph-integration-guide.md'])
         ->assertJsonPath('props.xchange.navigation.system_readiness_visible', false)
         ->assertJsonMissing(['label' => 'System Readiness'])
         ->assertJsonMissingPath('props.documentation.credentials')
@@ -65,7 +75,7 @@ it('includes system readiness navigation when the authenticated workspace is ena
         ->get(route('x-change.cockpit.documentation'))
         ->assertOk()
         ->assertJsonPath('props.xchange.navigation.system_readiness_visible', true)
-        ->assertJsonPath('props.documentation.sections.1.links.1.label', 'System Readiness');
+        ->assertJsonFragment(['label' => 'System Readiness']);
 });
 
 it('renders cockpit pages as read-only inertia endpoints', function (string $route, array $parameters, string $component) {
@@ -136,9 +146,9 @@ it('hydrates funding operations with secure read-only controls', function () {
         ->assertJsonPath('props.funding_qr_merchant_profile.uppercase', false)
         ->assertJsonPath('props.funding_qr_merchant_profile.application_name', 'X-Change')
         ->assertJsonCount(3, 'props.funding_qr_merchant_profile.template_options')
-        ->assertJsonPath('props.funding_qr_merchant_profile.presentation_only', true)
+        ->assertJsonPath('props.funding_qr_merchant_profile.presentation_only', false)
         ->assertJsonPath('props.funding_qr_merchant_profile.controls_routing', false)
-        ->assertJsonPath('props.funding_qr_merchant_profile.controls_settlement', false)
+        ->assertJsonPath('props.funding_qr_merchant_profile.controls_settlement', true)
         ->assertJsonMissingPath('props.funding_read_model.provider_transaction_id')
         ->assertJsonMissingPath('props.funding_read_model.provider_request_id')
         ->assertJsonMissingPath('props.funding_read_model.funding_address')
@@ -543,6 +553,26 @@ it('hydrates the dashboard with a sanitized dashboard read model prop', function
         ->assertJsonMissingPath('props.dashboard_read_model.raw_payload')
         ->assertJsonMissingPath('props.dashboard_read_model.wallet')
         ->assertJsonMissingPath('props.dashboard_read_model.provider');
+});
+
+it('scopes dashboard Pay Code rows to the authenticated operator', function () {
+    $operator = actingAsTestUser();
+    $operatorVoucher = issueVoucher(validVoucherInstructions(amount: 25));
+
+    $otherOperator = actingAsTestUser();
+    $otherVoucher = issueVoucher(validVoucherInstructions(amount: 30));
+
+    $this->actingAs($operator)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.dashboard'))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/Dashboard')
+        ->assertJsonPath('props.dashboard_read_model.metrics.0.key', 'pay-codes-visible')
+        ->assertJsonPath('props.dashboard_read_model.metrics.0.value', '1')
+        ->assertJsonPath('props.dashboard_read_model.activity.0.id', $operatorVoucher->code)
+        ->assertJsonMissing(['id' => $otherVoucher->code]);
+
+    expect($otherOperator->is($operator))->toBeFalse();
 });
 
 it('exposes a read-only campaign cockpit read model prop on the dashboard route', function () {
@@ -1307,10 +1337,31 @@ it('registers only the guarded issuance, funding, payout recovery, and Account C
         );
 
     expect($mutatingRoutes->pluck('action.as')->values()->all())->toBe([
+        'x-change.cockpit.provisioning.requests.store',
+        'x-change.cockpit.provisioning.requests.approvals.store',
+        'x-change.cockpit.provisioning.requests.rejections.store',
+        'x-change.cockpit.provisioning.requests.withdrawals.store',
+        'x-change.cockpit.provisioning.requests.offers.store',
+        'x-change.cockpit.provisioning.offers.activations.store',
+        'x-change.cockpit.provisioning.offers.revocations.store',
+        'x-change.cockpit.provisioning.offers.supersessions.store',
+        'x-change.cockpit.provisioning.offers.deliveries.store',
+        'x-change.cockpit.treasury.account-grants.store',
+        'x-change.cockpit.treasury.account-grants.approvals.store',
+        'x-change.cockpit.treasury.account-grants.executions.store',
+        'x-change.cockpit.treasury.institution-funds.store',
+        'x-change.cockpit.treasury.institution-funds.approvals.store',
+        'x-change.cockpit.treasury.institution-funds.executions.store',
+        'x-change.cockpit.treasury.reconciliation.store',
+        'x-change.cockpit.treasury.reconciliation.approvals.store',
+        'x-change.cockpit.treasury.reconciliation.executions.store',
         'x-change.cockpit.api-partners.clients.store',
         'x-change.cockpit.api-partners.clients.checks.store',
         'x-change.cockpit.api-partners.clients.suspensions.store',
         'x-change.cockpit.api-partners.clients.revocations.store',
+        'x-change.cockpit.api-partners.production-mandates.store',
+        'x-change.cockpit.api-partners.production-mandates.approvals.store',
+        'x-change.cockpit.api-partners.production-mandates.activations.store',
         'x-change.cockpit.commercial.offerings.store',
         'x-change.cockpit.commercial.offerings.approvals.store',
         'x-change.cockpit.commercial.offerings.activations.store',
@@ -1364,6 +1415,7 @@ it('registers only the guarded issuance, funding, payout recovery, and Account C
         'x-change.cockpit.funding.scenarios.qrph.store',
         'x-change.cockpit.funding.suspense.reconciliation-requests.store',
         'x-change.cockpit.funding.reconciliations.approve',
+        'x-change.cockpit.instance-keepsakes.download',
         'x-change.cockpit.quick-generate.store',
         'x-change.cockpit.quick-generate.claim-previews.store',
         'x-change.cockpit.quick-generate.artwork-previews.store',
@@ -1372,6 +1424,7 @@ it('registers only the guarded issuance, funding, payout recovery, and Account C
         'x-change.cockpit.rider-library.store',
         'x-change.cockpit.rider-library.pin',
         'x-change.cockpit.rider-library.forget',
+        'x-change.cockpit.pay-codes.collection-attempts.store',
         'x-change.cockpit.pay-codes.payout-corrections.store',
         'x-change.cockpit.pay-codes.terminal-actions.store',
     ])->and(Route::getRoutes()->getByName('x-change.cockpit.funding.intents.store')?->getActionName())

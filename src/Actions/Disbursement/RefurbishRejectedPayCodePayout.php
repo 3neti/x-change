@@ -278,10 +278,8 @@ final readonly class RefurbishRejectedPayCodePayout
 
     private function assertAuthorized(Voucher $voucher, Model $requestedBy): void
     {
-        if (
-            $voucher->owner_type !== $requestedBy->getMorphClass()
-            || (string) $voucher->owner_id !== (string) $requestedBy->getKey()
-        ) {
+        if ($voucher->owner_type !== $requestedBy->getMorphClass()
+            || (string) $voucher->owner_id !== (string) $requestedBy->getKey()) {
             throw new RuntimeException('Only the Pay Code owner may correct this payout destination.');
         }
 

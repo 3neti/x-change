@@ -63,6 +63,23 @@ export const cockpitPrimaryNavigation = cockpitNavigationItems.filter(
     (item) => item.group === 'primary',
 );
 
+const cockpitMobileNavigationOrder = [
+    'funding',
+    'quick-generate',
+    'dashboard',
+    'pay-codes',
+    'campaigns',
+] as const;
+
+export const cockpitMobilePrimaryNavigation =
+    cockpitMobileNavigationOrder.flatMap((key) => {
+        const item = cockpitPrimaryNavigation.find(
+            (candidate) => candidate.key === key,
+        );
+
+        return item ? [item] : [];
+    });
+
 export const cockpitSecondaryNavigation = cockpitNavigationItems.filter(
     (item) => item.group === 'secondary',
 );

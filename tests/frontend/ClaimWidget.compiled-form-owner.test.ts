@@ -24,6 +24,7 @@ const { post } = vi.hoisted(() => ({
 }));
 
 vi.mock('@inertiajs/vue3', () => ({
+    Head: { template: '<div><slot /></div>' },
     usePage: () => ({
         props: {
             errors: {},

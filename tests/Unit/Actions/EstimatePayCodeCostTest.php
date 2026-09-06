@@ -209,3 +209,35 @@ it('excludes a collectible target from the account debit', function () {
     expect($result->total)->toBe(15.0);
     expect($result->account_debit)->toBe(15.0);
 });
+
+it('requires only the commercial charge for collection voucher types', function (string $voucherType): void {
+    $input = validPayCodePayload(1000, 'INSTAPAY', [
+        'voucher_type' => $voucherType,
+        'target_amount' => 1000,
+        'inputs' => ['fields' => []],
+        'feedback' => [
+            'email' => null,
+            'mobile' => null,
+            'webhook' => null,
+        ],
+        'rider' => [
+            'message' => null,
+            'url' => null,
+            'splash' => null,
+        ],
+    ]);
+
+    $pricing = Mockery::mock(PricingServiceContract::class);
+    $pricing->shouldReceive('estimate')->once()->andReturn([
+        'currency' => 'PHP',
+        'base_fee' => 0.0,
+        'components' => ['collection_voucher' => 2.5],
+        'total' => 2.5,
+    ]);
+
+    $result = (new EstimatePayCodeCost($pricing))->handle($input);
+
+    expect($result->pay_code_value)->toBe(1000.0)
+        ->and($result->total)->toBe(2.5)
+        ->and($result->account_debit)->toBe(2.5);
+})->with(['payable', 'settlement']);

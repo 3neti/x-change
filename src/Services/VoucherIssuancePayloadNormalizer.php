@@ -32,9 +32,10 @@ class VoucherIssuancePayloadNormalizer
         $input = $this->stampDesigns->materialize($input);
         $input = $this->stampDesigns->normalizeForInstalledVoucherContract($input);
 
+        $voucherType = Arr::get($input, 'voucher_type');
         $flowType = Arr::get($input, 'metadata.flow_type');
 
-        if ($flowType !== 'collectible') {
+        if ($voucherType !== 'payable' && $flowType !== 'collectible') {
             return $input;
         }
 

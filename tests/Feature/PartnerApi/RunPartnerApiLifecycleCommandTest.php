@@ -86,5 +86,6 @@ it('issues reads and cancels through HTTP only after financial confirmation', fu
     Http::assertSentCount(6);
     Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/pay-codes')
         && filled($request->header('Idempotency-Key')[0] ?? null)
-        && filled($request->header('X-Correlation-ID')[0] ?? null));
+        && filled($request->header('X-Correlation-ID')[0] ?? null)
+        && filled($request['external_reference']));
 });

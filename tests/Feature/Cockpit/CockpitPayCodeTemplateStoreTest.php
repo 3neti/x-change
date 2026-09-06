@@ -34,6 +34,7 @@ it('stores an encrypted owner-scoped reusable pay code blueprint', function () {
             'expires_at' => '2026-07-29T09:00:00+08:00',
             'metadata' => [
                 'issuer_id' => 'sensitive-issuer',
+                'collection_wallet_id' => 'shared-wallet-17',
                 'custom' => [
                     'cockpit' => [
                         'template_key' => 'money-changer',
@@ -61,9 +62,11 @@ it('stores an encrypted owner-scoped reusable pay code blueprint', function () {
         ->and(data_get($instructions, 'cash.validation.secret'))->toBeNull()
         ->and(data_get($instructions, 'feedback.mobile'))->toBeNull()
         ->and(data_get($instructions, 'metadata.issuer_id'))->toBeNull()
+        ->and(data_get($instructions, 'metadata.collection_wallet_id'))->toBeNull()
         ->and(data_get($instructions, 'metadata.custom.cockpit.recipient_reference'))->toBeNull()
         ->and(data_get($instructions, 'starts_at'))->toBeNull()
         ->and($raw)->not->toContain('09173011987')
+        ->and($raw)->not->toContain('shared-wallet-17')
         ->and($raw)->not->toContain('never-store-this');
 });
 

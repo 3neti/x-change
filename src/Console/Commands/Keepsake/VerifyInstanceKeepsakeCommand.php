@@ -13,6 +13,29 @@ final class VerifyInstanceKeepsakeCommand extends Command
 {
     use InteractsWithJsonOutput;
 
+    protected $help = <<<HELP
+Decrypt and independently verify a downloaded keepsake archive against its expected SHA-256.
+
+Important behavior:
+
+- No provider calls and no financial mutations.
+- Extraction destination must not exist.
+- On success, this produces manifest and archive checks and reports safe-to-reset status as false.
+
+Usage:
+
+php artisan x-change:instance-keepsake:verify --help
+
+Common example:
+
+php artisan x-change:instance-keepsake:verify \
+  /absolute/path/to/instance-keepsake.xck \
+  --private-key-file=/path/to/secure/private.key \
+  --expected-archive-sha256=<SHA256_FROM_CREATION_OUTPUT> \
+  --extract-to=/private/path/keepsake-verification \
+  --json
+HELP;
+
     protected $signature = 'x-change:instance-keepsake:verify
         {archive : Downloaded encrypted keepsake archive}
         {--private-key-file= : Local private decryption key file}
@@ -22,6 +45,13 @@ final class VerifyInstanceKeepsakeCommand extends Command
         {--pretty : Pretty-print JSON output}';
 
     protected $description = 'Decrypt and independently verify a downloaded X-Change instance keepsake';
+
+    protected function configure(): void
+    {
+        parent::configure();
+
+        $this->setHelp($this->help);
+    }
 
     public function handle(VerifyInstanceKeepsakeArchive $verifier): int
     {

@@ -180,6 +180,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
         await wrapper
             .get('[data-testid="cockpit-quick-generate-primary-recipient"]')
             .setValue('09173011987');
+        await flushPromises();
 
         const mobileChip = wrapper.get(
             '[data-testid="cockpit-claim-requirement-chip-mobile"]',
@@ -210,9 +211,9 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
         ).toBe(false);
         expect(
             wrapper
-                .get('[data-testid="cockpit-claim-requirement-chip-mobile"]')
-                .attributes('data-locked'),
-        ).toBe('false');
+                .find('[data-testid="cockpit-claim-requirement-chip-mobile"]')
+                .exists(),
+        ).toBe(false);
     });
 
     it('Blank Pay Code clears manually selected optional requirements, and inference still locks Mobile/OTP immediately afterwards', async () => {

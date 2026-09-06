@@ -447,16 +447,30 @@ function sanitizeRecord(
         return null;
     }
 
+    const operationalStatus = sanitizeOperationalStatus(record);
+    const consumerStatus = stringValue(record.consumer_status);
+    const posReference = objectValue(record.pos_reference);
+
     return {
         code,
         template: stringValue(record.template) ?? 'Template pending',
-        purpose: stringValue(record.purpose),
+        purpose:
+            stringValue(posReference.purpose) ?? stringValue(record.purpose),
         capability: sanitizeCapability(record.capability),
         instructionBadges: sanitizeInstructionBadges(record.instruction_badges),
         amount: moneyValue(record.amount, stringValue(record.currency)),
-        status: sanitizeOperationalStatus(record).key,
+        amountPresentation: sanitizeAmountPresentation(
+            record.amount_presentation,
+            record.amount,
+            stringValue(record.currency),
+        ),
+        status: consumerStatus ?? operationalStatus.key,
+        consumerStatus,
+        collection: objectValue(record.collection),
+        claimSummary: sanitizeClaimSummary(record.claim_summary),
+        posReference,
         voucherStatus: stringValue(record.voucher_status),
-        operationalStatus: sanitizeOperationalStatus(record),
+        operationalStatus,
         party: sanitizeParty(record.party),
         timing: sanitizeTiming(record),
         terminalControl: sanitizeTerminalControl(record),
@@ -476,6 +490,29 @@ function sanitizeRecord(
                       > => action !== null,
                   )
             : [],
+    };
+}
+
+function sanitizeClaimSummary(
+    summary: CockpitPayCodeExplorerReadModelRecord['claim_summary'],
+): CockpitPayCodeExplorerRecord['claimSummary'] {
+    const value = objectValue(summary);
+
+    return {
+        schema: stringValue(value.schema) ?? undefined,
+        status: stringValue(value.status),
+        claimed_at: stringValue(value.claimed_at),
+        claimed_by_label: stringValue(value.claimed_by_label),
+        claimed_mobile_masked: stringValue(value.claimed_mobile_masked),
+        amount_minor:
+            typeof value.amount_minor === 'number' ? value.amount_minor : null,
+        currency: stringValue(value.currency),
+        location_label: stringValue(value.location_label),
+        evidence_count:
+            typeof value.evidence_count === 'number'
+                ? value.evidence_count
+                : null,
+        latest_claim_reference: stringValue(value.latest_claim_reference),
     };
 }
 
@@ -543,6 +580,48 @@ function sanitizeCapability(
         key: stringValue(value.key) ?? 'disbursement',
         label: stringValue(value.label) ?? 'Disbursement',
         voucherTypeLabel: stringValue(value.voucher_type_label) ?? 'Redeemable',
+    };
+}
+
+function sanitizeAmountPresentation(
+    presentation: CockpitPayCodeExplorerReadModelRecord['amount_presentation'],
+    fallbackAmount: unknown,
+    fallbackCurrency: string | null,
+): CockpitPayCodeExplorerRecord['amountPresentation'] {
+    const value = objectValue(presentation);
+    const flowType = stringValue(value.flow_type);
+
+    if (
+        flowType !== 'disbursable' &&
+        flowType !== 'payable' &&
+        flowType !== 'settlement'
+    ) {
+        return null;
+    }
+
+    const amountMinor = numberOrNull(value.amount_minor);
+    const targetAmountMinor = numberOrNull(value.target_amount_minor);
+    const amount = stringValue(value.amount)
+        ?? (amountMinor !== null
+            ? moneyValue(amountMinor / 100, fallbackCurrency)
+            : null);
+    const targetAmount = stringValue(value.target_amount)
+        ?? (targetAmountMinor !== null
+            ? moneyValue(targetAmountMinor / 100, fallbackCurrency)
+            : null);
+
+    return {
+        schema: stringValue(value.schema) ?? undefined,
+        flowType,
+        label: stringValue(value.label) ?? displayValue(flowType),
+        amountMinor,
+        targetAmountMinor,
+        amount:
+            amount ??
+            (flowType === 'disbursable'
+                ? moneyValue(fallbackAmount, fallbackCurrency)
+                : null),
+        targetAmount,
     };
 }
 
@@ -688,6 +767,10 @@ function numberValue(value: unknown): number {
     return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
+function numberOrNull(value: unknown): number | null {
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 function moneyValue(value: unknown, currency: string | null = 'PHP'): string {
     if (
         typeof value === 'string' &&
@@ -731,14 +814,15 @@ function integrationBadge(
 <template>
     <CockpitLayout
         active-navigation="pay-codes"
+        mobile-presentation="edge"
         :cockpit-header-read-model="props.cockpit_header_read_model"
     >
         <section
-            class="mx-auto max-w-7xl space-y-5"
+            class="mx-auto max-w-7xl space-y-5 px-4 md:px-0"
             data-testid="cockpit-pay-code-explorer-shell"
         >
             <section
-                class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                class="-mx-4 border-y border-slate-200 bg-white p-4 shadow-none md:mx-0 md:rounded-2xl md:border md:shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 data-testid="cockpit-pay-code-explorer-command-card"
             >
                 <div

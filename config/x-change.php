@@ -458,6 +458,10 @@ return [
         ],
 
         'quick_generate' => [
+            'startup_mode' => env(
+                'XCHANGE_COCKPIT_QUICK_GENERATE_STARTUP_MODE',
+                'blank',
+            ),
             'rider_library' => [
                 'recent_limit_per_kind' => 20,
             ],
@@ -663,6 +667,9 @@ return [
                 'enabled' => (bool) env('XCHANGE_CAMPAIGNS_EMAIL_DELIVERY_ENABLED', false),
             ],
         ],
+        'payout_recovery' => [
+            'enabled' => (bool) env('XCHANGE_CAMPAIGNS_PAYOUT_RECOVERY_ENABLED', false),
+        ],
     ],
 
     'terminology' => [
@@ -747,6 +754,7 @@ return [
             'pay-codes:estimate' => 'Estimate a Pay Code without reserving funds.',
             'pay-codes:issue' => 'Issue a Pay Code from the bound Account.',
             'pay-codes:read' => 'Inspect Pay Codes owned by the bound Account.',
+            'pay-codes:pay' => 'Create payer instructions for payable Pay Codes owned by the bound Account.',
             'pay-codes:cancel' => 'Cancel an eligible Pay Code owned by the bound Account.',
             'stored-value:read' => 'Read sanitized reusable-balance transactions presented to the client.',
             'stored-value:spend' => 'Debit a presented reusable balance into the bound merchant Account.',
@@ -756,6 +764,7 @@ return [
             'pay-codes:estimate',
             'pay-codes:issue',
             'pay-codes:read',
+            'pay-codes:pay',
             'pay-codes:cancel',
         ],
         'default_mandate' => [
@@ -2587,10 +2596,18 @@ return [
     'payment' => [
         'default_provider' => env('X_CHANGE_PAYMENT_PROVIDER', 'manual'),
 
+        /*
+         * Manual confirmations are a local/testing convenience. Production
+         * must use a provider-backed payment-attempt or webhook path unless
+         * this emergency kill-switch is deliberately enabled.
+         */
+        'allow_manual_provider_in_production' => env('X_CHANGE_PAYMENT_ALLOW_MANUAL_PROVIDER_IN_PRODUCTION', false),
+
         'attempts' => [
             'enabled' => env('X_CHANGE_PAYMENT_ATTEMPTS_ENABLED', true),
             'provider' => env('X_CHANGE_PAYMENT_ATTEMPT_PROVIDER', 'netbank'),
             'expires_after_minutes' => (int) env('X_CHANGE_PAYMENT_ATTEMPT_EXPIRES_AFTER_MINUTES', 15),
+            'ui_refresh_interval_milliseconds' => env('X_CHANGE_PAYMENT_UI_REFRESH_INTERVAL_MILLISECONDS', 5000),
             'hash_key' => env('X_CHANGE_PAYMENT_ATTEMPT_HASH_KEY'),
             'instruction_lock_seconds' => 30,
             'instruction_lock_wait_seconds' => 5,

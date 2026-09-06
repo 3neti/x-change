@@ -40,9 +40,22 @@ describe('claim widget submit view model', () => {
             hasCompiledForm: false,
             compiledFormValid: false,
             processing: true,
+            label: 'Accept Invitation',
         })).toEqual({
             disabled: false,
             label: 'Checking...',
+        });
+    });
+
+    it('uses x-ray provided submit copy when idle', () => {
+        expect(resolveClaimWidgetSubmitViewModel({
+            hasCompiledForm: false,
+            compiledFormValid: false,
+            processing: false,
+            label: 'Accept Invitation',
+        })).toEqual({
+            disabled: false,
+            label: 'Accept Invitation',
         });
     });
 });

@@ -23,6 +23,62 @@ it('moves collectible cash amount into target amount and zeroes cash amount', fu
         ->and(data_get($normalized, 'target_amount'))->toBe(100);
 });
 
+it('recognizes a payable voucher type as a collection flow without legacy metadata', function (): void {
+    $normalized = app(VoucherIssuancePayloadNormalizer::class)->normalize([
+        'voucher_type' => 'payable',
+        'cash' => [
+            'amount' => 275.50,
+            'currency' => 'PHP',
+        ],
+    ]);
+
+    expect(data_get($normalized, 'cash.amount'))->toBe(0)
+        ->and(data_get($normalized, 'target_amount'))->toBe(275.50)
+        ->and(data_get($normalized, 'voucher_type'))->toBe('payable');
+});
+
+it('preserves an explicit collection target independently from the funding amount', function (): void {
+    $normalized = app(VoucherIssuancePayloadNormalizer::class)->normalize([
+        'voucher_type' => 'payable',
+        'target_amount' => 300,
+        'cash' => [
+            'amount' => 100,
+            'currency' => 'PHP',
+        ],
+    ]);
+
+    expect(data_get($normalized, 'cash.amount'))->toBe(0)
+        ->and(data_get($normalized, 'target_amount'))->toBe(300);
+});
+
+it('keeps settlement cash target and slice instructions independent', function (): void {
+    $input = [
+        'voucher_type' => 'settlement',
+        'target_amount' => 1000,
+        'cash' => [
+            'amount' => 300,
+            'currency' => 'PHP',
+        ],
+        'slice_plan' => [
+            'schema' => 'voucher.slice-plan.v1',
+            'mode' => 'equal',
+            'selection' => 'next_only',
+            'total_minor' => 30_000,
+            'currency' => 'PHP',
+            'slices' => [
+                ['id' => 'slice_1', 'label' => 'Slice 1', 'amount_minor' => 15_000, 'sequence' => 1],
+                ['id' => 'slice_2', 'label' => 'Slice 2', 'amount_minor' => 15_000, 'sequence' => 2],
+            ],
+        ],
+    ];
+
+    $normalized = app(VoucherIssuancePayloadNormalizer::class)->normalize($input);
+
+    expect(data_get($normalized, 'cash.amount'))->toBe(300)
+        ->and(data_get($normalized, 'target_amount'))->toBe(1000)
+        ->and(data_get($normalized, 'slice_plan'))->toBe($input['slice_plan']);
+});
+
 it('does not mutate disbursable cash amount', function () {
     $input = [
         'cash' => [

@@ -37,6 +37,7 @@ final readonly class TreasuryCompatibilityLedgerSynchronizer
             'provider',
         )));
         $currency = mb_strtoupper(trim($funding->currency));
+        $this->forgetCachedPositionBalance($owner, $currency, $provider);
         $positionBalanceMinor = $this->accountBalances->providerBalanceMinor(
             $owner,
             $provider,
@@ -104,6 +105,7 @@ final readonly class TreasuryCompatibilityLedgerSynchronizer
             'provider',
         )));
         $currency = mb_strtoupper(trim($funding->currency));
+        $this->forgetCachedPositionBalance($owner, $currency, $provider);
         $positionBalanceMinor = $this->accountBalances->providerBalanceMinor(
             $owner,
             $provider,
@@ -153,8 +155,18 @@ final readonly class TreasuryCompatibilityLedgerSynchronizer
 
     private function usesTreasuryPositions(FundingDecisionData $funding): bool
     {
-        return $funding->authority === 'local_ledger'
+        return $funding->required_minor > 0
+            && $funding->authority === 'local_ledger'
             && data_get($funding->meta, 'topology') === 'ledger_pooled'
             && (bool) config('x-change.commercial.enabled', true);
+    }
+
+    private function forgetCachedPositionBalance(Model $owner, string $currency, string $provider): void
+    {
+        if (! method_exists($this->accountBalances, 'forget')) {
+            return;
+        }
+
+        $this->accountBalances->forget($owner, $currency, $provider);
     }
 }

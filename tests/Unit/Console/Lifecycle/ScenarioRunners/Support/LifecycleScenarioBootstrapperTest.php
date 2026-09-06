@@ -3,7 +3,72 @@
 declare(strict_types=1);
 
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioBootstrapper;
+use LBHurtado\XChange\Contracts\CommercialComponentEconomicsResolverContract;
+use LBHurtado\XChange\Contracts\CommercialOfferingResolverContract;
+use LBHurtado\XChange\Contracts\CommercialRecipientDesignationResolverContract;
+use LBHurtado\XChange\Services\Commercial\BootstrapCommercialComponentEconomicsFactory;
+use LBHurtado\XChange\Services\Commercial\BootstrapCommercialOfferingFactory;
+use LBHurtado\XChange\Models\CommercialRecipientDesignation;
 use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
+use LBHurtado\XCommerce\Data\CommercialComponentEconomicsSetData;
+use LBHurtado\XCommerce\Data\CommercialOfferingData;
+
+beforeEach(function (): void {
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+
+    app()->bind(
+        CommercialOfferingResolverContract::class,
+        fn ($app): CommercialOfferingResolverContract => new class($app->make(BootstrapCommercialOfferingFactory::class)) implements CommercialOfferingResolverContract
+        {
+            public function __construct(
+                private readonly BootstrapCommercialOfferingFactory $offerings,
+            ) {}
+
+            public function resolve(string $profile): CommercialOfferingData
+            {
+                return $this->offerings->make($profile);
+            }
+        },
+    );
+    app()->bind(
+        CommercialComponentEconomicsResolverContract::class,
+        fn ($app): CommercialComponentEconomicsResolverContract => new class(
+            $app->make(BootstrapCommercialOfferingFactory::class),
+            $app->make(BootstrapCommercialComponentEconomicsFactory::class),
+        ) implements CommercialComponentEconomicsResolverContract
+        {
+            public function __construct(
+                private readonly BootstrapCommercialOfferingFactory $offerings,
+                private readonly BootstrapCommercialComponentEconomicsFactory $economics,
+            ) {}
+
+            public function resolve(string $profile): CommercialComponentEconomicsSetData
+            {
+                return $this->economics->make($profile, $this->offerings->make($profile));
+            }
+        },
+    );
+    app()->bind(
+        CommercialRecipientDesignationResolverContract::class,
+        fn (): CommercialRecipientDesignationResolverContract => new class implements CommercialRecipientDesignationResolverContract
+        {
+            public function resolve(string $designationReference): CommercialRecipientDesignation
+            {
+                return new CommercialRecipientDesignation([
+                    'designation_reference' => $designationReference,
+                    'counterparty_reference' => 'counterparty:3neti',
+                    'commercial_role' => 'service_aggregator',
+                    'component_scope' => array_map(
+                        static fn ($item): string => $item->reference,
+                        app(BootstrapCommercialOfferingFactory::class)->make('pay_code')->catalog->items,
+                    ),
+                    'agreement_reference' => 'agreement:commissioning:institution-3neti:v1',
+                ]);
+            }
+        },
+    );
+});
 
 it('builds lifecycle input from scenario values', function () {
     $bootstrapper = app(LifecycleScenarioBootstrapper::class);

@@ -50,9 +50,7 @@ afterEach(() => {
 
 describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanup', () => {
     it('renders no removed resting helper sentences at rest', () => {
-        const wrapper = mountPanel({
-            templates: cockpitQuickGenerateTemplates,
-        });
+        const wrapper = mountPanel({ templates: cockpitQuickGenerateTemplates });
         const orderCard = wrapper.get(
             '[data-testid="cockpit-quick-generate-order-card"]',
         );
@@ -71,9 +69,7 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
     });
 
     it('exposes no visible documentation placeholders on Amount, Pay To, Purpose, or Status Updates', () => {
-        const wrapper = mountPanel({
-            templates: cockpitQuickGenerateTemplates,
-        });
+        const wrapper = mountPanel({ templates: cockpitQuickGenerateTemplates });
 
         expect(
             wrapper
@@ -82,7 +78,9 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         ).toBeUndefined();
         expect(
             wrapper
-                .get('[data-testid="cockpit-quick-generate-primary-recipient"]')
+                .get(
+                    '[data-testid="cockpit-quick-generate-primary-recipient"]',
+                )
                 .attributes('placeholder'),
         ).toBeUndefined();
         expect(
@@ -108,7 +106,7 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         ).toBeTruthy();
     });
 
-    it('keeps the Order header copy separate and places the Issue CTA beside Amount', () => {
+    it('keeps the workspace controls together and the Issue CTA beside Amount', () => {
         const wrapper = mountPanel({
             templates: cockpitQuickGenerateTemplates,
             onboardingPreset: true,
@@ -120,49 +118,62 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         const submitButton = orderCard.get(
             '[data-testid="cockpit-quick-generate-submit-button"]',
         );
-        const badge = orderCard.get(
+        const valueFlow = orderCard.get(
             '[data-testid="cockpit-quick-generate-voucher-kind"]',
+        );
+        const surfaceControl = orderCard.get(
+            '[data-testid="cockpit-quick-generate-surface-toggle"]',
         );
         const modeControl = orderCard.get(
             '[data-testid="cockpit-quick-generate-mode-control"]',
         );
-        const titleBlock = title.element.parentElement;
-        const actionRow = orderCard.get(
-            '[data-testid="cockpit-quick-generate-amount-actions"]',
+        const titleRow = title.element.parentElement?.parentElement;
+        const amountActionRow = orderCard.get(
+            '[data-testid="cockpit-quick-generate-amount-action-row"]',
         );
 
-        // The header contains only its copy. Both actions live with Amount.
-        expect(titleBlock?.contains(submitButton.element)).toBe(false);
-        expect(titleBlock?.contains(badge.element)).toBe(false);
-        expect(actionRow.element.contains(submitButton.element)).toBe(true);
-        expect(
-            actionRow
-                .find('[data-testid="cockpit-quick-generate-show-stamp"]')
-                .exists(),
-        ).toBe(true);
-        expect(actionRow.classes()).toContain('flex-col');
-        expect(actionRow.classes()).toContain('sm:flex-row');
+        expect(titleRow?.contains(submitButton.element)).toBe(false);
+        expect(amountActionRow.element.contains(submitButton.element)).toBe(
+            true,
+        );
+        expect(amountActionRow.classes()).toContain(
+            'grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]',
+        );
+        expect(amountActionRow.classes()).toContain(
+            'sm:grid-cols-[minmax(0,18rem)_minmax(0,18rem)]',
+        );
 
-        // The description remains grouped with the title.
-        const description = titleBlock?.querySelector('p');
-        expect(description).not.toBeNull();
-        expect(description?.textContent?.trim()).toBe(
+        const workspaceRow = orderCard.get(
+            '[data-testid="cockpit-quick-generate-order-mode-row"]',
+        );
+        expect(workspaceRow.element.contains(surfaceControl.element)).toBe(
+            true,
+        );
+        expect(workspaceRow.text()).toContain('Workspace');
+        expect(workspaceRow.element.contains(valueFlow.element)).toBe(false);
+        expect(workspaceRow.classes()).toContain('text-sm');
+        expect(orderCard.text()).not.toContain(
             'Set the value, payee, and purpose.',
         );
-        expect(titleBlock?.contains(description)).toBe(true);
-
-        // The badge shares a wrapping row with the Mode control instead of
-        // the CTA, so neither clips the other at a narrow card width.
-        const badgeRow = badge.element.parentElement;
-        expect(badgeRow?.contains(modeControl.element)).toBe(true);
-        expect(badgeRow?.contains(submitButton.element)).toBe(false);
-        expect(badgeRow?.classList.contains('flex-wrap')).toBe(true);
+        expect(workspaceRow.element.contains(submitButton.element)).toBe(
+            false,
+        );
+        expect(amountActionRow.element.contains(modeControl.element)).toBe(
+            true,
+        );
+        expect(amountActionRow.element.contains(valueFlow.element)).toBe(true);
+        expect(valueFlow.element.contains(modeControl.element)).toBe(false);
+        expect(valueFlow.classes()).toContain('row-start-2');
+        expect(modeControl.classes()).toContain('row-start-1');
+        const valueFlowRow = valueFlow.get(
+            '[data-testid="cockpit-quick-generate-value-flow-row"]',
+        );
+        expect(valueFlowRow.classes()).toContain('flex-nowrap');
+        expect(valueFlowRow.text()).toContain('Value flow');
     });
 
-    it('gives the Issue CTA a shrink-resistant, non-clippable structure independent of the badge', () => {
-        const wrapper = mountPanel({
-            templates: cockpitQuickGenerateTemplates,
-        });
+    it('gives the Issue CTA a full-track, non-clippable structure independent of Value Flow', () => {
+        const wrapper = mountPanel({ templates: cockpitQuickGenerateTemplates });
         const orderCard = wrapper.get(
             '[data-testid="cockpit-quick-generate-order-card"]',
         );
@@ -173,24 +184,39 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
             '[data-testid="cockpit-quick-generate-voucher-kind"]',
         );
 
-        expect(submitButton.classes()).toContain('shrink-0');
+        expect(submitButton.classes()).toContain('flex-1');
         expect(submitButton.classes()).not.toContain('absolute');
         expect(badge.classes()).not.toContain('absolute');
-        // No shared flex row forces the CTA to compete with the badge for
-        // space; they are siblings of different rows.
+        // Amount and the wider primary action share row one; Estimated Cost
+        // and the single-line Value Flow control align beneath them.
         expect(submitButton.element.parentElement).not.toBe(
             badge.element.parentElement,
+        );
+        expect(badge.classes()).toContain('col-start-2');
+        expect(badge.classes()).toContain('row-start-2');
+        const valueFlowRow = badge.get(
+            '[data-testid="cockpit-quick-generate-value-flow-row"]',
+        );
+        expect(badge.get('legend').classes()).toContain('sr-only');
+        expect(valueFlowRow.classes()).toContain('flex');
+        expect(valueFlowRow.classes()).toContain('items-center');
+        expect(valueFlowRow.classes()).toContain('flex-nowrap');
+        expect(submitButton.element.parentElement?.classList).toContain(
+            'col-start-2',
+        );
+        expect(submitButton.element.parentElement?.classList).toContain(
+            'row-start-1',
         );
     });
 
     it('gives each Order-card help glyph a keyboard-focusable trigger with an accessible name and a focus-reachable tooltip', async () => {
-        const wrapper = mountPanel({
-            templates: cockpitQuickGenerateTemplates,
-        });
+        const wrapper = mountPanel({ templates: cockpitQuickGenerateTemplates });
         const orderCard = wrapper.get(
             '[data-testid="cockpit-quick-generate-order-card"]',
         );
-        const glyphs = orderCard.findAll('[data-testid="cockpit-field-help"]');
+        const glyphs = orderCard.findAll(
+            '[data-testid="cockpit-field-help"]',
+        );
 
         // Mode, Amount, Pay To, Purpose, Status Updates, Claim
         // Requirements, Value Use, Transfer Network.
@@ -231,37 +257,37 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
 
     it('moves the ordinary Transfer Network description into its tooltip while keeping validation/unavailable errors visible', async () => {
         const wrapper = mountPanel({
-            templates: cockpitQuickGenerateTemplates,
-            settlementRailCapabilities: {
-                schema: 'x-change.cockpit.settlement-rail-capabilities.v1',
-                provider: {
-                    code: 'netbank',
-                    label: 'NetBank',
-                    enabled: true,
-                    binding_provider: 'netbank',
-                    binding_coherent: true,
-                },
-                connection_reference: 'netbank-primary',
-                default_mode: 'automatic',
-                automatic_policy: {
-                    instapay_below_amount_minor: 5_000_000,
-                    resolved_per_payout: true,
-                },
-                rails: [
-                    {
-                        code: 'INSTAPAY',
-                        label: 'InstaPay',
-                        enabled: false,
-                        currency: 'PHP',
-                        minimum_amount_minor: 1,
-                        maximum_amount_minor: 5_000_000,
-                        provider_fee_minor: 1_000,
-                        availability_reason: 'InstaPay is disabled.',
+                templates: cockpitQuickGenerateTemplates,
+                settlementRailCapabilities: {
+                    schema: 'x-change.cockpit.settlement-rail-capabilities.v1',
+                    provider: {
+                        code: 'netbank',
+                        label: 'NetBank',
+                        enabled: true,
+                        binding_provider: 'netbank',
+                        binding_coherent: true,
                     },
-                ],
-                source: 'configured-provider-capabilities',
-                live_provider_call: false,
-            },
+                    connection_reference: 'netbank-primary',
+                    default_mode: 'automatic',
+                    automatic_policy: {
+                        instapay_below_amount_minor: 5_000_000,
+                        resolved_per_payout: true,
+                    },
+                    rails: [
+                        {
+                            code: 'INSTAPAY',
+                            label: 'InstaPay',
+                            enabled: false,
+                            currency: 'PHP',
+                            minimum_amount_minor: 1,
+                            maximum_amount_minor: 5_000_000,
+                            provider_fee_minor: 1_000,
+                            availability_reason: 'InstaPay is disabled.',
+                        },
+                    ],
+                    source: 'configured-provider-capabilities',
+                    live_provider_call: false,
+                },
         });
         const railControl = wrapper.get(
             '[data-testid="cockpit-quick-generate-primary-settlement-rail"]',
@@ -272,12 +298,12 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
 
         expect(
             railControl
-                .get(
-                    '[data-testid="cockpit-quick-generate-settlement-rail-error"]',
-                )
+                .get('[data-testid="cockpit-quick-generate-settlement-rail-error"]')
                 .text(),
         ).toContain('InstaPay is disabled');
-        expect(tooltipFor(railTrigger)?.textContent?.length).toBeGreaterThan(0);
+        expect(tooltipFor(railTrigger)?.textContent?.length).toBeGreaterThan(
+            0,
+        );
         expect(
             railControl
                 .find(
@@ -315,9 +341,7 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
     });
 
     it('keeps Pay To inference locking Mobile and OTP in the Claim Requirements chips', async () => {
-        const wrapper = mountPanel({
-            templates: cockpitQuickGenerateTemplates,
-        });
+        const wrapper = mountPanel({ templates: cockpitQuickGenerateTemplates });
 
         await wrapper
             .get('[data-testid="cockpit-quick-generate-primary-recipient"]')
@@ -333,9 +357,9 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
                 .get('[data-testid="cockpit-claim-requirement-chip-otp"]')
                 .attributes('data-locked'),
         ).toBe('true');
-        expect(quickGenerateEngineeringPreview(wrapper).inputs.fields).toEqual(
-            expect.arrayContaining(['mobile', 'otp']),
-        );
+        expect(
+            quickGenerateEngineeringPreview(wrapper).inputs.fields,
+        ).toEqual(expect.arrayContaining(['mobile', 'otp']));
     });
 
     it('keeps Status Updates parsing and saved-destination shortcuts unchanged', async () => {
@@ -370,12 +394,12 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
     });
 
     it('keeps the Claim Requirements compact/detailed synchronization unchanged', async () => {
-        const wrapper = mountPanel({
-            templates: cockpitQuickGenerateTemplates,
-        });
+        const wrapper = mountPanel({ templates: cockpitQuickGenerateTemplates });
 
         await wrapper
-            .get('[data-testid="cockpit-quick-generate-order-options-toggle"]')
+            .get(
+                '[data-testid="cockpit-quick-generate-order-options-toggle"]',
+            )
             .trigger('click');
         await wrapper
             .get('[data-testid="cockpit-claim-requirements-trigger"]')
@@ -396,19 +420,26 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
     });
 
     it('has no forced horizontal overflow at the ~304px Order-card width and no secondary control using the primary Issue Pay Code styling', () => {
-        const wrapper = mountPanel({
-            templates: cockpitQuickGenerateTemplates,
-        });
+        const wrapper = mountPanel({ templates: cockpitQuickGenerateTemplates });
         const orderCard = wrapper.get(
             '[data-testid="cockpit-quick-generate-order-card"]',
         );
 
-        const oversizedMinWidths = orderCard
+        const issueActionOptions = orderCard.get(
+            '[data-testid="cockpit-quick-generate-issue-action-options"]',
+        );
+        const inFlowOrderHtml = orderCard
             .html()
+            .replace(issueActionOptions.html(), '');
+        const oversizedMinWidths = inFlowOrderHtml
             .match(/min-w-(\d|\[)/g)
-            ?.filter((match) => match !== 'min-w-0');
+            ?.filter(
+                (match) => match !== 'min-w-0' && match !== 'min-w-4',
+            );
 
         expect(oversizedMinWidths ?? []).toHaveLength(0);
+        expect(issueActionOptions.classes()).toContain('absolute');
+        expect(issueActionOptions.classes()).toContain('min-w-48');
 
         const submitButton = orderCard.get(
             '[data-testid="cockpit-quick-generate-submit-button"]',

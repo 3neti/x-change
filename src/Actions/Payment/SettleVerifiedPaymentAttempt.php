@@ -6,8 +6,10 @@ namespace LBHurtado\XChange\Actions\Payment;
 
 use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
+use LBHurtado\Voucher\Data\ExecutionContextData;
+use LBHurtado\Voucher\Data\ExecutionInstructionData;
 use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
+use LBHurtado\Voucher\Services\ExecutionEngine;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Models\PaymentAttempt;
@@ -16,10 +18,6 @@ use LogicException;
 
 class SettleVerifiedPaymentAttempt
 {
-    public function __construct(
-        private readonly CollectVoucherFunds $collect,
-    ) {}
-
     public function handle(
         PaymentAttempt $attempt,
         PaymentVerificationTrigger $trigger,
@@ -46,38 +44,47 @@ class SettleVerifiedPaymentAttempt
                 throw new LogicException('The provider transaction has already been applied.');
             }
 
-            $amount = $locked->expected_amount_minor / 100;
-            $result = new VoucherPaymentResultData(
-                voucher_code: (string) $voucher->code,
-                status: 'succeeded',
-                amount: $amount,
-                currency: $locked->currency,
-                provider: $locked->provider_code,
-                provider_reference: $locked->reference,
-                provider_transaction_id: $observation->provider_transaction_id,
+            $idempotencyKey = 'payment-attempt:'.$locked->reference;
+            $execution = app(ExecutionEngine::class)->execute(new ExecutionContextData(
+                contact: null,
+                voucherCode: (string) $voucher->code,
                 meta: [
-                    'payment_attempt_reference' => $locked->reference,
+                    'operation' => 'collect',
+                    'amount_minor' => $locked->expected_amount_minor,
+                    'currency' => $locked->currency,
+                    'provider' => $locked->provider_code,
+                    'provider_reference' => $locked->reference,
+                    'provider_transaction_id' => $observation->provider_transaction_id,
                     'provider_observation_id' => $observation->getKey(),
                     'verification_source' => $observation->verification_source,
+                    'idempotency_key' => $idempotencyKey,
                 ],
-                messages: ['Pay Code payment collected successfully.'],
-            );
+                voucher: $voucher,
+                instruction: ExecutionInstructionData::from([
+                    'driver' => 'payable_collection',
+                ]),
+                correlation: [
+                    'execution_id' => hash('sha256', implode('|', [
+                        'x-change.payment-attempt.collection.v1',
+                        (string) $locked->reference,
+                    ])),
+                ],
+            ));
 
-            $payload = [
-                'amount' => $amount,
-                'currency' => $locked->currency,
-                'status' => 'succeeded',
-                'provider' => $locked->provider_code,
-                'provider_reference' => $locked->reference,
-                'provider_transaction_id' => $observation->provider_transaction_id,
-                'idempotency_key' => 'payment-attempt:'.$locked->reference,
-            ];
+            if (! $execution->successful) {
+                throw new LogicException('Verified Payment Attempt collection execution was rejected.');
+            }
 
-            $this->collect->collectConfirmed($voucher, $result, $payload);
+            $collectionId = (int) ($execution->metadata['voucher_collection_id'] ?? 0);
+
+            if ($collectionId <= 0) {
+                throw new LogicException('Verified Payment Attempt collection execution returned no durable collection evidence.');
+            }
 
             $collection = VoucherCollection::query()
+                ->whereKey($collectionId)
                 ->where('voucher_id', $voucher->getKey())
-                ->where('idempotency_key', $payload['idempotency_key'])
+                ->where('idempotency_key', $idempotencyKey)
                 ->sole();
 
             $nextVersion = $locked->version + 1;

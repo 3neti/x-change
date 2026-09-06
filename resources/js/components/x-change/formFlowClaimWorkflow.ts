@@ -11,6 +11,7 @@ export interface ClaimWorkflowMetadata {
     title?: string | null;
     description?: string | null;
     confirmation_label?: string | null;
+    confirmation_title?: string | null;
     requires_authenticated_officer?: boolean | null;
     requires_mobile?: boolean | null;
     requires_destination?: boolean | null;
@@ -47,6 +48,7 @@ export function normalizeClaimWorkflow(input: unknown): ClaimWorkflowMetadata | 
         title: optionalString(payload.title),
         description: optionalString(payload.description),
         confirmation_label: optionalString(payload.confirmation_label),
+        confirmation_title: optionalString(payload.confirmation_title),
         requires_authenticated_officer: optionalBoolean(payload.requires_authenticated_officer),
         requires_mobile: optionalBoolean(payload.requires_mobile),
         requires_destination: optionalBoolean(payload.requires_destination),
@@ -61,6 +63,15 @@ export function claimWorkflowConfirmationLabel(
     fallback = 'Continue',
 ): string {
     return workflow?.confirmation_label?.trim() || fallback;
+}
+
+export function claimWorkflowConfirmationTitle(
+    workflow: ClaimWorkflowMetadata | null,
+    fallback = 'Review your details',
+): string {
+    return workflow?.confirmation_title?.trim()
+        || workflow?.title?.trim()
+        || fallback;
 }
 
 export function claimWorkflowSummaryText(workflow: ClaimWorkflowMetadata | null): string | null {

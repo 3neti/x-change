@@ -9,4 +9,5 @@ enum PaymentVerificationTrigger: string
     case Payer = 'payer';
     case Schedule = 'schedule';
     case Webhook = 'webhook';
+    case Operator = 'operator';
 }

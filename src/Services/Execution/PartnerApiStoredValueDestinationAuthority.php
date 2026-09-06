@@ -21,22 +21,28 @@ use LBHurtado\XChange\Models\StoredValueHolderBinding;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiRequestContext;
 use Throwable;
 
-final readonly class PartnerApiStoredValueDestinationAuthority implements StoredValueDestinationAuthorityContract
+final class PartnerApiStoredValueDestinationAuthority implements StoredValueDestinationAuthorityContract
 {
+    private ?bool $ready = null;
+
     public function __construct(
-        private PartnerApiRequestContext $partnerContext,
-        private TreasuryAccountPortfolioProvisioningContract $portfolios,
-        private TreasuryPrincipalReferenceResolverContract $principalReferences,
+        private readonly PartnerApiRequestContext $partnerContext,
+        private readonly TreasuryAccountPortfolioProvisioningContract $portfolios,
+        private readonly TreasuryPrincipalReferenceResolverContract $principalReferences,
     ) {}
 
     public function isReady(): bool
     {
+        if ($this->ready !== null) {
+            return $this->ready;
+        }
+
         if (! (bool) config('x-change.partner_api.enabled', false)) {
-            return false;
+            return $this->ready = false;
         }
 
         try {
-            return PartnerApiClient::query()
+            return $this->ready = PartnerApiClient::query()
                 ->where('status', 'active')
                 ->whereNull('suspended_at')
                 ->whereNull('revoked_at')
@@ -55,7 +61,7 @@ final readonly class PartnerApiStoredValueDestinationAuthority implements Stored
                             ->exists();
                 });
         } catch (Throwable) {
-            return false;
+            return $this->ready = false;
         }
     }
 

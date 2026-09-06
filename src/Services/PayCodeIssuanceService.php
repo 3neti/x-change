@@ -8,19 +8,26 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\ValidationException;
 use LBHurtado\Voucher\Contracts\GeneratesVouchers;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Data\VoucherMetadataData;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
 use LBHurtado\XChange\Contracts\RiderStampArtifactStoreContract;
+use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
+use LBHurtado\XChange\Services\Cockpit\CockpitPosSaleReferenceService;
+use LBHurtado\XChange\Services\Payment\PayCodePaymentLinkResolver;
 
 class PayCodeIssuanceService implements PayCodeIssuanceContract
 {
     public function __construct(
         protected RiderSplashArtworkSnapshotterContract $splashArtwork,
         protected RiderStampArtifactStoreContract $stampArtifacts,
+        protected PayCodePaymentLinkResolver $paymentLinks,
+        protected WalletAccessContract $wallets,
+        protected CockpitPosSaleReferenceService $posSaleReferences,
     ) {}
 
     public function issue(mixed $issuer, array $input): array
@@ -31,6 +38,7 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
 
         $input = app(VoucherIssuancePayloadNormalizer::class)->normalize($input);
         $input = $this->withCollectionWalletContext($issuer, $input);
+        $this->assertCollectionWalletPresentForCollectible($input);
         $instructions = VoucherInstructionsData::createFromAttribs($input);
         $this->restoreCustomMetadata($instructions, $input);
         $this->restorePreparedSplashArtworkSnapshot($instructions, $input);
@@ -41,7 +49,7 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
         try {
             Auth::setUser($issuer);
 
-            return DB::transaction(function () use ($input, $instructions): array {
+            return DB::transaction(function () use ($input, $instructions, $issuer): array {
                 $issued = app(GeneratesVouchers::class)->handle($instructions)->first();
 
                 if (! $issued) {
@@ -50,21 +58,27 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
 
                 $this->splashArtwork->assertStored($issued);
                 $this->persistNamedSliceMetadata($issued, $input);
+                $this->posSaleReferences->record($issued, $issuer, $input);
 
                 $code = (string) $issued->code;
                 $redeemPath = $this->redeemPath($code);
                 $redeemUrl = $this->redeemUrl($redeemPath);
                 $this->stampArtifacts->materialize($issued, $redeemUrl);
+                $paymentLinks = $this->paymentLinks->forVoucher($issued);
 
                 return [
                     'voucher_id' => $issued->id,
                     'code' => $code,
                     'issued_at' => $issued->created_at?->toRfc3339String() ?? now()->toRfc3339String(),
-                    'amount' => data_get($instructions->toArray(), 'cash.amount'),
+                    'amount' => (data_get($input, 'voucher_type') === 'payable'
+                        || data_get($input, 'metadata.flow_type') === 'collectible')
+                        ? data_get($instructions->toArray(), 'target_amount')
+                        : data_get($instructions->toArray(), 'cash.amount'),
                     'currency' => data_get($instructions->toArray(), 'cash.currency'),
                     'links' => [
                         'redeem' => $redeemUrl,
                         'redeem_path' => $redeemPath,
+                        ...$paymentLinks,
                     ],
                     'metadata' => $issued->metadata ?? null,
                 ];
@@ -145,21 +159,47 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
 
     protected function withCollectionWalletContext(Authenticatable $issuer, array $input): array
     {
-        $flowType = data_get($input, 'metadata.flow_type');
-
-        if ($flowType !== 'collectible') {
+        if (! $this->requiresCollectionWallet($input)) {
             return $input;
         }
 
         data_set($input, 'metadata.issuer_id', (string) $issuer->getAuthIdentifier());
-
-        $walletId = data_get($input, 'metadata.collection_wallet_id');
-
-        if (! $walletId && isset($issuer->wallet)) {
-            data_set($input, 'metadata.collection_wallet_id', $issuer->wallet->id);
-        }
+        data_set(
+            $input,
+            'metadata.collection_wallet_id',
+            (string) $this->wallets->resolveForUser($issuer)->getKey(),
+        );
 
         return $input;
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     *
+     * @throws ValidationException
+     */
+    protected function assertCollectionWalletPresentForCollectible(array $input): void
+    {
+        if (! $this->requiresCollectionWallet($input)) {
+            return;
+        }
+
+        if (filled(data_get($input, 'metadata.collection_wallet_id'))) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'metadata.collection_wallet_id' => 'A collection wallet is required for payable Pay Codes.',
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    private function requiresCollectionWallet(array $input): bool
+    {
+        return in_array(data_get($input, 'voucher_type'), ['payable', 'settlement'], true)
+            || data_get($input, 'metadata.flow_type') === 'collectible';
     }
 
     /**

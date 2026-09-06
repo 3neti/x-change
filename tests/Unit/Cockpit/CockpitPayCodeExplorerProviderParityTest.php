@@ -294,6 +294,7 @@ it('keeps only typed operational summaries in cockpit list records', function ()
             'starts_at' => null,
             'expires_at' => '2026-08-03T08:00:00+08:00',
             'redeemed_at' => null,
+            'terminal_at' => null,
         ],
     ])
         ->and(json_encode($record))->not->toContain('09173011987')

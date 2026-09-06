@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
+use LBHurtado\XChange\Contracts\VoucherLiabilitySummaryContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitCampaignReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
+use LBHurtado\XChange\Data\Money\VoucherLiabilitySummaryData;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\OptionalCockpitIntegrationReadModels;
@@ -192,6 +194,9 @@ it('serializes cockpit read model placeholders without broad payload exposure', 
             'distribution_links' => [],
             'redactions' => ['payloads' => 'not-loaded'],
             'authorized' => false,
+            'slices' => [],
+            'collection' => [],
+            'pos_reference' => [],
         ],
         'execution' => [
             'execution_id' => null,
@@ -1352,6 +1357,7 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
                     'currency' => 'PHP',
                     'status' => 'ready',
                     'display_status' => 'ready',
+                    'purpose' => null,
                     'party' => [
                         'state' => 'open',
                         'label' => 'Availability',
@@ -1364,6 +1370,13 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
                         'starts_at' => null,
                         'expires_at' => null,
                         'redeemed_at' => null,
+                        'terminal_at' => null,
+                    ],
+                    'terminal_control' => [
+                        'can_expire' => false,
+                        'can_cancel' => false,
+                        'blocked_reason' => null,
+                        'status' => 'blocked',
                     ],
                     'owner' => 'Operations',
                     'last_activity' => '2026-07-03T10:00:00+08:00',
@@ -1402,6 +1415,9 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
                             'reason' => 'Feedback delivery remains separately gated through x-feedback.',
                         ],
                     ],
+                    'consumer_status' => null,
+                    'collection' => [],
+                    'pos_reference' => [],
                 ],
                 [
                     'code' => 'PC-LIST-002',
@@ -1416,6 +1432,7 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
                     'currency' => 'PHP',
                     'status' => 'redeemed',
                     'display_status' => 'redeemed',
+                    'purpose' => null,
                     'party' => [
                         'state' => 'open',
                         'label' => 'Availability',
@@ -1428,6 +1445,13 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
                         'starts_at' => null,
                         'expires_at' => null,
                         'redeemed_at' => null,
+                        'terminal_at' => null,
+                    ],
+                    'terminal_control' => [
+                        'can_expire' => false,
+                        'can_cancel' => false,
+                        'blocked_reason' => null,
+                        'status' => 'blocked',
                     ],
                     'owner' => 'Redacted',
                     'last_activity' => '2026-07-02T10:00:00+08:00',
@@ -1444,10 +1468,10 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
                         [
                             'key' => 'distribution',
                             'label' => 'Distribution',
-                            'enabled' => true,
+                            'enabled' => false,
                             'read_only' => true,
-                            'href' => '/x/cockpit/pay-codes/PC-LIST-002/distribution',
-                            'reason' => 'Read-only Cockpit distribution workspace route.',
+                            'href' => null,
+                            'reason' => 'Terminal Pay Codes cannot be distributed for claim.',
                         ],
                         [
                             'key' => 'timeline',
@@ -1466,6 +1490,9 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
                             'reason' => 'Feedback delivery remains separately gated through x-feedback.',
                         ],
                     ],
+                    'consumer_status' => null,
+                    'collection' => [],
+                    'pos_reference' => [],
                 ],
             ],
             'redactions' => [
@@ -1800,6 +1827,90 @@ it('adapts voucher lifecycle list rows into sanitized cockpit dashboard facts', 
             ],
         ],
     ]);
+});
+
+it('keeps cockpit dashboard first paint away from the heavy liability summary service', function () {
+    $lifecycle = new class implements VoucherLifecycleServiceContract
+    {
+        /**
+         * @var array<string, mixed>
+         */
+        public array $lastFilters = [];
+
+        public function list(array $filters = []): array
+        {
+            $this->lastFilters = $filters;
+
+            return [
+                [
+                    'code' => 'PC-READY-001',
+                    'status' => 'issued',
+                    'display_status' => 'ready',
+                    'amount' => 100.00,
+                    'currency' => 'PHP',
+                    'created_at' => '2026-07-03T10:00:00+08:00',
+                ],
+            ];
+        }
+
+        public function show(string $voucher): mixed
+        {
+            return null;
+        }
+
+        public function showByCode(string $code): mixed
+        {
+            return null;
+        }
+
+        public function status(string $voucher): mixed
+        {
+            return null;
+        }
+
+        public function cancel(string $voucher, array $payload = []): mixed
+        {
+            return [];
+        }
+
+        public function expire(string $voucher, array $payload = []): mixed
+        {
+            return [];
+        }
+    };
+
+    $liabilities = new class implements VoucherLiabilitySummaryContract
+    {
+        public bool $called = false;
+
+        public function forIssuer(mixed $issuer): VoucherLiabilitySummaryData
+        {
+            $this->called = true;
+
+            return new VoucherLiabilitySummaryData(active_issued_minor: 10000, active_count: 1);
+        }
+    };
+
+    $readModel = (new VoucherLifecycleCockpitReadModelProvider(
+        vouchers: $lifecycle,
+        liabilities: $liabilities,
+    ))->forDashboard(new CockpitReadModelQueryData(
+        operatorId: '10',
+        operatorType: 'App\\Models\\User',
+    ));
+
+    $metricKeys = collect($readModel->metrics)
+        ->map(fn (mixed $metric): string => $metric->key)
+        ->all();
+
+    expect($liabilities->called)->toBeFalse()
+        ->and($metricKeys)->not->toContain('active-issued-liability')
+        ->and($lifecycle->lastFilters)->toMatchArray([
+            'include' => ['redeemer'],
+            'issuer_id' => '10',
+            'issuer_type' => 'App\\Models\\User',
+        ])
+        ->and($metricKeys)->toContain('pay-codes-visible');
 });
 
 it('adapts safe quick generate catalog facts without invoking voucher lifecycle reads', function () {

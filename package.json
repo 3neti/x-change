@@ -17,6 +17,7 @@
     "jsdom": "^29.1.1",
     "lucide-vue-next": "^0.468.0",
     "marked": "^18.0.7",
+    "pusher-js": "^8.6.0",
     "reka-ui": "^2.10.1",
     "typescript": "^5.9.3",
     "vitest": "^4.1.7",

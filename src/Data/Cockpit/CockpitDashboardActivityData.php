@@ -21,6 +21,15 @@ class CockpitDashboardActivityData extends Data
         public readonly string|Optional $projection_badge = new Optional,
         public readonly string|Optional $projection_status = new Optional,
         public readonly string|Optional $projection_detail = new Optional,
+        public readonly string|Optional $code = new Optional,
+        public readonly string|Optional $amount = new Optional,
+        public readonly string|Optional $status = new Optional,
+        public readonly string|Optional $target_label = new Optional,
+        public readonly string|Optional $detail_href = new Optional,
+        /**
+         * @var array<string, mixed>|Optional
+         */
+        public readonly array|Optional $claim_summary = new Optional,
         /**
          * @var array<int, string>|Optional
          */

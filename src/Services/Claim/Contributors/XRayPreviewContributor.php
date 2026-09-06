@@ -53,9 +53,12 @@ final class XRayPreviewContributor implements ClaimSurfaceContributor
             $projected,
         );
 
-        $surface->addComponent(
-            'xray_preview',
-            (array) XRayResultResource::make($result)->resolve($this->request),
-        );
+        $xray = (array) XRayResultResource::make($result)->resolve($this->request);
+
+        if (is_array($projected['presentation'] ?? null)) {
+            $xray['presentation'] = $projected['presentation'];
+        }
+
+        $surface->addComponent('xray_preview', $xray);
     }
 }

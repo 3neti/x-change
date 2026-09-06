@@ -38,7 +38,8 @@ function validMinimumWithdrawalPayload(array $overrides = []): array
 
 function validateMinimumWithdrawalRequest(string $requestClass, array $payload): Illuminate\Contracts\Validation\Validator
 {
-    $request = new $requestClass;
+    $request = $requestClass::create('/x/cockpit/quick-generate', 'POST', $payload);
+    $request->setContainer(app());
     $validator = Validator::make($payload, $request->rules());
 
     foreach ($request->after() as $callback) {
@@ -79,4 +80,42 @@ it('adds policy errors to estimate pay code requests', function (): void {
 
     expect($validator->errors()->first('cash.min_withdrawal'))
         ->toBe('Minimum withdrawal must be at least PHP 50.00.');
+});
+
+it('reports a clear collection amount error for a zero-value payable Pay Code', function (): void {
+    $validator = validateMinimumWithdrawalRequest(GeneratePayCodeRequest::class, validMinimumWithdrawalPayload([
+        'voucher_type' => 'payable',
+        'cash' => [
+            'amount' => 0,
+        ],
+    ]));
+
+    expect($validator->errors()->first('cash.amount'))
+        ->toBe('The amount to collect must be greater than zero for a payable Pay Code.');
+});
+
+it('keeps the redeemable minimum amount validation unchanged', function (): void {
+    $validator = validateMinimumWithdrawalRequest(GeneratePayCodeRequest::class, validMinimumWithdrawalPayload([
+        'voucher_type' => 'redeemable',
+        'cash' => [
+            'amount' => 0,
+        ],
+    ]));
+
+    expect($validator->errors()->first('cash.amount'))
+        ->toContain('must be at least 0.01');
+});
+
+it('validates the settlement target independently from its redeemable cash amount', function (): void {
+    $validator = validateMinimumWithdrawalRequest(GeneratePayCodeRequest::class, validMinimumWithdrawalPayload([
+        'voucher_type' => 'settlement',
+        'target_amount' => 0,
+        'cash' => [
+            'amount' => 100,
+        ],
+    ]));
+
+    expect($validator->errors()->first('target_amount'))
+        ->toBe('The target value must be greater than zero for a settlement Pay Code.')
+        ->and($validator->errors()->has('cash.amount'))->toBeFalse();
 });

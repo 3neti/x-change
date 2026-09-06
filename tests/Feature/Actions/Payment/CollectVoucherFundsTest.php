@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Event;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Payment\CollectVoucherFunds;
 use LBHurtado\XChange\Contracts\VoucherPaymentConfirmationContract;
+use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Exceptions\VoucherCannotCollect;
 use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
 use LBHurtado\XChange\Models\VoucherCollection;
@@ -15,6 +17,7 @@ beforeEach(function () {
 });
 
 it('credits wallet when collecting funds for collectible voucher', function () {
+    Event::fake([FundingProjectionChanged::class]);
     $user = actingAsTestUser();
 
     $voucher = issueVoucher(validVoucherInstructions(
@@ -70,9 +73,16 @@ it('credits wallet when collecting funds for collectible voucher', function () {
         ->and($collection->provider_transaction_id)->toBe('TXN-123')
         ->and($collection->payer_mobile)->toBe('09171234567')
         ->and($collection->wallet_transaction_id)->not->toBeNull();
+
+    Event::assertDispatched(
+        FundingProjectionChanged::class,
+        fn (FundingProjectionChanged $event): bool => $event->broadcastWith()['reason']
+            === 'voucher_collection_settled',
+    );
 });
 
 it('does not credit wallet when payment confirmation did not succeed', function () {
+    Event::fake([FundingProjectionChanged::class]);
     $user = actingAsTestUser();
 
     $voucher = issueVoucher(validVoucherInstructions(
@@ -112,6 +122,8 @@ it('does not credit wallet when payment confirmation did not succeed', function 
         ->and($collection->requested_amount_minor)->toBe(10000)
         ->and($collection->collected_amount_minor)->toBe(0)
         ->and($collection->wallet_transaction_id)->toBeNull();
+
+    Event::assertNotDispatched(FundingProjectionChanged::class);
 });
 
 it('blocks collection for disbursable vouchers', function () {

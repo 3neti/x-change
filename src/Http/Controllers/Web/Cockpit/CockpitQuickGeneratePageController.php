@@ -9,6 +9,9 @@ use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\XChange\Contracts\SettlementRailCapabilityRegistryContract;
+use LBHurtado\XChange\Contracts\VoucherAccessContract;
+use LBHurtado\XChange\Contracts\WalletAccessContract;
+use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeDetailAccess;
 use LBHurtado\XChange\Services\Cockpit\PayCodeTemplateReadModel;
 use LBHurtado\XChange\Services\Cockpit\QuickGenerateLastInstructionsStore;
 use LBHurtado\XChange\Services\Cockpit\RiderLibraryReadModel;
@@ -24,6 +27,9 @@ class CockpitQuickGeneratePageController extends Controller
         private readonly RiderLibraryReadModel $riderLibrary,
         private readonly InstructionCapabilityReadinessRegistry $instructionCapabilities,
         private readonly SettlementRailCapabilityRegistryContract $settlementRails,
+        private readonly WalletAccessContract $wallets,
+        private readonly VoucherAccessContract $vouchers,
+        private readonly CockpitPayCodeDetailAccess $payCodeAccess,
     ) {}
 
     public function __invoke(Request $request): Response
@@ -50,12 +56,75 @@ class CockpitQuickGeneratePageController extends Controller
                 'enabled' => $request->query('intent') === 'invite',
                 'source' => 'cockpit',
             ],
+            'startup_mode' => $this->startupMode(),
             'last_instructions' => $this->lastInstructions->for($request->user()),
             'saved_templates' => $this->templates->for($request->user()),
             'rider_library' => $this->riderLibrary->for($request->user()),
             'instruction_capabilities' => $this->instructionCapabilities->sanitized(),
             'settlement_rail_capabilities' => $this->settlementRails->sanitized(),
+            'collection_destination' => $this->collectionDestination($request),
+            'pos_voucher' => $this->posVoucher($request),
         ]);
+    }
+
+    private function startupMode(): string
+    {
+        return config('x-change.cockpit.quick_generate.startup_mode') === 'repeat_last'
+            ? 'repeat_last'
+            : 'blank';
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function posVoucher(Request $request): ?array
+    {
+        $code = $this->optionalString($request->query('pos_code'));
+
+        if ($code === null) {
+            return null;
+        }
+
+        $voucher = $this->vouchers->findByCode($code);
+
+        if ($voucher === null) {
+            return null;
+        }
+
+        abort_unless(
+            $request->user() !== null
+            && $this->payCodeAccess->canView($request->user(), $voucher),
+            404,
+        );
+
+        $props = $this->props->toVoucherDetailArray((string) $voucher->code);
+        $projection = data_get($props, 'read_model.voucher');
+
+        return is_array($projection) ? $projection : null;
+    }
+
+    /**
+     * @return array{schema: string, label: string, description: string, authority: string, status: string, editable: false, managed_automatically: true}|null
+     */
+    private function collectionDestination(Request $request): ?array
+    {
+        $user = $request->user();
+
+        if ($user === null) {
+            return null;
+        }
+
+        $this->wallets->resolveForUser($user);
+
+        return [
+            'schema' => 'x-change.cockpit.collection-destination.v1',
+            'label' => 'Your Client Funds',
+            'description' => 'Payments are credited to the collection account authorized for the signed-in operator.',
+            'authority' => 'authenticated_operator',
+            'status' => 'ready',
+            'editable' => false,
+            'managed_automatically' => true,
+        ];
     }
 
     /**

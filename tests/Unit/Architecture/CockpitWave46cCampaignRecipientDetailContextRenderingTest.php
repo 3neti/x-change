@@ -19,7 +19,7 @@ it('documents the campaign recipient detail context rendering', function (): voi
     expect($page)
         ->toContain('cockpit-voucher-detail-campaign-navigation-context')
         ->toContain('Opened from campaign activity')
-        ->toContain("destination !== 'pay_code_detail'");
+        ->toContain('destination !== "pay_code_detail"');
 
     expect($frontend)
         ->toContain('renders safe campaign recipient context on voucher detail without mutation controls')

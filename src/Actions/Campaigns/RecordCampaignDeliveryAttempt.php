@@ -12,10 +12,14 @@ use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
 use LBHurtado\XChange\Models\CampaignDeliveryAttemptEvent;
+use LBHurtado\XChange\Services\Campaigns\CampaignLifecycleJournal;
 
 final class RecordCampaignDeliveryAttempt
 {
-    public function __construct(private readonly AuditLoggerContract $audit) {}
+    public function __construct(
+        private readonly AuditLoggerContract $audit,
+        private readonly CampaignLifecycleJournal $journal,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $metadata
@@ -114,8 +118,8 @@ final class RecordCampaignDeliveryAttempt
         ?string $safeErrorCode = null,
         array $metadata = [],
     ): CampaignDeliveryAttemptEvent {
-        if (! in_array($eventType, ['completed', 'failed'], true)) {
-            throw new InvalidArgumentException('A terminal campaign delivery event must be completed or failed.');
+        if (! in_array($eventType, CampaignDeliveryAttempt::TerminalEventTypes, true)) {
+            throw new InvalidArgumentException('A terminal campaign delivery event must be completed, failed, or superseded.');
         }
 
         [$event, $created] = DB::transaction(function () use ($attempt, $eventType, $providerStatus, $providerDeliveryReference, $safeErrorCode, $metadata): array {
@@ -123,7 +127,7 @@ final class RecordCampaignDeliveryAttempt
                 ->lockForUpdate()
                 ->findOrFail($attempt->getKey());
             $existing = $lockedAttempt->events()
-                ->whereIn('event_type', ['completed', 'failed'])
+                ->whereIn('event_type', CampaignDeliveryAttempt::TerminalEventTypes)
                 ->orderBy('sequence')
                 ->first();
 
@@ -151,6 +155,11 @@ final class RecordCampaignDeliveryAttempt
                 'delivery_event_reference' => (string) $event->reference,
                 'safe_error_code' => $safeErrorCode,
             ]);
+            $this->journal->recordDelivery($this->terminalJournalEventType($attempt, $eventType), $attempt, null, [
+                'delivery_event_reference' => (string) $event->reference,
+                'terminal_event' => $eventType,
+                'safe_error_code' => $safeErrorCode,
+            ]);
         }
 
         return $event;
@@ -167,5 +176,20 @@ final class RecordCampaignDeliveryAttempt
             'attempt_number' => $attempt->attempt_number,
             'retry_of_reference' => $attempt->retry_of_reference,
         ];
+    }
+
+    private function terminalJournalEventType(CampaignDeliveryAttempt $attempt, string $eventType): string
+    {
+        $purpose = (string) data_get($attempt->metadata, 'purpose');
+
+        if ($purpose === 'beneficiary_payout_recovery' && $eventType === 'completed') {
+            return 'campaign.recovery_sms.sent';
+        }
+
+        if ($purpose === 'beneficiary_payout_recovery' && $eventType === 'superseded') {
+            return 'campaign.recovery_sms.superseded';
+        }
+
+        return 'campaign.delivery.'.$eventType;
     }
 }

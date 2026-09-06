@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 use LBHurtado\EmiCore\Enums\SettlementRail;
 use LBHurtado\Voucher\Enums\RiderContentFormat;
 use LBHurtado\Voucher\Enums\RiderStampArtworkSource;
@@ -45,6 +46,36 @@ class GeneratePayCodeRequest extends FormRequest
         return [
             ...$this->minimumWithdrawalPolicyValidators(),
             ...$this->cockpitPayeePolicyValidators(),
+            function (Validator $validator): void {
+                if ($this->isPayable()) {
+                    $targetAmount = $this->input('target_amount')
+                        ?? $this->input('cash.target_amount')
+                        ?? $this->input('cash.amount')
+                        ?? $this->input('amount');
+
+                    if (is_numeric($targetAmount) && (float) $targetAmount > 0) {
+                        return;
+                    }
+
+                    $validator->errors()->add(
+                        'cash.amount',
+                        'The amount to collect must be greater than zero for a payable Pay Code.',
+                    );
+
+                    return;
+                }
+
+                if ($this->input('voucher_type') === 'settlement') {
+                    $targetAmount = $this->input('target_amount');
+
+                    if (! is_numeric($targetAmount) || (float) $targetAmount <= 0) {
+                        $validator->errors()->add(
+                            'target_amount',
+                            'The target value must be greater than zero for a settlement Pay Code.',
+                        );
+                    }
+                }
+            },
         ];
     }
 
@@ -55,7 +86,11 @@ class GeneratePayCodeRequest extends FormRequest
     {
         return [
             'cash' => ['required', 'array'],
-            'cash.amount' => ['required', 'numeric', 'min:0.01'],
+            'cash.amount' => [
+                'required',
+                'numeric',
+                Rule::when($this->isPayable(), ['min:0'], ['min:0.01']),
+            ],
             'cash.currency' => ['required', 'string', 'max:10'],
             'cash.settlement_rail' => ['nullable', Rule::enum(SettlementRail::class)],
             'cash.slice_mode' => ['nullable', 'string', 'in:fixed,open'],
@@ -222,6 +257,7 @@ class GeneratePayCodeRequest extends FormRequest
             'slice_plan.max_slices' => ['nullable', 'integer', 'min:1'],
             'slice_plan.min_amount_minor' => ['nullable', 'integer', 'min:1'],
             'metadata' => ['nullable', 'array'],
+            'metadata.collection_wallet_id' => ['nullable', 'string', 'max:190'],
             'metadata.campaign' => ['nullable', 'array'],
             'metadata.campaign.planning_key' => ['nullable', 'string', 'max:120'],
             'metadata.campaign.execution_id' => ['nullable', 'string', 'max:120'],
@@ -243,13 +279,16 @@ class GeneratePayCodeRequest extends FormRequest
             'metadata.slice_policy.selection' => ['nullable', 'string'],
             'metadata.slice_policy.enforced' => ['nullable', 'boolean'],
             'metadata.custom' => ['nullable', 'array'],
+            'metadata.custom.external_reference' => ['nullable', 'string', 'max:190'],
             'metadata.custom.cockpit' => ['nullable', 'array'],
             'metadata.custom.cockpit.template_key' => ['nullable', 'string', 'max:80'],
             'metadata.custom.cockpit.source' => ['nullable', 'string', 'max:80'],
+            'metadata.custom.cockpit.builder' => ['nullable', 'string', 'max:80'],
             'metadata.custom.cockpit.payee' => ['nullable', 'array'],
             'metadata.custom.cockpit.payee.kind' => ['nullable', Rule::enum(CockpitPayeeKind::class)],
             'metadata.custom.cockpit.payee.explicit_secret' => ['nullable', 'boolean'],
             'metadata.custom.cockpit.purpose' => ['nullable', 'string', 'max:255'],
+            'metadata.custom.cockpit.order_reference' => ['nullable', 'string', 'max:190'],
             'metadata.custom.cockpit.recipient_reference' => ['nullable', 'string', 'max:80'],
             'metadata.custom.settlement' => ['nullable', 'array'],
             'metadata.custom.settlement.destinations' => ['nullable', 'array'],
@@ -305,5 +344,10 @@ class GeneratePayCodeRequest extends FormRequest
             ->filter(static fn (mixed $key): bool => is_string($key) && $key !== '')
             ->values()
             ->all();
+    }
+
+    private function isPayable(): bool
+    {
+        return $this->input('voucher_type') === 'payable';
     }
 }

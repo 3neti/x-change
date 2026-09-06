@@ -43,6 +43,8 @@ it('contains the expected lifecycle operations', function () {
         ['method' => 'post', 'path' => '/vouchers/code/{code}/claim/submit'],
         ['method' => 'post', 'path' => '/vouchers/code/{code}/claim/complete'],
         ['method' => 'get', 'path' => '/vouchers/code/{code}/claim/status'],
+        ['method' => 'post', 'path' => '/vouchers/code/{code}/payment-confirmations'],
+        ['method' => 'post', 'path' => '/payment/webhooks/{provider}'],
         ['method' => 'get', 'path' => '/reconciliations'],
         ['method' => 'get', 'path' => '/reconciliations/{reconciliation}'],
         ['method' => 'post', 'path' => '/reconciliations/{reconciliation}/resolve'],

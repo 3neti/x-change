@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { index as fundingIndex } from '@/routes/x-change/cockpit/funding';
 import { Link } from '@inertiajs/vue3';
 import { Landmark } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import { index as fundingIndex } from '@/routes/x-change/cockpit/funding';
 import CockpitGenerateActionPanel from '../components/CockpitGenerateActionPanel.vue';
 import CockpitIssuanceBoundaryPanel from '../components/CockpitIssuanceBoundaryPanel.vue';
 import CockpitPricingFundingSummary from '../components/CockpitPricingFundingSummary.vue';
@@ -14,6 +14,7 @@ import CockpitQuickGenerateIdempotencyGatePanel from '../components/CockpitQuick
 import CockpitQuickGenerateMutationAuthorizationDecisionPanel from '../components/CockpitQuickGenerateMutationAuthorizationDecisionPanel.vue';
 import CockpitQuickGenerateMutationHandoffPlanPanel from '../components/CockpitQuickGenerateMutationHandoffPlanPanel.vue';
 import CockpitQuickGenerateMutationPreconditionsReviewPanel from '../components/CockpitQuickGenerateMutationPreconditionsReviewPanel.vue';
+import CockpitQuickGeneratePosPanel from '../components/CockpitQuickGeneratePosPanel.vue';
 import CockpitQuickGeneratePricingGatePanel from '../components/CockpitQuickGeneratePricingGatePanel.vue';
 import CockpitQuickGenerateSubmitPanel from '../components/CockpitQuickGenerateSubmitPanel.vue';
 import CockpitQuickGenerateValidationRedactionGatePanel from '../components/CockpitQuickGenerateValidationRedactionGatePanel.vue';
@@ -50,6 +51,7 @@ import type {
 } from '../types';
 
 const props = defineProps<CockpitQuickGeneratePageProps>();
+const issuanceSurface = ref<'composer' | 'pos'>('composer');
 
 const clientFundsMinor = computed<number | null>(() => {
     const amount = props.cockpit_header_read_model?.balances?.find(
@@ -1106,10 +1108,14 @@ function stringValue(value: unknown): string | null {
 <template>
     <CockpitLayout
         active-navigation="quick-generate"
+        mobile-presentation="edge"
         :cockpit-header-read-model="props.cockpit_header_read_model"
         :cockpit-entry-notice="props.cockpit_entry_notice"
     >
-        <section class="space-y-4" data-testid="cockpit-quick-generate-shell">
+        <section
+            class="space-y-4 px-4 md:px-0"
+            data-testid="cockpit-quick-generate-shell"
+        >
             <header
                 class="hidden items-start justify-between gap-4 px-1 md:flex"
                 data-testid="cockpit-quick-generate-header"
@@ -1118,12 +1124,20 @@ function stringValue(value: unknown): string | null {
                     <h2
                         class="text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-50"
                     >
-                        Pay Code Issuance
+                        {{
+                            issuanceSurface === 'pos'
+                                ? 'Point of Sale'
+                                : 'Pay Code Issuance'
+                        }}
                     </h2>
                     <p
                         class="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300"
                     >
-                        Create a Pay Code for someone to claim.
+                        {{
+                            issuanceSurface === 'pos'
+                                ? 'Create a payment QR and watch the sale complete.'
+                                : 'Create a Pay Code for someone to claim.'
+                        }}
                     </p>
                 </div>
                 <Link
@@ -1142,7 +1156,10 @@ function stringValue(value: unknown): string | null {
                 data-testid="cockpit-quick-generate-primary-workflow-stack"
             >
                 <CockpitQuickGenerateSubmitPanel
+                    v-if="issuanceSurface === 'composer'"
+                    v-model:issuance-surface="issuanceSurface"
                     :client-funds-minor="clientFundsMinor"
+                    :collection-destination="props.collection_destination"
                     :mutation-contract="mutationContract"
                     :claim-preview-contract="claimPreviewContract"
                     :draft-contract="draftContract"
@@ -1154,6 +1171,7 @@ function stringValue(value: unknown): string | null {
                     :onboarding-preset="
                         props.invitation_preset?.enabled ?? false
                     "
+                    :startup-mode="props.startup_mode ?? 'blank'"
                     :last-instructions="props.last_instructions"
                     :saved-templates="props.saved_templates ?? []"
                     :rider-library="props.rider_library ?? []"
@@ -1164,6 +1182,12 @@ function stringValue(value: unknown): string | null {
                         props.settlement_rail_capabilities
                     "
                     :templates="templates"
+                />
+                <CockpitQuickGeneratePosPanel
+                    v-else
+                    v-model:issuance-surface="issuanceSurface"
+                    :mutation-contract="mutationContract"
+                    :pos-voucher="props.pos_voucher"
                 />
             </div>
         </section>

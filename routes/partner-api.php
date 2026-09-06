@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\CancelPartnerPayCodeController;
+use LBHurtado\XChange\Http\Controllers\PartnerApi\CreatePartnerPayCodePaymentAttemptController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\CreateStoredValueSpendChallengeController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\EstimatePartnerPayCodeController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\IssuePartnerPayCodeController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\ListStoredValueInstrumentTransactionsController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\ShowPartnerCapabilitiesController;
+use LBHurtado\XChange\Http\Controllers\PartnerApi\ShowPartnerPayCodeByReferenceController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\ShowPartnerPayCodeController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\SpendStoredValueInstrumentController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\VerifyStoredValueSpendChallengeController;
@@ -33,8 +35,17 @@ Route::prefix($prefix)
             ->name('pay-codes.store');
 
         Route::middleware(EnsurePartnerApiClient::using('pay-codes:read'))
+            ->get('/pay-codes/by-reference/{externalReference}', ShowPartnerPayCodeByReferenceController::class)
+            ->where('externalReference', '[A-Za-z0-9_.:-]{1,190}')
+            ->name('pay-codes.by-reference.show');
+
+        Route::middleware(EnsurePartnerApiClient::using('pay-codes:read'))
             ->get('/pay-codes/{code}', ShowPartnerPayCodeController::class)
             ->name('pay-codes.show');
+
+        Route::middleware(EnsurePartnerApiClient::using('pay-codes:pay'))
+            ->post('/pay-codes/{code}/payment-attempts', CreatePartnerPayCodePaymentAttemptController::class)
+            ->name('pay-codes.payment-attempts.store');
 
         Route::middleware(EnsurePartnerApiClient::using('pay-codes:cancel'))
             ->post('/pay-codes/{code}/cancellation', CancelPartnerPayCodeController::class)

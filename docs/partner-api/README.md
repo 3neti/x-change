@@ -143,6 +143,7 @@ The report schema is `x-change.partner-api-lifecycle-run.v1` and declares that t
 
 - OpenAPI: `resources/api/x-change-partner-api.openapi.json`
 - Postman: `resources/api/x-change-partner-api.postman_collection.json`
+- BPLS QR Ph guide: `docs/partner-api/bpls-qrph-integration-guide.md`
 
 The Postman collection contains placeholders only. Store real credentials in a private environment.
 

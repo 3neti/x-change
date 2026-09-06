@@ -40,6 +40,7 @@ it('returns a pricing estimate via api', function () {
         'prefix' => 'TEST',
         'mask' => '****',
         'ttl' => null,
+        'voucher_type' => 'payable',
         'metadata' => [],
     ];
 

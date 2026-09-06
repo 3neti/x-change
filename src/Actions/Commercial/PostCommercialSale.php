@@ -126,22 +126,27 @@ final readonly class PostCommercialSale
             $this->assertCurrentDispositionAuthorities($dispositionPlans);
 
             $scope = hash('sha256', $snapshot->reference);
-            $charge = $this->positionOperations->charge(
-                new TreasuryPositionCommercialChargeData(
-                    operationReference: 'commercial-charge:'.$scope,
-                    sourcePositionReference: $sourceClientFundsPositionReference,
-                    destinationPositionReference: $commercialClearingPositionReference,
-                    amountMinor: $snapshot->quoteSnapshot->totalPriceMinor,
-                    currency: $snapshot->quoteSnapshot->currency,
-                    idempotencyKey: 'commercial-charge-key:'.$scope,
-                    externalReference: $snapshot->reference,
-                    metadata: [
-                        'source' => 'x_change_commercial_sale',
-                        'commercial_sale_reference' => $snapshot->reference,
-                        'quote_reference' => $snapshot->quoteSnapshot->reference,
-                    ],
-                ),
-            );
+            $chargeOperationReference = null;
+
+            if ($snapshot->quoteSnapshot->totalPriceMinor > 0) {
+                $charge = $this->positionOperations->charge(
+                    new TreasuryPositionCommercialChargeData(
+                        operationReference: 'commercial-charge:'.$scope,
+                        sourcePositionReference: $sourceClientFundsPositionReference,
+                        destinationPositionReference: $commercialClearingPositionReference,
+                        amountMinor: $snapshot->quoteSnapshot->totalPriceMinor,
+                        currency: $snapshot->quoteSnapshot->currency,
+                        idempotencyKey: 'commercial-charge-key:'.$scope,
+                        externalReference: $snapshot->reference,
+                        metadata: [
+                            'source' => 'x_change_commercial_sale',
+                            'commercial_sale_reference' => $snapshot->reference,
+                            'quote_reference' => $snapshot->quoteSnapshot->reference,
+                        ],
+                    ),
+                );
+                $chargeOperationReference = $charge->operationReference;
+            }
 
             $allocations = $sale->allocations()->lockForUpdate()->get();
 
@@ -200,7 +205,7 @@ final readonly class PostCommercialSale
                 ->whereKey($sale->getKey())
                 ->update([
                     'status' => 'posted',
-                    'charge_operation_reference' => $charge->operationReference,
+                    'charge_operation_reference' => $chargeOperationReference,
                     'posted_at' => now(),
                     'updated_at' => now(),
                 ]);

@@ -44,6 +44,8 @@ it('returns guest-safe x-ray disclosure for a pay code', function (): void {
         ->assertJsonPath('success', true)
         ->assertJsonPath('data.xray.visible', true)
         ->assertJsonPath('data.xray.status', 'claimable')
+        ->assertJsonPath('data.xray.presentation.title', 'Claim Pay Code')
+        ->assertJsonPath('data.xray.presentation.primary_action_label', 'Start Claim')
         ->assertJsonPath('data.xray.disclosures.0.key', 'status')
         ->assertJsonPath('data.xray.requirements.0.key', 'mobile')
         ->assertJsonPath('data.xray.requirements.1.key', 'bank_account');

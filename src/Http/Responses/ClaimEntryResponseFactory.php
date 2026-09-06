@@ -42,4 +42,21 @@ class ClaimEntryResponseFactory
             'code' => $code,
         ])->rootView('x-change::claim-root');
     }
+
+    /**
+     * @param  array{amount_paid_minor: int, currency: string, completed_at: ?string}|null  $receiptSummary
+     */
+    public function paymentHandoff(
+        string $code,
+        string $paymentUrl,
+        bool $isFullyCollected,
+        ?array $receiptSummary = null,
+    ): Response {
+        return Inertia::render('x-change/claim/PaymentHandoff', [
+            'code' => $code,
+            'payment_url' => $isFullyCollected ? null : $paymentUrl,
+            'is_fully_collected' => $isFullyCollected,
+            'receipt_summary' => $isFullyCollected ? $receiptSummary : null,
+        ])->rootView('x-change::claim-root');
+    }
 }

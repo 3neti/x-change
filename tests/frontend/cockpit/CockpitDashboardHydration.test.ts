@@ -444,6 +444,74 @@ describe('Cockpit dashboard read model hydration', () => {
         ).toHaveLength(1);
     });
 
+    it('puts recently claimed Pay Codes in the center stage spotlight', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: {
+                    ...dashboardReadModel,
+                    activity: [
+                        {
+                            id: 'PC-CLAIMED-001',
+                            label: 'PC-CLAIMED-001 claimed',
+                            description: 'PHP 55.00 claimed by •••• 1987',
+                            timestamp: '2026-09-01T02:16:00+00:00',
+                            source: 'system',
+                            projection_badge: 'Claimed',
+                            projection_status: 'redeemed',
+                            projection_detail: 'Recipient-facing completion',
+                            code: 'PC-CLAIMED-001',
+                            amount: 'PHP 55.00',
+                            status: 'redeemed',
+                            target_label: '•••• 1987',
+                            detail_href: '/x/cockpit/pay-codes/PC-CLAIMED-001',
+                            claim_summary: {
+                                schema: 'x-change.cockpit.pay-code-claim-summary.v1',
+                                status: 'paid',
+                                claimed_at: '2026-09-01T02:16:00+00:00',
+                                claimed_by_label: '•••• 1987',
+                                claimed_mobile_masked: '•••• 1987',
+                                amount_minor: 5500,
+                                currency: 'PHP',
+                                location_label: 'Makati counter',
+                                evidence_count: 1,
+                            },
+                        },
+                        {
+                            id: 'PC-ISSUED-002',
+                            label: 'PC-ISSUED-002',
+                            description: 'Status: issued',
+                            timestamp: '2026-09-01T01:00:00+00:00',
+                            source: 'system',
+                            code: 'PC-ISSUED-002',
+                            amount: 'PHP 25.00',
+                            status: 'issued',
+                            target_label: 'Open claim',
+                        },
+                    ],
+                },
+            },
+        });
+
+        const spotlight = wrapper.find(
+            '[data-testid="cockpit-recently-claimed-spotlight"]',
+        );
+        const log = wrapper.find('[data-testid="cockpit-recent-log"]');
+
+        expect(spotlight.exists()).toBe(true);
+        expect(spotlight.text()).toContain('Center Stage');
+        expect(spotlight.text()).toContain('Recently Claimed');
+        expect(spotlight.text()).toContain('PC-CLAIMED-001');
+        expect(spotlight.text()).toContain('PHP 55.00');
+        expect(spotlight.text()).toContain('•••• 1987');
+        expect(spotlight.text()).toContain('Makati counter');
+        expect(spotlight.text()).not.toContain('Expires');
+        expect(
+            wrapper.findAll('[data-testid="cockpit-recently-claimed-item"]'),
+        ).toHaveLength(1);
+        expect(log.text()).not.toContain('PC-CLAIMED-001');
+        expect(log.text()).toContain('PC-ISSUED-002');
+    });
+
     it('hydrates the global header from cockpit header balance read model props', () => {
         const wrapper = mount(CockpitDashboard, {
             props: {

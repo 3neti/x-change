@@ -183,6 +183,7 @@ class EstimatePayCodeRequest extends FormRequest
             'slice_plan.slices.*.claim_by' => ['nullable', 'date'],
             'slice_plan.max_slices' => ['nullable', 'integer', 'min:1'],
             'slice_plan.min_amount_minor' => ['nullable', 'integer', 'min:1'],
+            'voucher_type' => ['nullable', 'string', 'max:80'],
             'metadata' => ['nullable', 'array'],
             'metadata.slices' => ['nullable', 'array'],
             'metadata.slices.*' => ['required', 'array'],

@@ -1220,6 +1220,164 @@
                     }
                 }
             }
+        },
+        "/vouchers/code/{code}/payment-confirmations": {
+            "post": {
+                "operationId": "x.v1.vouchers.payment-confirmations.store",
+                "summary": "Confirm or replay a collectible Pay Code payment",
+                "tags": [
+                    "Vouchers"
+                ],
+                "parameters": [
+                    {
+                        "name": "code",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "amount",
+                                    "currency",
+                                    "status"
+                                ],
+                                "properties": {
+                                    "amount": {
+                                        "type": "number",
+                                        "minimum": 0
+                                    },
+                                    "currency": {
+                                        "type": "string",
+                                        "minLength": 3,
+                                        "maxLength": 3,
+                                        "example": "PHP"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "example": "succeeded"
+                                    },
+                                    "provider": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "provider_reference": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "provider_transaction_id": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "idempotency_key": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "payer": {
+                                        "type": "object",
+                                        "additionalProperties": true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Voucher payment confirmation accepted or replayed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": true
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "additionalProperties": true
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Pay Code not found"
+                    },
+                    "409": {
+                        "description": "Voucher collection idempotency, provider reference, or provider transaction conflict"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/payment/webhooks/{provider}": {
+            "post": {
+                "operationId": "x.v1.payment.webhooks.handle",
+                "summary": "Handle provider payment evidence for collectible Pay Codes",
+                "tags": [
+                    "Payments"
+                ],
+                "parameters": [
+                    {
+                        "name": "provider",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": true
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Payment webhook processed or replayed"
+                    },
+                    "409": {
+                        "description": "Voucher collection idempotency, provider reference, or provider transaction conflict"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
         }
     },
     "components": {

@@ -9,6 +9,54 @@ use Illuminate\Support\Str;
 
 final class CockpitPayCodeDetailProjection
 {
+    /** @param array<string, mixed> $detail @return array<string, mixed> */
+    public function posReference(array $detail): array
+    {
+        $reference = data_get($detail, 'pos_reference');
+
+        if (! is_array($reference)) {
+            return [];
+        }
+
+        return [
+            'schema' => 'x-change.cockpit.pos-sale-reference.v1',
+            ...Arr::only($reference, [
+                'sale_reference',
+                'order_reference',
+                'purpose',
+                'legacy_reference',
+                'reference_kind',
+            ]),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $detail
+     * @return array<string, mixed>
+     */
+    public function collection(array $detail): array
+    {
+        $collection = data_get($detail, 'collection');
+
+        if (! is_array($collection)) {
+            return [];
+        }
+
+        return [
+            'schema' => 'x-change.cockpit.pay-code-collection.v1',
+            'consumer_status' => data_get($detail, 'consumer_status'),
+            ...Arr::only($collection, [
+                'currency',
+                'target_amount_minor',
+                'collected_total_minor',
+                'remaining_to_collect_minor',
+                'is_fully_collected',
+                'is_overpaid',
+                'overpaid_amount_minor',
+            ]),
+        ];
+    }
+
     /**
      * @param  array<string, mixed>  $detail
      * @return array<string, mixed>
@@ -31,7 +79,36 @@ final class CockpitPayCodeDetailProjection
                 'expires_at' => $detail['expires_at'] ?? null,
                 'redeemed_at' => $detail['redeemed_at'] ?? null,
             ],
+            'claim_summary' => $this->claimSummary($detail),
             'claim_count' => count($this->list($detail['claims'] ?? [])),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $detail
+     * @return array<string, mixed>
+     */
+    public function claimSummary(array $detail): array
+    {
+        $summary = $this->array($detail['claim_summary'] ?? []);
+
+        if ($summary === []) {
+            return [];
+        }
+
+        return [
+            'schema' => 'x-change.cockpit.pay-code-claim-summary.v1',
+            ...Arr::only($summary, [
+                'status',
+                'claimed_at',
+                'claimed_by_label',
+                'claimed_mobile_masked',
+                'amount_minor',
+                'currency',
+                'location_label',
+                'evidence_count',
+                'latest_claim_reference',
+            ]),
         ];
     }
 

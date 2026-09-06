@@ -244,6 +244,29 @@ const fundingReadModel = {
     },
 };
 
+const cockpitHeaderReadModel = {
+    schema: 'x-change.cockpit.header-read-model.v2',
+    status: 'available',
+    authorized: true,
+    read_only: true,
+    balances: [
+        {
+            key: 'internal',
+            label: 'Client Funds',
+            value: '₱20,000.00',
+            helper: 'Recognized client funds.',
+            tone: 'healthy' as const,
+        },
+        {
+            key: 'outstanding',
+            label: 'Outstanding Pay Codes',
+            value: '₱4,950.00',
+            helper: 'Active Pay Code obligations.',
+            tone: 'warning' as const,
+        },
+    ],
+};
+
 const fundingSimulation = {
     enabled: true,
     mode: 'rollback-only' as const,
@@ -359,9 +382,9 @@ const fundingQrMerchantProfile = {
         { value: '{app_name} - {name}', label: 'x-change + Name' },
     ],
     category_options: [],
-    presentation_only: true as const,
+    presentation_only: false as const,
     controls_routing: false as const,
-    controls_settlement: false as const,
+    controls_settlement: true as const,
 };
 
 const fundingRealtime = {
@@ -603,6 +626,7 @@ describe('Cockpit Funding foundation', () => {
         vi.stubGlobal('fetch', fetch);
         const wrapper = mount(Funding, {
             props: {
+                cockpit_header_read_model: cockpitHeaderReadModel,
                 funding_read_model: fundingReadModel,
                 standing_funding_address: standingFundingAvailability,
                 funding_qr_merchant_profile: fundingQrMerchantProfile,
@@ -629,12 +653,43 @@ describe('Cockpit Funding foundation', () => {
             wrapper
                 .get('[data-testid="cockpit-funding-summary-strip"]')
                 .findAll('article'),
-        ).toHaveLength(4);
+        ).toHaveLength(6);
+        const summaryCards = wrapper
+            .get('[data-testid="cockpit-funding-summary-strip"]')
+            .findAll('article');
+        expect(summaryCards.map((card) => card.text())).toEqual([
+            expect.stringContaining('Client Funds₱20,000.00'),
+            expect.stringContaining('Outstanding Pay Codes₱4,950.00'),
+            expect.stringContaining('Awaiting Funds1'),
+            expect.stringContaining('Settled Funding₱24,950.00'),
+            expect.stringContaining('Open Suspense1'),
+            expect.stringContaining('Recovery₱200.00'),
+        ]);
         expect(
             wrapper
                 .get('[data-testid="cockpit-funding-summary-strip"]')
                 .classes(),
-        ).toEqual(expect.arrayContaining(['hidden', 'grid-cols-4', 'md:grid']));
+        ).toEqual(
+            expect.arrayContaining([
+                'overflow-x-auto',
+                'snap-x',
+                'snap-mandatory',
+                'lg:grid-cols-6',
+                'lg:overflow-visible',
+            ]),
+        );
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-funding-summary-client-funds"]')
+                .classes(),
+        ).toEqual(
+            expect.arrayContaining([
+                'min-w-[9.5rem]',
+                'snap-start',
+                'snap-always',
+                'lg:min-w-0',
+            ]),
+        );
         expect(
             wrapper
                 .get('[data-testid="funding-mode-self_top_up"]')
@@ -744,7 +799,7 @@ describe('Cockpit Funding foundation', () => {
             wrapper.get('[data-testid="cockpit-funding-header"]').text(),
         ).toContain('Add funds using QR Ph, bank transfer, or Pay Code.');
         expect(
-            wrapper.get('[data-testid="cockpit-funding-more-options"]').text(),
+            wrapper.get('[data-testid="cockpit-funding-header"]').text(),
         ).toContain(
             'Funds appear in your Account only after confirmation from the bank or payment provider.',
         );
@@ -907,7 +962,7 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.get('table').classes()).toContain('min-w-[56rem]');
         expect(usePollMock).toHaveBeenCalledWith(
             5000,
-            {
+            expect.objectContaining({
                 only: [
                     'cockpit_header_read_model',
                     'funding_read_model',
@@ -915,167 +970,12 @@ describe('Cockpit Funding foundation', () => {
                     'funding_activity',
                     'funding_notice',
                 ],
-            },
+            }),
             {
                 autoStart: true,
                 mode: 'rest',
             },
         );
-    });
-
-    it('anchors mobile Funding on masked Client Funds and orders the active method before merged options', async () => {
-        const wrapper = mount(Funding, {
-            props: {
-                cockpit_header_read_model: {
-                    schema: 'x-change.cockpit.header-read-model.v1',
-                    status: 'available',
-                    authorized: true,
-                    read_only: true,
-                    operating_identity: 'Account holder',
-                    balances: [
-                        {
-                            key: 'internal',
-                            label: 'Client Funds',
-                            value: '₱8,241.70',
-                            tone: 'healthy',
-                            amount_minor: 824_170,
-                        },
-                        {
-                            key: 'outstanding',
-                            label: 'Outstanding Pay Codes',
-                            value: '₱250.00',
-                            tone: 'neutral',
-                            amount_minor: 25_000,
-                        },
-                    ],
-                },
-                funding_read_model: fundingReadModel,
-                standing_funding_address: {
-                    ...standingFundingAvailability,
-                    available: false,
-                },
-                funding_realtime: {
-                    ...fundingRealtime,
-                    enabled: false,
-                },
-            },
-        });
-
-        const hero = wrapper.get(
-            '[data-testid="cockpit-funding-balance-hero"]',
-        );
-        const heroValue = hero.get(
-            '[data-testid="cockpit-funding-balance-hero-value"]',
-        );
-        const heroToggle = hero.get(
-            '[data-testid="cockpit-funding-balance-hero-toggle"]',
-        );
-        const desktopSummary = wrapper.get(
-            '[data-testid="cockpit-funding-summary-strip"]',
-        );
-        const mobileSummary = wrapper.get(
-            '[data-testid="cockpit-funding-mobile-summary"]',
-        );
-        const page = wrapper.get('[data-testid="cockpit-funding-page"]');
-        const headerShell = wrapper.get(
-            '[data-testid="cockpit-funding-header-shell"]',
-        );
-        const header = wrapper.get('[data-testid="cockpit-funding-header"]');
-        const moreOptions = wrapper.get(
-            '[data-testid="cockpit-funding-more-options"]',
-        );
-        const advancedPaths = moreOptions.get(
-            '[data-testid="funding-advanced-paths"]',
-        );
-
-        expect(hero.classes()).toContain('md:hidden');
-        expect(heroValue.text()).toBe('••••••');
-        expect(heroToggle.attributes('aria-pressed')).toBe('false');
-        expect(heroToggle.attributes('aria-label')).toBe(
-            'Show Client Funds balance',
-        );
-
-        await heroToggle.trigger('click');
-
-        expect(heroValue.text()).toBe('₱8,241.70');
-        expect(heroToggle.attributes('aria-pressed')).toBe('true');
-        expect(heroToggle.attributes('aria-label')).toBe(
-            'Hide Client Funds balance',
-        );
-        expect(desktopSummary.classes()).toEqual(
-            expect.arrayContaining(['hidden', 'grid-cols-4', 'md:grid']),
-        );
-        expect(mobileSummary.classes()).toContain('md:hidden');
-        expect(mobileSummary.text()).toContain('Funding status');
-        expect(advancedPaths.attributes('open')).toBeUndefined();
-        expect(
-            mobileSummary
-                .get('[data-testid="cockpit-funding-mobile-summary-strip"]')
-                .findAll('article'),
-        ).toHaveLength(4);
-        expect(mobileSummary.text()).toEqual(
-            expect.stringContaining('Awaiting Funds'),
-        );
-        expect(mobileSummary.text()).toEqual(
-            expect.stringContaining('Settled Funding'),
-        );
-        expect(mobileSummary.text()).toEqual(
-            expect.stringContaining('Open Suspense'),
-        );
-        expect(mobileSummary.text()).toEqual(
-            expect.stringContaining('Recovery'),
-        );
-
-        const headerHtml = header.html();
-
-        expect(headerHtml.indexOf('cockpit-funding-balance-hero')).toBeLessThan(
-            headerHtml.indexOf('cockpit-funding-mode-switcher'),
-        );
-        expect(headerHtml).not.toContain('funding-advanced-paths');
-        expect(moreOptions.text()).toContain('Other funding options');
-        expect(moreOptions.text()).toContain('Funding status');
-        expect(page.classes()).toEqual(
-            expect.arrayContaining([
-                'flex',
-                'flex-col',
-                'gap-5',
-                'md:block',
-                'md:space-y-5',
-            ]),
-        );
-        expect(headerShell.classes()).toEqual(
-            expect.arrayContaining(['contents', 'md:block']),
-        );
-        expect(header.classes()).toEqual(
-            expect.arrayContaining(['-order-3', 'md:order-none']),
-        );
-        expect(
-            wrapper
-                .get('[data-testid="cockpit-standing-funding-address"]')
-                .classes(),
-        ).toEqual(expect.arrayContaining(['-order-2', 'md:order-none']));
-        expect(
-            wrapper
-                .get('[data-testid="cockpit-bank-transfer-funding"]')
-                .classes(),
-        ).toEqual(expect.arrayContaining(['-order-2', 'md:order-none']));
-        expect(
-            wrapper.get('[data-testid="cockpit-pay-code-funding"]').classes(),
-        ).toEqual(expect.arrayContaining(['-order-2', 'md:order-none']));
-        expect(
-            wrapper
-                .get('[data-testid="cockpit-reviewed-value-funding"]')
-                .classes(),
-        ).toEqual(expect.arrayContaining(['-order-2', 'md:order-none']));
-        expect(moreOptions.classes()).toEqual(
-            expect.arrayContaining(['-order-1', 'md:order-none']),
-        );
-        expect(
-            wrapper
-                .get('[data-testid="cockpit-funding-mode-switcher"]')
-                .get('[role="tablist"]')
-                .classes(),
-        ).toContain('grid-cols-3');
     });
 
     it('omits Treasury oversight for an ordinary Account holder', () => {
@@ -1209,7 +1109,7 @@ describe('Cockpit Funding foundation', () => {
         expect(routerPostMock.mock.calls[0]?.[1]).toEqual({});
     });
 
-    it('keeps three funding paths primary and moves exceptional paths behind disclosure', async () => {
+    it('keeps three funding paths primary and removes exceptional path navigation', async () => {
         const fetch = vi.fn();
         vi.stubGlobal('fetch', fetch);
         const wrapper = mount(Funding, {
@@ -1239,17 +1139,17 @@ describe('Cockpit Funding foundation', () => {
                 .exists(),
         ).toBe(false);
         expect(
-            wrapper.get('[data-testid="funding-advanced-paths"]').text(),
-        ).toContain('Lifecycle simulation');
+            wrapper.find('[data-testid="funding-advanced-paths"]').exists(),
+        ).toBe(false);
         expect(
-            wrapper.get('[data-testid="funding-advanced-paths"]').text(),
-        ).toContain('Other funding options');
+            wrapper
+                .find('[data-testid="funding-mode-reviewed_value"]')
+                .exists(),
+        ).toBe(false);
         expect(
-            wrapper.get('[data-testid="funding-advanced-paths"]').text(),
-        ).toContain('Reviewed Value');
-        expect(
-            wrapper.get('[data-testid="funding-advanced-paths"]').text(),
-        ).not.toContain('Exact provider instructions');
+            wrapper.find('[data-testid="funding-mode-simulation"]').exists(),
+        ).toBe(false);
+        expect(wrapper.text()).not.toContain('Other funding options');
 
         await wrapper
             .get('[data-testid="funding-mode-pay_code"]')
@@ -1317,12 +1217,20 @@ describe('Cockpit Funding foundation', () => {
             panel.find('[data-testid="funding-request-form"]').exists(),
         ).toBe(false);
 
-        await wrapper
-            .get('[data-testid="funding-mode-reviewed_value"]')
-            .trigger('click');
-        await nextTick();
+        const reviewedWrapper = mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+                funding_requests: fundingRequestReadModel,
+                pay_code_funding_preview: payCodeFundingPreview,
+                funding_workspace_mode: 'reviewed_value',
+                standing_funding_address: {
+                    ...standingFundingAvailability,
+                    available: false,
+                },
+            },
+        });
 
-        const reviewedValuePanel = wrapper.get(
+        const reviewedValuePanel = reviewedWrapper.get(
             '[data-testid="cockpit-reviewed-value-funding"]',
         );
 
@@ -1341,7 +1249,7 @@ describe('Cockpit Funding foundation', () => {
         expect(reviewedValuePanel.text()).not.toContain('Verification details');
         expect(reviewedValuePanel.text()).not.toContain('Submit for Review');
         expect(
-            wrapper.get('[data-testid="funding-activity"]').text(),
+            reviewedWrapper.get('[data-testid="funding-activity"]').text(),
         ).toContain('Funding Activity');
         expect(
             panel
@@ -1358,10 +1266,14 @@ describe('Cockpit Funding foundation', () => {
         );
         expect(reviewedValuePanel.text()).not.toContain('3 · Claim once');
         expect(
-            wrapper.find('[data-testid="open-funding-request-modal"]').exists(),
+            reviewedWrapper
+                .find('[data-testid="open-funding-request-modal"]')
+                .exists(),
         ).toBe(false);
         expect(
-            wrapper.find('[data-testid="funding-request-modal"]').exists(),
+            reviewedWrapper
+                .find('[data-testid="funding-request-modal"]')
+                .exists(),
         ).toBe(false);
     });
 
@@ -1444,6 +1356,7 @@ describe('Cockpit Funding foundation', () => {
                     ],
                 },
                 funding_request_submitted_reference: '01J-REQUEST-1',
+                funding_workspace_mode: 'reviewed_value',
                 standing_funding_address: {
                     ...standingFundingAvailability,
                     available: false,
@@ -1451,9 +1364,6 @@ describe('Cockpit Funding foundation', () => {
             },
         });
 
-        await wrapper
-            .get('[data-testid="funding-mode-reviewed_value"]')
-            .trigger('click');
         const result = wrapper.get('[data-testid="funding-request-result"]');
         const buttons = result.findAll('button');
 
@@ -1700,7 +1610,7 @@ describe('Cockpit Funding foundation', () => {
         await vi.runAllTimersAsync();
 
         expect(routerReloadMock).toHaveBeenCalledOnce();
-        expect(routerReloadMock).toHaveBeenCalledWith({
+        expect(routerReloadMock).toHaveBeenCalledWith(expect.objectContaining({
             only: [
                 'cockpit_header_read_model',
                 'funding_read_model',
@@ -1709,7 +1619,7 @@ describe('Cockpit Funding foundation', () => {
             ],
             preserveScroll: true,
             preserveState: true,
-        });
+        }));
         vi.useRealTimers();
     });
 
@@ -1914,7 +1824,7 @@ describe('Cockpit Funding foundation', () => {
             'Verified funding was recognized in Treasury Inventory',
         );
         expect(routerReloadMock).toHaveBeenCalledOnce();
-        expect(routerReloadMock).toHaveBeenCalledWith({
+        expect(routerReloadMock).toHaveBeenCalledWith(expect.objectContaining({
             only: [
                 'cockpit_header_read_model',
                 'funding_read_model',
@@ -1923,7 +1833,7 @@ describe('Cockpit Funding foundation', () => {
             ],
             preserveScroll: true,
             preserveState: true,
-        });
+        }));
 
         expect(
             wrapper
@@ -2030,6 +1940,31 @@ describe('Cockpit Funding foundation', () => {
                 method: 'POST',
             }),
         );
+    });
+
+    it('does not fabricate canonical balances when header facts are unavailable', () => {
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+                standing_funding_address: {
+                    ...standingFundingAvailability,
+                    available: false,
+                },
+            },
+        });
+
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-funding-summary-client-funds"]')
+                .text(),
+        ).toContain('—');
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-funding-summary-outstanding-pay-codes"]',
+                )
+                .text(),
+        ).toContain('—');
     });
 
     it('shows a pending NetBank receipt as applied once without confusing it with final settlement', async () => {
@@ -2157,7 +2092,7 @@ describe('Cockpit Funding foundation', () => {
             'New NetBank funding was applied to Client Funds exactly once.',
         );
         expect(routerReloadMock).toHaveBeenCalledOnce();
-        expect(routerReloadMock).toHaveBeenCalledWith({
+        expect(routerReloadMock).toHaveBeenCalledWith(expect.objectContaining({
             only: [
                 'cockpit_header_read_model',
                 'funding_read_model',
@@ -2166,7 +2101,7 @@ describe('Cockpit Funding foundation', () => {
             ],
             preserveScroll: true,
             preserveState: true,
-        });
+        }));
 
         await wrapper
             .get('[data-testid="check-standing-funding-history"]')

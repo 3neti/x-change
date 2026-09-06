@@ -12,6 +12,7 @@ use LBHurtado\XChange\Data\Reconciliation\DisbursementReconciliationData;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Services\DefaultDisbursementStatusFetcherService;
 use LBHurtado\XChange\Services\DefaultDisbursementStatusResolverService;
+use LBHurtado\XChange\Services\DisbursementRejectionTrustService;
 
 class CheckDisbursementStatusCommand extends Command
 {
@@ -30,6 +31,7 @@ class CheckDisbursementStatusCommand extends Command
         DefaultDisbursementStatusFetcherService $fetcher,
         DefaultDisbursementStatusResolverService $resolver,
         DisbursementReconciliationContract $reconciler,
+        DisbursementRejectionTrustService $rejectionTrust,
     ): int {
         $voucher = $vouchers->findByCodeOrFail((string) $this->argument('code'));
 
@@ -50,7 +52,13 @@ class CheckDisbursementStatusCommand extends Command
             return self::FAILURE;
         }
 
-        if ($this->option('sync')) {
+        if ($rejectionTrust->isTrusted($reconciliation)) {
+            $metadata = is_array($reconciliation->raw_response)
+                ? $reconciliation->raw_response
+                : [];
+            $fetchedStatus = 'failed';
+            $resolvedStatus = 'failed';
+        } elseif ($this->option('sync')) {
             $sync = $reconciler->reconcile($reconciliation->fresh());
             $reconciliation->refresh();
 

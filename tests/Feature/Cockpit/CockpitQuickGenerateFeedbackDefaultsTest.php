@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use LBHurtado\XChange\Contracts\WalletAccessContract;
+
 it('hydrates quick generate with operator-safe feedback defaults', function (): void {
     $user = actingAsTestUser();
 
@@ -15,6 +17,14 @@ it('hydrates quick generate with operator-safe feedback defaults', function (): 
         ->assertJsonPath('props.feedback_defaults.mobile', null)
         ->assertJsonPath('props.feedback_defaults.source', 'authenticated-user')
         ->assertJsonPath('props.feedback_defaults.read_only', true)
+        ->assertJsonPath('props.collection_destination.schema', 'x-change.cockpit.collection-destination.v1')
+        ->assertJsonPath('props.collection_destination.label', 'Your Client Funds')
+        ->assertJsonPath('props.collection_destination.authority', 'authenticated_operator')
+        ->assertJsonPath('props.collection_destination.status', 'ready')
+        ->assertJsonPath('props.collection_destination.editable', false)
+        ->assertJsonPath('props.collection_destination.managed_automatically', true)
+        ->assertJsonPath('props.startup_mode', 'blank')
+        ->assertJsonMissingPath('props.current_user_wallet_id')
         ->assertJsonMissingPath('props.feedback_defaults.raw_payload')
         ->assertJsonMissingPath('props.feedback_defaults.provider_payload')
         ->assertJsonMissingPath('props.feedback_defaults.wallet')
@@ -26,6 +36,86 @@ it('hydrates quick generate with operator-safe feedback defaults', function (): 
 
     expect($response->json('props.feedback_defaults.webhook'))
         ->toStartWith(url('/x/webhooks/operator/'));
+});
+
+it('exposes only the supported quick generate startup modes', function (mixed $configured, string $expected): void {
+    config()->set('x-change.cockpit.quick_generate.startup_mode', $configured);
+
+    actingAsTestUser();
+
+    $this
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.quick-generate'))
+        ->assertOk()
+        ->assertJsonPath('props.startup_mode', $expected);
+})->with([
+    'repeat last' => ['repeat_last', 'repeat_last'],
+    'blank' => ['blank', 'blank'],
+    'unsupported value' => ['money-changer', 'blank'],
+    'missing value' => [null, 'blank'],
+]);
+
+it('hydrates the platform wallet when the host default wallet is different', function (): void {
+    $user = actingAsTestUser();
+    $platformWallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $legacyWallet = $user->wallet()->create([
+        'name' => 'Legacy Default Wallet',
+        'slug' => 'legacy-default',
+    ]);
+    $walletCount = $user->wallet()->getRelated()->newQuery()
+        ->where('holder_type', $user->getMorphClass())
+        ->where('holder_id', $user->getKey())
+        ->count();
+
+    config()->set('wallet.wallet.default.slug', 'legacy-default');
+    $user->unsetRelation('wallet');
+
+    expect($user->wallet->getKey())
+        ->toBe($legacyWallet->getKey())
+        ->not->toBe($platformWallet->getKey());
+
+    $wallets = Mockery::mock(WalletAccessContract::class);
+    $wallets
+        ->shouldReceive('resolveForUser')
+        ->atLeast()
+        ->once()
+        ->with(Mockery::on(fn (mixed $candidate): bool => $candidate === $user))
+        ->andReturn($platformWallet);
+
+    app()->instance(WalletAccessContract::class, $wallets);
+
+    $this
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.quick-generate'))
+        ->assertOk()
+        ->assertJsonPath('props.collection_destination.label', 'Your Client Funds')
+        ->assertJsonPath('props.collection_destination.authority', 'authenticated_operator')
+        ->assertJsonMissingPath('props.current_user_wallet_id');
+
+    expect($user->wallet()->getRelated()->newQuery()
+        ->where('holder_type', $user->getMorphClass())
+        ->where('holder_id', $user->getKey())
+        ->count()
+    )->toBe($walletCount);
+});
+
+it('does not hide an unexpected platform wallet resolution failure', function (): void {
+    actingAsTestUser();
+
+    $wallets = Mockery::mock(WalletAccessContract::class);
+    $wallets
+        ->shouldReceive('resolveForUser')
+        ->once()
+        ->andThrow(new RuntimeException('Platform wallet lookup failed.'));
+
+    app()->instance(WalletAccessContract::class, $wallets);
+
+    $this->withoutExceptionHandling();
+
+    expect(fn () => $this
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.quick-generate'))
+    )->toThrow(RuntimeException::class, 'Platform wallet lookup failed.');
 });
 
 it('hydrates the effective onboarding OTP policy without exposing configuration details', function (): void {

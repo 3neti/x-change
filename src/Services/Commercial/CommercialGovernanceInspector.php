@@ -647,6 +647,13 @@ final readonly class CommercialGovernanceInspector
                 'policies' => [],
                 'message' => 'Commercial Recognition Policy storage is not ready.',
             ],
+            'tax_profiles' => [
+                'operational' => false,
+                'required_count' => 0,
+                'ready_count' => 0,
+                'profiles' => [],
+                'message' => 'Commercial Tax Profile storage is not ready.',
+            ],
             'partners' => [
                 'storage_ready' => false,
                 'active_count' => 0,

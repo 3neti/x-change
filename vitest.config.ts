@@ -6,6 +6,10 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
+      "@laravel/echo-vue": path.resolve(
+        import.meta.dirname,
+        "tests/frontend/stubs/echo-vue.ts",
+      ),
       "@/components/AppLogoIcon.vue": path.resolve(
         import.meta.dirname,
         "tests/frontend/stubs/AppLogoIcon.ts",

@@ -120,7 +120,7 @@ it('renders the public claim error page for a missing code', function () {
         ->assertJsonPath('props.code', 'MISSING');
 });
 
-it('does not admit a collectible Pay Code into the outward claim experience', function () {
+it('hands a collectible Pay Code to the payment experience', function () {
     $voucher = issueVoucher(validVoucherInstructions(100, 'INSTAPAY', [
         'voucher_type' => 'payable',
         'target_amount' => 100,
@@ -132,9 +132,10 @@ it('does not admit a collectible Pay Code into the outward claim experience', fu
     $this->withHeader('X-Inertia', 'true')
         ->get(route('x-change.claim.show', ['code' => $voucher->code]))
         ->assertOk()
-        ->assertJsonPath('component', 'x-change/claim/Error')
-        ->assertJsonPath('props.message', 'This Pay Code accepts payment and cannot be claimed.')
-        ->assertJsonPath('props.code', (string) $voucher->code);
+        ->assertJsonPath('component', 'x-change/claim/PaymentHandoff')
+        ->assertJsonPath('props.code', (string) $voucher->code)
+        ->assertJsonPath('props.payment_url', route('x-change.pay.show', ['code' => $voucher->code]))
+        ->assertJsonPath('props.is_fully_collected', false);
 });
 
 it('admits legacy campaign fulfillment Pay Codes into the outward claim experience', function () {

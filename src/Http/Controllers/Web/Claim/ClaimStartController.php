@@ -27,6 +27,8 @@ use LBHurtado\XChange\Services\Claim\VoucherClaimFlowCompiler;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
 use LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
+use LBHurtado\XChange\Services\VoucherCollectionProgressService;
+use LBHurtado\XChange\Services\XRay\VoucherXRayProjectionBuilder;
 use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultRedirector;
@@ -48,6 +50,8 @@ class ClaimStartController extends Controller
         protected PayoutDestinationRegistry $destinations,
         protected VoucherSliceExecutionCoordinator $sliceExecutions,
         protected VoucherSlicePlanProjection $slicePlans,
+        protected VoucherCollectionProgressService $collectionProgress,
+        protected VoucherXRayProjectionBuilder $xrayProjection,
     ) {}
 
     public function __invoke(Request $request): RedirectResponse|Response
@@ -175,7 +179,17 @@ class ClaimStartController extends Controller
             );
         }
 
-        if (! $this->capabilities->resolve($voucher)->can_disburse) {
+        $flowCapabilities = $this->capabilities->resolve($voucher);
+
+        if (! $flowCapabilities->can_disburse) {
+            if ($flowCapabilities->can_collect) {
+                return $this->claimEntryResponse()->paymentHandoff(
+                    code: $code,
+                    paymentUrl: route('x-change.pay.show', ['code' => $code]),
+                    isFullyCollected: $this->collectionProgress->compute($voucher)->is_fully_collected,
+                );
+            }
+
             return $this->claimEntryResponse()->error(
                 message: 'This Pay Code accepts payment and cannot be claimed.',
                 code: $code,
@@ -244,7 +258,9 @@ class ClaimStartController extends Controller
             }
         }
 
-        if ($voucher->redeemed_at !== null && $slicePlan === null) {
+        if ($voucher->redeemed_at !== null
+            && $slicePlan === null
+            && ! $this->isCampaignPayoutRecovery($voucher)) {
             return $this->redirectToCanonicalClaimSurface($code);
         }
 
@@ -281,6 +297,10 @@ class ClaimStartController extends Controller
         }
 
         $instructionPayload = $this->applyClaimDestinationDefaults($instructionPayload);
+        $instructionPayload = $this->applyClaimPresentation(
+            voucher: $voucher,
+            instructionPayload: $instructionPayload,
+        );
         $instructionPayload = $this->applySliceDefaults(
             instructionPayload: $instructionPayload,
             amount: $payoutAmount,
@@ -344,6 +364,10 @@ class ClaimStartController extends Controller
             compiledInputs: $inputs,
         );
         $instructionPayload = $this->applyClaimDestinationDefaults($instructionPayload);
+        $instructionPayload = $this->applyClaimPresentation(
+            voucher: $voucher,
+            instructionPayload: $instructionPayload,
+        );
 
         $instructionPayload = app(FormFlowSplashSkipPolicy::class)->apply($instructionPayload);
 
@@ -428,6 +452,26 @@ class ClaimStartController extends Controller
         return $instructionPayload;
     }
 
+    /**
+     * @param  array<string, mixed>  $instructionPayload
+     * @return array<string, mixed>
+     */
+    protected function applyClaimPresentation(Voucher $voucher, array $instructionPayload): array
+    {
+        $presentation = data_get($this->xrayProjection->build($voucher), 'presentation');
+
+        if (! is_array($presentation)) {
+            return $instructionPayload;
+        }
+
+        data_set($instructionPayload, 'metadata.claim_presentation', [
+            'schema' => 'x-change.claim-presentation.v1',
+            ...$presentation,
+        ]);
+
+        return $instructionPayload;
+    }
+
     protected function nextCanonicalSliceAmount(Voucher $voucher): ?float
     {
         $row = collect((array) data_get($this->slicePlans->forVoucher($voucher), 'rows', []))
@@ -485,6 +529,14 @@ class ClaimStartController extends Controller
     protected function voucherRequiresSecret(Voucher $voucher): bool
     {
         return filled(data_get($voucher->metadata ?? [], 'instructions.cash.validation.secret'));
+    }
+
+    private function isCampaignPayoutRecovery(Voucher $voucher): bool
+    {
+        $metadata = $voucher->getAttribute('metadata');
+
+        return data_get($metadata, 'instructions.metadata.custom.campaign.claim_activation') === 'provider_rejection'
+            && data_get($metadata, 'treasury.pay_code_reservation.status') === 'recovery_pending';
     }
 
     protected function claimSecretMatches(Voucher $voucher, mixed $secret): bool

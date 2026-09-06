@@ -15,10 +15,13 @@ class CockpitVoucherReadModelData extends Data
      * @param  array<string, mixed>  $claims
      * @param  array<string, mixed>  $settlement
      * @param  array<string, mixed>  $treasury
+     * @param  array<string, mixed>  $claim_summary
      * @param  array<int, CockpitVoucherEvidenceSummaryData>  $evidence_summary
      * @param  array<string, mixed>  $distribution_links
      * @param  array<string, mixed>  $redactions
      * @param  array<string, mixed>  $slices
+     * @param  array<string, mixed>  $collection
+     * @param  array<string, mixed>  $pos_reference
      */
     public function __construct(
         public readonly ?string $code,
@@ -34,5 +37,8 @@ class CockpitVoucherReadModelData extends Data
         public readonly array $redactions = ['payloads' => 'not-loaded'],
         public readonly bool $authorized = false,
         public readonly array $slices = [],
+        public readonly array $collection = [],
+        public readonly array $pos_reference = [],
+        public readonly array $claim_summary = [],
     ) {}
 }

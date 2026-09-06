@@ -21,6 +21,22 @@ it('resolves null provider', function () {
     expect($provider)->toBeInstanceOf(NullVoucherPaymentProvider::class);
 });
 
+it('blocks manual provider outside local and testing unless explicitly allowed', function () {
+    config()->set('app.env', 'production');
+    config()->set('x-change.payment.allow_manual_provider_in_production', false);
+
+    app(VoucherPaymentProviderManager::class)->driver('manual');
+})->throws(RuntimeException::class, 'Manual voucher payment provider is disabled');
+
+it('allows manual provider outside local and testing when explicitly configured', function () {
+    config()->set('app.env', 'production');
+    config()->set('x-change.payment.allow_manual_provider_in_production', true);
+
+    $provider = app(VoucherPaymentProviderManager::class)->driver('manual');
+
+    expect($provider)->toBeInstanceOf(ManualVoucherPaymentProvider::class);
+});
+
 it('resolves configured custom provider', function () {
     config()->set('x-change.payment.providers.fake', FakeVoucherPaymentProvider::class);
 

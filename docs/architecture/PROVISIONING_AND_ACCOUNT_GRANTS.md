@@ -282,3 +282,11 @@ tokens; terminal revocation also revokes the Passport client.
 
 The System Principal cannot be maker, checker, credential activator, or the
 recipient of interactive authority.
+
+## Remaining operational closure
+
+The provisioning machinery is implemented. Live maker-checker acceptance and
+final documentation closure are tracked in
+[Provisioning Operational Acceptance and Documentation Closure](../todo/provisioning_operational_acceptance.md).
+Institution Funds classification and Account Grants remain adjacent Treasury
+operations, not unfinished x-provisioning responsibilities.

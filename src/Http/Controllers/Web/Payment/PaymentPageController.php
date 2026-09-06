@@ -9,20 +9,26 @@ use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
-use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Models\PaymentAttempt;
+use LBHurtado\XChange\Services\Payment\PaymentAttemptPresenter;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptSessionGuard;
+use LBHurtado\XChange\Services\Payment\PaymentReceiptReadModel;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use Symfony\Component\HttpFoundation\Response;
 
 class PaymentPageController extends Controller
 {
+    public function __construct(
+        private readonly PaymentReceiptReadModel $receipts,
+    ) {}
+
     public function __invoke(
         Request $request,
         string $code,
         VoucherFlowCapabilityResolverContract $capabilities,
         VoucherCollectionProgressService $progress,
         PaymentAttemptSessionGuard $sessions,
+        PaymentAttemptPresenter $presenter,
     ): Response {
         $voucher = Voucher::query()
             ->where('code', strtoupper(trim($code)))
@@ -43,12 +49,17 @@ class PaymentPageController extends Controller
                 'collected_amount_minor' => $collection->collected_total_minor,
                 'amount_due_minor' => $collection->remaining_to_collect_minor,
                 'is_fully_paid' => $collection->is_fully_collected,
+                'rider_message' => $this->riderMessage($voucher),
                 'provider' => $provider,
                 'provider_available' => $providerEnabled,
                 'can_create_attempt' => (bool) config('x-change.payment.attempts.enabled', true)
                     && $providerEnabled
                     && ! $collection->is_fully_collected,
-                'attempt' => $attempt === null ? null : $this->presentAttempt($attempt),
+                'poll_interval_ms' => max(1000, (int) config('x-change.payment.attempts.ui_refresh_interval_milliseconds', 5000)),
+                'attempt' => $attempt === null ? null : $presenter->present($attempt),
+                'receipt' => $collection->is_fully_collected
+                    ? $this->receipts->forVoucher($voucher, $collection->currency)
+                    : null,
             ],
             'notice' => $request->session()->get('payment_notice'),
         ])->toResponse($request);
@@ -57,6 +68,13 @@ class PaymentPageController extends Controller
         $response->headers->set('Pragma', 'no-cache');
 
         return $response;
+    }
+
+    private function riderMessage(Voucher $voucher): ?string
+    {
+        $message = trim((string) $voucher->instructions->rider->message);
+
+        return $message === '' ? null : $message;
     }
 
     private function attempt(
@@ -79,32 +97,5 @@ class PaymentPageController extends Controller
         $sessions->assertOwner($attempt, $browserKey);
 
         return $attempt;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function presentAttempt(PaymentAttempt $attempt): array
-    {
-        $instructions = $attempt->instructions_ciphertext;
-        $qr = is_array($instructions) ? data_get($instructions, 'qr_code') : null;
-
-        return [
-            'reference' => $attempt->reference,
-            'status' => $attempt->status->value,
-            'provider' => $attempt->provider_code,
-            'amount_minor' => $attempt->expected_amount_minor,
-            'currency' => $attempt->currency,
-            'expires_at' => $attempt->expires_at?->toIso8601String(),
-            'last_checked_at' => $attempt->last_checked_at?->toIso8601String(),
-            'can_check' => $attempt->status === PaymentAttemptStatus::AwaitingPayment,
-            'qr_code' => is_array($qr) ? [
-                'mime_type' => data_get($qr, 'mime_type'),
-                'base64_payload' => data_get($qr, 'base64_payload'),
-                'qr_mode' => data_get($qr, 'qr_mode'),
-                'transaction_type' => data_get($qr, 'transaction_type'),
-                'embedded_amount' => (bool) data_get($qr, 'embedded_amount', false),
-            ] : null,
-        ];
     }
 }
