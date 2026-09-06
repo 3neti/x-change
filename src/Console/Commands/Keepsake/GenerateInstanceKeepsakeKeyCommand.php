@@ -47,6 +47,13 @@ HELP;
 
     protected $description = 'Generate a local recipient key for encrypted X-Change instance keepsakes';
 
+    protected function configure(): void
+    {
+        parent::configure();
+
+        $this->setHelp($this->help);
+    }
+
     public function handle(InstanceKeepsakeCrypto $crypto): int
     {
         try {

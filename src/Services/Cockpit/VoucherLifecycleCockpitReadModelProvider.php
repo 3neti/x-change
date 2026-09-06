@@ -70,6 +70,7 @@ use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitVoucherEvidenceSummaryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitVoucherReadModelData;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 use LBHurtado\XChange\Services\VoucherLifecycleService;
 
@@ -1516,7 +1517,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
      */
     private function payCodeListRows(CockpitReadModelQueryData $query): Collection
     {
-        return Voucher::query()
+        $vouchers = Voucher::query()
             ->select([
                 'id',
                 'code',
@@ -1545,8 +1546,14 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             )
             ->with(['redeemers.redeemer'])
             ->latest('id')
-            ->get()
-            ->map(fn (Voucher $voucher): array => $this->payCodeListRow($voucher))
+            ->get();
+        $claimSummaries = $this->payCodeListClaimSummaries($vouchers);
+
+        return $vouchers
+            ->map(fn (Voucher $voucher): array => $this->payCodeListRow(
+                $voucher,
+                $claimSummaries[(string) $voucher->getKey()] ?? [],
+            ))
             ->filter(fn (array $row): bool => $this->summaryCode($row, '') !== '')
             ->values();
     }
@@ -1584,9 +1591,10 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
     }
 
     /**
+     * @param  array<string, mixed>  $claimSummary
      * @return array<string, mixed>
      */
-    private function payCodeListRow(Voucher $voucher): array
+    private function payCodeListRow(Voucher $voucher, array $claimSummary = []): array
     {
         $instructions = $this->payCodeListInstructions($voucher);
         $status = $this->payCodeListOperationalStatus($voucher);
@@ -1623,7 +1631,8 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             'approval' => null,
             'external_reference' => $externalReference,
             'consumer_status' => $this->payCodeListConsumerStatus($instructions),
-            'collection' => $this->payCodeListCollection($instructions),
+            'claim_summary' => $claimSummary,
+            'collection' => $this->payCodeListCollection($voucher, $instructions),
             'instructions' => $instructions,
             'created_at' => $voucher->created_at?->toIso8601String(),
             'starts_at' => $voucher->starts_at?->toIso8601String(),
@@ -1642,6 +1651,54 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         $instructions = data_get($metadata, 'instructions', []);
 
         return is_array($instructions) ? $instructions : [];
+    }
+
+    /**
+     * @param  Collection<int, Voucher>  $vouchers
+     * @return array<string, array<string, mixed>>
+     */
+    private function payCodeListClaimSummaries(Collection $vouchers): array
+    {
+        $voucherIds = $vouchers
+            ->map(fn (Voucher $voucher): int => (int) $voucher->getKey())
+            ->filter()
+            ->values();
+
+        if ($voucherIds->isEmpty()) {
+            return [];
+        }
+
+        return VoucherClaim::query()
+            ->withCount('evidence')
+            ->whereIn('voucher_id', $voucherIds->all())
+            ->orderByDesc('claim_number')
+            ->orderByDesc('id')
+            ->get()
+            ->unique('voucher_id')
+            ->mapWithKeys(function (VoucherClaim $claim): array {
+                $claimedAt = $claim->completed_at
+                    ?? $claim->attempted_at
+                    ?? $claim->created_at;
+                $mobile = $this->maskedMobile($claim->claimer_mobile);
+
+                return [
+                    (string) $claim->voucher_id => [
+                        'schema' => 'x-change.cockpit.pay-code-claim-summary.v1',
+                        'status' => in_array($claim->status, ['paid', 'succeeded', 'withdrawn'], true)
+                            ? 'paid'
+                            : (string) $claim->status,
+                        'claimed_at' => $claimedAt?->toIso8601String(),
+                        'claimed_by_label' => $mobile,
+                        'claimed_mobile_masked' => $mobile,
+                        'amount_minor' => $claim->disbursed_amount_minor ?? $claim->requested_amount_minor,
+                        'currency' => $claim->currency ?? 'PHP',
+                        'location_label' => null,
+                        'evidence_count' => (int) $claim->evidence_count,
+                        'latest_claim_reference' => $claim->reference,
+                    ],
+                ];
+            })
+            ->all();
     }
 
     private function payCodeListAmount(Voucher $voucher, array $instructions): float
@@ -1983,15 +2040,45 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
     /**
      * @return array<string, mixed>
      */
-    private function payCodeListCollection(array $instructions): array
+    private function payCodeListCollection(Voucher $voucher, array $instructions): array
     {
         $targetAmount = data_get($instructions, 'target_amount');
         $currency = $this->nullableString(data_get($instructions, 'cash.currency')) ?? 'PHP';
+        $persistedProgress = data_get($voucher->metadata, 'collection_progress');
+
+        $targetAmountMinor = is_numeric($targetAmount)
+            ? (int) round((float) $targetAmount * 100)
+            : null;
+
+        if (is_array($persistedProgress)) {
+            return [
+                'currency' => $this->nullableString($persistedProgress['currency'] ?? null) ?? $currency,
+                'target_amount_minor' => is_numeric($persistedProgress['target_amount_minor'] ?? null)
+                    ? (int) $persistedProgress['target_amount_minor']
+                    : $targetAmountMinor,
+                'collected_total_minor' => is_numeric($persistedProgress['collected_total_minor'] ?? null)
+                    ? (int) $persistedProgress['collected_total_minor']
+                    : 0,
+                'remaining_to_collect_minor' => is_numeric($persistedProgress['remaining_to_collect_minor'] ?? null)
+                    ? (int) $persistedProgress['remaining_to_collect_minor']
+                    : $targetAmountMinor,
+                'is_fully_collected' => ($persistedProgress['is_fully_collected'] ?? false) === true,
+                'is_overpaid' => ($persistedProgress['is_overpaid'] ?? false) === true,
+                'overpaid_amount_minor' => is_numeric($persistedProgress['overpaid_amount_minor'] ?? null)
+                    ? (int) $persistedProgress['overpaid_amount_minor']
+                    : 0,
+            ];
+        }
 
         return [
             'target_amount_minor' => is_numeric($targetAmount)
-                ? (int) round((float) $targetAmount * 100)
+                ? $targetAmountMinor
                 : null,
+            'collected_total_minor' => 0,
+            'remaining_to_collect_minor' => $targetAmountMinor,
+            'is_fully_collected' => false,
+            'is_overpaid' => false,
+            'overpaid_amount_minor' => 0,
             'currency' => $currency,
         ];
     }
@@ -3024,7 +3111,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                         $amountMinor,
                         $this->stringValue($claimSummary['currency'] ?? null, $this->stringValue($row['currency'] ?? null, 'PHP')),
                     )
-                    : $this->amountValue($row['formatted_amount'] ?? $row['amount'] ?? null);
+                    : $this->dashboardActivityAmount($row);
                 $isClaimed = $claimedAt !== null
                     || $this->nullableString($row['redeemed_at'] ?? null) !== null
                     || in_array(strtolower($status), ['paid', 'redeemed', 'claimed'], true);
@@ -3086,6 +3173,29 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             ->take(5)
             ->values()
             ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function dashboardActivityAmount(array $row): ?string
+    {
+        $formatted = $this->nullableString($row['formatted_amount'] ?? null);
+
+        if ($formatted !== null) {
+            return $formatted;
+        }
+
+        $amount = $row['amount'] ?? null;
+
+        if (is_numeric($amount)) {
+            return $this->formatMinorMoney(
+                (int) round((float) $amount * 100),
+                $this->stringValue($row['currency'] ?? null, 'PHP'),
+            );
+        }
+
+        return $this->nullableString($amount);
     }
 
     /**

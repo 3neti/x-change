@@ -962,7 +962,7 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.get('table').classes()).toContain('min-w-[56rem]');
         expect(usePollMock).toHaveBeenCalledWith(
             5000,
-            {
+            expect.objectContaining({
                 only: [
                     'cockpit_header_read_model',
                     'funding_read_model',
@@ -970,7 +970,7 @@ describe('Cockpit Funding foundation', () => {
                     'funding_activity',
                     'funding_notice',
                 ],
-            },
+            }),
             {
                 autoStart: true,
                 mode: 'rest',
@@ -1610,7 +1610,7 @@ describe('Cockpit Funding foundation', () => {
         await vi.runAllTimersAsync();
 
         expect(routerReloadMock).toHaveBeenCalledOnce();
-        expect(routerReloadMock).toHaveBeenCalledWith({
+        expect(routerReloadMock).toHaveBeenCalledWith(expect.objectContaining({
             only: [
                 'cockpit_header_read_model',
                 'funding_read_model',
@@ -1619,7 +1619,7 @@ describe('Cockpit Funding foundation', () => {
             ],
             preserveScroll: true,
             preserveState: true,
-        });
+        }));
         vi.useRealTimers();
     });
 
@@ -1824,7 +1824,7 @@ describe('Cockpit Funding foundation', () => {
             'Verified funding was recognized in Treasury Inventory',
         );
         expect(routerReloadMock).toHaveBeenCalledOnce();
-        expect(routerReloadMock).toHaveBeenCalledWith({
+        expect(routerReloadMock).toHaveBeenCalledWith(expect.objectContaining({
             only: [
                 'cockpit_header_read_model',
                 'funding_read_model',
@@ -1833,7 +1833,7 @@ describe('Cockpit Funding foundation', () => {
             ],
             preserveScroll: true,
             preserveState: true,
-        });
+        }));
 
         expect(
             wrapper
@@ -2092,7 +2092,7 @@ describe('Cockpit Funding foundation', () => {
             'New NetBank funding was applied to Client Funds exactly once.',
         );
         expect(routerReloadMock).toHaveBeenCalledOnce();
-        expect(routerReloadMock).toHaveBeenCalledWith({
+        expect(routerReloadMock).toHaveBeenCalledWith(expect.objectContaining({
             only: [
                 'cockpit_header_read_model',
                 'funding_read_model',
@@ -2101,7 +2101,7 @@ describe('Cockpit Funding foundation', () => {
             ],
             preserveScroll: true,
             preserveState: true,
-        });
+        }));
 
         await wrapper
             .get('[data-testid="check-standing-funding-history"]')

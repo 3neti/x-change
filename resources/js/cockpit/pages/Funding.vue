@@ -295,6 +295,7 @@ const { start: startFundingPoll, stop: stopFundingPoll } = usePoll(
     Math.max(1000, props.funding_poll_interval ?? 5000),
     {
         only: [
+            'cockpit_header_read_model',
             'funding_read_model',
             'funding_requests',
             'funding_activity',

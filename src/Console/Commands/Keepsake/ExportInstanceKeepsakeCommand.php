@@ -84,6 +84,13 @@ HELP;
 
     protected $description = 'Preview or create an encrypted, non-restorable X-Change instance keepsake';
 
+    protected function configure(): void
+    {
+        parent::configure();
+
+        $this->setHelp($this->help);
+    }
+
     public function handle(
         PlanInstanceKeepsakeExport $planner,
         CreateInstanceKeepsakeExport $creator,

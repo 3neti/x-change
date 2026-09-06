@@ -46,6 +46,13 @@ HELP;
 
     protected $description = 'Decrypt and independently verify a downloaded X-Change instance keepsake';
 
+    protected function configure(): void
+    {
+        parent::configure();
+
+        $this->setHelp($this->help);
+    }
+
     public function handle(VerifyInstanceKeepsakeArchive $verifier): int
     {
         try {
