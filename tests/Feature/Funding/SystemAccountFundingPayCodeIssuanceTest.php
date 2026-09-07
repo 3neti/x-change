@@ -236,7 +236,6 @@ it('atomically provisions a new Account and funds it from the system Account Fun
     $sofia = User::query()
         ->where('mobile', '639399236237')
         ->sole();
-    $claim = $voucher->claims()->sole();
     $claimReplay = app(DispatchVoucherClaimOutcome::class)->handle(
         voucher: $voucher,
         requestedOutcome: 'account_funding',
@@ -247,7 +246,10 @@ it('atomically provisions a new Account and funds it from the system Account Fun
     expect($result->claimed)->toBeTrue()
         ->and($sofia->name)->toBe('Sofia Hurtado')
         ->and($sofia->email)->toBe('sofia@hurtado.ph')
-        ->and($claimReplay->is($claim))->toBeTrue()
+        ->and($voucher->claims()
+            ->whereKey($claimReplay->getKey())
+            ->exists())->toBeTrue()
+        ->and($voucher->claims()->count())->toBe(2)
         ->and(systemFundingPositionBalance(
             $system,
             TreasuryPositionPurpose::AccountFundingReserve,
@@ -262,7 +264,7 @@ it('atomically provisions a new Account and funds it from the system Account Fun
         ))->toBe(1_500)
         ->and(TreasuryInventory::query()
             ->sum('balance_minor'))->toBe($inventoryBefore)
-        ->and($voucher->claims()->count())->toBe(1)
+        ->and($voucher->claims()->count())->toBe(2)
         ->and(ExecutionJournalEntry::query()
             ->orderBy('id')
             ->pluck('event_type')

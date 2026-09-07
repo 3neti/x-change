@@ -3,8 +3,12 @@
 declare(strict_types=1);
 
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
+use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
+use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Console\Commands\BootstrapXChangeFromManifestCommand;
 use LBHurtado\XChange\Services\Commissioning\CommissioningManifestRepository;
+use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
 use LBHurtado\XChange\Services\Configuration\LocalEnvironmentFileWriter;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 
@@ -14,6 +18,8 @@ it('requires the x payout manifest to commission against netbank readiness', fun
 
     expect(data_get($manifest, 'deployment.profile'))->toBe('netbank')
         ->and(data_get($manifest, 'deployment.runtime_tier'))->toBe('local')
+        ->and(data_get($manifest, 'onboarding.invitation_amount'))->toBe(0)
+        ->and(data_get($manifest, 'onboarding.currency'))->toBe('PHP')
         ->and(data_get($manifest, 'bootstrap.environment.defaults.XCHANGE_DEPLOYMENT_PROFILE'))->toBe('netbank')
         ->and(data_get($manifest, 'bootstrap.environment.defaults.SESSION_DRIVER'))->toBe('database')
         ->and(data_get($manifest, 'bootstrap.environment.defaults.XCHANGE_FUNDING_NETBANK_ENABLED'))->toBeTrue()
@@ -176,3 +182,177 @@ it('commissions maker and checker onboarding invitations from the package manife
             ->toContain('/x/claim/'.(string) $voucher->code);
     });
 });
+
+
+it('commissions funded maker and checker invitations from the system Account Funding Reserve idempotently', function (): void {
+    $system = enableNetbankTreasuryForTests();
+    fundTestSystemAccountFundingReserve(
+        $system,
+        450_693,
+        'x-payout-funded-commissioning',
+    );
+    $manifestPath = fundedCommissioningManifestPath([
+        'invitation_amount: 100.00',
+        'currency: PHP',
+        'connection_reference: netbank-primary',
+        'funding_source: treasury_account_funding_reserve',
+        'authorization_reference: commissioning:x-payout:system-capital',
+        'funding_instruction: Client funds ready',
+    ]);
+
+    $firstExit = Artisan::call('x-change:commission:manifest', [
+        '--manifest' => $manifestPath,
+        '--json' => true,
+    ]);
+    $firstOutput = Artisan::output();
+    $first = json_decode(trim($firstOutput), true);
+
+    expect($firstExit)->toBe(0, $firstOutput);
+
+    $codes = collect($first['invitations'])->pluck('code', 'role');
+
+    expect($first['count'])->toBe(2)
+        ->and($codes->get('maker'))->toStartWith('MAKE-')
+        ->and($codes->get('checker'))->toStartWith('CHKR-')
+        ->and(SystemAccountFundingPayCodeIssuance::query()->count())->toBe(2)
+        ->and(commissioningSystemFundingPositionBalance(
+            $system,
+            TreasuryPositionPurpose::AccountFundingReserve,
+        ))->toBe(430_693)
+        ->and(commissioningSystemFundingPositionBalance(
+            $system,
+            TreasuryPositionPurpose::PayCodeReserve,
+        ))->toBe(20_000);
+
+    $secondExit = Artisan::call('x-change:commission:manifest', [
+        '--manifest' => $manifestPath,
+        '--json' => true,
+    ]);
+    $secondOutput = Artisan::output();
+    $second = json_decode(trim($secondOutput), true);
+
+    expect($secondExit)->toBe(0, $secondOutput)
+        ->and(collect($second['invitations'])->pluck(
+            'code',
+            'role',
+        )->all())->toBe($codes->all())
+        ->and(SystemAccountFundingPayCodeIssuance::query()->count())->toBe(2)
+        ->and(Voucher::query()->count())->toBe(2)
+        ->and(commissioningSystemFundingPositionBalance(
+            $system,
+            TreasuryPositionPurpose::AccountFundingReserve,
+        ))->toBe(430_693)
+        ->and(commissioningSystemFundingPositionBalance(
+            $system,
+            TreasuryPositionPurpose::PayCodeReserve,
+        ))->toBe(20_000);
+
+    Voucher::query()->get()->each(function (Voucher $voucher): void {
+        expect((float) data_get($voucher->metadata, 'instructions.cash.amount'))->toBe(100.0)
+            ->and(data_get(
+                $voucher->metadata,
+                'instructions.claim.default_outcome',
+            ))->toBe('account_funding')
+            ->and(data_get(
+                $voucher->metadata,
+                'instructions.claim.onboarding.mode',
+            ))->toBe('required')
+            ->and(data_get(
+                $voucher->metadata,
+                'instructions.metadata.custom.x_payout_commissioning.funding_instruction',
+            ))->toBe('Client funds ready')
+            ->and(data_get(
+                $voucher->metadata,
+                'treasury.pay_code_reservation.source_position_purpose',
+            ))->toBe(TreasuryPositionPurpose::AccountFundingReserve->value);
+    });
+});
+
+it('rejects funded commissioning invitations without an authorization reference', function (): void {
+    enableNetbankTreasuryForTests();
+    $manifestPath = fundedCommissioningManifestPath([
+        'invitation_amount: 100.00',
+        'currency: PHP',
+        'connection_reference: netbank-primary',
+        'funding_source: treasury_account_funding_reserve',
+    ]);
+
+    $this->artisan('x-change:commission:manifest', [
+        '--manifest' => $manifestPath,
+    ])
+        ->expectsOutputToContain(
+            'Funded commissioning invitations require [onboarding.authorization_reference].',
+        )
+        ->assertFailed();
+});
+
+it('rejects funded commissioning invitations when the Account Funding Reserve cannot cover every role', function (): void {
+    $system = enableNetbankTreasuryForTests();
+    fundTestSystemAccountFundingReserve(
+        $system,
+        15_000,
+        'x-payout-funded-commissioning-insufficient',
+    );
+    $manifestPath = fundedCommissioningManifestPath([
+        'invitation_amount: 100.00',
+        'currency: PHP',
+        'connection_reference: netbank-primary',
+        'funding_source: treasury_account_funding_reserve',
+        'authorization_reference: commissioning:x-payout:system-capital',
+    ]);
+
+    $this->artisan('x-change:commission:manifest', [
+        '--manifest' => $manifestPath,
+    ])
+        ->expectsOutputToContain(
+            'The system Account Funding Reserve does not cover funded commissioning invitations.',
+        )
+        ->assertFailed();
+
+    expect(Voucher::query()->count())->toBe(0)
+        ->and(SystemAccountFundingPayCodeIssuance::query()->count())->toBe(0)
+        ->and(commissioningSystemFundingPositionBalance(
+            $system,
+            TreasuryPositionPurpose::AccountFundingReserve,
+        ))->toBe(15_000)
+        ->and(commissioningSystemFundingPositionBalance(
+            $system,
+            TreasuryPositionPurpose::PayCodeReserve,
+        ))->toBe(0);
+});
+
+/**
+ * @param  list<string>  $onboardingLines
+ */
+function fundedCommissioningManifestPath(array $onboardingLines): string
+{
+    $path = storage_path('framework/testing/funded-commissioning-'.str()->uuid().'.yaml');
+
+    if (! is_dir(dirname($path))) {
+        mkdir(dirname($path), 0755, true);
+    }
+
+    file_put_contents($path, implode("\n", [
+        'extends: x-change://commissioning/manifests/x-payout.default.yaml',
+        'onboarding:',
+        ...array_map(static fn (string $line): string => '  '.$line, $onboardingLines),
+        '',
+    ]));
+
+    return $path;
+}
+
+function commissioningSystemFundingPositionBalance(
+    object $owner,
+    TreasuryPositionPurpose $purpose,
+): int {
+    $principal = app(
+        TreasuryPrincipalReferenceResolverContract::class,
+    )->resolve($owner);
+
+    return collect(
+        app(TreasuryPositionReadModelContract::class)->forPrincipal($principal),
+    )->first(
+        static fn ($position): bool => $position->purpose === $purpose,
+    )?->balanceMinor ?? 0;
+}

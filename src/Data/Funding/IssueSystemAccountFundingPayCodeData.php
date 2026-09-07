@@ -24,5 +24,9 @@ final class IssueSystemAccountFundingPayCodeData extends Data
         public readonly string $source = 'system_utility',
         public readonly array $metadata = [],
         public readonly bool $onboarding = false,
+        public readonly string $prefix = 'FUND',
+        public readonly string $mask = '****',
+        public readonly ?string $riderMessage = null,
+        public readonly ?string $onboardingProfile = null,
     ) {}
 }

@@ -11,8 +11,15 @@ use LBHurtado\Voucher\Contracts\GeneratesVouchers;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Enums\VoucherType;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
+use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
+use LBHurtado\XChange\Actions\Funding\IssueSystemAccountFundingPayCode;
+use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
+use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
+use LBHurtado\XChange\Data\Funding\IssueSystemAccountFundingPayCodeData;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 use LBHurtado\XChange\Services\Treasury\SystemPrincipalProvisioningService;
+use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 
 final readonly class CommissioningManifestCommissioner
 {
@@ -21,6 +28,11 @@ final readonly class CommissioningManifestCommissioner
         private SystemPrincipalProvisioningService $principals,
         private GeneratesVouchers $vouchers,
         private OnboardingVoucherInstructionPolicy $onboardingPolicy,
+        private IssueSystemAccountFundingPayCode $fundedInvitations,
+        private TreasuryProviderConnectionCatalog $connections,
+        private TreasuryAccountPortfolioProvisioningContract $portfolios,
+        private TreasuryPrincipalReferenceResolverContract $principalReferences,
+        private TreasuryPositionReadModelContract $positions,
     ) {}
 
     /** @return array{schema: string, count: int, invitations: list<array{role: string, code: string|null, claim_url: string|null, created: bool}>} */
@@ -42,9 +54,17 @@ final readonly class CommissioningManifestCommissioner
             data_get($manifest, 'invitations.metadata_namespace'),
             'invitations.metadata_namespace',
         );
+        $funding = $this->onboardingFunding($manifest);
         $roles = $this->roles($manifest);
+        $this->assertFundedInvitationsCovered($issuer, $roles, $funding);
         $issued = collect($roles)
-            ->map(fn (array $role): array => $this->ensureInvitation($role, $issuer, $namespace))
+            ->map(fn (array $role): array => $this->ensureInvitation(
+                $role,
+                $issuer,
+                $namespace,
+                $funding,
+                $manifestReference,
+            ))
             ->values()
             ->all();
 
@@ -101,8 +121,17 @@ final readonly class CommissioningManifestCommissioner
         ];
     }
 
-    /** @param array{role: string, label: string, profile: string, prefix: string} $role */
-    private function ensureInvitation(array $role, Model $issuer, string $namespace): array
+    /**
+     * @param  array{role: string, label: string, profile: string, prefix: string}  $role
+     * @param  array{amount_minor: int, currency: string, funding_source: string|null, authorization_reference: string|null, funding_instruction: string|null, connection_reference: string}  $funding
+     */
+    private function ensureInvitation(
+        array $role,
+        Model $issuer,
+        string $namespace,
+        array $funding,
+        string $manifestReference,
+    ): array
     {
         $existing = Voucher::query()
             ->get()
@@ -113,6 +142,16 @@ final readonly class CommissioningManifestCommissioner
 
         if ($existing instanceof Voucher) {
             return $this->invitationPayload($role['role'], (string) $existing->code, false);
+        }
+
+        if ($funding['amount_minor'] > 0) {
+            return $this->ensureFundedInvitation(
+                $role,
+                $issuer,
+                $namespace,
+                $funding,
+                $manifestReference,
+            );
         }
 
         $input = $this->onboardingPolicy->normalize([
@@ -160,6 +199,7 @@ final readonly class CommissioningManifestCommissioner
                         'role' => $role['role'],
                         'label' => $role['label'],
                         'profile' => $role['profile'],
+                        'funding_instruction' => $funding['funding_instruction'],
                     ],
                 ],
             ],
@@ -172,6 +212,199 @@ final readonly class CommissioningManifestCommissioner
         }
 
         return $this->invitationPayload($role['role'], (string) $voucher->code, true);
+    }
+
+
+    /**
+     * @param  list<array{role: string, label: string, profile: string, prefix: string}>  $roles
+     * @param  array{amount_minor: int, currency: string, funding_source: string|null, authorization_reference: string|null, funding_instruction: string|null, connection_reference: string}  $funding
+     */
+    private function assertFundedInvitationsCovered(Model $issuer, array $roles, array $funding): void
+    {
+        if ($funding['amount_minor'] <= 0) {
+            return;
+        }
+
+        $connection = collect($this->connections->active([
+            $funding['connection_reference'],
+        ]))->sole();
+
+        if ($connection->currency !== $funding['currency']) {
+            throw new InvalidArgumentException(
+                'Funded commissioning invitation currency must match the Treasury connection currency.',
+            );
+        }
+
+        $this->portfolios->provision($issuer, [
+            $connection->reference,
+        ]);
+        $principal = $this->principalReferences->resolve($issuer);
+        $reserve = collect($this->positions->forPrincipal($principal))->first(
+            static fn ($position): bool => $position->purpose === TreasuryPositionPurpose::AccountFundingReserve,
+        );
+        $availableMinor = (int) ($reserve?->balanceMinor ?? 0);
+        $requiredMinor = $funding['amount_minor'] * count($roles);
+
+        if ($availableMinor < $requiredMinor) {
+            throw new InvalidArgumentException(
+                'The system Account Funding Reserve does not cover funded commissioning invitations.',
+            );
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $manifest
+     * @return array{amount_minor: int, currency: string, funding_source: string|null, authorization_reference: string|null, funding_instruction: string|null, connection_reference: string}
+     */
+    private function onboardingFunding(array $manifest): array
+    {
+        $amount = (float) data_get(
+            $manifest,
+            'onboarding.invitation_amount',
+            0,
+        );
+        $amountMinor = (int) round($amount * 100);
+        $currency = strtoupper(trim(
+            (string) data_get($manifest, 'onboarding.currency', 'PHP'),
+        ));
+        $fundingSource = $this->nullableString(data_get(
+            $manifest,
+            'onboarding.funding_source',
+        ));
+        $authorizationReference = $this->nullableString(data_get(
+            $manifest,
+            'onboarding.authorization_reference',
+        ));
+        $connectionReference = trim((string) data_get(
+            $manifest,
+            'onboarding.connection_reference',
+            'netbank-primary',
+        ));
+
+        if ($amountMinor <= 0) {
+            return [
+                'amount_minor' => 0,
+                'currency' => $currency === '' ? 'PHP' : $currency,
+                'funding_source' => $fundingSource,
+                'authorization_reference' => $authorizationReference,
+                'funding_instruction' => $this->nullableString(data_get(
+                    $manifest,
+                    'onboarding.funding_instruction',
+                )),
+                'connection_reference' => $connectionReference === '' ? 'netbank-primary' : $connectionReference,
+            ];
+        }
+
+        if ($currency === '') {
+            throw new InvalidArgumentException(
+                'Commissioning manifest field [onboarding.currency] is required for funded invitations.',
+            );
+        }
+
+        if ($fundingSource !== 'treasury_account_funding_reserve') {
+            throw new InvalidArgumentException(
+                'Funded commissioning invitations require [onboarding.funding_source] to be [treasury_account_funding_reserve].',
+            );
+        }
+
+        if ($authorizationReference === null) {
+            throw new InvalidArgumentException(
+                'Funded commissioning invitations require [onboarding.authorization_reference].',
+            );
+        }
+
+        if ($connectionReference === '') {
+            throw new InvalidArgumentException(
+                'Funded commissioning invitations require [onboarding.connection_reference].',
+            );
+        }
+
+        return [
+            'amount_minor' => $amountMinor,
+            'currency' => $currency,
+            'funding_source' => $fundingSource,
+            'authorization_reference' => $authorizationReference,
+            'funding_instruction' => $this->nullableString(data_get(
+                $manifest,
+                'onboarding.funding_instruction',
+                'Client funds ready',
+            )),
+            'connection_reference' => $connectionReference,
+        ];
+    }
+
+    /**
+     * @param  array{role: string, label: string, profile: string, prefix: string}  $role
+     * @param  array{amount_minor: int, currency: string, funding_source: string|null, authorization_reference: string|null, funding_instruction: string|null, connection_reference: string}  $funding
+     * @return array{role: string, code: string|null, claim_url: string|null, created: bool}
+     */
+    private function ensureFundedInvitation(
+        array $role,
+        Model $issuer,
+        string $namespace,
+        array $funding,
+        string $manifestReference,
+    ): array
+    {
+        $idempotencyReference = implode(':', [
+            'commissioning-invitation',
+            sha1($manifestReference),
+            $role['role'],
+            (string) $funding['amount_minor'],
+            $funding['currency'],
+            $funding['funding_source'],
+            sha1((string) $funding['authorization_reference']),
+        ]);
+
+        $issuance = $this->fundedInvitations->handle(new IssueSystemAccountFundingPayCodeData(
+            amountMinor: $funding['amount_minor'],
+            connectionReference: $funding['connection_reference'],
+            idempotencyReference: $idempotencyReference,
+            expiresAt: now()->addYear(),
+            recipient: null,
+            evidenceReference: 'commissioning-manifest:'
+                .$role['role']
+                .':'
+                .$funding['amount_minor'],
+            authorizationReference: $funding['authorization_reference'],
+            source: 'commissioning_invitation',
+            metadata: [
+                'flow_type' => 'disbursable',
+                'issuer_id' => (string) $issuer->getKey(),
+                'custom' => [
+                    $namespace => [
+                        'role' => $role['role'],
+                        'label' => $role['label'],
+                        'profile' => $role['profile'],
+                        'funding_source' => $funding['funding_source'],
+                        'funding_instruction' => $funding['funding_instruction'],
+                        'authorization_reference' => $funding['authorization_reference'],
+                    ],
+                ],
+                'onboarding_grant' => [
+                    'enabled' => true,
+                    'funding_instruction' => $funding['funding_instruction'],
+                    'funding_source' => $funding['funding_source'],
+                ],
+            ],
+            onboarding: true,
+            prefix: $role['prefix'],
+            mask: '****',
+            riderMessage: $role['label'].' onboarding invitation',
+            onboardingProfile: $role['profile'],
+        ));
+
+        $voucher = $issuance->voucher;
+
+        if (! $voucher instanceof Voucher) {
+            return $this->invitationPayload($role['role'], null, false);
+        }
+
+        return $this->invitationPayload(
+            $role['role'],
+            (string) $voucher->code,
+            $issuance->wasRecentlyCreated,
+        );
     }
 
     /** @return array{role: string, code: string|null, claim_url: string|null, created: bool} */

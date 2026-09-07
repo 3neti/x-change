@@ -30,6 +30,10 @@ it('honors an explicitly declared voucher type and initial state', function () {
             ],
             'metadata' => [
                 'flow_type' => 'collectible',
+                'collection_wallet_id' => (string) $requester->wallet()
+                    ->where('slug', 'platform')
+                    ->sole()
+                    ->getKey(),
             ],
         ],
         expiresAt: now()->addWeek(),

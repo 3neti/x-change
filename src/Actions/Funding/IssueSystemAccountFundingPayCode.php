@@ -176,10 +176,17 @@ final readonly class IssueSystemAccountFundingPayCode
                 ],
                 'inputs' => ['fields' => []],
                 'feedback' => [],
-                'rider' => [],
+                'rider' => [
+                    'message' => $data->riderMessage,
+                    'url' => null,
+                    'redirect_timeout' => null,
+                    'splash' => null,
+                    'splash_timeout' => null,
+                    'og_source' => null,
+                ],
                 'count' => 1,
-                'prefix' => 'FUND',
-                'mask' => '****',
+                'prefix' => $data->prefix,
+                'mask' => $data->mask,
                 'expires_at' => $data->expiresAt,
                 'voucher_type' => 'redeemable',
                 'claim' => [
@@ -190,9 +197,10 @@ final readonly class IssueSystemAccountFundingPayCode
                     'selection' => 'server',
                     'consumption' => 'one_of',
                     'default_outcome' => 'account_funding',
-                    'onboarding' => [
+                    'onboarding' => array_filter([
                         'mode' => $data->onboarding ? 'required' : 'if_required',
-                    ],
+                        'profile' => $data->onboardingProfile,
+                    ], static fn (mixed $value): bool => $value !== null),
                     'claimant' => $recipient === null
                         ? ['mode' => 'unbound']
                         : [
@@ -237,6 +245,18 @@ final readonly class IssueSystemAccountFundingPayCode
             $voucherMetadata = is_array($voucher->metadata)
                 ? $voucher->metadata
                 : [];
+
+            if (is_array(data_get($data->metadata, 'custom'))) {
+                data_set(
+                    $voucherMetadata,
+                    'instructions.metadata.custom',
+                    array_replace_recursive(
+                        (array) data_get($voucherMetadata, 'instructions.metadata.custom', []),
+                        (array) data_get($data->metadata, 'custom'),
+                    ),
+                );
+            }
+
             data_set($voucherMetadata, 'treasury.account_funding', [
                 'status' => 'ready',
                 'destinations' => ['account_funding'],
@@ -305,6 +325,10 @@ final readonly class IssueSystemAccountFundingPayCode
             'expires_at' => $data->expiresAt->toIso8601String(),
             'metadata' => $data->metadata,
             'onboarding' => $data->onboarding,
+            'prefix' => trim($data->prefix),
+            'mask' => trim($data->mask),
+            'rider_message' => $data->riderMessage,
+            'onboarding_profile' => $data->onboardingProfile,
         ], JSON_THROW_ON_ERROR));
     }
 }

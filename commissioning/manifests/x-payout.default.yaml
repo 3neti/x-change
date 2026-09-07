@@ -7,6 +7,9 @@ deployment:
   runtime_tier: local
 system_principal:
   name: x-PayOut System
+onboarding:
+  invitation_amount: 0
+  currency: PHP
 invitations:
   schema: x-payout.commissioning-invitations.v1
   metadata_namespace: x_payout_commissioning
