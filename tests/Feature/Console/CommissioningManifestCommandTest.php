@@ -215,6 +215,9 @@ it('commissions funded maker and checker invitations from the system Account Fun
         ->and($codes->get('maker'))->toStartWith('MAKE-')
         ->and($codes->get('checker'))->toStartWith('CHKR-')
         ->and(SystemAccountFundingPayCodeIssuance::query()->count())->toBe(2)
+        ->and(data_get($first, 'funding.opening_reserve_minor'))->toBe(450_693)
+        ->and(data_get($first, 'funding.account_funding_reserve_after_minor'))->toBe(430_693)
+        ->and(data_get($first, 'funding.pay_code_reserve_after_minor'))->toBe(20_000)
         ->and(commissioningSystemFundingPositionBalance(
             $system,
             TreasuryPositionPurpose::AccountFundingReserve,
@@ -247,6 +250,7 @@ it('commissions funded maker and checker invitations from the system Account Fun
             TreasuryPositionPurpose::PayCodeReserve,
         ))->toBe(20_000);
 
+
     Voucher::query()->get()->each(function (Voucher $voucher): void {
         expect((float) data_get($voucher->metadata, 'instructions.cash.amount'))->toBe(100.0)
             ->and(data_get(
@@ -266,6 +270,37 @@ it('commissions funded maker and checker invitations from the system Account Fun
                 'treasury.pay_code_reservation.source_position_purpose',
             ))->toBe(TreasuryPositionPurpose::AccountFundingReserve->value);
     });
+});
+
+
+it('prints funded commissioning reserve feedback for operators', function (): void {
+    $system = enableNetbankTreasuryForTests();
+    fundTestSystemAccountFundingReserve(
+        $system,
+        450_693,
+        'x-payout-funded-commissioning-output',
+    );
+    $manifestPath = fundedCommissioningManifestPath([
+        'invitation_amount: 100.00',
+        'currency: PHP',
+        'connection_reference: netbank-primary',
+        'funding_source: treasury_account_funding_reserve',
+        'authorization_reference: commissioning:x-payout:system-capital',
+        'funding_instruction: Client funds ready',
+    ]);
+
+    $humanExit = Artisan::call('x-change:commission:manifest', [
+        '--manifest' => $manifestPath,
+    ]);
+    $humanOutput = Artisan::output();
+
+    expect($humanExit)->toBe(0, $humanOutput)
+        ->and($humanOutput)->toContain('Opening reserve:')
+        ->and($humanOutput)->toContain('₱4,506.93')
+        ->and($humanOutput)->toContain('After reserve:')
+        ->and($humanOutput)->toContain('₱4,306.93')
+        ->and($humanOutput)->toContain('Pay Code reserve:')
+        ->and($humanOutput)->toContain('₱200.00');
 });
 
 it('rejects funded commissioning invitations without an authorization reference', function (): void {

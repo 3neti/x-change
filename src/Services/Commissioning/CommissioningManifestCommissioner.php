@@ -35,7 +35,7 @@ final readonly class CommissioningManifestCommissioner
         private TreasuryPositionReadModelContract $positions,
     ) {}
 
-    /** @return array{schema: string, count: int, invitations: list<array{role: string, code: string|null, claim_url: string|null, created: bool}>} */
+    /** @return array{schema: string, count: int, invitations: list<array{role: string, code: string|null, claim_url: string|null, created: bool}>, funding: array<string, mixed>|null} */
     public function commission(string $manifestReference): array
     {
         $manifest = $this->manifests->load($manifestReference);
@@ -56,7 +56,11 @@ final readonly class CommissioningManifestCommissioner
         );
         $funding = $this->onboardingFunding($manifest);
         $roles = $this->roles($manifest);
-        $this->assertFundedInvitationsCovered($issuer, $roles, $funding);
+        $fundingBefore = $this->assertFundedInvitationsCovered(
+            $issuer,
+            $roles,
+            $funding,
+        );
         $issued = collect($roles)
             ->map(fn (array $role): array => $this->ensureInvitation(
                 $role,
@@ -75,6 +79,11 @@ final readonly class CommissioningManifestCommissioner
             ),
             'count' => count($issued),
             'invitations' => $issued,
+            'funding' => $this->fundingFeedback(
+                $funding,
+                $fundingBefore,
+                $this->fundedInvitationBalances($issuer, $funding),
+            ),
         ];
     }
 
@@ -218,11 +227,34 @@ final readonly class CommissioningManifestCommissioner
     /**
      * @param  list<array{role: string, label: string, profile: string, prefix: string}>  $roles
      * @param  array{amount_minor: int, currency: string, funding_source: string|null, authorization_reference: string|null, funding_instruction: string|null, connection_reference: string}  $funding
+     * @return array{account_funding_reserve_minor: int, pay_code_reserve_minor: int, currency: string, connection_reference: string}|null
      */
-    private function assertFundedInvitationsCovered(Model $issuer, array $roles, array $funding): void
+    private function assertFundedInvitationsCovered(Model $issuer, array $roles, array $funding): ?array
     {
         if ($funding['amount_minor'] <= 0) {
-            return;
+            return null;
+        }
+
+        $balances = $this->fundedInvitationBalances($issuer, $funding);
+        $requiredMinor = $funding['amount_minor'] * count($roles);
+
+        if ($balances['account_funding_reserve_minor'] < $requiredMinor) {
+            throw new InvalidArgumentException(
+                'The system Account Funding Reserve does not cover funded commissioning invitations.',
+            );
+        }
+
+        return $balances;
+    }
+
+    /**
+     * @param  array{amount_minor: int, currency: string, funding_source: string|null, authorization_reference: string|null, funding_instruction: string|null, connection_reference: string}  $funding
+     * @return array{account_funding_reserve_minor: int, pay_code_reserve_minor: int, currency: string, connection_reference: string}|null
+     */
+    private function fundedInvitationBalances(Model $issuer, array $funding): ?array
+    {
+        if ($funding['amount_minor'] <= 0) {
+            return null;
         }
 
         $connection = collect($this->connections->active([
@@ -239,17 +271,42 @@ final readonly class CommissioningManifestCommissioner
             $connection->reference,
         ]);
         $principal = $this->principalReferences->resolve($issuer);
-        $reserve = collect($this->positions->forPrincipal($principal))->first(
-            static fn ($position): bool => $position->purpose === TreasuryPositionPurpose::AccountFundingReserve,
-        );
-        $availableMinor = (int) ($reserve?->balanceMinor ?? 0);
-        $requiredMinor = $funding['amount_minor'] * count($roles);
+        $positions = collect($this->positions->forPrincipal($principal));
 
-        if ($availableMinor < $requiredMinor) {
-            throw new InvalidArgumentException(
-                'The system Account Funding Reserve does not cover funded commissioning invitations.',
-            );
+        return [
+            'account_funding_reserve_minor' => (int) ($positions->first(
+                static fn ($position): bool => $position->purpose === TreasuryPositionPurpose::AccountFundingReserve,
+            )?->balanceMinor ?? 0),
+            'pay_code_reserve_minor' => (int) ($positions->first(
+                static fn ($position): bool => $position->purpose === TreasuryPositionPurpose::PayCodeReserve,
+            )?->balanceMinor ?? 0),
+            'currency' => $connection->currency,
+            'connection_reference' => $connection->reference,
+        ];
+    }
+
+    /**
+     * @param  array{amount_minor: int, currency: string, funding_source: string|null, authorization_reference: string|null, funding_instruction: string|null, connection_reference: string}  $funding
+     * @param  array{account_funding_reserve_minor: int, pay_code_reserve_minor: int, currency: string, connection_reference: string}|null  $before
+     * @param  array{account_funding_reserve_minor: int, pay_code_reserve_minor: int, currency: string, connection_reference: string}|null  $after
+     * @return array<string, mixed>|null
+     */
+    private function fundingFeedback(array $funding, ?array $before, ?array $after): ?array
+    {
+        if ($funding['amount_minor'] <= 0 || $before === null || $after === null) {
+            return null;
         }
+
+        return [
+            'schema' => 'x-change.commissioning-funding.v1',
+            'source' => $funding['funding_source'],
+            'connection_reference' => $after['connection_reference'],
+            'currency' => $after['currency'],
+            'invitation_amount_minor' => $funding['amount_minor'],
+            'opening_reserve_minor' => $before['account_funding_reserve_minor'],
+            'account_funding_reserve_after_minor' => $after['account_funding_reserve_minor'],
+            'pay_code_reserve_after_minor' => $after['pay_code_reserve_minor'],
+        ];
     }
 
     /**
