@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Commissioning;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use InvalidArgumentException;
 use LBHurtado\Voucher\Contracts\GeneratesVouchers;
@@ -417,7 +418,7 @@ final readonly class CommissioningManifestCommissioner
             amountMinor: $funding['amount_minor'],
             connectionReference: $funding['connection_reference'],
             idempotencyReference: $idempotencyReference,
-            expiresAt: now()->addYear(),
+            expiresAt: Carbon::now()->addYear(),
             recipient: null,
             evidenceReference: 'commissioning-manifest:'
                 .$role['role']
