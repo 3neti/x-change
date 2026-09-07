@@ -147,6 +147,27 @@ it('propagates prepared manifest values over stale process values', function ():
     }
 });
 
+it('passes treasury opening capitalization options for funded onboarding bootstrap manifests', function (): void {
+    $manifestPath = fundedCommissioningManifestPath([
+        'invitation_amount: 100.00',
+        'currency: PHP',
+        'connection_reference: netbank-primary',
+        'funding_source: treasury_account_funding_reserve',
+        'authorization_reference: commissioning:x-payout:system-capital',
+    ]);
+    $manifest = app(CommissioningManifestRepository::class)->load($manifestPath);
+    $command = app(BootstrapXChangeFromManifestCommand::class);
+    $method = new ReflectionMethod($command, 'treasuryOpeningInstallOptions');
+
+    $options = $method->invoke($command, $manifest);
+
+    expect($options)->toContain(
+        '--treasury-opening-policy=system-capital',
+        '--capitalization-authorization-reference=commissioning:x-payout:system-capital',
+        '--confirm-system-ownership',
+    );
+});
+
 it('commissions maker and checker onboarding invitations from the package manifest idempotently', function (): void {
     provisionTestSystemPrincipalForCommissioning();
 

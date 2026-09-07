@@ -89,6 +89,8 @@ final class BootstrapXChangeFromManifestCommand extends Command
             $install[] = '--profile='.$profile;
         }
 
+        array_push($install, ...$this->treasuryOpeningInstallOptions($manifest));
+
         return [
             ['php', 'artisan', 'config:clear'],
             ['php', 'artisan', 'x-change:doctor', '--pre-install', '--strict'],
@@ -347,6 +349,31 @@ final class BootstrapXChangeFromManifestCommand extends Command
         }
 
         return $commands;
+    }
+
+    /**
+     * @param  array<string, mixed>  $manifest
+     * @return list<string>
+     */
+    private function treasuryOpeningInstallOptions(array $manifest): array
+    {
+        $fundingSource = trim((string) data_get($manifest, 'onboarding.funding_source'));
+
+        if ($fundingSource !== 'treasury_account_funding_reserve') {
+            return [];
+        }
+
+        $authorizationReference = trim((string) data_get($manifest, 'onboarding.authorization_reference'));
+
+        if ($authorizationReference === '') {
+            return [];
+        }
+
+        return [
+            '--treasury-opening-policy=system-capital',
+            '--capitalization-authorization-reference='.$authorizationReference,
+            '--confirm-system-ownership',
+        ];
     }
 
     /**
