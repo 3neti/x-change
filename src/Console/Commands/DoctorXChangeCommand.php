@@ -23,40 +23,54 @@ class DoctorXChangeCommand extends Command
         {--strict : Return a non-zero exit status when any check fails}
         {--assets : Inspect published x-change frontend asset drift only}
         {--pre-install : Inspect only checks that are safe before migrations and publishing}
+        {--pre-commission : Inspect checks required before running commissioning without requiring commissioned state}
         {--commercial-governance : Inspect Commercial Offering activation and require maker-checker readiness}
         {--operator-activity-runtime : Inspect Cockpit operator activity runtime configuration only}';
 
     protected $description = 'Inspect X-Change turnkey installation readiness.';
 
-    public function handle(
-        XChangeProviderTopologyResolverContract $topologies,
-        ProviderRuntimeSettingsResolverContract $settings,
-        PublicationVerifier $publications,
-        CockpitOperatorIssuanceActivityRuntimeProfileInspector $operatorActivityRuntimeProfile,
-        PreInstallReadinessInspector $preInstallReadiness,
-        CommissioningStateResolver $commissioning,
-        SystemPrincipalAccountReadinessInspector $systemPrincipalAccount,
-        CommercialGovernanceInspector $commercialGovernance,
-    ): int {
-        $checks = $this->option('pre-install')
-            ? $preInstallReadiness->inspect()['checks']
-            : ($this->option('commercial-governance')
-            ? [
+    public function handle(): int
+    {
+        if ($this->option('pre-install')) {
+            $checks = app(PreInstallReadinessInspector::class)->inspect()['checks'];
+        } elseif ($this->option('pre-commission')) {
+            $checks = [
+                $this->check('x-change config', config('x-change') !== [], 'config(x-change) is loaded'),
+                ...app(PreInstallReadinessInspector::class)->inspect()['checks'],
+                $this->check('onboarding package', class_exists('LBHurtado\\Onboarding\\OnboardingServiceProvider'), '3neti/onboarding is installed'),
+                $this->check('onboarding config', config('onboarding') !== [], 'config(onboarding) is loaded'),
+                $this->check('onboarding sessions table', $this->hasTable('onboarding_sessions'), 'onboarding_sessions table exists'),
+                $this->check('users.mobile column', $this->hasColumn('users', 'mobile'), 'users.mobile exists'),
+                $this->check('users.mobile_verified_at column', $this->hasColumn('users', 'mobile_verified_at'), 'users.mobile_verified_at exists'),
+                $this->check('users.identity_level column', $this->hasColumn('users', 'identity_level'), 'users.identity_level exists'),
+                $this->check('Fortify mobile username', config('fortify.username') === 'mobile', 'fortify.username is mobile'),
+                $this->providerTopologyCheck(app(XChangeProviderTopologyResolverContract::class)),
+                $this->providerRuntimeSettingsCheck(app(ProviderRuntimeSettingsResolverContract::class)),
+            ];
+        } elseif ($this->option('commercial-governance')) {
+            $commercialGovernance = app(CommercialGovernanceInspector::class);
+            $checks = [
                 $this->commercialGovernanceCheck($commercialGovernance, true),
                 $this->commercialComponentEconomicsCheck($commercialGovernance),
                 $this->commercialRecipientDesignationsCheck($commercialGovernance),
                 $this->commercialRecognitionPoliciesCheck($commercialGovernance),
                 $this->commercialTaxProfilesCheck($commercialGovernance),
-            ]
-            : ($this->option('operator-activity-runtime')
-            ? [$this->operatorActivityRuntimeProfileCheck($operatorActivityRuntimeProfile)]
-            : ($this->option('assets')
-            ? [$this->publishedAssetCheck($publications)]
-            : [
+            ];
+        } elseif ($this->option('operator-activity-runtime')) {
+            $checks = [
+                $this->operatorActivityRuntimeProfileCheck(
+                    app(CockpitOperatorIssuanceActivityRuntimeProfileInspector::class),
+                ),
+            ];
+        } elseif ($this->option('assets')) {
+            $checks = [$this->publishedAssetCheck(app(PublicationVerifier::class))];
+        } else {
+            $commercialGovernance = app(CommercialGovernanceInspector::class);
+            $checks = [
                 $this->check('x-change config', config('x-change') !== [], 'config(x-change) is loaded'),
-                ...$preInstallReadiness->inspect()['checks'],
-                $systemPrincipalAccount->inspect(),
-                $this->commissioningCheck($commissioning),
+                ...app(PreInstallReadinessInspector::class)->inspect()['checks'],
+                app(SystemPrincipalAccountReadinessInspector::class)->inspect(),
+                $this->commissioningCheck(app(CommissioningStateResolver::class)),
                 $this->commercialGovernanceCheck($commercialGovernance),
                 $this->commercialComponentEconomicsCheck($commercialGovernance),
                 $this->commercialRecipientDesignationsCheck($commercialGovernance),
@@ -69,9 +83,10 @@ class DoctorXChangeCommand extends Command
                 $this->check('users.mobile_verified_at column', $this->hasColumn('users', 'mobile_verified_at'), 'users.mobile_verified_at exists'),
                 $this->check('users.identity_level column', $this->hasColumn('users', 'identity_level'), 'users.identity_level exists'),
                 $this->check('Fortify mobile username', config('fortify.username') === 'mobile', 'fortify.username is mobile'),
-                $this->providerTopologyCheck($topologies),
-                $this->providerRuntimeSettingsCheck($settings),
-            ])));
+                $this->providerTopologyCheck(app(XChangeProviderTopologyResolverContract::class)),
+                $this->providerRuntimeSettingsCheck(app(ProviderRuntimeSettingsResolverContract::class)),
+            ];
+        }
 
         $passed = collect($checks)->every(
             static fn (array $check): bool => $check['passed'] === true,

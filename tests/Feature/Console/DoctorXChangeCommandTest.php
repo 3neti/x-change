@@ -2,13 +2,21 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schema;
+use LBHurtado\EmiCore\Contracts\DeploymentConnectionContributor;
+use LBHurtado\EmiCore\Data\Configuration\ProviderConnectionTemplateData;
+use LBHurtado\EmiCore\Enums\ProviderCapability;
 use LBHurtado\XChange\Contracts\Publication\XChangePublicationContributor;
 use LBHurtado\XChange\Data\Publication\PublicationDefinitionData;
 use LBHurtado\XChange\Enums\PublicationInvocation;
 use LBHurtado\XChange\Enums\PublicationOverwritePolicy;
 use LBHurtado\XChange\Enums\PublicationScope;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository;
+use LBHurtado\XChange\Services\Configuration\DeploymentConnectionCatalog;
+use LBHurtado\XChange\Services\Configuration\DeploymentProfileCatalog;
+use LBHurtado\XChange\Services\Configuration\DeploymentTreasuryConnectionConfiguration;
 use LBHurtado\XChange\Services\Configuration\PreInstallReadinessInspector;
 use LBHurtado\XChange\Services\Publication\PublicationCatalog;
 
@@ -31,6 +39,61 @@ it('runs a strict pre-install doctor without requiring post-install tables', fun
         ->not->toContain('onboarding sessions table');
     expect(collect($payload['checks'])->pluck('name'))
         ->not->toContain('system principal account');
+});
+
+it('runs a strict pre-commission doctor without requiring commissioned state', function (): void {
+    ensurePreCommissionOnboardingSchema();
+
+    config()->set('x-change.payout.system_user_column', 'email');
+    config()->set('x-change.payout.system_user_id', 'missing-system@example.test');
+
+    $exitCode = Artisan::call('x-change:doctor', [
+        '--pre-commission' => true,
+        '--strict' => true,
+        '--json' => true,
+    ]);
+    $payload = json_decode(Artisan::output(), true);
+    $names = collect($payload['checks'])->pluck('name');
+
+    expect($exitCode)->toBe(0)
+        ->and($payload['success'])->toBeTrue()
+        ->and($names)->toContain(
+            'deployment configuration',
+            'system principal identity',
+            'onboarding sessions table',
+            'provider topology',
+            'provider runtime settings',
+        )
+        ->and($names)->not->toContain(
+            'system principal account',
+            'commissioning manifest',
+            'commercial governance',
+            'commercial component economics',
+            'commercial recipient designations',
+            'commercial recognition policies',
+            'commercial tax profiles',
+        );
+});
+
+it('fails strict pre-commission readiness when provider runtime settings cannot resolve', function (): void {
+    $original = config('x-change.provider_runtime.default_provider');
+
+    config()->set('x-change.provider_runtime.default_provider', 'unsupported-provider');
+
+    $exitCode = Artisan::call('x-change:doctor', [
+        '--pre-commission' => true,
+        '--strict' => true,
+        '--json' => true,
+    ]);
+    $payload = json_decode(Artisan::output(), true);
+    $check = collect($payload['checks'])->firstWhere('name', 'provider runtime settings');
+
+    config()->set('x-change.provider_runtime.default_provider', $original);
+
+    expect($exitCode)->toBe(1)
+        ->and($payload['success'])->toBeFalse()
+        ->and($check['passed'])->toBeFalse()
+        ->and($check['message'])->toContain('unsupported-provider');
 });
 
 it('fails strict runtime readiness without the persisted system principal Account', function (): void {
@@ -71,6 +134,8 @@ it('requires an explicitly configured deployment profile', function () {
 });
 
 it('reports invalid live system principal identity variables', function () {
+    enableNetbankDeploymentConnectionTemplate();
+
     config()->set('x-change.deployment.profile', 'netbank');
     config()->set('x-change.payout.system_user_column', 'id');
     config()->set('x-change.payout.system_user_id', '1');
@@ -287,6 +352,8 @@ it('reports commercial tax profile readiness when governance storage is invalid'
 });
 
 it('accepts private local claim evidence storage for a local netbank runtime', function (): void {
+    enableNetbankDeploymentConnectionTemplate();
+
     config()->set('x-change.deployment.profile', 'netbank');
     config()->set('x-change.deployment.runtime_tier', 'local');
     config()->set('x-change.claim.evidence.disk', 'local');
@@ -304,6 +371,8 @@ it('accepts private local claim evidence storage for a local netbank runtime', f
 });
 
 it('rejects local claim evidence storage for staging and production runtimes', function (string $tier): void {
+    enableNetbankDeploymentConnectionTemplate();
+
     config()->set('x-change.deployment.profile', 'netbank');
     config()->set('x-change.deployment.runtime_tier', $tier);
     config()->set('x-change.claim.evidence.disk', 'local');
@@ -321,6 +390,8 @@ it('rejects local claim evidence storage for staging and production runtimes', f
 })->with(['staging', 'production']);
 
 it('accepts a configured durable private claim evidence disk for staging', function (): void {
+    enableNetbankDeploymentConnectionTemplate();
+
     config()->set('x-change.deployment.profile', 'netbank');
     config()->set('x-change.deployment.runtime_tier', 'staging');
     config()->set('x-change.claim.evidence.disk', 's3');
@@ -343,6 +414,8 @@ it('accepts a configured durable private claim evidence disk for staging', funct
 });
 
 it('reports missing s3 credentials only when a durable runtime selects s3', function (): void {
+    enableNetbankDeploymentConnectionTemplate();
+
     config()->set('x-change.deployment.profile', 'netbank');
     config()->set('x-change.deployment.runtime_tier', 'production');
     config()->set('x-change.claim.evidence.disk', 's3');
@@ -548,4 +621,68 @@ function failingBuildPublicationCatalog(): PublicationCatalog
             }
         },
     ]);
+}
+
+function ensurePreCommissionOnboardingSchema(): void
+{
+    if (! Schema::hasTable('onboarding_sessions')) {
+        Schema::create('onboarding_sessions', function (Blueprint $table): void {
+            $table->id();
+            $table->timestamps();
+        });
+    }
+
+    if (! Schema::hasTable('users')) {
+        return;
+    }
+
+    Schema::table('users', function (Blueprint $table): void {
+        if (! Schema::hasColumn('users', 'mobile')) {
+            $table->string('mobile')->nullable();
+        }
+
+        if (! Schema::hasColumn('users', 'mobile_verified_at')) {
+            $table->timestamp('mobile_verified_at')->nullable();
+        }
+
+        if (! Schema::hasColumn('users', 'identity_level')) {
+            $table->string('identity_level')->nullable();
+        }
+    });
+}
+
+function enableNetbankDeploymentConnectionTemplate(): void
+{
+    $contributor = new class implements DeploymentConnectionContributor
+    {
+        public function providerCode(): string
+        {
+            return 'netbank';
+        }
+
+        public function connectionTemplates(): array
+        {
+            return [
+                new ProviderConnectionTemplateData(
+                    reference: 'netbank-primary',
+                    provider: 'netbank',
+                    currency: 'PHP',
+                    inventoryReference: 'inventory:netbank:vca-cash',
+                    settlementResourceReference: 'resource:netbank:corporate-vca',
+                    settlementResourceType: 'cash_at_bank',
+                    custodyMode: 'provider_projection',
+                    requiredCapabilities: [
+                        ProviderCapability::ReadinessProbe,
+                        ProviderCapability::BalanceRead,
+                        ProviderCapability::FundingEvidenceRead,
+                        ProviderCapability::FundingInstructionIssue,
+                    ],
+                ),
+            ];
+        }
+    };
+
+    app()->instance(DeploymentConnectionCatalog::class, new DeploymentConnectionCatalog([$contributor]));
+    app()->forgetInstance(DeploymentProfileCatalog::class);
+    app()->forgetInstance(DeploymentTreasuryConnectionConfiguration::class);
 }

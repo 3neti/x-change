@@ -95,6 +95,7 @@ final class BootstrapXChangeFromManifestCommand extends Command
             ['php', 'artisan', 'config:clear'],
             ['php', 'artisan', 'x-change:doctor', '--pre-install', '--strict'],
             $this->migrationCommand(),
+            ['php', 'artisan', 'x-change:doctor', '--pre-commission', '--strict'],
             $install,
             [
                 'php',
