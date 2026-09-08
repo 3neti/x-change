@@ -68,7 +68,7 @@ it('promotes claimed Pay Code facts into dashboard activity without exposing raw
     expect($activity)->toMatchArray([
         'label' => $voucher->code.' claimed',
         'projection_badge' => 'Claimed',
-        'projection_status' => 'redeemed',
+        'projection_status' => 'paid',
         'projection_detail' => 'Recipient-facing completion',
         'code' => $voucher->code,
         'amount' => 'PHP 55.00',
