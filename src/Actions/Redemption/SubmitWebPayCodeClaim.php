@@ -12,6 +12,7 @@ use LBHurtado\XChange\Data\Claims\ClaimApprovalInitiationResultData;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Claim\VoucherClaimPolicyResolver;
+use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 use LBHurtado\XChange\Support\Claim\UseDeferredPaynamicsOtpResolver;
 use RuntimeException;
 
@@ -33,6 +34,12 @@ class SubmitWebPayCodeClaim
     {
         if ($this->isCampaignPayoutRecovery($voucher)) {
             return $this->campaignPayoutRecoveries->handle($voucher, $payload);
+        }
+
+        if ($this->usesOnboardingExecutionDriver($voucher)) {
+            return $this->deferredOtpResolver->run(
+                fn () => $this->submitPayCodeClaim->handle($voucher, $payload)
+            );
         }
 
         if ($this->claimPolicies->resolve($voucher)->defaultOutcome === 'account_funding') {
@@ -73,5 +80,13 @@ class SubmitWebPayCodeClaim
 
         return data_get($metadata, 'instructions.metadata.custom.campaign.claim_activation') === 'provider_rejection'
             && data_get($metadata, 'treasury.pay_code_reservation.status') === 'recovery_pending';
+    }
+
+    private function usesOnboardingExecutionDriver(Voucher $voucher): bool
+    {
+        return data_get(
+            $voucher->getAttribute('metadata'),
+            'instructions.execution.driver',
+        ) === OnboardingVoucherInstructionPolicy::ExecutionDriver;
     }
 }

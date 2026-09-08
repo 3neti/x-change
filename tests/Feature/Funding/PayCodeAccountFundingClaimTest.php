@@ -17,6 +17,7 @@ use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Data\FundingDecisionData;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Funding\PayCodeFundingEligibility;
 use LBHurtado\XChange\Services\Funding\PayCodeFundingInspectionStore;
 use LBHurtado\XChange\Tests\Fakes\User;
@@ -25,7 +26,12 @@ use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 it('issues an Account Funding Pay Code with a no-payout commercial profile and Treasury reserve', function () {
     $issuer = actingAsTestUser();
     enableNetbankTreasuryForTests();
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:account-funding-test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'account-funding-test-v1');
     config()->set('x-change.commercial.enabled', true);
+    app(ProvisionCommercialBaselines::class)->provision(
+        'commissioning-manifest:account-funding-claim',
+    );
     app(TreasuryAccountPortfolioProvisioningContract::class)->provision(
         $issuer,
         ['netbank-primary'],

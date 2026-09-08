@@ -3,14 +3,17 @@
 declare(strict_types=1);
 
 use Bavix\Wallet\Exceptions\InsufficientFunds;
+use Illuminate\Http\Request;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\XChange\Actions\Claim\DispatchVoucherClaimOutcome;
 use LBHurtado\XChange\Actions\Funding\IssueSystemAccountFundingPayCode;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
+use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Data\Funding\IssueSystemAccountFundingPayCodeData;
+use LBHurtado\XChange\Exceptions\VoucherClaimOutcomeConflict;
 use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
@@ -275,6 +278,139 @@ it('atomically provisions a new Account and funds it from the system Account Fun
             ]);
 
     fakePayoutProvider()->assertNoDisbursementAttempted();
+});
+
+it('lets guest web claims use the onboarding driver before Account Funding settlement', function (): void {
+    config()->set('x-change.onboarding.voucher.require_otp', false);
+
+    $system = enableNetbankTreasuryForTests();
+    fundTestUserWallet($system, 0);
+    fundTestSystemAccountFundingReserve(
+        $system,
+        10_000,
+        'web-onboarding-grant',
+    );
+    $request = Request::create('/x/claim/MAKE-TEST', 'POST');
+    $session = app('session')->driver();
+    $session->start();
+    $request->setLaravelSession($session);
+    app()->instance(Request::class, $request);
+    auth()->logout();
+
+    $issuance = app(IssueSystemAccountFundingPayCode::class)->handle(
+        new IssueSystemAccountFundingPayCodeData(
+            amountMinor: 10_000,
+            connectionReference: 'netbank-primary',
+            idempotencyReference: 'web-onboarding-grant-20260908-001',
+            expiresAt: now()->addDay(),
+            evidenceReference: 'system-reserve:web-onboarding-grant',
+            authorizationReference: 'system-policy:onboarding-grant-v1',
+            source: 'commissioning_invitation',
+            onboarding: true,
+            prefix: 'MAKE',
+            riderMessage: 'x-PayOut Maker onboarding invitation',
+            onboardingProfile: 'x-payout-maker',
+        ),
+    );
+    $voucher = $issuance->voucher;
+
+    expect($voucher)->not->toBeNull()
+        ->and(data_get($voucher?->metadata, 'instructions.execution.driver'))
+        ->toBe('onboarding_account_provisioning')
+        ->and(data_get($voucher?->metadata, 'instructions.claim.default_outcome'))
+        ->toBe('account_funding');
+
+    $result = app(SubmitWebPayCodeClaim::class)->handle($voucher, [
+        'mobile' => '639173011987',
+        'recipient_country' => 'PH',
+        'inputs' => [
+            'full_name' => 'Lester Hurtado',
+            'name' => 'Lester Hurtado',
+            'email' => 'lester.onboarding@example.test',
+            'mobile' => '639173011987',
+        ],
+    ]);
+    $claimant = User::query()
+        ->where('email', 'lester.onboarding@example.test')
+        ->sole();
+
+    expect($result->claimed)->toBeTrue()
+        ->and($result->status)->toBe('redeemed')
+        ->and($claimant->name)->toBe('Lester Hurtado')
+        ->and(auth()->user()?->is($claimant))->toBeTrue()
+        ->and(systemFundingPositionBalance(
+            $system,
+            TreasuryPositionPurpose::PayCodeReserve,
+        ))->toBe(0)
+        ->and(systemFundingPositionBalance(
+            $claimant,
+            TreasuryPositionPurpose::ClientFunds,
+        ))->toBe(10_000)
+        ->and($voucher->refresh()->redeemed_at)->not->toBeNull()
+        ->and($voucher->claims()->count())->toBe(2)
+        ->and(ExecutionJournalEntry::query()
+            ->orderBy('id')
+            ->pluck('event_type')
+            ->all())->toBe([
+                'account_funding.pay_code.issued',
+                'account_funding.pay_code.outcome_selected',
+                'account_funding.pay_code.applied',
+            ]);
+
+    $claimReplay = app(DispatchVoucherClaimOutcome::class)->handle(
+        voucher: $voucher,
+        requestedOutcome: 'account_funding',
+        payload: [],
+        claimant: $claimant,
+    );
+
+    expect($claimReplay->status)->toBe('succeeded')
+        ->and($voucher->claims()->count())->toBe(2)
+        ->and(systemFundingPositionBalance(
+            $claimant,
+            TreasuryPositionPurpose::ClientFunds,
+        ))->toBe(10_000)
+        ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'account_funding.pay_code.applied')
+            ->count())->toBe(1);
+});
+
+it('still rejects guest web claims for direct Account Funding Pay Codes', function (): void {
+    $system = enableNetbankTreasuryForTests();
+    fundTestUserWallet($system, 0);
+    fundTestSystemAccountFundingReserve(
+        $system,
+        5_000,
+        'direct-account-funding-guest',
+    );
+    auth()->logout();
+
+    $issuance = app(IssueSystemAccountFundingPayCode::class)->handle(
+        new IssueSystemAccountFundingPayCodeData(
+            amountMinor: 5_000,
+            connectionReference: 'netbank-primary',
+            idempotencyReference: 'direct-account-funding-guest-20260908-001',
+            expiresAt: now()->addDay(),
+            evidenceReference: 'system-reserve:direct-account-funding-guest',
+            authorizationReference: 'system-policy:direct-account-funding-v1',
+            source: 'system_utility',
+        ),
+    );
+    $voucher = $issuance->voucher;
+
+    expect(fn () => app(SubmitWebPayCodeClaim::class)->handle($voucher, [
+        'mobile' => '639173011987',
+    ]))->toThrow(
+        VoucherClaimOutcomeConflict::class,
+        'Account Funding requires an authenticated Account owner.',
+    );
+
+    expect(systemFundingPositionBalance(
+        $system,
+        TreasuryPositionPurpose::PayCodeReserve,
+    ))->toBe(5_000)
+        ->and($voucher->refresh()->redeemed_at)->toBeNull()
+        ->and($voucher->claims()->count())->toBe(0);
 });
 
 it('rolls back onboarding grant issuance when the system reserve is insufficient', function (): void {
