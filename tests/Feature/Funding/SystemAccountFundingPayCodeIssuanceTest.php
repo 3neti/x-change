@@ -11,10 +11,13 @@ use LBHurtado\XChange\Actions\Claim\DispatchVoucherClaimOutcome;
 use LBHurtado\XChange\Actions\Funding\IssueSystemAccountFundingPayCode;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
+use LBHurtado\XChange\Contracts\CockpitHeaderReadModelProviderContract;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Data\Funding\IssueSystemAccountFundingPayCodeData;
 use LBHurtado\XChange\Exceptions\VoucherClaimOutcomeConflict;
+use LBHurtado\XChange\Models\ProviderBalanceSnapshot;
 use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
+use LBHurtado\XChange\Services\CheckNetbankSourceAccountReadiness;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
@@ -282,6 +285,8 @@ it('atomically provisions a new Account and funds it from the system Account Fun
 
 it('lets guest web claims use the onboarding driver before Account Funding settlement', function (): void {
     config()->set('x-change.onboarding.voucher.require_otp', false);
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    config()->set('x-change.provider_runtime.payout_provider_hint', null);
 
     $system = enableNetbankTreasuryForTests();
     fundTestUserWallet($system, 0);
@@ -296,6 +301,23 @@ it('lets guest web claims use the onboarding driver before Account Funding settl
     $request->setLaravelSession($session);
     app()->instance(Request::class, $request);
     auth()->logout();
+    $readiness = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
+    $readiness->shouldReceive('handle')
+        ->once()
+        ->with()
+        ->andReturn([
+            'enabled' => true,
+            'ready' => true,
+            'checked' => true,
+            'account_number_masked' => '********0019',
+            'balance_minor' => 507_693,
+            'available_balance_minor' => 507_693,
+            'currency' => 'PHP',
+            'as_of' => now()->subSecond()->toIso8601String(),
+            'fetched_at' => now()->toIso8601String(),
+            'message' => 'NetBank source account balance was refreshed.',
+        ]);
+    app()->instance(CheckNetbankSourceAccountReadiness::class, $readiness);
 
     $issuance = app(IssueSystemAccountFundingPayCode::class)->handle(
         new IssueSystemAccountFundingPayCodeData(
@@ -333,6 +355,13 @@ it('lets guest web claims use the onboarding driver before Account Funding settl
     $claimant = User::query()
         ->where('email', 'lester.onboarding@example.test')
         ->sole();
+    $snapshot = ProviderBalanceSnapshot::query()
+        ->where('provider_code', 'netbank')
+        ->where('balance_key', 'netbank_source_account')
+        ->sole();
+    $header = app(CockpitHeaderReadModelProviderContract::class)
+        ->forOperator($claimant)
+        ->toArray();
 
     expect($result->claimed)->toBeTrue()
         ->and($result->status)->toBe('redeemed')
@@ -346,6 +375,12 @@ it('lets guest web claims use the onboarding driver before Account Funding settl
             $claimant,
             TreasuryPositionPurpose::ClientFunds,
         ))->toBe(10_000)
+        ->and($snapshot->available_balance_minor)->toBe(507_693)
+        ->and($snapshot->refresh_status)->toBe('fresh')
+        ->and($header['balances'][0]['value'])->toContain('100.00')
+        ->and($header['balances'][1]['value'])->toContain('0.00')
+        ->and($header['balances'][2]['value'])->toContain('100.00')
+        ->and($header['balances'][2]['value'])->not->toBe('Not available')
         ->and($voucher->refresh()->redeemed_at)->not->toBeNull()
         ->and($voucher->claims()->count())->toBe(2)
         ->and(ExecutionJournalEntry::query()

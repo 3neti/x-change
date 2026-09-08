@@ -22,7 +22,9 @@ class ConfigProviderRuntimeSettingsResolver implements ProviderRuntimeSettingsRe
         $provider = strtolower((string) $provider);
 
         if ($override === null && $provider === 'manual') {
-            return $this->providerFromExplicitPayoutHint() ?? $provider;
+            return $this->providerFromExplicitPayoutHint()
+                ?? $this->providerFromDeploymentProfile()
+                ?? $provider;
         }
 
         return $provider;
@@ -63,6 +65,21 @@ class ConfigProviderRuntimeSettingsResolver implements ProviderRuntimeSettingsRe
         return match (true) {
             str_contains($provider, 'netbank') => 'netbank',
             str_contains($provider, 'paynamics'), str_contains($provider, 'constellation') => 'paynamics',
+            default => null,
+        };
+    }
+
+    protected function providerFromDeploymentProfile(): ?string
+    {
+        $profile = config('x-change.deployment.profile');
+
+        if (! is_string($profile) || trim($profile) === '') {
+            return null;
+        }
+
+        return match (strtolower(trim($profile))) {
+            'netbank' => 'netbank',
+            'paynamics' => 'paynamics',
             default => null,
         };
     }

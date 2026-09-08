@@ -43,9 +43,21 @@ it('infers Paynamics runtime provider from a friendly payout provider hint', fun
     expect(app(ProviderRuntimeSettingsResolverContract::class)->provider())->toBe('paynamics');
 });
 
+it('infers NetBank runtime provider from the deployment profile when default remains manual', function () {
+    config()->set('x-change.provider_runtime.default_provider', 'manual');
+    config()->set('x-change.provider_runtime.payout_provider_hint', null);
+    config()->set('x-change.deployment.profile', 'netbank');
+
+    $settings = app(ProviderRuntimeSettingsResolverContract::class);
+
+    expect($settings->provider())->toBe('netbank')
+        ->and($settings->topology())->toBe('ledger_pooled');
+});
+
 it('does not infer a provider from an empty payout provider hint', function () {
     config()->set('x-change.provider_runtime.default_provider', 'manual');
     config()->set('x-change.provider_runtime.payout_provider_hint', null);
+    config()->set('x-change.deployment.profile', 'development');
 
     expect(app(ProviderRuntimeSettingsResolverContract::class)->provider())->toBe('manual');
 });

@@ -15,6 +15,7 @@ use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Data\ExecutionResultData;
 use LBHurtado\Voucher\Services\DefaultExecutionDriver;
 use LBHurtado\XChange\Actions\Claim\DispatchVoucherClaimOutcome;
+use LBHurtado\XChange\Actions\Funding\RefreshFundingLiquidity;
 use LBHurtado\XChange\Exceptions\OnboardingVoucherExecutionFailed;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Onboarding\OnboardingVoucherClaimantAuthenticator;
@@ -29,6 +30,7 @@ final readonly class OnboardingAccountProvisioningExecutionDriver implements Exe
         private DefaultExecutionDriver $defaultDriver,
         private DispatchVoucherClaimOutcome $claimOutcomes,
         private OnboardingVoucherClaimantAuthenticator $authenticator,
+        private RefreshFundingLiquidity $liquidity,
         private Request $request,
     ) {}
 
@@ -113,6 +115,16 @@ final readonly class OnboardingAccountProvisioningExecutionDriver implements Exe
                 $promotion->user,
                 $this->request,
             ));
+        }
+
+        if ($settlement['mode'] === 'account_funding') {
+            DB::afterCommit(function () use ($promotion): void {
+                try {
+                    $this->liquidity->handle($promotion->user);
+                } catch (Throwable $exception) {
+                    report($exception);
+                }
+            });
         }
 
         return new ExecutionResultData(
