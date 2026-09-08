@@ -78,6 +78,13 @@ final class CommissionFromManifestCommand extends Command
             'Pay Code reserve:',
             $this->formatMinor((int) ($funding['pay_code_reserve_after_minor'] ?? 0), $currency),
         ));
+        $this->line(sprintf(
+            '%-27s %s',
+            'Issuance guard:',
+            data_get($funding, 'provider_liquidity.status') === 'ready'
+                ? 'Ready (fresh provider liquidity)'
+                : 'Not checked',
+        ));
         $this->newLine();
     }
 

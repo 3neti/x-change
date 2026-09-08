@@ -14,6 +14,7 @@ use LBHurtado\Voucher\Enums\VoucherType;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
+use LBHurtado\XChange\Actions\Funding\RefreshFundingLiquidity;
 use LBHurtado\XChange\Actions\Funding\IssueSystemAccountFundingPayCode;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
@@ -34,6 +35,7 @@ final readonly class CommissioningManifestCommissioner
         private TreasuryAccountPortfolioProvisioningContract $portfolios,
         private TreasuryPrincipalReferenceResolverContract $principalReferences,
         private TreasuryPositionReadModelContract $positions,
+        private RefreshFundingLiquidity $liquidity,
     ) {}
 
     /** @return array{schema: string, count: int, invitations: list<array{role: string, code: string|null, claim_url: string|null, created: bool}>, funding: array<string, mixed>|null} */
@@ -62,6 +64,7 @@ final readonly class CommissioningManifestCommissioner
             $roles,
             $funding,
         );
+        $liquidity = $this->assertFundedInvitationsLiquidityReady($issuer, $funding);
         $issued = collect($roles)
             ->map(fn (array $role): array => $this->ensureInvitation(
                 $role,
@@ -84,6 +87,7 @@ final readonly class CommissioningManifestCommissioner
                 $funding,
                 $fundingBefore,
                 $this->fundedInvitationBalances($issuer, $funding),
+                $liquidity,
             ),
         ];
     }
@@ -250,6 +254,35 @@ final readonly class CommissioningManifestCommissioner
 
     /**
      * @param  array{amount_minor: int, currency: string, funding_source: string|null, authorization_reference: string|null, funding_instruction: string|null, connection_reference: string}  $funding
+     * @return array{status: string, refreshed: int, failed: int, busy: int, unavailable: int, review_required: int, connections: list<array{provider: string, status: string}>}|null
+     */
+    private function assertFundedInvitationsLiquidityReady(Model $issuer, array $funding): ?array
+    {
+        if ($funding['amount_minor'] <= 0) {
+            return null;
+        }
+
+        $result = $this->liquidity->handle($issuer);
+
+        if (! $result->succeeded() || $result->hasIncompleteConnections()) {
+            throw new InvalidArgumentException(
+                'Funded commissioning invitations require a fresh provider liquidity snapshot before onboarding can be marked ready.',
+            );
+        }
+
+        return [
+            'status' => 'ready',
+            'refreshed' => $result->refreshed,
+            'failed' => $result->failed,
+            'busy' => $result->busy,
+            'unavailable' => $result->unavailable,
+            'review_required' => $result->reviewRequired,
+            'connections' => $result->connections,
+        ];
+    }
+
+    /**
+     * @param  array{amount_minor: int, currency: string, funding_source: string|null, authorization_reference: string|null, funding_instruction: string|null, connection_reference: string}  $funding
      * @return array{account_funding_reserve_minor: int, pay_code_reserve_minor: int, currency: string, connection_reference: string}|null
      */
     private function fundedInvitationBalances(Model $issuer, array $funding): ?array
@@ -292,7 +325,7 @@ final readonly class CommissioningManifestCommissioner
      * @param  array{account_funding_reserve_minor: int, pay_code_reserve_minor: int, currency: string, connection_reference: string}|null  $after
      * @return array<string, mixed>|null
      */
-    private function fundingFeedback(array $funding, ?array $before, ?array $after): ?array
+    private function fundingFeedback(array $funding, ?array $before, ?array $after, ?array $liquidity): ?array
     {
         if ($funding['amount_minor'] <= 0 || $before === null || $after === null) {
             return null;
@@ -307,6 +340,7 @@ final readonly class CommissioningManifestCommissioner
             'opening_reserve_minor' => $before['account_funding_reserve_minor'],
             'account_funding_reserve_after_minor' => $after['account_funding_reserve_minor'],
             'pay_code_reserve_after_minor' => $after['pay_code_reserve_minor'],
+            'provider_liquidity' => $liquidity,
         ];
     }
 

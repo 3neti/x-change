@@ -7,7 +7,9 @@ use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Console\Commands\BootstrapXChangeFromManifestCommand;
+use LBHurtado\XChange\Models\ProviderBalanceSnapshot;
 use LBHurtado\XChange\Services\Commissioning\CommissioningManifestRepository;
+use LBHurtado\XChange\Services\CheckNetbankSourceAccountReadiness;
 use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
 use LBHurtado\XChange\Services\Configuration\LocalEnvironmentFileWriter;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
@@ -220,6 +222,7 @@ it('commissions funded maker and checker invitations from the system Account Fun
         'authorization_reference: commissioning:x-payout:system-capital',
         'funding_instruction: Client funds ready',
     ]);
+    mockCommissioningNetbankLiquidityRefresh(450_693, 2);
 
     $firstExit = Artisan::call('x-change:commission:manifest', [
         '--manifest' => $manifestPath,
@@ -239,6 +242,12 @@ it('commissions funded maker and checker invitations from the system Account Fun
         ->and(data_get($first, 'funding.opening_reserve_minor'))->toBe(450_693)
         ->and(data_get($first, 'funding.account_funding_reserve_after_minor'))->toBe(430_693)
         ->and(data_get($first, 'funding.pay_code_reserve_after_minor'))->toBe(20_000)
+        ->and(data_get($first, 'funding.provider_liquidity.status'))->toBe('ready')
+        ->and(ProviderBalanceSnapshot::query()
+            ->where('provider_code', 'netbank')
+            ->where('balance_key', 'netbank_source_account')
+            ->sole()
+            ->available_balance_minor)->toBe(450_693)
         ->and(commissioningSystemFundingPositionBalance(
             $system,
             TreasuryPositionPurpose::AccountFundingReserve,
@@ -309,6 +318,7 @@ it('prints funded commissioning reserve feedback for operators', function (): vo
         'authorization_reference: commissioning:x-payout:system-capital',
         'funding_instruction: Client funds ready',
     ]);
+    mockCommissioningNetbankLiquidityRefresh(450_693);
 
     $humanExit = Artisan::call('x-change:commission:manifest', [
         '--manifest' => $manifestPath,
@@ -321,7 +331,56 @@ it('prints funded commissioning reserve feedback for operators', function (): vo
         ->and($humanOutput)->toContain('After reserve:')
         ->and($humanOutput)->toContain('₱4,306.93')
         ->and($humanOutput)->toContain('Pay Code reserve:')
-        ->and($humanOutput)->toContain('₱200.00');
+        ->and($humanOutput)->toContain('₱200.00')
+        ->and($humanOutput)->toContain('Issuance guard:')
+        ->and($humanOutput)->toContain('Ready (fresh provider liquidity)');
+});
+
+it('rejects funded commissioning invitations when provider liquidity cannot be refreshed', function (): void {
+    $system = enableNetbankTreasuryForTests();
+    fundTestSystemAccountFundingReserve(
+        $system,
+        450_693,
+        'x-payout-funded-commissioning-no-liquidity',
+    );
+    $manifestPath = fundedCommissioningManifestPath([
+        'invitation_amount: 100.00',
+        'currency: PHP',
+        'connection_reference: netbank-primary',
+        'funding_source: treasury_account_funding_reserve',
+        'authorization_reference: commissioning:x-payout:system-capital',
+        'funding_instruction: Client funds ready',
+    ]);
+    $readiness = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
+    $readiness->shouldReceive('handle')
+        ->once()
+        ->with()
+        ->andReturn([
+            'enabled' => true,
+            'ready' => false,
+            'checked' => true,
+        ]);
+    app()->instance(CheckNetbankSourceAccountReadiness::class, $readiness);
+
+    $this->artisan('x-change:commission:manifest', [
+        '--manifest' => $manifestPath,
+    ])
+        ->expectsOutputToContain(
+            'Funded commissioning invitations require a fresh provider liquidity snapshot before onboarding can be marked ready.',
+        )
+        ->assertFailed();
+
+    expect(Voucher::query()->count())->toBe(0)
+        ->and(SystemAccountFundingPayCodeIssuance::query()->count())->toBe(0)
+        ->and(ProviderBalanceSnapshot::query()->count())->toBe(0)
+        ->and(commissioningSystemFundingPositionBalance(
+            $system,
+            TreasuryPositionPurpose::AccountFundingReserve,
+        ))->toBe(450_693)
+        ->and(commissioningSystemFundingPositionBalance(
+            $system,
+            TreasuryPositionPurpose::PayCodeReserve,
+        ))->toBe(0);
 });
 
 it('rejects funded commissioning invitations without an authorization reference', function (): void {
@@ -396,6 +455,27 @@ function fundedCommissioningManifestPath(array $onboardingLines): string
     ]));
 
     return $path;
+}
+
+function mockCommissioningNetbankLiquidityRefresh(int $availableMinor, int $times = 1): void
+{
+    $readiness = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
+    $readiness->shouldReceive('handle')
+        ->times($times)
+        ->with()
+        ->andReturn([
+            'enabled' => true,
+            'ready' => true,
+            'checked' => true,
+            'account_number_masked' => '********0019',
+            'balance_minor' => $availableMinor,
+            'available_balance_minor' => $availableMinor,
+            'currency' => 'PHP',
+            'as_of' => now()->subSecond()->toIso8601String(),
+            'fetched_at' => now()->toIso8601String(),
+            'message' => 'NetBank source account balance was refreshed.',
+        ]);
+    app()->instance(CheckNetbankSourceAccountReadiness::class, $readiness);
 }
 
 function commissioningSystemFundingPositionBalance(
