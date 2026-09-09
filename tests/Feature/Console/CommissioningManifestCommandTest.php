@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schema;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
@@ -70,6 +73,8 @@ it('keeps bootstrap strict while allowing interactive credential capture', funct
         ->toContain("'APP_KEY' => \$this->environmentFileValue('APP_KEY') ?? ''")
         ->toContain('{--force : Force database migrations when bootstrapping in production}')
         ->toContain('migrationCommand')
+        ->toContain('preMutationCommands')
+        ->toContain('mutationCommands')
         ->toContain("\$this->option('force') || ! \$this->input->isInteractive()")
         ->toContain("\$command[] = '--force'")
         ->toContain("'config:clear'")
@@ -80,6 +85,98 @@ it('keeps bootstrap strict while allowing interactive credential capture', funct
         ->toContain("'npm', 'install', '--include=dev'")
         ->toContain("'npm', 'run', 'build'")
         ->not->toContain("'key:generate'");
+});
+
+it('runs bootstrap build before install and manifest commissioning', function (): void {
+    $source = file_get_contents((new ReflectionClass(BootstrapXChangeFromManifestCommand::class))->getFileName());
+
+    expect(strpos($source, 'foreach ($this->preMutationCommands()'))
+        ->toBeLessThan(strpos($source, 'foreach ($this->buildCommands($manifest)'))
+        ->and(strpos($source, 'foreach ($this->buildCommands($manifest)'))
+        ->toBeLessThan(strpos($source, 'foreach ($this->mutationCommands($manifestReference, $manifest)'))
+        ->and($source)
+        ->toContain(
+            "'x-change:doctor', '--pre-install', '--strict'",
+            "'x-change:doctor', '--pre-commission', '--strict'",
+            "'npm', 'install', '--include=dev'",
+            "'npm', 'run', 'build'",
+            "'x-change:commission:manifest'",
+            "'x-change:doctor', '--strict'",
+        );
+});
+
+it('does not mint onboarding invitations when bootstrap aborts before the mutation gate', function (): void {
+    ensureCommissioningOnboardingSchemaForBootstrapTest();
+
+    $manifestPath = storage_path('framework/testing/bootstrap-build-gate-'.str()->uuid().'.yaml');
+
+    if (! is_dir(dirname($manifestPath))) {
+        mkdir(dirname($manifestPath), 0755, true);
+    }
+
+    file_put_contents($manifestPath, implode("\n", [
+        'schema: x-change.commissioning.manifest.v1',
+        'application:',
+        '  key: x-payout',
+        '  name: x-PayOut',
+        'deployment:',
+        '  profile: development',
+        '  runtime_tier: local',
+        'system_principal:',
+        '  name: x-PayOut System',
+        'onboarding:',
+        '  invitation_amount: 0',
+        '  currency: PHP',
+        'invitations:',
+        '  schema: x-payout.commissioning-invitations.v1',
+        '  metadata_namespace: x_payout_commissioning',
+        '  roles:',
+        '    - role: maker',
+        '      label: x-PayOut Maker',
+        '      profile: x-payout-maker',
+        '      prefix: MAKE',
+        '    - role: checker',
+        '      label: x-PayOut Checker',
+        '      profile: x-payout-checker',
+        '      prefix: CHKR',
+        'bootstrap:',
+        '  environment:',
+        '    copy_env: false',
+        '    sqlite_database: ""',
+        '  build:',
+        '    enabled: true',
+        '    npm_install: true',
+        '    npm_build: true',
+        '  verify:',
+        '    enabled: false',
+        '',
+    ]));
+
+    $npm = storage_path('framework/testing/failing-bin/npm');
+
+    if (! is_dir(dirname($npm))) {
+        mkdir(dirname($npm), 0755, true);
+    }
+
+    file_put_contents($npm, "#!/bin/sh\necho 'intentional npm failure' >&2\nexit 1\n");
+    chmod($npm, 0755);
+
+    $originalPath = getenv('PATH') ?: '';
+    putenv('PATH='.dirname($npm).PATH_SEPARATOR.$originalPath);
+
+    try {
+        $exitCode = Artisan::call('x-change:bootstrap', [
+            '--manifest' => $manifestPath,
+            '--skip-verify' => true,
+        ]);
+        $output = Artisan::output();
+    } finally {
+        putenv('PATH='.$originalPath);
+    }
+
+    expect($exitCode)->toBe(1, $output)
+        ->and(Voucher::query()->count())->toBe(0)
+        ->and(SystemAccountFundingPayCodeIssuance::query()->count())->toBe(0);
 });
 
 it('derives manifest environment aliases from existing source variables', function (): void {
@@ -492,4 +589,34 @@ function commissioningSystemFundingPositionBalance(
     )->first(
         static fn ($position): bool => $position->purpose === $purpose,
     )?->balanceMinor ?? 0;
+}
+
+function ensureCommissioningOnboardingSchemaForBootstrapTest(): void
+{
+    if (! Schema::hasTable('onboarding_sessions')) {
+        Schema::create('onboarding_sessions', function (Blueprint $table): void {
+            $table->id();
+            $table->string('code')->unique();
+            $table->string('profile')->nullable();
+            $table->string('status')->default('pending');
+            $table->string('mobile')->nullable();
+            $table->json('payload')->nullable();
+            $table->timestamp('completed_at')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    Schema::table('users', function (Blueprint $table): void {
+        if (! Schema::hasColumn('users', 'mobile')) {
+            $table->string('mobile')->nullable();
+        }
+
+        if (! Schema::hasColumn('users', 'mobile_verified_at')) {
+            $table->timestamp('mobile_verified_at')->nullable();
+        }
+
+        if (! Schema::hasColumn('users', 'identity_level')) {
+            $table->string('identity_level')->nullable();
+        }
+    });
 }

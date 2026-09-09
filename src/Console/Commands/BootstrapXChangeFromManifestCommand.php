@@ -41,7 +41,7 @@ final class BootstrapXChangeFromManifestCommand extends Command
             return self::FAILURE;
         }
 
-        foreach ($this->commands($manifestReference, $manifest) as $command) {
+        foreach ($this->preMutationCommands() as $command) {
             if (! $this->runProcess($command)) {
                 return self::FAILURE;
             }
@@ -52,6 +52,12 @@ final class BootstrapXChangeFromManifestCommand extends Command
                 if (! $this->runProcess($command)) {
                     return self::FAILURE;
                 }
+            }
+        }
+
+        foreach ($this->mutationCommands($manifestReference, $manifest) as $command) {
+            if (! $this->runProcess($command)) {
+                return self::FAILURE;
             }
         }
 
@@ -70,7 +76,21 @@ final class BootstrapXChangeFromManifestCommand extends Command
      * @param  array<string, mixed>  $manifest
      * @return list<list<string>>
      */
-    private function commands(string $manifestReference, array $manifest): array
+    private function preMutationCommands(): array
+    {
+        return [
+            ['php', 'artisan', 'config:clear'],
+            ['php', 'artisan', 'x-change:doctor', '--pre-install', '--strict'],
+            $this->migrationCommand(),
+            ['php', 'artisan', 'x-change:doctor', '--pre-commission', '--strict'],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $manifest
+     * @return list<list<string>>
+     */
+    private function mutationCommands(string $manifestReference, array $manifest): array
     {
         $install = [
             'php',
@@ -92,10 +112,6 @@ final class BootstrapXChangeFromManifestCommand extends Command
         array_push($install, ...$this->treasuryOpeningInstallOptions($manifest));
 
         return [
-            ['php', 'artisan', 'config:clear'],
-            ['php', 'artisan', 'x-change:doctor', '--pre-install', '--strict'],
-            $this->migrationCommand(),
-            ['php', 'artisan', 'x-change:doctor', '--pre-commission', '--strict'],
             $install,
             [
                 'php',
