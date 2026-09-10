@@ -8,8 +8,12 @@ deployment:
 system_principal:
   name: x-PayOut System
 onboarding:
-  invitation_amount: 0
+  invitation_amount: 100.00
   currency: PHP
+  connection_reference: netbank-primary
+  funding_source: treasury_account_funding_reserve
+  authorization_reference: commissioning:x-payout:system-capital
+  funding_instruction: Client funds ready
 invitations:
   schema: x-payout.commissioning-invitations.v1
   metadata_namespace: x_payout_commissioning

@@ -23,8 +23,12 @@ it('requires the x payout manifest to commission against netbank readiness', fun
 
     expect(data_get($manifest, 'deployment.profile'))->toBe('netbank')
         ->and(data_get($manifest, 'deployment.runtime_tier'))->toBe('local')
-        ->and(data_get($manifest, 'onboarding.invitation_amount'))->toBe(0)
+        ->and(data_get($manifest, 'onboarding.invitation_amount'))->toBe(100.00)
         ->and(data_get($manifest, 'onboarding.currency'))->toBe('PHP')
+        ->and(data_get($manifest, 'onboarding.connection_reference'))->toBe('netbank-primary')
+        ->and(data_get($manifest, 'onboarding.funding_source'))->toBe('treasury_account_funding_reserve')
+        ->and(data_get($manifest, 'onboarding.authorization_reference'))->toBe('commissioning:x-payout:system-capital')
+        ->and(data_get($manifest, 'onboarding.funding_instruction'))->toBe('Client funds ready')
         ->and(data_get($manifest, 'bootstrap.environment.defaults.XCHANGE_DEPLOYMENT_PROFILE'))->toBe('netbank')
         ->and(data_get($manifest, 'bootstrap.environment.defaults.SESSION_DRIVER'))->toBe('database')
         ->and(data_get($manifest, 'bootstrap.environment.defaults.XCHANGE_FUNDING_NETBANK_ENABLED'))->toBeTrue()
@@ -269,7 +273,13 @@ it('passes treasury opening capitalization options for funded onboarding bootstr
 });
 
 it('commissions maker and checker onboarding invitations from the package manifest idempotently', function (): void {
-    provisionTestSystemPrincipalForCommissioning();
+    $system = enableNetbankTreasuryForTests();
+    fundTestSystemAccountFundingReserve(
+        $system,
+        450_693,
+        'x-payout-package-funded-commissioning',
+    );
+    mockCommissioningNetbankLiquidityRefresh(450_693, 2);
 
     $this->artisan('x-change:commission:manifest', [
         '--manifest' => 'x-change://commissioning/manifests/x-payout.default.yaml',
@@ -296,7 +306,18 @@ it('commissions maker and checker onboarding invitations from the package manife
         ->and($vouchers->every(fn (Voucher $voucher): bool => $voucher->redeemed_at === null))->toBeTrue()
         ->and($vouchers->every(fn (Voucher $voucher): bool => data_get($voucher->metadata, 'instructions.onboarding') === true))->toBeTrue()
         ->and($vouchers->every(fn (Voucher $voucher): bool => data_get($voucher->metadata, 'instructions.metadata.flow_type') === 'disbursable'))->toBeTrue()
-        ->and($vouchers->every(fn (Voucher $voucher): bool => data_get($voucher->metadata, 'instructions.execution.driver') === OnboardingVoucherInstructionPolicy::ExecutionDriver))->toBeTrue();
+        ->and($vouchers->every(fn (Voucher $voucher): bool => (float) data_get($voucher->metadata, 'instructions.cash.amount') === 100.0))->toBeTrue()
+        ->and($vouchers->every(fn (Voucher $voucher): bool => data_get($voucher->metadata, 'instructions.claim.default_outcome') === 'account_funding'))->toBeTrue()
+        ->and($vouchers->every(fn (Voucher $voucher): bool => data_get($voucher->metadata, 'instructions.execution.driver') === OnboardingVoucherInstructionPolicy::ExecutionDriver))->toBeTrue()
+        ->and(SystemAccountFundingPayCodeIssuance::query()->count())->toBe(2)
+        ->and(commissioningSystemFundingPositionBalance(
+            $system,
+            TreasuryPositionPurpose::AccountFundingReserve,
+        ))->toBe(430_693)
+        ->and(commissioningSystemFundingPositionBalance(
+            $system,
+            TreasuryPositionPurpose::PayCodeReserve,
+        ))->toBe(20_000);
 
     $vouchers->each(function (Voucher $voucher): void {
         expect(route('x-change.claim.show', ['code' => $voucher->code]))
@@ -488,6 +509,7 @@ it('rejects funded commissioning invitations without an authorization reference'
         'currency: PHP',
         'connection_reference: netbank-primary',
         'funding_source: treasury_account_funding_reserve',
+        "authorization_reference: ''",
     ]);
 
     $this->artisan('x-change:commission:manifest', [
