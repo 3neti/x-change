@@ -166,3 +166,81 @@ Post-release host guidance:
 2. Run one more local/package verification.
 3. Release a follow-up x-PayOut beta consuming `^1.0`.
 4. Keep the Cloud cleanroom report as the public beta deployment baseline.
+
+## Post-release `^1.0` consumption proof
+
+The post-release host guidance was completed with:
+
+| Package | Version |
+|---|---|
+| `3neti/x-payout` | `v1.0.0-beta.41` |
+| `3neti/x-change` constraint | `^1.0` |
+| Resolved `3neti/x-change` | `v1.0.0` |
+
+Local x-PayOut verification passed:
+
+- `php artisan x-payout:build-diagnostics --skip-wayfinder`;
+- `public/build/manifest.json` exists;
+- focused x-PayOut tests: 7 tests, 40 assertions;
+- `composer validate --strict --no-interaction`;
+- `git diff --check`.
+
+A second fresh Laravel Cloud cleanroom then proved the public beta installation path from zero:
+
+| Item | Result |
+|---|---|
+| Cloud URL | `https://x-payout-cleanroom-20260911b-production-0als5a.laravel.cloud` |
+| Application ID | `app-a2b7d98d-bb2f-499e-871e-499cf1bb660e` |
+| Environment ID | `env-a2b7d98f-9daf-4c2a-a67b-8334179775e1` |
+| x-PayOut | `v1.0.0-beta.41` |
+| x-change | `v1.0.0` |
+| Frontend artifact | `public/build/manifest.json` confirmed |
+| Cloud frontend build | Not run |
+| Deployment profile | `netbank` |
+| Runtime tier | `production` |
+| Pre-commission strict doctor | Passed |
+| Commissioning with `--skip-build` | Passed |
+| Post-claim strict doctor | Passed |
+| Issuance/provider-liquidity guard | Ready |
+
+Financial posture:
+
+| Item | Amount |
+|---|---:|
+| NetBank opening inventory | `₱5,029.43` |
+| Account Funding Reserve after commissioning | `₱4,829.43` |
+| Pay Code Reserve before claims | `₱200.00` |
+
+Onboarding proof:
+
+| Role | Code | Result |
+|---|---|---|
+| Maker | `MAKE-6TCE` | Account created; `₱100.00 available for instructions`; Client Funds `₱100.00`; landed at `/x/cockpit/quick-generate` |
+| Checker | `CHKR-KCK3` | Account created; `₱100.00 available for instructions`; Client Funds `₱100.00`; landed at `/x/cockpit/overview` |
+
+Database verification confirmed both invitation records were redeemed and both onboarding users were persisted.
+
+This proves the full public beta path:
+
+```text
+x-payout v1.0.0-beta.41
+    -> composer requires x-change:^1.0
+    -> resolves x-change v1.0.0
+    -> deploys fresh to Laravel Cloud
+    -> uses prebuilt assets
+    -> skips Cloud npm/Vite
+    -> passes pre-commission doctor
+    -> commissions with --skip-build
+    -> issues funded Maker/Checker onboarding invitations
+    -> claims both
+    -> gives each ₱100 Client Funds
+    -> routes each role correctly
+    -> passes post-claim strict doctor
+```
+
+The blessed public beta pair is now:
+
+```text
+3neti/x-change v1.0.0
+3neti/x-payout v1.0.0-beta.41
+```

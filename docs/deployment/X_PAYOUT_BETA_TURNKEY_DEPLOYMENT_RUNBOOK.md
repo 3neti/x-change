@@ -10,8 +10,8 @@ Use this runbook when the goal is to create a new x-PayOut app from zero, commis
 
 | Package | Version |
 |---|---|
-| `3neti/x-payout` | `v1.0.0-beta.39` |
-| `3neti/x-change` | `v1.0.0-beta.347` |
+| `3neti/x-payout` | `v1.0.0-beta.41` |
+| `3neti/x-change` | `^1.0`, currently resolving to `v1.0.0` |
 
 The matching x-PayOut release ships prebuilt frontend assets in `public/build`.
 
@@ -133,6 +133,43 @@ Invariant confirmed:
 ```text
 ₱5,029.43 opening inventory - ₱200.00 funded invitations = ₱4,829.43 Account Funding Reserve
 ```
+
+## Stable `^1.0` proof: 2026-09-11
+
+A second fresh Laravel Cloud app was created from zero after `3neti/x-change v1.0.0` was tagged and x-PayOut was updated to consume `3neti/x-change:^1.0`.
+
+| Item | Result |
+|---|---|
+| Cloud URL | `https://x-payout-cleanroom-20260911b-production-0als5a.laravel.cloud` |
+| Application ID | `app-a2b7d98d-bb2f-499e-871e-499cf1bb660e` |
+| Environment ID | `env-a2b7d98f-9daf-4c2a-a67b-8334179775e1` |
+| x-PayOut | `v1.0.0-beta.41` |
+| x-change | `v1.0.0`, resolved through `^1.0` |
+| Frontend build | Prebuilt assets used; no Cloud npm/Vite/Vite Plus build |
+| Deployment profile | `netbank` |
+| Runtime tier | `production` |
+| Pre-commission doctor | Passed |
+| Commissioning | Passed with `--skip-build` |
+| Post-claim strict doctor | Passed |
+| NetBank opening inventory | `₱5,029.43` |
+| Account Funding Reserve after commissioning | `₱4,829.43` |
+| Pay Code Reserve before claims | `₱200.00` |
+| Issuance/provider-liquidity guard | Ready |
+
+Generated invitations:
+
+| Role | Code | Result |
+|---|---|---|
+| Maker | `MAKE-6TCE` | Claimed; landed at `/x/cockpit/quick-generate`; Client Funds `₱100.00` |
+| Checker | `CHKR-KCK3` | Claimed; landed at `/x/cockpit/overview`; Client Funds `₱100.00` |
+
+Invariant confirmed again:
+
+```text
+₱5,029.43 opening inventory - ₱200.00 funded invitations = ₱4,829.43 Account Funding Reserve
+```
+
+This is the current public beta baseline.
 
 ## Report format for future runs
 
