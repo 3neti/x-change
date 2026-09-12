@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "597db137064999624af73dc466c707f2",
+    "content-hash": "77a6e130a639372b1e8e28b739d11263",
     "packages": [
         {
             "name": "3neti/cash",
@@ -1259,7 +1259,7 @@
         },
         {
             "name": "3neti/voucher",
-            "version": "v1.0.0-beta.9",
+            "version": "v1.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/voucher.git",
@@ -1340,7 +1340,7 @@
         },
         {
             "name": "3neti/wallet",
-            "version": "v2.0.0-beta.8",
+            "version": "v2.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/wallet.git",
@@ -1391,7 +1391,7 @@
             "description": "Custom wallet for X-Change",
             "support": {
                 "issues": "https://github.com/3neti/wallet/issues",
-                "source": "https://github.com/3neti/wallet/tree/v2.0.0-beta.8"
+                "source": "https://github.com/3neti/wallet/tree/v2.0.0"
             },
             "time": "2026-08-19T03:08:26+00:00"
         },
@@ -1713,7 +1713,7 @@
         },
         {
             "name": "3neti/x-provisioning",
-            "version": "v1.0.0-beta.11",
+            "version": "v1.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/x-provisioning.git",
@@ -16820,10 +16820,7 @@
     "minimum-stability": "stable",
     "stability-flags": {
         "3neti/emi-core": 10,
-        "3neti/emi-paynamics": 10,
-        "3neti/voucher": 10,
-        "3neti/wallet": 10,
-        "3neti/x-provisioning": 10
+        "3neti/emi-paynamics": 10
     },
     "prefer-stable": true,
     "prefer-lowest": false,
