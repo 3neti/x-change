@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "77a6e130a639372b1e8e28b739d11263",
+    "content-hash": "561cc8ec3e61a1ed31edeee1637ad2e6",
     "packages": [
         {
             "name": "3neti/cash",
@@ -127,7 +127,7 @@
         },
         {
             "name": "3neti/emi-core",
-            "version": "v2.0.0-beta.6",
+            "version": "v2.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/emi-core.git",
@@ -176,7 +176,7 @@
             "description": "Provider-agnostic EMI domain: contracts, enums, models, DTOs, events",
             "support": {
                 "issues": "https://github.com/3neti/emi-core/issues",
-                "source": "https://github.com/3neti/emi-core/tree/v2.0.0-beta.6"
+                "source": "https://github.com/3neti/emi-core/tree/v2.0.0"
             },
             "time": "2026-08-28T05:13:11+00:00"
         },
@@ -250,20 +250,20 @@
         },
         {
             "name": "3neti/emi-paynamics",
-            "version": "v2.0.0-beta.2",
+            "version": "v2.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/emi-paynamics.git",
-                "reference": "d79214dc5a3409425574df8d793ad1d0872fc449"
+                "reference": "7d36263cd6092ed117db863dc41c2c462185385a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/emi-paynamics/zipball/d79214dc5a3409425574df8d793ad1d0872fc449",
-                "reference": "d79214dc5a3409425574df8d793ad1d0872fc449",
+                "url": "https://api.github.com/repos/3neti/emi-paynamics/zipball/7d36263cd6092ed117db863dc41c2c462185385a",
+                "reference": "7d36263cd6092ed117db863dc41c2c462185385a",
                 "shasum": ""
             },
             "require": {
-                "3neti/emi-core": "^2.0@beta",
+                "3neti/emi-core": "^2.0",
                 "illuminate/http": "^12.0 || ^13.0",
                 "illuminate/support": "^12.0 || ^13.0",
                 "lorisleiva/laravel-actions": "^2.9",
@@ -302,9 +302,9 @@
             "description": "Paynamics Constellation adapter for EMI core",
             "support": {
                 "issues": "https://github.com/3neti/emi-paynamics/issues",
-                "source": "https://github.com/3neti/emi-paynamics/tree/v2.0.0-beta.2"
+                "source": "https://github.com/3neti/emi-paynamics/tree/v2.0.0"
             },
-            "time": "2026-07-31T14:04:42+00:00"
+            "time": "2026-09-12T09:39:36+00:00"
         },
         {
             "name": "3neti/form-flow",
@@ -16818,10 +16818,7 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "3neti/emi-core": 10,
-        "3neti/emi-paynamics": 10
-    },
+    "stability-flags": {},
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
