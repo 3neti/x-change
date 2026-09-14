@@ -147,7 +147,11 @@ partner payouts additionally require independent maker-checker approval.
 Fresh commissioning activates immutable package baseline pricing without
 fabricating human approval. Price changes remain locked until different named
 maker and checker operators are authorized; approval and activation are
-separate controls. See [Commercial Governance](./docs/commercial-governance/README.md).
+separate controls. Maker and Checker onboarding is optional for completing
+cloud commissioning, but required before governed maintenance such as pricing,
+waterfall, commission, Treasury, provisioning, payout, production API, or
+campaign policy changes. See [Commercial Governance](./docs/commercial-governance/README.md)
+and [Commissioning Maker/Checker Doctrine](./docs/governance/COMMISSIONING_MAKER_CHECKER_DOCTRINE.md).
 
 Operators can verify the complete boundary without moving money:
 
