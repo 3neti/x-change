@@ -55,10 +55,14 @@ final readonly class PreparePayCodeTreasuryIssuance
             )
             ->values();
 
-        if (! $voucher instanceof Voucher || $amountMinor <= 0) {
+        if (! $voucher instanceof Voucher) {
             throw new PayCodeIssuanceFailed(
                 'The Pay Code principal could not be reserved.',
             );
+        }
+
+        if ($amountMinor <= 0) {
+            return;
         }
 
         if ($connections->count() !== 1) {

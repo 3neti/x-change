@@ -333,6 +333,80 @@ it('synchronizes the compatibility ledger and reserves Treasury principal for is
         ))->toBe(500);
 });
 
+it('issues zero-denominated Treasury lead intake pay codes without reserving principal', function () {
+    $user = actingAsTestUser(0);
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.commercial.enabled', true);
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision(
+        $user,
+        ['netbank-primary'],
+    );
+    app(VerifiedTreasuryFundingAllocationContract::class)->allocate(
+        accountReference: 'wallet:'.$user->wallet->uuid,
+        provider: 'netbank',
+        amountMinor: 5_000,
+        currency: 'PHP',
+        evidenceReference: 'netbank:lead-intake-zero-principal',
+    );
+    $funding = Mockery::mock(ProviderFundingPolicyContract::class);
+    $funding->shouldReceive('assertCanIssue')
+        ->once()
+        ->andReturn(FundingDecisionData::allowed(
+            authority: 'local_ledger',
+            availableMinor: 5_000,
+            requiredMinor: 0,
+            currency: 'PHP',
+            meta: [
+                'provider' => 'netbank',
+                'topology' => 'ledger_pooled',
+            ],
+        ));
+    app()->instance(ProviderFundingPolicyContract::class, $funding);
+
+    $result = app(GeneratePayCode::class)->handle(validPayCodePayload(
+        0,
+        'INSTAPAY',
+        [
+            'inputs' => [
+                'fields' => [
+                    'name',
+                    'mobile',
+                    'email',
+                    'address',
+                    'birth_date',
+                    'reference_code',
+                ],
+            ],
+            'feedback' => [
+                'email' => null,
+                'mobile' => null,
+                'webhook' => null,
+            ],
+            'provider' => 'netbank',
+            'metadata' => [
+                'issuer_id' => (string) $user->getKey(),
+                'custom' => [
+                    'lead_campaign' => [
+                        'kind' => 'lead',
+                        'payment_mode' => 'invoice_after_intake',
+                    ],
+                ],
+            ],
+        ],
+    ));
+
+    expect($result->amount)->toBe(0.0)
+        ->and(Voucher::query()->findOrFail($result->voucher_id)->code)->toStartWith('TEST')
+        ->and(data_get(
+            Voucher::query()->findOrFail($result->voucher_id)->metadata,
+            'treasury.pay_code_reservation.amount_minor',
+        ))->toBeNull()
+        ->and(treasuryPositionBalanceForPurpose(
+            TreasuryPositionPurpose::PayCodeReserve,
+            $user,
+        ))->toBe(0);
+});
+
 it('fails closed when the compatibility ledger exceeds authoritative Client Funds', function () {
     $user = actingAsTestUser(6_000);
     enableNetbankTreasuryForTests();
