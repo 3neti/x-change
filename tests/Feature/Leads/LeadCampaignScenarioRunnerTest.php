@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Voucher\Enums\VoucherInputField;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Data\DebitData;
 use LBHurtado\XChange\Data\IssuerData;
@@ -47,8 +48,35 @@ it('runs the AUI browser scenario and redirects through the public lead endpoint
         ])
         ->and($template->name)->toBe('AUI On-Demand Insurance Payment')
         ->and(data_get($template->instructions_ciphertext, 'cash.amount'))->toBe(0)
+        ->and(data_get($template->instructions_ciphertext, 'inputs.fields'))->toBe([
+            'name',
+            'mobile',
+            'email',
+            'address',
+            'birth_date',
+            'reference_code',
+        ])
         ->and(data_get($template->instructions_ciphertext, 'metadata.custom.lead_campaign.scenario'))->toBe('aui_on_demand_insurance_payment')
-        ->and(data_get($template->instructions_ciphertext, 'metadata.custom.lead_campaign.payment_mode'))->toBe('invoice_after_intake');
+        ->and(data_get($template->instructions_ciphertext, 'metadata.custom.lead_campaign.payment_mode'))->toBe('invoice_after_intake')
+        ->and(data_get($template->instructions_ciphertext, 'metadata.custom.lead_campaign.requested_particulars'))->toBe([
+            'insurance_product',
+            'vehicle_registration_number',
+            'driver_license_number',
+            'payment_reference',
+        ]);
+});
+
+it('keeps the AUI browser scenario executable against voucher input fields', function (): void {
+    actingAsTestUser();
+
+    $this->post(route('x-change.cockpit.campaigns.lead-scenario-runner.store'))
+        ->assertRedirect();
+
+    $template = PayCodeTemplate::query()->sole();
+    $supported = VoucherInputField::values();
+
+    expect(data_get($template->instructions_ciphertext, 'inputs.fields'))
+        ->each->toBeIn($supported);
 });
 
 it('continues the browser scenario through public endpoint generation into claim', function (): void {
