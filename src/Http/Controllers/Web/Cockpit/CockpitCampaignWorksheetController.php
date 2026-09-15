@@ -22,12 +22,16 @@ use LBHurtado\XCampaign\Data\CampaignWorksheetSummaryData;
 use LBHurtado\XCampaign\Models\CampaignWorksheet;
 use LBHurtado\XCampaign\Models\CampaignWorksheetAuthorization;
 use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
+use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRequest;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRowRequest;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
+use LBHurtado\XChange\Models\LeadCampaign;
+use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegistry;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityRequirementResolver;
+use Throwable;
 
 class CockpitCampaignWorksheetController extends Controller
 {
@@ -37,6 +41,7 @@ class CockpitCampaignWorksheetController extends Controller
         private readonly CampaignWorksheetIntakeRepository $intakes,
         private readonly InstructionCapabilityReadinessRegistry $instructionCapabilities,
         private readonly InstructionCapabilityRequirementResolver $instructionCapabilityRequirements,
+        private readonly ClaimUrlQrRendererContract $claimUrlQrRenderer,
     ) {}
 
     public function index(Request $request): Response
@@ -46,6 +51,14 @@ class CockpitCampaignWorksheetController extends Controller
         return Inertia::render('x-change/cockpit/Campaigns', [
             'worksheets' => $this->summariesFor($owner),
             'active_intake' => $this->activeIntakeFor($owner),
+            'campaign_usage_profiles' => $this->usageProfiles(),
+            'endpoint_capabilities' => $this->endpointCapabilities(),
+            'pay_code_templates' => $this->payCodeTemplatesFor($owner),
+            'endpoint_campaigns' => $this->endpointCampaignsFor($owner),
+            'endpoint_campaign_form' => [
+                'action_url' => route('x-change.cockpit.campaigns.endpoints.store'),
+                'default_timezone' => config('app.timezone', 'UTC'),
+            ],
         ]);
     }
 
@@ -189,6 +202,131 @@ class CockpitCampaignWorksheetController extends Controller
     private function ownerType(mixed $owner): string
     {
         return $owner instanceof Model ? $owner->getMorphClass() : $owner::class;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function usageProfiles(): array
+    {
+        return collect((array) config('x-change.campaigns.usage_profiles', []))
+            ->map(fn (array $profile, string $key): array => [
+                'key' => $key,
+                'label' => (string) ($profile['label'] ?? $key),
+                'description' => (string) ($profile['description'] ?? ''),
+                'entry_point' => (string) ($profile['entry_point'] ?? 'operator_defined'),
+                'person_type' => (string) ($profile['person_type'] ?? 'participant'),
+                'pay_code_generation' => (string) ($profile['pay_code_generation'] ?? 'operator_defined'),
+                'default_capabilities' => array_values((array) ($profile['default_capabilities'] ?? [])),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<array{key: string, label: string}>
+     */
+    private function endpointCapabilities(): array
+    {
+        return collect((array) config('x-change.campaigns.endpoint_capabilities', []))
+            ->map(fn (string $label, string $key): array => [
+                'key' => $key,
+                'label' => $label,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function payCodeTemplatesFor(mixed $owner): array
+    {
+        return PayCodeTemplate::query()
+            ->where('owner_type', $this->ownerType($owner))
+            ->where('owner_id', (string) $owner->getAuthIdentifier())
+            ->where('status', 'active')
+            ->latest('updated_at')
+            ->limit(50)
+            ->get()
+            ->map(fn (PayCodeTemplate $template): array => [
+                'id' => $template->getKey(),
+                'reference' => $template->reference,
+                'name' => $template->name,
+                'description' => $template->description,
+                'amount_minor' => $this->templateAmountMinor($template),
+                'currency' => (string) data_get($template->instructions_ciphertext, 'cash.currency', 'PHP'),
+                'flow_type' => (string) data_get(
+                    $template->instructions_ciphertext,
+                    'voucher_type',
+                    data_get($template->instructions_ciphertext, 'flow_type', 'disbursable'),
+                ),
+                'input_fields' => array_values((array) data_get($template->instructions_ciphertext, 'inputs.fields', [])),
+            ])
+            ->all();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function endpointCampaignsFor(mixed $owner): array
+    {
+        return LeadCampaign::query()
+            ->with('payCodeTemplate')
+            ->where('owner_type', $this->ownerType($owner))
+            ->where('owner_id', (string) $owner->getAuthIdentifier())
+            ->latest('updated_at')
+            ->limit(25)
+            ->get()
+            ->map(function (LeadCampaign $campaign): array {
+                $publicUrl = route('x-change.leads.start', [
+                    'merchant_slug' => $campaign->merchant_slug,
+                    'endpoint_slug' => $campaign->endpoint_slug,
+                ]);
+
+                return [
+                    'reference' => $campaign->reference,
+                    'title' => $campaign->title,
+                    'description' => $campaign->description,
+                    'status' => $campaign->status,
+                    'merchant_display_name' => $campaign->merchant_display_name,
+                    'merchant_slug' => $campaign->merchant_slug,
+                    'endpoint_slug' => $campaign->endpoint_slug,
+                    'public_url' => $publicUrl,
+                    'qr_data_uri' => $this->qrFor($publicUrl),
+                    'usage_count' => $campaign->usage_count,
+                    'starts_limit' => $campaign->starts_limit,
+                    'last_started_at' => $campaign->last_started_at?->toIso8601String(),
+                    'expires_at' => $campaign->expires_at?->toIso8601String(),
+                    'usage_key' => (string) data_get($campaign->settings, 'usage_key', data_get($campaign->settings, 'kind', 'lead')),
+                    'usage_label' => (string) data_get($campaign->settings, 'usage_label', 'Lead'),
+                    'capabilities' => array_values((array) data_get($campaign->settings, 'capabilities', [])),
+                    'availability' => (array) data_get($campaign->settings, 'availability', []),
+                    'limits' => (array) data_get($campaign->settings, 'limits', []),
+                    'template' => $campaign->payCodeTemplate instanceof PayCodeTemplate ? [
+                        'id' => $campaign->payCodeTemplate->getKey(),
+                        'reference' => $campaign->payCodeTemplate->reference,
+                        'name' => $campaign->payCodeTemplate->name,
+                        'amount_minor' => $this->templateAmountMinor($campaign->payCodeTemplate),
+                        'currency' => (string) data_get($campaign->payCodeTemplate->instructions_ciphertext, 'cash.currency', 'PHP'),
+                    ] : null,
+                ];
+            })
+            ->all();
+    }
+
+    private function templateAmountMinor(PayCodeTemplate $template): int
+    {
+        return (int) data_get($template->instructions_ciphertext, 'cash.amount', 0);
+    }
+
+    private function qrFor(string $url): ?string
+    {
+        try {
+            return $this->claimUrlQrRenderer->render($url);
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     /** @return array<string, mixed> */

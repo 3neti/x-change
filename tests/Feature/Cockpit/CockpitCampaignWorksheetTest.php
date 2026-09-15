@@ -29,6 +29,8 @@ use LBHurtado\XChange\Jobs\Campaigns\ConvergeCampaignFeedbackDeliveryJob;
 use LBHurtado\XChange\Jobs\Campaigns\DispatchCampaignFeedbackJob;
 use LBHurtado\XChange\Jobs\Feedback\DeliverQueuedFeedbackSmsJob;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
+use LBHurtado\XChange\Models\LeadCampaign;
+use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetAuthorizationExecutionService;
 use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
 use LBHurtado\XFeedback\Drivers\SmsFeedbackChannelDriver;
@@ -106,6 +108,114 @@ it('shows only the authenticated owner campaign worksheet summaries', function (
         ->assertJsonPath('props.worksheets.0.name', 'July Payroll')
         ->assertJsonPath('props.worksheets.0.beneficiary_count', 0)
         ->assertJsonMissingPath('props.worksheets.0.beneficiary');
+});
+
+it('exposes endpoint campaign profiles, active templates, and existing public endpoints', function (): void {
+    $owner = actingAsTestUser();
+    $template = PayCodeTemplate::query()->create([
+        'owner_type' => $owner->getMorphClass(),
+        'owner_id' => (string) $owner->getKey(),
+        'name' => 'Public application template',
+        'base_template_key' => 'blank-pay-code',
+        'instructions_ciphertext' => [
+            'cash' => ['amount' => 10_000, 'currency' => 'PHP'],
+            'inputs' => ['fields' => ['name', 'mobile']],
+            'count' => 1,
+            'prefix' => 'LEAD',
+            'mask' => '****',
+        ],
+        'include_amount' => true,
+        'include_purpose' => true,
+        'status' => 'active',
+    ]);
+
+    LeadCampaign::query()->create([
+        'owner_type' => $owner->getMorphClass(),
+        'owner_id' => (string) $owner->getKey(),
+        'pay_code_template_id' => $template->getKey(),
+        'merchant_display_name' => 'Acme Merchant',
+        'merchant_slug' => 'acme-merchant',
+        'endpoint_slug' => 'apply',
+        'title' => 'Application',
+        'status' => 'active',
+        'starts_limit' => 25,
+        'settings' => [
+            'usage_key' => 'lead',
+            'usage_label' => 'Lead',
+            'capabilities' => ['public_endpoint', 'claim_intake'],
+        ],
+    ]);
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.index'))
+        ->assertOk()
+        ->assertJsonPath('props.campaign_usage_profiles.0.key', 'ayuda')
+        ->assertJsonPath('props.pay_code_templates.0.name', 'Public application template')
+        ->assertJsonPath('props.pay_code_templates.0.amount_minor', 10_000)
+        ->assertJsonPath('props.endpoint_campaigns.0.title', 'Application')
+        ->assertJsonPath('props.endpoint_campaigns.0.public_url', route('x-change.leads.start', [
+            'merchant_slug' => 'acme-merchant',
+            'endpoint_slug' => 'apply',
+        ]))
+        ->assertJsonPath('props.endpoint_campaigns.0.starts_limit', 25)
+        ->assertJsonPath('props.endpoint_campaigns.0.template.name', 'Public application template')
+        ->assertJsonPath('props.endpoint_campaign_form.action_url', route('x-change.cockpit.campaigns.endpoints.store'));
+});
+
+it('creates an endpoint campaign from an owned Pay Code template', function (): void {
+    $owner = actingAsTestUser();
+    $template = PayCodeTemplate::query()->create([
+        'owner_type' => $owner->getMorphClass(),
+        'owner_id' => (string) $owner->getKey(),
+        'name' => 'Promo template',
+        'base_template_key' => 'blank-pay-code',
+        'instructions_ciphertext' => [
+            'cash' => ['amount' => 5_000, 'currency' => 'PHP'],
+            'inputs' => ['fields' => ['name', 'mobile']],
+            'count' => 1,
+            'prefix' => 'PROMO',
+            'mask' => '****',
+        ],
+        'include_amount' => true,
+        'include_purpose' => true,
+        'status' => 'active',
+    ]);
+
+    $this->post(route('x-change.cockpit.campaigns.endpoints.store'), [
+        'title' => 'Snacks Promo',
+        'description' => 'Public promo link.',
+        'usage_key' => 'promo',
+        'capabilities' => ['public_endpoint', 'distribution', 'claim_limits'],
+        'pay_code_template_id' => $template->getKey(),
+        'endpoint_slug' => 'snacks-promo',
+        'starts_limit' => 10,
+        'budget_cap_minor' => 50_000,
+        'daily_window_start' => '08:00',
+        'daily_window_end' => '17:00',
+        'timezone' => 'Asia/Manila',
+    ])->assertRedirect(route('x-change.cockpit.campaigns.index'))
+        ->assertSessionHas('campaign_notice', 'Snacks Promo is ready to share.');
+
+    $campaign = LeadCampaign::query()->where('endpoint_slug', 'snacks-promo')->firstOrFail();
+
+    expect($campaign->owner_type)->toBe($owner->getMorphClass())
+        ->and($campaign->pay_code_template_id)->toBe($template->getKey())
+        ->and($campaign->starts_limit)->toBe(10)
+        ->and($campaign->settings)->toMatchArray([
+            'usage_key' => 'promo',
+            'usage_label' => 'Promo',
+            'capabilities' => ['public_endpoint', 'distribution', 'claim_limits'],
+            'entry_point' => 'public_qr_link',
+            'person_type' => 'prospect',
+            'pay_code_generation' => 'on_scan',
+            'limits' => ['budget_cap_minor' => 50_000],
+            'availability' => [
+                'starts_at' => null,
+                'daily_window_start' => '08:00',
+                'daily_window_end' => '17:00',
+                'timezone' => 'Asia/Manila',
+            ],
+        ]);
 });
 
 it('lets only the draft owner save one encrypted Pay Code experience for every beneficiary', function () {

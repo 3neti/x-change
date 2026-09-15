@@ -20,6 +20,72 @@ const worksheet = {
     updated_at: '2026-07-29T12:00:00+08:00',
 };
 
+const usageProfiles = [
+    {
+        key: 'lead',
+        label: 'Lead',
+        description: 'Public QR or link that starts a reusable intake or offer.',
+        entry_point: 'public_qr_link',
+        person_type: 'prospect',
+        pay_code_generation: 'on_scan',
+        default_capabilities: ['public_endpoint', 'claim_intake'],
+    },
+    {
+        key: 'collection',
+        label: 'Collection',
+        description: 'Public payment or stored-value endpoint for payers.',
+        entry_point: 'public_qr_link',
+        person_type: 'payer',
+        pay_code_generation: 'on_invoice_or_scan',
+        default_capabilities: ['public_endpoint', 'collection'],
+    },
+];
+
+const endpointCapabilities = [
+    { key: 'public_endpoint', label: 'Public QR/link endpoint' },
+    { key: 'claim_intake', label: 'Collect claim/intake details' },
+    { key: 'collection', label: 'Collection/payment request' },
+];
+
+const payCodeTemplate = {
+    id: 12,
+    reference: '01KYTEMPLATE0000000000000',
+    name: 'Insurance application template',
+    description: 'Applicant intake',
+    amount_minor: 10000,
+    currency: 'PHP',
+    flow_type: 'disbursable',
+    input_fields: ['name', 'mobile'],
+};
+
+const endpointCampaign = {
+    reference: '01KYENDPOINT0000000000000',
+    title: 'Insurance Application',
+    description: 'Public acquisition link',
+    status: 'active',
+    merchant_display_name: 'AUI Insurance',
+    merchant_slug: 'aui-insurance',
+    endpoint_slug: 'application',
+    public_url: 'https://example.test/x/o/aui-insurance/application',
+    qr_data_uri: 'data:image/png;base64,abc123',
+    usage_count: 3,
+    starts_limit: 25,
+    last_started_at: '2026-07-29T12:00:00+08:00',
+    expires_at: null,
+    usage_key: 'lead',
+    usage_label: 'Lead',
+    capabilities: ['public_endpoint', 'claim_intake'],
+    availability: {},
+    limits: {},
+    template: {
+        id: 12,
+        reference: '01KYTEMPLATE0000000000000',
+        name: 'Insurance application template',
+        amount_minor: 10000,
+        currency: 'PHP',
+    },
+};
+
 describe('Cockpit campaign worksheets', () => {
     it('presents only aggregate draft facts until beneficiaries are added', () => {
         const wrapper = mount(Campaigns, {
@@ -96,6 +162,56 @@ describe('Cockpit campaign worksheets', () => {
             (wrapper.vm as unknown as { form: { profile: string } }).form
                 .profile,
         ).toBe('assistance');
+    });
+
+    it('creates and monitors endpoint campaigns from Pay Code templates', async () => {
+        const wrapper = mount(Campaigns, {
+            props: {
+                worksheets: [worksheet],
+                campaign_usage_profiles: usageProfiles,
+                endpoint_capabilities: endpointCapabilities,
+                pay_code_templates: [payCodeTemplate],
+                endpoint_campaigns: [endpointCampaign],
+                endpoint_campaign_form: {
+                    action_url: '/x/cockpit/campaigns/endpoints',
+                    default_timezone: 'Asia/Manila',
+                },
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="campaign-flavor-endpoints"]')
+            .trigger('click');
+
+        expect(wrapper.text()).toContain('Endpoint Campaigns');
+        expect(wrapper.text()).toContain('Insurance Application');
+        expect(wrapper.text()).toContain('https://example.test/x/o/aui-insurance/application');
+        expect(wrapper.text()).toContain('Insurance application template');
+        expect(wrapper.text()).toContain('₱2,500.00 cap');
+        expect(
+            wrapper.get('[data-testid="campaign-endpoint-qr"]').attributes(
+                'src',
+            ),
+        ).toBe(endpointCampaign.qr_data_uri);
+
+        const endpointForm = (
+            wrapper.vm as unknown as {
+                endpointForm: {
+                    title: string;
+                    post: (...args: unknown[]) => void;
+                };
+            }
+        ).endpointForm;
+        const post = vi
+            .spyOn(endpointForm, 'post')
+            .mockImplementation(() => undefined);
+
+        await wrapper
+            .get('[data-testid="campaign-endpoint-create-form"]')
+            .trigger('submit');
+
+        expect(post).toHaveBeenCalledOnce();
+        expect(post.mock.calls[0][0]).toBe('/x/cockpit/campaigns/endpoints');
     });
 
     it('keeps empty-state creation vocabulary aligned with the selected flavor', async () => {

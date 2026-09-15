@@ -10,7 +10,6 @@ use LBHurtado\XChange\Data\IssuerData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
-use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Tests\Fakes\User;
 
@@ -117,6 +116,64 @@ it('does not start inactive lead campaigns', function (): void {
 
     expect($fakeIssuer->payloads)->toBeEmpty()
         ->and($campaign->fresh()->usage_count)->toBe(0);
+});
+
+it('does not start endpoint campaigns before their availability window', function (): void {
+    $operator = leadCampaignOperator('AUI Insurance');
+    $template = leadCampaignTemplate($operator);
+    $campaign = app(CreateLeadCampaign::class)->handle($operator, $template, [
+        'title' => 'Insurance Application',
+        'endpoint_slug' => 'application',
+        'settings' => [
+            'usage_key' => 'lead',
+            'availability' => [
+                'starts_at' => now()->addDay()->toIso8601String(),
+                'timezone' => config('app.timezone', 'UTC'),
+            ],
+        ],
+    ]);
+    $fakeIssuer = leadCampaignFakeGeneratePayCode('AUI-LEAD-1');
+
+    app()->instance(GeneratePayCode::class, $fakeIssuer);
+
+    $this->get(route('x-change.leads.start', [
+        'merchant_slug' => $campaign->merchant_slug,
+        'endpoint_slug' => $campaign->endpoint_slug,
+    ]))->assertNotFound();
+
+    expect($fakeIssuer->payloads)->toBeEmpty()
+        ->and($campaign->fresh()->usage_count)->toBe(0);
+});
+
+it('records configured endpoint campaign usage metadata on generated pay codes', function (): void {
+    $operator = leadCampaignOperator('AUI Insurance');
+    $template = leadCampaignTemplate($operator);
+    $campaign = app(CreateLeadCampaign::class)->handle($operator, $template, [
+        'title' => 'Insurance Collection',
+        'endpoint_slug' => 'insurance-payment',
+        'settings' => [
+            'usage_key' => 'collection',
+            'usage_label' => 'Collection',
+            'capabilities' => ['public_endpoint', 'collection'],
+            'entry_point' => 'public_qr_link',
+            'person_type' => 'payer',
+            'pay_code_generation' => 'on_invoice_or_scan',
+        ],
+    ]);
+    $fakeIssuer = leadCampaignFakeGeneratePayCode('AUI-COLL-1');
+
+    app()->instance(GeneratePayCode::class, $fakeIssuer);
+
+    $this->get(route('x-change.leads.start', [
+        'merchant_slug' => $campaign->merchant_slug,
+        'endpoint_slug' => $campaign->endpoint_slug,
+    ]))->assertRedirect(route('x-change.claim.show', ['code' => 'AUI-COLL-1']));
+
+    expect(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.kind'))->toBe('collection')
+        ->and(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.usage_label'))->toBe('Collection')
+        ->and(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.capabilities'))->toBe(['public_endpoint', 'collection'])
+        ->and(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.person_type'))->toBe('payer')
+        ->and(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.pay_code_generation'))->toBe('on_invoice_or_scan');
 });
 
 function leadCampaignOperator(string $name): User

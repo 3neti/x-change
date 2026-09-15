@@ -3,10 +3,14 @@ import { useForm } from '@inertiajs/vue3';
 import {
     BriefcaseBusiness,
     ClipboardList,
+    Copy,
     FileSpreadsheet,
+    Globe2,
     HandCoins,
+    Link2,
     LockKeyhole,
     Plus,
+    QrCode,
     Send,
     Trash2,
     Upload,
@@ -34,16 +38,78 @@ type CampaignWorksheet = {
     updated_at: string | null;
 };
 
+type CampaignUsageProfile = {
+    key: string;
+    label: string;
+    description: string;
+    entry_point: string;
+    person_type: string;
+    pay_code_generation: string;
+    default_capabilities: string[];
+};
+
+type CampaignEndpointCapability = {
+    key: string;
+    label: string;
+};
+
+type CampaignPayCodeTemplate = {
+    id: number;
+    reference: string;
+    name: string;
+    description: string | null;
+    amount_minor: number;
+    currency: string;
+    flow_type: string;
+    input_fields: string[];
+};
+
+type EndpointCampaign = {
+    reference: string;
+    title: string;
+    description: string | null;
+    status: string;
+    merchant_display_name: string;
+    merchant_slug: string;
+    endpoint_slug: string;
+    public_url: string;
+    qr_data_uri: string | null;
+    usage_count: number;
+    starts_limit: number | null;
+    last_started_at: string | null;
+    expires_at: string | null;
+    usage_key: string;
+    usage_label: string;
+    capabilities: string[];
+    availability: Record<string, unknown>;
+    limits: Record<string, unknown>;
+    template: {
+        id: number;
+        reference: string;
+        name: string;
+        amount_minor: number;
+        currency: string;
+    } | null;
+};
+
 type CampaignsPageProps = CockpitHeaderPageProps & {
     worksheets: CampaignWorksheet[];
     active_intake?: Record<string, unknown>;
+    campaign_usage_profiles?: CampaignUsageProfile[];
+    endpoint_capabilities?: CampaignEndpointCapability[];
+    pay_code_templates?: CampaignPayCodeTemplate[];
+    endpoint_campaigns?: EndpointCampaign[];
+    endpoint_campaign_form?: {
+        action_url: string;
+        default_timezone: string;
+    };
 };
 
 const props = defineProps<CampaignsPageProps>();
 
-type CampaignFlavor = CampaignWorksheet['profile'];
+type CampaignFlavor = CampaignWorksheet['profile'] | 'endpoints';
 
-const campaignFlavors: CampaignFlavor[] = ['payroll', 'assistance'];
+const campaignFlavors: CampaignFlavor[] = ['payroll', 'assistance', 'endpoints'];
 const activeFlavor = ref<CampaignFlavor>('payroll');
 const flavorCopy: Record<
     CampaignFlavor,
@@ -98,12 +164,32 @@ const flavorCopy: Record<
         emptyBatchTitle: 'Start Empty Distribution',
         namePlaceholder: 'August assistance',
     },
+    endpoints: {
+        eyebrow: 'Endpoints',
+        title: 'Endpoint Campaigns',
+        description:
+            'Turn an existing Pay Code template into a public QR or link that generates a fresh Pay Code when opened.',
+        listTitle: 'Public Endpoints',
+        people: 'Starts',
+        person: 'participant',
+        total: 'Exposure',
+        emptyTitle: 'No endpoint campaigns yet',
+        emptyDescription:
+            'Create a public campaign link from a Pay Code template.',
+        importTitle: 'Create Endpoint Campaign',
+        importDescription:
+            'Select a reusable Pay Code template, choose usage, and publish a governed QR/link endpoint.',
+        emptyBatchTitle: 'Create Endpoint Campaign',
+        namePlaceholder: 'Insurance application',
+    },
 };
 const activeCopy = computed(() => flavorCopy[activeFlavor.value]);
 const visibleWorksheets = computed(() =>
-    props.worksheets.filter(
-        (worksheet) => worksheet.profile === activeFlavor.value,
-    ),
+    activeFlavor.value === 'endpoints'
+        ? []
+        : props.worksheets.filter(
+              (worksheet) => worksheet.profile === activeFlavor.value,
+          ),
 );
 const visiblePeopleCount = computed(() =>
     visibleWorksheets.value.reduce(
@@ -118,6 +204,36 @@ const form = useForm({
     fulfillment_mode: 'pay_code_distribution',
     delivery_plan: ['csv'],
 });
+const usageProfiles = computed<CampaignUsageProfile[]>(
+    () => props.campaign_usage_profiles ?? [],
+);
+const endpointCapabilities = computed<CampaignEndpointCapability[]>(
+    () => props.endpoint_capabilities ?? [],
+);
+const payCodeTemplates = computed<CampaignPayCodeTemplate[]>(
+    () => props.pay_code_templates ?? [],
+);
+const endpointCampaigns = computed<EndpointCampaign[]>(
+    () => props.endpoint_campaigns ?? [],
+);
+const endpointForm = useForm({
+    title: '',
+    description: '',
+    usage_key: usageProfiles.value[0]?.key ?? 'lead',
+    capabilities: usageProfiles.value[0]?.default_capabilities ?? [],
+    pay_code_template_id: payCodeTemplates.value[0]?.id ?? null,
+    endpoint_slug: '',
+    starts_limit: null as number | null,
+    budget_cap_minor: null as number | null,
+    starts_at: '',
+    expires_at: '',
+    daily_window_start: '',
+    daily_window_end: '',
+    timezone:
+        props.endpoint_campaign_form?.default_timezone ??
+        Intl.DateTimeFormat().resolvedOptions().timeZone ??
+        'UTC',
+});
 const deleteForm = useForm({});
 const authorizationForm = useForm({});
 const authorizingWorksheet = ref<string | null>(null);
@@ -128,7 +244,26 @@ const isDraggingIntake = ref(false);
 const intakeFileError = ref<string | null>(null);
 
 watch(activeFlavor, (profile) => {
-    form.profile = profile;
+    if (profile !== 'endpoints') {
+        form.profile = profile;
+    }
+});
+
+watch(
+    () => endpointForm.usage_key,
+    (usageKey) => {
+        const profile = usageProfiles.value.find(
+            (candidate) => candidate.key === usageKey,
+        );
+
+        endpointForm.capabilities = profile?.default_capabilities ?? [];
+    },
+);
+
+watch(payCodeTemplates, (templates) => {
+    if (endpointForm.pay_code_template_id === null && templates.length > 0) {
+        endpointForm.pay_code_template_id = templates[0].id;
+    }
 });
 
 function uploadIntake(event: Event): void {
@@ -289,6 +424,29 @@ function createWorksheet(): void {
     });
 }
 
+function createEndpointCampaign(): void {
+    if (!props.endpoint_campaign_form?.action_url) {
+        return;
+    }
+
+    endpointForm.post(props.endpoint_campaign_form.action_url, {
+        preserveScroll: true,
+        onSuccess: () => {
+            endpointForm.reset(
+                'title',
+                'description',
+                'endpoint_slug',
+                'starts_limit',
+                'budget_cap_minor',
+                'starts_at',
+                'expires_at',
+                'daily_window_start',
+                'daily_window_end',
+            );
+        },
+    });
+}
+
 function deleteWorksheet(worksheet: CampaignWorksheet): void {
     if (
         !window.confirm(
@@ -332,6 +490,52 @@ function peso(minor: number): string {
         style: 'currency',
         currency: 'PHP',
     }).format(minor / 100);
+}
+
+function selectedTemplate(): CampaignPayCodeTemplate | undefined {
+    return payCodeTemplates.value.find(
+        (template) => template.id === endpointForm.pay_code_template_id,
+    );
+}
+
+function selectedUsageProfile(): CampaignUsageProfile | undefined {
+    return usageProfiles.value.find(
+        (profile) => profile.key === endpointForm.usage_key,
+    );
+}
+
+function templateSummary(template: CampaignPayCodeTemplate | null): string {
+    if (template === null) {
+        return 'Template unavailable';
+    }
+
+    const inputs =
+        template.input_fields.length > 0
+            ? `${template.input_fields.length} field${template.input_fields.length === 1 ? '' : 's'}`
+            : 'standard claim';
+
+    return `${display(template.flow_type)} · ${peso(template.amount_minor)} · ${inputs}`;
+}
+
+function campaignExposure(campaign: EndpointCampaign): string {
+    const amount = campaign.template?.amount_minor ?? 0;
+    const maxStarts = campaign.starts_limit ?? null;
+
+    if (amount <= 0 || maxStarts === null) {
+        return amount > 0 ? `${peso(amount)} each` : 'No principal';
+    }
+
+    return `${peso(amount * maxStarts)} cap`;
+}
+
+async function copyEndpointUrl(url: string): Promise<void> {
+    const clipboard = globalThis.navigator?.clipboard;
+
+    if (!clipboard?.writeText) {
+        return;
+    }
+
+    await clipboard.writeText(url);
 }
 
 function activityLabel(): string {
@@ -459,17 +663,17 @@ const updatedRelativeTime = (value: string | null): string =>
                     </dl>
                 </div>
                 <div
-                    class="mt-4 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-950"
+                    class="mt-4 grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-950"
                     role="group"
                     aria-label="Campaign flavor"
                     data-testid="campaign-flavor-switch"
                 >
-                    <button
-                        v-for="flavor in campaignFlavors"
-                        :key="flavor"
-                        type="button"
-                        :aria-pressed="activeFlavor === flavor"
-                        :data-testid="`campaign-flavor-${flavor === 'assistance' ? 'ayuda' : flavor}`"
+                        <button
+                            v-for="flavor in campaignFlavors"
+                            :key="flavor"
+                            type="button"
+                            :aria-pressed="activeFlavor === flavor"
+                            :data-testid="`campaign-flavor-${flavor === 'assistance' ? 'ayuda' : flavor}`"
                         :class="
                             activeFlavor === flavor
                                 ? 'bg-white text-slate-950 shadow-sm dark:bg-slate-800 dark:text-white'
@@ -484,16 +688,26 @@ const updatedRelativeTime = (value: string | null): string =>
                             aria-hidden="true"
                         />
                         <HandCoins
-                            v-else
+                            v-else-if="flavor === 'assistance'"
                             class="size-4"
                             aria-hidden="true"
                         />
-                        {{ flavor === 'payroll' ? 'Payroll' : 'Ayuda' }}
+                        <QrCode v-else class="size-4" aria-hidden="true" />
+                        {{
+                            flavor === 'payroll'
+                                ? 'Payroll'
+                                : flavor === 'assistance'
+                                  ? 'Ayuda'
+                                  : 'Endpoints'
+                        }}
                     </button>
                 </div>
             </section>
 
-            <section class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
+            <section
+                v-if="activeFlavor !== 'endpoints'"
+                class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]"
+            >
                 <div
                     class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 >
@@ -886,6 +1100,468 @@ const updatedRelativeTime = (value: string | null): string =>
                         </form>
                     </details>
                 </div>
+            </section>
+
+            <section
+                v-else
+                class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]"
+                data-testid="campaign-endpoint-canvas"
+            >
+                <div
+                    class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                >
+                    <div
+                        class="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"
+                    >
+                        <div>
+                            <p
+                                class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
+                            >
+                                Public Campaign Links
+                            </p>
+                            <h2
+                                class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50"
+                            >
+                                Endpoint Campaigns
+                            </h2>
+                        </div>
+                        <span
+                            class="w-fit rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                            >{{ endpointCampaigns.length }} live cards</span
+                        >
+                    </div>
+
+                    <div
+                        v-if="endpointCampaigns.length === 0"
+                        class="flex min-h-72 flex-col items-center justify-center px-6 text-center"
+                    >
+                        <QrCode
+                            class="size-9 text-slate-300 dark:text-slate-700"
+                            aria-hidden="true"
+                        />
+                        <p
+                            class="mt-3 font-semibold text-slate-950 dark:text-slate-50"
+                        >
+                            No endpoint campaigns yet
+                        </p>
+                        <p
+                            class="mt-1 max-w-sm text-sm leading-5 text-slate-500 dark:text-slate-400"
+                        >
+                            Create one from a saved Pay Code template. The
+                            public link mints a fresh Pay Code when opened.
+                        </p>
+                    </div>
+
+                    <div
+                        v-else
+                        class="grid gap-4 p-4 lg:grid-cols-2"
+                        data-testid="campaign-endpoint-list"
+                    >
+                        <article
+                            v-for="campaign in endpointCampaigns"
+                            :key="campaign.reference"
+                            class="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950"
+                            :data-testid="`campaign-endpoint-card-${campaign.reference}`"
+                        >
+                            <div class="flex items-start gap-3">
+                                <img
+                                    v-if="campaign.qr_data_uri"
+                                    :src="campaign.qr_data_uri"
+                                    :alt="`QR code for ${campaign.title}`"
+                                    class="size-24 rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm dark:border-slate-800"
+                                    data-testid="campaign-endpoint-qr"
+                                />
+                                <div
+                                    v-else
+                                    class="flex size-24 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-slate-400 dark:border-slate-700 dark:bg-slate-900"
+                                >
+                                    <QrCode
+                                        class="size-8"
+                                        aria-hidden="true"
+                                    />
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div
+                                        class="flex flex-wrap items-center gap-2"
+                                    >
+                                        <span
+                                            class="rounded-full bg-white px-2 py-0.5 text-[0.65rem] font-semibold text-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                                            >{{ campaign.usage_label }}</span
+                                        >
+                                        <span
+                                            :class="
+                                                statusClasses(campaign.status)
+                                            "
+                                            class="rounded-full px-2 py-0.5 text-[0.65rem] font-semibold"
+                                            >{{
+                                                display(campaign.status)
+                                            }}</span
+                                        >
+                                    </div>
+                                    <h3
+                                        class="mt-2 truncate text-sm font-semibold text-slate-950 dark:text-slate-50"
+                                    >
+                                        {{ campaign.title }}
+                                    </h3>
+                                    <p
+                                        class="mt-1 line-clamp-2 text-xs leading-5 text-slate-500 dark:text-slate-400"
+                                    >
+                                        {{
+                                            campaign.description ||
+                                            campaign.template?.name ||
+                                            'Pay Code endpoint'
+                                        }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div
+                                class="grid gap-2 rounded-xl bg-white p-3 text-xs dark:bg-slate-900"
+                            >
+                                <div class="flex items-center gap-2">
+                                    <Globe2
+                                        class="size-3.5 shrink-0 text-slate-400"
+                                        aria-hidden="true"
+                                    />
+                                    <a
+                                        :href="campaign.public_url"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        class="min-w-0 truncate text-emerald-700 underline decoration-emerald-300 underline-offset-4 dark:text-emerald-300"
+                                        >{{ campaign.public_url }}</a
+                                    >
+                                    <button
+                                        type="button"
+                                        class="ml-auto inline-flex size-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                                        :aria-label="`Copy ${campaign.title} endpoint URL`"
+                                        @click="
+                                            copyEndpointUrl(
+                                                campaign.public_url,
+                                            )
+                                        "
+                                    >
+                                        <Copy
+                                            class="size-3.5"
+                                            aria-hidden="true"
+                                        />
+                                    </button>
+                                </div>
+                                <dl class="grid grid-cols-3 gap-2">
+                                    <div>
+                                        <dt
+                                            class="text-slate-500 dark:text-slate-400"
+                                        >
+                                            Starts
+                                        </dt>
+                                        <dd
+                                            class="font-semibold text-slate-950 dark:text-slate-50"
+                                        >
+                                            {{ campaign.usage_count }}
+                                            <span
+                                                v-if="campaign.starts_limit"
+                                                class="font-normal text-slate-400"
+                                                >/ {{
+                                                    campaign.starts_limit
+                                                }}</span
+                                            >
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt
+                                            class="text-slate-500 dark:text-slate-400"
+                                        >
+                                            Exposure
+                                        </dt>
+                                        <dd
+                                            class="font-semibold text-slate-950 dark:text-slate-50"
+                                        >
+                                            {{ campaignExposure(campaign) }}
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt
+                                            class="text-slate-500 dark:text-slate-400"
+                                        >
+                                            Expires
+                                        </dt>
+                                        <dd
+                                            class="font-semibold text-slate-950 dark:text-slate-50"
+                                        >
+                                            {{
+                                                campaign.expires_at
+                                                    ? updatedRelativeTime(
+                                                          campaign.expires_at,
+                                                      )
+                                                    : 'Open'
+                                            }}
+                                        </dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+
+                <form
+                    class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                    data-testid="campaign-endpoint-create-form"
+                    @submit.prevent="createEndpointCampaign"
+                >
+                    <div class="flex items-center gap-2">
+                        <Link2
+                            class="size-4 text-slate-500 dark:text-slate-400"
+                            aria-hidden="true"
+                        />
+                        <div>
+                            <p
+                                class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
+                            >
+                                New Endpoint
+                            </p>
+                            <h2
+                                class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50"
+                            >
+                                Create from Template
+                            </h2>
+                        </div>
+                    </div>
+                    <p
+                        class="mt-2 text-sm leading-5 text-slate-600 dark:text-slate-300"
+                    >
+                        The selected Pay Code template remains the source of
+                        truth. This campaign only adds a public entry point,
+                        limits, and availability.
+                    </p>
+
+                    <div
+                        v-if="payCodeTemplates.length === 0"
+                        class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-200"
+                    >
+                        Save a Pay Code template in Quick Generate before
+                        creating an endpoint campaign.
+                    </div>
+
+                    <div v-else class="mt-4 grid gap-3">
+                        <label
+                            class="grid gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
+                        >
+                            Campaign name
+                            <input
+                                v-model="endpointForm.title"
+                                type="text"
+                                maxlength="120"
+                                placeholder="Insurance application"
+                                class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:focus:border-slate-100 dark:focus:ring-slate-100/10"
+                            />
+                            <span
+                                v-if="endpointForm.errors.title"
+                                class="text-xs font-normal text-rose-600 dark:text-rose-300"
+                                >{{ endpointForm.errors.title }}</span
+                            >
+                        </label>
+
+                        <label
+                            class="grid gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
+                        >
+                            Pay Code template
+                            <select
+                                v-model="endpointForm.pay_code_template_id"
+                                class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:focus:border-slate-100 dark:focus:ring-slate-100/10"
+                            >
+                                <option
+                                    v-for="template in payCodeTemplates"
+                                    :key="template.id"
+                                    :value="template.id"
+                                >
+                                    {{ template.name }}
+                                </option>
+                            </select>
+                            <span
+                                class="text-xs font-normal text-slate-500 dark:text-slate-400"
+                            >
+                                {{
+                                    selectedTemplate()
+                                        ? templateSummary(
+                                              selectedTemplate() ?? null,
+                                          )
+                                        : 'Choose a template'
+                                }}
+                            </span>
+                            <span
+                                v-if="endpointForm.errors.pay_code_template_id"
+                                class="text-xs font-normal text-rose-600 dark:text-rose-300"
+                                >{{
+                                    endpointForm.errors.pay_code_template_id
+                                }}</span
+                            >
+                        </label>
+
+                        <label
+                            class="grid gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
+                        >
+                            Campaign usage
+                            <select
+                                v-model="endpointForm.usage_key"
+                                class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:focus:border-slate-100 dark:focus:ring-slate-100/10"
+                            >
+                                <option
+                                    v-for="profile in usageProfiles"
+                                    :key="profile.key"
+                                    :value="profile.key"
+                                >
+                                    {{ profile.label }}
+                                </option>
+                            </select>
+                            <span
+                                class="text-xs font-normal text-slate-500 dark:text-slate-400"
+                            >
+                                {{
+                                    selectedUsageProfile()?.description ||
+                                    'Operator-defined endpoint campaign.'
+                                }}
+                            </span>
+                        </label>
+
+                        <label
+                            class="grid gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
+                        >
+                            Endpoint slug
+                            <input
+                                v-model="endpointForm.endpoint_slug"
+                                type="text"
+                                maxlength="120"
+                                placeholder="insurance-application"
+                                class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:focus:border-slate-100 dark:focus:ring-slate-100/10"
+                            />
+                            <span
+                                class="text-xs font-normal text-slate-500 dark:text-slate-400"
+                            >
+                                Leave blank to derive it from the campaign name.
+                            </span>
+                            <span
+                                v-if="endpointForm.errors.endpoint_slug"
+                                class="text-xs font-normal text-rose-600 dark:text-rose-300"
+                                >{{ endpointForm.errors.endpoint_slug }}</span
+                            >
+                        </label>
+
+                        <fieldset
+                            class="grid gap-2 rounded-xl border border-slate-200 p-3 dark:border-slate-800"
+                        >
+                            <legend
+                                class="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400"
+                            >
+                                Capabilities
+                            </legend>
+                            <label
+                                v-for="capability in endpointCapabilities"
+                                :key="capability.key"
+                                class="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-200"
+                            >
+                                <input
+                                    v-model="endpointForm.capabilities"
+                                    type="checkbox"
+                                    :value="capability.key"
+                                    class="rounded border-slate-300 text-slate-950 focus:ring-slate-950 dark:border-slate-700 dark:bg-slate-950"
+                                />
+                                {{ capability.label }}
+                            </label>
+                        </fieldset>
+
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <label
+                                class="grid gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
+                            >
+                                Max starts
+                                <input
+                                    v-model.number="endpointForm.starts_limit"
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    placeholder="100"
+                                    class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:focus:border-slate-100 dark:focus:ring-slate-100/10"
+                                />
+                            </label>
+                            <label
+                                class="grid gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
+                            >
+                                Budget cap
+                                <input
+                                    v-model.number="
+                                        endpointForm.budget_cap_minor
+                                    "
+                                    type="number"
+                                    min="0"
+                                    step="100"
+                                    placeholder="10000"
+                                    class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:focus:border-slate-100 dark:focus:ring-slate-100/10"
+                                />
+                            </label>
+                        </div>
+
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <label
+                                class="grid gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
+                            >
+                                Start
+                                <input
+                                    v-model="endpointForm.starts_at"
+                                    type="datetime-local"
+                                    class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:focus:border-slate-100 dark:focus:ring-slate-100/10"
+                                />
+                            </label>
+                            <label
+                                class="grid gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
+                            >
+                                End
+                                <input
+                                    v-model="endpointForm.expires_at"
+                                    type="datetime-local"
+                                    class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:focus:border-slate-100 dark:focus:ring-slate-100/10"
+                                />
+                            </label>
+                        </div>
+
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <label
+                                class="grid gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
+                            >
+                                Daily start
+                                <input
+                                    v-model="endpointForm.daily_window_start"
+                                    type="time"
+                                    class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:focus:border-slate-100 dark:focus:ring-slate-100/10"
+                                />
+                            </label>
+                            <label
+                                class="grid gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
+                            >
+                                Daily end
+                                <input
+                                    v-model="endpointForm.daily_window_end"
+                                    type="time"
+                                    class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:focus:border-slate-100 dark:focus:ring-slate-100/10"
+                                />
+                            </label>
+                        </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        :disabled="
+                            endpointForm.processing ||
+                            payCodeTemplates.length === 0
+                        "
+                        class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white"
+                    >
+                        <QrCode class="size-4" aria-hidden="true" />
+                        {{
+                            endpointForm.processing
+                                ? 'Creating…'
+                                : 'Create Endpoint Campaign'
+                        }}
+                    </button>
+                </form>
             </section>
         </main>
         <CockpitCampaignIntakeDialog

@@ -645,6 +645,65 @@ return [
     ],
 
     'campaigns' => [
+        'usage_profiles' => [
+            'ayuda' => [
+                'label' => 'Ayuda',
+                'description' => 'Beneficiary assistance using imported or approved lists.',
+                'entry_point' => 'beneficiary_list',
+                'person_type' => 'beneficiary',
+                'pay_code_generation' => 'on_approval_or_schedule',
+                'default_capabilities' => ['distribution'],
+            ],
+            'payroll' => [
+                'label' => 'Payroll',
+                'description' => 'Employee disbursement batches with maker/checker controls.',
+                'entry_point' => 'csv_batch',
+                'person_type' => 'employee',
+                'pay_code_generation' => 'on_approval',
+                'default_capabilities' => ['distribution', 'batch_approval'],
+            ],
+            'lead' => [
+                'label' => 'Lead',
+                'description' => 'Public QR or link that starts a reusable intake or offer.',
+                'entry_point' => 'public_qr_link',
+                'person_type' => 'prospect',
+                'pay_code_generation' => 'on_scan',
+                'default_capabilities' => ['public_endpoint', 'claim_intake'],
+            ],
+            'collection' => [
+                'label' => 'Collection',
+                'description' => 'Public payment or stored-value endpoint for payers.',
+                'entry_point' => 'public_qr_link',
+                'person_type' => 'payer',
+                'pay_code_generation' => 'on_invoice_or_scan',
+                'default_capabilities' => ['public_endpoint', 'collection'],
+            ],
+            'promo' => [
+                'label' => 'Promo',
+                'description' => 'Public claim endpoint with caps, expiry, and identity limits.',
+                'entry_point' => 'public_qr_link',
+                'person_type' => 'prospect',
+                'pay_code_generation' => 'on_scan',
+                'default_capabilities' => ['public_endpoint', 'distribution', 'claim_limits'],
+            ],
+            'custom' => [
+                'label' => 'Custom',
+                'description' => 'Operator-defined campaign behavior using a Pay Code template.',
+                'entry_point' => 'operator_defined',
+                'person_type' => 'participant',
+                'pay_code_generation' => 'operator_defined',
+                'default_capabilities' => [],
+            ],
+        ],
+        'endpoint_capabilities' => [
+            'public_endpoint' => 'Public QR/link endpoint',
+            'claim_intake' => 'Collect claim/intake details',
+            'distribution' => 'Disbursement or benefit distribution',
+            'collection' => 'Collection/payment request',
+            'stored_value' => 'Stored-value consumption',
+            'batch_approval' => 'Maker/checker approval',
+            'claim_limits' => 'Per-person claim controls',
+        ],
         'pay_code_issuance' => [
             'connection' => env(
                 'XCHANGE_CAMPAIGNS_PAY_CODE_TREASURY_CONNECTION',

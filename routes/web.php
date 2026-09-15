@@ -16,10 +16,10 @@ use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimShareCardController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimStartController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSubmitController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
-use LBHurtado\XChange\Http\Controllers\Web\Leads\LeadCampaignEndpointController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountScenarioController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignApprovalDeliveryController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignEndpointController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignVoucherBlueprintController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetAuthorizationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetBankTransferDispatchController;
@@ -122,6 +122,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliation
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliationRunExecutionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitVoucherDetailPageController;
 use LBHurtado\XChange\Http\Controllers\Web\DashboardPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Leads\LeadCampaignEndpointController;
 use LBHurtado\XChange\Http\Controllers\Web\LinkPaynamicsWalletController;
 use LBHurtado\XChange\Http\Controllers\Web\Onboarding\InitialPinSetupController;
 use LBHurtado\XChange\Http\Controllers\Web\Onboarding\MobileVerificationChallengeController;
@@ -366,6 +367,9 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::post('campaigns', [CockpitCampaignWorksheetController::class, 'store'])
             ->middleware('throttle:20,1')
             ->name('x-change.cockpit.campaigns.store');
+        Route::post('campaigns/endpoints', [CockpitCampaignEndpointController::class, 'store'])
+            ->middleware('throttle:12,1')
+            ->name('x-change.cockpit.campaigns.endpoints.store');
         Route::get(
             'campaigns/lead-scenario-runner',
             [CockpitLeadCampaignScenarioRunnerController::class, 'show'],

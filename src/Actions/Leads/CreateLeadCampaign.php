@@ -52,6 +52,14 @@ final readonly class CreateLeadCampaign
             (string) ($attributes['endpoint_slug'] ?? $title),
         );
 
+        $settings = [
+            'kind' => 'lead',
+            'entry_point' => 'public_qr_link',
+            'person_type' => 'prospect',
+            'pay_code_generation' => 'on_scan',
+            ...(array) ($attributes['settings'] ?? []),
+        ];
+
         return LeadCampaign::query()->create([
             'owner_type' => $owner->getMorphClass(),
             'owner_id' => (string) $owner->getKey(),
@@ -69,12 +77,7 @@ final readonly class CreateLeadCampaign
                 : null,
             'expires_at' => $attributes['expires_at'] ?? null,
             'merchant_certification_status' => 'none',
-            'settings' => [
-                'kind' => 'lead',
-                'entry_point' => 'public_qr_link',
-                'person_type' => 'prospect',
-                'pay_code_generation' => 'on_scan',
-            ],
+            'settings' => $settings,
         ]);
     }
 }
