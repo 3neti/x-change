@@ -16,6 +16,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimShareCardController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimStartController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSubmitController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Leads\LeadCampaignEndpointController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountScenarioController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignApprovalDeliveryController;
@@ -62,6 +63,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestTransfer
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingVerificationCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitInstanceKeepsakeDownloadController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitInstanceKeepsakeDownloadShowController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitLeadCampaignScenarioRunnerController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitNetbankStandingFundingAddressController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerApiClientConnectionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerApiClientController;
@@ -364,6 +366,15 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::post('campaigns', [CockpitCampaignWorksheetController::class, 'store'])
             ->middleware('throttle:20,1')
             ->name('x-change.cockpit.campaigns.store');
+        Route::get(
+            'campaigns/lead-scenario-runner',
+            [CockpitLeadCampaignScenarioRunnerController::class, 'show'],
+        )->name('x-change.cockpit.campaigns.lead-scenario-runner.show');
+        Route::post(
+            'campaigns/lead-scenario-runner',
+            [CockpitLeadCampaignScenarioRunnerController::class, 'store'],
+        )->middleware('throttle:6,1')
+            ->name('x-change.cockpit.campaigns.lead-scenario-runner.store');
         Route::post('campaigns/intakes', [CockpitCampaignWorksheetIntakeController::class, 'store'])
             ->middleware('throttle:12,1')
             ->name('x-change.cockpit.campaigns.intakes.store');
@@ -682,6 +693,11 @@ Route::prefix('x')->middleware(['web', ShareXChangeBranding::class])->group(func
         ->name('x-change.pay.attempts.checks.store');
     Route::get('claim', ClaimStartController::class)->name('x-change.claim.start');
     Route::post('claim', ClaimStartController::class)->name('x-change.claim.start.submit');
+    Route::get('o/{merchant_slug}/{endpoint_slug}', LeadCampaignEndpointController::class)
+        ->where('merchant_slug', '[a-z0-9][a-z0-9-]{0,119}')
+        ->where('endpoint_slug', '[a-z0-9][a-z0-9-]{0,119}')
+        ->middleware((array) config('x-change.leads.public_start_middleware', ['throttle:30,1']))
+        ->name('x-change.leads.start');
     Route::get('claim/{code}', ClaimPageController::class)
         ->middleware((array) config('x-change.claim.public_read_middleware', []))
         ->name('x-change.claim.show');
