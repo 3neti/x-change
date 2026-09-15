@@ -2580,6 +2580,15 @@ return [
         ],
     ],
 
+    'leads' => [
+        'scenario_runner' => [
+            'enabled' => env('XCHANGE_LEADS_SCENARIO_RUNNER_ENABLED', ! app()->isProduction()),
+        ],
+        'public_start_middleware' => [
+            'throttle:30,1',
+        ],
+    ],
+
     'payment_qr' => [
         'renderer' => env('XCHANGE_PAYMENT_QR_RENDERER', 'json'),
 
