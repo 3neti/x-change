@@ -1,6 +1,7 @@
 export type SuccessPageToneInput = {
     compiledClaimStatus?: string | null;
     claimOutcome?: string | null;
+    claimWorkflowKey?: string | null;
     riderState?: string | null;
 };
 
@@ -14,6 +15,13 @@ function isPendingValue(value: string | null | undefined): boolean {
 }
 
 export function resolveSuccessPageTone(input: SuccessPageToneInput): SuccessPageTone {
+    if (input.claimWorkflowKey === 'lead-intake.v1') {
+        return {
+            isPending: false,
+            iconClass: 'text-green-500',
+        };
+    }
+
     const isPending =
         isPendingValue(input.compiledClaimStatus)
         || isPendingValue(input.claimOutcome)

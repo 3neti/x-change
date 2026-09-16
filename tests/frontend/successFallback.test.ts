@@ -66,6 +66,21 @@ describe('success fallback', () => {
         )).toBe('Your claim is being processed');
     });
 
+    it('resolves lead intake fallback title without payout language', () => {
+        expect(isPendingClaimOutcome({
+            claimOutcome: 'accepted_pending',
+            claimWorkflowKey: 'lead-intake.v1',
+        })).toBe(false);
+
+        expect(resolveSuccessFallbackTitle(
+            { amount: 0 },
+            {
+                claimOutcome: 'accepted_pending',
+                claimWorkflowKey: 'lead-intake.v1',
+            },
+        )).toBe('Application submitted');
+    });
+
     it('resolves disbursed fallback title for non-zero amount', () => {
         expect(resolveSuccessFallbackTitle(
             { amount: 100 },

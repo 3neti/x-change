@@ -47,10 +47,6 @@ final readonly class RunAuiInsuranceLeadScenario
                 'amount' => 0,
                 'currency' => 'PHP',
                 'validation' => [
-                    'mobile_verification' => [
-                        'driver' => 'otp',
-                        'enforcement' => 'strict',
-                    ],
                     'country' => 'PH',
                 ],
             ],
@@ -85,6 +81,12 @@ final readonly class RunAuiInsuranceLeadScenario
                         ],
                     ],
                 ],
+            ],
+            'claim' => [
+                'outcomes' => [
+                    ['key' => 'lead_intake'],
+                ],
+                'default_outcome' => 'lead_intake',
             ],
         ];
     }

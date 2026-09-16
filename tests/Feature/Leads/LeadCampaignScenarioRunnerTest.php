@@ -63,7 +63,12 @@ it('runs the AUI browser scenario and redirects through the public lead endpoint
             'vehicle_registration_number',
             'driver_license_number',
             'payment_reference',
-        ]);
+        ])
+        ->and(data_get($template->instructions_ciphertext, 'claim.outcomes'))->toBe([
+            ['key' => 'lead_intake'],
+        ])
+        ->and(data_get($template->instructions_ciphertext, 'claim.default_outcome'))->toBe('lead_intake')
+        ->and(data_get($template->instructions_ciphertext, 'cash.validation.mobile_verification'))->toBeNull();
 });
 
 it('keeps the AUI browser scenario executable against voucher input fields', function (): void {
@@ -99,7 +104,12 @@ it('continues the browser scenario through public endpoint generation into claim
     expect($campaign->fresh()->usage_count)->toBe(1)
         ->and(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.scenario'))->toBe('aui_on_demand_insurance_payment')
         ->and(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.payment_mode'))->toBe('invoice_after_intake')
-        ->and(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.campaign_reference'))->toBe($campaign->reference);
+        ->and(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.campaign_reference'))->toBe($campaign->reference)
+        ->and(data_get($fakeIssuer->payloads[0], 'claim.outcomes'))->toBe([
+            ['key' => 'lead_intake'],
+        ])
+        ->and(data_get($fakeIssuer->payloads[0], 'claim.default_outcome'))->toBe('lead_intake')
+        ->and(data_get($fakeIssuer->payloads[0], 'cash.validation.mobile_verification'))->toBeNull();
 });
 
 function auiLeadCampaignFakeGeneratePayCode(string $code): GeneratePayCode

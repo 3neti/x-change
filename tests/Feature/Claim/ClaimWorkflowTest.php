@@ -245,6 +245,74 @@ it('compiles account funding without collecting a payout destination', function 
         ->and($payload['metadata']['claim_workflow']['confirmation_label'])->toBe('Add to My Account');
 });
 
+it('compiles lead intake without collecting payout destination or amount', function () {
+    $voucher = Mockery::mock(Voucher::class);
+    $voucher->shouldReceive('getAttribute')->with('metadata')->andReturn([
+        'instructions' => [
+            'claim' => [
+                'default_outcome' => 'lead_intake',
+            ],
+        ],
+    ]);
+
+    $workflow = (new DefaultClaimWorkflowResolver)->resolve($voucher);
+    $instructions = app(FormFlowClaimWorkflowMutator::class)->apply(
+        FormFlowInstructionsData::from([
+            'reference_id' => 'claim-workflow-lead-intake-01',
+            'callbacks' => ['on_complete' => 'https://example.test/claim-workflow-lead-intake-01'],
+            'steps' => [
+                [
+                    'handler' => 'form',
+                    'config' => [
+                        'step_name' => 'wallet_info',
+                        'fields' => [
+                            ['name' => 'amount'],
+                            ['name' => 'settlement_rail'],
+                            ['name' => 'mobile', 'required' => false],
+                            ['name' => 'bank_code'],
+                            ['name' => 'account_number'],
+                        ],
+                    ],
+                ],
+                [
+                    'handler' => 'form',
+                    'config' => [
+                        'step_name' => 'bio_fields',
+                        'fields' => [
+                            ['name' => 'name', 'required' => false],
+                            ['name' => 'email', 'required' => false],
+                            ['name' => 'address', 'required' => false],
+                            ['name' => 'birth_date', 'required' => false],
+                            ['name' => 'reference_code', 'required' => false],
+                        ],
+                    ],
+                ],
+            ],
+        ]),
+        $workflow,
+    );
+
+    $payload = $instructions->toArray();
+    $walletStep = $payload['steps'][0]['config'];
+    $bioStep = $payload['steps'][1]['config'];
+
+    expect($workflow->key)->toBe('lead-intake.v1')
+        ->and($workflow->title)->toBe('Submit Application')
+        ->and($workflow->requires_mobile)->toBeTrue()
+        ->and($workflow->requires_destination)->toBeFalse()
+        ->and($workflow->requires_amount)->toBeFalse()
+        ->and($workflow->authentication_mode)->toBe(ClaimAuthenticationMode::ClaimantHandoff)
+        ->and($workflow->required_claim_fields)->toBe(['name', 'mobile', 'email'])
+        ->and(array_column($walletStep['fields'], 'name'))->toBe(['mobile'])
+        ->and($walletStep['fields'][0]['required'])->toBeTrue()
+        ->and($walletStep['claim_workflow']['key'])->toBe('lead-intake.v1')
+        ->and($walletStep['claim_workflow']['confirmation_label'])->toBe('Submit Application')
+        ->and($bioStep['fields'][0]['required'])->toBeTrue()
+        ->and($bioStep['fields'][1]['required'])->toBeTrue()
+        ->and($bioStep['fields'][2]['required'])->toBeFalse()
+        ->and($payload['metadata']['claim_workflow']['confirmation_title'])->toBe('Review your application');
+});
+
 it('keeps destination collection for an ordinary disbursement workflow', function () {
     config()->set('x-change.claim.experience_ui.variant', 'immersive');
 

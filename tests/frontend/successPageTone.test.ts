@@ -40,6 +40,16 @@ describe('success page tone', () => {
         });
     });
 
+    it('uses success tone for lead intake even when the generic claim outcome is pending', () => {
+        expect(resolveSuccessPageTone({
+            claimOutcome: 'accepted_pending',
+            claimWorkflowKey: 'lead-intake.v1',
+        })).toEqual({
+            isPending: false,
+            iconClass: 'text-green-500',
+        });
+    });
+
     it('uses pending tone when rider state is pending', () => {
         expect(resolveSuccessPageTone({
             compiledClaimStatus: 'success',

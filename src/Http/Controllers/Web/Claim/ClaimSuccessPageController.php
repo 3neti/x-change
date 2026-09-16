@@ -10,6 +10,7 @@ use Inertia\Response;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\Claim\DefaultClaimWorkflowResolver;
 use LBHurtado\XChange\Services\Claim\OnboardingSuccessActionResolver;
 use LBHurtado\XChange\Services\Claim\VoucherRiderFallbackPolicy;
 use LBHurtado\XChange\Services\XRay\VoucherXRayProjectionBuilder;
@@ -29,6 +30,7 @@ class ClaimSuccessPageController
         VoucherRiderFallbackPolicy $riderFallbacks,
         VoucherXRayProjectionBuilder $xray,
         OnboardingSuccessActionResolver $onboardingActions,
+        DefaultClaimWorkflowResolver $workflowResolver,
     ): Response|JsonResponse {
         $voucher = Voucher::query()
             ->where('code', $code)
@@ -58,6 +60,7 @@ class ClaimSuccessPageController
                 'currency' => data_get($voucher, 'cash.currency'),
             ],
             'claimOutcome' => $state->value,
+            'claimWorkflowKey' => $workflowResolver->resolve($voucher)->key,
             'rider' => $experience?->toArray(),
             'redirectEndpoint' => route('x-change.claim.redirect', [
                 'code' => $voucher->code,

@@ -46,6 +46,7 @@ interface VoucherProps {
 interface Props {
     voucher: VoucherProps;
     claimOutcome?: string;
+    claimWorkflowKey?: string | null;
     rider?: RiderExperience | null;
     redirectEndpoint?: string | null;
     claim_experience?: Record<string, any> | null;
@@ -162,6 +163,7 @@ const formattedAmount = computed(() =>
 const fallbackTitle = computed(() =>
     resolveSuccessFallbackTitle(props.voucher, {
         claimOutcome: props.claimOutcome,
+        claimWorkflowKey: props.claimWorkflowKey,
         riderState: props.rider?.state,
     }),
 );
@@ -180,6 +182,7 @@ const pageTone = computed(() =>
     resolveSuccessPageTone({
         compiledClaimStatus: compiledClaimResult.value.status,
         claimOutcome: props.claimOutcome,
+        claimWorkflowKey: props.claimWorkflowKey,
         riderState: props.rider?.state,
     }),
 );

@@ -95,6 +95,25 @@ final class DefaultClaimWorkflowResolver implements ClaimWorkflowResolverContrac
             );
         }
 
+        if ($this->defaultOutcome($voucher) === 'lead_intake') {
+            return new ClaimWorkflowDescriptorData(
+                key: 'lead-intake.v1',
+                requires_mobile: true,
+                requires_destination: false,
+                requires_amount: false,
+                title: 'Submit Application',
+                description: 'Provide your details so the merchant can prepare the next step.',
+                confirmation_label: 'Submit Application',
+                confirmation_title: 'Review your application',
+                authentication_mode: ClaimAuthenticationMode::ClaimantHandoff,
+                required_claim_fields: ['name', 'mobile', 'email'],
+                review: [
+                    'lead_intake' => true,
+                    'completion_destination' => 'claim_success',
+                ],
+            );
+        }
+
         return new ClaimWorkflowDescriptorData(
             key: 'disbursement.v1',
             requires_mobile: true,

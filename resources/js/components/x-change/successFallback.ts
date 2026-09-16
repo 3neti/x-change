@@ -7,6 +7,7 @@ export type SuccessVoucherPayload = {
 
 export type SuccessFallbackStatePayload = {
     claimOutcome?: string | null;
+    claimWorkflowKey?: string | null;
     riderState?: string | null;
 };
 
@@ -35,6 +36,10 @@ export function formatSuccessVoucherAmount(voucher: SuccessVoucherPayload): stri
 }
 
 export function isPendingClaimOutcome(payload: SuccessFallbackStatePayload): boolean {
+    if (payload.claimWorkflowKey === 'lead-intake.v1') {
+        return false;
+    }
+
     return payload.claimOutcome === 'accepted_pending'
         || payload.riderState === 'accepted_pending';
 }
@@ -43,6 +48,10 @@ export function resolveSuccessFallbackTitle(
     voucher: SuccessVoucherPayload,
     payload: SuccessFallbackStatePayload,
 ): string {
+    if (payload.claimWorkflowKey === 'lead-intake.v1') {
+        return 'Application submitted';
+    }
+
     if (isPendingClaimOutcome(payload)) {
         return 'Your claim is being processed';
     }

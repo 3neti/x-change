@@ -154,6 +154,35 @@ it('passes claim experience to success page payload', function () {
         ]);
 });
 
+it('exposes lead intake workflow to the success page payload', function (): void {
+    $voucher = issueVoucher(validVoucherInstructions(
+        overrides: [
+            'cash' => [
+                'amount' => 0,
+                'currency' => 'PHP',
+            ],
+            'claim' => [
+                'outcomes' => [
+                    ['key' => 'lead_intake'],
+                ],
+                'default_outcome' => 'lead_intake',
+            ],
+            'inputs' => [
+                'fields' => [
+                    'name',
+                    'mobile',
+                    'email',
+                ],
+            ],
+        ],
+    ));
+
+    $this->getJson(route('x-change.claim.success', [
+        'code' => $voucher->code,
+    ]))->assertOk()
+        ->assertJsonPath('claimWorkflowKey', 'lead-intake.v1');
+});
+
 it('does not apply a default Rider after an onboarding claim without authored Rider content', function (): void {
     $resolver = Mockery::mock(RiderExperienceResolverContract::class);
     $resolver->shouldNotReceive('resolve');
