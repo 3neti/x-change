@@ -309,15 +309,6 @@ const successAction = computed(() => {
                         {{ successPresentation.body }}
                     </p>
 
-                    <a
-                        v-if="successAction"
-                        :href="successAction.url"
-                        data-testid="claim-success-primary-action"
-                        class="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                        {{ successAction.label }}
-                    </a>
-
                     <p
                         v-if="successPresentation.receiptLabel"
                         data-testid="claim-success-receipt"
@@ -366,6 +357,15 @@ const successAction = computed(() => {
                         {{ fallbackTitle }}
                     </p>
                 </div>
+
+                <a
+                    v-if="successAction"
+                    :href="successAction.url"
+                    data-testid="claim-success-primary-action"
+                    class="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                    {{ successAction.label }}
+                </a>
 
                 <div
                     v-if="compiledClaimResult.visible"

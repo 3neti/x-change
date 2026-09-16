@@ -9,10 +9,12 @@ use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
+use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Claim\DefaultClaimWorkflowResolver;
 use LBHurtado\XChange\Services\Claim\OnboardingSuccessActionResolver;
 use LBHurtado\XChange\Services\Claim\VoucherRiderFallbackPolicy;
+use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LBHurtado\XChange\Services\XRay\VoucherXRayProjectionBuilder;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSuccessPayload;
@@ -31,6 +33,8 @@ class ClaimSuccessPageController
         VoucherXRayProjectionBuilder $xray,
         OnboardingSuccessActionResolver $onboardingActions,
         DefaultClaimWorkflowResolver $workflowResolver,
+        VoucherFlowCapabilityResolverContract $capabilities,
+        VoucherCollectionProgressService $collectionProgress,
     ): Response|JsonResponse {
         $voucher = Voucher::query()
             ->where('code', $code)
@@ -70,9 +74,13 @@ class ClaimSuccessPageController
             'compiled_claim_result' => app(CompiledClaimSuccessPayload::class)->pull(),
             'destination' => $this->destinationSnapshot($voucher),
             'success_presentation' => $successPresentation,
-            'success_action' => $successPresentation === null
-                ? null
-                : $onboardingActions->resolve($successPresentation),
+            'success_action' => $this->successAction(
+                voucher: $voucher,
+                successPresentation: $successPresentation,
+                onboardingActions: $onboardingActions,
+                capabilities: $capabilities,
+                collectionProgress: $collectionProgress,
+            ),
         ];
 
         if (request()->wantsJson()) {
@@ -80,6 +88,50 @@ class ClaimSuccessPageController
         }
 
         return Inertia::render('x-change/claim/Success', $props);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $successPresentation
+     * @return array<string, mixed>|null
+     */
+    private function successAction(
+        Voucher $voucher,
+        ?array $successPresentation,
+        OnboardingSuccessActionResolver $onboardingActions,
+        VoucherFlowCapabilityResolverContract $capabilities,
+        VoucherCollectionProgressService $collectionProgress,
+    ): ?array {
+        if ($successPresentation !== null) {
+            $onboardingAction = $onboardingActions->resolve($successPresentation);
+
+            if ($onboardingAction !== null) {
+                return $onboardingAction;
+            }
+        }
+
+        if (! $capabilities->resolve($voucher)->can_collect) {
+            return null;
+        }
+
+        if ($collectionProgress->compute($voucher)->is_fully_collected) {
+            return null;
+        }
+
+        return [
+            'key' => 'x-change.claim-success.continue-to-payment',
+            'label' => 'Continue to payment',
+            'intent' => 'pay_code_payment',
+            'description' => 'Open the payment page for this Pay Code.',
+            'enabled' => true,
+            'target' => [
+                'type' => 'url',
+                'url' => route('x-change.pay.show', ['code' => $voucher->code]),
+                'method' => 'GET',
+                'redirectable' => true,
+                'external' => false,
+            ],
+            'source' => 'x-ray',
+        ];
     }
 
     /**

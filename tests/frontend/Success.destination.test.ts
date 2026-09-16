@@ -133,4 +133,34 @@ describe('claim Success destination route rendering', () => {
         expect(wrapper.find('[data-testid="claim-theme-picker"]').exists()).toBe(false);
         expect(wrapper.get('[data-testid="claim-success-primary-action"]').attributes('href')).toBe('/x/cockpit/quick-generate');
     });
+
+    it('renders a payment action even when success uses the generic claim presentation', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                rider: {
+                    success: {
+                        type: 'text',
+                        body: 'AUI insurance payment intake',
+                    },
+                },
+                destination: null,
+                success_presentation: null,
+                success_action: {
+                    key: 'x-change.claim-success.continue-to-payment',
+                    label: 'Continue to payment',
+                    enabled: true,
+                    target: {
+                        url: '/x/pay/AUI-J2ZG',
+                        method: 'GET',
+                        redirectable: true,
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Disbursed to your account');
+        expect(wrapper.text()).toContain('Continue to payment');
+        expect(wrapper.get('[data-testid="claim-success-primary-action"]').attributes('href')).toBe('/x/pay/AUI-J2ZG');
+    });
 });

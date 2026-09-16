@@ -51,6 +51,35 @@ it('renders a read-only collectible payment page without sensitive instructions'
         ->assertJsonPath('props.payment.receipt', null);
 });
 
+it('renders the same public payment page for settlement Pay Codes after intake', function (): void {
+    $user = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 0.00,
+        settlementRail: 'INSTAPAY',
+        overrides: [
+            'target_amount' => 105.13,
+            'rider' => [
+                'message' => 'Insurance payment intake',
+            ],
+            'metadata' => [
+                'flow_type' => 'settlement',
+                'issuer_id' => (string) $user->id,
+                'collection_wallet_id' => $user->wallet->id,
+            ],
+        ],
+    ));
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.pay.show', ['code' => strtolower((string) $voucher->code)]))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/claim/Payment')
+        ->assertJsonPath('props.payment.pay_code', (string) $voucher->code)
+        ->assertJsonPath('props.payment.rider_message', 'Insurance payment intake')
+        ->assertJsonPath('props.payment.target_amount_minor', 10513)
+        ->assertJsonPath('props.payment.amount_due_minor', 10513)
+        ->assertJsonPath('props.payment.can_create_attempt', true);
+});
+
 it('presents the voucher rider message as payer X-Ray context', function (): void {
     $voucher = publicPaymentVoucherForUser(
         actingAsTestUser(),

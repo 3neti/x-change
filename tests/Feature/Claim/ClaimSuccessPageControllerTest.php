@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
+use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 use LBHurtado\XRider\Contracts\RiderExperienceResolverContract;
@@ -52,6 +54,8 @@ BLADE);
         ->name('x-change.cockpit.dashboard');
     Route::get('/x/cockpit/quick-generate', fn () => response('quick-generate'))
         ->name('x-change.cockpit.quick-generate');
+    Route::get('/x/pay/{code}', fn (string $code) => response('pay '.$code))
+        ->name('x-change.pay.show');
 });
 
 it('exposes claim experience redirect countdown metadata to the success page', function () {
@@ -182,6 +186,78 @@ it('exposes lead intake workflow to the success page payload', function (): void
     ]))->assertOk()
         ->assertJsonPath('claimWorkflowKey', 'lead-intake.v1');
 });
+
+it('offers payment as the next action after a settlement claim with an unpaid collection target', function (): void {
+    $user = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 0.00,
+        settlementRail: 'INSTAPAY',
+        overrides: [
+            'target_amount' => 105.13,
+            'claim' => [
+                'outcomes' => [
+                    ['key' => 'lead_intake'],
+                ],
+                'default_outcome' => 'lead_intake',
+            ],
+            'metadata' => [
+                'flow_type' => 'settlement',
+                'issuer_id' => (string) $user->id,
+                'collection_wallet_id' => $user->wallet->id,
+            ],
+        ],
+    ));
+
+    $this->getJson(route('x-change.claim.success', [
+        'code' => $voucher->code,
+    ]))->assertOk()
+        ->assertJsonPath('success_action.key', 'x-change.claim-success.continue-to-payment')
+        ->assertJsonPath('success_action.label', 'Continue to payment')
+        ->assertJsonPath('success_action.intent', 'pay_code_payment')
+        ->assertJsonPath('success_action.target.url', route('x-change.pay.show', ['code' => $voucher->code]));
+});
+
+it('does not offer payment after a fully paid settlement claim success', function (): void {
+    $user = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 0.00,
+        settlementRail: 'INSTAPAY',
+        overrides: [
+            'target_amount' => 105.13,
+            'metadata' => [
+                'flow_type' => 'settlement',
+                'issuer_id' => (string) $user->id,
+                'collection_wallet_id' => $user->wallet->id,
+            ],
+        ],
+    ));
+
+    claimSuccessPageCollection($voucher, 105.13);
+
+    $this->getJson(route('x-change.claim.success', [
+        'code' => $voucher->code,
+    ]))->assertOk()
+        ->assertJsonPath('success_action', null);
+});
+
+function claimSuccessPageCollection(Voucher $voucher, float $amount): VoucherCollection
+{
+    return VoucherCollection::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'collection_number' => VoucherCollection::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->count() + 1,
+        'status' => 'collected',
+        'requested_amount_minor' => (int) round($amount * 100),
+        'collected_amount_minor' => (int) round($amount * 100),
+        'currency' => 'PHP',
+        'provider' => 'test',
+        'provider_reference' => 'claim-success-payment-handoff',
+        'provider_transaction_id' => 'claim-success-payment-handoff-'.str()->uuid(),
+        'idempotency_key' => 'claim-success-payment-handoff:'.str()->uuid(),
+        'completed_at' => now(),
+    ]);
+}
 
 it('does not apply a default Rider after an onboarding claim without authored Rider content', function (): void {
     $resolver = Mockery::mock(RiderExperienceResolverContract::class);
