@@ -18,6 +18,11 @@ type CampaignWorksheet = {
 type CampaignsPageProps = CockpitHeaderPageProps & {
     worksheets: CampaignWorksheet[];
     active_intake?: Record<string, unknown>;
+    campaign_usage_profiles?: Record<string, unknown>[];
+    endpoint_capabilities?: Record<string, unknown>[];
+    pay_code_templates?: Record<string, unknown>[];
+    endpoint_campaigns?: Record<string, unknown>[];
+    endpoint_campaign_form?: Record<string, unknown>;
 };
 
 const props = defineProps<CampaignsPageProps>();
