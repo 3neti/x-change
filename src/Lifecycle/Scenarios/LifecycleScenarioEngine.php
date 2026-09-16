@@ -209,6 +209,7 @@ final class LifecycleScenarioEngine
             'treasury_onboarding_grant',
             'feedback_delivery',
             'payment_voucher_collection',
+            'aui_insurance_acquisition',
             'commercial_operations_simulation',
             'treasury_account_grant_simulation',
             'provisioning_governance_simulation',

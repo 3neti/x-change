@@ -2108,5 +2108,40 @@ return [
             ],
         ],
 
+        'campaign_aui_insurance_acquisition' => [
+            'label' => 'AUI Insurance Acquisition',
+            'description' => 'Issues an AUI-style settlement Pay Code and reports claim/pay URLs for browser verification.',
+            'category' => 'campaigns',
+            'tags' => ['campaign', 'aui', 'insurance', 'acquisition', 'settlement', 'scenario-runner'],
+            'mode' => 'aui_insurance_acquisition',
+            'amount' => 0,
+            'target_amount' => 100,
+            'currency' => 'PHP',
+            'prefix' => 'AUI',
+            'mask' => '****',
+            'voucher_type' => 'settlement',
+            'settlement_preferred' => true,
+            'metadata' => [
+                'flow_type' => 'settlement',
+            ],
+            'applicant' => [
+                'name' => 'Apple Hurtado',
+                'mobile' => '09175180722',
+                'email' => 'apple.hurtado@example.test',
+                'address' => 'AUI scenario test address',
+                'birth_date' => '1990-01-01',
+                'vehicle_registration' => 'AUI-TEST-REG-001',
+                'plate_number' => 'AUI1234',
+                'license_number' => 'N01-00-000000',
+            ],
+            'application' => [
+                'form_flow_fields' => ['name', 'mobile', 'email', 'address', 'birth_date', 'otp'],
+                'domain_fields' => ['vehicle_registration', 'plate_number', 'license_number'],
+            ],
+            'rider' => [
+                'message' => 'Complete your AUI insurance application, then continue to payment.',
+            ],
+        ],
+
     ],
 ];
