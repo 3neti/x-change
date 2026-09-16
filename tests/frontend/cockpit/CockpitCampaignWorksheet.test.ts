@@ -194,6 +194,32 @@ describe('Cockpit campaign worksheets', () => {
             ),
         ).toBe(endpointCampaign.qr_data_uri);
 
+        await wrapper
+            .get(
+                `[data-testid="campaign-endpoint-share-stamp-${endpointCampaign.reference}"]`,
+            )
+            .trigger('click');
+
+        const stamp = wrapper.get(
+            `[data-testid="campaign-endpoint-stamp-modal-${endpointCampaign.reference}"]`,
+        );
+
+        expect(stamp.text()).toContain('Endpoint Campaign Stamp');
+        expect(stamp.text()).toContain('AUI Insurance');
+        expect(stamp.text()).toContain('Insurance Application');
+        expect(stamp.text()).toContain(endpointCampaign.public_url);
+        expect(stamp.text()).not.toContain('/x/claim/');
+        expect(
+            stamp.get('[data-testid="campaign-endpoint-stamp-qr"]').attributes(
+                'src',
+            ),
+        ).toBe(endpointCampaign.qr_data_uri);
+        expect(
+            stamp
+                .get('[data-testid="campaign-endpoint-stamp-open"]')
+                .attributes('href'),
+        ).toBe(endpointCampaign.public_url);
+
         const endpointForm = (
             wrapper.vm as unknown as {
                 endpointForm: {

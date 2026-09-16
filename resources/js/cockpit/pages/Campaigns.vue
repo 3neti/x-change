@@ -12,9 +12,11 @@ import {
     Plus,
     QrCode,
     Send,
+    Share2,
     Trash2,
     Upload,
     Users,
+    X,
 } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { destroy, show, store } from '@/routes/x-change/cockpit/campaigns';
@@ -242,6 +244,7 @@ const intakeFileInput = ref<HTMLInputElement | null>(null);
 const intakeDragDepth = ref(0);
 const isDraggingIntake = ref(false);
 const intakeFileError = ref<string | null>(null);
+const selectedEndpointStamp = ref<EndpointCampaign | null>(null);
 
 watch(activeFlavor, (profile) => {
     if (profile !== 'endpoints') {
@@ -526,6 +529,27 @@ function campaignExposure(campaign: EndpointCampaign): string {
     }
 
     return `${peso(amount * maxStarts)} cap`;
+}
+
+function endpointAvailabilitySummary(campaign: EndpointCampaign): string {
+    const parts = [
+        campaign.starts_limit
+            ? `${campaign.usage_count} of ${campaign.starts_limit} starts used`
+            : `${campaign.usage_count} starts`,
+        campaign.expires_at
+            ? `Expires ${updatedRelativeTime(campaign.expires_at)}`
+            : 'Open until paused',
+    ];
+
+    return parts.join(' · ');
+}
+
+function openEndpointStamp(campaign: EndpointCampaign): void {
+    selectedEndpointStamp.value = campaign;
+}
+
+function closeEndpointStamp(): void {
+    selectedEndpointStamp.value = null;
 }
 
 async function copyEndpointUrl(url: string): Promise<void> {
@@ -1167,7 +1191,7 @@ const updatedRelativeTime = (value: string | null): string =>
                                 <img
                                     v-if="campaign.qr_data_uri"
                                     :src="campaign.qr_data_uri"
-                                    :alt="`QR code for ${campaign.title}`"
+                                    :alt="`Endpoint stamp code for ${campaign.title}`"
                                     class="size-24 rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm dark:border-slate-800"
                                     data-testid="campaign-endpoint-qr"
                                 />
@@ -1298,6 +1322,17 @@ const updatedRelativeTime = (value: string | null): string =>
                                     </div>
                                 </dl>
                             </div>
+
+                            <button
+                                type="button"
+                                class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200 dark:hover:bg-emerald-950"
+                                :aria-label="`Share ${campaign.title} endpoint stamp`"
+                                :data-testid="`campaign-endpoint-share-stamp-${campaign.reference}`"
+                                @click="openEndpointStamp(campaign)"
+                            >
+                                <Share2 class="size-4" aria-hidden="true" />
+                                Share Stamp
+                            </button>
                         </article>
                     </div>
                 </div>
@@ -1568,5 +1603,201 @@ const updatedRelativeTime = (value: string | null): string =>
             v-if="Object.keys(props.active_intake ?? {}).length > 0"
             :intake="props.active_intake as never"
         />
+
+        <div
+            v-if="selectedEndpointStamp"
+            class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-3 backdrop-blur-sm sm:items-center"
+            role="presentation"
+            data-testid="campaign-endpoint-stamp-overlay"
+            @click.self="closeEndpointStamp"
+        >
+            <section
+                role="dialog"
+                aria-modal="true"
+                :aria-labelledby="`campaign-endpoint-stamp-title-${selectedEndpointStamp.reference}`"
+                class="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-4 shadow-2xl outline-none dark:bg-slate-950"
+                :data-testid="`campaign-endpoint-stamp-modal-${selectedEndpointStamp.reference}`"
+                tabindex="-1"
+                @keydown.esc="closeEndpointStamp"
+            >
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p
+                            class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300"
+                        >
+                            Endpoint Campaign Stamp
+                        </p>
+                        <h2
+                            :id="`campaign-endpoint-stamp-title-${selectedEndpointStamp.reference}`"
+                            class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50"
+                        >
+                            {{ selectedEndpointStamp.title }}
+                        </h2>
+                        <p
+                            class="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400"
+                        >
+                            Ready to print, post, send, or advertise.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        class="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
+                        aria-label="Close endpoint stamp"
+                        data-testid="campaign-endpoint-stamp-close"
+                        @click="closeEndpointStamp"
+                    >
+                        <X class="size-4" aria-hidden="true" />
+                    </button>
+                </div>
+
+                <div
+                    class="mt-4 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-slate-950 text-white shadow-inner dark:border-slate-800"
+                    data-testid="campaign-endpoint-stamp-preview"
+                >
+                    <div
+                        class="grid gap-4 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.35),transparent_32%),linear-gradient(135deg,#020617,#111827_52%,#064e3b)] p-5"
+                    >
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <p
+                                    class="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-emerald-200"
+                                >
+                                    {{ selectedEndpointStamp.usage_label }}
+                                    campaign
+                                </p>
+                                <h3
+                                    class="mt-2 text-2xl font-semibold leading-tight"
+                                >
+                                    {{ selectedEndpointStamp.title }}
+                                </h3>
+                                <p
+                                    class="mt-2 text-sm leading-5 text-slate-200"
+                                >
+                                    {{
+                                        selectedEndpointStamp.description ||
+                                        selectedEndpointStamp.template?.name ||
+                                        'Scan to start this Pay Code experience.'
+                                    }}
+                                </p>
+                            </div>
+                            <span
+                                :class="
+                                    statusClasses(selectedEndpointStamp.status)
+                                "
+                                class="shrink-0 rounded-full px-2 py-1 text-[0.65rem] font-semibold"
+                                >{{
+                                    display(selectedEndpointStamp.status)
+                                }}</span
+                            >
+                        </div>
+
+                        <div
+                            class="grid gap-4 rounded-2xl bg-white/95 p-4 text-slate-950 shadow-xl sm:grid-cols-[10rem_1fr]"
+                        >
+                            <div
+                                class="flex min-h-40 items-center justify-center rounded-xl border border-slate-200 bg-white p-2"
+                            >
+                                <img
+                                    v-if="selectedEndpointStamp.qr_data_uri"
+                                    :src="selectedEndpointStamp.qr_data_uri"
+                                    :alt="`Endpoint stamp code for ${selectedEndpointStamp.title}`"
+                                    class="size-36"
+                                    data-testid="campaign-endpoint-stamp-qr"
+                                />
+                                <QrCode
+                                    v-else
+                                    class="size-16 text-slate-300"
+                                    aria-hidden="true"
+                                />
+                            </div>
+                            <div class="grid content-between gap-4">
+                                <div>
+                                    <p
+                                        class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500"
+                                    >
+                                        Presented by
+                                    </p>
+                                    <p class="mt-1 text-lg font-semibold">
+                                        {{
+                                            selectedEndpointStamp.merchant_display_name
+                                        }}
+                                    </p>
+                                </div>
+                                <dl class="grid gap-2 text-xs">
+                                    <div>
+                                        <dt
+                                            class="font-semibold uppercase tracking-[0.14em] text-slate-500"
+                                        >
+                                            Availability
+                                        </dt>
+                                        <dd class="mt-0.5 font-medium">
+                                            {{
+                                                endpointAvailabilitySummary(
+                                                    selectedEndpointStamp,
+                                                )
+                                            }}
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt
+                                            class="font-semibold uppercase tracking-[0.14em] text-slate-500"
+                                        >
+                                            Exposure
+                                        </dt>
+                                        <dd class="mt-0.5 font-medium">
+                                            {{
+                                                campaignExposure(
+                                                    selectedEndpointStamp,
+                                                )
+                                            }}
+                                        </dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
+
+                        <div
+                            class="rounded-2xl border border-white/10 bg-white/10 p-3 text-xs text-slate-100"
+                        >
+                            <p
+                                class="font-semibold uppercase tracking-[0.18em] text-emerald-200"
+                            >
+                                Public endpoint
+                            </p>
+                            <p
+                                class="mt-1 break-all font-medium"
+                                data-testid="campaign-endpoint-stamp-url"
+                            >
+                                {{ selectedEndpointStamp.public_url }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 grid gap-2 sm:grid-cols-2">
+                    <button
+                        type="button"
+                        class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-900"
+                        data-testid="campaign-endpoint-stamp-copy"
+                        @click="
+                            copyEndpointUrl(selectedEndpointStamp.public_url)
+                        "
+                    >
+                        <Copy class="size-4" aria-hidden="true" />
+                        Copy link
+                    </button>
+                    <a
+                        :href="selectedEndpointStamp.public_url"
+                        target="_blank"
+                        rel="noreferrer"
+                        class="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white"
+                        data-testid="campaign-endpoint-stamp-open"
+                    >
+                        <Globe2 class="size-4" aria-hidden="true" />
+                        Open endpoint
+                    </a>
+                </div>
+            </section>
+        </div>
     </CockpitLayout>
 </template>
