@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Bavix\Wallet\Models\Wallet;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\XChange\Actions\Claim\DispatchVoucherClaimOutcome;
@@ -387,6 +388,49 @@ it('offers the local simulator while live funding providers remain disabled', fu
         ->and($readModel['suspense_cases'])->toBeEmpty()
         ->and($readModel['approval_queue'])->toBeEmpty()
         ->and(FundingIntent::query()->where('provider_code', 'qrph_simulator')->count())->toBe(2);
+});
+
+it('keeps the Funding projection bounded while preserving complete suspense totals', function () {
+    config([
+        'x-change.funding.providers.netbank.enabled' => true,
+        'x-change.funding.providers.paynamics_constellation.enabled' => true,
+        'x-change.funding.providers.qrph_simulator.enabled' => false,
+    ]);
+
+    $operator = actingAsTestUser(0);
+    $wallet = $operator->wallet()->where('slug', 'platform')->firstOrFail();
+
+    foreach (range(1, 30) as $index) {
+        $intent = fundingCockpitIntent(
+            $operator,
+            $wallet,
+            FundingIntentStatus::Suspense,
+        );
+
+        FundingSuspenseCase::query()->create([
+            'case_key' => hash('sha256', 'bounded-funding-suspense-'.$index),
+            'funding_intent_id' => $intent->getKey(),
+            'provider_code' => 'netbank',
+            'reason_code' => 'amount_mismatch',
+            'status' => 'open',
+            'details' => [],
+            'opened_at' => now()->addSeconds($index),
+        ]);
+    }
+
+    $queryCount = 0;
+    DB::listen(static function () use (&$queryCount): void {
+        $queryCount++;
+    });
+
+    $readModel = app(FundingCockpitReadModelProvider::class)
+        ->forOperator($operator)
+        ->toArray();
+
+    expect($readModel['summary']['open_suspense'])->toBe(30)
+        ->and($readModel['suspense_cases'])->toHaveCount(20)
+        ->and($readModel['intents'])->toHaveCount(20)
+        ->and($queryCount)->toBeLessThan(35);
 });
 
 function fundingCockpitIntent(

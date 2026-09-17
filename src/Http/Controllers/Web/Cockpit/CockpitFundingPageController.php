@@ -52,12 +52,15 @@ class CockpitFundingPageController extends Controller
         $fundingRequests = $this->fundingRequests->forOperator($operator);
 
         return Inertia::render('x-change/cockpit/Funding', [
-            ...$this->props->toArray(),
+            ...$this->props->toArray(includeReadModel: false),
             'funding_read_model' => $this->funding->forOperator($operator)->toArray(),
             'funding_requests' => $fundingRequests,
-            'funding_activity' => $this->fundingActivity->forOperator(
-                $operator,
-                $fundingRequests,
+            'funding_activity' => Inertia::defer(
+                fn (): array => $this->fundingActivity->forOperator(
+                    $operator,
+                    $fundingRequests,
+                ),
+                'funding-activity',
             ),
             'funding_instruction' => $request->session()->pull('funding_instruction'),
             'funding_notice' => $request->session()->pull('funding_notice')

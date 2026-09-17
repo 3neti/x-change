@@ -76,11 +76,14 @@ final readonly class FundingActivityCockpitReadModel
         return SystemAccountFundingPayCodeIssuance::query()
             ->with(['voucher', 'accountFundingClaim'])
             ->visibleToRecipient($operator)
+            ->latest('issued_at')
+            ->limit(100)
             ->get()
             ->reject(fn (SystemAccountFundingPayCodeIssuance $issuance): bool => filled(data_get(
                 $issuance->metadata,
                 'custom.reviewed_funding.request_reference',
             )))
+            ->take(50)
             ->map(fn (SystemAccountFundingPayCodeIssuance $issuance): array => $this->accountFundingPayCodeItem($issuance));
     }
 

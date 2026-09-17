@@ -639,6 +639,11 @@ describe('Cockpit Funding foundation', () => {
             wrapper.get('[data-testid="cockpit-funding-page"]').text(),
         ).toContain('Account Funding');
         expect(
+            wrapper
+                .get('[data-testid="cockpit-funding-activity-loading"]')
+                .attributes('aria-label'),
+        ).toBe('Loading funding activity');
+        expect(
             wrapper.get('[data-testid="cockpit-funding-header"]').classes(),
         ).toContain('py-3');
         expect(

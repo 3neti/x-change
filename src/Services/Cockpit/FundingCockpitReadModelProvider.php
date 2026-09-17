@@ -41,45 +41,50 @@ class FundingCockpitReadModelProvider
             ->where('created_by_id', $actorId);
         $operationalIntentsQuery = (clone $intentsQuery)
             ->where('provider_code', '!=', self::SimulationProvider);
-        $intentIds = (clone $operationalIntentsQuery)->pluck('id');
-        $settlements = FundingSettlement::query()
-            ->whereIn('funding_intent_id', $intentIds)
-            ->latest('settled_at')
-            ->get();
-        $settledStandingReceipts = AccountFundingReceipt::query()
+        $operationalIntentIds = (clone $operationalIntentsQuery)->select('id');
+        $settlementsQuery = FundingSettlement::query()
+            ->whereIn('funding_intent_id', $operationalIntentIds);
+        $settledStandingReceiptsQuery = AccountFundingReceipt::query()
             ->where('status', AccountFundingReceiptStatus::Settled)
             ->whereHas(
                 'standingFundingAddress',
                 fn (Builder $query): Builder => $query
                     ->where('owner_type', $actorType)
                     ->where('owner_id', $actorId),
-            )
-            ->latest('settled_at')
-            ->get();
-        $settledAccountFundingPayCodeClaims = $operator instanceof Model
-            ? SystemAccountFundingPayCodeIssuance::query()
-                ->with('accountFundingClaim')
-                ->visibleToRecipient($operator)
-                ->get()
-                ->reject(fn (SystemAccountFundingPayCodeIssuance $issuance): bool => filled(data_get(
-                    $issuance->metadata,
-                    'custom.reviewed_funding.request_reference',
-                )))
-                ->pluck('accountFundingClaim')
-                ->filter(fn (mixed $claim): bool => $claim instanceof VoucherClaim
-                    && $claim->isSuccessful())
-                ->values()
-            : collect();
-        $openSuspenseCases = FundingSuspenseCase::query()
-            ->whereIn('funding_intent_id', $intentIds)
-            ->whereIn('status', ['open', 'monitoring'])
-            ->with(['fundingIntent', 'reconciliationRequests'])
+            );
+        $accountFundingClaimsQuery = $operator instanceof Model
+            ? VoucherClaim::query()
+                ->where('claim_type', 'account_funding')
+                ->where('status', 'succeeded')
+                ->whereIn(
+                    'voucher_id',
+                    SystemAccountFundingPayCodeIssuance::query()
+                        ->visibleToRecipient($operator)
+                        ->whereNull('metadata->custom->reviewed_funding->request_reference')
+                        ->select('voucher_id'),
+                )
+            : VoucherClaim::query()->whereRaw('1 = 0');
+        $openSuspenseCasesQuery = FundingSuspenseCase::query()
+            ->whereIn('funding_intent_id', (clone $operationalIntentsQuery)->select('id'))
+            ->whereIn('status', ['open', 'monitoring']);
+        $openSuspenseCount = (clone $openSuspenseCasesQuery)->count();
+        $openSuspenseCases = (clone $openSuspenseCasesQuery)
+            ->with([
+                'fundingIntent',
+                'reconciliationRequests' => fn ($query) => $query
+                    ->where('status', 'pending_approval'),
+            ])
             ->latest('opened_at')
+            ->limit(20)
             ->get();
-        $activeRecoveries = FundingRecovery::query()
-            ->whereIn('funding_intent_id', $intentIds)
-            ->where('outstanding_amount_minor', '>', 0)
+        $activeRecoveriesQuery = FundingRecovery::query()
+            ->whereIn('funding_intent_id', (clone $operationalIntentsQuery)->select('id'))
+            ->where('outstanding_amount_minor', '>', 0);
+        $recoveryMinor = (int) (clone $activeRecoveriesQuery)
+            ->sum('outstanding_amount_minor');
+        $activeRecoveries = (clone $activeRecoveriesQuery)
             ->latest('opened_at')
+            ->limit(20)
             ->get();
         $canViewTreasuryControls = $this->treasuryAccess
             ->canViewTreasuryControls($operator);
@@ -94,11 +99,11 @@ class FundingCockpitReadModelProvider
         return new CockpitFundingReadModelData(
             summary: $this->summary(
                 $operationalIntentsQuery,
-                $settlements,
-                $settledStandingReceipts,
-                $settledAccountFundingPayCodeClaims,
-                $openSuspenseCases,
-                $activeRecoveries,
+                $settlementsQuery,
+                $settledStandingReceiptsQuery,
+                $accountFundingClaimsQuery,
+                $openSuspenseCount,
+                $recoveryMinor,
             ),
             providers: $this->providers($actorType, $actorId),
             intents: $this->intents($operationalIntentsQuery),
@@ -142,35 +147,32 @@ class FundingCockpitReadModelProvider
 
     /**
      * @param  Builder<FundingIntent>  $intentsQuery
-     * @param  Collection<int, FundingSettlement>  $settlements
-     * @param  Collection<int, AccountFundingReceipt>  $standingReceipts
-     * @param  Collection<int, VoucherClaim>  $accountFundingPayCodeClaims
-     * @param  Collection<int, FundingSuspenseCase>  $suspenseCases
-     * @param  Collection<int, FundingRecovery>  $recoveries
+     * @param  Builder<FundingSettlement>  $settlementsQuery
+     * @param  Builder<AccountFundingReceipt>  $standingReceiptsQuery
+     * @param  Builder<VoucherClaim>  $accountFundingClaimsQuery
      * @return array<string, int|string>
      */
     private function summary(
         Builder $intentsQuery,
-        Collection $settlements,
-        Collection $standingReceipts,
-        Collection $accountFundingPayCodeClaims,
-        Collection $suspenseCases,
-        Collection $recoveries,
+        Builder $settlementsQuery,
+        Builder $standingReceiptsQuery,
+        Builder $accountFundingClaimsQuery,
+        int $openSuspenseCount,
+        int $recoveryMinor,
     ): array {
         $currency = $this->currency(
-            $settlements->first()?->currency
-                ?? $standingReceipts->first()?->currency
-                ?? $accountFundingPayCodeClaims->first()?->currency,
+            (clone $settlementsQuery)->latest('settled_at')->value('currency')
+                ?? (clone $standingReceiptsQuery)->latest('settled_at')->value('currency')
+                ?? (clone $accountFundingClaimsQuery)->latest('completed_at')->value('currency'),
         );
-        $settledMinor = (int) $settlements->sum('net_amount_minor')
-            + (int) $standingReceipts->sum('net_amount_minor')
-            + (int) $accountFundingPayCodeClaims->sum('disbursed_amount_minor');
-        $recoveryMinor = (int) $recoveries->sum('outstanding_amount_minor');
+        $settledMinor = (int) (clone $settlementsQuery)->sum('net_amount_minor')
+            + (int) (clone $standingReceiptsQuery)->sum('net_amount_minor')
+            + (int) (clone $accountFundingClaimsQuery)->sum('disbursed_amount_minor');
 
         return [
             'awaiting_funds' => (clone $intentsQuery)->where('status', 'awaiting_funds')->count(),
             'settled_funding' => $this->formatMoney($settledMinor, $currency),
-            'open_suspense' => $suspenseCases->count(),
+            'open_suspense' => $openSuspenseCount,
             'recovery_outstanding' => $this->formatMoney($recoveryMinor, $currency),
         ];
     }
@@ -180,17 +182,19 @@ class FundingCockpitReadModelProvider
      */
     private function providers(string $actorType, string $actorId): array
     {
+        $preferences = FundingDestinationPreference::query()
+            ->with('providerAccountLink')
+            ->where('owner_type', $actorType)
+            ->where('owner_id', $actorId)
+            ->get()
+            ->keyBy('provider_code');
+
         return collect((array) config('x-change.funding.providers', []))
             ->filter(fn (mixed $provider): bool => is_array($provider))
-            ->map(function (array $provider, string $code) use ($actorType, $actorId): array {
+            ->map(function (array $provider, string $code) use ($preferences): array {
                 $enabled = ($provider['enabled'] ?? false) === true;
                 $simulationOnly = $code === self::SimulationProvider;
-                $preference = FundingDestinationPreference::query()
-                    ->with('providerAccountLink')
-                    ->where('owner_type', $actorType)
-                    ->where('owner_id', $actorId)
-                    ->where('provider_code', $code)
-                    ->first();
+                $preference = $preferences->get($code);
                 $mode = $preference?->mode ?? 'shared';
                 $link = $preference?->providerAccountLink;
                 $dedicatedReady = $mode !== 'dedicated' || (
@@ -294,7 +298,6 @@ class FundingCockpitReadModelProvider
         bool $canManageTreasuryReconciliation,
     ): array {
         return $cases
-            ->take(20)
             ->map(function (FundingSuspenseCase $case) use ($canManageTreasuryReconciliation): array {
                 $pendingRequest = $case->reconciliationRequests
                     ->firstWhere('status', 'pending_approval');
@@ -386,7 +389,6 @@ class FundingCockpitReadModelProvider
             ->pluck('status', 'funding_recovery_id');
 
         return $recoveries
-            ->take(20)
             ->map(fn (FundingRecovery $recovery): array => [
                 'reference' => $recovery->reference,
                 'status' => $recovery->status,

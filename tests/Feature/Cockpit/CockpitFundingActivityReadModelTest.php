@@ -109,6 +109,20 @@ it('hydrates the unified activity projection on the Funding page', function () {
     $this->withHeader('X-Inertia', 'true')
         ->get(route('x-change.cockpit.funding.index'))
         ->assertOk()
+        ->assertJsonMissingPath('props.read_model')
+        ->assertJsonMissingPath('props.funding_activity')
+        ->assertJsonPath(
+            'deferredProps.funding-activity.0',
+            'funding_activity',
+        );
+
+    $this->withHeaders([
+        'X-Inertia' => 'true',
+        'X-Inertia-Partial-Component' => 'x-change/cockpit/Funding',
+        'X-Inertia-Partial-Data' => 'funding_activity',
+    ])
+        ->get(route('x-change.cockpit.funding.index'))
+        ->assertOk()
         ->assertJsonPath(
             'props.funding_activity.schema',
             'x-change.cockpit.funding-activity.v1',
