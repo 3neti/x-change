@@ -84,7 +84,17 @@ final readonly class RunDisbursableFeedbackEndpointScenario
                     ],
                 ],
             ],
-            'claim' => [],
+            'claim' => [
+                'outcomes' => [
+                    ['key' => 'provider_disbursement'],
+                ],
+                'selection' => 'server',
+                'consumption' => 'one_of',
+                'default_outcome' => 'provider_disbursement',
+                'onboarding' => ['mode' => 'never'],
+                'claimant' => ['mode' => 'unbound'],
+                'profile' => 'voucher.claim.v1',
+            ],
         ];
     }
 }

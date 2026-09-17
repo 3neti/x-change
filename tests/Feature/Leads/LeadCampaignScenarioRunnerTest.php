@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Enums\VoucherInputField;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Data\DebitData;
@@ -38,6 +39,7 @@ it('runs the disbursable feedback scenario with a bounded endpoint template', fu
 
     $campaign = LeadCampaign::query()->sole();
     $template = PayCodeTemplate::query()->sole();
+    $typedInstructions = VoucherInstructionsData::from($template->instructions_ciphertext);
 
     expect($campaign->title)->toBe('₱25 Feedback Endpoint')
         ->and($campaign->owner_type)->toBe($operator->getMorphClass())
@@ -64,6 +66,10 @@ it('runs the disbursable feedback scenario with a bounded endpoint template', fu
         ->and(data_get($template->instructions_ciphertext, 'inputs.fields'))->toBe([])
         ->and(data_get($template->instructions_ciphertext, 'feedback.mobile'))->toBe('09173011987')
         ->and(data_get($template->instructions_ciphertext, 'rider.message'))->toBe('test feedback')
+        ->and(data_get($template->instructions_ciphertext, 'claim.outcomes.0.key'))->toBe('provider_disbursement')
+        ->and(data_get($template->instructions_ciphertext, 'claim.default_outcome'))->toBe('provider_disbursement')
+        ->and(data_get($template->instructions_ciphertext, 'claim.profile'))->toBe('voucher.claim.v1')
+        ->and($typedInstructions->claim?->outcomes[0]->key)->toBe('provider_disbursement')
         ->and(data_get($template->instructions_ciphertext, 'metadata.custom.lead_campaign.scenario'))->toBe('disbursable_feedback_endpoint');
 });
 
@@ -105,6 +111,8 @@ it('continues the feedback browser scenario through public endpoint generation i
         ->and(data_get($fakeIssuer->payloads[0], 'cash.amount'))->toBe(25)
         ->and(data_get($fakeIssuer->payloads[0], 'feedback.mobile'))->toBe('09173011987')
         ->and(data_get($fakeIssuer->payloads[0], 'rider.message'))->toBe('test feedback')
+        ->and(data_get($fakeIssuer->payloads[0], 'claim.outcomes.0.key'))->toBe('provider_disbursement')
+        ->and(data_get($fakeIssuer->payloads[0], 'claim.default_outcome'))->toBe('provider_disbursement')
         ->and(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.scenario'))->toBe('disbursable_feedback_endpoint')
         ->and(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.campaign_reference'))->toBe($campaign->reference)
         ->and(data_get($fakeIssuer->payloads[0], 'metadata.flow_type'))->toBe('disbursable');
