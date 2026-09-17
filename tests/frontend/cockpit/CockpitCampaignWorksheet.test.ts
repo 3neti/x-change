@@ -184,6 +184,11 @@ describe('Cockpit campaign worksheets', () => {
             .trigger('click');
 
         expect(wrapper.text()).toContain('Endpoint Campaigns');
+        expect(
+            wrapper
+                .get('[data-testid="campaign-endpoint-scenario-runner-link"]')
+                .attributes('href'),
+        ).toBe('/x/cockpit/campaigns/lead-scenario-runner');
         expect(wrapper.text()).toContain('Insurance Application');
         expect(wrapper.text()).toContain('https://example.test/x/o/aui-insurance/application');
         expect(wrapper.text()).toContain('Insurance application template');

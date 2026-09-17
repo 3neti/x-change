@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useForm } from '@inertiajs/vue3';
+import { Link, useForm } from '@inertiajs/vue3';
 import {
     BriefcaseBusiness,
     ClipboardList,
@@ -9,6 +9,7 @@ import {
     HandCoins,
     Link2,
     LockKeyhole,
+    PlayCircle,
     Plus,
     QrCode,
     Send,
@@ -19,6 +20,7 @@ import {
     X,
 } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { show as showScenarioRunner } from '@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitLeadCampaignScenarioRunnerController';
 import { destroy, show, store } from '@/routes/x-change/cockpit/campaigns';
 import authorizations from '@/routes/x-change/cockpit/campaigns/authorizations';
 import { store as storeIntake } from '@/routes/x-change/cockpit/campaigns/intakes';
@@ -1149,10 +1151,20 @@ const updatedRelativeTime = (value: string | null): string =>
                                 Endpoint Campaigns
                             </h2>
                         </div>
-                        <span
-                            class="w-fit rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                            >{{ endpointCampaigns.length }} live cards</span
-                        >
+                        <div class="flex flex-wrap items-center gap-2">
+                            <Link
+                                :href="showScenarioRunner.url()"
+                                class="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-emerald-700 dark:hover:text-emerald-300"
+                                data-testid="campaign-endpoint-scenario-runner-link"
+                            >
+                                <PlayCircle class="size-3.5" aria-hidden="true" />
+                                Test endpoint lifecycle
+                            </Link>
+                            <span
+                                class="w-fit rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                                >{{ endpointCampaigns.length }} live cards</span
+                            >
+                        </div>
                     </div>
 
                     <div

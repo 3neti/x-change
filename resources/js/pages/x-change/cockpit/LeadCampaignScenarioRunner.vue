@@ -12,7 +12,8 @@ type LeadScenario = {
     pay_code_generation: string;
     claim_surface: string;
     amount: string;
-    action_url: string;
+    details_label: string;
+    details_description: string;
     fields: string[];
 };
 
@@ -28,6 +29,7 @@ type RecentLeadCampaign = {
 
 type LeadCampaignScenarioRunnerPageProps = CockpitHeaderPageProps & {
     scenario: LeadScenario;
+    scenarios: LeadScenario[];
     recent_lead_campaigns: RecentLeadCampaign[];
 };
 

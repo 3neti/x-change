@@ -10,47 +10,39 @@ use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\XChange\Actions\Leads\RunAuiInsuranceLeadScenario;
+use LBHurtado\XChange\Actions\Leads\RunDisbursableFeedbackEndpointScenario;
+use LBHurtado\XChange\Http\Requests\Web\Cockpit\RunLeadCampaignScenarioRequest;
 use LBHurtado\XChange\Models\LeadCampaign;
+use LBHurtado\XChange\Services\Leads\LeadCampaignBrowserScenarioCatalog;
 
 final class CockpitLeadCampaignScenarioRunnerController extends Controller
 {
+    public function __construct(
+        private readonly LeadCampaignBrowserScenarioCatalog $scenarios,
+    ) {}
+
     public function show(Request $request): Response
     {
         $this->ensureEnabled();
 
         return Inertia::render('x-change/cockpit/LeadCampaignScenarioRunner', [
-            'scenario' => [
-                'schema' => 'x-change.cockpit.lead-campaign-scenario-runner.v1',
-                'key' => 'aui_on_demand_insurance_payment',
-                'title' => 'AUI On-Demand Insurance Payment',
-                'description' => 'Create a public lead campaign endpoint that mints a zero-denominated intake Pay Code and routes the prospect through the normal claim UX.',
-                'entry_point' => 'Public QR/link',
-                'person_type' => 'Prospect',
-                'pay_code_generation' => 'On scan',
-                'claim_surface' => '/x/claim/{code}',
-                'amount' => '₱0.00',
-                'action_url' => route('x-change.cockpit.campaigns.lead-scenario-runner.store'),
-                'fields' => [
-                    'Name',
-                    'Mobile',
-                    'Email',
-                    'Address',
-                    'Birthday',
-                    'Insurance product',
-                    'Vehicle registration number',
-                    'Driver license number',
-                    'Payment reference',
-                ],
-            ],
+            'scenario' => $this->scenarios->find($request->string('scenario')->toString()),
+            'scenarios' => $this->scenarios->all(),
             'recent_lead_campaigns' => $this->recentCampaigns($request),
         ]);
     }
 
-    public function store(Request $request, RunAuiInsuranceLeadScenario $runner): RedirectResponse
-    {
+    public function store(
+        RunLeadCampaignScenarioRequest $request,
+        RunAuiInsuranceLeadScenario $auiScenario,
+        RunDisbursableFeedbackEndpointScenario $feedbackScenario,
+    ): RedirectResponse {
         $this->ensureEnabled();
 
-        $campaign = $runner->handle($request->user());
+        $campaign = match ($request->validated('scenario')) {
+            'aui_on_demand_insurance_payment' => $auiScenario->handle($request->user()),
+            default => $feedbackScenario->handle($request->user()),
+        };
 
         return to_route('x-change.leads.start', [
             'merchant_slug' => $campaign->merchant_slug,

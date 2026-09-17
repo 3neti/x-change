@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import {
+    show,
+    store,
+} from '@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitLeadCampaignScenarioRunnerController';
+import {
     ArrowRight,
     ClipboardList,
     FileText,
@@ -25,7 +29,8 @@ type LeadScenario = {
     pay_code_generation: string;
     claim_surface: string;
     amount: string;
-    action_url: string;
+    details_label: string;
+    details_description: string;
     fields: string[];
 };
 
@@ -42,6 +47,7 @@ type RecentLeadCampaign = {
 const props = defineProps<{
     cockpit_header_read_model?: CockpitHeaderReadModel;
     scenario: LeadScenario;
+    scenarios: LeadScenario[];
     recent_lead_campaigns: RecentLeadCampaign[];
 }>();
 
@@ -49,8 +55,8 @@ const running = ref(false);
 
 function runScenario(): void {
     router.post(
-        props.scenario.action_url,
-        {},
+        store.url(),
+        { scenario: props.scenario.key },
         {
             preserveScroll: false,
             onStart: () => {
@@ -61,6 +67,10 @@ function runScenario(): void {
             },
         },
     );
+}
+
+function selectScenario(key: string): void {
+    router.get(show.url(), { scenario: key }, { preserveScroll: true });
 }
 </script>
 
@@ -115,6 +125,34 @@ function runScenario(): void {
             </section>
 
             <section
+                class="grid gap-2 sm:grid-cols-2"
+                aria-label="Browser lifecycle scenarios"
+                data-testid="cockpit-lead-scenario-selector"
+            >
+                <button
+                    v-for="option in props.scenarios"
+                    :key="option.key"
+                    type="button"
+                    class="min-w-0 rounded-xl border px-4 py-3 text-left transition"
+                    :class="
+                        option.key === props.scenario.key
+                            ? 'border-emerald-500 bg-emerald-50 text-emerald-950 dark:border-emerald-400 dark:bg-emerald-950/30 dark:text-emerald-100'
+                            : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200'
+                    "
+                    :aria-pressed="option.key === props.scenario.key"
+                    :data-testid="`cockpit-lead-scenario-option-${option.key}`"
+                    @click="selectScenario(option.key)"
+                >
+                    <span class="block truncate text-sm font-semibold">
+                        {{ option.title }}
+                    </span>
+                    <span class="mt-1 block text-xs opacity-75">
+                        {{ option.amount }} · {{ option.person_type }}
+                    </span>
+                </button>
+            </section>
+
+            <section
                 class="grid gap-3 md:grid-cols-4"
                 data-testid="cockpit-lead-scenario-contract"
             >
@@ -161,11 +199,10 @@ function runScenario(): void {
                 data-testid="cockpit-lead-scenario-fields"
             >
                 <h2 class="text-sm font-semibold text-slate-950 dark:text-slate-50">
-                    Claim UX intake fields
+                    {{ props.scenario.details_label }}
                 </h2>
                 <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                    These particulars are collected by the generated Pay Code
-                    claim flow before payment instructions are issued.
+                    {{ props.scenario.details_description }}
                 </p>
                 <div class="mt-4 flex flex-wrap gap-2">
                     <span

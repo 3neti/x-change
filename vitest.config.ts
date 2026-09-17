@@ -97,6 +97,11 @@ export default defineConfig({
           import.meta.dirname,
           "tests/frontend/stubs/cockpit-pay-code-explorer-route.ts",
         ),
+      "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitLeadCampaignScenarioRunnerController":
+        path.resolve(
+          import.meta.dirname,
+          "tests/frontend/stubs/lead-campaign-scenario-runner-route.ts",
+        ),
       "@/actions/LBHurtado/XChange/Http/Controllers/Web/StoredValueInstrumentPageController":
         path.resolve(
           import.meta.dirname,
