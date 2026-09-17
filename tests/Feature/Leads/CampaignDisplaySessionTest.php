@@ -256,6 +256,33 @@ it('requires completed intake before creating paired payment instructions', func
         ->and($this->displayAdapter->instructionCalls)->toBe(1);
 });
 
+it('allows paired pure payable payment without intake while keeping the QR seller only', function (): void {
+    $template = $this->displayCampaign->payCodeTemplate;
+    $instructions = $template->instructions_ciphertext;
+    data_set($instructions, 'metadata.flow_type', 'collectible');
+    data_set($instructions, 'inputs.fields', []);
+    $template->update(['instructions_ciphertext' => $instructions]);
+    $session = createPairedDisplay();
+    $this->get(pairedDisplayEntryUrl($session))->assertRedirect();
+    $voucher = $session->fresh()->voucher;
+
+    $this->withHeader('X-Inertia', 'true')->get(route('x-change.claim.show', $voucher->code))
+        ->assertOk()->assertJsonPath('component', 'x-change/claim/PaymentHandoff');
+    $this->get(route('x-change.pay.show', $voucher->code))->assertOk()
+        ->assertJsonPath('props.payment.can_create_attempt', true);
+    $this->post(route('x-change.pay.attempts.store', $voucher->code))->assertRedirect();
+    $this->get(route('x-change.pay.show', $voucher->code))->assertOk()
+        ->assertJsonPath('props.payment.attempt.status', 'awaiting_payment')
+        ->assertJsonPath('props.payment.attempt.qr_code', null);
+    $this->getJson(route('x-change.cockpit.display-sessions.show', $session->reference))->assertOk()
+        ->assertJsonPath('session.status', 'awaiting_payment')
+        ->assertJsonStructure(['session' => ['attempt' => ['qr_code' => ['base64_payload']]]]);
+    expect($session->fresh()->intake_completed_at)->toBeNull()
+        ->and($voucher->fresh()->redeemed_at)->toBeNull()
+        ->and($this->displayAdapter->instructionCalls)->toBe(1)
+        ->and(PaymentAttempt::query()->sole()->status)->toBe(PaymentAttemptStatus::AwaitingPayment);
+});
+
 it('shows provider QR only to the seller and polls without writes or provider verification', function (): void {
     $session = createPairedDisplay();
     $this->get(pairedDisplayEntryUrl($session))->assertRedirect();

@@ -33,7 +33,7 @@ class PaymentAttemptController extends Controller
         $display = $displays->forPayer($voucher, $request);
         if ($display !== null) {
             $displays->assertOpen($display);
-            abort_unless($display->intake_completed_at !== null, 409, 'Complete the application before choosing payment.');
+            abort_unless($displays->intakeReady($display, $voucher), 409, 'Complete the application before choosing payment.');
         }
 
         $browserKeySession = 'x-change.payment.browser-key';

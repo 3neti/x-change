@@ -89,6 +89,12 @@ final readonly class CampaignDisplaySessions
         abort_if($session->ended_at !== null || $session->expires_at->isPast(), 410, 'The seller display has ended. Ask the seller to start a new session.');
     }
 
+    public function intakeReady(CampaignDisplaySession $session, Voucher $voucher): bool
+    {
+        return ! $this->capabilities->resolve($voucher)->can_disburse
+            || $session->intake_completed_at !== null;
+    }
+
     /** Record validated application input only; payment authorization remains with the collection engine. */
     public function recordIntake(Voucher $voucher): void
     {

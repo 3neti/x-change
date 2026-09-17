@@ -63,7 +63,7 @@ class PaymentPageController extends Controller
                 'provider_available' => $providerEnabled,
                 'can_create_attempt' => (bool) config('x-change.payment.attempts.enabled', true)
                     && $providerEnabled
-                    && ($display === null || ($display->ended_at === null && ! $display->expires_at->isPast() && $display->intake_completed_at !== null))
+                    && ($display === null || ($display->ended_at === null && ! $display->expires_at->isPast() && $displays->intakeReady($display, $voucher)))
                     && ! $collection->is_fully_collected,
                 'poll_interval_ms' => max(1000, (int) config('x-change.payment.attempts.ui_refresh_interval_milliseconds', 5000)),
                 'attempt' => $attemptData,
