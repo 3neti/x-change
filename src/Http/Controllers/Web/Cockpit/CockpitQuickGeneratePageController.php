@@ -11,11 +11,13 @@ use Inertia\Response;
 use LBHurtado\XChange\Contracts\SettlementRailCapabilityRegistryContract;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
+use LBHurtado\XChange\Models\CampaignDisplaySession;
 use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeDetailAccess;
 use LBHurtado\XChange\Services\Cockpit\PayCodeTemplateReadModel;
 use LBHurtado\XChange\Services\Cockpit\QuickGenerateLastInstructionsStore;
 use LBHurtado\XChange\Services\Cockpit\RiderLibraryReadModel;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegistry;
+use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
 
 class CockpitQuickGeneratePageController extends Controller
@@ -32,9 +34,17 @@ class CockpitQuickGeneratePageController extends Controller
         private readonly CockpitPayCodeDetailAccess $payCodeAccess,
     ) {}
 
-    public function __invoke(Request $request): Response
+    public function __invoke(Request $request, CampaignDisplaySessions $displays): Response
     {
+        $display = null;
+        if ($request->filled('display_session')) {
+            $display = CampaignDisplaySession::query()->where('reference', $request->query('display_session'))->firstOrFail();
+            $displays->authorize($display, $request->user());
+        }
+
         return Inertia::render('x-change/cockpit/QuickGenerate', [
+            'display_campaigns' => fn (): array => $displays->campaignsFor($request->user()),
+            'display_session' => $display === null ? null : $displays->present($display),
             ...$this->props->toQuickGenerateArray(
                 campaignPlanningKey: $this->optionalString($request->query('campaign_planning_key')),
                 campaignExecutionId: $this->optionalString($request->query('campaign_execution_id')),

@@ -93,6 +93,30 @@ const baseProps = {
 };
 
 describe('claim Success redirect countdown rendering', () => {
+    it('suppresses automatic redirects only while paired payment is pending and preserves the payment action', async () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                paired_payment: true,
+                claim_experience: null,
+                rider: {
+                    ...baseProps.rider,
+                    success: { enabled: true, type: 'text', content: 'Thanks for your order.' },
+                    redirect: { enabled: true, url: 'https://example.com/old-target', delay_seconds: 5 },
+                    stages: { stages: [{ key: 'external-redirect', type: 'redirect', phase: 'redirect', payload: { url: 'https://example.com/old-target' } }] },
+                },
+                success_action: { label: 'Continue to payment', enabled: true, target: { url: '/x/pay/TEST123', method: 'get' } },
+            },
+        });
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="rider-runtime"]').exists()).toBe(false);
+        expect(wrapper.text()).toContain('Thanks for your order.');
+        expect(wrapper.get('a[href="/x/pay/TEST123"]').text()).toContain('Continue to payment');
+        await wrapper.setProps({ paired_payment: false });
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="rider-runtime"]').exists()).toBe(true);
+    });
+
     it('keeps provider payout pending visible above rider content', () => {
         const wrapper = mount(Success, {
             props: {

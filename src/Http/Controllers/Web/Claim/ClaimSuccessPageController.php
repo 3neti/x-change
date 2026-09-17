@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Http\Controllers\Web\Claim;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\Voucher\Models\Voucher;
@@ -14,6 +15,7 @@ use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Claim\DefaultClaimWorkflowResolver;
 use LBHurtado\XChange\Services\Claim\OnboardingSuccessActionResolver;
 use LBHurtado\XChange\Services\Claim\VoucherRiderFallbackPolicy;
+use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LBHurtado\XChange\Services\XRay\VoucherXRayProjectionBuilder;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
@@ -35,10 +37,14 @@ class ClaimSuccessPageController
         DefaultClaimWorkflowResolver $workflowResolver,
         VoucherFlowCapabilityResolverContract $capabilities,
         VoucherCollectionProgressService $collectionProgress,
+        Request $request,
+        CampaignDisplaySessions $displays,
     ): Response|JsonResponse {
         $voucher = Voucher::query()
             ->where('code', $code)
             ->firstOrFail();
+
+        $display = $displays->forPayer($voucher, $request);
 
         $claimExperience = ResolveClaimExperience::run($voucher)->toArray();
         $subject = $subjects->fromVoucher($voucher);
@@ -58,6 +64,8 @@ class ClaimSuccessPageController
             : null;
 
         $props = [
+            'paired_payment' => $display !== null && $capabilities->resolve($voucher)->can_collect
+                && ! $collectionProgress->compute($voucher)->is_fully_collected,
             'voucher' => [
                 'code' => (string) $voucher->code,
                 'amount' => data_get($voucher, 'cash.amount'),

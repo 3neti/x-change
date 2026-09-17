@@ -19,6 +19,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountScenarioController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignApprovalDeliveryController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignDisplaySessionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignEndpointController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignVoucherBlueprintController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetAuthorizationController;
@@ -137,6 +138,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentVerificationCheckContr
 use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationAcceptanceController;
 use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationPageController;
 use LBHurtado\XChange\Http\Controllers\Web\StoredValueInstrumentPageController;
+use LBHurtado\XChange\Http\Middleware\GuardPairedCampaignClaim;
 use LBHurtado\XChange\Http\Middleware\RequireVerifiedMobile;
 use LBHurtado\XChange\Http\Middleware\ShareCockpitHeaderReadModel;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
@@ -567,6 +569,14 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             CockpitFundingReconciliationApprovalController::class,
         )->name('x-change.cockpit.funding.reconciliations.approve');
         Route::get('quick-generate', CockpitQuickGeneratePageController::class)->name('x-change.cockpit.quick-generate');
+        Route::post('display-sessions', [CockpitCampaignDisplaySessionController::class, 'store'])
+            ->middleware('throttle:12,1,display-write:')->name('x-change.cockpit.display-sessions.store');
+        Route::get('display-sessions/{displaySession:reference}', [CockpitCampaignDisplaySessionController::class, 'show'])
+            ->middleware('throttle:30,1,display-read:')->name('x-change.cockpit.display-sessions.show');
+        Route::post('display-sessions/{displaySession:reference}/end', [CockpitCampaignDisplaySessionController::class, 'end'])
+            ->middleware('throttle:12,1,display-write:')->name('x-change.cockpit.display-sessions.end');
+        Route::post('display-sessions/{displaySession:reference}/reset', [CockpitCampaignDisplaySessionController::class, 'reset'])
+            ->middleware('throttle:12,1,display-write:')->name('x-change.cockpit.display-sessions.reset');
         Route::get(
             'instance-keepsakes/{reference}/download',
             CockpitInstanceKeepsakeDownloadShowController::class,
@@ -683,7 +693,7 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
 });
 
 // Public claim routes (no auth required)
-Route::prefix('x')->middleware(['web', ShareXChangeBranding::class])->group(function (): void {
+Route::prefix('x')->middleware(['web', ShareXChangeBranding::class, GuardPairedCampaignClaim::class])->group(function (): void {
     Route::get('pay/{code}', PaymentPageController::class)
         ->middleware((array) config('x-change.payment.attempts.public_read_middleware', []))
         ->name('x-change.pay.show');

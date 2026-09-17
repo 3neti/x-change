@@ -13,6 +13,7 @@ use LBHurtado\XChange\Actions\Leads\RunAuiInsuranceLeadScenario;
 use LBHurtado\XChange\Actions\Leads\RunDisbursableFeedbackEndpointScenario;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\RunLeadCampaignScenarioRequest;
 use LBHurtado\XChange\Models\LeadCampaign;
+use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
 use LBHurtado\XChange\Services\Leads\LeadCampaignBrowserScenarioCatalog;
 
 final class CockpitLeadCampaignScenarioRunnerController extends Controller
@@ -36,13 +37,20 @@ final class CockpitLeadCampaignScenarioRunnerController extends Controller
         RunLeadCampaignScenarioRequest $request,
         RunAuiInsuranceLeadScenario $auiScenario,
         RunDisbursableFeedbackEndpointScenario $feedbackScenario,
+        CampaignDisplaySessions $displays,
     ): RedirectResponse {
         $this->ensureEnabled();
 
         $campaign = match ($request->validated('scenario')) {
-            'aui_on_demand_insurance_payment' => $auiScenario->handle($request->user()),
+            'aui_on_demand_insurance_payment', 'paired_campaign_qr' => $auiScenario->handle($request->user()),
             default => $feedbackScenario->handle($request->user()),
         };
+
+        if ($request->validated('scenario') === 'paired_campaign_qr') {
+            $display = $displays->create($campaign);
+
+            return to_route('x-change.cockpit.quick-generate', ['surface' => 'qr', 'display_session' => $display->reference]);
+        }
 
         return to_route('x-change.leads.start', [
             'merchant_slug' => $campaign->merchant_slug,

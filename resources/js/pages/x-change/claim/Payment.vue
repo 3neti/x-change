@@ -61,6 +61,7 @@ type PaymentReceipt = {
 };
 
 type PaymentReadModel = {
+    paired_display?: { reference: string; status: string } | null;
     pay_code: string;
     currency: string;
     target_amount_minor: number;
@@ -82,6 +83,11 @@ const props = defineProps<{
 }>();
 const creating = ref(false);
 const checking = ref(false);
+const pairedUnavailable = computed(() =>
+    ['ended', 'expired', 'review'].includes(
+        props.payment.paired_display?.status ?? '',
+    ),
+);
 const selectedMethod = ref<'qr' | null>(props.payment.attempt ? 'qr' : null);
 
 function money(amountMinor: number, currency: string): string {
@@ -167,6 +173,7 @@ function selectQr(): void {
 function startPayment(): void {
     if (
         selectedMethod.value !== 'qr' ||
+        pairedUnavailable.value ||
         !props.payment.can_create_attempt ||
         creating.value
     ) {
@@ -342,6 +349,18 @@ function printReceipt(): void {
                     </div>
                 </CardHeader>
                 <CardContent class="space-y-5">
+                    <div
+                        v-if="pairedUnavailable"
+                        role="status"
+                        class="rounded-lg border border-amber-500/25 bg-amber-500/10 p-4 text-sm"
+                        data-testid="payer-pairing-unavailable"
+                    >
+                        {{
+                            payment.paired_display?.status === 'review'
+                                ? 'Your payment is under review. Do not pay again.'
+                                : 'This seller display pairing has ended or expired. Ask the seller for a new display before paying.'
+                        }}
+                    </div>
                     <div class="grid gap-3 sm:grid-cols-3">
                         <Button
                             type="button"
@@ -420,7 +439,46 @@ function printReceipt(): void {
                             }}</Badge>
                         </div>
                         <div
-                            v-if="qrSource"
+                            v-if="payment.paired_display"
+                            class="rounded-lg border border-primary/20 bg-primary/5 p-5 text-center"
+                            data-testid="payer-paired-display-instructions"
+                        >
+                            <p class="font-semibold">
+                                {{
+                                    pairedUnavailable
+                                        ? 'Seller display unavailable'
+                                        : payment.paired_display.status ===
+                                            'awaiting_payment'
+                                          ? 'Scan the seller screen'
+                                          : 'Preparing the seller display'
+                                }}
+                            </p>
+                            <p class="mt-2 text-sm text-muted-foreground">
+                                <template
+                                    v-if="
+                                        !pairedUnavailable &&
+                                        payment.paired_display.status ===
+                                            'awaiting_payment'
+                                    "
+                                    >Open your bank or wallet app and scan the
+                                    QR Ph code on the seller’s display to pay
+                                    {{ attemptAmount }}. Return here to see your
+                                    payment confirmation.</template
+                                >
+                                <template v-else-if="!pairedUnavailable"
+                                    >Wait for the payment QR to appear on the
+                                    seller’s display before opening your bank or
+                                    wallet app.</template
+                                >
+                                <template v-else
+                                    >Do not scan an old QR. Check with the
+                                    seller before making another
+                                    payment.</template
+                                >
+                            </p>
+                        </div>
+                        <div
+                            v-else-if="qrSource"
                             class="mx-auto w-fit rounded-xl border border-border bg-white p-4 shadow-sm"
                         >
                             <img
@@ -436,10 +494,15 @@ function printReceipt(): void {
                             The provider did not return a usable QR image.
                         </div>
                         <div
+                            v-if="!pairedUnavailable"
                             class="rounded-lg border border-border bg-muted p-4"
                         >
                             <p class="text-sm font-medium">
-                                Scan with any QR Ph app
+                                {{
+                                    payment.paired_display
+                                        ? 'Your QR is on the seller display'
+                                        : 'Scan with any QR Ph app'
+                                }}
                             </p>
                             <p class="mt-1 text-sm text-muted-foreground">
                                 Pay exactly {{ attemptAmount }}. The QR is bound
@@ -487,7 +550,11 @@ function printReceipt(): void {
                             data-testid="payer-create-qr"
                             class="w-full"
                             size="lg"
-                            :disabled="!payment.can_create_attempt || creating"
+                            :disabled="
+                                !payment.can_create_attempt ||
+                                creating ||
+                                pairedUnavailable
+                            "
                             @click="startPayment"
                         >
                             <Loader2

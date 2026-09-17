@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, toRef } from 'vue';
+import { computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import { CheckCircle2, Clock3 } from 'lucide-vue-next';
 import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
@@ -44,6 +44,7 @@ interface VoucherProps {
 }
 
 interface Props {
+    paired_payment?: boolean;
     voucher: VoucherProps;
     claimOutcome?: string;
     claimWorkflowKey?: string | null;
@@ -87,7 +88,15 @@ interface Props {
 const props = defineProps<Props>();
 
 const riderContent = computed(() => props.rider?.success ?? null);
-const riderRedirect = computed(() => props.rider?.redirect ?? null);
+const riderRedirect = computed(() =>
+    props.paired_payment ? null : props.rider?.redirect ?? null,
+);
+const effectiveRedirect = computed(() =>
+    props.paired_payment ? null : props.redirect ?? null,
+);
+const effectiveRedirectEndpoint = computed(() =>
+    props.paired_payment ? null : props.redirectEndpoint ?? null,
+);
 
 const displayedRiderContent = computed(() =>
     resolveSuccessRiderMessage(riderContent.value, {
@@ -104,7 +113,9 @@ const successVisualStages = computed<RawRiderStage[]>(() =>
 );
 
 const redirectRuntimeStages = computed<RawRiderStage[]>(() =>
-    resolveRedirectRuntimeStages(props.rider, props.claim_experience),
+    props.paired_payment
+        ? []
+        : resolveRedirectRuntimeStages(props.rider, props.claim_experience),
 );
 
 const hasRiderMessage = computed(() =>
@@ -113,8 +124,8 @@ const hasRiderMessage = computed(() =>
 
 const { countdownRedirect, hasRedirect } = useClaimSuccessRedirect(
     riderRedirect,
-    toRef(props, 'redirect'),
-    toRef(props, 'redirectEndpoint'),
+    effectiveRedirect,
+    effectiveRedirectEndpoint,
 );
 
 const successViewModel = computed(() =>

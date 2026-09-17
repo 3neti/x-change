@@ -25,6 +25,7 @@ import { destroy, show, store } from '@/routes/x-change/cockpit/campaigns';
 import authorizations from '@/routes/x-change/cockpit/campaigns/authorizations';
 import { store as storeIntake } from '@/routes/x-change/cockpit/campaigns/intakes';
 import CockpitCampaignIntakeDialog from '../components/CockpitCampaignIntakeDialog.vue';
+import CockpitCampaignEndpointStamp from '../components/CockpitCampaignEndpointStamp.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import { formatAbsoluteTime, formatRelativeTime } from '../utils/dateTime';
 import type { CockpitHeaderPageProps } from '../types';
@@ -1662,129 +1663,13 @@ const updatedRelativeTime = (value: string | null): string =>
                     </button>
                 </div>
 
-                <div
-                    class="mt-4 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-slate-950 text-white shadow-inner dark:border-slate-800"
-                    data-testid="campaign-endpoint-stamp-preview"
-                >
-                    <div
-                        class="grid gap-4 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.35),transparent_32%),linear-gradient(135deg,#020617,#111827_52%,#064e3b)] p-5"
-                    >
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="min-w-0">
-                                <p
-                                    class="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-emerald-200"
-                                >
-                                    {{ selectedEndpointStamp.usage_label }}
-                                    campaign
-                                </p>
-                                <h3
-                                    class="mt-2 text-2xl font-semibold leading-tight"
-                                >
-                                    {{ selectedEndpointStamp.title }}
-                                </h3>
-                                <p
-                                    class="mt-2 text-sm leading-5 text-slate-200"
-                                >
-                                    {{
-                                        selectedEndpointStamp.description ||
-                                        selectedEndpointStamp.template?.name ||
-                                        'Scan to start this Pay Code experience.'
-                                    }}
-                                </p>
-                            </div>
-                            <span
-                                :class="
-                                    statusClasses(selectedEndpointStamp.status)
-                                "
-                                class="shrink-0 rounded-full px-2 py-1 text-[0.65rem] font-semibold"
-                                >{{
-                                    display(selectedEndpointStamp.status)
-                                }}</span
-                            >
-                        </div>
-
-                        <div
-                            class="grid gap-4 rounded-2xl bg-white/95 p-4 text-slate-950 shadow-xl sm:grid-cols-[10rem_1fr]"
-                        >
-                            <div
-                                class="flex min-h-40 items-center justify-center rounded-xl border border-slate-200 bg-white p-2"
-                            >
-                                <img
-                                    v-if="selectedEndpointStamp.qr_data_uri"
-                                    :src="selectedEndpointStamp.qr_data_uri"
-                                    :alt="`Endpoint stamp code for ${selectedEndpointStamp.title}`"
-                                    class="size-36"
-                                    data-testid="campaign-endpoint-stamp-qr"
-                                />
-                                <QrCode
-                                    v-else
-                                    class="size-16 text-slate-300"
-                                    aria-hidden="true"
-                                />
-                            </div>
-                            <div class="grid content-between gap-4">
-                                <div>
-                                    <p
-                                        class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500"
-                                    >
-                                        Presented by
-                                    </p>
-                                    <p class="mt-1 text-lg font-semibold">
-                                        {{
-                                            selectedEndpointStamp.merchant_display_name
-                                        }}
-                                    </p>
-                                </div>
-                                <dl class="grid gap-2 text-xs">
-                                    <div>
-                                        <dt
-                                            class="font-semibold uppercase tracking-[0.14em] text-slate-500"
-                                        >
-                                            Availability
-                                        </dt>
-                                        <dd class="mt-0.5 font-medium">
-                                            {{
-                                                endpointAvailabilitySummary(
-                                                    selectedEndpointStamp,
-                                                )
-                                            }}
-                                        </dd>
-                                    </div>
-                                    <div>
-                                        <dt
-                                            class="font-semibold uppercase tracking-[0.14em] text-slate-500"
-                                        >
-                                            Exposure
-                                        </dt>
-                                        <dd class="mt-0.5 font-medium">
-                                            {{
-                                                campaignExposure(
-                                                    selectedEndpointStamp,
-                                                )
-                                            }}
-                                        </dd>
-                                    </div>
-                                </dl>
-                            </div>
-                        </div>
-
-                        <div
-                            class="rounded-2xl border border-white/10 bg-white/10 p-3 text-xs text-slate-100"
-                        >
-                            <p
-                                class="font-semibold uppercase tracking-[0.18em] text-emerald-200"
-                            >
-                                Public endpoint
-                            </p>
-                            <p
-                                class="mt-1 break-all font-medium"
-                                data-testid="campaign-endpoint-stamp-url"
-                            >
-                                {{ selectedEndpointStamp.public_url }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
+                <CockpitCampaignEndpointStamp
+                    :campaign="selectedEndpointStamp"
+                    :availability="endpointAvailabilitySummary(selectedEndpointStamp)"
+                    :exposure="campaignExposure(selectedEndpointStamp)"
+                    :status-class="statusClasses(selectedEndpointStamp.status)"
+                    :status-label="display(selectedEndpointStamp.status)"
+                />
 
                 <div class="mt-4 grid gap-2 sm:grid-cols-2">
                     <button

@@ -10,6 +10,7 @@ use Inertia\Inertia;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Models\PaymentAttempt;
+use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptPresenter;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptSessionGuard;
 use LBHurtado\XChange\Services\Payment\PaymentReceiptReadModel;
@@ -29,6 +30,7 @@ class PaymentPageController extends Controller
         VoucherCollectionProgressService $progress,
         PaymentAttemptSessionGuard $sessions,
         PaymentAttemptPresenter $presenter,
+        CampaignDisplaySessions $displays,
     ): Response {
         $voucher = Voucher::query()
             ->where('code', strtoupper(trim($code)))
@@ -36,8 +38,15 @@ class PaymentPageController extends Controller
 
         abort_unless($capabilities->resolve($voucher)->can_collect, 404);
 
+        $display = $displays->forPayer($voucher, $request);
+
         $collection = $progress->compute($voucher);
         $attempt = $this->attempt($request, $voucher, $sessions);
+        $attempt ??= $display?->attempt;
+        $attemptData = $attempt === null ? null : $presenter->present($attempt);
+        if ($display !== null && $attemptData !== null) {
+            $attemptData['qr_code'] = null;
+        }
         $provider = strtolower((string) config('x-change.payment.attempts.provider', 'netbank'));
         $providerEnabled = (bool) config("x-change.funding.providers.{$provider}.enabled", false);
 
@@ -54,9 +63,14 @@ class PaymentPageController extends Controller
                 'provider_available' => $providerEnabled,
                 'can_create_attempt' => (bool) config('x-change.payment.attempts.enabled', true)
                     && $providerEnabled
+                    && ($display === null || ($display->ended_at === null && ! $display->expires_at->isPast() && $display->intake_completed_at !== null))
                     && ! $collection->is_fully_collected,
                 'poll_interval_ms' => max(1000, (int) config('x-change.payment.attempts.ui_refresh_interval_milliseconds', 5000)),
-                'attempt' => $attempt === null ? null : $presenter->present($attempt),
+                'attempt' => $attemptData,
+                'paired_display' => $display === null ? null : [
+                    'reference' => $display->reference,
+                    'status' => $displays->present($display)['status'],
+                ],
                 'receipt' => $collection->is_fully_collected
                     ? $this->receipts->forVoucher($voucher, $collection->currency)
                     : null,

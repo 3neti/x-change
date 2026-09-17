@@ -1615,6 +1615,8 @@ export type CockpitCollectionDestination = {
 };
 
 export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
+    display_campaigns?: import('./pairedDisplay').DisplayCampaign[];
+    display_session?: import('./pairedDisplay').DisplaySession | null;
     collection_destination?: CockpitCollectionDestination | null;
     startup_mode?: 'blank' | 'repeat_last';
     quick_generate_read_model?: CockpitQuickGenerateReadModel;

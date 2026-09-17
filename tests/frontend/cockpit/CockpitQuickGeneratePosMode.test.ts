@@ -84,6 +84,11 @@ describe('Cockpit Quick Generate POS mode', () => {
         ).toBe(true);
         wrapper
             .findComponent({ name: 'CockpitQuickGeneratePosPanel' })
+            .vm.$emit('update:issuanceSurface', 'qr');
+        await wrapper.vm.$nextTick();
+        expect(wrapper.findComponent({ name: 'CockpitQuickGenerateQrPanel' }).exists()).toBe(true);
+        wrapper
+            .findComponent({ name: 'CockpitQuickGenerateQrPanel' })
             .vm.$emit('update:issuanceSurface', 'composer');
         await wrapper.vm.$nextTick();
 

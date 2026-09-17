@@ -6,6 +6,10 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
+      "@/routes/x-change/cockpit/display-sessions": path.resolve(
+        import.meta.dirname,
+        "tests/frontend/stubs/display-session-routes.ts",
+      ),
       "@laravel/echo-vue": path.resolve(
         import.meta.dirname,
         "tests/frontend/stubs/echo-vue.ts",

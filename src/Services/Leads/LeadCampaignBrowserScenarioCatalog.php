@@ -16,6 +16,14 @@ final class LeadCampaignBrowserScenarioCatalog
         return [
             $this->feedbackEndpoint(),
             $this->auiInsurance(),
+            [
+                ...$this->auiInsurance(),
+                'key' => 'paired_campaign_qr',
+                'title' => 'Paired seller/customer QR',
+                'description' => 'Open a seller display without issuing a Pay Code. Scan its campaign QR from a separate customer browser, complete intake, and choose QR Ph to display payment on the seller screen.',
+                'details_description' => 'Use two browser sessions. Test data only; generating a QR does not make a payment.',
+                'fields' => ['Name', 'Mobile', 'Email', 'Address', 'Birth Date', 'Reference Code'],
+            ],
         ];
     }
 

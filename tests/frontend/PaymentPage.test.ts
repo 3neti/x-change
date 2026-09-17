@@ -44,6 +44,59 @@ describe('PaymentPage', () => {
         usePoll.mockReturnValue({ start: pollStart, stop: pollStop });
     });
 
+    it('directs paired customers to the seller display without exposing a QR', async () => {
+        const payment = {
+            ...pendingPayment,
+            paired_display: {
+                reference: 'DISPLAY1',
+                status: 'awaiting_payment',
+            },
+            attempt: {
+                reference: 'ATTEMPT1',
+                status: 'awaiting_payment',
+                provider: 'netbank',
+                amount_minor: 7500,
+                currency: 'PHP',
+                expires_at: null,
+                last_checked_at: null,
+                can_check: true,
+                qr_code: {
+                    mime_type: 'image/png',
+                    base64_payload: 'PRIVATEQR',
+                    qr_mode: 'dynamic',
+                    transaction_type: 'P2M',
+                    embedded_amount: true,
+                },
+            },
+        };
+        const wrapper = mount(PaymentPage, { props: { payment } });
+        expect(
+            wrapper
+                .get('[data-testid="payer-paired-display-instructions"]')
+                .text(),
+        ).toContain('Scan the seller screen');
+        expect(wrapper.find('img[alt^="QR Ph code"]').exists()).toBe(false);
+        expect(wrapper.html()).not.toContain('PRIVATEQR');
+        await wrapper.setProps({
+            payment: {
+                ...payment,
+                paired_display: { reference: 'DISPLAY1', status: 'ended' },
+            },
+        });
+        expect(
+            wrapper.get('[data-testid="payer-pairing-unavailable"]').text(),
+        ).toContain('ended or expired');
+        expect(wrapper.text()).not.toContain('Scan the seller screen');
+        await wrapper.setProps({
+            payment: {
+                ...payment,
+                paired_display: { reference: 'DISPLAY1', status: 'claimed' },
+            },
+        });
+        expect(wrapper.text()).toContain('Preparing the seller display');
+        expect(wrapper.text()).not.toContain('Scan the seller screen');
+    });
+
     it('starts one exact payment attempt through the generated route', async () => {
         const wrapper = mount(PaymentPage, {
             props: {

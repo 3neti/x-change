@@ -15,6 +15,8 @@ import CockpitQuickGenerateMutationAuthorizationDecisionPanel from '../component
 import CockpitQuickGenerateMutationHandoffPlanPanel from '../components/CockpitQuickGenerateMutationHandoffPlanPanel.vue';
 import CockpitQuickGenerateMutationPreconditionsReviewPanel from '../components/CockpitQuickGenerateMutationPreconditionsReviewPanel.vue';
 import CockpitQuickGeneratePosPanel from '../components/CockpitQuickGeneratePosPanel.vue';
+import CockpitQuickGenerateQrPanel from '../components/CockpitQuickGenerateQrPanel.vue';
+import type { CockpitQuickGenerateSurface } from '../components/CockpitQuickGenerateSurfaceSwitch.vue';
 import CockpitQuickGeneratePricingGatePanel from '../components/CockpitQuickGeneratePricingGatePanel.vue';
 import CockpitQuickGenerateSubmitPanel from '../components/CockpitQuickGenerateSubmitPanel.vue';
 import CockpitQuickGenerateValidationRedactionGatePanel from '../components/CockpitQuickGenerateValidationRedactionGatePanel.vue';
@@ -51,7 +53,10 @@ import type {
 } from '../types';
 
 const props = defineProps<CockpitQuickGeneratePageProps>();
-const issuanceSurface = ref<'composer' | 'pos'>('composer');
+const issuanceSurface = ref<CockpitQuickGenerateSurface>(
+    props.display_session ? 'qr' : 'composer',
+);
+const displaySession = ref(props.display_session ?? null);
 
 const clientFundsMinor = computed<number | null>(() => {
     const amount = props.cockpit_header_read_model?.balances?.find(
@@ -1127,7 +1132,9 @@ function stringValue(value: unknown): string | null {
                         {{
                             issuanceSurface === 'pos'
                                 ? 'Point of Sale'
-                                : 'Pay Code Issuance'
+                                : issuanceSurface === 'qr'
+                                  ? 'QR Code'
+                                  : 'Pay Code Issuance'
                         }}
                     </h2>
                     <p
@@ -1136,7 +1143,9 @@ function stringValue(value: unknown): string | null {
                         {{
                             issuanceSurface === 'pos'
                                 ? 'Create a payment QR and watch the sale complete.'
-                                : 'Create a Pay Code for someone to claim.'
+                                : issuanceSurface === 'qr'
+                                  ? 'Pair a campaign with this seller display.'
+                                  : 'Create a Pay Code for someone to claim.'
                         }}
                     </p>
                 </div>
@@ -1184,10 +1193,16 @@ function stringValue(value: unknown): string | null {
                     :templates="templates"
                 />
                 <CockpitQuickGeneratePosPanel
-                    v-else
+                    v-else-if="issuanceSurface === 'pos'"
                     v-model:issuance-surface="issuanceSurface"
                     :mutation-contract="mutationContract"
                     :pos-voucher="props.pos_voucher"
+                />
+                <CockpitQuickGenerateQrPanel
+                    v-else
+                    v-model:issuance-surface="issuanceSurface"
+                    v-model:session="displaySession"
+                    :campaigns="props.display_campaigns"
                 />
             </div>
         </section>

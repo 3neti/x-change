@@ -72,7 +72,7 @@ final readonly class StartLeadCampaign
         return $result;
     }
 
-    private function ensureStartable(LeadCampaign $campaign): void
+    public function ensureStartable(LeadCampaign $campaign): void
     {
         if ($campaign->status !== 'active') {
             throw ValidationException::withMessages([
