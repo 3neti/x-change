@@ -1440,6 +1440,18 @@ return [
         ],
     ],
 
+    'audit' => [
+        'cache' => [
+            'bucket_size' => (int) env('XCHANGE_AUDIT_CACHE_BUCKET_SIZE', 500),
+            'max_recent_buckets' => (int) env('XCHANGE_AUDIT_CACHE_MAX_RECENT_BUCKETS', 48),
+            'event_ttl' => (int) env('XCHANGE_AUDIT_CACHE_EVENT_TTL', 2_592_000),
+            'default_list_limit' => (int) env('XCHANGE_AUDIT_CACHE_DEFAULT_LIST_LIMIT', 50),
+            'max_list_limit' => (int) env('XCHANGE_AUDIT_CACHE_MAX_LIST_LIMIT', 100),
+            'lock_seconds' => (int) env('XCHANGE_AUDIT_CACHE_LOCK_SECONDS', 10),
+            'lock_wait_seconds' => (int) env('XCHANGE_AUDIT_CACHE_LOCK_WAIT_SECONDS', 5),
+        ],
+    ],
+
     'integrations' => [
         'system_wallet_resolver' => NullSystemWalletResolver::class,
         'audit_logger' => CacheAuditLogger::class,

@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Support\Logging;
 
 use Illuminate\Support\Str;
+use LBHurtado\XChange\Contracts\AppendableEventStoreContract;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
 
 class CacheAuditLogger implements AuditLoggerContract
 {
     public function __construct(
-        protected CacheEventStore $store,
+        protected AppendableEventStoreContract $store,
     ) {}
 
     public function log(string $event, array $payload = []): void

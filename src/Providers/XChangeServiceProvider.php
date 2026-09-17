@@ -62,6 +62,7 @@ use LBHurtado\XChange\Actions\Auth\ResetMobileFirstPin;
 use LBHurtado\XChange\Console\Commands\AdoptCommissioningManifestCommand;
 use LBHurtado\XChange\Console\Commands\AdoptHostCommand;
 use LBHurtado\XChange\Console\Commands\AdoptXChangeCommand;
+use LBHurtado\XChange\Console\Commands\BootstrapXChangeFromManifestCommand;
 use LBHurtado\XChange\Console\Commands\Campaigns\ProcessCampaignBatchFulfillmentOutboxCommand;
 use LBHurtado\XChange\Console\Commands\Campaigns\ShowCampaignPayoutRecoveryDeliveriesCommand;
 use LBHurtado\XChange\Console\Commands\Claim\ClaimWalkthroughCommand;
@@ -69,6 +70,7 @@ use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionCont
 use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
 use LBHurtado\XChange\Console\Commands\Claim\SnapshotRiderSplashArtworkCommand;
 use LBHurtado\XChange\Console\Commands\Claim\SubmitPayCodeClaimCommand;
+use LBHurtado\XChange\Console\Commands\CleanupLegacyEventIndexCommand;
 use LBHurtado\XChange\Console\Commands\CloudRecipeCommand;
 use LBHurtado\XChange\Console\Commands\Cockpit\SeedCockpitDiagnosticActivityCommand;
 use LBHurtado\XChange\Console\Commands\Cockpit\ShowCockpitOperatorActivityRuntimeProfileCommand;
@@ -82,7 +84,6 @@ use LBHurtado\XChange\Console\Commands\Commercial\ReconcilePendingPartnerCommiss
 use LBHurtado\XChange\Console\Commands\Commercial\RecordProviderCostBatchCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\RequestPartnerCommissionPayoutBatchCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\SubmitPartnerCommissionPayoutBatchCommand;
-use LBHurtado\XChange\Console\Commands\BootstrapXChangeFromManifestCommand;
 use LBHurtado\XChange\Console\Commands\CommissionFromManifestCommand;
 use LBHurtado\XChange\Console\Commands\CommissioningStatusCommand;
 use LBHurtado\XChange\Console\Commands\CommissionXChangeCommand;
@@ -158,6 +159,7 @@ use LBHurtado\XChange\Console\Commands\ValidateDeploymentManifestCommand;
 use LBHurtado\XChange\Console\Commands\Wallet\GetWalletBalanceCommand;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\AccountProvisioningContract;
+use LBHurtado\XChange\Contracts\AppendableEventStoreContract;
 use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
 use LBHurtado\XChange\Contracts\CampaignBankTransferDispatcherContract;
 use LBHurtado\XChange\Contracts\CampaignBankTransferStatusCheckerContract;
@@ -1041,7 +1043,9 @@ class XChangeServiceProvider extends ServiceProvider
 
         $this->app->bind(EventLifecycleServiceContract::class, EventLifecycleService::class);
 
-        $this->app->singleton(EventStoreContract::class, CacheEventStore::class);
+        $this->app->singleton(CacheEventStore::class);
+        $this->app->alias(CacheEventStore::class, EventStoreContract::class);
+        $this->app->alias(CacheEventStore::class, AppendableEventStoreContract::class);
 
         $this->app->bind(
             WithdrawalLifecycleServiceContract::class,
@@ -1449,6 +1453,7 @@ class XChangeServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->commands([
+                CleanupLegacyEventIndexCommand::class,
                 OnboardIssuerCommand::class,
                 OpenIssuerWalletCommand::class,
                 VerifyTestMobileCommand::class,

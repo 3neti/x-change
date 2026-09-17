@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Bavix\Wallet\Models\Transaction;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
 use LBHurtado\EmiCore\Contracts\StandingFundingAddressProvider;
@@ -25,6 +26,8 @@ use LBHurtado\XChange\Actions\Funding\ProvisionStandingFundingAddress;
 use LBHurtado\XChange\Actions\Funding\RepairStandingFundingAddressBindingEffectiveAt;
 use LBHurtado\XChange\Actions\Funding\RequestStandingFundingAddressBindingMigration;
 use LBHurtado\XChange\Actions\Funding\SyncStandingFundingAddress;
+use LBHurtado\XChange\Contracts\AppendableEventStoreContract;
+use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Enums\AccountFundingReceiptStatus;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
@@ -41,6 +44,7 @@ use LBHurtado\XChange\Models\StandingFundingAddressBindingRevision;
 use LBHurtado\XChange\Models\TreasuryOperatorAuthorization;
 use LBHurtado\XChange\Services\Funding\StandingFundingAccountReferenceResolver;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressBindingResolver;
+use LBHurtado\XChange\Support\Logging\CacheAuditLogger;
 
 beforeEach(function () {
     enableNetbankTreasuryForTests();
@@ -206,6 +210,34 @@ it('recognizes settled provider evidence and credits an Account exactly once', f
         fn (FundingProjectionChanged $event): bool => $event->broadcastWith()['reason']
             === 'account_funding_settled',
     );
+});
+
+it('synchronizes funding without materializing the legacy unbounded event index', function () {
+    Cache::forever('xchange:events:index', array_fill(0, 50_000, 'legacy-event'));
+    app()->instance(
+        AuditLoggerContract::class,
+        new CacheAuditLogger(app(AppendableEventStoreContract::class)),
+    );
+
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    $address = provisionStandingAddress(
+        $user,
+        'wallet:'.$wallet->uuid,
+        FundingAddressPurpose::AccountFunding,
+        FundingRecognitionMode::Automatic,
+    );
+    $provider->observations = [
+        standingFundingObservation($provider->fundingAddress),
+    ];
+
+    $result = app(SyncStandingFundingAddress::class)->handle($address);
+
+    expect($result->applied)->toBe(1)
+        ->and(Cache::get('xchange:events:index'))->toHaveCount(50_000)
+        ->and(Cache::get('xchange:events:v2:recent-buckets'))->not->toBeEmpty();
 });
 
 it('keeps a realtime broadcast outage outside the committed Account credit', function () {
