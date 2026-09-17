@@ -10,6 +10,7 @@ use LBHurtado\PaymentGateway\Funding\NetbankFundingProviderAdapter;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
 use LBHurtado\XChange\Actions\Payment\IssuePaymentInstructions;
+use LBHurtado\XChange\Actions\Payment\SettleVerifiedPaymentAttempt;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
 use LBHurtado\XChange\Models\PaymentAttempt;
@@ -49,6 +50,31 @@ it('renders a read-only collectible payment page without sensitive instructions'
         ->assertJsonPath('props.payment.poll_interval_ms', 1000)
         ->assertJsonPath('props.payment.attempt', null)
         ->assertJsonPath('props.payment.receipt', null);
+});
+
+it('shows verified but incomplete collection without inviting another payment', function (): void {
+    $voucher = publicPaymentVoucher();
+    $this->post(route('x-change.pay.attempts.store', $voucher->code))->assertRedirect();
+    $attempt = PaymentAttempt::query()->sole();
+    $this->paymentAdapter->fundingObservation = publicExactPaymentObservation($attempt);
+    $settle = Mockery::mock(SettleVerifiedPaymentAttempt::class);
+    $settle->shouldReceive('handle')->once()->andThrow(new RuntimeException('internal settlement failure'));
+    app()->instance(SettleVerifiedPaymentAttempt::class, $settle);
+    Exceptions::fake();
+
+    $this->post(route('x-change.pay.attempts.checks.store', ['code' => $voucher->code, 'attempt' => $attempt->reference]))
+        ->assertRedirect()
+        ->assertSessionHas('payment_notice', 'Your bank payment is verified. Collection completion is pending. Do not pay again.');
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.pay.show', ['code' => $voucher->code, 'attempt' => $attempt->reference]))
+        ->assertOk()
+        ->assertJsonPath('props.payment.attempt.status', 'verified')
+        ->assertJsonPath('props.payment.attempt.can_check', false)
+        ->assertJsonPath('props.payment.attempt.qr_code', null)
+        ->assertJsonPath('props.payment.can_create_attempt', false)
+        ->assertJsonPath('props.payment.is_fully_paid', false);
+    expect(VoucherCollection::query()->count())->toBe(0);
 });
 
 it('renders the same public payment page for settlement Pay Codes after intake', function (): void {

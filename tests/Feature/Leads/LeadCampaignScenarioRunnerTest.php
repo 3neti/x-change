@@ -2,17 +2,23 @@
 
 declare(strict_types=1);
 
+use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Enums\VoucherInputField;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Actions\Payment\VerifyPaymentAttempt;
+use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
 use LBHurtado\XChange\Data\DebitData;
 use LBHurtado\XChange\Data\IssuerData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
+use LBHurtado\XChange\Enums\PaymentAttemptStatus;
+use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Models\PaymentAttempt;
+use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 
@@ -112,11 +118,24 @@ it('preserves the AUI settlement target from the endpoint template and offers sa
         ->and($instructions['target_amount'])->toBe(100)
         ->and(data_get($instructions, 'cash.amount'))->toBe(0)
         ->and(data_get($instructions, 'metadata.flow_type'))->toBe('settlement')
+        ->and(data_get($instructions, 'metadata.custom.settlement.driver'))->toBe('claim-intake')
         ->and(data_get($instructions, 'claim.default_outcome'))->toBe('lead_intake')
         ->and(data_get($instructions, 'rider.url'))->toBeNull();
 
     data_set($instructions, 'metadata.collection_wallet_id', $operator->wallet->id);
     $voucher = issueVoucher(validVoucherInstructions(0, 'INSTAPAY', $instructions));
+
+    app(SubmitWebPayCodeClaim::class)->handle($voucher, [
+        'mobile' => '639171234567',
+        'inputs' => [
+            'name' => 'Demo Applicant',
+            'mobile' => '639171234567',
+            'email' => 'demo@example.test',
+            'address' => 'Demo address',
+            'birth_date' => '1990-01-01',
+            'reference_code' => 'DEMO-001',
+        ],
+    ]);
 
     $this->withHeader('X-Inertia', 'true')
         ->get(route('x-change.claim.show', ['code' => $voucher->code]))
@@ -156,6 +175,34 @@ it('preserves the AUI settlement target from the endpoint template and offers sa
         ->assertJsonPath('props.payment.attempt.amount_minor', 10000)
         ->assertJsonPath('props.payment.attempt.qr_code.mime_type', 'image/png')
         ->assertJsonStructure(['props' => ['payment' => ['attempt' => ['qr_code' => ['base64_payload']]]]]);
+
+    $adapter = app($adapterClass);
+    $adapter->fundingObservation = new ProviderFundingObservationData(
+        provider: 'netbank',
+        providerTransactionId: 'aui-demo-payment',
+        grossAmountMinor: 10000,
+        feeAmountMinor: 0,
+        netAmountMinor: 10000,
+        currency: 'PHP',
+        providerStatus: 'settled',
+        verificationSource: 'fake-authoritative-api',
+        payloadHash: hash('sha256', 'aui-demo-payment'),
+        fundingAddress: $attempt->funding_address_ciphertext,
+        occurredAt: now()->toDateTimeImmutable(),
+        settledAt: now()->toDateTimeImmutable(),
+        metadata: ['destination_verified' => true],
+    );
+    $settled = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    $replay = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+
+    expect($settled->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and($replay->voucher_collection_id)->toBe($settled->voucher_collection_id)
+        ->and(VoucherCollection::where('voucher_id', $voucher->id)->count())->toBe(1);
+
+    $this->get(route('x-change.pay.show', ['code' => $voucher->code, 'attempt' => $attempt->reference]))
+        ->assertOk()
+        ->assertJsonPath('props.payment.is_fully_paid', true)
+        ->assertJsonPath('props.payment.receipt.amount_paid_minor', 10000);
 });
 
 it('continues the feedback browser scenario through public endpoint generation into claim', function (): void {

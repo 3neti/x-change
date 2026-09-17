@@ -13,6 +13,7 @@ use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptSessionGuard;
+use Throwable;
 
 class PaymentVerificationCheckController extends Controller
 {
@@ -32,7 +33,15 @@ class PaymentVerificationCheckController extends Controller
         $browserKey = (string) $request->session()->get('x-change.payment.browser-key', '');
         $sessions->assertOwner($attempt, $browserKey);
 
-        $checked = $verify->handle($attempt, PaymentVerificationTrigger::Payer);
+        try {
+            $checked = $verify->handle($attempt, PaymentVerificationTrigger::Payer);
+        } catch (Throwable $exception) {
+            $checked = $attempt->fresh();
+            if ($checked?->status !== PaymentAttemptStatus::Verified) {
+                throw $exception;
+            }
+            report($exception);
+        }
 
         return redirect()
             ->route('x-change.pay.show', [
@@ -46,6 +55,7 @@ class PaymentVerificationCheckController extends Controller
     {
         return match ($status) {
             PaymentAttemptStatus::Settled => 'Payment confirmed from NetBank history.',
+            PaymentAttemptStatus::Verified => 'Your bank payment is verified. Collection completion is pending. Do not pay again.',
             PaymentAttemptStatus::AwaitingPayment => 'No settled matching payment is visible yet.',
             PaymentAttemptStatus::Suspense => 'NetBank returned payment evidence that needs review.',
             PaymentAttemptStatus::Expired => 'This payment QR has expired.',

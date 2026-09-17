@@ -83,6 +83,9 @@ const props = defineProps<{
 }>();
 const creating = ref(false);
 const checking = ref(false);
+const completionPending = computed(
+    () => props.payment.attempt?.status === 'verified',
+);
 const pairedUnavailable = computed(() =>
     ['ended', 'expired', 'review'].includes(
         props.payment.paired_display?.status ?? '',
@@ -109,7 +112,7 @@ const attemptAmount = computed(() =>
 const shouldPoll = computed(
     () =>
         props.payment.attempt !== null &&
-        props.payment.attempt.can_check === true &&
+        (props.payment.attempt.can_check === true || completionPending.value) &&
         !props.payment.is_fully_paid,
 );
 const { start: startPaymentPoll, stop: stopPaymentPoll } = usePoll(
@@ -295,11 +298,17 @@ function printReceipt(): void {
                 </CardHeader>
                 <CardContent>
                     <div class="rounded-lg bg-muted p-4 text-center">
-                        <p class="text-sm text-muted-foreground">Amount due</p>
+                        <p class="text-sm text-muted-foreground">
+                            {{
+                                completionPending
+                                    ? 'Payment received'
+                                    : 'Amount due'
+                            }}
+                        </p>
                         <p
                             class="mt-1 text-3xl font-bold tracking-tight text-foreground tabular-nums"
                         >
-                            {{ amountDue }}
+                            {{ completionPending ? attemptAmount : amountDue }}
                         </p>
                         <Badge variant="outline" class="mt-2">{{
                             payment.pay_code
@@ -335,7 +344,28 @@ function printReceipt(): void {
             </Card>
 
             <Card
-                v-if="!payment.is_fully_paid"
+                v-if="completionPending && !payment.is_fully_paid"
+                data-testid="payer-completion-pending"
+                role="status"
+            >
+                <CardHeader>
+                    <CardTitle>Payment received — completion pending</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p>
+                        Your bank payment has been verified. We are completing
+                        the collection record. Do not pay again. This page
+                        updates automatically.
+                    </p>
+                    <p class="mt-2 text-sm text-muted-foreground">
+                        If this message persists, give the merchant Pay Code
+                        {{ payment.pay_code }}.
+                    </p>
+                </CardContent>
+            </Card>
+
+            <Card
+                v-if="!payment.is_fully_paid && !completionPending"
                 data-testid="payer-funding-methods-step"
                 class="border-primary/10 shadow-none print:hidden"
             >

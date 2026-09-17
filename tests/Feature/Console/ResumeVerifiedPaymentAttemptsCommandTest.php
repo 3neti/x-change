@@ -13,6 +13,7 @@ use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
 use LBHurtado\XChange\Actions\Payment\VerifyPaymentAttempt;
+use LBHurtado\XChange\Actions\Redemption\PrepareVoucherClaimEvidence;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
@@ -89,6 +90,32 @@ it('settles an already verified attempt before applying expiry logic', function 
 
     expect($settled->status)->toBe(PaymentAttemptStatus::Settled)
         ->and($settled->expired_at)->toBeNull()
+        ->and($this->settlementRecoveryAdapter->lastVerification)->toBeNull();
+});
+
+it('recovers a verified intake settlement once from durable evidence without provider calls', function (): void {
+    $fixture = verifiedSettlementRecoveryFixture(10_000, now()->subHour());
+    $voucher = $fixture['voucher'];
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.metadata.flow_type', 'settlement');
+    data_set($metadata, 'instructions.claim', ['outcomes' => [['key' => 'lead_intake']], 'default_outcome' => 'lead_intake']);
+    data_set($metadata, 'instructions.inputs.fields', ['name', 'mobile', 'email']);
+    $voucher->update(['metadata' => $metadata]);
+    app(PrepareVoucherClaimEvidence::class)->handle($voucher, ['inputs' => [
+        'name' => 'Demo Applicant', 'mobile' => '639171234567', 'email' => 'demo@example.test',
+    ]]);
+
+    foreach (range(1, 2) as $run) {
+        $this->artisan('x-change:payments:resume-verified', [
+            '--attempt' => [$fixture['attempt']->reference], '--commit' => true, '--json' => true,
+        ])->assertSuccessful();
+    }
+
+    expect($fixture['attempt']->fresh()->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and(VoucherCollection::query()->count())->toBe(1)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
+        ->and(TreasuryPositionOperation::query()->count())->toBe(2)
+        ->and(treasuryClientFundsLedger($fixture['owner'])->getBalanceIntAttribute())->toBe(10_000)
         ->and($this->settlementRecoveryAdapter->lastVerification)->toBeNull();
 });
 

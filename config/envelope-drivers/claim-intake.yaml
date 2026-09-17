@@ -1,0 +1,14 @@
+id: claim-intake
+version: 1.0.0
+name: Claim Intake Collection
+description: Collection after the configured claim evidence has been durably captured.
+
+checklist:
+  - id: claim_intake_complete
+    label: Required application evidence captured
+    auto: true
+
+gates:
+  settleable:
+    conditions:
+      - claim_intake_complete

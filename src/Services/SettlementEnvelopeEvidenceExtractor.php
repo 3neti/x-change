@@ -8,6 +8,10 @@ use Illuminate\Support\Arr;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Data\Settlement\SettlementEnvelopeEvidenceData;
 use LBHurtado\XChange\Data\Settlement\SettlementEnvelopeProfileData;
+use LBHurtado\XChange\Enums\ClaimEvidenceStatus;
+use LBHurtado\XChange\Exceptions\IncompleteClaimEvidence;
+use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\Claim\ClaimEvidenceRequirements;
 
 class SettlementEnvelopeEvidenceExtractor
 {
@@ -55,6 +59,10 @@ class SettlementEnvelopeEvidenceExtractor
             ?? Arr::get($instructionsMetadata, 'settlement_checklist')
             ?? [];
 
+        if ($profile->driver === 'claim-intake') {
+            $checklist['claim_intake_complete'] = $this->claimIntakeComplete($voucher);
+        }
+
         return new SettlementEnvelopeEvidenceData(
             payload: $payload,
             documents: is_array($documents) ? $documents : [],
@@ -68,6 +76,52 @@ class SettlementEnvelopeEvidenceExtractor
                 'source' => 'x-change',
             ],
         );
+    }
+
+    private function claimIntakeComplete(Voucher $voucher): bool
+    {
+        if (data_get($voucher->metadata, 'instructions.claim.default_outcome') !== 'lead_intake') {
+            return false;
+        }
+
+        $requirements = app(ClaimEvidenceRequirements::class);
+
+        foreach (VoucherClaim::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->whereIn('status', ['prepared', 'succeeded'])
+            ->with('evidence')
+            ->lazyByIdDesc(50) as $claim) {
+            if (data_get($claim->meta, 'evidence.persisted') !== true) {
+                continue;
+            }
+
+            $inputs = [];
+            foreach ($claim->evidence as $evidence) {
+                if ((int) $evidence->voucher_id !== (int) $voucher->getKey()
+                    || ! in_array($evidence->status, [ClaimEvidenceStatus::Captured, ClaimEvidenceStatus::Verified], true)) {
+                    continue;
+                }
+
+                $inputs[$evidence->requirement_key] = data_get($evidence->payload, 'value')
+                    ?? (filled($evidence->artifact_path) ? true : null);
+            }
+
+            if (! filled($inputs['name'] ?? null)
+                || ! filled($inputs['mobile'] ?? null)
+                || ! filled($inputs['email'] ?? null)) {
+                continue;
+            }
+
+            try {
+                $requirements->assertComplete($voucher, ['inputs' => $inputs]);
+
+                return true;
+            } catch (IncompleteClaimEvidence) {
+                continue;
+            }
+        }
+
+        return false;
     }
 
     protected function mapPayloadFromFormFlow(array $mapping, array $context): array

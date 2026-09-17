@@ -64,6 +64,12 @@ class SettlementEnvelopeMetadataSyncService
             ...$existingEnvelope,
             'driver' => Arr::get($existingEnvelope, 'driver')
                 ?? Arr::get($metadata, 'settlement_driver')
+                    ?? Arr::get($metadata, 'instructions.metadata.settlement_driver')
+                    ?? Arr::get($metadata, 'instructions.metadata.envelope_driver')
+                    ?? Arr::get($metadata, 'instructions.metadata.custom.settlement.driver')
+                    ?? (Arr::get($metadata, 'instructions.claim.default_outcome') === 'lead_intake'
+                        ? 'claim-intake'
+                        : null)
                     ?? config('x-change.settlement.default_driver', 'philhealth-bst'),
             'payload' => $envelopePayload,
             'documents' => (array) Arr::get($existingEnvelope, 'documents', []),

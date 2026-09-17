@@ -318,6 +318,22 @@ it('shows provider QR only to the seller and polls without writes or provider ve
         ->assertJsonPath('session.status', 'paid')->assertJsonPath('session.attempt', null);
 });
 
+it('keeps verified payment completion visible after the paired QR expires', function (): void {
+    $session = createPairedDisplay();
+    $this->get(pairedDisplayEntryUrl($session))->assertRedirect();
+    $voucher = $session->fresh()->voucher;
+    $session->update(['intake_completed_at' => now()]);
+    $this->post(route('x-change.pay.attempts.store', $voucher->code))->assertRedirect();
+    $attempt = PaymentAttempt::query()->sole();
+    app(TransitionPaymentAttempt::class)->handle($attempt, PaymentAttemptStatus::Verified, 'test_verification', PaymentVerificationTrigger::Operator);
+    $this->travel(30)->minutes();
+    $this->getJson(route('x-change.cockpit.display-sessions.show', $session->reference))->assertOk()
+        ->assertJsonPath('session.status', 'completing')
+        ->assertJsonPath('session.attempt', null)
+        ->assertJsonPath('session.entry_qr_data_uri', null);
+    expect($this->displayAdapter->lastVerification)->toBeNull();
+});
+
 it('does not unlock paired payment when required intake evidence is invalid or missing', function (mixed $name): void {
     $template = $this->displayCampaign->payCodeTemplate;
     $instructions = $template->instructions_ciphertext;

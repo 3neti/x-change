@@ -11,6 +11,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptSessionGuard;
+use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\VoucherCapabilityGuard;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LogicException;
@@ -21,6 +22,7 @@ class CreatePaymentAttempt
         private readonly VoucherCapabilityGuard $capabilities,
         private readonly VoucherCollectionProgressService $progress,
         private readonly PaymentAttemptSessionGuard $sessions,
+        private readonly SettlementCollectionGate $settlementGate,
     ) {}
 
     public function handle(
@@ -30,6 +32,10 @@ class CreatePaymentAttempt
         string $idempotencyKey,
     ): PaymentAttempt {
         $this->capabilities->ensureCanCollect($voucher);
+
+        if (data_get($voucher->metadata, 'instructions.claim.default_outcome') === 'lead_intake') {
+            $this->settlementGate->ensureCollectibleSettlementIsReady($voucher);
+        }
 
         $provider = strtolower($this->required($provider, 'Provider'));
         $browserKey = $this->required($browserKey, 'Browser session');

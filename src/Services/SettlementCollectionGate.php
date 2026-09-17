@@ -82,6 +82,12 @@ class SettlementCollectionGate
             'driver' => data_get($envelope, 'driver')
                 ?? $metadata['settlement_driver']
                     ?? $metadata['envelope_driver']
+                    ?? data_get($metadata, 'instructions.metadata.settlement_driver')
+                    ?? data_get($metadata, 'instructions.metadata.envelope_driver')
+                    ?? data_get($metadata, 'instructions.metadata.custom.settlement.driver')
+                    ?? (data_get($metadata, 'instructions.claim.default_outcome') === 'lead_intake'
+                        ? 'claim-intake'
+                        : null)
                     ?? config('x-change.settlement.default_driver', 'philhealth-bst'),
             'gate' => config('x-change.settlement.default_gate', 'settleable'),
             'payload' => (array) (

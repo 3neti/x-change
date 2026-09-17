@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
 use LBHurtado\XChange\Actions\Payment\IssuePaymentInstructions;
+use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
 use Throwable;
@@ -71,6 +72,10 @@ class PaymentAttemptController extends Controller
                 return $issue->handle($attempt);
             };
             $attempt = $display === null ? $issueAttempt() : $displays->synchronized($display, $issueAttempt);
+        } catch (VoucherRequiresSettlementEnvelope) {
+            return redirect()
+                ->route('x-change.pay.show', ['code' => $voucher->code])
+                ->with('payment_notice', 'Complete the required application evidence before paying.');
         } catch (Throwable) {
             return redirect()
                 ->route('x-change.pay.show', ['code' => $voucher->code])

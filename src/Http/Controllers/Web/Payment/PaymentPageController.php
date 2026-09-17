@@ -9,6 +9,7 @@ use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
+use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptPresenter;
@@ -63,6 +64,7 @@ class PaymentPageController extends Controller
                 'provider_available' => $providerEnabled,
                 'can_create_attempt' => (bool) config('x-change.payment.attempts.enabled', true)
                     && $providerEnabled
+                    && $attempt?->status !== PaymentAttemptStatus::Verified
                     && ($display === null || ($display->ended_at === null && ! $display->expires_at->isPast() && $displays->intakeReady($display, $voucher)))
                     && ! $collection->is_fully_collected,
                 'poll_interval_ms' => max(1000, (int) config('x-change.payment.attempts.ui_refresh_interval_milliseconds', 5000)),

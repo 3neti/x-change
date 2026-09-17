@@ -135,15 +135,16 @@ final readonly class CampaignDisplaySessions
         if ($attempt !== null) {
             $status = match ($attempt->status) {
                 PaymentAttemptStatus::Settled => 'paid',
+                PaymentAttemptStatus::Verified => 'completing',
                 PaymentAttemptStatus::Suspense => 'review',
                 PaymentAttemptStatus::Expired, PaymentAttemptStatus::Cancelled => 'expired',
                 default => 'awaiting_payment',
             };
-            if ($attempt->expires_at?->isPast() && $status !== 'paid') {
+            if ($attempt->expires_at?->isPast() && ! in_array($status, ['paid', 'completing'], true)) {
                 $status = 'expired';
             }
         }
-        if ($session->expires_at->isPast() && ! in_array($status, ['paid', 'completed'], true)) {
+        if ($session->expires_at->isPast() && ! in_array($status, ['paid', 'completed', 'completing'], true)) {
             $status = 'expired';
         }
         if ($session->ended_at !== null) {

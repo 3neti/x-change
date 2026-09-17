@@ -279,6 +279,26 @@ describe('paired campaign display', () => {
         expect(wrapper.classes()).not.toContain('fixed');
     });
 
+    it('shows verified collection completion instead of another QR even after display expiry', async () => {
+        const completing = {
+            ...payment,
+            status: 'completing' as const,
+            attempt: null,
+            expires_at: '2020-01-01T00:00:00Z',
+        };
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(completing)));
+        const wrapper = render({ session: completing });
+        await flushPromises();
+        expect(wrapper.text()).toContain(
+            'Payment received — completion pending',
+        );
+        expect(wrapper.text()).toContain('Do not pay again');
+        expect(
+            wrapper.find('[data-testid="display-payment-qr"]').exists(),
+        ).toBe(false);
+        expect(wrapper.text()).not.toContain('Display expired');
+    });
+
     it('blocks unavailable campaigns and distinguishes review from successful payment', async () => {
         const fetchMock = vi.fn();
         vi.stubGlobal('fetch', fetchMock);

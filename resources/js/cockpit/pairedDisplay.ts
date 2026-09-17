@@ -13,6 +13,7 @@ export type DisplaySession = {
         | 'ready'
         | 'claimed'
         | 'awaiting_payment'
+        | 'completing'
         | 'paid'
         | 'completed'
         | 'expired'

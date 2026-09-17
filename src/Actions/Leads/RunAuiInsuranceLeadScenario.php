@@ -78,6 +78,7 @@ final readonly class RunAuiInsuranceLeadScenario
             'metadata' => [
                 'flow_type' => 'settlement',
                 'custom' => [
+                    'settlement' => ['driver' => 'claim-intake'],
                     'lead_campaign' => [
                         'scenario' => 'aui_on_demand_insurance_payment',
                         'payment_mode' => 'same_code_after_intake',

@@ -46,7 +46,9 @@ const expired = computed(() =>
 );
 const status = computed(() =>
     expired.value &&
-    !['paid', 'completed', 'ended'].includes(session.value?.status ?? '')
+    !['paid', 'completed', 'ended', 'completing'].includes(
+        session.value?.status ?? '',
+    )
         ? 'expired'
         : session.value?.status,
 );
@@ -358,26 +360,30 @@ onBeforeUnmount(() => {
                             {{
                                 status === 'paid'
                                     ? 'Payment confirmed'
-                                    : status === 'completed'
-                                      ? 'Claim completed'
-                                      : status === 'expired'
-                                        ? 'Display expired'
-                                        : status === 'review'
-                                          ? 'Payment under review'
-                                          : status === 'claimed'
-                                            ? 'Customer connected'
-                                            : 'Reconnecting display'
+                                    : status === 'completing'
+                                      ? 'Payment received — completion pending'
+                                      : status === 'completed'
+                                        ? 'Claim completed'
+                                        : status === 'expired'
+                                          ? 'Display expired'
+                                          : status === 'review'
+                                            ? 'Payment under review'
+                                            : status === 'claimed'
+                                              ? 'Customer connected'
+                                              : 'Reconnecting display'
                             }}
                         </h4>
                         <p class="mt-2 text-sm">
                             {{
                                 status === 'paid' || status === 'completed'
                                     ? 'Ready for the next customer.'
-                                    : status === 'expired'
-                                      ? 'Start a fresh display before inviting another customer.'
-                                      : status === 'review'
-                                        ? 'Do not pay again. Payment confirmation requires review.'
-                                        : 'Continue on your phone. Your payment QR will appear here.'
+                                    : status === 'completing'
+                                      ? 'The bank payment is verified. Do not pay again. We are completing the collection record.'
+                                      : status === 'expired'
+                                        ? 'Start a fresh display before inviting another customer.'
+                                        : status === 'review'
+                                          ? 'Do not pay again. Payment confirmation requires review.'
+                                          : 'Continue on your phone. Your payment QR will appear here.'
                             }}
                         </p>
                     </div>

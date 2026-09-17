@@ -44,6 +44,47 @@ describe('PaymentPage', () => {
         usePoll.mockReturnValue({ start: pollStart, stop: pollStop });
     });
 
+    it('keeps verified payments polling without presenting another payment QR', () => {
+        const wrapper = mount(PaymentPage, {
+            props: {
+                payment: {
+                    ...pendingPayment,
+                    attempt: {
+                        reference: 'VERIFIED1',
+                        status: 'verified',
+                        provider: 'netbank',
+                        amount_minor: 7500,
+                        currency: 'PHP',
+                        expires_at: null,
+                        last_checked_at: null,
+                        can_check: false,
+                        qr_code: {
+                            mime_type: 'image/png',
+                            base64_payload: 'OLDQR',
+                            qr_mode: 'dynamic',
+                            transaction_type: 'p2m',
+                            embedded_amount: true,
+                        },
+                    },
+                },
+            },
+        });
+        expect(
+            wrapper.get('[data-testid="payer-completion-pending"]').text(),
+        ).toContain('Do not pay again');
+        expect(
+            wrapper.find('[data-testid="payer-funding-methods-step"]').exists(),
+        ).toBe(false);
+        expect(wrapper.find('img[alt^="QR Ph code"]').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('Amount due');
+        expect(usePoll).toHaveBeenCalledWith(
+            5000,
+            { only: ['payment', 'notice'] },
+            { autoStart: true, mode: 'rest' },
+        );
+        expect(routerPost).not.toHaveBeenCalled();
+    });
+
     it('directs paired customers to the seller display without exposing a QR', async () => {
         const payment = {
             ...pendingPayment,

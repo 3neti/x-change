@@ -26,7 +26,7 @@ final class PaymentAttemptPresenter
             'expires_at' => $attempt->expires_at?->toIso8601String(),
             'last_checked_at' => $attempt->last_checked_at?->toIso8601String(),
             'can_check' => $attempt->status === PaymentAttemptStatus::AwaitingPayment,
-            'qr_code' => is_array($qr) ? [
+            'qr_code' => $attempt->status === PaymentAttemptStatus::AwaitingPayment && is_array($qr) ? [
                 'mime_type' => data_get($qr, 'mime_type'),
                 'base64_payload' => data_get($qr, 'base64_payload'),
                 'qr_mode' => data_get($qr, 'qr_mode'),

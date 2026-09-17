@@ -2,13 +2,90 @@
 
 declare(strict_types=1);
 
+use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
+use LBHurtado\XChange\Actions\Redemption\PrepareVoucherClaimEvidence;
 use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
+use LBHurtado\XChange\Models\PaymentAttempt;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
 
 beforeEach(function () {
     config()->set('x-change.settlement.default_driver', 'philhealth-bst');
     config()->set('x-change.settlement.drivers_path', settlementEnvelopeDriversPath());
 });
+
+it('requires durable complete intake evidence rather than metadata claims of readiness', function (): void {
+    $voucher = claimIntakeSettlementVoucher();
+    $gate = app(SettlementCollectionGate::class);
+    expect($gate->contextFromVoucher($voucher)['driver'])->toBe('claim-intake');
+
+    expect(fn () => $gate->ensureCollectibleSettlementIsReady($voucher, [
+        'checklist' => ['claim_intake_complete' => true],
+    ]))->toThrow(VoucherRequiresSettlementEnvelope::class);
+
+    app(PrepareVoucherClaimEvidence::class)->handle($voucher, [
+        'inputs' => ['name' => 'Demo', 'mobile' => '639171234567'],
+    ]);
+    expect(fn () => $gate->ensureCollectibleSettlementIsReady($voucher))
+        ->toThrow(VoucherRequiresSettlementEnvelope::class);
+
+    app(PrepareVoucherClaimEvidence::class)->handle($voucher, [
+        'inputs' => ['email' => 'demo@example.test'],
+    ]);
+    expect(fn () => $gate->ensureCollectibleSettlementIsReady($voucher))
+        ->toThrow(VoucherRequiresSettlementEnvelope::class);
+
+    app(PrepareVoucherClaimEvidence::class)->handle($voucher, ['inputs' => claimIntakeSettlementInputs()]);
+    $gate->ensureCollectibleSettlementIsReady($voucher);
+
+    VoucherClaim::query()->where('voucher_id', $voucher->id)->update(['status' => 'execution_failed']);
+    expect(fn () => $gate->ensureCollectibleSettlementIsReady($voucher))
+        ->toThrow(VoucherRequiresSettlementEnvelope::class);
+});
+
+it('does not replace explicit settlement requirements with the intake profile', function (): void {
+    $voucher = claimIntakeSettlementVoucher('philhealth-bst');
+    app(PrepareVoucherClaimEvidence::class)->handle($voucher, ['inputs' => claimIntakeSettlementInputs()]);
+    $gate = app(SettlementCollectionGate::class);
+    expect($gate->contextFromVoucher($voucher)['driver'])->toBe('philhealth-bst');
+    expect(fn () => $gate->ensureCollectibleSettlementIsReady($voucher))
+        ->toThrow(VoucherRequiresSettlementEnvelope::class);
+});
+
+it('does not create payment attempts before intake requirements are persisted', function (): void {
+    $voucher = claimIntakeSettlementVoucher();
+    expect(fn () => app(CreatePaymentAttempt::class)->handle($voucher, 'netbank', 'browser', 'request'))
+        ->toThrow(VoucherRequiresSettlementEnvelope::class);
+    expect(PaymentAttempt::query()->count())->toBe(0);
+});
+
+it('requires verified OTP evidence when the intake instruction asks for it', function (): void {
+    $voucher = claimIntakeSettlementVoucher(null, ['name', 'mobile', 'email', 'otp']);
+    app(PrepareVoucherClaimEvidence::class)->handle($voucher, ['inputs' => [
+        ...claimIntakeSettlementInputs(), 'otp' => ['verified' => false],
+    ]]);
+    $gate = app(SettlementCollectionGate::class);
+    expect(fn () => $gate->ensureCollectibleSettlementIsReady($voucher))
+        ->toThrow(VoucherRequiresSettlementEnvelope::class);
+    app(PrepareVoucherClaimEvidence::class)->handle($voucher, ['inputs' => [
+        ...claimIntakeSettlementInputs(), 'otp' => ['verified' => true],
+    ]]);
+    $gate->ensureCollectibleSettlementIsReady($voucher);
+});
+
+function claimIntakeSettlementVoucher(?string $driver = null, array $fields = ['name', 'mobile', 'email']): object
+{
+    return issueVoucher(validVoucherInstructions(overrides: [
+        'inputs' => ['fields' => $fields],
+        'claim' => ['outcomes' => [['key' => 'lead_intake']], 'default_outcome' => 'lead_intake'],
+        'metadata' => ['flow_type' => 'settlement', 'custom' => ['settlement' => array_filter(['driver' => $driver])]],
+    ]));
+}
+
+function claimIntakeSettlementInputs(): array
+{
+    return ['name' => 'Demo', 'mobile' => '639171234567', 'email' => 'demo@example.test'];
+}
 
 it('blocks settlement collection when envelope is not ready', function () {
     $voucher = issueVoucher(validVoucherInstructions(
