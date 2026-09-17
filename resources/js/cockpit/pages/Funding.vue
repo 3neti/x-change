@@ -10,7 +10,7 @@ import {
     Search,
     TicketCheck,
 } from 'lucide-vue-next';
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
 import { store as storeVerificationCheck } from '@/routes/x-change/cockpit/funding/intents/verification-checks';
 import { store as refreshFundingLiquidityRoute } from '@/routes/x-change/cockpit/funding/liquidity-refreshes';
 import { store as claimPayCodeFundingRoute } from '@/routes/x-change/cockpit/funding/pay-code-claims';
@@ -454,12 +454,6 @@ onUnmounted(() => {
 
     if (standingHistoryCooldownTimer !== null) {
         clearInterval(standingHistoryCooldownTimer);
-    }
-});
-
-onMounted(() => {
-    if (props.standing_funding_address?.available === true) {
-        void openStandingFundingAddress();
     }
 });
 
@@ -1825,7 +1819,11 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 class="size-3.5 shrink-0"
                                 aria-hidden="true"
                             />
-                            Try again
+                            {{
+                                standingAddressError === null
+                                    ? 'Show QR Ph'
+                                    : 'Try again'
+                            }}
                         </button>
                         <button
                             v-if="standingAddress"

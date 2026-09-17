@@ -614,7 +614,7 @@ describe('Cockpit Funding foundation', () => {
         workflowEchoCallback.current = null;
     });
 
-    it('renders provider-verified funding posture and opens the reusable QR immediately', async () => {
+    it('renders provider-verified funding posture and opens the reusable QR only on request', async () => {
         const fetch = vi.fn().mockResolvedValue({
             ok: true,
             status: 200,
@@ -634,6 +634,13 @@ describe('Cockpit Funding foundation', () => {
             },
         });
         await flushPromises();
+
+        expect(fetch).not.toHaveBeenCalled();
+        expect(
+            wrapper
+                .get('[data-testid="open-standing-funding-address"]')
+                .text(),
+        ).toContain('Show QR Ph');
 
         expect(
             wrapper.get('[data-testid="cockpit-funding-page"]').text(),
@@ -769,9 +776,15 @@ describe('Cockpit Funding foundation', () => {
             expect(
                 wrapper
                     .get(`[data-testid="funding-mode-icon-${fundingMode}"]`)
-                    .attributes('aria-hidden'),
+                .attributes('aria-hidden'),
             ).toBe('true');
         }
+
+        await wrapper
+            .get('[data-testid="open-standing-funding-address"]')
+            .trigger('click');
+        await flushPromises();
+
         expect(
             wrapper
                 .get('[data-testid="check-standing-funding-history-icon"]')
@@ -1766,6 +1779,10 @@ describe('Cockpit Funding foundation', () => {
             },
         });
 
+        expect(fetch).not.toHaveBeenCalled();
+        await wrapper
+            .get('[data-testid="open-standing-funding-address"]')
+            .trigger('click');
         await flushPromises();
 
         expect(fetch).toHaveBeenNthCalledWith(
@@ -1869,6 +1886,10 @@ describe('Cockpit Funding foundation', () => {
             },
         });
 
+        expect(fetch).not.toHaveBeenCalled();
+        await wrapper
+            .get('[data-testid="open-standing-funding-address"]')
+            .trigger('click');
         await flushPromises();
 
         expect(
@@ -1933,6 +1954,10 @@ describe('Cockpit Funding foundation', () => {
             },
         });
 
+        expect(fetch).not.toHaveBeenCalled();
+        await wrapper
+            .get('[data-testid="open-standing-funding-address"]')
+            .trigger('click');
         await flushPromises();
 
         expect(wrapper.text()).toContain('AF-PERSISTED123');
@@ -2082,6 +2107,10 @@ describe('Cockpit Funding foundation', () => {
             },
         });
 
+        expect(fetch).not.toHaveBeenCalled();
+        await wrapper
+            .get('[data-testid="open-standing-funding-address"]')
+            .trigger('click');
         await flushPromises();
         await wrapper
             .get('[data-testid="check-standing-funding-history"]')
@@ -2176,6 +2205,10 @@ describe('Cockpit Funding foundation', () => {
             },
         });
 
+        expect(fetch).not.toHaveBeenCalled();
+        await wrapper
+            .get('[data-testid="open-standing-funding-address"]')
+            .trigger('click');
         await flushPromises();
         await wrapper
             .get('[data-testid="check-standing-funding-history"]')

@@ -489,6 +489,55 @@ it('keeps the sensitive QR and address out of initial Inertia props', function (
     expect($channel)->toMatch('/\Ax-change\.funding\.[a-f0-9]{64}\z/');
 });
 
+it('keeps repeated Funding page reads free of writes, provider calls, and audit events', function () {
+    actingAsVerifiedFundingOperator();
+
+    Http::fake([
+        'https://auth.netbank.test/oauth2/token' => Http::response([
+            'access_token' => 'access-token',
+            'expires_in' => 3600,
+        ]),
+        'https://api.netbank.test/v1/qrph/generate' => Http::response([
+            'qr_code' => reusableFundingTestPng(),
+        ]),
+    ]);
+
+    $this->postJson(
+        route('x-change.cockpit.funding.standing-addresses.netbank.store'),
+        ['confirm_account_funding_address' => true],
+    )->assertOk();
+
+    $providerCallsBefore = collect(Http::recorded())->count();
+    $addressCountBefore = StandingFundingAddress::query()->count();
+    $artifactCountBefore = StandingFundingQrArtifact::query()->count();
+    $receiptCountBefore = AccountFundingReceipt::query()->count();
+    $writes = [];
+
+    $this->fakeAuditLogger()->reset();
+    DB::listen(function ($query) use (&$writes): void {
+        if (preg_match('/\A(?:insert|update|delete|replace|alter|create|drop)\b/i', ltrim($query->sql)) === 1) {
+            $writes[] = $query->sql;
+        }
+    });
+
+    foreach (range(1, 2) as $requestNumber) {
+        $this->withHeader('X-Inertia', 'true')
+            ->get(route('x-change.cockpit.funding.index'))
+            ->assertOk()
+            ->assertJsonPath('props.standing_funding_address.available', true)
+            ->assertJsonPath('props.standing_funding_address.exists', true)
+            ->assertJsonMissingPath('props.standing_funding_address.funding_address')
+            ->assertJsonMissingPath('props.standing_funding_address.qr_code');
+    }
+
+    expect($writes)->toBeEmpty()
+        ->and($this->fakeAuditLogger()->count())->toBe(0)
+        ->and(collect(Http::recorded())->count())->toBe($providerCallsBefore)
+        ->and(StandingFundingAddress::query()->count())->toBe($addressCountBefore)
+        ->and(StandingFundingQrArtifact::query()->count())->toBe($artifactCountBefore)
+        ->and(AccountFundingReceipt::query()->count())->toBe($receiptCountBefore);
+});
+
 it('isolates each realtime funding channel to its owning operator', function () {
     $owner = actingAsVerifiedFundingOperator();
     $other = actingAsTestUser();
