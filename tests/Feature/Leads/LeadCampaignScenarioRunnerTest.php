@@ -12,6 +12,9 @@ use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
+use LBHurtado\XChange\Models\PaymentAttempt;
+use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
+use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 
 it('renders the disbursable feedback endpoint as the default browser scenario', function (): void {
     actingAsTestUser();
@@ -26,6 +29,7 @@ it('renders the disbursable feedback endpoint as the default browser scenario', 
         ->assertJsonPath('props.scenario.claim_surface', '/x/claim/{code}')
         ->assertJsonPath('props.scenario.fields.0', 'Disbursable')
         ->assertJsonPath('props.scenarios.1.key', 'aui_on_demand_insurance_payment')
+        ->assertJsonPath('props.scenarios.1.amount', '₱0.00 disbursement · ₱100.00 collection target')
         ->assertJsonPath('props.recent_lead_campaigns', []);
 });
 
@@ -86,6 +90,72 @@ it('keeps the AUI browser scenario executable against voucher input fields', fun
 
     expect(data_get($template->instructions_ciphertext, 'inputs.fields'))
         ->each->toBeIn($supported);
+});
+
+it('preserves the AUI settlement target from the endpoint template and offers same-code payment after intake', function (): void {
+    $operator = actingAsTestUser();
+    $fakeIssuer = auiLeadCampaignFakeGeneratePayCode('AUI-SETTLEMENT');
+    app()->instance(GeneratePayCode::class, $fakeIssuer);
+
+    $this->post(route('x-change.cockpit.campaigns.lead-scenario-runner.store'), [
+        'scenario' => 'aui_on_demand_insurance_payment',
+    ])->assertRedirect();
+
+    $campaign = LeadCampaign::query()->sole();
+    $this->get(route('x-change.leads.start', [
+        'merchant_slug' => $campaign->merchant_slug,
+        'endpoint_slug' => $campaign->endpoint_slug,
+    ]))->assertRedirect(route('x-change.claim.show', ['code' => 'AUI-SETTLEMENT']));
+
+    $instructions = $fakeIssuer->payloads[0];
+    expect($instructions['voucher_type'])->toBe('settlement')
+        ->and($instructions['target_amount'])->toBe(100)
+        ->and(data_get($instructions, 'cash.amount'))->toBe(0)
+        ->and(data_get($instructions, 'metadata.flow_type'))->toBe('settlement')
+        ->and(data_get($instructions, 'claim.default_outcome'))->toBe('lead_intake')
+        ->and(data_get($instructions, 'rider.url'))->toBeNull();
+
+    data_set($instructions, 'metadata.collection_wallet_id', $operator->wallet->id);
+    $voucher = issueVoucher(validVoucherInstructions(0, 'INSTAPAY', $instructions));
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.claim.show', ['code' => $voucher->code]))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/claim/Entry');
+
+    $this->withHeader('X-Inertia', 'false')
+        ->getJson(route('x-change.claim.success', ['code' => $voucher->code]))
+        ->assertOk()
+        ->assertJsonPath('claimWorkflowKey', 'lead-intake.v1')
+        ->assertJsonPath('success_action.label', 'Continue to payment')
+        ->assertJsonPath('success_action.target.url', route('x-change.pay.show', ['code' => $voucher->code]));
+
+    config()->set('x-change.funding.providers.netbank.enabled', true);
+    config()->set('x-change.payment.attempts.enabled', true);
+    config()->set('x-change.payment.attempts.provider', 'netbank');
+    $adapterClass = FakeFundingProviderAdapter::class;
+    app()->instance($adapterClass, new $adapterClass);
+    app()->tag($adapterClass, 'emi.funding-provider-adapters');
+    app()->forgetInstance(FundingProviderAdapterRegistry::class);
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.pay.show', ['code' => $voucher->code]))
+        ->assertOk()
+        ->assertJsonPath('props.payment.amount_due_minor', 10000)
+        ->assertJsonPath('props.payment.can_create_attempt', true);
+
+    $this->withHeader('X-Inertia', 'false')
+        ->post(route('x-change.pay.attempts.store', ['code' => $voucher->code]))
+        ->assertRedirect();
+
+    $attempt = PaymentAttempt::query()->where('voucher_id', $voucher->getKey())->sole();
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.pay.show', ['code' => $voucher->code, 'attempt' => $attempt->reference]))
+        ->assertOk()
+        ->assertJsonPath('props.payment.attempt.status', 'awaiting_payment')
+        ->assertJsonPath('props.payment.attempt.amount_minor', 10000)
+        ->assertJsonPath('props.payment.attempt.qr_code.mime_type', 'image/png')
+        ->assertJsonStructure(['props' => ['payment' => ['attempt' => ['qr_code' => ['base64_payload']]]]]);
 });
 
 it('continues the feedback browser scenario through public endpoint generation into claim', function (): void {

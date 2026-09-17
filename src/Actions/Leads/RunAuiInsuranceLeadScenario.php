@@ -61,17 +61,26 @@ final readonly class RunAuiInsuranceLeadScenario
                 ],
             ],
             'feedback' => [],
+            'voucher_type' => 'settlement',
+            'target_amount' => 100,
+            'rules' => [
+                'min_payment' => 100,
+                'max_payment' => 100,
+                'allow_overpayment' => false,
+                'auto_close_on_full_payment' => true,
+            ],
             'rider' => [
-                'message' => 'AUI insurance payment intake',
+                'message' => 'Application received. Continue to payment to pay the ₱100.00 insurance premium.',
             ],
             'count' => 1,
             'prefix' => 'AUI',
             'mask' => '****',
             'metadata' => [
+                'flow_type' => 'settlement',
                 'custom' => [
                     'lead_campaign' => [
                         'scenario' => 'aui_on_demand_insurance_payment',
-                        'payment_mode' => 'invoice_after_intake',
+                        'payment_mode' => 'same_code_after_intake',
                         'invoice_channels' => ['email', 'downloadable_qrph'],
                         'requested_particulars' => [
                             'insurance_product',
