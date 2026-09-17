@@ -75,7 +75,7 @@
         "3neti/x-campaign": "^1.0",
         "3neti/x-commerce": "^1.2",
         "3neti/x-feedback": "^1.0",
-        "3neti/x-journal": "^1.0",
+        "3neti/x-journal": "^1.1",
         "3neti/x-provisioning": "^1.0",
         "3neti/x-ray": "^1.0.1",
         "3neti/x-rider": "^1.0",

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "561cc8ec3e61a1ed31edeee1637ad2e6",
+    "content-hash": "8746d092ee42bd860a3362ad0e19d5de",
     "packages": [
         {
             "name": "3neti/cash",
@@ -1650,11 +1650,11 @@
         },
         {
             "name": "3neti/x-journal",
-            "version": "v1.0.0",
+            "version": "v1.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/x-journal.git",
-                "reference": "5cdebe0bc02d02cd7994b50bf2049fe9539e4a5a"
+                "reference": "02803bebeb78fbfbad21e0391fccbbe414f11d71"
             },
             "require": {
                 "illuminate/support": "^12.0 || ^13.0",
@@ -1709,7 +1709,7 @@
                 }
             ],
             "description": "Evidentiary journal package for the x-change Settlement Operating System",
-            "time": "2026-07-31T08:47:42+00:00"
+            "time": "2026-09-17T01:55:10+00:00"
         },
         {
             "name": "3neti/x-provisioning",

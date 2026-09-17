@@ -1442,6 +1442,7 @@ return [
 
     'audit' => [
         'cache' => [
+            'projection_enabled' => (bool) env('XCHANGE_AUDIT_CACHE_PROJECTION_ENABLED', true),
             'bucket_size' => (int) env('XCHANGE_AUDIT_CACHE_BUCKET_SIZE', 500),
             'max_recent_buckets' => (int) env('XCHANGE_AUDIT_CACHE_MAX_RECENT_BUCKETS', 48),
             'event_ttl' => (int) env('XCHANGE_AUDIT_CACHE_EVENT_TTL', 2_592_000),

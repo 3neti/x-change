@@ -214,6 +214,7 @@ use LBHurtado\XChange\Contracts\DisbursementStatusFetcherContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Contracts\EventLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\EventStoreContract;
+use LBHurtado\XChange\Contracts\PaginatedEventStoreContract;
 use LBHurtado\XChange\Contracts\Execution\StoredValueDestinationAuthorityContract;
 use LBHurtado\XChange\Contracts\Execution\StoredValueHolderAuthorityContract;
 use LBHurtado\XChange\Contracts\ExecutionCashDisbursementPollerContract;
@@ -503,6 +504,7 @@ use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
 use LBHurtado\XChange\Support\Claim\DefaultClaimApprovalStatusResolver;
 use LBHurtado\XChange\Support\Cockpit\DefaultCockpitRedactor;
 use LBHurtado\XChange\Support\Logging\CacheEventStore;
+use LBHurtado\XChange\Support\Logging\XJournalEventStore;
 use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
 use LBHurtado\XProvisioning\Contracts\ProvisioningActivatorContract;
 use LBHurtado\XProvisioning\Contracts\ProvisioningActorGuardContract;
@@ -1044,8 +1046,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->bind(EventLifecycleServiceContract::class, EventLifecycleService::class);
 
         $this->app->singleton(CacheEventStore::class);
-        $this->app->alias(CacheEventStore::class, EventStoreContract::class);
-        $this->app->alias(CacheEventStore::class, AppendableEventStoreContract::class);
+        $this->app->singleton(XJournalEventStore::class);
+        $this->app->alias(XJournalEventStore::class, EventStoreContract::class);
+        $this->app->alias(XJournalEventStore::class, AppendableEventStoreContract::class);
+        $this->app->alias(XJournalEventStore::class, PaginatedEventStoreContract::class);
 
         $this->app->bind(
             WithdrawalLifecycleServiceContract::class,
