@@ -372,6 +372,9 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::post('campaigns/endpoints', [CockpitCampaignEndpointController::class, 'store'])
             ->middleware('throttle:12,1')
             ->name('x-change.cockpit.campaigns.endpoints.store');
+        Route::patch('campaigns/endpoints/{campaign}/template', [CockpitCampaignEndpointController::class, 'updateTemplate'])
+            ->middleware('throttle:12,1')
+            ->name('x-change.cockpit.campaigns.endpoints.template.update');
         Route::patch('campaigns/endpoints/{campaign}/pause', [CockpitCampaignEndpointController::class, 'pause'])
             ->middleware('throttle:12,1')
             ->name('x-change.cockpit.campaigns.endpoints.pause');

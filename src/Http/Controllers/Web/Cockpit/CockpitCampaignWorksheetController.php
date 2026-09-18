@@ -303,6 +303,7 @@ class CockpitCampaignWorksheetController extends Controller
                     'availability_state' => $this->endpointAvailabilityFor($campaign),
                     'progress' => $progress[$campaign->getKey()] ?? $this->emptyEndpointProgress($campaign),
                     'actions' => [
+                        'template_update_url' => route('x-change.cockpit.campaigns.endpoints.template.update', $campaign->reference),
                         'pause_url' => route('x-change.cockpit.campaigns.endpoints.pause', $campaign->reference),
                         'resume_url' => route('x-change.cockpit.campaigns.endpoints.resume', $campaign->reference),
                     ],
@@ -310,6 +311,7 @@ class CockpitCampaignWorksheetController extends Controller
                         'id' => $campaign->payCodeTemplate->getKey(),
                         'reference' => $campaign->payCodeTemplate->reference,
                         'name' => $campaign->payCodeTemplate->name,
+                        'version_id' => $campaign->active_template_version_id,
                         'amount_minor' => $this->templateAmountMinor($campaign->payCodeTemplate),
                         'currency' => (string) data_get($campaign->payCodeTemplate->instructions_ciphertext, 'cash.currency', 'PHP'),
                     ] : null,

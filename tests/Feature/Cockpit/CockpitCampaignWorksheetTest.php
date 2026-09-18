@@ -32,6 +32,7 @@ use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetAuthorizationExecutionService;
+use LBHurtado\XChange\Services\Leads\LeadCampaignTemplateVersionId;
 use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
 use LBHurtado\XFeedback\Drivers\SmsFeedbackChannelDriver;
 use LBHurtado\XFeedback\Mail\FeedbackEmailMessage;
@@ -133,6 +134,7 @@ it('exposes endpoint campaign profiles, active templates, and existing public en
         'owner_type' => $owner->getMorphClass(),
         'owner_id' => (string) $owner->getKey(),
         'pay_code_template_id' => $template->getKey(),
+        'active_template_version_id' => app(LeadCampaignTemplateVersionId::class)->forTemplate($template),
         'merchant_display_name' => 'Acme Merchant',
         'merchant_slug' => 'acme-merchant',
         'endpoint_slug' => 'apply',
@@ -161,9 +163,11 @@ it('exposes endpoint campaign profiles, active templates, and existing public en
         ->assertJsonPath('props.endpoint_campaigns.0.availability_state.label', 'Open')
         ->assertJsonPath('props.endpoint_campaigns.0.progress.started', 0)
         ->assertJsonPath('props.endpoint_campaigns.0.progress.completed', 0)
+        ->assertJsonPath('props.endpoint_campaigns.0.actions.template_update_url', route('x-change.cockpit.campaigns.endpoints.template.update', LeadCampaign::query()->sole()->reference))
         ->assertJsonPath('props.endpoint_campaigns.0.actions.pause_url', route('x-change.cockpit.campaigns.endpoints.pause', LeadCampaign::query()->sole()->reference))
         ->assertJsonPath('props.endpoint_campaigns.0.starts_limit', 25)
         ->assertJsonPath('props.endpoint_campaigns.0.template.name', 'Public application template')
+        ->assertJsonPath('props.endpoint_campaigns.0.template.version_id', app(LeadCampaignTemplateVersionId::class)->forTemplate($template))
         ->assertJsonPath('props.endpoint_campaign_form.action_url', route('x-change.cockpit.campaigns.endpoints.store'));
 });
 
@@ -205,6 +209,7 @@ it('creates an endpoint campaign from an owned Pay Code template', function (): 
 
     expect($campaign->owner_type)->toBe($owner->getMorphClass())
         ->and($campaign->pay_code_template_id)->toBe($template->getKey())
+        ->and($campaign->active_template_version_id)->toBe(app(LeadCampaignTemplateVersionId::class)->forTemplate($template))
         ->and($campaign->starts_limit)->toBe(10)
         ->and($campaign->settings)->toMatchArray([
             'usage_key' => 'promo',
@@ -221,6 +226,80 @@ it('creates an endpoint campaign from an owned Pay Code template', function (): 
                 'timezone' => 'Asia/Manila',
             ],
         ]);
+});
+
+it('updates an endpoint template for future starts without changing the public endpoint or counters', function (): void {
+    $owner = actingAsTestUser();
+    $firstTemplate = PayCodeTemplate::query()->create([
+        'owner_type' => $owner->getMorphClass(),
+        'owner_id' => (string) $owner->getKey(),
+        'name' => 'Original endpoint template',
+        'base_template_key' => 'blank-pay-code',
+        'instructions_ciphertext' => [
+            'cash' => ['amount' => 10_000, 'currency' => 'PHP'],
+            'count' => 1,
+            'prefix' => 'OLD',
+            'mask' => '****',
+        ],
+        'include_amount' => true,
+        'include_purpose' => true,
+        'status' => 'active',
+    ]);
+    $secondTemplate = PayCodeTemplate::query()->create([
+        'owner_type' => $owner->getMorphClass(),
+        'owner_id' => (string) $owner->getKey(),
+        'name' => 'Updated endpoint template',
+        'base_template_key' => 'blank-pay-code',
+        'instructions_ciphertext' => [
+            'cash' => ['amount' => 25_000, 'currency' => 'PHP'],
+            'count' => 1,
+            'prefix' => 'NEW',
+            'mask' => '****',
+        ],
+        'include_amount' => true,
+        'include_purpose' => true,
+        'status' => 'active',
+    ]);
+    $originalVersion = app(LeadCampaignTemplateVersionId::class)->forTemplate($firstTemplate);
+    $campaign = LeadCampaign::query()->create([
+        'owner_type' => $owner->getMorphClass(),
+        'owner_id' => (string) $owner->getKey(),
+        'pay_code_template_id' => $firstTemplate->getKey(),
+        'active_template_version_id' => $originalVersion,
+        'merchant_display_name' => 'Acme Merchant',
+        'merchant_slug' => 'acme-merchant',
+        'endpoint_slug' => 'apply',
+        'title' => 'Application',
+        'status' => 'active',
+        'usage_count' => 3,
+        'settings' => ['usage_key' => 'lead', 'usage_label' => 'Lead'],
+    ]);
+    $audit = fakeAuditLogger();
+    $publicUrl = route('x-change.leads.start', [
+        'merchant_slug' => $campaign->merchant_slug,
+        'endpoint_slug' => $campaign->endpoint_slug,
+    ]);
+
+    $this->patch(route('x-change.cockpit.campaigns.endpoints.template.update', $campaign->reference), [
+        'pay_code_template_id' => $secondTemplate->getKey(),
+    ])->assertRedirect(route('x-change.cockpit.campaigns.index'))
+        ->assertSessionHas('campaign_notice', 'Application will use Updated endpoint template for future starts. Existing Pay Codes remain untouched.');
+
+    $updated = $campaign->fresh();
+    $newVersion = app(LeadCampaignTemplateVersionId::class)->forTemplate($secondTemplate);
+
+    expect($updated->pay_code_template_id)->toBe($secondTemplate->getKey())
+        ->and($updated->active_template_version_id)->toBe($newVersion)
+        ->and($updated->usage_count)->toBe(3)
+        ->and(route('x-change.leads.start', [
+            'merchant_slug' => $updated->merchant_slug,
+            'endpoint_slug' => $updated->endpoint_slug,
+        ]))->toBe($publicUrl)
+        ->and($audit->last()['event'] ?? null)->toBe('campaign.endpoint.template_version_changed')
+        ->and($audit->last()['context']['previous_template_reference'] ?? null)->toBe($firstTemplate->reference)
+        ->and($audit->last()['context']['previous_template_version_id'] ?? null)->toBe($originalVersion)
+        ->and($audit->last()['context']['template_reference'] ?? null)->toBe($secondTemplate->reference)
+        ->and($audit->last()['context']['template_version_id'] ?? null)->toBe($newVersion);
 });
 
 it('pauses and resumes endpoint campaigns without touching existing starts', function (): void {

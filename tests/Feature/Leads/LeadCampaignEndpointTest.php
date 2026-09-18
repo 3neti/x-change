@@ -16,6 +16,7 @@ use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
+use LBHurtado\XChange\Services\Leads\LeadCampaignTemplateVersionId;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('creates a merchant scoped lead campaign from an owner template', function (): void {
@@ -31,6 +32,7 @@ it('creates a merchant scoped lead campaign from an owner template', function ()
     expect($campaign->owner_type)->toBe($operator->getMorphClass())
         ->and($campaign->owner_id)->toBe((string) $operator->getKey())
         ->and($campaign->pay_code_template_id)->toBe($template->getKey())
+        ->and($campaign->active_template_version_id)->toBe(app(LeadCampaignTemplateVersionId::class)->forTemplate($template))
         ->and($campaign->merchant_display_name)->toContain('AUI Insurance')
         ->and($campaign->merchant_slug)->toStartWith('aui-insurance')
         ->and($campaign->endpoint_slug)->toBe('application')
@@ -205,12 +207,67 @@ it('mints a pay code from a lead campaign endpoint and redirects into claim', fu
         ->and(data_get($fakeIssuer->payloads[0], 'metadata.campaign.planning_key'))->toBe('application')
         ->and(data_get($fakeIssuer->payloads[0], 'metadata.campaign.campaign_id'))->toBe($campaign->reference)
         ->and(data_get($fakeIssuer->payloads[0], 'metadata.campaign.source'))->toBe('lead_campaign')
+        ->and(data_get($fakeIssuer->payloads[0], 'metadata.campaign.template_reference'))->toBe($template->reference)
+        ->and(data_get($fakeIssuer->payloads[0], 'metadata.campaign.template_version_id'))->toBe($campaign->active_template_version_id)
         ->and(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.schema'))->toBe('x-change.lead-campaign-attribution.v1')
         ->and(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.kind'))->toBe('lead')
         ->and(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.template_reference'))->toBe($template->reference)
+        ->and(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.template_version_id'))->toBe($campaign->active_template_version_id)
         ->and(data_get($fakeIssuer->payloads[0], '_meta.source'))->toBe('lead_campaign.public_endpoint')
         ->and($campaign->usage_count)->toBe(1)
         ->and($campaign->last_started_at)->not->toBeNull();
+});
+
+it('keeps the public endpoint URL stable while future starts use the updated template version', function (): void {
+    $operator = leadCampaignOperator('AUI Insurance');
+    $firstTemplate = leadCampaignTemplate($operator, 'Original application');
+    $secondTemplate = leadCampaignTemplate($operator, 'Updated application');
+    $secondInstructions = $secondTemplate->instructions_ciphertext;
+    data_set($secondInstructions, 'cash.amount', 2500);
+    data_set($secondInstructions, 'rider.message', 'Updated insurance application');
+    $secondTemplate->update(['instructions_ciphertext' => $secondInstructions]);
+    $campaign = app(CreateLeadCampaign::class)->handle($operator, $firstTemplate, [
+        'title' => 'Insurance Application',
+        'endpoint_slug' => 'application',
+    ]);
+    $publicRoute = route('x-change.leads.start', [
+        'merchant_slug' => $campaign->merchant_slug,
+        'endpoint_slug' => $campaign->endpoint_slug,
+    ]);
+    $firstVersion = app(LeadCampaignTemplateVersionId::class)->forTemplate($firstTemplate);
+    $updatedVersion = app(LeadCampaignTemplateVersionId::class)->forTemplate($secondTemplate);
+    $fakeIssuer = leadCampaignFakeGeneratePayCode('AUI-LEAD');
+    app()->instance(GeneratePayCode::class, $fakeIssuer);
+
+    $this->get($publicRoute)->assertRedirect(route('x-change.claim.show', ['code' => 'AUI-LEAD']));
+
+    $audit = fakeAuditLogger();
+    $this->patch(route('x-change.cockpit.campaigns.endpoints.template.update', $campaign->reference), [
+        'pay_code_template_id' => $secondTemplate->getKey(),
+    ])->assertRedirect(route('x-change.cockpit.campaigns.index'))
+        ->assertSessionHas('campaign_notice', 'Insurance Application will use Updated application for future starts. Existing Pay Codes remain untouched.');
+
+    $this->get($publicRoute)->assertRedirect(route('x-change.claim.show', ['code' => 'AUI-LEAD']));
+
+    expect(route('x-change.leads.start', [
+        'merchant_slug' => $campaign->fresh()->merchant_slug,
+        'endpoint_slug' => $campaign->fresh()->endpoint_slug,
+    ]))->toBe($publicRoute)
+        ->and($fakeIssuer->payloads)->toHaveCount(2)
+        ->and(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.template_reference'))->toBe($firstTemplate->reference)
+        ->and(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.template_version_id'))->toBe($firstVersion)
+        ->and(data_get($fakeIssuer->payloads[1], 'cash.amount'))->toBe(2500)
+        ->and(data_get($fakeIssuer->payloads[1], 'rider.message'))->toBe('Updated insurance application')
+        ->and(data_get($fakeIssuer->payloads[1], 'metadata.custom.lead_campaign.template_reference'))->toBe($secondTemplate->reference)
+        ->and(data_get($fakeIssuer->payloads[1], 'metadata.custom.lead_campaign.template_version_id'))->toBe($updatedVersion)
+        ->and($campaign->fresh()->pay_code_template_id)->toBe($secondTemplate->getKey())
+        ->and($campaign->fresh()->active_template_version_id)->toBe($updatedVersion)
+        ->and($campaign->fresh()->usage_count)->toBe(2)
+        ->and($audit->last()['event'] ?? null)->toBe('campaign.endpoint.template_version_changed')
+        ->and($audit->last()['context']['previous_template_reference'] ?? null)->toBe($firstTemplate->reference)
+        ->and($audit->last()['context']['previous_template_version_id'] ?? null)->toBe($firstVersion)
+        ->and($audit->last()['context']['template_reference'] ?? null)->toBe($secondTemplate->reference)
+        ->and($audit->last()['context']['template_version_id'] ?? null)->toBe($updatedVersion);
 });
 
 it('does not start inactive lead campaigns', function (): void {

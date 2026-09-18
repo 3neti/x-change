@@ -114,6 +114,7 @@ type EndpointCampaign = {
         source: string;
     };
     actions?: {
+        template_update_url: string;
         pause_url: string;
         resume_url: string;
     };
@@ -121,6 +122,7 @@ type EndpointCampaign = {
         id: number;
         reference: string;
         name: string;
+        version_id: string | null;
         amount_minor: number;
         currency: string;
     } | null;
@@ -275,6 +277,9 @@ const endpointForm = useForm({
 const deleteForm = useForm({});
 const authorizationForm = useForm({});
 const endpointStatusForm = useForm({});
+const endpointTemplateForm = useForm({
+    pay_code_template_id: null as number | null,
+});
 const authorizingWorksheet = ref<string | null>(null);
 const intakeForm = useForm<{ file: File | null }>({ file: null });
 const intakeFileInput = ref<HTMLInputElement | null>(null);
@@ -282,6 +287,7 @@ const intakeDragDepth = ref(0);
 const isDraggingIntake = ref(false);
 const intakeFileError = ref<string | null>(null);
 const selectedEndpointStamp = ref<EndpointCampaign | null>(null);
+const endpointTemplateSelections = ref<Record<string, number | null>>({});
 const endpointDialog = ref<HTMLElement | null>(null);
 let endpointReturnFocus: HTMLElement | null = null;
 
@@ -538,6 +544,61 @@ function resumeEndpointCampaign(campaign: EndpointCampaign): void {
 
     endpointStatusForm.patch(campaign.actions.resume_url, {
         preserveScroll: true,
+    });
+}
+
+function selectedEndpointTemplateId(campaign: EndpointCampaign): number | null {
+    return (
+        endpointTemplateSelections.value[campaign.reference] ??
+        campaign.template?.id ??
+        null
+    );
+}
+
+function endpointTemplateChanged(campaign: EndpointCampaign): boolean {
+    const selected = selectedEndpointTemplateId(campaign);
+
+    return selected !== null && selected !== (campaign.template?.id ?? null);
+}
+
+function selectEndpointTemplate(campaign: EndpointCampaign, event: Event): void {
+    const target = event.target as HTMLSelectElement | null;
+
+    endpointTemplateSelections.value[campaign.reference] = target?.value
+        ? Number(target.value)
+        : null;
+}
+
+function updateEndpointTemplate(campaign: EndpointCampaign): void {
+    const templateId = selectedEndpointTemplateId(campaign);
+    const template = payCodeTemplates.value.find(
+        (candidate) => candidate.id === templateId,
+    );
+
+    if (
+        !campaign.actions?.template_update_url ||
+        endpointTemplateForm.processing ||
+        templateId === null ||
+        template === undefined ||
+        !endpointTemplateChanged(campaign)
+    ) {
+        return;
+    }
+
+    if (
+        !window.confirm(
+            `Update “${campaign.title}” to use “${template.name}” for future starts?\n\nThe public link and QR stay the same. People who already started keep their original Pay Code.`,
+        )
+    ) {
+        return;
+    }
+
+    endpointTemplateForm.pay_code_template_id = templateId;
+    endpointTemplateForm.patch(campaign.actions.template_update_url, {
+        preserveScroll: true,
+        onSuccess: () => {
+            endpointTemplateSelections.value[campaign.reference] = templateId;
+        },
     });
 }
 
@@ -1402,6 +1463,48 @@ const updatedRelativeTime = (value: string | null): string =>
                                 </p>
                             </div>
                             <div class="flex flex-wrap gap-2 xl:grid">
+                                <label
+                                    class="grid gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300"
+                                >
+                                    Future starts template
+                                    <select
+                                        :value="
+                                            selectedEndpointTemplateId(campaign)
+                                        "
+                                        class="min-h-10 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                                        :data-testid="`campaign-endpoint-template-select-${campaign.reference}`"
+                                        @change="
+                                            selectEndpointTemplate(
+                                                campaign,
+                                                $event,
+                                            )
+                                        "
+                                    >
+                                        <option
+                                            v-for="template in payCodeTemplates"
+                                            :key="template.id"
+                                            :value="template.id"
+                                        >
+                                            {{ template.name }}
+                                        </option>
+                                    </select>
+                                </label>
+                                <button
+                                    type="button"
+                                    class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-indigo-200 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-60 dark:border-indigo-900 dark:text-indigo-300 dark:hover:bg-indigo-950/40"
+                                    :disabled="
+                                        endpointTemplateForm.processing ||
+                                        !endpointTemplateChanged(campaign)
+                                    "
+                                    :data-testid="`campaign-endpoint-update-template-${campaign.reference}`"
+                                    @click="updateEndpointTemplate(campaign)"
+                                >
+                                    Update future starts
+                                </button>
+                                <p class="text-xs leading-4 text-slate-500 dark:text-slate-400">
+                                    Same public link. Existing Pay Codes do not
+                                    change.
+                                </p>
                                 <button
                                     type="button"
                                     class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200"

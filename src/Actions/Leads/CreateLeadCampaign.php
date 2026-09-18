@@ -12,6 +12,7 @@ use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Services\Funding\FundingQrMerchantProfileResolver;
 use LBHurtado\XChange\Services\Leads\LeadCampaignPublicSlugService;
+use LBHurtado\XChange\Services\Leads\LeadCampaignTemplateVersionId;
 
 final readonly class CreateLeadCampaign
 {
@@ -19,6 +20,7 @@ final readonly class CreateLeadCampaign
         private FundingQrMerchantProfileResolver $merchantProfiles,
         private LeadCampaignPublicSlugService $slugs,
         private EndpointCampaignRepository $endpoints,
+        private LeadCampaignTemplateVersionId $templateVersions,
     ) {}
 
     /**
@@ -66,6 +68,7 @@ final readonly class CreateLeadCampaign
             'owner_type' => $owner->getMorphClass(),
             'owner_id' => (string) $owner->getKey(),
             'pay_code_template_id' => $template->getKey(),
+            'active_template_version_id' => $this->templateVersions->forTemplate($template),
             'merchant_display_name' => $merchant->displayName,
             'merchant_slug' => $merchantSlug,
             'endpoint_slug' => $endpointSlug,

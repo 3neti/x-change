@@ -311,6 +311,7 @@ use LBHurtado\XChange\Exceptions\VoucherCollectionConflict;
 use LBHurtado\XChange\Exceptions\VoucherFlowCapabilityException;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
 use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignEndpointController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetController;
 use LBHurtado\XChange\Http\Controllers\Web\Leads\LeadCampaignEndpointController;
 use LBHurtado\XChange\Http\Middleware\EnsureXChangeIsCommissioned;
@@ -524,6 +525,7 @@ class XChangeServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->when([
+            CockpitCampaignEndpointController::class,
             CockpitCampaignWorksheetController::class,
             CreateLeadCampaign::class,
             StartLeadCampaign::class,

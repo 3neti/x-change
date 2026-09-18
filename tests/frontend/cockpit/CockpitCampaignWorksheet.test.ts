@@ -96,6 +96,8 @@ const endpointCampaign = {
         source: 'display_sessions',
     },
     actions: {
+        template_update_url:
+            '/x/cockpit/campaigns/endpoints/01KYENDPOINT0000000000000/template',
         pause_url: '/x/cockpit/campaigns/endpoints/01KYENDPOINT0000000000000/pause',
         resume_url:
             '/x/cockpit/campaigns/endpoints/01KYENDPOINT0000000000000/resume',
@@ -104,6 +106,7 @@ const endpointCampaign = {
         id: 12,
         reference: '01KYTEMPLATE0000000000000',
         name: 'Insurance application template',
+        version_id: 'pctv_original',
         amount_minor: 10000,
         currency: 'PHP',
     },
@@ -283,6 +286,7 @@ describe('Cockpit campaign worksheets', () => {
         expect(wrapper.text()).toContain('Lester Hurtado');
         expect(wrapper.text()).toContain('Open');
         expect(wrapper.text()).toContain('Show QR & Share');
+        expect(wrapper.text()).toContain('Future starts template');
         expect(
             wrapper.find('[data-testid="campaign-endpoint-qr"]').exists(),
         ).toBe(false);
@@ -379,6 +383,73 @@ describe('Cockpit campaign worksheets', () => {
 
         expect(post).toHaveBeenCalledOnce();
         expect(post.mock.calls[0][0]).toBe('/x/cockpit/campaigns/endpoints');
+    });
+
+    it('updates only future endpoint starts to a newly selected template', async () => {
+        const updatedTemplate = {
+            ...payCodeTemplate,
+            id: 25,
+            reference: '01KYUPDATEDTEMPLATE0000000',
+            name: 'Updated insurance payment template',
+            amount_minor: 25000,
+        };
+        const confirm = vi
+            .spyOn(window, 'confirm')
+            .mockImplementation(() => true);
+        const wrapper = mount(Campaigns, {
+            props: {
+                worksheets: [],
+                pay_code_templates: [payCodeTemplate, updatedTemplate],
+                endpoint_campaigns: [endpointCampaign],
+            },
+        });
+        await wrapper
+            .get('[data-testid="campaign-flavor-endpoints"]')
+            .trigger('click');
+
+        const endpointTemplateForm = (
+            wrapper.vm as unknown as {
+                endpointTemplateForm: {
+                    patch: (...args: unknown[]) => void;
+                    pay_code_template_id: number | null;
+                };
+            }
+        ).endpointTemplateForm;
+        const patch = vi
+            .spyOn(endpointTemplateForm, 'patch')
+            .mockImplementation(() => undefined);
+
+        expect(
+            wrapper
+                .get(
+                    `[data-testid="campaign-endpoint-update-template-${endpointCampaign.reference}"]`,
+                )
+                .attributes('disabled'),
+        ).toBeDefined();
+
+        await wrapper
+            .get(
+                `[data-testid="campaign-endpoint-template-select-${endpointCampaign.reference}"]`,
+            )
+            .setValue(String(updatedTemplate.id));
+        await wrapper
+            .get(
+                `[data-testid="campaign-endpoint-update-template-${endpointCampaign.reference}"]`,
+            )
+            .trigger('click');
+
+        expect(confirm).toHaveBeenCalledWith(
+            expect.stringContaining('future starts'),
+        );
+        expect(endpointTemplateForm.pay_code_template_id).toBe(
+            updatedTemplate.id,
+        );
+        expect(patch).toHaveBeenCalledWith(
+            endpointCampaign.actions.template_update_url,
+            expect.objectContaining({ preserveScroll: true }),
+        );
+
+        confirm.mockRestore();
     });
 
     it('pauses and resumes endpoint campaigns from the management row', async () => {

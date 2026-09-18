@@ -8,14 +8,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use LBHurtado\XCampaign\Contracts\EndpointCampaignRepository;
 use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\StoreCampaignEndpointRequest;
+use LBHurtado\XChange\Http\Requests\Web\Cockpit\UpdateCampaignEndpointTemplateRequest;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
+use LBHurtado\XChange\Services\Leads\LeadCampaignTemplateVersionId;
 
 final class CockpitCampaignEndpointController extends Controller
 {
+    public function __construct(private readonly EndpointCampaignRepository $endpoints) {}
+
     public function store(
         StoreCampaignEndpointRequest $request,
         CreateLeadCampaign $createLeadCampaign,
@@ -73,6 +78,58 @@ final class CockpitCampaignEndpointController extends Controller
 
         return to_route('x-change.cockpit.campaigns.index')
             ->with('campaign_notice', sprintf('%s is open again.', $endpoint->title));
+    }
+
+    public function updateTemplate(
+        UpdateCampaignEndpointTemplateRequest $request,
+        string $campaign,
+        AuditLoggerContract $audit,
+        LeadCampaignTemplateVersionId $templateVersions,
+    ): RedirectResponse {
+        $endpoint = $this->endpointForOwner($request, $campaign);
+        $owner = $request->user();
+        $validated = $request->validated();
+
+        $template = PayCodeTemplate::query()
+            ->where('owner_type', $owner instanceof Model ? $owner->getMorphClass() : $owner::class)
+            ->where('owner_id', (string) $owner->getAuthIdentifier())
+            ->where('status', 'active')
+            ->whereKey($validated['pay_code_template_id'])
+            ->firstOrFail();
+
+        $previousTemplate = $endpoint->payCodeTemplate()->first();
+        $previousTemplateVersion = $endpoint->active_template_version_id;
+        $newTemplateVersion = $templateVersions->forTemplate($template);
+
+        if (
+            (string) $endpoint->pay_code_template_id === (string) $template->getKey()
+            && (string) $previousTemplateVersion === $newTemplateVersion
+        ) {
+            return to_route('x-change.cockpit.campaigns.index')
+                ->with('campaign_notice', sprintf('%s is already using that template for future starts.', $endpoint->title));
+        }
+
+        $endpoint->forceFill([
+            'pay_code_template_id' => $template->getKey(),
+            'active_template_version_id' => $newTemplateVersion,
+        ])->save();
+
+        $endpoint->refresh();
+
+        $audit->log('campaign.endpoint.template_version_changed', [
+            'campaign_reference' => $endpoint->reference,
+            'previous_template_id' => $previousTemplate?->getKey(),
+            'previous_template_reference' => $previousTemplate?->reference,
+            'previous_template_version_id' => $previousTemplateVersion,
+            'template_id' => $template->getKey(),
+            'template_reference' => $template->reference,
+            'template_version_id' => $newTemplateVersion,
+            'actor_type' => $owner instanceof Model ? $owner->getMorphClass() : $owner::class,
+            'actor_id' => (string) $owner->getAuthIdentifier(),
+        ]);
+
+        return to_route('x-change.cockpit.campaigns.index')
+            ->with('campaign_notice', sprintf('%s will use %s for future starts. Existing Pay Codes remain untouched.', $endpoint->title, $template->name));
     }
 
     private function endpointForOwner(Request $request, string $reference): LeadCampaign

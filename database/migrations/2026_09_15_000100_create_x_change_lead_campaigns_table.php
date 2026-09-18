@@ -18,6 +18,7 @@ return new class extends Migration
             $table->foreignId('pay_code_template_id')
                 ->constrained('x_change_pay_code_templates')
                 ->restrictOnDelete();
+            $table->string('active_template_version_id', 80)->nullable();
             $table->string('merchant_display_name', 120);
             $table->string('merchant_slug', 120);
             $table->string('endpoint_slug', 120);
