@@ -13,13 +13,19 @@ import {
     Plus,
     QrCode,
     Send,
-    Share2,
     Trash2,
     Upload,
     Users,
     X,
 } from 'lucide-vue-next';
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    ref,
+    watch,
+} from 'vue';
 import { show as showScenarioRunner } from '@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitLeadCampaignScenarioRunnerController';
 import { destroy, show, store } from '@/routes/x-change/cockpit/campaigns';
 import authorizations from '@/routes/x-change/cockpit/campaigns/authorizations';
@@ -114,7 +120,11 @@ const props = defineProps<CampaignsPageProps>();
 
 type CampaignFlavor = CampaignWorksheet['profile'] | 'endpoints';
 
-const campaignFlavors: CampaignFlavor[] = ['payroll', 'assistance', 'endpoints'];
+const campaignFlavors: CampaignFlavor[] = [
+    'payroll',
+    'assistance',
+    'endpoints',
+];
 const activeFlavor = ref<CampaignFlavor>('payroll');
 const flavorCopy: Record<
     CampaignFlavor,
@@ -248,6 +258,8 @@ const intakeDragDepth = ref(0);
 const isDraggingIntake = ref(false);
 const intakeFileError = ref<string | null>(null);
 const selectedEndpointStamp = ref<EndpointCampaign | null>(null);
+const endpointDialog = ref<HTMLElement | null>(null);
+let endpointReturnFocus: HTMLElement | null = null;
 
 watch(activeFlavor, (profile) => {
     if (profile !== 'endpoints') {
@@ -548,11 +560,37 @@ function endpointAvailabilitySummary(campaign: EndpointCampaign): string {
 }
 
 function openEndpointStamp(campaign: EndpointCampaign): void {
+    endpointReturnFocus =
+        document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null;
     selectedEndpointStamp.value = campaign;
+    nextTick(() => endpointDialog.value?.focus());
 }
 
 function closeEndpointStamp(): void {
     selectedEndpointStamp.value = null;
+    nextTick(() => endpointReturnFocus?.focus());
+}
+
+function trapEndpointFocus(event: KeyboardEvent): void {
+    const items = endpointDialog.value?.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), a[href]',
+    );
+    if (!items?.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (
+        event.shiftKey &&
+        (document.activeElement === first ||
+            document.activeElement === endpointDialog.value)
+    ) {
+        event.preventDefault();
+        last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+    }
 }
 
 async function copyEndpointUrl(url: string): Promise<void> {
@@ -695,12 +733,12 @@ const updatedRelativeTime = (value: string | null): string =>
                     aria-label="Campaign flavor"
                     data-testid="campaign-flavor-switch"
                 >
-                        <button
-                            v-for="flavor in campaignFlavors"
-                            :key="flavor"
-                            type="button"
-                            :aria-pressed="activeFlavor === flavor"
-                            :data-testid="`campaign-flavor-${flavor === 'assistance' ? 'ayuda' : flavor}`"
+                    <button
+                        v-for="flavor in campaignFlavors"
+                        :key="flavor"
+                        type="button"
+                        :aria-pressed="activeFlavor === flavor"
+                        :data-testid="`campaign-flavor-${flavor === 'assistance' ? 'ayuda' : flavor}`"
                         :class="
                             activeFlavor === flavor
                                 ? 'bg-white text-slate-950 shadow-sm dark:bg-slate-800 dark:text-white'
@@ -1131,7 +1169,7 @@ const updatedRelativeTime = (value: string | null): string =>
 
             <section
                 v-else
-                class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]"
+                class="grid min-w-0 gap-5"
                 data-testid="campaign-endpoint-canvas"
             >
                 <div
@@ -1158,12 +1196,20 @@ const updatedRelativeTime = (value: string | null): string =>
                                 class="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-emerald-700 dark:hover:text-emerald-300"
                                 data-testid="campaign-endpoint-scenario-runner-link"
                             >
-                                <PlayCircle class="size-3.5" aria-hidden="true" />
+                                <PlayCircle
+                                    class="size-3.5"
+                                    aria-hidden="true"
+                                />
                                 Test endpoint lifecycle
                             </Link>
                             <span
                                 class="w-fit rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                                >{{ endpointCampaigns.length }} live cards</span
+                                >{{ endpointCampaigns.length }}
+                                {{
+                                    endpointCampaigns.length === 1
+                                        ? 'campaign'
+                                        : 'campaigns'
+                                }}</span
                             >
                         </div>
                     </div>
@@ -1191,161 +1237,109 @@ const updatedRelativeTime = (value: string | null): string =>
 
                     <div
                         v-else
-                        class="grid gap-4 p-4 lg:grid-cols-2"
                         data-testid="campaign-endpoint-list"
+                        role="list"
+                        aria-label="Endpoint campaigns"
+                        class="divide-y divide-slate-200 dark:divide-slate-800"
                     >
+                        <div
+                            aria-hidden="true"
+                            class="hidden gap-4 bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-500 dark:bg-slate-950 dark:text-slate-400 xl:grid xl:grid-cols-[minmax(0,2fr)_6rem_4rem_minmax(0,1fr)_12rem]"
+                        >
+                            <span>Campaign</span><span>Status</span
+                            ><span>Starts</span
+                            ><span>Availability / Exposure</span
+                            ><span>Actions</span>
+                        </div>
                         <article
                             v-for="campaign in endpointCampaigns"
                             :key="campaign.reference"
-                            class="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950"
+                            role="listitem"
+                            class="grid min-w-0 gap-3 p-4 xl:grid-cols-[minmax(0,2fr)_6rem_4rem_minmax(0,1fr)_12rem] xl:items-center xl:gap-4"
                             :data-testid="`campaign-endpoint-card-${campaign.reference}`"
                         >
-                            <div class="flex items-start gap-3">
-                                <img
-                                    v-if="campaign.qr_data_uri"
-                                    :src="campaign.qr_data_uri"
-                                    :alt="`Endpoint stamp code for ${campaign.title}`"
-                                    class="size-24 rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm dark:border-slate-800"
-                                    data-testid="campaign-endpoint-qr"
-                                />
-                                <div
-                                    v-else
-                                    class="flex size-24 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-slate-400 dark:border-slate-700 dark:bg-slate-900"
+                            <div class="min-w-0">
+                                <h3
+                                    class="break-words text-sm font-semibold text-slate-950 dark:text-slate-50"
+                                >
+                                    {{ campaign.title }}
+                                </h3>
+                                <p
+                                    class="mt-1 break-all text-xs text-slate-500 dark:text-slate-400"
+                                    data-testid="campaign-endpoint-identifier"
+                                >
+                                    {{ campaign.merchant_slug }}/{{
+                                        campaign.endpoint_slug
+                                    }}
+                                </p>
+                                <p
+                                    class="mt-1 text-xs text-slate-500 dark:text-slate-400"
+                                >
+                                    {{ campaign.usage_label }}
+                                </p>
+                            </div>
+                            <div>
+                                <span
+                                    :class="statusClasses(campaign.status)"
+                                    class="inline-flex rounded-full px-2 py-1 text-xs font-semibold"
+                                    >{{ display(campaign.status) }}</span
+                                >
+                            </div>
+                            <p
+                                class="text-sm font-semibold text-slate-950 dark:text-slate-50"
+                            >
+                                <span
+                                    class="font-normal text-slate-500 xl:sr-only"
+                                    >Starts: </span
+                                >{{ campaign.usage_count
+                                }}<span
+                                    v-if="campaign.starts_limit"
+                                    class="font-normal text-slate-500"
+                                >
+                                    / {{ campaign.starts_limit }}</span
+                                >
+                            </p>
+                            <div
+                                class="text-xs text-slate-600 dark:text-slate-300"
+                            >
+                                <p>
+                                    {{
+                                        campaign.expires_at
+                                            ? `Ends ${updatedRelativeTime(campaign.expires_at)}`
+                                            : 'No end date'
+                                    }}
+                                </p>
+                                <p class="mt-1">
+                                    {{ campaignExposure(campaign) }}
+                                </p>
+                            </div>
+                            <div class="flex flex-wrap gap-2 xl:grid">
+                                <button
+                                    type="button"
+                                    class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200"
+                                    :aria-label="`Show QR & Share ${campaign.title} — ${campaign.endpoint_slug}`"
+                                    :data-testid="`campaign-endpoint-share-stamp-${campaign.reference}`"
+                                    @click="openEndpointStamp(campaign)"
                                 >
                                     <QrCode
-                                        class="size-8"
+                                        class="size-4 shrink-0"
                                         aria-hidden="true"
-                                    />
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <div
-                                        class="flex flex-wrap items-center gap-2"
-                                    >
-                                        <span
-                                            class="rounded-full bg-white px-2 py-0.5 text-[0.65rem] font-semibold text-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                                            >{{ campaign.usage_label }}</span
-                                        >
-                                        <span
-                                            :class="
-                                                statusClasses(campaign.status)
-                                            "
-                                            class="rounded-full px-2 py-0.5 text-[0.65rem] font-semibold"
-                                            >{{
-                                                display(campaign.status)
-                                            }}</span
-                                        >
-                                    </div>
-                                    <h3
-                                        class="mt-2 truncate text-sm font-semibold text-slate-950 dark:text-slate-50"
-                                    >
-                                        {{ campaign.title }}
-                                    </h3>
-                                    <p
-                                        class="mt-1 line-clamp-2 text-xs leading-5 text-slate-500 dark:text-slate-400"
-                                    >
-                                        {{
-                                            campaign.description ||
-                                            campaign.template?.name ||
-                                            'Pay Code endpoint'
-                                        }}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div
-                                class="grid gap-2 rounded-xl bg-white p-3 text-xs dark:bg-slate-900"
-                            >
-                                <div class="flex items-center gap-2">
-                                    <Globe2
-                                        class="size-3.5 shrink-0 text-slate-400"
+                                    />Show QR &amp; Share
+                                </button>
+                                <button
+                                    type="button"
+                                    class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200"
+                                    :aria-label="`Copy ${campaign.title} endpoint URL — ${campaign.endpoint_slug}`"
+                                    @click="
+                                        copyEndpointUrl(campaign.public_url)
+                                    "
+                                >
+                                    <Copy
+                                        class="size-3.5"
                                         aria-hidden="true"
-                                    />
-                                    <a
-                                        :href="campaign.public_url"
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        class="min-w-0 truncate text-emerald-700 underline decoration-emerald-300 underline-offset-4 dark:text-emerald-300"
-                                        >{{ campaign.public_url }}</a
-                                    >
-                                    <button
-                                        type="button"
-                                        class="ml-auto inline-flex size-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                                        :aria-label="`Copy ${campaign.title} endpoint URL`"
-                                        @click="
-                                            copyEndpointUrl(
-                                                campaign.public_url,
-                                            )
-                                        "
-                                    >
-                                        <Copy
-                                            class="size-3.5"
-                                            aria-hidden="true"
-                                        />
-                                    </button>
-                                </div>
-                                <dl class="grid grid-cols-3 gap-2">
-                                    <div>
-                                        <dt
-                                            class="text-slate-500 dark:text-slate-400"
-                                        >
-                                            Starts
-                                        </dt>
-                                        <dd
-                                            class="font-semibold text-slate-950 dark:text-slate-50"
-                                        >
-                                            {{ campaign.usage_count }}
-                                            <span
-                                                v-if="campaign.starts_limit"
-                                                class="font-normal text-slate-400"
-                                                >/ {{
-                                                    campaign.starts_limit
-                                                }}</span
-                                            >
-                                        </dd>
-                                    </div>
-                                    <div>
-                                        <dt
-                                            class="text-slate-500 dark:text-slate-400"
-                                        >
-                                            Exposure
-                                        </dt>
-                                        <dd
-                                            class="font-semibold text-slate-950 dark:text-slate-50"
-                                        >
-                                            {{ campaignExposure(campaign) }}
-                                        </dd>
-                                    </div>
-                                    <div>
-                                        <dt
-                                            class="text-slate-500 dark:text-slate-400"
-                                        >
-                                            Expires
-                                        </dt>
-                                        <dd
-                                            class="font-semibold text-slate-950 dark:text-slate-50"
-                                        >
-                                            {{
-                                                campaign.expires_at
-                                                    ? updatedRelativeTime(
-                                                          campaign.expires_at,
-                                                      )
-                                                    : 'Open'
-                                            }}
-                                        </dd>
-                                    </div>
-                                </dl>
+                                    />Copy Link
+                                </button>
                             </div>
-
-                            <button
-                                type="button"
-                                class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200 dark:hover:bg-emerald-950"
-                                :aria-label="`Share ${campaign.title} endpoint stamp`"
-                                :data-testid="`campaign-endpoint-share-stamp-${campaign.reference}`"
-                                @click="openEndpointStamp(campaign)"
-                            >
-                                <Share2 class="size-4" aria-hidden="true" />
-                                Share Stamp
-                            </button>
                         </article>
                     </div>
                 </div>
@@ -1619,12 +1613,13 @@ const updatedRelativeTime = (value: string | null): string =>
 
         <div
             v-if="selectedEndpointStamp"
-            class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-3 backdrop-blur-sm sm:items-center"
+            class="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/60 p-3 backdrop-blur-sm sm:items-center"
             role="presentation"
             data-testid="campaign-endpoint-stamp-overlay"
             @click.self="closeEndpointStamp"
         >
             <section
+                ref="endpointDialog"
                 role="dialog"
                 aria-modal="true"
                 :aria-labelledby="`campaign-endpoint-stamp-title-${selectedEndpointStamp.reference}`"
@@ -1632,6 +1627,7 @@ const updatedRelativeTime = (value: string | null): string =>
                 :data-testid="`campaign-endpoint-stamp-modal-${selectedEndpointStamp.reference}`"
                 tabindex="-1"
                 @keydown.esc="closeEndpointStamp"
+                @keydown.tab="trapEndpointFocus"
             >
                 <div class="flex items-start justify-between gap-3">
                     <div>
@@ -1665,7 +1661,9 @@ const updatedRelativeTime = (value: string | null): string =>
 
                 <CockpitCampaignEndpointStamp
                     :campaign="selectedEndpointStamp"
-                    :availability="endpointAvailabilitySummary(selectedEndpointStamp)"
+                    :availability="
+                        endpointAvailabilitySummary(selectedEndpointStamp)
+                    "
                     :exposure="campaignExposure(selectedEndpointStamp)"
                     :status-class="statusClasses(selectedEndpointStamp.status)"
                     :status-label="display(selectedEndpointStamp.status)"

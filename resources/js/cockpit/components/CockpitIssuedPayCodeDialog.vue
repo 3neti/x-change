@@ -3,7 +3,6 @@ import {
     Check,
     ExternalLink,
     LoaderCircle,
-    Minimize2,
     ScanQrCode,
     X,
 } from 'lucide-vue-next';
@@ -14,6 +13,7 @@ import type {
     RiderStampPreviewSource,
 } from '../riderStampPreview';
 import CockpitPayCodeCanvas from './CockpitPayCodeCanvas.vue';
+import CockpitExpandedStampQr from './CockpitExpandedStampQr.vue';
 import CockpitPayCodeShareCard from './CockpitPayCodeShareCard.vue';
 
 const props = withDefaults(
@@ -67,7 +67,7 @@ const emit = defineEmits<{
 }>();
 
 const dialog = ref<HTMLElement | null>(null);
-const showStampButton = ref<HTMLButtonElement | null>(null);
+const showStampButton = ref<{ focus: () => void } | null>(null);
 const qrExpanded = ref(false);
 const paymentQr = ref<string | null>(null);
 const paymentQrStatus = ref<'idle' | 'loading' | 'ready' | 'failed'>('idle');
@@ -116,7 +116,9 @@ const shareContextText = computed<string>(() => {
     return `${action} \u00b7 ${formattedAmount.value}`;
 });
 const isCollectible = computed<boolean>(() => {
-    return props.voucherType === 'payable' || props.voucherType === 'settlement';
+    return (
+        props.voucherType === 'payable' || props.voucherType === 'settlement'
+    );
 });
 
 watch(
@@ -328,60 +330,19 @@ function handleEscape(): void {
                 <div
                     class="grid gap-5 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_17rem]"
                 >
-                    <div
+                    <CockpitExpandedStampQr
                         v-if="qrExpanded && normalizedClaimQr"
-                        class="flex min-h-80 flex-col rounded-3xl border border-slate-200 bg-slate-100/80 p-3 shadow-inner dark:border-slate-800 dark:bg-slate-900/80 sm:min-h-[38rem] lg:col-span-2"
-                        data-testid="cockpit-issued-pay-code-expanded-qr"
-                    >
-                        <div
-                            class="mb-3 flex items-start justify-between gap-3 px-1"
-                        >
-                            <div>
-                                <p
-                                    class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
-                                >
-                                    Claim QR
-                                </p>
-                                <p
-                                    class="text-xs text-slate-600 dark:text-slate-300"
-                                >
-                                    Scan to open Pay Code {{ normalizedCode }}.
-                                </p>
-                            </div>
-                            <button
-                                ref="showStampButton"
-                                type="button"
-                                class="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-900"
-                                data-testid="cockpit-issued-pay-code-show-stamp"
-                                @click="showStamp"
-                            >
-                                <Minimize2
-                                    class="size-3.5"
-                                    aria-hidden="true"
-                                />
-                                Show Stamp
-                            </button>
-                        </div>
-                        <button
-                            type="button"
-                            class="group flex min-h-80 flex-1 items-center justify-center overflow-hidden rounded-[1.4rem] bg-white p-4 shadow-xl shadow-slate-900/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 sm:min-h-[34rem] sm:p-6"
-                            aria-label="Show finalized Stamp"
-                            aria-pressed="true"
-                            data-testid="cockpit-issued-pay-code-expanded-qr-button"
-                            @click="showStamp"
-                        >
-                            <img
-                                :src="normalizedClaimQr"
-                                :alt="`Claim QR for Pay Code ${normalizedCode}`"
-                                class="aspect-square w-full max-w-2xl object-contain"
-                                width="1024"
-                                height="1024"
-                                decoding="async"
-                                data-testid="cockpit-issued-pay-code-expanded-qr-image"
-                            />
-                        </button>
-                    </div>
-
+                        ref="showStampButton"
+                        class="min-h-80 sm:min-h-[38rem] lg:col-span-2"
+                        :src="normalizedClaimQr"
+                        :alt="`Claim QR for Pay Code ${normalizedCode}`"
+                        title="Claim QR"
+                        :description="`Scan to open Pay Code ${normalizedCode}.`"
+                        test-id="cockpit-issued-pay-code-expanded-qr"
+                        return-label="Show Stamp"
+                        return-test-id="cockpit-issued-pay-code-show-stamp"
+                        @restore="showStamp"
+                    />
                     <div
                         v-else-if="normalizedShareCardUrl"
                         class="rounded-3xl border border-slate-200 bg-slate-100/80 p-3 shadow-inner dark:border-slate-800 dark:bg-slate-900/80"
@@ -476,19 +437,27 @@ function handleEscape(): void {
                             >
                                 Payment QR
                             </p>
-                            <p class="mt-1 text-xs text-sky-900 dark:text-sky-100">
-                                For the payer to scan. This is separate from the claim QR.
+                            <p
+                                class="mt-1 text-xs text-sky-900 dark:text-sky-100"
+                            >
+                                For the payer to scan. This is separate from the
+                                claim QR.
                             </p>
                             <div
                                 v-if="paymentQrStatus === 'loading'"
                                 class="mt-3 flex min-h-28 items-center justify-center gap-2 text-xs text-sky-800 dark:text-sky-200"
                                 data-testid="cockpit-issued-pay-code-payment-loading"
                             >
-                                <LoaderCircle class="size-4 animate-spin" aria-hidden="true" />
+                                <LoaderCircle
+                                    class="size-4 animate-spin"
+                                    aria-hidden="true"
+                                />
                                 Preparing QR Ph…
                             </div>
                             <img
-                                v-else-if="paymentQrStatus === 'ready' && paymentQr"
+                                v-else-if="
+                                    paymentQrStatus === 'ready' && paymentQr
+                                "
                                 :src="paymentQr"
                                 :alt="`Payment QR for Pay Code ${normalizedCode}`"
                                 class="mx-auto mt-3 aspect-square w-full max-w-48 rounded-xl bg-white object-contain p-2"
@@ -510,7 +479,10 @@ function handleEscape(): void {
                                 class="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-sky-300 bg-white px-3 text-xs font-semibold text-sky-900 transition hover:bg-sky-100 dark:border-sky-800 dark:bg-slate-950 dark:text-sky-100 dark:hover:bg-sky-950"
                                 data-testid="cockpit-issued-pay-code-payment-link"
                             >
-                                <ExternalLink class="size-3.5" aria-hidden="true" />
+                                <ExternalLink
+                                    class="size-3.5"
+                                    aria-hidden="true"
+                                />
                                 Open public payment page
                             </a>
                         </section>

@@ -116,7 +116,8 @@ describe('Cockpit route page adapters', () => {
                         claim_surface: '/x/claim/{code}',
                         amount: '₱25.00',
                         details_label: 'Template instructions',
-                        details_description: 'The saved template is authoritative.',
+                        details_description:
+                            'The saved template is authoritative.',
                         fields: ['Disbursable'],
                     },
                 ],
@@ -206,11 +207,9 @@ describe('Cockpit route page adapters', () => {
             .find('[data-testid="campaign-flavor-endpoints"]')
             .trigger('click');
 
-        expect(wrapper.text()).toContain('1 live cards');
+        expect(wrapper.text()).toContain('1 campaign');
         expect(wrapper.text()).toContain('Endpoint ₱500 Disbursement');
-        expect(wrapper.text()).toContain(
-            'https://x-change.test/x/o/lyfe-shaw/endpoint-500-disbursement',
-        );
+        expect(wrapper.text()).toContain('lyfe-shaw/endpoint-500-disbursement');
         expect(
             wrapper.find('[data-testid="campaign-endpoint-list"]').exists(),
         ).toBe(true);

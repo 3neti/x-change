@@ -24,7 +24,8 @@ const usageProfiles = [
     {
         key: 'lead',
         label: 'Lead',
-        description: 'Public QR or link that starts a reusable intake or offer.',
+        description:
+            'Public QR or link that starts a reusable intake or offer.',
         entry_point: 'public_qr_link',
         person_type: 'prospect',
         pay_code_generation: 'on_scan',
@@ -87,6 +88,64 @@ const endpointCampaign = {
 };
 
 describe('Cockpit campaign worksheets', () => {
+    it('keeps identical campaign titles distinguishable and shares the selected endpoint', async () => {
+        const second = {
+            ...endpointCampaign,
+            reference: 'SECOND',
+            endpoint_slug: 'application-demo',
+            public_url:
+                'https://example.test/x/o/aui-insurance/application-demo',
+            qr_data_uri: 'data:image/png;base64,SECOND',
+        };
+        const wrapper = mount(Campaigns, {
+            attachTo: document.body,
+            props: {
+                worksheets: [],
+                endpoint_campaigns: [endpointCampaign, second],
+            },
+        });
+        await wrapper
+            .get('[data-testid="campaign-flavor-endpoints"]')
+            .trigger('click');
+        expect(
+            wrapper
+                .get('[data-testid="campaign-endpoint-list"]')
+                .attributes('role'),
+        ).toBe('list');
+        expect(wrapper.text()).toContain('aui-insurance/application-demo');
+        expect(wrapper.text()).toContain('2 campaigns');
+        const share = wrapper.get(
+            '[data-testid="campaign-endpoint-share-stamp-SECOND"]',
+        );
+        (share.element as HTMLButtonElement).focus();
+        await share.trigger('click');
+        expect(
+            wrapper.get('[data-testid="campaign-endpoint-stamp-url"]').text(),
+        ).toBe(second.public_url);
+        await wrapper
+            .get('[data-testid="campaign-endpoint-enlarge-qr"]')
+            .trigger('click');
+        expect(
+            wrapper
+                .get('[data-testid="campaign-endpoint-expanded-qr-image"]')
+                .attributes('src'),
+        ).toBe(second.qr_data_uri);
+        expect(document.activeElement?.getAttribute('data-testid')).toBe(
+            'campaign-endpoint-expanded-qr-restore',
+        );
+        await wrapper
+            .get('[data-testid="campaign-endpoint-expanded-qr-restore"]')
+            .trigger('click');
+        expect(document.activeElement?.getAttribute('data-testid')).toBe(
+            'campaign-endpoint-enlarge-qr',
+        );
+        await wrapper
+            .get('[data-testid="campaign-endpoint-stamp-close"]')
+            .trigger('click');
+        expect(document.activeElement).toBe(share.element);
+        wrapper.unmount();
+    });
+
     it('presents only aggregate draft facts until beneficiaries are added', () => {
         const wrapper = mount(Campaigns, {
             props: {
@@ -190,14 +249,13 @@ describe('Cockpit campaign worksheets', () => {
                 .attributes('href'),
         ).toBe('/x/cockpit/campaigns/lead-scenario-runner');
         expect(wrapper.text()).toContain('Insurance Application');
-        expect(wrapper.text()).toContain('https://example.test/x/o/aui-insurance/application');
+        expect(wrapper.text()).toContain('aui-insurance/application');
         expect(wrapper.text()).toContain('Insurance application template');
         expect(wrapper.text()).toContain('₱2,500.00 cap');
+        expect(wrapper.text()).toContain('Show QR & Share');
         expect(
-            wrapper.get('[data-testid="campaign-endpoint-qr"]').attributes(
-                'src',
-            ),
-        ).toBe(endpointCampaign.qr_data_uri);
+            wrapper.find('[data-testid="campaign-endpoint-qr"]').exists(),
+        ).toBe(false);
 
         await wrapper
             .get(
@@ -215,15 +273,63 @@ describe('Cockpit campaign worksheets', () => {
         expect(stamp.text()).toContain(endpointCampaign.public_url);
         expect(stamp.text()).not.toContain('/x/claim/');
         expect(
-            stamp.get('[data-testid="campaign-endpoint-stamp-qr"]').attributes(
-                'src',
-            ),
+            stamp
+                .get('[data-testid="campaign-endpoint-stamp-qr"]')
+                .attributes('src'),
         ).toBe(endpointCampaign.qr_data_uri);
         expect(
             stamp
                 .get('[data-testid="campaign-endpoint-stamp-open"]')
                 .attributes('href'),
         ).toBe(endpointCampaign.public_url);
+
+        await stamp
+            .get('[data-testid="campaign-endpoint-enlarge-qr"]')
+            .trigger('click');
+        expect(
+            stamp
+                .get('[data-testid="campaign-endpoint-expanded-qr-image"]')
+                .attributes('src'),
+        ).toBe(endpointCampaign.qr_data_uri);
+        expect(
+            stamp.find('[data-testid="campaign-endpoint-stamp-qr"]').exists(),
+        ).toBe(false);
+        await stamp
+            .get('[data-testid="campaign-endpoint-expanded-qr-button"]')
+            .trigger('click');
+        expect(
+            stamp.find('[data-testid="campaign-endpoint-stamp-qr"]').exists(),
+        ).toBe(true);
+        await stamp
+            .get('[data-testid="campaign-endpoint-enlarge-qr"]')
+            .trigger('click');
+        await stamp
+            .get('[data-testid="campaign-endpoint-expanded-qr-restore"]')
+            .trigger('keydown', { key: 'Escape' });
+        expect(
+            wrapper
+                .find('[data-testid="campaign-endpoint-stamp-overlay"]')
+                .exists(),
+        ).toBe(true);
+        expect(
+            stamp.find('[data-testid="campaign-endpoint-stamp-qr"]').exists(),
+        ).toBe(true);
+        await stamp
+            .get('[data-testid="campaign-endpoint-enlarge-qr"]')
+            .trigger('click');
+        await stamp
+            .get('[data-testid="campaign-endpoint-stamp-close"]')
+            .trigger('click');
+        await wrapper
+            .get(
+                `[data-testid="campaign-endpoint-share-stamp-${endpointCampaign.reference}"]`,
+            )
+            .trigger('click');
+        expect(
+            wrapper
+                .find('[data-testid="campaign-endpoint-expanded-qr"]')
+                .exists(),
+        ).toBe(false);
 
         const endpointForm = (
             wrapper.vm as unknown as {
@@ -897,11 +1003,15 @@ describe('Cockpit campaign worksheets', () => {
         expect(page).toContain('Send To Officer');
         expect(page).toContain('must sign in to approve this batch.');
         expect(page).toContain('data-testid="campaign-worksheet-stats"');
-        expect(page).toContain('data-testid="campaign-browser-scenario-runner"');
+        expect(page).toContain(
+            'data-testid="campaign-browser-scenario-runner"',
+        );
         expect(page).toContain('Live Payroll Runner');
         expect(page).toContain('I APPROVE LIVE BANK TRANSFERS');
         expect(page).toContain('data-testid="campaign-browser-runner-execute"');
-        expect(page).toContain('data-testid="campaign-browser-runner-live-confirmation"');
+        expect(page).toContain(
+            'data-testid="campaign-browser-runner-live-confirmation"',
+        );
         expect(page).toContain('data-testid="campaign-row-monitor-label"');
         expect(page).toContain('data-testid="campaign-row-monitor-detail"');
         expect(page).toContain('item.monitor_label');
