@@ -157,6 +157,11 @@ it('exposes endpoint campaign profiles, active templates, and existing public en
             'merchant_slug' => 'acme-merchant',
             'endpoint_slug' => 'apply',
         ]))
+        ->assertJsonPath('props.endpoint_campaigns.0.creator.name', $owner->name)
+        ->assertJsonPath('props.endpoint_campaigns.0.availability_state.label', 'Open')
+        ->assertJsonPath('props.endpoint_campaigns.0.progress.started', 0)
+        ->assertJsonPath('props.endpoint_campaigns.0.progress.completed', 0)
+        ->assertJsonPath('props.endpoint_campaigns.0.actions.pause_url', route('x-change.cockpit.campaigns.endpoints.pause', LeadCampaign::query()->sole()->reference))
         ->assertJsonPath('props.endpoint_campaigns.0.starts_limit', 25)
         ->assertJsonPath('props.endpoint_campaigns.0.template.name', 'Public application template')
         ->assertJsonPath('props.endpoint_campaign_form.action_url', route('x-change.cockpit.campaigns.endpoints.store'));
@@ -216,6 +221,57 @@ it('creates an endpoint campaign from an owned Pay Code template', function (): 
                 'timezone' => 'Asia/Manila',
             ],
         ]);
+});
+
+it('pauses and resumes endpoint campaigns without touching existing starts', function (): void {
+    $owner = actingAsTestUser();
+    $template = PayCodeTemplate::query()->create([
+        'owner_type' => $owner->getMorphClass(),
+        'owner_id' => (string) $owner->getKey(),
+        'name' => 'Pause template',
+        'base_template_key' => 'blank-pay-code',
+        'instructions_ciphertext' => [
+            'cash' => ['amount' => 5_000, 'currency' => 'PHP'],
+            'count' => 1,
+            'prefix' => 'PAUS',
+            'mask' => '****',
+        ],
+        'include_amount' => true,
+        'include_purpose' => true,
+        'status' => 'active',
+    ]);
+    $campaign = LeadCampaign::query()->create([
+        'owner_type' => $owner->getMorphClass(),
+        'owner_id' => (string) $owner->getKey(),
+        'pay_code_template_id' => $template->getKey(),
+        'merchant_display_name' => 'Acme Merchant',
+        'merchant_slug' => 'acme-merchant',
+        'endpoint_slug' => 'pause-me',
+        'title' => 'Pause Me',
+        'status' => 'active',
+        'usage_count' => 3,
+        'settings' => ['usage_key' => 'lead', 'usage_label' => 'Lead'],
+    ]);
+
+    $audit = fakeAuditLogger();
+
+    $this->patch(route('x-change.cockpit.campaigns.endpoints.pause', $campaign->reference))
+        ->assertRedirect(route('x-change.cockpit.campaigns.index'))
+        ->assertSessionHas('campaign_notice', 'Pause Me is paused. Existing Pay Codes remain untouched.');
+
+    expect($campaign->fresh()->status)->toBe('paused')
+        ->and($campaign->fresh()->usage_count)->toBe(3)
+        ->and($audit->last()['event'] ?? null)->toBe('campaign.endpoint.status_changed')
+        ->and($audit->last()['context']['campaign_reference'] ?? null)->toBe($campaign->reference)
+        ->and($audit->last()['context']['previous_status'] ?? null)->toBe('active')
+        ->and($audit->last()['context']['status'] ?? null)->toBe('paused');
+
+    $this->patch(route('x-change.cockpit.campaigns.endpoints.resume', $campaign->reference))
+        ->assertRedirect(route('x-change.cockpit.campaigns.index'))
+        ->assertSessionHas('campaign_notice', 'Pause Me is open again.');
+
+    expect($campaign->fresh()->status)->toBe('active')
+        ->and($campaign->fresh()->usage_count)->toBe(3);
 });
 
 it('lets only the draft owner save one encrypted Pay Code experience for every beneficiary', function () {

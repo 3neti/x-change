@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use InvalidArgumentException;
@@ -25,9 +28,11 @@ use LBHurtado\XCampaign\Models\CampaignWorksheetAuthorization;
 use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
 use LBHurtado\XCampaign\ReadModels\EndpointCampaignSummary;
 use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
+use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRequest;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRowRequest;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
+use LBHurtado\XChange\Models\CampaignDisplaySession;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Models\VoucherClaim;
@@ -275,12 +280,16 @@ class CockpitCampaignWorksheetController extends Controller
      */
     private function endpointCampaignsFor(mixed $owner): array
     {
-        return $this->endpoints->recentForOwner(
+        $campaigns = $this->endpoints->recentForOwner(
             $this->ownerType($owner),
             (string) $owner->getAuthIdentifier(),
         )
-            ->load('payCodeTemplate')
-            ->map(function (LeadCampaign $campaign): array {
+            ->load('payCodeTemplate');
+        $progress = $this->endpointProgressFor($campaigns);
+        $creator = $this->endpointCreatorFor($owner);
+
+        return $campaigns
+            ->map(function (LeadCampaign $campaign) use ($creator, $progress): array {
                 $publicUrl = route('x-change.leads.start', [
                     'merchant_slug' => $campaign->merchant_slug,
                     'endpoint_slug' => $campaign->endpoint_slug,
@@ -290,6 +299,13 @@ class CockpitCampaignWorksheetController extends Controller
                     ...$this->endpointSummary->forCampaign($campaign),
                     'public_url' => $publicUrl,
                     'qr_data_uri' => $this->qrFor($publicUrl),
+                    'creator' => $creator,
+                    'availability_state' => $this->endpointAvailabilityFor($campaign),
+                    'progress' => $progress[$campaign->getKey()] ?? $this->emptyEndpointProgress($campaign),
+                    'actions' => [
+                        'pause_url' => route('x-change.cockpit.campaigns.endpoints.pause', $campaign->reference),
+                        'resume_url' => route('x-change.cockpit.campaigns.endpoints.resume', $campaign->reference),
+                    ],
                     'template' => $campaign->payCodeTemplate instanceof PayCodeTemplate ? [
                         'id' => $campaign->payCodeTemplate->getKey(),
                         'reference' => $campaign->payCodeTemplate->reference,
@@ -300,6 +316,128 @@ class CockpitCampaignWorksheetController extends Controller
                 ];
             })
             ->all();
+    }
+
+    /**
+     * @param  Collection<int, LeadCampaign>  $campaigns
+     * @return array<int|string, array{started: int, completed: int, in_progress: int, source: string}>
+     */
+    private function endpointProgressFor(Collection $campaigns): array
+    {
+        $ids = $campaigns->modelKeys();
+        if ($ids === []) {
+            return [];
+        }
+
+        $sessions = CampaignDisplaySession::query()
+            ->with(['attempt', 'voucher'])
+            ->whereIn('lead_campaign_id', $ids)
+            ->get()
+            ->groupBy('lead_campaign_id');
+
+        return $campaigns->mapWithKeys(function (LeadCampaign $campaign) use ($sessions): array {
+            $campaignSessions = $sessions->get($campaign->getKey(), collect());
+            $completed = $campaignSessions
+                ->filter(fn (CampaignDisplaySession $session): bool => $this->endpointSessionCompleted($campaign, $session))
+                ->count();
+            $started = (int) $campaign->usage_count;
+
+            return [
+                $campaign->getKey() => [
+                    'started' => $started,
+                    'completed' => min($completed, $started),
+                    'in_progress' => max(0, $started - $completed),
+                    'source' => $campaignSessions->isEmpty() ? 'starts' : 'display_sessions',
+                ],
+            ];
+        })->all();
+    }
+
+    private function endpointSessionCompleted(LeadCampaign $campaign, CampaignDisplaySession $session): bool
+    {
+        $usage = (string) data_get($campaign->settings, 'usage_key', data_get($campaign->settings, 'kind', 'lead'));
+        $capabilities = array_values((array) data_get($campaign->settings, 'capabilities', []));
+        $collectsPayment = $usage === 'collection' || in_array('collection', $capabilities, true);
+
+        if ($collectsPayment) {
+            return $session->attempt?->status === PaymentAttemptStatus::Settled;
+        }
+
+        return $session->intake_completed_at !== null || $session->voucher?->redeemed_at !== null;
+    }
+
+    /**
+     * @return array{started: int, completed: int, in_progress: int, source: string}
+     */
+    private function emptyEndpointProgress(LeadCampaign $campaign): array
+    {
+        $started = (int) $campaign->usage_count;
+
+        return [
+            'started' => $started,
+            'completed' => 0,
+            'in_progress' => $started,
+            'source' => 'starts',
+        ];
+    }
+
+    /**
+     * @return array{name: string, type: string}
+     */
+    private function endpointCreatorFor(mixed $owner): array
+    {
+        return [
+            'name' => filled($owner->name ?? null) ? (string) $owner->name : 'Account owner',
+            'type' => $this->ownerType($owner),
+        ];
+    }
+
+    /**
+     * @return array{key: string, label: string, reason: string|null}
+     */
+    private function endpointAvailabilityFor(LeadCampaign $campaign): array
+    {
+        if ($campaign->status === 'paused') {
+            return ['key' => 'paused', 'label' => 'Paused', 'reason' => 'New starts are paused.'];
+        }
+
+        if ($campaign->expires_at !== null && $campaign->expires_at->isPast()) {
+            return ['key' => 'ended', 'label' => 'Ended', 'reason' => 'The end date has passed.'];
+        }
+
+        $availability = (array) data_get((array) $campaign->settings, 'availability', []);
+        $timezone = (string) ($availability['timezone'] ?? config('app.timezone', 'UTC'));
+
+        if (filled($availability['starts_at'] ?? null)) {
+            $startsAt = Carbon::parse((string) $availability['starts_at'], $timezone);
+            if ($startsAt->isFuture()) {
+                return ['key' => 'scheduled', 'label' => 'Scheduled', 'reason' => 'Not open yet.'];
+            }
+        }
+
+        if ($campaign->starts_limit !== null && (int) $campaign->usage_count >= (int) $campaign->starts_limit) {
+            return ['key' => 'limit_reached', 'label' => 'Limit reached', 'reason' => 'The start limit has been reached.'];
+        }
+
+        $dailyStart = $availability['daily_window_start'] ?? null;
+        $dailyEnd = $availability['daily_window_end'] ?? null;
+        if (is_string($dailyStart) && is_string($dailyEnd)) {
+            $now = Carbon::now($timezone);
+            $current = $now->format('H:i');
+            $isOpen = $dailyStart <= $dailyEnd
+                ? $current >= $dailyStart && $current <= $dailyEnd
+                : $current >= $dailyStart || $current <= $dailyEnd;
+
+            if (! $isOpen) {
+                return ['key' => 'outside_hours', 'label' => 'Outside hours', 'reason' => 'Closed by the daily schedule.'];
+            }
+        }
+
+        if ($campaign->status === 'active') {
+            return ['key' => 'open', 'label' => 'Open', 'reason' => 'Accepting new starts.'];
+        }
+
+        return ['key' => 'unavailable', 'label' => Str::headline($campaign->status), 'reason' => 'Not accepting new starts.'];
     }
 
     private function templateAmountMinor(PayCodeTemplate $template): int

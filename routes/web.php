@@ -372,6 +372,12 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::post('campaigns/endpoints', [CockpitCampaignEndpointController::class, 'store'])
             ->middleware('throttle:12,1')
             ->name('x-change.cockpit.campaigns.endpoints.store');
+        Route::patch('campaigns/endpoints/{campaign}/pause', [CockpitCampaignEndpointController::class, 'pause'])
+            ->middleware('throttle:12,1')
+            ->name('x-change.cockpit.campaigns.endpoints.pause');
+        Route::patch('campaigns/endpoints/{campaign}/resume', [CockpitCampaignEndpointController::class, 'resume'])
+            ->middleware('throttle:12,1')
+            ->name('x-change.cockpit.campaigns.endpoints.resume');
         Route::get(
             'campaigns/lead-scenario-runner',
             [CockpitLeadCampaignScenarioRunnerController::class, 'show'],

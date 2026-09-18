@@ -67,6 +67,8 @@ const endpointCampaign = {
     merchant_display_name: 'AUI Insurance',
     merchant_slug: 'aui-insurance',
     endpoint_slug: 'application',
+    created_at: '2026-07-29T10:00:00+08:00',
+    updated_at: '2026-07-29T12:00:00+08:00',
     public_url: 'https://example.test/x/o/aui-insurance/application',
     qr_data_uri: 'data:image/png;base64,abc123',
     usage_count: 3,
@@ -77,7 +79,27 @@ const endpointCampaign = {
     usage_label: 'Lead',
     capabilities: ['public_endpoint', 'claim_intake'],
     availability: {},
+    availability_state: {
+        key: 'open',
+        label: 'Open',
+        reason: 'Accepting new starts.',
+    },
     limits: {},
+    creator: {
+        name: 'Lester Hurtado',
+        type: 'user',
+    },
+    progress: {
+        started: 3,
+        completed: 1,
+        in_progress: 2,
+        source: 'display_sessions',
+    },
+    actions: {
+        pause_url: '/x/cockpit/campaigns/endpoints/01KYENDPOINT0000000000000/pause',
+        resume_url:
+            '/x/cockpit/campaigns/endpoints/01KYENDPOINT0000000000000/resume',
+    },
     template: {
         id: 12,
         reference: '01KYTEMPLATE0000000000000',
@@ -249,9 +271,17 @@ describe('Cockpit campaign worksheets', () => {
                 .attributes('href'),
         ).toBe('/x/cockpit/campaigns/lead-scenario-runner');
         expect(wrapper.text()).toContain('Insurance Application');
-        expect(wrapper.text()).toContain('aui-insurance/application');
+        expect(wrapper.text()).toContain(
+            'https://example.test/x/o/aui-insurance/application',
+        );
         expect(wrapper.text()).toContain('Insurance application template');
         expect(wrapper.text()).toContain('₱2,500.00 cap');
+        expect(wrapper.text()).toContain(
+            '3 started · 1 completed · 2 in progress',
+        );
+        expect(wrapper.text()).toContain('Created');
+        expect(wrapper.text()).toContain('Lester Hurtado');
+        expect(wrapper.text()).toContain('Open');
         expect(wrapper.text()).toContain('Show QR & Share');
         expect(
             wrapper.find('[data-testid="campaign-endpoint-qr"]').exists(),
@@ -349,6 +379,59 @@ describe('Cockpit campaign worksheets', () => {
 
         expect(post).toHaveBeenCalledOnce();
         expect(post.mock.calls[0][0]).toBe('/x/cockpit/campaigns/endpoints');
+    });
+
+    it('pauses and resumes endpoint campaigns from the management row', async () => {
+        const wrapper = mount(Campaigns, {
+            props: {
+                worksheets: [],
+                endpoint_campaigns: [endpointCampaign],
+            },
+        });
+        await wrapper
+            .get('[data-testid="campaign-flavor-endpoints"]')
+            .trigger('click');
+        const statusForm = (
+            wrapper.vm as unknown as {
+                endpointStatusForm: {
+                    patch: (...args: unknown[]) => void;
+                };
+            }
+        ).endpointStatusForm;
+        const patch = vi
+            .spyOn(statusForm, 'patch')
+            .mockImplementation(() => undefined);
+
+        await wrapper
+            .get(
+                `[data-testid="campaign-endpoint-pause-${endpointCampaign.reference}"]`,
+            )
+            .trigger('click');
+
+        expect(patch).toHaveBeenCalledWith(endpointCampaign.actions.pause_url, {
+            preserveScroll: true,
+        });
+
+        const paused = {
+            ...endpointCampaign,
+            status: 'paused',
+            availability_state: {
+                key: 'paused',
+                label: 'Paused',
+                reason: 'New starts are paused.',
+            },
+        };
+        await wrapper.setProps({ endpoint_campaigns: [paused] });
+        await wrapper
+            .get(
+                `[data-testid="campaign-endpoint-resume-${endpointCampaign.reference}"]`,
+            )
+            .trigger('click');
+
+        expect(patch).toHaveBeenLastCalledWith(
+            endpointCampaign.actions.resume_url,
+            { preserveScroll: true },
+        );
     });
 
     it('keeps empty-state creation vocabulary aligned with the selected flavor', async () => {

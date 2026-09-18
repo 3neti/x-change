@@ -6,9 +6,12 @@ namespace LBHurtado\XChange\Http\Controllers\Web\Cockpit;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
+use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\StoreCampaignEndpointRequest;
+use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 
 final class CockpitCampaignEndpointController extends Controller
@@ -52,5 +55,56 @@ final class CockpitCampaignEndpointController extends Controller
 
         return to_route('x-change.cockpit.campaigns.index')
             ->with('campaign_notice', sprintf('%s is ready to share.', $campaign->title));
+    }
+
+    public function pause(Request $request, string $campaign, AuditLoggerContract $audit): RedirectResponse
+    {
+        $endpoint = $this->endpointForOwner($request, $campaign);
+        $this->setEndpointStatus($endpoint, 'paused', $request, $audit);
+
+        return to_route('x-change.cockpit.campaigns.index')
+            ->with('campaign_notice', sprintf('%s is paused. Existing Pay Codes remain untouched.', $endpoint->title));
+    }
+
+    public function resume(Request $request, string $campaign, AuditLoggerContract $audit): RedirectResponse
+    {
+        $endpoint = $this->endpointForOwner($request, $campaign);
+        $this->setEndpointStatus($endpoint, 'active', $request, $audit);
+
+        return to_route('x-change.cockpit.campaigns.index')
+            ->with('campaign_notice', sprintf('%s is open again.', $endpoint->title));
+    }
+
+    private function endpointForOwner(Request $request, string $reference): LeadCampaign
+    {
+        $owner = $request->user();
+
+        return LeadCampaign::query()
+            ->where('owner_type', $owner instanceof Model ? $owner->getMorphClass() : $owner::class)
+            ->where('owner_id', (string) $owner->getAuthIdentifier())
+            ->where('reference', $reference)
+            ->firstOrFail();
+    }
+
+    private function setEndpointStatus(
+        LeadCampaign $campaign,
+        string $status,
+        Request $request,
+        AuditLoggerContract $audit,
+    ): void {
+        if ($campaign->status === $status) {
+            return;
+        }
+
+        $previous = $campaign->status;
+        $campaign->forceFill(['status' => $status])->save();
+
+        $audit->log('campaign.endpoint.status_changed', [
+            'campaign_reference' => $campaign->reference,
+            'previous_status' => $previous,
+            'status' => $status,
+            'actor_type' => $request->user() instanceof Model ? $request->user()->getMorphClass() : $request->user()::class,
+            'actor_id' => (string) $request->user()->getAuthIdentifier(),
+        ]);
     }
 }

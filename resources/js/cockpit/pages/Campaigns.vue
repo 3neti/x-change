@@ -9,9 +9,11 @@ import {
     HandCoins,
     Link2,
     LockKeyhole,
+    PauseCircle,
     PlayCircle,
     Plus,
     QrCode,
+    RotateCcw,
     Send,
     Trash2,
     Upload,
@@ -83,6 +85,8 @@ type EndpointCampaign = {
     merchant_display_name: string;
     merchant_slug: string;
     endpoint_slug: string;
+    created_at: string | null;
+    updated_at: string | null;
     public_url: string;
     qr_data_uri: string | null;
     usage_count: number;
@@ -93,7 +97,26 @@ type EndpointCampaign = {
     usage_label: string;
     capabilities: string[];
     availability: Record<string, unknown>;
+    availability_state?: {
+        key: string;
+        label: string;
+        reason: string | null;
+    };
     limits: Record<string, unknown>;
+    creator?: {
+        name: string;
+        type: string;
+    };
+    progress?: {
+        started: number;
+        completed: number;
+        in_progress: number;
+        source: string;
+    };
+    actions?: {
+        pause_url: string;
+        resume_url: string;
+    };
     template: {
         id: number;
         reference: string;
@@ -251,6 +274,7 @@ const endpointForm = useForm({
 });
 const deleteForm = useForm({});
 const authorizationForm = useForm({});
+const endpointStatusForm = useForm({});
 const authorizingWorksheet = ref<string | null>(null);
 const intakeForm = useForm<{ file: File | null }>({ file: null });
 const intakeFileInput = ref<HTMLInputElement | null>(null);
@@ -497,6 +521,26 @@ function createApprovalPayCode(worksheet: CampaignWorksheet): void {
     });
 }
 
+function pauseEndpointCampaign(campaign: EndpointCampaign): void {
+    if (!campaign.actions?.pause_url || endpointStatusForm.processing) {
+        return;
+    }
+
+    endpointStatusForm.patch(campaign.actions.pause_url, {
+        preserveScroll: true,
+    });
+}
+
+function resumeEndpointCampaign(campaign: EndpointCampaign): void {
+    if (!campaign.actions?.resume_url || endpointStatusForm.processing) {
+        return;
+    }
+
+    endpointStatusForm.patch(campaign.actions.resume_url, {
+        preserveScroll: true,
+    });
+}
+
 function display(value: string): string {
     return value
         .replaceAll('_', ' ')
@@ -544,6 +588,40 @@ function campaignExposure(campaign: EndpointCampaign): string {
     }
 
     return `${peso(amount * maxStarts)} cap`;
+}
+
+function campaignProgress(campaign: EndpointCampaign): string {
+    const progress = campaign.progress ?? {
+        started: campaign.usage_count,
+        completed: 0,
+        in_progress: campaign.usage_count,
+        source: 'starts',
+    };
+
+    return `${progress.started} started · ${progress.completed} completed · ${progress.in_progress} in progress`;
+}
+
+function campaignCreatedLine(campaign: EndpointCampaign): string {
+    const created = updatedRelativeTime(campaign.created_at);
+    const creator = campaign.creator?.name ?? 'Account owner';
+
+    return `Created ${created} by ${creator}`;
+}
+
+function availabilityClasses(key: string): string {
+    if (key === 'open') {
+        return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300';
+    }
+
+    if (key === 'scheduled' || key === 'outside_hours') {
+        return 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300';
+    }
+
+    if (key === 'paused') {
+        return 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300';
+    }
+
+    return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
 }
 
 function endpointAvailabilitySummary(campaign: EndpointCampaign): string {
@@ -1244,18 +1322,17 @@ const updatedRelativeTime = (value: string | null): string =>
                     >
                         <div
                             aria-hidden="true"
-                            class="hidden gap-4 bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-500 dark:bg-slate-950 dark:text-slate-400 xl:grid xl:grid-cols-[minmax(0,2fr)_6rem_4rem_minmax(0,1fr)_12rem]"
+                            class="hidden gap-4 bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-500 dark:bg-slate-950 dark:text-slate-400 xl:grid xl:grid-cols-[minmax(0,2.2fr)_8rem_minmax(0,1.5fr)_minmax(0,1.4fr)_13rem]"
                         >
-                            <span>Campaign</span><span>Status</span
-                            ><span>Starts</span
-                            ><span>Availability / Exposure</span
+                            <span>Endpoint</span><span>Availability</span
+                            ><span>Progress</span><span>Exposure</span
                             ><span>Actions</span>
                         </div>
                         <article
                             v-for="campaign in endpointCampaigns"
                             :key="campaign.reference"
                             role="listitem"
-                            class="grid min-w-0 gap-3 p-4 xl:grid-cols-[minmax(0,2fr)_6rem_4rem_minmax(0,1fr)_12rem] xl:items-center xl:gap-4"
+                            class="grid min-w-0 gap-3 p-4 xl:grid-cols-[minmax(0,2.2fr)_8rem_minmax(0,1.5fr)_minmax(0,1.4fr)_13rem] xl:items-center xl:gap-4"
                             :data-testid="`campaign-endpoint-card-${campaign.reference}`"
                         >
                             <div class="min-w-0">
@@ -1265,43 +1342,54 @@ const updatedRelativeTime = (value: string | null): string =>
                                     {{ campaign.title }}
                                 </h3>
                                 <p
-                                    class="mt-1 break-all text-xs text-slate-500 dark:text-slate-400"
+                                    class="mt-1 break-all text-xs font-medium text-slate-700 dark:text-slate-200"
                                     data-testid="campaign-endpoint-identifier"
                                 >
-                                    {{ campaign.merchant_slug }}/{{
-                                        campaign.endpoint_slug
-                                    }}
+                                    {{ campaign.public_url }}
                                 </p>
                                 <p
                                     class="mt-1 text-xs text-slate-500 dark:text-slate-400"
                                 >
-                                    {{ campaign.usage_label }}
+                                    {{ campaignCreatedLine(campaign) }}
                                 </p>
                             </div>
                             <div>
                                 <span
-                                    :class="statusClasses(campaign.status)"
+                                    :class="
+                                        availabilityClasses(
+                                            campaign.availability_state?.key ??
+                                                campaign.status,
+                                        )
+                                    "
                                     class="inline-flex rounded-full px-2 py-1 text-xs font-semibold"
-                                    >{{ display(campaign.status) }}</span
+                                    >{{
+                                        campaign.availability_state?.label ??
+                                        display(campaign.status)
+                                    }}</span
                                 >
                             </div>
-                            <p
-                                class="text-sm font-semibold text-slate-950 dark:text-slate-50"
-                            >
-                                <span
-                                    class="font-normal text-slate-500 xl:sr-only"
-                                    >Starts: </span
-                                >{{ campaign.usage_count
-                                }}<span
+                            <div>
+                                <p
+                                    class="text-sm font-semibold text-slate-950 dark:text-slate-50"
+                                    data-testid="campaign-endpoint-progress"
+                                >
+                                    {{ campaignProgress(campaign) }}
+                                </p>
+                                <p
                                     v-if="campaign.starts_limit"
-                                    class="font-normal text-slate-500"
+                                    class="mt-1 text-xs text-slate-500 dark:text-slate-400"
                                 >
-                                    / {{ campaign.starts_limit }}</span
-                                >
-                            </p>
+                                    Limit:
+                                    {{ campaign.usage_count }} /
+                                    {{ campaign.starts_limit }} starts
+                                </p>
+                            </div>
                             <div
                                 class="text-xs text-slate-600 dark:text-slate-300"
                             >
+                                <p class="font-semibold text-slate-800 dark:text-slate-100">
+                                    {{ campaignExposure(campaign) }}
+                                </p>
                                 <p>
                                     {{
                                         campaign.expires_at
@@ -1310,7 +1398,7 @@ const updatedRelativeTime = (value: string | null): string =>
                                     }}
                                 </p>
                                 <p class="mt-1">
-                                    {{ campaignExposure(campaign) }}
+                                    {{ campaign.usage_label }}
                                 </p>
                             </div>
                             <div class="flex flex-wrap gap-2 xl:grid">
@@ -1338,6 +1426,32 @@ const updatedRelativeTime = (value: string | null): string =>
                                         class="size-3.5"
                                         aria-hidden="true"
                                     />Copy Link
+                                </button>
+                                <button
+                                    v-if="campaign.status === 'active'"
+                                    type="button"
+                                    class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50 disabled:opacity-60 dark:border-amber-900 dark:text-amber-300 dark:hover:bg-amber-950/40"
+                                    :disabled="endpointStatusForm.processing"
+                                    :data-testid="`campaign-endpoint-pause-${campaign.reference}`"
+                                    @click="pauseEndpointCampaign(campaign)"
+                                >
+                                    <PauseCircle
+                                        class="size-3.5"
+                                        aria-hidden="true"
+                                    />Pause
+                                </button>
+                                <button
+                                    v-else-if="campaign.status === 'paused'"
+                                    type="button"
+                                    class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-60 dark:border-emerald-900 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
+                                    :disabled="endpointStatusForm.processing"
+                                    :data-testid="`campaign-endpoint-resume-${campaign.reference}`"
+                                    @click="resumeEndpointCampaign(campaign)"
+                                >
+                                    <RotateCcw
+                                        class="size-3.5"
+                                        aria-hidden="true"
+                                    />Resume
                                 </button>
                             </div>
                         </article>
