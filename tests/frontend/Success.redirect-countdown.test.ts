@@ -93,6 +93,49 @@ const baseProps = {
 };
 
 describe('claim Success redirect countdown rendering', () => {
+    it.each(['claim-widget', 'x-rider'])('keeps the canonical payment handoff ahead of %s redirects', async (owner) => {
+        const action = {
+            key: 'x-change.claim-success.continue-to-payment',
+            label: 'Continue to payment', enabled: true,
+            target: { url: '/x/pay/TEST123', method: 'GET' },
+        };
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                paired_payment: false,
+                redirect: { ...baseProps.redirect, owner },
+                claim_experience: { ...baseProps.claim_experience, diagnostics: { redirect_owner: owner } },
+                rider: {
+                    ...baseProps.rider,
+                    success: { enabled: true, type: 'text', content: 'Application received.' },
+                    redirect: { enabled: true, url: 'https://example.com/success', timeout: 8 },
+                    stages: { stages: [{ key: 'demo-redirect', type: 'redirect', phase: 'redirect', payload: { url: 'https://example.com/success', timeout: 8 } }] },
+                },
+                success_action: action,
+            },
+        });
+
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="rider-runtime"]').exists()).toBe(false);
+        expect(wrapper.get('a[href="/x/pay/TEST123"]').text()).toBe('Continue to payment');
+        expect(wrapper.text()).toContain('Application received.');
+
+        await wrapper.setProps({ success_action: null });
+        expect(wrapper.find('[data-testid="rider-runtime"]').exists()).toBe(owner === 'x-rider');
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(owner === 'claim-widget');
+        wrapper.unmount();
+    });
+
+    it.each([
+        { key: 'other-action', label: 'Continue to payment', enabled: true, target: { url: '/other' } },
+        { key: 'x-change.claim-success.continue-to-payment', label: 'Continue', enabled: false, target: { url: '/x/pay/TEST123' } },
+        { key: 'x-change.claim-success.continue-to-payment', label: 'Continue', enabled: true, target: { url: ' ' } },
+    ])('does not suppress ordinary redirects for an unrelated or unavailable action: %j', (action) => {
+        const wrapper = mount(Success, { props: { ...baseProps, success_action: action } });
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
+        wrapper.unmount();
+    });
+
     it('suppresses automatic redirects only while paired payment is pending and preserves the payment action', async () => {
         const wrapper = mount(Success, {
             props: {

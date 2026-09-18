@@ -87,15 +87,25 @@ interface Props {
 
 const props = defineProps<Props>();
 
+const hasPaymentHandoff = computed(() =>
+    props.success_action?.key === 'x-change.claim-success.continue-to-payment'
+    && props.success_action.enabled !== false
+    && Boolean(props.success_action.label?.trim())
+    && Boolean(props.success_action.target?.url?.trim()),
+);
+const suppressAutomaticRedirects = computed(() =>
+    props.paired_payment || hasPaymentHandoff.value,
+);
+
 const riderContent = computed(() => props.rider?.success ?? null);
 const riderRedirect = computed(() =>
-    props.paired_payment ? null : props.rider?.redirect ?? null,
+    suppressAutomaticRedirects.value ? null : props.rider?.redirect ?? null,
 );
 const effectiveRedirect = computed(() =>
-    props.paired_payment ? null : props.redirect ?? null,
+    suppressAutomaticRedirects.value ? null : props.redirect ?? null,
 );
 const effectiveRedirectEndpoint = computed(() =>
-    props.paired_payment ? null : props.redirectEndpoint ?? null,
+    suppressAutomaticRedirects.value ? null : props.redirectEndpoint ?? null,
 );
 
 const displayedRiderContent = computed(() =>
@@ -113,7 +123,7 @@ const successVisualStages = computed<RawRiderStage[]>(() =>
 );
 
 const redirectRuntimeStages = computed<RawRiderStage[]>(() =>
-    props.paired_payment
+    suppressAutomaticRedirects.value
         ? []
         : resolveRedirectRuntimeStages(props.rider, props.claim_experience),
 );
@@ -150,13 +160,13 @@ const shouldShowVoucherCodeBadge = computed(
 );
 
 const redirectOwnership = computed(() =>
-    resolveSuccessRedirectOwnershipViewModel(props.redirect ?? null),
+    resolveSuccessRedirectOwnershipViewModel(effectiveRedirect.value),
 );
 
 const countdownViewModel = computed(() =>
     resolveSuccessCountdownViewModel({
         countdownRedirect: countdownRedirect.value,
-        redirectEndpoint: props.redirectEndpoint ?? null,
+        redirectEndpoint: effectiveRedirectEndpoint.value,
         redirectOwnership: redirectOwnership.value,
     }),
 );
@@ -440,7 +450,7 @@ const successAction = computed(() => {
             <RiderRuntimeSequencer
                 v-if="hasRedirectRuntimeStages"
                 :stages="redirectRuntimeStages"
-                :redirect-endpoint="redirectEndpoint"
+                :redirect-endpoint="effectiveRedirectEndpoint"
             />
 
             <div
