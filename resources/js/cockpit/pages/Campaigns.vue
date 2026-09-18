@@ -651,6 +651,14 @@ function campaignExposure(campaign: EndpointCampaign): string {
     return `${peso(amount * maxStarts)} cap`;
 }
 
+function campaignEndpointPath(campaign: EndpointCampaign): string {
+    try {
+        return new URL(campaign.public_url).pathname;
+    } catch {
+        return `/x/o/${campaign.merchant_slug}/${campaign.endpoint_slug}`;
+    }
+}
+
 function campaignProgress(campaign: EndpointCampaign): string {
     const progress = campaign.progress ?? {
         started: campaign.usage_count,
@@ -1405,8 +1413,9 @@ const updatedRelativeTime = (value: string | null): string =>
                                 <p
                                     class="mt-1 break-all text-xs font-medium text-slate-700 dark:text-slate-200"
                                     data-testid="campaign-endpoint-identifier"
+                                    :title="campaign.public_url"
                                 >
-                                    {{ campaign.public_url }}
+                                    {{ campaignEndpointPath(campaign) }}
                                 </p>
                                 <p
                                     class="mt-1 text-xs text-slate-500 dark:text-slate-400"

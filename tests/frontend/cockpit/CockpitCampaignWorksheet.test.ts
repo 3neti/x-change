@@ -137,7 +137,15 @@ describe('Cockpit campaign worksheets', () => {
                 .get('[data-testid="campaign-endpoint-list"]')
                 .attributes('role'),
         ).toBe('list');
-        expect(wrapper.text()).toContain('aui-insurance/application-demo');
+        expect(wrapper.text()).toContain('/x/o/aui-insurance/application-demo');
+        expect(wrapper.text()).not.toContain(
+            'https://example.test/x/o/aui-insurance/application-demo',
+        );
+        expect(
+            wrapper
+                .get('[data-testid="campaign-endpoint-identifier"]')
+                .attributes('title'),
+        ).toBe(endpointCampaign.public_url);
         expect(wrapper.text()).toContain('2 campaigns');
         const share = wrapper.get(
             '[data-testid="campaign-endpoint-share-stamp-SECOND"]',
@@ -274,7 +282,8 @@ describe('Cockpit campaign worksheets', () => {
                 .attributes('href'),
         ).toBe('/x/cockpit/campaigns/lead-scenario-runner');
         expect(wrapper.text()).toContain('Insurance Application');
-        expect(wrapper.text()).toContain(
+        expect(wrapper.text()).toContain('/x/o/aui-insurance/application');
+        expect(wrapper.text()).not.toContain(
             'https://example.test/x/o/aui-insurance/application',
         );
         expect(wrapper.text()).toContain('Insurance application template');
