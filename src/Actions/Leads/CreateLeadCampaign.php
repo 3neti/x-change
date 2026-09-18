@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Actions\Leads;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\XCampaign\Contracts\EndpointCampaignRepository;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Services\Funding\FundingQrMerchantProfileResolver;
@@ -17,6 +18,7 @@ final readonly class CreateLeadCampaign
     public function __construct(
         private FundingQrMerchantProfileResolver $merchantProfiles,
         private LeadCampaignPublicSlugService $slugs,
+        private EndpointCampaignRepository $endpoints,
     ) {}
 
     /**
@@ -60,7 +62,7 @@ final readonly class CreateLeadCampaign
             ...(array) ($attributes['settings'] ?? []),
         ];
 
-        return LeadCampaign::query()->create([
+        return $this->endpoints->create([
             'owner_type' => $owner->getMorphClass(),
             'owner_id' => (string) $owner->getKey(),
             'pay_code_template_id' => $template->getKey(),

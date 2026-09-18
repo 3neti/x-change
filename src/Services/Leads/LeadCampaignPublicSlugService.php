@@ -6,10 +6,12 @@ namespace LBHurtado\XChange\Services\Leads;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
-use LBHurtado\XChange\Models\LeadCampaign;
+use LBHurtado\XCampaign\Contracts\EndpointCampaignRepository;
 
 final class LeadCampaignPublicSlugService
 {
+    public function __construct(private readonly EndpointCampaignRepository $endpoints) {}
+
     public function merchantSlug(string $merchantDisplayName, Model $owner): string
     {
         $base = $this->baseSlug($merchantDisplayName, 'merchant-'.$owner->getKey());
@@ -17,14 +19,9 @@ final class LeadCampaignPublicSlugService
         $suffix = 2;
 
         while (
-            LeadCampaign::query()
-                ->where('merchant_slug', $candidate)
-                ->where(function ($query) use ($owner): void {
-                    $query
-                        ->where('owner_type', '!=', $owner->getMorphClass())
-                        ->orWhere('owner_id', '!=', (string) $owner->getKey());
-                })
-                ->exists()
+            $this->endpoints->merchantSlugUsedByOtherOwner(
+                $candidate, $owner->getMorphClass(), (string) $owner->getKey(),
+            )
         ) {
             $candidate = $this->appendSuffix($base, (string) $suffix);
             $suffix++;
@@ -45,10 +42,7 @@ final class LeadCampaignPublicSlugService
         $suffix = 2;
 
         while (
-            LeadCampaign::query()
-                ->where('merchant_slug', $merchantSlug)
-                ->where('endpoint_slug', $candidate)
-                ->exists()
+            $this->endpoints->publicEndpointExists($merchantSlug, $candidate)
         ) {
             $candidate = $this->appendSuffix($base, (string) $suffix);
             $suffix++;

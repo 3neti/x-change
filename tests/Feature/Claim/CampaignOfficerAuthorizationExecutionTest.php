@@ -35,6 +35,9 @@ it('plans beneficiaries after a distinct authenticated officer authorizes the ap
     $authorization = app(IssueCampaignWorksheetApprovalPayCode::class)->handle((string) $worksheet->reference, $issuer);
     $voucher = Voucher::query()->where('code', $authorization->approval_pay_code)->sole();
 
+    expect((int) $issuer->wallet()->where('slug', 'platform')->sole()->balance)->toBe(0)
+        ->and((int) $officer->wallet()->where('slug', 'platform')->sole()->balance)->toBe(0);
+
     $this->actingAs($officer);
     $result = app(CampaignWorksheetAuthorizationExecutionService::class)->execute($voucher, [
         'mobile' => '09173011987',
@@ -127,6 +130,8 @@ function campaignOfficerAuthorizationUser(?string $mobile = null): User
         'email' => 'campaign-officer-'.Str::uuid().'@example.test',
         'password' => Hash::make('password'),
     ]);
+
+    fundTestUserWallet($user, 0);
 
     if ($mobile !== null) {
         $user->forceFill(['mobile' => $mobile])->save();

@@ -56,9 +56,13 @@ use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
+use LBHurtado\XCampaign\Contracts\EndpointCampaignRepository;
+use LBHurtado\XCampaign\Repositories\EloquentEndpointCampaignRepository;
 use LBHurtado\XChange\Actions\Auth\AuthenticateMobileFirstUser;
 use LBHurtado\XChange\Actions\Auth\CreateNewMobileFirstUser;
 use LBHurtado\XChange\Actions\Auth\ResetMobileFirstPin;
+use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
+use LBHurtado\XChange\Actions\Leads\StartLeadCampaign;
 use LBHurtado\XChange\Console\Commands\AdoptCommissioningManifestCommand;
 use LBHurtado\XChange\Console\Commands\AdoptHostCommand;
 use LBHurtado\XChange\Console\Commands\AdoptXChangeCommand;
@@ -214,7 +218,6 @@ use LBHurtado\XChange\Contracts\DisbursementStatusFetcherContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Contracts\EventLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\EventStoreContract;
-use LBHurtado\XChange\Contracts\PaginatedEventStoreContract;
 use LBHurtado\XChange\Contracts\Execution\StoredValueDestinationAuthorityContract;
 use LBHurtado\XChange\Contracts\Execution\StoredValueHolderAuthorityContract;
 use LBHurtado\XChange\Contracts\ExecutionCashDisbursementPollerContract;
@@ -237,6 +240,7 @@ use LBHurtado\XChange\Contracts\MinimumWithdrawalPolicyResolverContract;
 use LBHurtado\XChange\Contracts\MoneyMovementAccountingDecisionContract;
 use LBHurtado\XChange\Contracts\MoneyMovementLifecycleTriggerMatrixContract;
 use LBHurtado\XChange\Contracts\MoneyMovementTargetModelContract;
+use LBHurtado\XChange\Contracts\PaginatedEventStoreContract;
 use LBHurtado\XChange\Contracts\PayCodePresentationResolverContract;
 use LBHurtado\XChange\Contracts\PayoutDestinationValidatorContract;
 use LBHurtado\XChange\Contracts\PricelistServiceContract;
@@ -307,6 +311,8 @@ use LBHurtado\XChange\Exceptions\VoucherCollectionConflict;
 use LBHurtado\XChange\Exceptions\VoucherFlowCapabilityException;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
 use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetController;
+use LBHurtado\XChange\Http\Controllers\Web\Leads\LeadCampaignEndpointController;
 use LBHurtado\XChange\Http\Middleware\EnsureXChangeIsCommissioned;
 use LBHurtado\XChange\Http\Middleware\RequireInitialPinSetup;
 use LBHurtado\XChange\Http\Responses\MobileFirstRegisterResponse;
@@ -316,6 +322,7 @@ use LBHurtado\XChange\Listeners\HandleConfirmedDisbursement;
 use LBHurtado\XChange\Listeners\HandleRejectedDisbursement;
 use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
 use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
+use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\Base64PngClaimUrlQrRenderer;
 use LBHurtado\XChange\Services\CacheClaimApprovalWorkflowStore;
@@ -442,6 +449,7 @@ use LBHurtado\XChange\Services\Keepsake\Contributors\ClaimEvidenceKeepsakeContri
 use LBHurtado\XChange\Services\Keepsake\Contributors\PayCodeSummaryKeepsakeContributor;
 use LBHurtado\XChange\Services\Keepsake\GrantedInstanceKeepsakeAccess;
 use LBHurtado\XChange\Services\Keepsake\InstanceKeepsakeContributorCatalog;
+use LBHurtado\XChange\Services\Leads\LeadCampaignPublicSlugService;
 use LBHurtado\XChange\Services\LinkPreview\LinkCanonicalizerRegistry;
 use LBHurtado\XChange\Services\LinkPreview\LinkPreviewDriverRepository;
 use LBHurtado\XChange\Services\LinkPreview\LinkPreviewEngine;
@@ -515,6 +523,18 @@ class XChangeServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->when([
+            CockpitCampaignWorksheetController::class,
+            CreateLeadCampaign::class,
+            StartLeadCampaign::class,
+            LeadCampaignPublicSlugService::class,
+            LeadCampaignEndpointController::class,
+        ])
+            ->needs(EndpointCampaignRepository::class)
+            ->give(fn () => new EloquentEndpointCampaignRepository(
+                new LeadCampaign,
+            ));
+
         $this->mergeConfigFrom(
             $this->packagePath('config/x-change.php'),
             'x-change'

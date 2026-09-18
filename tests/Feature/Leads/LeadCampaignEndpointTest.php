@@ -3,13 +3,18 @@
 declare(strict_types=1);
 
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use LBHurtado\XCampaign\Models\EndpointCampaign;
 use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
+use LBHurtado\XChange\Actions\Leads\StartLeadCampaign;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Data\DebitData;
 use LBHurtado\XChange\Data\IssuerData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
+use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Tests\Fakes\User;
 
@@ -37,6 +42,86 @@ it('creates a merchant scoped lead campaign from an owner template', function ()
         ]);
 });
 
+it('retains the persisted endpoint identity and template relation after extraction', function (): void {
+    $operator = leadCampaignOperator('Compatibility merchant');
+    $template = leadCampaignTemplate($operator);
+    $campaign = app(CreateLeadCampaign::class)->handle($operator, $template, [
+        'title' => 'Existing public link',
+        'endpoint_slug' => 'existing-public-link',
+    ]);
+    $reference = $campaign->reference;
+    $url = route('x-change.leads.start', [
+        'merchant_slug' => $campaign->merchant_slug,
+        'endpoint_slug' => $campaign->endpoint_slug,
+    ]);
+    $campaign->refresh();
+
+    expect($campaign)->toBeInstanceOf(EndpointCampaign::class)
+        ->and($campaign->getTable())->toBe('x_change_lead_campaigns')
+        ->and($campaign->getMorphClass())->toBe(LeadCampaign::class)
+        ->and($campaign->reference)->toBe($reference)
+        ->and($campaign->reference)->not->toBeEmpty()
+        ->and($campaign->owner->is($operator))->toBeTrue()
+        ->and($campaign->payCodeTemplate->is($template))->toBeTrue()
+        ->and($campaign->usage_count)->toBe(0)
+        ->and($campaign->status)->toBe('active')
+        ->and(route('x-change.leads.start', [
+            'merchant_slug' => $campaign->merchant_slug,
+            'endpoint_slug' => $campaign->endpoint_slug,
+        ]))->toBe($url);
+});
+
+it('rejects unavailable endpoint starts before issuing or incrementing usage', function (array $attributes): void {
+    $this->travelTo(Carbon::parse('2026-09-18 04:00:00', 'UTC'));
+    $operator = leadCampaignOperator('Availability merchant');
+    $template = leadCampaignTemplate($operator);
+    $campaign = app(CreateLeadCampaign::class)->handle($operator, $template, [
+        'title' => 'Availability baseline', ...$attributes,
+    ]);
+    $fakeIssuer = leadCampaignFakeGeneratePayCode('SHOULD-NOT-ISSUE');
+    app()->instance(GeneratePayCode::class, $fakeIssuer);
+
+    $this->get(route('x-change.leads.start', [
+        'merchant_slug' => $campaign->merchant_slug,
+        'endpoint_slug' => $campaign->endpoint_slug,
+    ]))->assertNotFound();
+
+    expect($fakeIssuer->payloads)->toBeEmpty()
+        ->and($campaign->fresh()->usage_count)->toBe(0)
+        ->and($campaign->fresh()->last_started_at)->toBeNull();
+})->with([
+    'expired' => [['expires_at' => '2026-09-17 00:00:00']],
+    'zero start limit' => [['starts_limit' => 0]],
+    'outside local hours' => [['settings' => ['availability' => [
+        'timezone' => 'Asia/Manila', 'daily_window_start' => '13:00', 'daily_window_end' => '14:00',
+    ]]]],
+]);
+
+it('does not record a successful start when issuance fails', function (): void {
+    $operator = leadCampaignOperator('Failed issuance merchant');
+    $campaign = app(CreateLeadCampaign::class)->handle($operator, leadCampaignTemplate($operator), [
+        'title' => 'Failed issuance',
+    ]);
+    $issuer = Mockery::mock(GeneratePayCode::class);
+    $issuer->shouldReceive('handle')->once()->andThrow(new RuntimeException('Issuance failed'));
+    app()->instance(GeneratePayCode::class, $issuer);
+
+    expect(fn () => app(StartLeadCampaign::class)->handle($campaign))->toThrow(RuntimeException::class, 'Issuance failed');
+    expect($campaign->fresh()->usage_count)->toBe(0)
+        ->and($campaign->fresh()->last_started_at)->toBeNull();
+});
+
+it('rejects a missing public endpoint without issuing a Pay Code', function (): void {
+    $issuer = leadCampaignFakeGeneratePayCode('SHOULD-NOT-ISSUE');
+    app()->instance(GeneratePayCode::class, $issuer);
+
+    $this->get(route('x-change.leads.start', [
+        'merchant_slug' => 'missing', 'endpoint_slug' => 'missing',
+    ]))->assertNotFound();
+
+    expect($issuer->payloads)->toBeEmpty();
+});
+
 it('keeps lead campaign endpoint slugs unique under the merchant slug', function (): void {
     $operator = leadCampaignOperator('AUI Insurance');
     $firstTemplate = leadCampaignTemplate($operator, 'First template');
@@ -54,6 +139,37 @@ it('keeps lead campaign endpoint slugs unique under the merchant slug', function
     expect($first->merchant_slug)->toBe($second->merchant_slug)
         ->and($first->endpoint_slug)->toBe('application')
         ->and($second->endpoint_slug)->toBe('application-2');
+});
+
+it('lists endpoint summaries with batched template loading and no endpoint writes', function (): void {
+    $owner = leadCampaignOperator('List merchant');
+    foreach (range(1, 3) as $number) {
+        $template = leadCampaignTemplate($owner, 'Template '.$number);
+        app(CreateLeadCampaign::class)->handle($owner, $template, [
+            'title' => 'Endpoint '.$number,
+        ]);
+    }
+    $before = LeadCampaign::query()->orderBy('id')->get()->map->getAttributes()->all();
+    DB::enableQueryLog();
+    DB::flushQueryLog();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.index'))
+        ->assertOk()
+        ->assertJsonCount(3, 'props.endpoint_campaigns')
+        ->assertJsonPath('props.endpoint_campaigns.0.usage_key', 'lead')
+        ->assertJsonPath('props.endpoint_campaigns.0.usage_count', 0)
+        ->assertJsonPath('props.endpoint_campaigns.0.template.currency', 'PHP');
+
+    $queries = collect(DB::getQueryLog())->pluck('query');
+    DB::disableQueryLog();
+    $endpointQueries = $queries->filter(fn (string $sql): bool => str_contains($sql, '"x_change_lead_campaigns"'));
+    $templateQueries = $queries->filter(fn (string $sql): bool => str_contains($sql, '"x_change_pay_code_templates"'));
+
+    expect($endpointQueries)->toHaveCount(1)
+        ->and(strtolower($endpointQueries->sole()))->toStartWith('select')
+        ->and($templateQueries)->toHaveCount(2)
+        ->and(LeadCampaign::query()->orderBy('id')->get()->map->getAttributes()->all())->toBe($before);
 });
 
 it('rejects lead campaigns created from another owners template', function (): void {

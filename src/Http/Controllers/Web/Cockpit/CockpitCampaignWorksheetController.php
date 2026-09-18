@@ -14,6 +14,7 @@ use InvalidArgumentException;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetImportRepository;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetIntakeRepository;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
+use LBHurtado\XCampaign\Contracts\EndpointCampaignRepository;
 use LBHurtado\XCampaign\Data\CampaignWorksheetData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetImportData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetIntakeData;
@@ -22,6 +23,7 @@ use LBHurtado\XCampaign\Data\CampaignWorksheetSummaryData;
 use LBHurtado\XCampaign\Models\CampaignWorksheet;
 use LBHurtado\XCampaign\Models\CampaignWorksheetAuthorization;
 use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
+use LBHurtado\XCampaign\ReadModels\EndpointCampaignSummary;
 use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRequest;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRowRequest;
@@ -42,6 +44,8 @@ class CockpitCampaignWorksheetController extends Controller
         private readonly InstructionCapabilityReadinessRegistry $instructionCapabilities,
         private readonly InstructionCapabilityRequirementResolver $instructionCapabilityRequirements,
         private readonly ClaimUrlQrRendererContract $claimUrlQrRenderer,
+        private readonly EndpointCampaignRepository $endpoints,
+        private readonly EndpointCampaignSummary $endpointSummary,
     ) {}
 
     public function index(Request $request): Response
@@ -271,13 +275,11 @@ class CockpitCampaignWorksheetController extends Controller
      */
     private function endpointCampaignsFor(mixed $owner): array
     {
-        return LeadCampaign::query()
-            ->with('payCodeTemplate')
-            ->where('owner_type', $this->ownerType($owner))
-            ->where('owner_id', (string) $owner->getAuthIdentifier())
-            ->latest('updated_at')
-            ->limit(25)
-            ->get()
+        return $this->endpoints->recentForOwner(
+            $this->ownerType($owner),
+            (string) $owner->getAuthIdentifier(),
+        )
+            ->load('payCodeTemplate')
             ->map(function (LeadCampaign $campaign): array {
                 $publicUrl = route('x-change.leads.start', [
                     'merchant_slug' => $campaign->merchant_slug,
@@ -285,24 +287,9 @@ class CockpitCampaignWorksheetController extends Controller
                 ]);
 
                 return [
-                    'reference' => $campaign->reference,
-                    'title' => $campaign->title,
-                    'description' => $campaign->description,
-                    'status' => $campaign->status,
-                    'merchant_display_name' => $campaign->merchant_display_name,
-                    'merchant_slug' => $campaign->merchant_slug,
-                    'endpoint_slug' => $campaign->endpoint_slug,
+                    ...$this->endpointSummary->forCampaign($campaign),
                     'public_url' => $publicUrl,
                     'qr_data_uri' => $this->qrFor($publicUrl),
-                    'usage_count' => $campaign->usage_count,
-                    'starts_limit' => $campaign->starts_limit,
-                    'last_started_at' => $campaign->last_started_at?->toIso8601String(),
-                    'expires_at' => $campaign->expires_at?->toIso8601String(),
-                    'usage_key' => (string) data_get($campaign->settings, 'usage_key', data_get($campaign->settings, 'kind', 'lead')),
-                    'usage_label' => (string) data_get($campaign->settings, 'usage_label', 'Lead'),
-                    'capabilities' => array_values((array) data_get($campaign->settings, 'capabilities', [])),
-                    'availability' => (array) data_get($campaign->settings, 'availability', []),
-                    'limits' => (array) data_get($campaign->settings, 'limits', []),
                     'template' => $campaign->payCodeTemplate instanceof PayCodeTemplate ? [
                         'id' => $campaign->payCodeTemplate->getKey(),
                         'reference' => $campaign->payCodeTemplate->reference,

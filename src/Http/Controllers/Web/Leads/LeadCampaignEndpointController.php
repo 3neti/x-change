@@ -8,12 +8,14 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\XCampaign\Contracts\EndpointCampaignRepository;
 use LBHurtado\XChange\Actions\Leads\StartLeadCampaign;
-use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
 
 final class LeadCampaignEndpointController extends Controller
 {
+    public function __construct(private readonly EndpointCampaignRepository $endpoints) {}
+
     public function __invoke(
         string $merchant_slug,
         string $endpoint_slug,
@@ -21,10 +23,7 @@ final class LeadCampaignEndpointController extends Controller
         Request $request,
         CampaignDisplaySessions $displays,
     ): RedirectResponse {
-        $campaign = LeadCampaign::query()
-            ->where('merchant_slug', $merchant_slug)
-            ->where('endpoint_slug', $endpoint_slug)
-            ->firstOrFail();
+        $campaign = $this->endpoints->findByPublicEndpointOrFail($merchant_slug, $endpoint_slug);
 
         try {
             if ($request->has('display')) {

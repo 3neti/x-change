@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Actions\Leads;
 
 use Illuminate\Support\Arr;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\XCampaign\Contracts\EndpointCampaignRepository;
+use LBHurtado\XCampaign\Services\EndpointCampaignAvailability;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Models\LeadCampaign;
@@ -16,6 +16,8 @@ final readonly class StartLeadCampaign
 {
     public function __construct(
         private GeneratePayCode $generatePayCode,
+        private EndpointCampaignRepository $endpoints,
+        private EndpointCampaignAvailability $availability = new EndpointCampaignAvailability,
     ) {}
 
     public function handle(LeadCampaign $campaign): GeneratePayCodeResultData
@@ -61,80 +63,18 @@ final readonly class StartLeadCampaign
 
         $result = $this->generatePayCode->handle($payload);
 
-        $campaign->newQuery()
-            ->whereKey($campaign->getKey())
-            ->update([
-                'usage_count' => DB::raw('usage_count + 1'),
-                'last_started_at' => now(),
-                'updated_at' => now(),
-            ]);
+        $this->endpoints->recordSuccessfulStart($campaign);
 
         return $result;
     }
 
     public function ensureStartable(LeadCampaign $campaign): void
     {
-        if ($campaign->status !== 'active') {
-            throw ValidationException::withMessages([
-                'campaign' => 'This Lead Campaign is not accepting new prospects.',
-            ]);
-        }
-
-        if ($campaign->expires_at !== null && $campaign->expires_at->isPast()) {
-            throw ValidationException::withMessages([
-                'campaign' => 'This Lead Campaign has expired.',
-            ]);
-        }
-
-        $this->ensureAvailabilityWindow($campaign);
-
-        if (
-            $campaign->starts_limit !== null
-            && $campaign->usage_count >= $campaign->starts_limit
-        ) {
-            throw ValidationException::withMessages([
-                'campaign' => 'This Lead Campaign has reached its prospect limit.',
-            ]);
-        }
+        $this->availability->ensureStartable($campaign);
 
         if (! Arr::has((array) $campaign->payCodeTemplate?->instructions_ciphertext, 'cash')) {
             throw ValidationException::withMessages([
                 'template' => 'The Lead Campaign template is missing Pay Code cash instructions.',
-            ]);
-        }
-    }
-
-    private function ensureAvailabilityWindow(LeadCampaign $campaign): void
-    {
-        $availability = (array) data_get((array) $campaign->settings, 'availability', []);
-        $timezone = (string) ($availability['timezone'] ?? config('app.timezone', 'UTC'));
-
-        if (filled($availability['starts_at'] ?? null)) {
-            $startsAt = Carbon::parse((string) $availability['starts_at'], $timezone);
-
-            if ($startsAt->isFuture()) {
-                throw ValidationException::withMessages([
-                    'campaign' => 'This Lead Campaign is not open yet.',
-                ]);
-            }
-        }
-
-        $dailyStart = $availability['daily_window_start'] ?? null;
-        $dailyEnd = $availability['daily_window_end'] ?? null;
-
-        if (! is_string($dailyStart) || ! is_string($dailyEnd)) {
-            return;
-        }
-
-        $now = Carbon::now($timezone);
-        $current = $now->format('H:i');
-        $isOpen = $dailyStart <= $dailyEnd
-            ? $current >= $dailyStart && $current <= $dailyEnd
-            : $current >= $dailyStart || $current <= $dailyEnd;
-
-        if (! $isOpen) {
-            throw ValidationException::withMessages([
-                'campaign' => 'This Lead Campaign is outside its daily operating window.',
             ]);
         }
     }
