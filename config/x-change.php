@@ -2656,8 +2656,22 @@ return [
         'scenario_runner' => [
             'enabled' => env('XCHANGE_LEADS_SCENARIO_RUNNER_ENABLED', ! app()->isProduction()),
         ],
+        'public_view_middleware' => [
+            'throttle:x-change-leads-view',
+        ],
         'public_start_middleware' => [
-            'throttle:30,1',
+            'throttle:x-change-leads-start',
+        ],
+        'rate_limits' => [
+            'view_per_minute' => (int) env('XCHANGE_LEADS_VIEW_RATE_LIMIT_PER_MINUTE', 60),
+            'start_per_minute' => (int) env('XCHANGE_LEADS_START_RATE_LIMIT_PER_MINUTE', 5),
+            'start_per_hour' => (int) env('XCHANGE_LEADS_START_RATE_LIMIT_PER_HOUR', 30),
+            'endpoint_start_per_day' => (int) env('XCHANGE_LEADS_ENDPOINT_START_RATE_LIMIT_PER_DAY', 100),
+        ],
+        'idempotency' => [
+            'window_minutes' => (int) env('XCHANGE_LEADS_START_IDEMPOTENCY_WINDOW_MINUTES', 10),
+            'lock_seconds' => (int) env('XCHANGE_LEADS_START_LOCK_SECONDS', 15),
+            'lock_wait_seconds' => (int) env('XCHANGE_LEADS_START_LOCK_WAIT_SECONDS', 3),
         ],
     ],
 

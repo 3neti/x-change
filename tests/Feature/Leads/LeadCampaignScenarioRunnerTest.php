@@ -108,7 +108,7 @@ it('preserves the AUI settlement target from the endpoint template and offers sa
     ])->assertRedirect();
 
     $campaign = LeadCampaign::query()->sole();
-    $this->get(route('x-change.leads.start', [
+    $this->post(route('x-change.leads.start.submit', [
         'merchant_slug' => $campaign->merchant_slug,
         'endpoint_slug' => $campaign->endpoint_slug,
     ]))->assertRedirect(route('x-change.claim.show', ['code' => 'AUI-SETTLEMENT']));
@@ -219,7 +219,7 @@ it('continues the feedback browser scenario through public endpoint generation i
 
     $campaign = LeadCampaign::query()->sole();
 
-    $this->get(route('x-change.leads.start', [
+    $this->post(route('x-change.leads.start.submit', [
         'merchant_slug' => $campaign->merchant_slug,
         'endpoint_slug' => $campaign->endpoint_slug,
     ]))->assertRedirect(route('x-change.claim.show', ['code' => 'AUI-LIFE-1']));

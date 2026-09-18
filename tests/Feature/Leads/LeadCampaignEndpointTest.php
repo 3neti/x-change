@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use LBHurtado\XCampaign\Models\EndpointCampaign;
 use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
 use LBHurtado\XChange\Actions\Leads\StartLeadCampaign;
@@ -83,10 +84,17 @@ it('rejects unavailable endpoint starts before issuing or incrementing usage', f
     $fakeIssuer = leadCampaignFakeGeneratePayCode('SHOULD-NOT-ISSUE');
     app()->instance(GeneratePayCode::class, $fakeIssuer);
 
-    $this->get(route('x-change.leads.start', [
+    $url = route('x-change.leads.start', [
         'merchant_slug' => $campaign->merchant_slug,
         'endpoint_slug' => $campaign->endpoint_slug,
-    ]))->assertNotFound();
+    ]);
+
+    $this->withHeader('X-Inertia', 'true')->get($url)->assertOk();
+    $this->post(route('x-change.leads.start.submit', [
+        'merchant_slug' => $campaign->merchant_slug,
+        'endpoint_slug' => $campaign->endpoint_slug,
+    ]))->assertRedirect($url)
+        ->assertSessionHasErrors('campaign');
 
     expect($fakeIssuer->payloads)->toBeEmpty()
         ->and($campaign->fresh()->usage_count)->toBe(0)
@@ -195,7 +203,17 @@ it('mints a pay code from a lead campaign endpoint and redirects into claim', fu
 
     app()->instance(GeneratePayCode::class, $fakeIssuer);
 
-    $this->get(route('x-change.leads.start', [
+    $url = route('x-change.leads.start', [
+        'merchant_slug' => $campaign->merchant_slug,
+        'endpoint_slug' => $campaign->endpoint_slug,
+    ]);
+
+    $this->withHeader('X-Inertia', 'true')->get($url)->assertOk();
+
+    expect($fakeIssuer->payloads)->toBeEmpty()
+        ->and($campaign->fresh()->usage_count)->toBe(0);
+
+    $this->post(route('x-change.leads.start.submit', [
         'merchant_slug' => $campaign->merchant_slug,
         'endpoint_slug' => $campaign->endpoint_slug,
     ]))->assertRedirect(route('x-change.claim.show', ['code' => 'AUI-LEAD-1']));
@@ -216,6 +234,55 @@ it('mints a pay code from a lead campaign endpoint and redirects into claim', fu
         ->and(data_get($fakeIssuer->payloads[0], '_meta.source'))->toBe('lead_campaign.public_endpoint')
         ->and($campaign->usage_count)->toBe(1)
         ->and($campaign->last_started_at)->not->toBeNull();
+});
+
+it('returns the same pay code for duplicate starts in the same browser window', function (): void {
+    $operator = leadCampaignOperator('Idempotent merchant');
+    $campaign = app(CreateLeadCampaign::class)->handle($operator, leadCampaignTemplate($operator), [
+        'title' => 'Idempotent insurance application',
+        'endpoint_slug' => 'idempotent-application',
+    ]);
+    $fakeIssuer = leadCampaignFakeGeneratePayCode('AUI-ONCE');
+    app()->instance(GeneratePayCode::class, $fakeIssuer);
+
+    $startRoute = route('x-change.leads.start.submit', [
+        'merchant_slug' => $campaign->merchant_slug,
+        'endpoint_slug' => $campaign->endpoint_slug,
+    ]);
+
+    $this->post($startRoute)
+        ->assertRedirect(route('x-change.claim.show', ['code' => 'AUI-ONCE']));
+    $this->post($startRoute)
+        ->assertRedirect(route('x-change.claim.show', ['code' => 'AUI-ONCE']));
+
+    expect($fakeIssuer->payloads)->toHaveCount(1)
+        ->and($campaign->fresh()->usage_count)->toBe(1);
+});
+
+it('rate limits excessive endpoint campaign starts before another code can be minted', function (): void {
+    config()->set('x-change.leads.rate_limits.start_per_minute', 1);
+    config()->set('x-change.leads.rate_limits.start_per_hour', 50);
+    config()->set('x-change.leads.rate_limits.endpoint_start_per_day', 50);
+    RateLimiter::clear('start:minute:127.0.0.1');
+    RateLimiter::clear('start:hour:127.0.0.1');
+
+    $operator = leadCampaignOperator('Rate limited merchant');
+    $campaign = app(CreateLeadCampaign::class)->handle($operator, leadCampaignTemplate($operator), [
+        'title' => 'Rate limited application',
+        'endpoint_slug' => 'limited-application',
+    ]);
+    $fakeIssuer = leadCampaignFakeGeneratePayCode('AUI-LIMITED');
+    app()->instance(GeneratePayCode::class, $fakeIssuer);
+
+    $startRoute = route('x-change.leads.start.submit', [
+        'merchant_slug' => $campaign->merchant_slug,
+        'endpoint_slug' => $campaign->endpoint_slug,
+    ]);
+
+    $this->post($startRoute)->assertRedirect(route('x-change.claim.show', ['code' => 'AUI-LIMITED']));
+    $this->post($startRoute)->assertTooManyRequests();
+
+    expect($fakeIssuer->payloads)->toHaveCount(1);
 });
 
 it('keeps the public endpoint URL stable while future starts use the updated template version', function (): void {
@@ -239,7 +306,10 @@ it('keeps the public endpoint URL stable while future starts use the updated tem
     $fakeIssuer = leadCampaignFakeGeneratePayCode('AUI-LEAD');
     app()->instance(GeneratePayCode::class, $fakeIssuer);
 
-    $this->get($publicRoute)->assertRedirect(route('x-change.claim.show', ['code' => 'AUI-LEAD']));
+    $this->post(route('x-change.leads.start.submit', [
+        'merchant_slug' => $campaign->merchant_slug,
+        'endpoint_slug' => $campaign->endpoint_slug,
+    ]))->assertRedirect(route('x-change.claim.show', ['code' => 'AUI-LEAD']));
 
     $audit = fakeAuditLogger();
     $this->patch(route('x-change.cockpit.campaigns.endpoints.template.update', $campaign->reference), [
@@ -247,7 +317,14 @@ it('keeps the public endpoint URL stable while future starts use the updated tem
     ])->assertRedirect(route('x-change.cockpit.campaigns.index'))
         ->assertSessionHas('campaign_notice', 'Insurance Application will use Updated application for future starts. Existing Pay Codes remain untouched.');
 
-    $this->get($publicRoute)->assertRedirect(route('x-change.claim.show', ['code' => 'AUI-LEAD']));
+    session()->flush();
+
+    $this->post(route('x-change.leads.start.submit', [
+        'merchant_slug' => $campaign->fresh()->merchant_slug,
+        'endpoint_slug' => $campaign->fresh()->endpoint_slug,
+    ]))->assertRedirect(route('x-change.claim.show', ['code' => 'AUI-LEAD']));
+
+    $templateChangeAudit = collect($audit->events('campaign.endpoint.template_version_changed'))->first();
 
     expect(route('x-change.leads.start', [
         'merchant_slug' => $campaign->fresh()->merchant_slug,
@@ -263,11 +340,10 @@ it('keeps the public endpoint URL stable while future starts use the updated tem
         ->and($campaign->fresh()->pay_code_template_id)->toBe($secondTemplate->getKey())
         ->and($campaign->fresh()->active_template_version_id)->toBe($updatedVersion)
         ->and($campaign->fresh()->usage_count)->toBe(2)
-        ->and($audit->last()['event'] ?? null)->toBe('campaign.endpoint.template_version_changed')
-        ->and($audit->last()['context']['previous_template_reference'] ?? null)->toBe($firstTemplate->reference)
-        ->and($audit->last()['context']['previous_template_version_id'] ?? null)->toBe($firstVersion)
-        ->and($audit->last()['context']['template_reference'] ?? null)->toBe($secondTemplate->reference)
-        ->and($audit->last()['context']['template_version_id'] ?? null)->toBe($updatedVersion);
+        ->and($templateChangeAudit['context']['previous_template_reference'] ?? null)->toBe($firstTemplate->reference)
+        ->and($templateChangeAudit['context']['previous_template_version_id'] ?? null)->toBe($firstVersion)
+        ->and($templateChangeAudit['context']['template_reference'] ?? null)->toBe($secondTemplate->reference)
+        ->and($templateChangeAudit['context']['template_version_id'] ?? null)->toBe($updatedVersion);
 });
 
 it('does not start inactive lead campaigns', function (): void {
@@ -282,10 +358,17 @@ it('does not start inactive lead campaigns', function (): void {
 
     app()->instance(GeneratePayCode::class, $fakeIssuer);
 
-    $this->get(route('x-change.leads.start', [
+    $url = route('x-change.leads.start', [
         'merchant_slug' => $campaign->merchant_slug,
         'endpoint_slug' => $campaign->endpoint_slug,
-    ]))->assertNotFound();
+    ]);
+
+    $this->withHeader('X-Inertia', 'true')->get($url)->assertOk();
+    $this->post(route('x-change.leads.start.submit', [
+        'merchant_slug' => $campaign->merchant_slug,
+        'endpoint_slug' => $campaign->endpoint_slug,
+    ]))->assertRedirect($url)
+        ->assertSessionHasErrors('campaign');
 
     expect($fakeIssuer->payloads)->toBeEmpty()
         ->and($campaign->fresh()->usage_count)->toBe(0);
@@ -309,10 +392,17 @@ it('does not start endpoint campaigns before their availability window', functio
 
     app()->instance(GeneratePayCode::class, $fakeIssuer);
 
-    $this->get(route('x-change.leads.start', [
+    $url = route('x-change.leads.start', [
         'merchant_slug' => $campaign->merchant_slug,
         'endpoint_slug' => $campaign->endpoint_slug,
-    ]))->assertNotFound();
+    ]);
+
+    $this->withHeader('X-Inertia', 'true')->get($url)->assertOk();
+    $this->post(route('x-change.leads.start.submit', [
+        'merchant_slug' => $campaign->merchant_slug,
+        'endpoint_slug' => $campaign->endpoint_slug,
+    ]))->assertRedirect($url)
+        ->assertSessionHasErrors('campaign');
 
     expect($fakeIssuer->payloads)->toBeEmpty()
         ->and($campaign->fresh()->usage_count)->toBe(0);
@@ -337,7 +427,7 @@ it('records configured endpoint campaign usage metadata on generated pay codes',
 
     app()->instance(GeneratePayCode::class, $fakeIssuer);
 
-    $this->get(route('x-change.leads.start', [
+    $this->post(route('x-change.leads.start.submit', [
         'merchant_slug' => $campaign->merchant_slug,
         'endpoint_slug' => $campaign->endpoint_slug,
     ]))->assertRedirect(route('x-change.claim.show', ['code' => 'AUI-COLL-1']));

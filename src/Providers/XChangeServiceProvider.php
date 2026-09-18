@@ -1466,6 +1466,7 @@ class XChangeServiceProvider extends ServiceProvider
         $this->bootConfig();
         $this->bootPartnerApiOAuth();
         $this->loadViewsFrom($this->packagePath('resources/views'), 'x-change');
+        $this->bootLeadCampaignEndpointRateLimiter();
         $this->bootFundingVerificationRateLimiter();
         $this->bootPaymentVerificationRateLimiter();
         $this->bootCommercialSettlementRateLimiter();
@@ -1635,6 +1636,39 @@ class XChangeServiceProvider extends ServiceProvider
                 1,
                 (int) config('x-change.funding.verification_provider_rate_limit_per_minute', 30),
             ))->by((string) data_get($job, 'providerCode', 'unknown'));
+        });
+    }
+
+    protected function bootLeadCampaignEndpointRateLimiter(): void
+    {
+        RateLimiter::for('x-change-leads-view', function (Request $request): Limit {
+            return Limit::perMinute(max(
+                1,
+                (int) config('x-change.leads.rate_limits.view_per_minute', 60),
+            ))->by('view:'.($request->ip() ?? 'unknown'));
+        });
+
+        RateLimiter::for('x-change-leads-start', function (Request $request): array {
+            $ip = $request->ip() ?? 'unknown';
+            $endpoint = implode(':', [
+                (string) $request->route('merchant_slug', 'unknown'),
+                (string) $request->route('endpoint_slug', 'unknown'),
+            ]);
+
+            return [
+                Limit::perMinute(max(
+                    1,
+                    (int) config('x-change.leads.rate_limits.start_per_minute', 5),
+                ))->by('start:minute:'.$ip),
+                Limit::perHour(max(
+                    1,
+                    (int) config('x-change.leads.rate_limits.start_per_hour', 30),
+                ))->by('start:hour:'.$ip),
+                Limit::perDay(max(
+                    1,
+                    (int) config('x-change.leads.rate_limits.endpoint_start_per_day', 100),
+                ))->by('start:day:'.$endpoint.':'.$ip),
+            ];
         });
     }
 

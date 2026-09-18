@@ -443,9 +443,14 @@ it('keeps unpaired endpoint and payer QR behavior unchanged', function (): void 
         'merchant_slug' => $this->displayCampaign->merchant_slug,
         'endpoint_slug' => $this->displayCampaign->endpoint_slug,
     ]);
-    $this->get($url)->assertRedirect();
-    $this->get($url)->assertRedirect();
-    expect(Voucher::query()->count())->toBe(2)
+    $startUrl = route('x-change.leads.start.submit', [
+        'merchant_slug' => $this->displayCampaign->merchant_slug,
+        'endpoint_slug' => $this->displayCampaign->endpoint_slug,
+    ]);
+    $this->withHeader('X-Inertia', 'true')->get($url)->assertOk();
+    $this->post($startUrl)->assertRedirect();
+    $this->post($startUrl)->assertRedirect();
+    expect(Voucher::query()->count())->toBe(1)
         ->and(CampaignDisplaySession::query()->count())->toBe(0);
     $voucher = Voucher::query()->firstOrFail();
     $this->post(route('x-change.pay.attempts.store', $voucher->code))->assertRedirect();

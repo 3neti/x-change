@@ -716,11 +716,16 @@ Route::prefix('x')->middleware(['web', ShareXChangeBranding::class, GuardPairedC
         ->name('x-change.pay.attempts.checks.store');
     Route::get('claim', ClaimStartController::class)->name('x-change.claim.start');
     Route::post('claim', ClaimStartController::class)->name('x-change.claim.start.submit');
-    Route::get('o/{merchant_slug}/{endpoint_slug}', LeadCampaignEndpointController::class)
+    Route::get('o/{merchant_slug}/{endpoint_slug}', [LeadCampaignEndpointController::class, 'show'])
         ->where('merchant_slug', '[a-z0-9][a-z0-9-]{0,119}')
         ->where('endpoint_slug', '[a-z0-9][a-z0-9-]{0,119}')
-        ->middleware((array) config('x-change.leads.public_start_middleware', ['throttle:30,1']))
+        ->middleware((array) config('x-change.leads.public_view_middleware', ['throttle:x-change-leads-view']))
         ->name('x-change.leads.start');
+    Route::post('o/{merchant_slug}/{endpoint_slug}', [LeadCampaignEndpointController::class, 'start'])
+        ->where('merchant_slug', '[a-z0-9][a-z0-9-]{0,119}')
+        ->where('endpoint_slug', '[a-z0-9][a-z0-9-]{0,119}')
+        ->middleware((array) config('x-change.leads.public_start_middleware', ['throttle:x-change-leads-start']))
+        ->name('x-change.leads.start.submit');
     Route::get('claim/{code}', ClaimPageController::class)
         ->middleware((array) config('x-change.claim.public_read_middleware', []))
         ->name('x-change.claim.show');
