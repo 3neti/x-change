@@ -92,6 +92,7 @@ use LBHurtado\XChange\Console\Commands\CommissionFromManifestCommand;
 use LBHurtado\XChange\Console\Commands\CommissioningStatusCommand;
 use LBHurtado\XChange\Console\Commands\CommissionXChangeCommand;
 use LBHurtado\XChange\Console\Commands\ConfigureXChangeCommand;
+use LBHurtado\XChange\Console\Commands\Continuity\PlanInstanceContinuityCommand;
 use LBHurtado\XChange\Console\Commands\DeployXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\CheckDisbursementStatusCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\RestoreUnsubmittedPayoutCorrectionCommand;
@@ -117,6 +118,7 @@ use LBHurtado\XChange\Console\Commands\InspectXChangeConfigurationCommand;
 use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Keepsake\ExportInstanceKeepsakeCommand;
 use LBHurtado\XChange\Console\Commands\Keepsake\GenerateInstanceKeepsakeKeyCommand;
+use LBHurtado\XChange\Console\Commands\Keepsake\InspectInstanceKeepsakeCommand;
 use LBHurtado\XChange\Console\Commands\Keepsake\VerifyInstanceKeepsakeCommand;
 use LBHurtado\XChange\Console\Commands\Lifecycle\PrepareLifecycleEnvironmentCommand;
 use LBHurtado\XChange\Console\Commands\Lifecycle\RunLifecycleScenarioCommand;
@@ -1486,6 +1488,8 @@ class XChangeServiceProvider extends ServiceProvider
                 VerifyTestMobileCommand::class,
                 ExportInstanceKeepsakeCommand::class,
                 GenerateInstanceKeepsakeKeyCommand::class,
+                InspectInstanceKeepsakeCommand::class,
+                PlanInstanceContinuityCommand::class,
                 VerifyInstanceKeepsakeCommand::class,
                 GetWalletBalanceCommand::class,
                 EstimatePayCodeCostCommand::class,

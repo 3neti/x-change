@@ -4,14 +4,15 @@ This document describes how to create and verify a read-only instance keepsake a
 
 ## What it is
 
-An instance keepsake is a **one-time, encrypted, non-restorable snapshot** of selected
-operator-accessed data for review and audit preparation.
+An instance keepsake is a **one-time, encrypted continuity image** of selected
+operator-accessed data for review, audit preparation, and deterministic recovery planning.
+It is not itself an executable restore or financial authority.
 
 The keepsake is intentionally:
 
 - encrypted
 - file-level immutable while the export reference is unchanged
-- non-restorable
+- non-restorable without a separately implemented and authorized continuity apply path
 - provider-safe in its default scope
 
 It is for investigation, portability evidence, and controlled review. It does not
@@ -22,6 +23,8 @@ replace banking data migration or provider onboarding.
 - `x-change:instance-keepsake:keygen` (local)
 - `x-change:instance-keepsake:export` (dry-run and create)
 - `x-change:instance-keepsake:verify` (off-system verification)
+- `x-change:instance-keepsake:inspect` (verified inventory and privacy summary)
+- `x-change:continuity:plan` (destination-specific, read-only recovery proposal)
 
 ## Recommended flow
 
@@ -62,6 +65,9 @@ php artisan x-change:instance-keepsake:verify \
   --json
 ```
 
+5. Inspect and produce a destination plan using the commands in
+   [Instance Continuity and Recovery](./INSTANCE_CONTINUITY_RECOVERY.md).
+
 ## Safety rules
 
 - Keep all private key material outside source control and outside Cloud environments.
@@ -71,6 +77,8 @@ php artisan x-change:instance-keepsake:verify \
   or funding state recovery.
 - Treat any successful verification as a controlled evidence artifact, not an
   operational restoration permit.
+- Never delete a source or destination instance merely because verification or planning
+  succeeded; both commands deliberately report `safe_to_reset: false`.
 
 ## Command help
 
@@ -79,5 +87,7 @@ Use built-in command help (`--help`) when needed:
 - `php artisan x-change:instance-keepsake:keygen --help`
 - `php artisan x-change:instance-keepsake:export --help`
 - `php artisan x-change:instance-keepsake:verify --help`
+- `php artisan x-change:instance-keepsake:inspect --help`
+- `php artisan x-change:continuity:plan --help`
 
 This command set is fail-closed by design and reports schema-stable machine output.

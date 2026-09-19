@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use LBHurtado\XChange\Console\Commands\Continuity\PlanInstanceContinuityCommand;
 use LBHurtado\XChange\Console\Commands\Keepsake\ExportInstanceKeepsakeCommand;
 use LBHurtado\XChange\Console\Commands\Keepsake\GenerateInstanceKeepsakeKeyCommand;
+use LBHurtado\XChange\Console\Commands\Keepsake\InspectInstanceKeepsakeCommand;
 use LBHurtado\XChange\Console\Commands\Keepsake\VerifyInstanceKeepsakeCommand;
 
 it('shows actionable guidance for export command help', function () {
@@ -38,4 +40,15 @@ it('shows actionable guidance for verify help', function () {
         ->toContain('Decrypt and independently verify a downloaded keepsake archive')
         ->toContain('No provider calls and no financial mutations')
         ->toContain('Extraction destination must not exist');
+});
+
+it('shows the read-only boundaries for inspect and continuity plan help', function () {
+    $inspect = new InspectInstanceKeepsakeCommand;
+    $plan = new PlanInstanceContinuityCommand;
+
+    expect($inspect->getHelp())
+        ->toContain('never writes application state')
+        ->and($plan->getHelp())
+        ->toContain('never imports records')
+        ->toContain('restores live Pay Codes');
 });

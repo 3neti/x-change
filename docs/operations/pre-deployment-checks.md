@@ -133,9 +133,13 @@ Before migration-sensitive operations, include the keep-snapshot runbook as part
 
 - `x-change:instance-keepsake:export` (dry run and create with strong operator references)
 - `x-change:instance-keepsake:verify` (offline checksum and manifest validation)
+- `x-change:instance-keepsake:inspect` (verified inventory and privacy scope)
+- `x-change:continuity:plan` (destination-specific dry-run proposal)
 
 Run this after operational checks, before environment handoff or destructive resets.
 See [instance keepsake export](./INSTANCE_KEEPSAKE_EXPORT.md) for exact command sequence.
+See [instance continuity and recovery](./INSTANCE_CONTINUITY_RECOVERY.md) before any
+cleanroom reset, migration, or disaster-recovery exercise.
 
 ---
 
