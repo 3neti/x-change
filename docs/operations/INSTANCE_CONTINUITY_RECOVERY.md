@@ -69,8 +69,12 @@ delete the source or credit the destination.
 | Precise location JSON | Excluded unless separately requested and confirmed |
 | Account invitations | Inert blueprint; no credentials or authority |
 | Pay Code templates | Inert review blueprint; instructions are currently excluded |
-| Campaigns | Not yet included; reported as a planning blocker |
+| Endpoint campaigns | Historical snapshot plus inert, disabled review blueprint |
 | Secrets, sessions, OTPs | Never included |
+
+Set a stable, non-secret `XCHANGE_INSTANCE_ID` on every host. The continuity checkpoint
+also records the public application identity, deployment profile, runtime tier, and only
+persisted provider-balance snapshots. Export never refreshes or contacts a provider.
 
 ## Cleanroom rehearsal stop conditions
 

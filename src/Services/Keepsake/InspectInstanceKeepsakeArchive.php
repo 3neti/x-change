@@ -29,6 +29,9 @@ final readonly class InspectInstanceKeepsakeArchive
             $evidence = $this->readOptionalJson($workspace.'/snapshot/claim-evidence.json');
             $accountInvitations = $this->readOptionalJson($workspace.'/blueprint/account-invitations.json');
             $templates = $this->readOptionalJson($workspace.'/blueprint/pay-code-templates.json');
+            $campaigns = $this->readOptionalJson($workspace.'/snapshot/endpoint-campaigns.json');
+            $campaignBlueprints = $this->readOptionalJson($workspace.'/blueprint/endpoint-campaigns.json');
+            $checkpoint = $this->readOptionalJson($workspace.'/snapshot/continuity-checkpoint.json');
             $accountRows = $this->list($accounts, 'accounts');
             $payCodeRows = $this->list($payCodes, 'pay_codes');
             $evidenceRows = $this->list($evidence, 'records');
@@ -50,6 +53,9 @@ final readonly class InspectInstanceKeepsakeArchive
                     'claim_evidence_records' => count($evidenceRows),
                     'account_invitations' => count($this->list($accountInvitations, 'invitations')),
                     'pay_code_templates' => count($this->list($templates, 'templates')),
+                    'endpoint_campaigns' => count($this->list($campaigns, 'campaigns')),
+                    'endpoint_campaign_blueprints' => count($this->list($campaignBlueprints, 'campaigns')),
+                    'provider_checkpoints' => count($this->list($checkpoint, 'provider_balance_snapshots')),
                     'artifact_entries' => count(array_filter(
                         $manifest['entries'] ?? [],
                         static fn (mixed $entry): bool => is_array($entry)
@@ -58,6 +64,14 @@ final readonly class InspectInstanceKeepsakeArchive
                 ],
                 'financial_observation' => $this->financialObservation($accountRows),
                 'pay_code_states' => $this->payCodeStates($payCodeRows),
+                'source_instance' => is_array($checkpoint['source_instance'] ?? null)
+                    ? $checkpoint['source_instance']
+                    : null,
+                'provider_checkpoint' => $this->providerCheckpointSummary($checkpoint),
+                'coverage' => [
+                    'endpoint_campaigns' => $campaigns !== null,
+                    'continuity_checkpoint' => $checkpoint !== null,
+                ],
                 'privacy' => [
                     'personal_data_present' => $this->personalDataPresent($accountRows),
                     'precise_location_sidecars' => count(array_filter(
@@ -181,6 +195,31 @@ final readonly class InspectInstanceKeepsakeArchive
         }
 
         return false;
+    }
+
+    /** @param array<string, mixed>|null $checkpoint
+     * @return array{count:int,all_fresh:bool,latest_fetched_at:?string}
+     */
+    private function providerCheckpointSummary(?array $checkpoint): array
+    {
+        $snapshots = $this->list($checkpoint, 'provider_balance_snapshots');
+        $fetched = array_values(array_filter(array_map(
+            static fn (array $snapshot): ?string => is_string($snapshot['fetched_at'] ?? null)
+                ? $snapshot['fetched_at']
+                : null,
+            $snapshots,
+        )));
+        sort($fetched);
+
+        return [
+            'count' => count($snapshots),
+            'all_fresh' => $snapshots !== [] && array_all(
+                $snapshots,
+                static fn (array $snapshot): bool => ($snapshot['refresh_status'] ?? null) === 'fresh'
+                    && ($snapshot['is_stale'] ?? true) === false,
+            ),
+            'latest_fetched_at' => $fetched === [] ? null : end($fetched),
+        ];
     }
 
     private function removeDirectory(string $directory): void

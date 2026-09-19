@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://3neti.test/schemas/x-change/instance-keepsake/continuity-checkpoint.v1.json",
+  "title": "X-Change Continuity Checkpoint v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "source_instance", "observed_at", "provider_calls", "ownership_authority", "provider_balance_snapshots"],
+  "properties": {
+    "schema": {"const": "x-change.instance-keepsake.continuity-checkpoint.v1"},
+    "source_instance": {"type": "object"},
+    "observed_at": {"type": "string"},
+    "provider_calls": {"const": false},
+    "ownership_authority": {"const": false},
+    "provider_balance_snapshots": {"type": "array", "items": {"type": "object"}}
+  }
+}

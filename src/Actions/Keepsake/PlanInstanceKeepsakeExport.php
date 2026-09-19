@@ -13,13 +13,15 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Data\Keepsake\InstanceKeepsakeContext;
 use LBHurtado\XChange\Data\Keepsake\InstanceKeepsakePlan;
 use LBHurtado\XChange\Exceptions\InstanceKeepsakeException;
+use LBHurtado\XChange\Models\LeadCampaign;
+use LBHurtado\XChange\Models\ProviderBalanceSnapshot;
 use LBHurtado\XChange\Services\Keepsake\CanonicalKeepsakeJson;
 use LBHurtado\XChange\Services\Keepsake\InstanceKeepsakeContributorCatalog;
 use LBHurtado\XChange\Services\Keepsake\KeepsakeUserModelResolver;
 
 final readonly class PlanInstanceKeepsakeExport
 {
-    private const ALLOWED_INCLUDES = ['accounts', 'pay-codes', 'claim-evidence', 'blueprint'];
+    private const ALLOWED_INCLUDES = ['accounts', 'pay-codes', 'claim-evidence', 'campaigns', 'continuity', 'blueprint'];
 
     public function __construct(
         private KeepsakeUserModelResolver $users,
@@ -48,7 +50,7 @@ final readonly class PlanInstanceKeepsakeExport
 
         $users = $this->loadUsers($allUsers, $userIdentifiers);
         $vouchers = $this->loadVouchers($users);
-        $observedAt = $this->observationWatermark($users, $vouchers);
+        $observedAt = $this->observationWatermark($users, $vouchers, $includes);
         $context = new InstanceKeepsakeContext(
             users: $users,
             vouchers: $vouchers,
@@ -219,7 +221,7 @@ final readonly class PlanInstanceKeepsakeExport
         ))));
 
         if ($normalized === []) {
-            $normalized = ['accounts', 'pay-codes', 'claim-evidence', 'blueprint'];
+            $normalized = ['accounts', 'pay-codes', 'claim-evidence', 'campaigns', 'continuity', 'blueprint'];
         }
 
         foreach ($normalized as $include) {
@@ -281,8 +283,9 @@ final readonly class PlanInstanceKeepsakeExport
     /**
      * @param  list<array{reference:string,model:Model}>  $users
      * @param  list<array{reference:string,model:Model}>  $vouchers
+     * @param  list<string>  $includes
      */
-    private function observationWatermark(array $users, array $vouchers): string
+    private function observationWatermark(array $users, array $vouchers, array $includes): string
     {
         $timestamps = [];
 
@@ -291,6 +294,36 @@ final readonly class PlanInstanceKeepsakeExport
 
             if ($timestamp instanceof \DateTimeInterface) {
                 $timestamps[] = CarbonImmutable::instance($timestamp)->utc();
+            }
+        }
+
+        if (in_array('campaigns', $includes, true) && $users !== []) {
+            $owners = [];
+
+            foreach ($users as $user) {
+                $owners[$user['model']->getMorphClass()][] = $user['model']->getKey();
+            }
+
+            $campaignTimestamp = LeadCampaign::query()
+                ->where(function ($query) use ($owners): void {
+                    foreach ($owners as $ownerType => $ownerIds) {
+                        $query->orWhere(function ($owner) use ($ownerType, $ownerIds): void {
+                            $owner->where('owner_type', $ownerType)->whereIn('owner_id', $ownerIds);
+                        });
+                    }
+                })
+                ->max('updated_at');
+
+            if ($campaignTimestamp !== null) {
+                $timestamps[] = CarbonImmutable::parse($campaignTimestamp)->utc();
+            }
+        }
+
+        if (in_array('continuity', $includes, true)) {
+            $providerTimestamp = ProviderBalanceSnapshot::query()->max('updated_at');
+
+            if ($providerTimestamp !== null) {
+                $timestamps[] = CarbonImmutable::parse($providerTimestamp)->utc();
             }
         }
 

@@ -26,6 +26,9 @@ replace banking data migration or provider onboarding.
 - `x-change:instance-keepsake:inspect` (verified inventory and privacy summary)
 - `x-change:continuity:plan` (destination-specific, read-only recovery proposal)
 
+Default scope also captures endpoint-campaign evidence and a persisted provider/source
+checkpoint. Configure a stable `XCHANGE_INSTANCE_ID` before creating continuity images.
+
 ## Recommended flow
 
 1. Generate a local keypair and store the **public key** in

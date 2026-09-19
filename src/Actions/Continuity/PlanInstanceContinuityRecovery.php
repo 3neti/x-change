@@ -32,12 +32,24 @@ final readonly class PlanInstanceContinuityRecovery
         $inventory = $inspection['inventory'];
         $financial = $inspection['financial_observation'];
         $blockers = [
-            'source_instance_identity_not_embedded',
-            'provider_checkpoint_not_embedded',
-            'campaigns_not_included',
             'live_pay_code_restore_not_supported',
             'financial_apply_not_supported',
         ];
+
+        if (($inspection['coverage']['endpoint_campaigns'] ?? false) !== true) {
+            $blockers[] = 'campaigns_not_included';
+        }
+
+        if (($inspection['coverage']['continuity_checkpoint'] ?? false) !== true
+            || (int) ($inspection['provider_checkpoint']['count'] ?? 0) === 0) {
+            $blockers[] = 'provider_checkpoint_not_embedded';
+        } elseif (($inspection['provider_checkpoint']['all_fresh'] ?? false) !== true) {
+            $blockers[] = 'provider_checkpoint_not_fresh';
+        }
+
+        if (blank($inspection['source_instance']['id'] ?? null)) {
+            $blockers[] = 'source_instance_identity_not_embedded';
+        }
 
         if (($inspection['complete'] ?? false) !== true) {
             $blockers[] = 'keepsake_has_omissions';
@@ -57,10 +69,13 @@ final readonly class PlanInstanceContinuityRecovery
             'inventory' => $inventory,
             'financial_observation' => $financial,
             'pay_code_states' => $inspection['pay_code_states'],
+            'source_instance' => $inspection['source_instance'],
+            'provider_checkpoint' => $inspection['provider_checkpoint'],
             'proposed_actions' => [
                 'accounts' => 'identity_match_and_reverification',
                 'account_invitations' => 'review_inert_blueprint',
                 'pay_code_templates' => 'review_and_recreate_from_inert_blueprint',
+                'endpoint_campaigns' => 'review_and_recreate_disabled_from_inert_blueprint',
                 'historical_pay_codes' => 'retain_as_evidence_only',
                 'claim_evidence' => 'retain_for_authorized_review',
                 'client_funds' => 'reconcile_then_prepare_separate_authorized_credit_plan',

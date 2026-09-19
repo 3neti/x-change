@@ -449,6 +449,8 @@ use LBHurtado\XChange\Services\Funding\StandingFundingAddressProviderRegistry;
 use LBHurtado\XChange\Services\InstructionBackedPricingService;
 use LBHurtado\XChange\Services\Keepsake\Contributors\AccountSnapshotKeepsakeContributor;
 use LBHurtado\XChange\Services\Keepsake\Contributors\ClaimEvidenceKeepsakeContributor;
+use LBHurtado\XChange\Services\Keepsake\Contributors\ContinuityCheckpointKeepsakeContributor;
+use LBHurtado\XChange\Services\Keepsake\Contributors\EndpointCampaignKeepsakeContributor;
 use LBHurtado\XChange\Services\Keepsake\Contributors\PayCodeSummaryKeepsakeContributor;
 use LBHurtado\XChange\Services\Keepsake\GrantedInstanceKeepsakeAccess;
 use LBHurtado\XChange\Services\Keepsake\InstanceKeepsakeContributorCatalog;
@@ -653,10 +655,14 @@ class XChangeServiceProvider extends ServiceProvider
             ),
         );
         $this->app->singleton(AccountSnapshotKeepsakeContributor::class);
+        $this->app->singleton(ContinuityCheckpointKeepsakeContributor::class);
+        $this->app->singleton(EndpointCampaignKeepsakeContributor::class);
         $this->app->singleton(PayCodeSummaryKeepsakeContributor::class);
         $this->app->singleton(ClaimEvidenceKeepsakeContributor::class);
         $this->app->tag([
             AccountSnapshotKeepsakeContributor::class,
+            ContinuityCheckpointKeepsakeContributor::class,
+            EndpointCampaignKeepsakeContributor::class,
             PayCodeSummaryKeepsakeContributor::class,
             ClaimEvidenceKeepsakeContributor::class,
         ], InstanceKeepsakeContributor::class);

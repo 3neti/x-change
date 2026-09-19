@@ -2634,9 +2634,15 @@ return [
         'chunk_size' => 100,
         'max_users' => 1_000,
         'max_pay_codes' => 10_000,
+        'max_campaigns' => 10_000,
+        'max_provider_checkpoints' => 100,
         'max_artifacts' => 20_000,
         'max_item_bytes' => 10 * 1024 * 1024,
         'max_total_bytes' => 512 * 1024 * 1024,
+    ],
+
+    'instance' => [
+        'id' => env('XCHANGE_INSTANCE_ID'),
     ],
 
     'disbursement' => [

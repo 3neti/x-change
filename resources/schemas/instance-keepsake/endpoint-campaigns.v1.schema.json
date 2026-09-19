@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://3neti.test/schemas/x-change/instance-keepsake/endpoint-campaigns.v1.json",
+  "title": "X-Change Historical Endpoint Campaign Snapshot v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "campaigns"],
+  "properties": {
+    "schema": {"const": "x-change.instance-keepsake.endpoint-campaigns.v1"},
+    "campaigns": {"type": "array", "items": {"type": "object", "required": ["reference", "source_reference", "historical_only", "restorable"]}}
+  }
+}

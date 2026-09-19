@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://3neti.test/schemas/x-change/instance-keepsake/endpoint-campaign-blueprints.v1.json",
+  "title": "X-Change Inert Endpoint Campaign Blueprint v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "inert", "importer_included", "campaigns"],
+  "properties": {
+    "schema": {"const": "x-change.instance-keepsake.endpoint-campaign-blueprints.v1"},
+    "inert": {"const": true},
+    "importer_included": {"const": false},
+    "campaigns": {"type": "array", "items": {"type": "object", "required": ["reference", "desired_state", "requires_review"]}}
+  }
+}

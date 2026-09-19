@@ -32,6 +32,9 @@ final class InstanceKeepsakeSchemaValidator
             'x-change.instance-keepsake.location.v1' => $this->validateLocation($decoded),
             'x-change.instance-keepsake.account-invitations.v1' => $this->validateAccountInvitations($decoded),
             'x-change.instance-keepsake.pay-code-templates.v1' => $this->validatePayCodeTemplates($decoded),
+            'x-change.instance-keepsake.endpoint-campaigns.v1' => $this->validateEndpointCampaigns($decoded),
+            'x-change.instance-keepsake.endpoint-campaign-blueprints.v1' => $this->validateEndpointCampaignBlueprints($decoded),
+            'x-change.instance-keepsake.continuity-checkpoint.v1' => $this->validateContinuityCheckpoint($decoded),
             default => throw new InstanceKeepsakeException('schema_invalid', 'A keepsake JSON document uses an unknown schema.'),
         };
 
@@ -160,6 +163,88 @@ final class InstanceKeepsakeSchemaValidator
 
         foreach ($document['templates'] as $template) {
             if (($template['instructions_included'] ?? null) !== false || ($template['requires_review'] ?? null) !== true) {
+                $this->invalid();
+            }
+        }
+    }
+
+    /** @param array<string, mixed> $document */
+    private function validateEndpointCampaigns(array $document): void
+    {
+        $this->assertExactKeys($document, ['schema', 'campaigns']);
+        $this->assertList($document['campaigns'] ?? null, [
+            'reference', 'source_reference', 'account_reference', 'template_reference',
+            'active_template_version_id', 'merchant_display_name', 'merchant_slug',
+            'endpoint_slug', 'title', 'description', 'status', 'usage_count',
+            'last_started_at', 'starts_limit', 'expires_at', 'created_at', 'updated_at',
+            'settings_included', 'historical_only', 'restorable',
+        ]);
+
+        foreach ($document['campaigns'] as $campaign) {
+            if (($campaign['settings_included'] ?? null) !== false
+                || ($campaign['historical_only'] ?? null) !== true
+                || ($campaign['restorable'] ?? null) !== false) {
+                $this->invalid();
+            }
+        }
+    }
+
+    /** @param array<string, mixed> $document */
+    private function validateEndpointCampaignBlueprints(array $document): void
+    {
+        $this->assertExactKeys($document, ['schema', 'inert', 'importer_included', 'campaigns']);
+        $this->assertList($document['campaigns'] ?? null, [
+            'reference', 'account_reference', 'template_reference', 'merchant_display_name',
+            'merchant_slug', 'endpoint_slug', 'title', 'description', 'starts_limit',
+            'expires_at', 'desired_state', 'settings_included',
+            'merchant_certification_included', 'activation_authority_included', 'requires_review',
+        ]);
+
+        if (($document['inert'] ?? null) !== true || ($document['importer_included'] ?? null) !== false) {
+            $this->invalid();
+        }
+
+        foreach ($document['campaigns'] as $campaign) {
+            if (($campaign['desired_state'] ?? null) !== 'disabled'
+                || ($campaign['settings_included'] ?? null) !== false
+                || ($campaign['merchant_certification_included'] ?? null) !== false
+                || ($campaign['activation_authority_included'] ?? null) !== false
+                || ($campaign['requires_review'] ?? null) !== true) {
+                $this->invalid();
+            }
+        }
+    }
+
+    /** @param array<string, mixed> $document */
+    private function validateContinuityCheckpoint(array $document): void
+    {
+        $this->assertExactKeys($document, [
+            'schema', 'source_instance', 'observed_at', 'provider_calls',
+            'ownership_authority', 'provider_balance_snapshots',
+        ]);
+        $source = $document['source_instance'] ?? null;
+
+        if (! is_array($source)) {
+            $this->invalid();
+        }
+
+        $this->assertExactKeys($source, ['id', 'name', 'url', 'deployment_profile', 'runtime_tier']);
+        $this->assertList($document['provider_balance_snapshots'] ?? null, [
+            'provider_code', 'balance_key', 'scope_key', 'balance_minor',
+            'available_balance_minor', 'currency', 'account_reference_masked',
+            'provider_as_of', 'fetched_at', 'refresh_status', 'updated_at',
+            'is_stale', 'maximum_age_seconds', 'authority', 'restoration_authority',
+        ]);
+
+        if (($document['provider_calls'] ?? null) !== false || ($document['ownership_authority'] ?? null) !== false) {
+            $this->invalid();
+        }
+
+        foreach ($document['provider_balance_snapshots'] as $snapshot) {
+            if (($snapshot['authority'] ?? null) !== 'observational_snapshot'
+                || ($snapshot['restoration_authority'] ?? null) !== false
+                || ! is_bool($snapshot['is_stale'] ?? null)
+                || ! is_int($snapshot['maximum_age_seconds'] ?? null)) {
                 $this->invalid();
             }
         }

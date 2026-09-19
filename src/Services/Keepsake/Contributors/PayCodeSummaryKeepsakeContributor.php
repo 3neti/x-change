@@ -11,10 +11,14 @@ use LBHurtado\XChange\Data\Keepsake\InstanceKeepsakeContribution;
 use LBHurtado\XChange\Exceptions\InstanceKeepsakeException;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Services\Keepsake\CanonicalKeepsakeJson;
+use LBHurtado\XChange\Services\Keepsake\KeepsakePayCodeTemplateReferences;
 
 final readonly class PayCodeSummaryKeepsakeContributor implements InstanceKeepsakeContributor
 {
-    public function __construct(private CanonicalKeepsakeJson $json) {}
+    public function __construct(
+        private CanonicalKeepsakeJson $json,
+        private KeepsakePayCodeTemplateReferences $templateReferences,
+    ) {}
 
     public function key(): string
     {
@@ -97,6 +101,7 @@ final readonly class PayCodeSummaryKeepsakeContributor implements InstanceKeepsa
     {
         $templates = [];
         $ownerKeys = [];
+        $references = $this->templateReferences->forContext($context);
 
         foreach ($context->users as $user) {
             $ownerKeys[$user['model']->getMorphClass().'|'.$user['model']->getKey()] = $user['reference'];
@@ -106,15 +111,21 @@ final readonly class PayCodeSummaryKeepsakeContributor implements InstanceKeepsa
             ->select(['id', 'owner_type', 'owner_id', 'reference', 'name', 'description', 'base_template_key', 'include_amount', 'include_purpose', 'status'])
             ->orderBy('id')
             ->lazyById((int) config('x-change.instance_keepsake.chunk_size', 100))
-            ->each(function (PayCodeTemplate $template) use (&$templates, $ownerKeys): void {
+            ->each(function (PayCodeTemplate $template) use (&$templates, $ownerKeys, $references): void {
                 $ownerReference = $ownerKeys[$template->owner_type.'|'.$template->owner_id] ?? null;
 
                 if ($ownerReference === null || $template->status !== 'active') {
                     return;
                 }
 
+                $reference = $references[(string) $template->getKey()] ?? null;
+
+                if ($reference === null) {
+                    return;
+                }
+
                 $templates[] = [
-                    'reference' => 'template-'.str_pad((string) (count($templates) + 1), 6, '0', STR_PAD_LEFT),
+                    'reference' => $reference,
                     'account_reference' => $ownerReference,
                     'name' => (string) $template->name,
                     'description' => filled($template->description) ? (string) $template->description : null,

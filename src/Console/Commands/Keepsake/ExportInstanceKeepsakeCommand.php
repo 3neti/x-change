@@ -67,7 +67,7 @@ HELP;
     protected $signature = 'x-change:instance-keepsake:export
         {--all-users : Include every user Account}
         {--user=* : Include specific users by email or configured model key}
-        {--include=* : accounts, pay-codes, claim-evidence, blueprint}
+        {--include=* : accounts, pay-codes, claim-evidence, campaigns, continuity, blueprint}
         {--include-personal-data : Include names, emails, and mobiles in the archive}
         {--include-location-data : Include precise location JSON sidecars in the archive}
         {--confirm-location-data : Separately acknowledge precise location export}
