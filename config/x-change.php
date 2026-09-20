@@ -2647,6 +2647,22 @@ return [
         'max_total_bytes' => 512 * 1024 * 1024,
     ],
 
+    'continuity' => [
+        'provider_statement' => [
+            'disk' => env(
+                'XCHANGE_CONTINUITY_PROVIDER_STATEMENT_DISK',
+                env('XCHANGE_INSTANCE_KEEPSAKE_DISK', env('XCHANGE_CLAIM_EVIDENCE_DISK', 'local')),
+            ),
+            'directory' => env(
+                'XCHANGE_CONTINUITY_PROVIDER_STATEMENT_DIRECTORY',
+                'x-change/provider-statements',
+            ),
+            'max_rows' => (int) env('XCHANGE_CONTINUITY_PROVIDER_STATEMENT_MAX_ROWS', 10_000),
+            'max_range_days' => (int) env('XCHANGE_CONTINUITY_PROVIDER_STATEMENT_MAX_RANGE_DAYS', 3660),
+            'max_bytes' => (int) env('XCHANGE_CONTINUITY_PROVIDER_STATEMENT_MAX_BYTES', 10 * 1024 * 1024),
+        ],
+    ],
+
     'instance' => [
         'id' => env('XCHANGE_INSTANCE_ID'),
     ],
