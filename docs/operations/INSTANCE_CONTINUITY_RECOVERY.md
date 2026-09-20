@@ -57,6 +57,39 @@ Both commands must report `read_only: true`, `moves_money: false`, and
 `safe_to_reset: false`. A successful plan is evidence for review, not permission to
 delete the source or credit the destination.
 
+## Offline provider attribution audit
+
+When a persisted Treasury balance differs from the provider statement, normalize the
+private statement to CSV with these required headers:
+
+```text
+transaction_id,direction,amount,currency,status,occurred_at
+```
+
+`direction` must be `credit` or `debit`; `amount` is an unsigned decimal string in the
+selected connection's currency; `occurred_at` must be an explicit parseable timestamp.
+Additional columns may be present but are never emitted in the report.
+
+Run the bounded offline audit from a private local path:
+
+```bash
+php artisan x-change:treasury:audit-provider-attribution \
+  --statement=/private/statements/netbank-normalized.csv \
+  --connection=netbank-primary \
+  --json
+```
+
+The command streams the statement, makes no provider calls, writes no database/cache/
+journal/Treasury state, and hashes every transaction identifier before including it in
+output. It classifies matched inflows/outflows, unmatched provider debits/credits,
+duplicates, and amount/status mismatches. The result always reports
+`safe_to_reconcile: false`: it is evidence for disposition, never authority to repair,
+credit, derecognize, or reset an instance.
+
+Default safeguards limit the input to 10 MiB, 10,000 rows, 64 columns, and 2,048
+characters per cell. Operators should retain the private source statement separately
+from the sanitized JSON report and its `statement_sha256`.
+
 ## Current portability matrix
 
 | Data | Current treatment |

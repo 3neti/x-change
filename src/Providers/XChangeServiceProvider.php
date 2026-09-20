@@ -144,6 +144,7 @@ use LBHurtado\XChange\Console\Commands\Settlement\EvaluateSettlementEnvelopeComm
 use LBHurtado\XChange\Console\Commands\SetupXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Slices\DeliverVoucherSliceExecutionJournalCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\AttestCommercialAccountingCommand;
+use LBHurtado\XChange\Console\Commands\Treasury\AuditProviderAttributionCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\AuthorizeTreasuryOperatorCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\BackfillCommercialAccountingJournalCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\BackfillDisbursementSettlementJournalCommand;
@@ -1569,6 +1570,7 @@ class XChangeServiceProvider extends ServiceProvider
                 ProvisionTreasuryCommand::class,
                 ReconcileOpeningTreasuryBalanceCommand::class,
                 RepairMissingDisbursementPostingsCommand::class,
+                AuditProviderAttributionCommand::class,
                 SimulateTreasuryProviderDepositCommand::class,
                 InstallXChangeCommand::class,
                 PublishXChangeCommand::class,

@@ -1114,6 +1114,12 @@ return [
                 ],
             ],
         ],
+        'provider_attribution_audit' => [
+            'max_bytes' => 10 * 1024 * 1024,
+            'max_rows' => 10_000,
+            'max_cell_characters' => 2_048,
+            'detail_limit' => 100,
+        ],
     ],
 
     'funding' => [
