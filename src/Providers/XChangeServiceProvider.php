@@ -94,6 +94,7 @@ use LBHurtado\XChange\Console\Commands\CommissionXChangeCommand;
 use LBHurtado\XChange\Console\Commands\ConfigureXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Continuity\CaptureProviderStatementCommand;
 use LBHurtado\XChange\Console\Commands\Continuity\PlanInstanceContinuityCommand;
+use LBHurtado\XChange\Console\Commands\Continuity\ProposeProviderStatementAttributionCommand;
 use LBHurtado\XChange\Console\Commands\DeployXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\CheckDisbursementStatusCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\RestoreUnsubmittedPayoutCorrectionCommand;
@@ -1499,6 +1500,7 @@ class XChangeServiceProvider extends ServiceProvider
                 InspectInstanceKeepsakeCommand::class,
                 PlanInstanceContinuityCommand::class,
                 CaptureProviderStatementCommand::class,
+                ProposeProviderStatementAttributionCommand::class,
                 VerifyInstanceKeepsakeCommand::class,
                 GetWalletBalanceCommand::class,
                 EstimatePayCodeCostCommand::class,
