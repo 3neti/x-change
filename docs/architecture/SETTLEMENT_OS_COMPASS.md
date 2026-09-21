@@ -33,6 +33,28 @@ Campaign / Program Scale
 
 This Compass is the program-level memory. Future workstream compasses should be summarized here when a slice begins, completes, reveals a significant risk, or changes a package boundary.
 
+## Instance continuity recovery track
+
+Updated 2026-09-22. The operative plan and safety gates are in
+[Instance Continuity and Recovery](../operations/INSTANCE_CONTINUITY_RECOVERY.md#implementation-status-and-revised-recovery-path-2026-09-22).
+
+| Gate | Status | Boundary |
+|---|---|---|
+| Encrypted keepsake export, inspection, and deterministic continuity planning | Released | Evidence only; not a restorable image or financial authority |
+| Bounded NetBank statement capture and offline attribution audit | Released through `v1.0.32` | Private evidence and read-only classification; five-row local sample is incomplete |
+| Checksum-pinned provider-attribution proposal | Released in `v1.0.33`; local sandbox accepted | Same deterministic proposal on the released command; three unmatched credits and two unmatched debits, no financial writes |
+| Complete source obligation and recipient entitlement proposal | Not implemented | Must prove ownership, outstanding liability, mobile binding, and non-duplication; do not infer amounts from unmatched provider entries |
+| Destination reserve proof, source cutover fence, Maker/Checker approval | Not implemented | Shared-provider-account and double-spend exposure must be resolved before issuance |
+| Recipient-bound Account Funding Pay Code issuance and fresh-account claim rehearsal | Not implemented as continuity apply | Existing account-funding claim semantics are reusable, but recovery issuance has no authorization or apply path |
+| Live recovery and historical keepsake-linked presentation | Not authorized | Distinct gates after complete local rehearsal; preserve keepsake before any reset |
+
+No continuity apply command exists. The near-term delivery design avoids first
+importing old Accounts, but **does not avoid** financial reconciliation, reserve
+backing, source obligation disposition, identity review, or independent approval.
+The immediate critical-update TODO is recorded in
+[Remaining Activities](../todo/remaining.md#immediate-critical-update-pending-user-details);
+its content must not be guessed.
+
 ## Current Position
 
 Current wave: Onboarding Voucher Revised Claim Architecture

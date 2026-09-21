@@ -16,6 +16,75 @@ policies, approvals, and journals remain authoritative.
 
 Current commands are deliberately read-only. There is no continuity apply command yet.
 
+## Implementation status and revised recovery path (2026-09-22)
+
+The local sandbox consumes x-change `v1.0.33`. The bounded NetBank capture,
+offline attribution audit, and checksum-pinned provider-attribution proposal are
+implemented. The local five-row capture for September 1–20, 2026 (exclusive end)
+produced three unmatched provider credits, two unmatched provider debits, and
+zero matches. Repeated proposal runs returned the same hash, and the inspected
+financial table counts remained unchanged. The five-row limit was reached:
+this is an **incomplete sample**, not a statement of total provider activity,
+source liabilities, beneficial ownership, or recoverable value.
+
+We will pursue recipient-bound, Account Funding Pay Codes as a narrower
+**delivery mechanism** instead of importing source account records as a first
+step. A person may create or connect a fresh destination Account during claim,
+prove control of the intended mobile number, and receive approved value through
+the existing `account_funding` claim outcome. Mobile verification alone does
+not prove ownership of a source balance. This path does not restore an old
+Account, old Pay Code, prior claim status, provider history, or credentials.
+It is not authorized or implemented as a continuity issuance workflow today.
+
+The order of gates is:
+
+1. **Preserve source evidence first.** Export and independently verify the
+   encrypted keepsake before any source or destination reset. Retain claim
+   images, maps, and location evidence under the existing privacy controls;
+   defer their account-linked presentation, not their preservation. Pin the
+   archive checksum, manifest, source instance identity, and a consistent
+   source cutover checkpoint.
+2. **Build a complete entitlement proposal, read-only.** Reconcile source
+   Client Funds and outstanding Pay Code obligations at the cutover, plus
+   provider activity and ownership evidence. Classify each historical code
+   (paid, claimed, cancelled, expired, or still outstanding), and exclude
+   liabilities that must remain on the source or were already satisfied.
+   Propose one recipient identity, amount in minor units, mobile binding,
+   source evidence reference, and disposition per proposed entitlement. No
+   amount may be derived by summing unmatched provider credits or by treating
+   the five-row capture as complete.
+3. **Review backing and non-duplication.** Establish which instance owns the
+   provider funds, identify any shared NetBank account exposure, and prove
+   sufficient attributed Account Funding Reserve in the destination. Freeze
+   or otherwise fence source-side spending at a documented cutover. Match the
+   entitlement total to source obligations and the destination reserve without
+   double-counting outstanding Pay Codes. Produce deterministic plan and
+   evidence hashes, per-recipient exceptions, and a dry-run Treasury posture.
+4. **Separate approval and implementation gate.** An independent Maker and
+   Checker must approve an immutable, expiring plan pinned to source/destination
+   IDs, cutover, hashes, beneficiary set, amounts, fee treatment, and rollback
+   policy. Implement and test idempotent recipient-bound issuance through the
+   existing Treasury-backed Account Funding path; fail closed on duplicate
+   source entitlements, missing reserve, changed evidence, mobile mismatch,
+   or partial failure. No direct wallet/database credit or synthetic provider
+   transaction is permitted.
+5. **Rehearse locally before any live cutover.** Use a disposable, separately
+   identified x-PayOut installation. Verify issuance reservation, OTP/mobile
+   binding, account creation or connection, one-time claim, resulting Client
+   Funds, repeat/replay behavior, journal, and reconciliation. Compare source
+   and destination obligations before and after; stop if the provider-backed
+   conservation proof fails. Only then seek a distinct authorization for any
+   live financial operation.
+
+The currently released `x-change:continuity:propose-provider-attribution`
+command is **review-only**. Its `financial_apply_not_supported`,
+`maker_checker_authorization_not_present`,
+`provider_attribution_not_authorized`,
+`transaction_ownership_not_established`, and
+`provider_statement_sample_incomplete` blockers remain. No released command
+issues recovery Pay Codes or credits destination Client Funds from this plan.
+See the [continuity status in the Settlement OS compass](../architecture/SETTLEMENT_OS_COMPASS.md#instance-continuity-recovery-track).
+
 ## Inputs and secret handling
 
 An AI guide may ask conversationally for an instance identifier, archive location,

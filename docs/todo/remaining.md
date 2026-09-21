@@ -1,5 +1,21 @@
 # Remaining Activities Checklist
 
+## Immediate Critical Update — Pending User Details
+
+- [ ] **Immediate, priority 0:** capture the user's forthcoming critical update
+  and identify its affected behavior, instance, evidence, and safety boundary.
+- [ ] Triage it before further continuity implementation or any destructive
+  cleanroom reset. Do not infer the defect or make a financial change from this
+  placeholder.
+- [ ] Once specified, add a scoped corrective plan, regression evidence, owner,
+  and release/verification gate; then update the
+  [continuity runbook](../operations/INSTANCE_CONTINUITY_RECOVERY.md) and
+  [Settlement OS compass](../architecture/SETTLEMENT_OS_COMPASS.md) if relevant.
+
+Current continuity status: source keepsake and provider evidence can be
+preserved and reviewed, but recipient entitlement recovery and Pay Code
+issuance are not implemented or authorized. See the linked runbook above.
+
 ## Urgent Corrective Slice — Pay Code issuance compatibility ledger false-negative
 
 ### Problem
