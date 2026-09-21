@@ -51,9 +51,11 @@ Updated 2026-09-22. The operative plan and safety gates are in
 No continuity apply command exists. The near-term delivery design avoids first
 importing old Accounts, but **does not avoid** financial reconciliation, reserve
 backing, source obligation disposition, identity review, or independent approval.
-The immediate critical-update TODO is recorded in
-[Remaining Activities](../todo/remaining.md#immediate-critical-update-pending-user-details);
-its content must not be guessed.
+The [immediate paid-status corrective gate](../todo/remaining.md)
+now precedes continuity issuance. The forensic report for `6HGF` and `XGQQ`
+found completed collections despite later Payable/Expired Cockpit presentation.
+Collection outcome and voucher availability must remain separate; the
+historical `expired` label alone is not recovery-entitlement evidence.
 
 ## Current Position
 

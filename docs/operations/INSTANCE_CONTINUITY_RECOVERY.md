@@ -85,6 +85,16 @@ command is **review-only**. Its `financial_apply_not_supported`,
 issues recovery Pay Codes or credits destination Client Funds from this plan.
 See the [continuity status in the Settlement OS compass](../architecture/SETTLEMENT_OS_COMPASS.md#instance-continuity-recovery-track).
 
+**Immediate dependency:** the testing-instance forensic report for paid Pay
+Codes `6HGF` and `XGQQ` exposed a presentation/read-model defect: full
+collection remains recorded, but expiry can supersede Paid in Cockpit and
+possibly the Partner API. Complete the
+[paid-status corrective gate](../todo/remaining.md)
+before treating historical voucher status as source-obligation evidence.
+Collection and receipt evidence, availability, and original claim outcome
+must be assessed separately. No financial repair was indicated for those
+two payments.
+
 ## Inputs and secret handling
 
 An AI guide may ask conversationally for an instance identifier, archive location,

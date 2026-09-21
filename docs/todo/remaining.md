@@ -1,20 +1,46 @@
 # Remaining Activities Checklist
 
-## Immediate Critical Update — Pending User Details
+## Immediate Critical Update — Paid Pay Codes Shown as Payable/Expired
 
-- [ ] **Immediate, priority 0:** capture the user's forthcoming critical update
-  and identify its affected behavior, instance, evidence, and safety boundary.
-- [ ] Triage it before further continuity implementation or any destructive
-  cleanroom reset. Do not infer the defect or make a financial change from this
-  placeholder.
-- [ ] Once specified, add a scoped corrective plan, regression evidence, owner,
-  and release/verification gate; then update the
-  [continuity runbook](../operations/INSTANCE_CONTINUITY_RECOVERY.md) and
-  [Settlement OS compass](../architecture/SETTLEMENT_OS_COMPASS.md) if relevant.
+**Priority 0, presentation/read-model correctness.** The September 22, 2026
+testing-instance forensic report on Pay Codes `6HGF` and `XGQQ` reports two
+completed ₱3,975 collections, receipts, and matching settlement postings.
+Both were paid before their deadlines. The public payment pages say “Payment
+received,” while Cockpit can subsequently show `Payable` and put them in
+`Expired` rather than `Completed`. No financial repair, replay, or Treasury
+adjustment is indicated by that report. The exact deployed commit and a live
+authenticated Partner API response were **not** established in the audit.
+
+- [ ] Confirm the deployed testing commit/package version and reproduce the
+  discrepancy through authenticated Cockpit list/detail/filter reads and a
+  Partner API read. Preserve the report's distinction between observed UI and
+  API behavior inferred from package source. Do not disclose provider IDs or
+  private payment evidence in public artifacts.
+- [ ] Define one collection-derived financial outcome policy: a fully collected
+  Pay Code remains **Paid** after its payment window expires; availability
+  separately describes whether new payment can be accepted. Specify unpaid
+  and partially collected expiry, and obtain an explicit disposition for
+  **cancellation after full collection** before changing that precedence.
+- [ ] Add regression coverage for paid before/after expiry, unpaid and partial
+  expiry, list/detail/Partner API status parity, Completed/Expired filters and
+  counts, and cancellation-after-payment policy. Keep receipt and collection
+  facts authoritative; do not infer payment from a voucher state alone.
+- [ ] Implement the smallest package-level read-model/status correction, with
+  no voucher, payment-attempt, collection, Treasury, provider, or accounting
+  mutations. Verify locally, then release and inspect the testing instance.
+- [ ] Update the continuity evidence and operator guidance only after the
+  status fix is proven: historical `expired` labels alone must never be used
+  to exclude a settled payment or decide a recovery entitlement.
+
+This correctness gate takes precedence over recipient-bound continuity
+issuance and any destructive cleanroom reset. Its acceptance requires the two
+reported codes to be discoverable as completed payments without changing their
+recorded collection or financial postings.
 
 Current continuity status: source keepsake and provider evidence can be
 preserved and reviewed, but recipient entitlement recovery and Pay Code
-issuance are not implemented or authorized. See the linked runbook above.
+issuance are not implemented or authorized. See the
+[continuity runbook](../operations/INSTANCE_CONTINUITY_RECOVERY.md).
 
 ## Urgent Corrective Slice — Pay Code issuance compatibility ledger false-negative
 
