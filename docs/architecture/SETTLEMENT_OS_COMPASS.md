@@ -33,6 +33,14 @@ Campaign / Program Scale
 
 This Compass is the program-level memory. Future workstream compasses should be summarized here when a slice begins, completes, reveals a significant risk, or changes a package boundary.
 
+## Payment monitoring track
+
+Updated 2026-09-23. Automatic QR Ph payment observation is paused after a
+successful five-attempt Laravel Cloud testing canary. The current evidence,
+boundaries, and resume gate are recorded in the
+[Payment Monitoring Compass](PAYMENT_MONITORING_COMPASS.md). Remaining work is
+tracked in the [paused workstream TODO](../todo/payment-monitoring.md).
+
 ## Instance continuity recovery track
 
 Updated 2026-09-22. The operative plan and safety gates are in
