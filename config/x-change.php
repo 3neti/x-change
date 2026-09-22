@@ -808,6 +808,9 @@ return [
     'partner_api' => [
         'payment_events' => [
             'enabled' => env('XCHANGE_PARTNER_PAYMENT_EVENTS_ENABLED', false),
+            'connection' => env('XCHANGE_PARTNER_PAYMENT_EVENTS_CONNECTION', 'database'),
+            'queue' => env('XCHANGE_PARTNER_PAYMENT_EVENTS_QUEUE', 'partner-payments'),
+            'lock_store' => env('XCHANGE_PARTNER_PAYMENT_EVENTS_LOCK_STORE', 'database'),
             // Deployment-managed mapping keyed by PartnerApiClient.reference; never supplied by callers.
             // Each entry contains url and a dedicated secret of at least 32 bytes.
             'receivers' => [],

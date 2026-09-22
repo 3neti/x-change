@@ -5,16 +5,17 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Console\Commands\Payment;
 
 use Illuminate\Console\Command;
+use LBHurtado\XChange\Jobs\Payment\DeliverPartnerPaymentEvent;
 use LBHurtado\XChange\Models\PartnerPaymentEvent;
-use LBHurtado\XChange\Services\Payment\PartnerPaymentEventDelivery;
+use Throwable;
 
 final class DeliverPartnerPaymentEventsCommand extends Command
 {
     protected $signature = 'x-change:partner-payment-events:deliver {--limit=20} {--retry= : Explicitly requeue one failed event UUID; does not repeat a payment}';
 
-    protected $description = 'Deliver durable partner collection notifications without executing payments.';
+    protected $description = 'Queue due partner collection notifications without HTTP or payment execution.';
 
-    public function handle(PartnerPaymentEventDelivery $delivery): int
+    public function handle(): int
     {
         if (! config('x-change.partner_api.payment_events.enabled', false)) {
             $this->line('Partner payment events are disabled.');
@@ -28,11 +29,16 @@ final class DeliverPartnerPaymentEventsCommand extends Command
         $events = PartnerPaymentEvent::query()->whereIn('status', ['pending', 'sending'])->where('available_at', '<=', now())
             ->where(fn ($query) => $query->whereNull('lease_expires_at')->orWhere('lease_expires_at', '<=', now()))
             ->orderBy('id')->limit(max(1, min(100, (int) $this->option('limit'))))->pluck('id');
-        $delivered = 0;
         foreach ($events as $id) {
-            $delivered += (int) $delivery->deliver((int) $id);
+            try {
+                DeliverPartnerPaymentEvent::dispatch((int) $id);
+            } catch (Throwable) {
+                $this->error('Notification enqueue unavailable; durable events remain recoverable.');
+
+                return self::FAILURE;
+            }
         }
-        $this->line('Considered '.$events->count().'; delivered '.$delivered.'.');
+        $this->line('Considered '.$events->count().' due event(s) for unique queue dispatch.');
 
         return self::SUCCESS;
     }

@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Schema;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Payment\RecordVoucherCollection;
 use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
+use LBHurtado\XChange\Jobs\Payment\DeliverPartnerPaymentEvent;
 use LBHurtado\XChange\Models\PartnerApiClient;
 use LBHurtado\XChange\Models\PartnerApiPayCodeReference;
 use LBHurtado\XChange\Models\PartnerPaymentEvent;
@@ -30,6 +34,15 @@ function partnerEventFixture(): VoucherCollection
 
 beforeEach(function (): void {
     Http::preventStrayRequests();
+    config()->set('queue.connections.database', ['driver' => 'database', 'table' => 'jobs', 'queue' => 'default', 'retry_after' => 90]);
+    config()->set('cache.stores.database', ['driver' => 'database', 'table' => 'cache', 'lock_table' => 'cache_locks']);
+    if (! Schema::hasTable('cache_locks')) {
+        Schema::create('cache_locks', function (Blueprint $table): void {
+            $table->string('key')->primary();
+            $table->string('owner');
+            $table->integer('expiration');
+        });
+    }
     config()->set('x-change.partner_api.payment_events', ['enabled' => true, 'allowed_hosts' => ['receiver.example.test'], 'receivers' => ['partner-test' => ['url' => 'https://receiver.example.test/integrations/x-change/payment-events', 'secret' => str_repeat('s', 32)]]]);
     app()->bind(PartnerPaymentReceiver::class, fn () => new class extends PartnerPaymentReceiver
     {
@@ -129,8 +142,44 @@ it('recovers expired worker leases but not live leases and stops after bounded a
     $event->update(['attempts' => 7]);
     expect(app(PartnerPaymentEventDelivery::class)->deliver($event->id))->toBeFalse();
     expect($event->fresh()->status)->toBe('failed')->and($event->fresh()->attempts)->toBe(8);
+    Queue::fake();
     $this->artisan('x-change:partner-payment-events:deliver', ['--retry' => $event->event_id])->assertSuccessful();
+    Queue::assertPushed(DeliverPartnerPaymentEvent::class, 1);
+    expect($event->fresh()->status)->toBe('pending');
+    (new DeliverPartnerPaymentEvent($event->id))->handle(app(PartnerPaymentEventDelivery::class));
     expect($event->fresh()->status)->toBe('delivered')->and($event->fresh()->event_id)->toBe($event->event_id);
+});
+
+it('sweeps only due events onto a dedicated durable unique queue without HTTP', function (): void {
+    $event = app(PartnerPaymentEventOutbox::class)->record(partnerEventFixture());
+    Queue::fake();
+    $this->artisan('x-change:partner-payment-events:deliver')->assertSuccessful();
+    $this->artisan('x-change:partner-payment-events:deliver')->assertSuccessful();
+    Queue::assertPushed(DeliverPartnerPaymentEvent::class, 1);
+    Queue::assertPushed(DeliverPartnerPaymentEvent::class, fn ($job) => $job->eventId === $event->id && $job->queue === 'partner-payments' && $job->connection === 'database' && $job->timeout === 30 && $job->tries === 1);
+    Http::assertNothingSent();
+    expect($event->fresh()->attempts)->toBe(0)->and($event->fresh()->status)->toBe('pending');
+});
+
+it('rejects inline queue execution and preserves the outbox on enqueue failure', function (): void {
+    $event = app(PartnerPaymentEventOutbox::class)->record(partnerEventFixture());
+    config()->set('x-change.partner_api.payment_events.connection', 'sync');
+    $this->artisan('x-change:partner-payment-events:deliver')->assertFailed();
+    expect($event->fresh()->status)->toBe('pending')->and($event->fresh()->attempts)->toBe(0);
+    Http::assertNothingSent();
+});
+
+it('keeps worker failure recoverable without leaking exception details', function (): void {
+    $event = app(PartnerPaymentEventOutbox::class)->record(partnerEventFixture());
+    $event->update(['status' => 'sending', 'lease_expires_at' => now()->addMinutes(2)]);
+    (new DeliverPartnerPaymentEvent($event->id))->failed(new RuntimeException('secret must never be persisted'));
+    expect($event->fresh()->status)->toBe('sending')->and($event->fresh()->last_error)->toBe('notification_worker_failed');
+    Queue::fake();
+    $this->artisan('x-change:partner-payment-events:deliver')->assertSuccessful();
+    Queue::assertNothingPushed();
+    $this->travel(3)->minutes();
+    $this->artisan('x-change:partner-payment-events:deliver')->assertSuccessful();
+    Queue::assertPushed(DeliverPartnerPaymentEvent::class, 1);
 });
 
 it('blocks suspended partners and does not log exception messages', function (): void {
