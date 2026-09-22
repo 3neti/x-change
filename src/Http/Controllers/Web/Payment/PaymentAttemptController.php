@@ -14,6 +14,7 @@ use LBHurtado\XChange\Actions\Payment\IssuePaymentInstructions;
 use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
+use LBHurtado\XChange\Services\Payment\PaymentQrDeliveryPolicy;
 use Throwable;
 
 class PaymentAttemptController extends Controller
@@ -24,6 +25,7 @@ class PaymentAttemptController extends Controller
         CreatePaymentAttempt $create,
         IssuePaymentInstructions $issue,
         CampaignDisplaySessions $displays,
+        PaymentQrDeliveryPolicy $qrDelivery,
     ): RedirectResponse {
         abort_unless((bool) config('x-change.payment.attempts.enabled', true), 404);
 
@@ -32,6 +34,7 @@ class PaymentAttemptController extends Controller
             ->firstOrFail();
 
         $display = $displays->forPayer($voucher, $request);
+        $qrDeliveryModes = $qrDelivery->forVoucher($voucher, $display !== null);
         if ($display !== null) {
             $displays->assertOpen($display);
             abort_unless($displays->intakeReady($display, $voucher), 409, 'Complete the application before choosing payment.');
@@ -54,7 +57,7 @@ class PaymentAttemptController extends Controller
         }
 
         try {
-            $issueAttempt = function () use ($create, $issue, $voucher, $browserKey, $idempotencyKey, $display, $displays): PaymentAttempt {
+            $issueAttempt = function () use ($create, $issue, $voucher, $browserKey, $idempotencyKey, $qrDeliveryModes, $display, $displays): PaymentAttempt {
                 if ($display !== null) {
                     $displays->assertOpen($display->fresh());
                 }
@@ -63,6 +66,7 @@ class PaymentAttemptController extends Controller
                     provider: (string) config('x-change.payment.attempts.provider', 'netbank'),
                     browserKey: $browserKey,
                     idempotencyKey: $idempotencyKey,
+                    qrDeliveryModes: $qrDeliveryModes,
                 );
 
                 if ($display !== null) {

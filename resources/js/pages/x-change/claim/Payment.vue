@@ -3,6 +3,7 @@ import { Head, router, usePoll } from '@inertiajs/vue3';
 import {
     CheckCircle2,
     CreditCard,
+    Download,
     Loader2,
     Printer,
     ReceiptText,
@@ -23,6 +24,7 @@ import {
 import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
 import { store as createPaymentAttempt } from '@/routes/x-change/pay/attempts';
 import { store as checkPaymentAttempt } from '@/routes/x-change/pay/attempts/checks';
+import { download as downloadPaymentQr } from '@/routes/x-change/pay/attempts/qr';
 
 defineOptions({ layout: null });
 
@@ -35,6 +37,7 @@ type PaymentAttempt = {
     expires_at: string | null;
     last_checked_at: string | null;
     can_check: boolean;
+    qr_delivery_modes?: string[];
     qr_code: {
         mime_type: string | null;
         base64_payload: string | null;
@@ -143,6 +146,23 @@ const qrSource = computed(() => {
     }
 
     return `data:image/png;base64,${qr.base64_payload}`;
+});
+
+const qrDownloadUrl = computed(() => {
+    const attempt = props.payment.attempt;
+
+    if (
+        !attempt ||
+        !(attempt.qr_delivery_modes ?? []).includes('downloadable') ||
+        qrSource.value === null
+    ) {
+        return null;
+    }
+
+    return downloadPaymentQr.url({
+        code: props.payment.pay_code,
+        attempt: attempt.reference,
+    });
 });
 
 const expiresAt = computed(() => {
@@ -509,13 +529,24 @@ function printReceipt(): void {
                         </div>
                         <div
                             v-else-if="qrSource"
-                            class="mx-auto w-fit rounded-xl border border-border bg-white p-4 shadow-sm"
+                            class="mx-auto grid w-fit justify-items-center gap-3 rounded-xl border border-border bg-white p-4 shadow-sm"
                         >
                             <img
                                 :src="qrSource"
                                 :alt="`QR Ph code for ${attemptAmount}`"
                                 class="size-64 max-w-full"
                             />
+                            <Button
+                                v-if="qrDownloadUrl"
+                                as-child
+                                variant="outline"
+                                class="w-full text-black"
+                                data-testid="payer-download-qr"
+                            >
+                                <a :href="qrDownloadUrl" download>
+                                    <Download class="mr-2 h-4 w-4" />Download QR Ph
+                                </a>
+                            </Button>
                         </div>
                         <div
                             v-else

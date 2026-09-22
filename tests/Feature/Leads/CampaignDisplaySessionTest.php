@@ -105,6 +105,23 @@ it('creates a seller display without minting a voucher or charging a wallet', fu
         ->and($this->displayAdapter->instructionCalls)->toBe(0);
 });
 
+it('rejects an unsupported QR delivery contract before campaign issuance', function (): void {
+    $template = $this->displayCampaign->payCodeTemplate;
+    $instructions = $template->instructions_ciphertext;
+    data_set($instructions, 'metadata.custom.payment.qr_delivery_modes', ['downloadable']);
+    $template->update(['instructions_ciphertext' => $instructions]);
+
+    $this->postJson(route('x-change.cockpit.display-sessions.store'), [
+        'campaign_reference' => $this->displayCampaign->reference,
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors('payment.qr_delivery_modes');
+
+    expect(CampaignDisplaySession::query()->count())->toBe(0)
+        ->and(Voucher::query()->count())->toBe(0)
+        ->and($this->displayGenerationCalls)->toBe(0)
+        ->and($this->displayAdapter->instructionCalls)->toBe(0);
+});
+
 it('launches the paired browser scenario in seller QR mode without issuing a code', function (): void {
     $response = $this->post(route('x-change.cockpit.campaigns.lead-scenario-runner.store'), [
         'scenario' => 'paired_campaign_qr',
@@ -281,6 +298,41 @@ it('allows paired pure payable payment without intake while keeping the QR selle
         ->and($voucher->fresh()->redeemed_at)->toBeNull()
         ->and($this->displayAdapter->instructionCalls)->toBe(1)
         ->and(PaymentAttempt::query()->sole()->status)->toBe(PaymentAttemptStatus::AwaitingPayment);
+});
+
+it('honors an explicit remote QR contract even when the campaign was opened from a seller display', function (): void {
+    $template = $this->displayCampaign->payCodeTemplate;
+    $instructions = $template->instructions_ciphertext;
+    data_set($instructions, 'metadata.flow_type', 'collectible');
+    data_set($instructions, 'metadata.custom.payment.qr_delivery_modes', ['payer_page', 'downloadable']);
+    data_set($instructions, 'inputs.fields', []);
+    $template->update(['instructions_ciphertext' => $instructions]);
+
+    $session = createPairedDisplay();
+    $this->get(pairedDisplayEntryUrl($session))->assertRedirect();
+    $voucher = $session->fresh()->voucher;
+    $this->post(route('x-change.pay.attempts.store', $voucher->code))->assertRedirect();
+    $attempt = PaymentAttempt::query()->sole();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.pay.show', [
+            'code' => $voucher->code,
+            'attempt' => $attempt->reference,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('props.payment.paired_display', null)
+        ->assertJsonPath('props.payment.attempt.qr_delivery_modes', ['payer_page', 'downloadable'])
+        ->assertJsonStructure(['props' => ['payment' => ['attempt' => ['qr_code' => ['base64_payload']]]]]);
+
+    $this->getJson(route('x-change.cockpit.display-sessions.show', $session->reference))
+        ->assertOk()
+        ->assertJsonPath('session.status', 'awaiting_payment')
+        ->assertJsonPath('session.attempt', null);
+
+    $this->get(route('x-change.pay.attempts.qr.download', [
+        'code' => $voucher->code,
+        'attempt' => $attempt->reference,
+    ]))->assertOk()->assertDownload($voucher->code.'-qrph.png');
 });
 
 it('shows provider QR only to the seller and polls without writes or provider verification', function (): void {

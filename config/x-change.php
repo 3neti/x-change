@@ -2754,6 +2754,9 @@ return [
             'public_check_middleware' => [
                 'throttle:6,1',
             ],
+            'public_download_middleware' => [
+                'throttle:12,1',
+            ],
         ],
 
         'providers' => [

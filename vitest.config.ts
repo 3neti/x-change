@@ -326,6 +326,10 @@ export default defineConfig({
         import.meta.dirname,
         "tests/frontend/stubs/payment-verification-check-route.ts",
       ),
+      "@/routes/x-change/pay/attempts/qr": path.resolve(
+        import.meta.dirname,
+        "tests/frontend/stubs/payment-qr-download-route.ts",
+      ),
       "@/routes/x-change/pay/attempts": path.resolve(
         import.meta.dirname,
         "tests/frontend/stubs/payment-attempt-route.ts",

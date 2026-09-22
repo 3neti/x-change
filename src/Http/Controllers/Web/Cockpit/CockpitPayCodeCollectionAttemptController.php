@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
 use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
 use LBHurtado\XChange\Actions\Payment\IssuePaymentInstructions;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
+use LBHurtado\XChange\Enums\PaymentQrDeliveryMode;
 use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeDetailAccess;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptPresenter;
 
@@ -57,6 +58,7 @@ final class CockpitPayCodeCollectionAttemptController extends Controller
             provider: (string) config('x-change.payment.attempts.provider', 'netbank'),
             browserKey: $browserKey,
             idempotencyKey: $idempotencyKey,
+            qrDeliveryModes: [PaymentQrDeliveryMode::ApiPayload],
         );
 
         return response()->json([

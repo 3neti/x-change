@@ -15,11 +15,13 @@ use LBHurtado\XChange\Actions\Leads\StartLeadCampaign;
 use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
+use LBHurtado\XChange\Enums\PaymentQrDeliveryMode;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceBusy;
 use LBHurtado\XChange\Models\CampaignDisplaySession;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptPresenter;
+use LBHurtado\XChange\Services\Payment\PaymentQrDeliveryPolicy;
 
 final readonly class CampaignDisplaySessions
 {
@@ -27,6 +29,7 @@ final readonly class CampaignDisplaySessions
         private StartLeadCampaign $start,
         private ClaimUrlQrRendererContract $qr,
         private PaymentAttemptPresenter $attempts,
+        private PaymentQrDeliveryPolicy $qrDelivery,
         private VoucherFlowCapabilityResolverContract $capabilities,
     ) {}
 
@@ -157,6 +160,15 @@ final readonly class CampaignDisplaySessions
             'display' => $session->entry_token,
         ]);
 
+        $sellerMayDisplayAttempt = $attempt !== null
+            && $session->voucher !== null
+            && $this->qrDelivery->allows(
+                $attempt,
+                $session->voucher,
+                true,
+                PaymentQrDeliveryMode::SellerDisplay,
+            );
+
         return [
             'reference' => $session->reference,
             'status' => $status,
@@ -165,7 +177,9 @@ final readonly class CampaignDisplaySessions
             'public_url' => $status === 'ready' ? $url : null,
             'pay_code' => $session->voucher?->code,
             'expires_at' => $session->expires_at->toIso8601String(),
-            'attempt' => $attempt !== null && $status === 'awaiting_payment' ? $this->attempts->present($attempt) : null,
+            'attempt' => $sellerMayDisplayAttempt && $status === 'awaiting_payment'
+                ? $this->attempts->present($attempt)
+                : null,
             'links' => [
                 'show' => route('x-change.cockpit.display-sessions.show', $session->reference),
                 'end' => route('x-change.cockpit.display-sessions.end', $session->reference),

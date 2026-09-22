@@ -189,6 +189,7 @@ describe('PaymentPage', () => {
                         expires_at: '2026-07-24T10:15:00+08:00',
                         last_checked_at: null,
                         can_check: true,
+                        qr_delivery_modes: ['payer_page', 'downloadable'],
                         qr_code: {
                             mime_type: 'image/png',
                             base64_payload: 'iVBORw0KGgo=',
@@ -205,6 +206,10 @@ describe('PaymentPage', () => {
             'data:image/png;base64,iVBORw0KGgo=',
         );
         expect(wrapper.text()).toContain('Pay exactly ₱75.00');
+        expect(wrapper.get('a[download]').attributes('href')).toBe(
+            '/x/pay/PAY-1234/attempts/01JTEST/qr',
+        );
+        expect(wrapper.text()).toContain('Download QR Ph');
         expect(wrapper.text()).toContain('cannot fund your x-change Account');
         expect(wrapper.text()).toContain('Check payment status');
         expect(usePoll).toHaveBeenCalledWith(

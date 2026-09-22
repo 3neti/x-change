@@ -10,10 +10,12 @@ use Inertia\Inertia;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
+use LBHurtado\XChange\Enums\PaymentQrDeliveryMode;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptPresenter;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptSessionGuard;
+use LBHurtado\XChange\Services\Payment\PaymentQrDeliveryPolicy;
 use LBHurtado\XChange\Services\Payment\PaymentReceiptReadModel;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use Symfony\Component\HttpFoundation\Response;
@@ -31,6 +33,7 @@ class PaymentPageController extends Controller
         VoucherCollectionProgressService $progress,
         PaymentAttemptSessionGuard $sessions,
         PaymentAttemptPresenter $presenter,
+        PaymentQrDeliveryPolicy $delivery,
         CampaignDisplaySessions $displays,
     ): Response {
         $voucher = Voucher::query()
@@ -45,8 +48,17 @@ class PaymentPageController extends Controller
         $attempt = $this->attempt($request, $voucher, $sessions);
         $attempt ??= $display?->attempt;
         $attemptData = $attempt === null ? null : $presenter->present($attempt);
-        if ($display !== null && $attemptData !== null) {
+        $deliveryModes = $attempt === null
+            ? $delivery->forVoucher($voucher, $display !== null)
+            : $delivery->forAttempt($attempt, $voucher, $display !== null);
+        $payerPageQr = in_array(PaymentQrDeliveryMode::PayerPage, $deliveryModes, true);
+        $sellerDisplayQr = in_array(PaymentQrDeliveryMode::SellerDisplay, $deliveryModes, true);
+
+        if (! $payerPageQr && $attemptData !== null) {
             $attemptData['qr_code'] = null;
+        }
+        if ($attemptData !== null) {
+            $attemptData['qr_delivery_modes'] = $delivery->values($deliveryModes);
         }
         $provider = strtolower((string) config('x-change.payment.attempts.provider', 'netbank'));
         $providerEnabled = (bool) config("x-change.funding.providers.{$provider}.enabled", false);
@@ -69,7 +81,7 @@ class PaymentPageController extends Controller
                     && ! $collection->is_fully_collected,
                 'poll_interval_ms' => max(1000, (int) config('x-change.payment.attempts.ui_refresh_interval_milliseconds', 5000)),
                 'attempt' => $attemptData,
-                'paired_display' => $display === null ? null : [
+                'paired_display' => $display === null || ! $sellerDisplayQr ? null : [
                     'reference' => $display->reference,
                     'status' => $displays->present($display)['status'],
                 ],

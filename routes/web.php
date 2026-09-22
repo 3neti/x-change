@@ -135,6 +135,7 @@ use LBHurtado\XChange\Http\Controllers\Web\PayCodeIndexPageController;
 use LBHurtado\XChange\Http\Controllers\Web\PayCodeShowPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentAttemptController;
 use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentQrCodeDownloadController;
 use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentVerificationCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationAcceptanceController;
 use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationPageController;
@@ -715,6 +716,11 @@ Route::prefix('x')->middleware(['web', ShareXChangeBranding::class, GuardPairedC
     Route::post('pay/{code}/attempts', PaymentAttemptController::class)
         ->middleware((array) config('x-change.payment.attempts.public_start_middleware', []))
         ->name('x-change.pay.attempts.store');
+    Route::get(
+        'pay/{code}/attempts/{attempt:reference}/qr',
+        PaymentQrCodeDownloadController::class,
+    )->middleware((array) config('x-change.payment.attempts.public_download_middleware', []))
+        ->name('x-change.pay.attempts.qr.download');
     Route::post(
         'pay/{code}/attempts/{attempt:reference}/checks',
         PaymentVerificationCheckController::class,

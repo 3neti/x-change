@@ -12,6 +12,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
 use LBHurtado\XChange\Actions\Payment\IssuePaymentInstructions;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
+use LBHurtado\XChange\Enums\PaymentQrDeliveryMode;
 use LBHurtado\XChange\Exceptions\IdempotencyConflict;
 use LBHurtado\XChange\Exceptions\VoucherCannotCollect;
 use LBHurtado\XChange\Http\Requests\PartnerApi\CreatePartnerPayCodePaymentAttemptRequest;
@@ -80,6 +81,7 @@ class CreatePartnerPayCodePaymentAttemptController extends Controller
             provider: $provider,
             browserKey: sprintf('partner-api:%s:%s', $client->reference, strtoupper((string) $voucher->code)),
             idempotencyKey: $key,
+            qrDeliveryModes: [PaymentQrDeliveryMode::ApiPayload],
         );
 
         try {

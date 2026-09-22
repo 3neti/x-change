@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Exceptions;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\PaymentGateway\Exceptions\NetbankFundingRequestFailed;
@@ -151,7 +152,40 @@ it('creates and reopens exact provider QR instructions in the payer session', fu
         ->assertJsonPath('props.payment.attempt.amount_minor', 10000)
         ->assertJsonPath('props.payment.attempt.qr_code.mime_type', 'image/png')
         ->assertJsonPath('props.payment.attempt.qr_code.embedded_amount', true)
+        ->assertJsonPath('props.payment.attempt.qr_delivery_modes.0', 'payer_page')
         ->assertJsonStructure(['props' => ['payment' => ['attempt' => ['qr_code' => ['base64_payload']]]]]);
+});
+
+it('downloads an authorized live QR without exposing it to another browser or after expiry', function (): void {
+    $voucher = publicPaymentVoucherForUser(
+        actingAsTestUser(),
+        qrDeliveryModes: ['payer_page', 'downloadable'],
+    );
+
+    $this->post(route('x-change.pay.attempts.store', $voucher->code))->assertRedirect();
+    $attempt = PaymentAttempt::query()->sole();
+    $browserKey = (string) session('x-change.payment.browser-key');
+    $downloadUrl = route('x-change.pay.attempts.qr.download', [
+        'code' => $voucher->code,
+        'attempt' => $attempt->reference,
+    ]);
+
+    $this->get($downloadUrl)
+        ->assertOk()
+        ->assertDownload($voucher->code.'-qrph.png')
+        ->assertHeader('Cache-Control', 'max-age=0, no-store, private')
+        ->assertHeader('Content-Type', 'image/png');
+
+    $this->withSession(['x-change.payment.browser-key' => 'another-browser'])
+        ->get($downloadUrl)
+        ->assertNotFound();
+
+    DB::table('x_change_payment_attempts')->where('id', $attempt->getKey())->update([
+        'expires_at' => now()->subMinute(),
+    ]);
+    $this->withSession(['x-change.payment.browser-key' => $browserKey])
+        ->get($downloadUrl)
+        ->assertGone();
 });
 
 it('sanitizes provider instruction failures and safely retries the same attempt', function (): void {
@@ -331,8 +365,22 @@ function publicPaymentVoucher(): Voucher
     return publicPaymentVoucherForUser(actingAsTestUser());
 }
 
-function publicPaymentVoucherForUser(User $user, ?string $riderMessage = null): Voucher
-{
+/** @param list<string>|null $qrDeliveryModes */
+function publicPaymentVoucherForUser(
+    User $user,
+    ?string $riderMessage = null,
+    ?array $qrDeliveryModes = null,
+): Voucher {
+    $metadata = [
+        'flow_type' => 'collectible',
+        'issuer_id' => (string) $user->id,
+        'collection_wallet_id' => $user->wallet->id,
+    ];
+
+    if ($qrDeliveryModes !== null) {
+        data_set($metadata, 'custom.payment.qr_delivery_modes', $qrDeliveryModes);
+    }
+
     return issueVoucher(validVoucherInstructions(
         amount: 0.00,
         settlementRail: 'INSTAPAY',
@@ -341,11 +389,7 @@ function publicPaymentVoucherForUser(User $user, ?string $riderMessage = null): 
             'rider' => [
                 'message' => $riderMessage,
             ],
-            'metadata' => [
-                'flow_type' => 'collectible',
-                'issuer_id' => (string) $user->id,
-                'collection_wallet_id' => $user->wallet->id,
-            ],
+            'metadata' => $metadata,
         ],
     ));
 }

@@ -95,7 +95,15 @@ it('keeps the AUI browser scenario executable against voucher input fields', fun
     $supported = VoucherInputField::values();
 
     expect(data_get($template->instructions_ciphertext, 'inputs.fields'))
-        ->each->toBeIn($supported);
+        ->each->toBeIn($supported)
+        ->and(data_get(
+            $template->instructions_ciphertext,
+            'metadata.custom.payment.qr_delivery_modes',
+        ))->toBe(['payer_page', 'downloadable'])
+        ->and(data_get(
+            $template->instructions_ciphertext,
+            'metadata.custom.lead_campaign.invoice_channels',
+        ))->toBeNull();
 });
 
 it('preserves the AUI settlement target from the endpoint template and offers same-code payment after intake', function (): void {
@@ -119,6 +127,8 @@ it('preserves the AUI settlement target from the endpoint template and offers sa
         ->and(data_get($instructions, 'cash.amount'))->toBe(0)
         ->and(data_get($instructions, 'metadata.flow_type'))->toBe('settlement')
         ->and(data_get($instructions, 'metadata.custom.settlement.driver'))->toBe('claim-intake')
+        ->and(data_get($instructions, 'metadata.custom.payment.qr_delivery_modes'))
+        ->toBe(['payer_page', 'downloadable'])
         ->and(data_get($instructions, 'claim.default_outcome'))->toBe('lead_intake')
         ->and(data_get($instructions, 'rider.url'))->toBeNull();
 

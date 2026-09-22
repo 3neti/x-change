@@ -9,8 +9,10 @@ use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
+use LBHurtado\XChange\Enums\PaymentQrDeliveryMode;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptSessionGuard;
+use LBHurtado\XChange\Services\Payment\PaymentQrDeliveryPolicy;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\VoucherCapabilityGuard;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
@@ -23,13 +25,16 @@ class CreatePaymentAttempt
         private readonly VoucherCollectionProgressService $progress,
         private readonly PaymentAttemptSessionGuard $sessions,
         private readonly SettlementCollectionGate $settlementGate,
+        private readonly PaymentQrDeliveryPolicy $qrDelivery,
     ) {}
 
+    /** @param list<PaymentQrDeliveryMode>|null $qrDeliveryModes */
     public function handle(
         Voucher $voucher,
         string $provider,
         string $browserKey,
         string $idempotencyKey,
+        ?array $qrDeliveryModes = null,
     ): PaymentAttempt {
         $this->capabilities->ensureCanCollect($voucher);
 
@@ -41,6 +46,8 @@ class CreatePaymentAttempt
         $browserKey = $this->required($browserKey, 'Browser session');
         $idempotencyKey = $this->required($idempotencyKey, 'Idempotency key');
         $progress = $this->progress->compute($voucher);
+        $qrDeliveryModes ??= $this->qrDelivery->forVoucher($voucher, false);
+        $qrDeliveryModeValues = $this->qrDelivery->values($qrDeliveryModes);
 
         if ($progress->remaining_to_collect_minor <= 0) {
             throw new LogicException('This Pay Code is already fully paid.');
@@ -67,6 +74,7 @@ class CreatePaymentAttempt
                 $sessionKeyHash,
                 $idempotencyKeyHash,
                 $fingerprint,
+                $qrDeliveryModeValues,
             ): PaymentAttempt {
                 $attempt = PaymentAttempt::query()->create([
                     'voucher_id' => $voucher->getKey(),
@@ -83,6 +91,7 @@ class CreatePaymentAttempt
                     ),
                     'metadata' => [
                         'purpose' => 'voucher_payment',
+                        'qr_delivery_modes' => $qrDeliveryModeValues,
                     ],
                 ]);
 

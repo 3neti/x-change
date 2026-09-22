@@ -79,10 +79,12 @@ final readonly class RunAuiInsuranceLeadScenario
                 'flow_type' => 'settlement',
                 'custom' => [
                     'settlement' => ['driver' => 'claim-intake'],
+                    'payment' => [
+                        'qr_delivery_modes' => ['payer_page', 'downloadable'],
+                    ],
                     'lead_campaign' => [
                         'scenario' => 'aui_on_demand_insurance_payment',
                         'payment_mode' => 'same_code_after_intake',
-                        'invoice_channels' => ['email', 'downloadable_qrph'],
                         'requested_particulars' => [
                             'insurance_product',
                             'vehicle_registration_number',

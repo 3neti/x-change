@@ -12,6 +12,7 @@ use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Services\Leads\LeadCampaignTemplateVersionId;
+use LBHurtado\XChange\Services\Payment\PaymentQrDeliveryPolicy;
 
 final readonly class StartLeadCampaign
 {
@@ -20,6 +21,7 @@ final readonly class StartLeadCampaign
         private EndpointCampaignRepository $endpoints,
         private EndpointCampaignAvailability $availability,
         private LeadCampaignTemplateVersionId $templateVersions,
+        private PaymentQrDeliveryPolicy $qrDelivery,
     ) {}
 
     public function handle(LeadCampaign $campaign): GeneratePayCodeResultData
@@ -79,10 +81,14 @@ final readonly class StartLeadCampaign
     {
         $this->availability->ensureStartable($campaign);
 
-        if (! Arr::has((array) $campaign->payCodeTemplate?->instructions_ciphertext, 'cash')) {
+        $instructions = (array) $campaign->payCodeTemplate?->instructions_ciphertext;
+
+        if (! Arr::has($instructions, 'cash')) {
             throw ValidationException::withMessages([
                 'template' => 'The Lead Campaign template is missing Pay Code cash instructions.',
             ]);
         }
+
+        $this->qrDelivery->validateInstructions($instructions);
     }
 }
