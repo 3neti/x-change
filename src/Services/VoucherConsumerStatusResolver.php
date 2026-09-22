@@ -24,16 +24,16 @@ class VoucherConsumerStatusResolver
         Voucher $voucher,
         VoucherCollectionProgressData $progress,
     ): string {
+        if (app(VoucherCollectionOutcomeProjection::class)->project($voucher, $progress)['outcome'] === 'paid') {
+            return 'paid';
+        }
+
         if ($voucher->isCancelled()) {
             return 'cancelled';
         }
 
         if ($voucher->isExpired()) {
             return 'expired';
-        }
-
-        if ($progress->is_fully_collected) {
-            return 'paid';
         }
 
         $latestAttempt = PaymentAttempt::query()

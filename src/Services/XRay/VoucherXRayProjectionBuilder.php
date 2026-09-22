@@ -11,6 +11,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
+use LBHurtado\XChange\Services\VoucherCollectionOutcomeProjection;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 
 class VoucherXRayProjectionBuilder
@@ -30,7 +31,12 @@ class VoucherXRayProjectionBuilder
         $sliceVoucher = $voucher instanceof Voucher ? $voucher : $sliceSource;
         $status = $sliceVoucher instanceof Voucher && $this->isCampaignPayoutRecovery($sliceVoucher)
             ? 'claimable'
-            : $this->xrayStatus((string) data_get($voucher, 'status', 'unknown'), $voucher);
+            : $this->xrayStatus(
+                (string) data_get($voucher, 'status', 'unknown'),
+                $sliceVoucher instanceof Voucher && $this->capabilities->canCollect($sliceVoucher)
+                    ? $sliceVoucher
+                    : $voucher,
+            );
         $slicePlan = $sliceVoucher instanceof Voucher
             ? $this->slicePlans->forVoucher($sliceVoucher)
             : [];
@@ -72,9 +78,18 @@ class VoucherXRayProjectionBuilder
     {
         if ($voucher instanceof Voucher && $this->capabilities->canCollect($voucher)) {
             $progress = $this->progress->compute($voucher);
+            $outcome = app(VoucherCollectionOutcomeProjection::class)->project($voucher, $progress);
 
-            if ($progress->is_fully_collected) {
+            if ($outcome['outcome'] === 'paid') {
                 return 'paid';
+            }
+
+            if ($outcome['availability'] === 'expired') {
+                return 'expired';
+            }
+
+            if ($outcome['availability'] === 'cancelled') {
+                return 'hidden';
             }
 
             return 'payable';

@@ -20,6 +20,7 @@ use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
 use LBHurtado\XChange\Contracts\CockpitCampaignIssuanceDraftAdapterContract;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Contracts\MoneyMovementAccountingDecisionContract;
+use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Contracts\VoucherLiabilitySummaryContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitCampaignReadModelData;
@@ -69,9 +70,12 @@ use LBHurtado\XChange\Data\Cockpit\CockpitReadModelBundleData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitVoucherEvidenceSummaryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitVoucherReadModelData;
+use LBHurtado\XChange\Data\Payment\VoucherCollectionProgressData;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
+use LBHurtado\XChange\Services\VoucherCollectionOutcomeProjection;
 use LBHurtado\XChange\Services\VoucherLifecycleService;
 
 class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProviderContract
@@ -1548,11 +1552,18 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             ->latest('id')
             ->get();
         $claimSummaries = $this->payCodeListClaimSummaries($vouchers);
+        $collectedTotals = VoucherCollection::query()
+            ->whereIn('voucher_id', $vouchers->modelKeys())
+            ->whereIn('status', ['collected', 'succeeded'])
+            ->selectRaw('voucher_id, SUM(collected_amount_minor) as collected_total_minor')
+            ->groupBy('voucher_id')
+            ->pluck('collected_total_minor', 'voucher_id');
 
         return $vouchers
             ->map(fn (Voucher $voucher): array => $this->payCodeListRow(
                 $voucher,
                 $claimSummaries[(string) $voucher->getKey()] ?? [],
+                (int) ($collectedTotals[$voucher->getKey()] ?? 0),
             ))
             ->filter(fn (array $row): bool => $this->summaryCode($row, '') !== '')
             ->values();
@@ -1594,10 +1605,44 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
      * @param  array<string, mixed>  $claimSummary
      * @return array<string, mixed>
      */
-    private function payCodeListRow(Voucher $voucher, array $claimSummary = []): array
+    private function payCodeListRow(Voucher $voucher, array $claimSummary = [], int $collectedTotalMinor = 0): array
     {
         $instructions = $this->payCodeListInstructions($voucher);
         $status = $this->payCodeListOperationalStatus($voucher);
+        $collection = $this->payCodeListCollection($voucher, $instructions);
+        $capabilities = app(VoucherFlowCapabilityResolverContract::class)->resolve($voucher);
+        $isCollectible = $capabilities->can_collect;
+        if ($isCollectible) {
+            $target = (int) ($collection['target_amount_minor'] ?? 0);
+            $collection['collected_total_minor'] = $collectedTotalMinor;
+            $collection['remaining_to_collect_minor'] = max($target - $collectedTotalMinor, 0);
+            $collection['is_fully_collected'] = $target > 0 && $collectedTotalMinor >= $target;
+            $collection['is_overpaid'] = $target > 0 && $collectedTotalMinor > $target;
+            $collection['overpaid_amount_minor'] = max($collectedTotalMinor - $target, 0);
+            $progress = new VoucherCollectionProgressData(
+                currency: (string) ($collection['currency'] ?? 'PHP'),
+                target_amount_minor: $target,
+                collected_total_minor: $collectedTotalMinor,
+                remaining_to_collect_minor: (int) $collection['remaining_to_collect_minor'],
+                is_fully_collected: (bool) $collection['is_fully_collected'],
+                is_overpaid: (bool) $collection['is_overpaid'],
+                overpaid_amount_minor: (int) $collection['overpaid_amount_minor'],
+            );
+            $outcome = app(VoucherCollectionOutcomeProjection::class)->project($voucher, $progress);
+            if ($outcome['outcome'] === 'paid' && ! $capabilities->can_disburse) {
+                $status = $this->payCodeListStatus(
+                    key: 'paid',
+                    label: 'Paid',
+                    tone: 'positive',
+                    availabilityKey: $outcome['availability'],
+                    availabilityLabel: ucfirst($outcome['availability']),
+                    settlementOutcome: 'succeeded',
+                    terminal: true,
+                    canClaim: false,
+                    voucherStatus: $this->voucherStateValue($voucher),
+                );
+            }
+        }
         $operational = $this->payCodeListOperationalSummary($voucher, $instructions);
         $externalReference = $this->nullableString(data_get($instructions, 'metadata.custom.external_reference'));
 
@@ -1630,9 +1675,13 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             'attention' => $this->payCodeListAttention($voucher),
             'approval' => null,
             'external_reference' => $externalReference,
-            'consumer_status' => $this->payCodeListConsumerStatus($instructions),
+            'consumer_status' => $isCollectible && ! $capabilities->can_disburse
+                ? ($collection['is_fully_collected']
+                    ? 'paid'
+                    : (in_array($status['key'], ['expired', 'cancelled'], true) ? $status['key'] : 'payable'))
+                : null,
             'claim_summary' => $claimSummary,
-            'collection' => $this->payCodeListCollection($voucher, $instructions),
+            'collection' => $collection,
             'instructions' => $instructions,
             'created_at' => $voucher->created_at?->toIso8601String(),
             'starts_at' => $voucher->starts_at?->toIso8601String(),
@@ -2025,16 +2074,6 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 ?? 'The receiving institution rejected the payout destination.',
             'tone' => 'critical',
         ];
-    }
-
-    private function payCodeListConsumerStatus(array $instructions): ?string
-    {
-        $flowType = strtolower($this->stringValue(data_get($instructions, 'metadata.flow_type'), ''));
-        $voucherType = strtolower($this->stringValue(data_get($instructions, 'voucher_type'), ''));
-
-        return in_array($flowType, ['collectible', 'payable'], true) || $voucherType === 'payable'
-            ? 'payable'
-            : null;
     }
 
     /**

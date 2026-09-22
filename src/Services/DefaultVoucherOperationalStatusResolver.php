@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services;
 
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Contracts\VoucherOperationalStatusResolverContract;
 use LBHurtado\XChange\Data\PayCode\PayCodeOperationalStatusData;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
@@ -33,6 +34,29 @@ class DefaultVoucherOperationalStatusResolver implements VoucherOperationalStatu
         $requiresRecovery = data_get($voucher->metadata, 'disbursement.requires_recovery') === true;
         $payoutSucceeded = in_array($payoutStatus, ['succeeded', 'completed', 'paid'], true)
             || $internalStatus === 'finalized';
+
+        $flow = app(VoucherFlowCapabilityResolverContract::class)->resolve($voucher);
+        if ($flow->can_collect && ! $flow->can_disburse) {
+            $progress = app(VoucherCollectionProgressService::class)->compute($voucher);
+            $collection = app(VoucherCollectionOutcomeProjection::class)->project($voucher, $progress);
+
+            if ($collection['outcome'] === 'paid') {
+                return $this->status(
+                    key: 'paid',
+                    label: 'Paid',
+                    tone: 'positive',
+                    availabilityKey: $collection['availability'],
+                    availabilityLabel: match ($collection['availability']) {
+                        'expired' => 'Expired',
+                        'cancelled' => 'Cancelled',
+                        default => 'Closed',
+                    },
+                    settlementOutcome: 'succeeded',
+                    terminal: true,
+                    canClaim: false,
+                );
+            }
+        }
 
         if (
             $requiresRecovery

@@ -160,8 +160,47 @@ it('projects canonical collection facts in lifecycle summary and detail', functi
                 'is_overpaid' => false,
                 'overpaid_amount_minor' => 0,
             ]);
+
+        if ($consumerStatus === 'paid') {
+            expect($facts['operational_status']['availability_key'])->toBe('closed');
+        }
     }
 })->with(['payable', 'processing', 'paid']);
+
+it('preserves confirmed payable outcome after its payment window expires', function (): void {
+    $voucher = canonicalLifecyclePayableVoucher('PAID-THEN-EXPIRED');
+    VoucherCollection::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'collection_number' => 1,
+        'status' => 'collected',
+        'requested_amount_minor' => 10000,
+        'collected_amount_minor' => 10000,
+        'currency' => 'PHP',
+        'provider' => 'netbank',
+        'provider_reference' => 'paid-then-expired',
+        'provider_transaction_id' => 'paid-then-expired',
+        'idempotency_key' => 'paid-then-expired',
+        'completed_at' => now()->subDay(),
+    ]);
+    $voucher->forceFill(['expires_at' => now()->subHour()])->save();
+
+    $detail = app(VoucherLifecycleService::class)->show((string) $voucher->getKey());
+
+    expect($detail['consumer_status'])->toBe('paid')
+        ->and($detail['status'])->toBe('paid')
+        ->and($detail['operational_status'])->toMatchArray([
+            'key' => 'paid',
+            'availability_key' => 'expired',
+            'settlement_outcome' => 'succeeded',
+            'can_claim' => false,
+        ])
+        ->and($detail['collection']['is_fully_collected'])->toBeTrue();
+    expect($detail['collection_state'])->toBe([
+        'outcome' => 'paid',
+        'availability' => 'expired',
+        'next_action' => 'view_receipt',
+    ]);
+});
 
 it('projects null collection facts for a non-collectible voucher', function (): void {
     $voucher = issueVoucher();

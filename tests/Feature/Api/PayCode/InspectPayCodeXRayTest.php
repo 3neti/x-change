@@ -5,6 +5,7 @@ declare(strict_types=1);
 use LBHurtado\Voucher\Services\VoucherSlicePlanFactory;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
+use LBHurtado\XChange\Models\VoucherCollection;
 
 it('returns guest-safe x-ray disclosure for a pay code', function (): void {
     $service = Mockery::mock(VoucherLifecycleServiceContract::class);
@@ -52,6 +53,37 @@ it('returns guest-safe x-ray disclosure for a pay code', function (): void {
 
     expect(collect($response->json('data.xray.redactions'))->pluck('key')->all())
         ->toContain('amount', 'issuer', 'redirect_url');
+});
+
+it('keeps confirmed collection paid in x-ray after the voucher expires', function (): void {
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'voucher_type' => 'payable',
+        'target_amount' => 100,
+        'metadata' => [
+            'flow_type' => 'collectible',
+            'collection_wallet_id' => (string) $issuer->wallet()->where('slug', 'platform')->sole()->getKey(),
+        ],
+    ]));
+    VoucherCollection::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'collection_number' => 1,
+        'status' => 'collected',
+        'requested_amount_minor' => 10000,
+        'collected_amount_minor' => 10000,
+        'currency' => 'PHP',
+        'provider' => 'netbank',
+        'provider_reference' => 'xray-paid-expired',
+        'provider_transaction_id' => 'xray-paid-expired',
+        'idempotency_key' => 'xray-paid-expired',
+        'completed_at' => now()->subDay(),
+    ]);
+    $voucher->forceFill(['expires_at' => now()->subHour()])->save();
+    auth()->logout();
+
+    $this->postJson(xchangeApi('pay-codes/x-ray'), ['code' => $voucher->code])
+        ->assertOk()
+        ->assertJsonPath('data.xray.status', 'paid');
 });
 
 it('returns a safe x-ray not found response', function (): void {

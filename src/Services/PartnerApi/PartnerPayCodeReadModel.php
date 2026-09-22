@@ -45,6 +45,7 @@ class PartnerPayCodeReadModel
             'code' => (string) data_get($detail, 'code'),
             'external_reference' => data_get($detail, 'external_reference'),
             'consumer_status' => data_get($detail, 'consumer_status'),
+            'collection_state' => data_get($detail, 'collection_state'),
             'amount_minor' => Money::of((string) data_get($detail, 'amount', 0), $currency)
                 ->getMinorAmount()
                 ->toInt(),

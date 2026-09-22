@@ -884,7 +884,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
     }
 
     /**
-     * @return array{consumer_status: string|null, collection: array<string, mixed>|null}
+     * @return array{consumer_status: string|null, collection: array<string, mixed>|null, collection_state: array<string, string>|null}
      */
     protected function collectibleFacts(Voucher $voucher): array
     {
@@ -892,6 +892,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             return [
                 'consumer_status' => null,
                 'collection' => null,
+                'collection_state' => null,
             ];
         }
 
@@ -900,6 +901,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         return [
             'consumer_status' => $this->consumerStatusResolver()->resolveFromProgress($voucher, $progress),
             'collection' => $progress->toArray(),
+            'collection_state' => app(VoucherCollectionOutcomeProjection::class)->project($voucher, $progress),
         ];
     }
 

@@ -9,6 +9,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Models\PosSaleReference;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Cockpit\PayCodeTerminalControlReadModel;
 
 it('shows an account holder only their own Pay Codes', function () {
@@ -25,6 +26,46 @@ it('shows an account holder only their own Pay Codes', function () {
         ->assertJsonPath('props.pay_codes_read_model.records.0.code', $visibleVoucher->code)
         ->assertJsonMissingPath('props.pay_codes_read_model.records.1')
         ->assertJsonMissing(['code' => $hiddenVoucher->code]);
+});
+
+it('lists a fully collected payable as completed even after expiration', function () {
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'voucher_type' => 'payable',
+        'target_amount' => 100,
+        'metadata' => [
+            'flow_type' => 'collectible',
+            'collection_wallet_id' => (string) $issuer->wallet()->where('slug', 'platform')->sole()->getKey(),
+        ],
+    ]));
+    VoucherCollection::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'collection_number' => 1,
+        'status' => 'collected',
+        'requested_amount_minor' => 10000,
+        'collected_amount_minor' => 10000,
+        'currency' => 'PHP',
+        'provider' => 'netbank',
+        'provider_reference' => 'expired-paid-cockpit',
+        'provider_transaction_id' => 'expired-paid-cockpit',
+        'idempotency_key' => 'expired-paid-cockpit',
+        'completed_at' => now()->subDay(),
+    ]);
+    $voucher->forceFill(['expires_at' => now()->subHour()])->save();
+
+    $this->actingAs($issuer)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.index', ['status' => 'completed']))
+        ->assertOk()
+        ->assertJsonPath('props.pay_codes_read_model.records.0.code', $voucher->code)
+        ->assertJsonPath('props.pay_codes_read_model.records.0.status', 'paid')
+        ->assertJsonPath('props.pay_codes_read_model.records.0.consumer_status', 'paid');
+
+    $this->actingAs($issuer)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.index', ['status' => 'expired']))
+        ->assertOk()
+        ->assertJsonMissing(['code' => $voucher->code]);
 });
 
 it('prefetches terminal eligibility with fixed query cost instead of per-row queries', function () {
@@ -286,6 +327,39 @@ it('projects amount presentation by Pay Code flow type', function () {
         'target_amount' => 'PHP 100.00',
         'display_amount' => 'PHP 100.50 → PHP 100.00',
     ]);
+});
+
+it('keeps settlement collection and outbound completion distinct in the list', function () {
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(100.50, overrides: [
+        'voucher_type' => 'settlement',
+        'target_amount' => 100,
+        'metadata' => [
+            'collection_wallet_id' => (string) $issuer->wallet()->where('slug', 'platform')->sole()->getKey(),
+            'flow_type' => 'settlement',
+        ],
+    ]));
+    VoucherCollection::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'collection_number' => 1,
+        'status' => 'collected',
+        'requested_amount_minor' => 10000,
+        'collected_amount_minor' => 10000,
+        'currency' => 'PHP',
+        'provider' => 'netbank',
+        'provider_reference' => 'settlement-collected-not-disbursed',
+        'provider_transaction_id' => 'settlement-collected-not-disbursed',
+        'idempotency_key' => 'settlement-collected-not-disbursed',
+        'completed_at' => now(),
+    ]);
+
+    $this->actingAs($issuer)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.index', ['search' => $voucher->code]))
+        ->assertOk()
+        ->assertJsonPath('props.pay_codes_read_model.records.0.consumer_status', null)
+        ->assertJsonPath('props.pay_codes_read_model.records.0.collection.is_fully_collected', true)
+        ->assertJsonPath('props.pay_codes_read_model.records.0.status', 'active');
 });
 
 it('falls back to the rider message when no external reference is present', function (): void {

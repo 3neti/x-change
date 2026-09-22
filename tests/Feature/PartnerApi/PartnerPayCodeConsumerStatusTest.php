@@ -85,6 +85,25 @@ it('reports a fully collected Pay Code as paid', function (): void {
     expect(app(PartnerPayCodeConsumerStatusResolver::class)->resolve($voucher))->toBe('paid');
 });
 
+it('does not let voucher closure erase a confirmed collection', function (string $state): void {
+    $voucher = bplsStatusVoucher('STATUS-PAID-'.strtoupper($state), $state);
+    VoucherCollection::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'collection_number' => 1,
+        'status' => 'collected',
+        'requested_amount_minor' => 10000,
+        'collected_amount_minor' => 10000,
+        'currency' => 'PHP',
+        'provider' => 'netbank',
+        'provider_reference' => 'bpls-status-paid-'.$state,
+        'provider_transaction_id' => 'bpls-status-paid-'.$state,
+        'idempotency_key' => 'bpls-status-paid-'.$state,
+        'completed_at' => now()->subDay(),
+    ]);
+
+    expect(app(PartnerPayCodeConsumerStatusResolver::class)->resolve($voucher))->toBe('paid');
+})->with(['expired', 'cancelled']);
+
 it('gives cancelled and expired voucher states precedence over payment progress', function (string $state): void {
     $voucher = bplsStatusVoucher('STATUS-'.strtoupper($state), $state);
 
