@@ -11,6 +11,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
 use LBHurtado\XChange\Exceptions\VoucherCollectionConflict;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Services\Payment\PartnerPaymentEventOutbox;
 use LBHurtado\XChange\Services\Payment\VoucherCollectionJournal;
 use LBHurtado\XChange\Services\VoucherCollectionIdempotencyService;
 
@@ -108,6 +109,7 @@ final readonly class RecordVoucherCollection
                 ],
             ]);
 
+            app(PartnerPaymentEventOutbox::class)->record($collection);
             DB::afterCommit(
                 fn () => $this->journal->record($collection->fresh()),
             );

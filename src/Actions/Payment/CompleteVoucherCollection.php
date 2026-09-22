@@ -12,6 +12,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Data\Payment\ConfirmedVoucherCollectionData;
 use LBHurtado\XChange\Exceptions\VoucherCollectionConflict;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Services\Payment\PartnerPaymentEventOutbox;
 use LBHurtado\XChange\Services\Payment\VoucherCollectionJournal;
 use LBHurtado\XChange\Services\Payment\VoucherCollectionPostingRegistry;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
@@ -157,6 +158,7 @@ final readonly class CompleteVoucherCollection
                     'collection' => $data->metadata,
                 ],
             ]);
+            app(PartnerPaymentEventOutbox::class)->record($collection);
             DB::afterCommit(
                 fn () => $this->journal->record($collection->fresh()),
             );

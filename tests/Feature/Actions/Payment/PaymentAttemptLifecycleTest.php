@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use LBHurtado\EmiCore\Data\Funding\FundingQrMerchantData;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\Merchant\Contracts\MerchantProfileRepositoryContract;
@@ -24,6 +25,9 @@ use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Events\PaymentTransactionObserved;
 use LBHurtado\XChange\Models\ObservedPaymentTransaction;
+use LBHurtado\XChange\Models\PartnerApiClient;
+use LBHurtado\XChange\Models\PartnerApiPayCodeReference;
+use LBHurtado\XChange\Models\PartnerPaymentEvent;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
@@ -472,6 +476,34 @@ it('replays an already-settled Payment Attempt without executing another collect
         ->and($replay->events()->count())->toBe($eventCount)
         ->and($balanceAfterSettlement)->toBe($balanceBefore + 100.00)
         ->and((float) $user->wallet->fresh()->balanceFloat)->toBe($balanceAfterSettlement);
+});
+
+it('atomically emits one partner event from settlement and none on replay', function (): void {
+    $user = actingAsTestUser();
+    $voucher = paymentAttemptCollectibleVoucherForUser($user);
+    $client = PartnerApiClient::query()->create([
+        'reference' => 'settlement-partner', 'oauth_client_id' => 'fake-client', 'name' => 'Fake partner',
+        'issuer_type' => $user->getMorphClass(), 'issuer_id' => (string) $user->id,
+        'status' => 'active', 'activated_at' => now(),
+    ]);
+    PartnerApiPayCodeReference::query()->create([
+        'partner_api_client_id' => $client->id, 'voucher_id' => $voucher->id,
+        'external_reference' => 'fake-settlement-reference', 'terms_hash' => hash('sha256', 'test'),
+    ]);
+    config()->set('x-change.partner_api.payment_events.enabled', true);
+    config()->set('x-change.partner_api.payment_events.receivers.settlement-partner', []);
+    Http::preventStrayRequests();
+    $attempt = issuedPaymentAttempt($voucher);
+    $this->paymentAdapter->fundingObservation = exactPaymentObservation($attempt);
+    app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Schedule);
+    app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Schedule);
+    $events = PartnerPaymentEvent::query()->get();
+    expect($events)->toHaveCount(1);
+    expect(json_decode($events->first()->body, true))->toMatchArray([
+        'amount_minor' => 10000, 'external_reference' => 'fake-settlement-reference',
+        'pay_code' => $voucher->code, 'partner_reference' => 'settlement-partner',
+    ]);
+    Http::assertNothingSent();
 });
 
 it('keeps pending provider history awaiting payment without collection', function (): void {

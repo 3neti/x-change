@@ -806,6 +806,13 @@ return [
     ],
 
     'partner_api' => [
+        'payment_events' => [
+            'enabled' => env('XCHANGE_PARTNER_PAYMENT_EVENTS_ENABLED', false),
+            // Deployment-managed mapping keyed by PartnerApiClient.reference; never supplied by callers.
+            // Each entry contains url and a dedicated secret of at least 32 bytes.
+            'receivers' => [],
+            'allowed_hosts' => [],
+        ],
         'enabled' => env('XCHANGE_PARTNER_API_ENABLED', false),
         'public_discovery_enabled' => env('XCHANGE_PARTNER_API_PUBLIC_DISCOVERY_ENABLED', true),
         'documentation_url' => env('XCHANGE_PARTNER_API_DOCUMENTATION_URL'),

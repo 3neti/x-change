@@ -148,6 +148,7 @@ use LBHurtado\XChange\Console\Commands\PartnerApi\CreatePartnerApiClientCommand;
 use LBHurtado\XChange\Console\Commands\PartnerApi\RunPartnerApiLifecycleCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\EstimatePayCodeCostCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\GeneratePayCodeCommand;
+use LBHurtado\XChange\Console\Commands\Payment\DeliverPartnerPaymentEventsCommand;
 use LBHurtado\XChange\Console\Commands\Payment\MonitorOpenPaymentAttemptsCommand;
 use LBHurtado\XChange\Console\Commands\Payment\ResumeVerifiedPaymentAttemptsCommand;
 use LBHurtado\XChange\Console\Commands\Payment\VerifyOpenPaymentAttemptsCommand;
@@ -1632,6 +1633,11 @@ class XChangeServiceProvider extends ServiceProvider
         $this->bootCommercialSettlementRateLimiter();
         $this->bootPartnerApiRateLimiter();
         $this->bootFundingVerificationSchedule();
+        if (config('x-change.partner_api.payment_events.enabled', false)) {
+            $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+                $schedule->command('x-change:partner-payment-events:deliver --limit=20')->everyMinute()->withoutOverlapping(5);
+            });
+        }
         $this->bootFundingBroadcastChannel();
         $this->bootRoutes();
         $this->bootMobileFirstFortify();
@@ -1640,6 +1646,7 @@ class XChangeServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->commands([
+                DeliverPartnerPaymentEventsCommand::class,
                 CleanupLegacyEventIndexCommand::class,
                 PreviewCommissioningManifestCommand::class,
                 OnboardIssuerCommand::class,
