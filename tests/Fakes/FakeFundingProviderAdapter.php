@@ -14,6 +14,7 @@ use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\EmiCore\Data\Funding\ProviderWebhookReceiptData;
 use LBHurtado\EmiCore\Data\Funding\ProviderWebhookRequestData;
 use LBHurtado\EmiCore\Data\Funding\WebhookAuthenticationData;
+use LBHurtado\XChange\Data\Payment\ObservedPaymentTransactionData;
 use Throwable;
 
 class FakeFundingProviderAdapter implements FundingProviderAdapter
@@ -29,6 +30,11 @@ class FakeFundingProviderAdapter implements FundingProviderAdapter
     public ?ProviderFundingObservationData $fundingObservation = null;
 
     public ?FundingVerificationData $lastVerification = null;
+
+    /** @var list<ObservedPaymentTransactionData> */
+    public array $incomingPayments = [];
+
+    public int $incomingPaymentCalls = 0;
 
     public function __construct(
         private readonly string $provider = 'netbank',
@@ -108,5 +114,14 @@ class FakeFundingProviderAdapter implements FundingProviderAdapter
                 'destination_verified' => true,
             ],
         );
+    }
+
+    /** @return list<ObservedPaymentTransactionData> */
+    public function incomingPayments(FundingVerificationData $verification): array
+    {
+        $this->lastVerification = $verification;
+        $this->incomingPaymentCalls++;
+
+        return $this->incomingPayments;
     }
 }

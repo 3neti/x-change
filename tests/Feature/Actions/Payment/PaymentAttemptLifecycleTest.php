@@ -12,12 +12,18 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\Services\ExecutionEngine;
 use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
 use LBHurtado\XChange\Actions\Payment\IssuePaymentInstructions;
+use LBHurtado\XChange\Actions\Payment\MonitorPaymentAttempt;
+use LBHurtado\XChange\Actions\Payment\RecordObservedPaymentTransaction;
 use LBHurtado\XChange\Actions\Payment\RecordVoucherCollection;
 use LBHurtado\XChange\Actions\Payment\SettleVerifiedPaymentAttempt;
 use LBHurtado\XChange\Actions\Payment\VerifyPaymentAttempt;
+use LBHurtado\XChange\Data\Payment\ObservedPaymentTransactionData;
+use LBHurtado\XChange\Data\Payment\PaymentObservationNoticeData;
 use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
+use LBHurtado\XChange\Events\PaymentTransactionObserved;
+use LBHurtado\XChange\Models\ObservedPaymentTransaction;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
@@ -25,6 +31,7 @@ use LBHurtado\XChange\Services\Funding\FundingQrMerchantProfileResolver;
 use LBHurtado\XChange\Support\Funding\FundingMerchantSnapshot;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 use LBHurtado\XChange\Tests\Fakes\User;
+use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
 beforeEach(function (): void {
     config()->set('x-change.funding.providers.netbank.enabled', true);
@@ -34,6 +41,169 @@ beforeEach(function (): void {
     $this->app->instance(FakeFundingProviderAdapter::class, $this->paymentAdapter);
     $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
     $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
+});
+
+it('records multiple provider payments per QR without duplicating or exposing payer identity', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $attempt = app(CreatePaymentAttempt::class)->handle($voucher, 'netbank', 'monitor-session', 'monitor-request');
+    $record = app(RecordObservedPaymentTransaction::class);
+
+    $firstData = new ObservedPaymentTransactionData(
+        providerTransactionId: 'netbank-credit-1',
+        amountMinor: 2500,
+        currency: 'PHP',
+        providerStatus: 'settled',
+        payerName: 'Apple Hurtado',
+        payerAccountNumber: '09175180722',
+        payerInstitutionCode: 'GCASH',
+    );
+    $first = $record->handle($attempt, $firstData);
+    $replay = $record->handle($attempt, $firstData);
+    $second = $record->handle($attempt, new ObservedPaymentTransactionData(
+        providerTransactionId: 'netbank-credit-2',
+        amountMinor: 5000,
+        currency: 'PHP',
+        providerStatus: 'settled',
+        payerMobile: '09175180722',
+    ));
+    $raw = DB::table('x_change_observed_payment_transactions')->find($first->getKey());
+
+    expect($replay->is($first))->toBeTrue()
+        ->and($attempt->observedPayments()->count())->toBe(2)
+        ->and($second->amount_minor)->toBe(5000)
+        ->and($first->payer_mobile_ciphertext)->toBeNull()
+        ->and($raw->payer_name_ciphertext)->not->toContain('Apple Hurtado')
+        ->and($raw->payer_account_ciphertext)->not->toContain('09175180722')
+        ->and($raw->provider_transaction_id_ciphertext)->not->toContain('netbank-credit-1')
+        ->and(ExecutionJournalEntry::query()->where('event_type', 'payment.provider_observed')->count())->toBe(2)
+        ->and(json_encode(ExecutionJournalEntry::query()->where('event_type', 'payment.provider_observed')->firstOrFail()->toArray()))
+        ->not->toContain('Apple Hurtado')
+        ->not->toContain('09175180722')
+        ->and(array_key_exists('payer_account_ciphertext', $first->toArray()))->toBeFalse();
+});
+
+it('refuses to reattribute an observed provider transaction to another QR', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $first = app(CreatePaymentAttempt::class)->handle($voucher, 'netbank', 'monitor-first', 'monitor-first');
+    $second = app(CreatePaymentAttempt::class)->handle($voucher, 'netbank', 'monitor-second', 'monitor-second');
+    $payment = new ObservedPaymentTransactionData('same-provider-credit', 2500, 'PHP', 'settled');
+    app(RecordObservedPaymentTransaction::class)->handle($first, $payment);
+
+    expect(fn () => app(RecordObservedPaymentTransaction::class)->handle($second, $payment))
+        ->toThrow(LogicException::class)
+        ->and(ObservedPaymentTransaction::query()->count())->toBe(1);
+});
+
+it('records provider status changes once without altering collection state', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $attempt = app(CreatePaymentAttempt::class)->handle($voucher, 'netbank', 'status-session', 'status-request');
+    $record = app(RecordObservedPaymentTransaction::class);
+    $pending = $record->handle($attempt, new ObservedPaymentTransactionData('changing-credit', 2500, 'PHP', 'pending'));
+    $settled = $record->handle($attempt, new ObservedPaymentTransactionData('changing-credit', 2500, 'PHP', 'settled'));
+    $record->handle($attempt, new ObservedPaymentTransactionData('changing-credit', 2500, 'PHP', 'settled'));
+    $record->handle($attempt, new ObservedPaymentTransactionData('changing-credit', 2500, 'PHP', 'pending'));
+
+    expect($settled->is($pending))->toBeTrue()
+        ->and($pending->statuses()->pluck('provider_status')->all())->toBe(['pending', 'settled', 'pending'])
+        ->and(ExecutionJournalEntry::query()->where('event_type', 'payment.provider_observed')->count())->toBe(3)
+        ->and($attempt->fresh()->status)->toBe(PaymentAttemptStatus::PendingInstructions)
+        ->and(DB::table('voucher_collections')->count())->toBe(0);
+
+    expect(fn () => $record->handle($attempt, new ObservedPaymentTransactionData('changing-credit', 2600, 'PHP', 'settled')))
+        ->toThrow(LogicException::class);
+});
+
+it('monitors multiple credits on a settled QR without invoking settlement', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $attempt = app(IssuePaymentInstructions::class)->handle(app(CreatePaymentAttempt::class)->handle(
+        $voucher, 'netbank', 'monitor-settled-session', 'monitor-settled-request',
+    ));
+    PaymentAttempt::query()->whereKey($attempt->getKey())->update(['status' => PaymentAttemptStatus::Settled]);
+    $attempt = $attempt->fresh();
+    $this->paymentAdapter->incomingPayments = [
+        new ObservedPaymentTransactionData('incoming-1', 2500, 'PHP', 'settled'),
+        new ObservedPaymentTransactionData('incoming-2', 5000, 'PHP', 'settled'),
+    ];
+
+    $first = app(MonitorPaymentAttempt::class)->handle($attempt);
+    $replay = app(MonitorPaymentAttempt::class)->handle($attempt);
+
+    expect($first)->toBe(2)
+        ->and($replay)->toBe(2)
+        ->and($this->paymentAdapter->incomingPaymentCalls)->toBe(2)
+        ->and(ObservedPaymentTransaction::query()->count())->toBe(2)
+        ->and($attempt->fresh()->last_monitored_at)->not->toBeNull()
+        ->and($attempt->fresh()->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and(DB::table('voucher_collections')->count())->toBe(0);
+});
+
+it('integrates the local NetBank reader with x-change payment persistence', function (): void {
+    expect(method_exists(NetbankFundingProviderAdapter::class, 'incomingPayments'))->toBeTrue();
+
+    config()->set('payment-gateway.netbank.funding.corporate_account_number', '113-001-00001-9');
+    config()->set('payment-gateway.netbank.funding.corporate_account_name', 'X-Change');
+    config()->set('payment-gateway.netbank.funding.vca_alias', '91500');
+    $voucher = paymentAttemptCollectibleVoucher();
+    $attempt = app(IssuePaymentInstructions::class)->handle(app(CreatePaymentAttempt::class)->handle(
+        $voucher, 'netbank', 'reader-session', 'reader-request',
+    ));
+    $vca = $attempt->funding_address_ciphertext;
+    $client = Mockery::mock(NetbankFundingApiClient::class);
+    $client->shouldReceive('allTransactions')->once()->with($vca, '113-001-00001-9')
+        ->andReturn((function () use ($vca): Generator {
+            foreach ([['credit-1', 2500], ['credit-2', 5000]] as [$id, $amount]) {
+                yield [
+                    'transaction_id' => $id,
+                    'type' => 'Credit',
+                    'description' => 'EXTERNAL_TRANSFER_INCOMING',
+                    'destination_account' => ['account_alias' => $vca],
+                    'amount' => ['num' => (string) $amount, 'cur' => 'PHP'],
+                    'status' => 'SETTLED',
+                    'date' => now()->toIso8601String(),
+                    'sender_name' => 'Apple Hurtado',
+                    'source_account' => ['account_number' => '09175180722', 'bank_code' => 'GXCHPHM2XXX'],
+                ];
+            }
+        })());
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([
+        new NetbankFundingProviderAdapter($client),
+    ]));
+
+    expect(app(MonitorPaymentAttempt::class)->handle($attempt))->toBe(2)
+        ->and($attempt->observedPayments()->count())->toBe(2)
+        ->and($attempt->observedPayments()->firstOrFail()->payer_mobile_ciphertext)->toBeNull()
+        ->and($attempt->fresh()->status)->toBe(PaymentAttemptStatus::AwaitingPayment)
+        ->and(DB::table('voucher_collections')->count())->toBe(0);
+});
+
+it('does not call NetBank after the QR observation window closes', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $attempt = app(IssuePaymentInstructions::class)->handle(app(CreatePaymentAttempt::class)->handle(
+        $voucher, 'netbank', 'monitor-expired-session', 'monitor-expired-request',
+    ));
+    PaymentAttempt::query()->whereKey($attempt->getKey())->update(['expires_at' => now()->subMinutes(10)]);
+
+    expect(app(MonitorPaymentAttempt::class)->handle($attempt->fresh()))->toBe(0)
+        ->and($this->paymentAdapter->incomingPaymentCalls)->toBe(0);
+});
+
+it('keeps payer identity out of the private broadcast payload', function (): void {
+    $payment = new ObservedPaymentTransactionData(
+        'private-transaction', 2500, 'PHP', 'settled',
+        payerName: 'Apple Hurtado', payerAccountNumber: '09175180722',
+    );
+    $event = new PaymentTransactionObserved('App\\Models\\User', '123', new PaymentObservationNoticeData(
+        1, 2, 3, $payment->providerStatus, 'provider_payment_observed', now()->toIso8601String(),
+    ));
+    $payload = json_encode($event->broadcastWith(), JSON_THROW_ON_ERROR);
+
+    expect($payload)->not->toContain('Apple Hurtado')
+        ->not->toContain('09175180722')
+        ->not->toContain('private-transaction');
+
+    expect(json_encode($event, JSON_THROW_ON_ERROR))->not->toContain('Apple Hurtado')
+        ->not->toContain('09175180722')
+        ->not->toContain('private-transaction');
 });
 
 it('creates an exact Payment Attempt for the collectible balance', function (): void {

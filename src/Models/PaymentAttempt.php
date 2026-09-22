@@ -40,6 +40,7 @@ class PaymentAttempt extends Model
         'provider_transaction_id',
         'instructions_created_at',
         'last_checked_at',
+        'last_monitored_at',
         'verified_at',
         'settled_at',
         'expired_at',
@@ -92,6 +93,7 @@ class PaymentAttempt extends Model
             'voucher_collection_id' => 'integer',
             'instructions_created_at' => 'immutable_datetime',
             'last_checked_at' => 'immutable_datetime',
+            'last_monitored_at' => 'immutable_datetime',
             'verified_at' => 'immutable_datetime',
             'settled_at' => 'immutable_datetime',
             'expired_at' => 'immutable_datetime',
@@ -108,5 +110,10 @@ class PaymentAttempt extends Model
     public function events(): HasMany
     {
         return $this->hasMany(PaymentAttemptEvent::class)->orderBy('sequence');
+    }
+
+    public function observedPayments(): HasMany
+    {
+        return $this->hasMany(ObservedPaymentTransaction::class)->orderBy('occurred_at');
     }
 }

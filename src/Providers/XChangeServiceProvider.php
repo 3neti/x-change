@@ -133,6 +133,7 @@ use LBHurtado\XChange\Console\Commands\PartnerApi\CreatePartnerApiClientCommand;
 use LBHurtado\XChange\Console\Commands\PartnerApi\RunPartnerApiLifecycleCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\EstimatePayCodeCostCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\GeneratePayCodeCommand;
+use LBHurtado\XChange\Console\Commands\Payment\MonitorOpenPaymentAttemptsCommand;
 use LBHurtado\XChange\Console\Commands\Payment\ResumeVerifiedPaymentAttemptsCommand;
 use LBHurtado\XChange\Console\Commands\Payment\VerifyOpenPaymentAttemptsCommand;
 use LBHurtado\XChange\Console\Commands\Provisioning\AuthorizeProvisioningOperatorCommand;
@@ -1525,6 +1526,7 @@ class XChangeServiceProvider extends ServiceProvider
                 VerifyFundingRequestBackingCommand::class,
                 VerifyOpenFundingIntentsCommand::class,
                 VerifyOpenPaymentAttemptsCommand::class,
+                MonitorOpenPaymentAttemptsCommand::class,
                 ResumeVerifiedPaymentAttemptsCommand::class,
                 SyncStandingFundingAddressesCommand::class,
                 ReconcilePendingDisbursementsCommand::class,
@@ -1813,6 +1815,19 @@ class XChangeServiceProvider extends ServiceProvider
                 $schedule
                     ->command("xchange:payments:verify-open --provider=netbank --limit={$batchSize}")
                     ->name('xchange:payments:verify-open:netbank')
+                    ->everyMinute()
+                    ->onOneServer()
+                    ->withoutOverlapping(5);
+            });
+        }
+
+        if ((bool) config('x-change.payment.monitoring.scheduled_enabled', false)) {
+            $batchSize = max(1, (int) config('x-change.payment.monitoring.scheduled_batch_size', 50));
+
+            $this->callAfterResolving(Schedule::class, function (Schedule $schedule) use ($batchSize): void {
+                $schedule
+                    ->command("xchange:payments:monitor-open --provider=netbank --limit={$batchSize}")
+                    ->name('xchange:payments:monitor-open:netbank')
                     ->everyMinute()
                     ->onOneServer()
                     ->withoutOverlapping(5);

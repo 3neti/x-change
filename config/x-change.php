@@ -2717,6 +2717,11 @@ return [
     ],
 
     'payment' => [
+        'monitoring' => [
+            'scheduled_enabled' => (bool) env('X_CHANGE_PAYMENT_MONITORING_SCHEDULED_ENABLED', false),
+            'scheduled_batch_size' => (int) env('X_CHANGE_PAYMENT_MONITORING_BATCH_SIZE', 50),
+            'expiry_grace_seconds' => (int) env('X_CHANGE_PAYMENT_MONITORING_EXPIRY_GRACE_SECONDS', 300),
+        ],
         'default_provider' => env('X_CHANGE_PAYMENT_PROVIDER', 'manual'),
 
         /*
