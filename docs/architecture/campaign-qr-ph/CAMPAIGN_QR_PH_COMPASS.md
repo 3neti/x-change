@@ -11,9 +11,9 @@ snapshot from inception, and issues one zero-value completion Pay Code.
 
 ## Current Position
 
-Current gate: **Gate 2 complete — ready for Gate 3 campaign configuration**
+Current gate: **Gate 3 complete — ready for Gate 4 recognition boundary**
 
-Current state: **Evidence and bounded polling boundaries locked**
+Current state: **Campaign payment QR configuration is immutable**
 
 Prior checkpoint: **Reusable multi-payment characterization complete**
 
@@ -89,6 +89,14 @@ canonical evidence and cannot trigger a business side effect. Exact NetBank
 mapping is deferred until provider documentation or controlled live evidence
 shows whether a reversal mutates the credit or arrives as a separate debit.
 
+Campaign entry is now explicit: ordinary endpoint campaigns use
+`pay_code_on_open`, while reusable campaign QR Ph uses
+`reusable_payment_qr`. The latter binds one exact campaign template revision
+to one active payment-purpose Standing Funding Address and its active static QR
+artifact. Provider, currency, amount mode, availability, and permitted-payment
+rules are hashed into an immutable configuration. Identical retries converge;
+conflicting or stale bindings fail closed.
+
 Redacted evidence: [Gate 1 live characterization report](reports/001-netbank-live-characterization.md).
 
 ## Settled Decisions
@@ -145,9 +153,10 @@ Stop before business recognition if any of these remain ambiguous:
 
 ## Next Controlled Gate
 
-Gate 3: add the explicit campaign entry mode and bind one reusable provider
-address/QR to an immutable campaign revision. Preserve the new cadence and
-batch bounds. Do not begin business recognition until incompatible provider
-evidence has a durable, operator-visible quarantine path.
+Gate 4a: persist an operator-visible quarantine/attention record when canonical
+provider evidence is incompatible, adverse, or unknown. Prove it has zero
+coverage, envelope, Pay Code, Client Funds, or Treasury side effects. Only
+then implement qualifying-payment recognition against the immutable Gate 3
+binding.
 
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).

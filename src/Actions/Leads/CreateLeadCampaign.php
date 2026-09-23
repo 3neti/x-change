@@ -8,6 +8,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\XCampaign\Contracts\EndpointCampaignRepository;
+use LBHurtado\XChange\Enums\CampaignEntryMode;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Services\Funding\FundingQrMerchantProfileResolver;
@@ -59,6 +60,7 @@ final readonly class CreateLeadCampaign
         $settings = [
             'kind' => 'lead',
             'entry_point' => 'public_qr_link',
+            'entry_mode' => CampaignEntryMode::PayCodeOnOpen->value,
             'person_type' => 'prospect',
             'pay_code_generation' => 'on_scan',
             ...(array) ($attributes['settings'] ?? []),

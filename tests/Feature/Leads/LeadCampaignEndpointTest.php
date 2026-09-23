@@ -40,6 +40,7 @@ it('creates a merchant scoped lead campaign from an owner template', function ()
         ->and($campaign->settings)->toMatchArray([
             'kind' => 'lead',
             'entry_point' => 'public_qr_link',
+            'entry_mode' => 'pay_code_on_open',
             'person_type' => 'prospect',
             'pay_code_generation' => 'on_scan',
         ]);

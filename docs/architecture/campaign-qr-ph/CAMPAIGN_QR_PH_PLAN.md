@@ -198,12 +198,24 @@ Status: **Dependency-integrated; x-change release and host verification pending*
 
 ### Gate 3 — Campaign QR Ph configuration
 
-Status: **Pending**
+Status: **Complete; operator UI deferred**
 
-- Add an explicit campaign entry-mode enum.
-- Bind a reusable provider address/QR to one campaign revision.
-- Define amount, currency, availability, expiry, and permitted-payment rules.
-- Make revision changes explicit; never mutate historical payment bindings.
+- `CampaignEntryMode` distinguishes `pay_code_on_open` from
+  `reusable_payment_qr`; existing endpoint campaigns default explicitly to the
+  former.
+- `CampaignPaymentQrBinding` immutably binds one endpoint-campaign template
+  revision to one active payment-purpose Standing Funding Address and one
+  active static QR artifact.
+- The binding snapshots provider, currency, open/fixed amount mode, optional
+  fixed amount, availability interval, permitted-payment rules, and a
+  deterministic configuration hash.
+- Replaying identical configuration returns the existing binding. Conflicting
+  configuration for the same revision, reused provider addresses, stale QR
+  artifacts, incoherent amount rules, and cross-owner binding fail closed.
+- A later campaign-template change creates a new revision and therefore needs
+  a new explicit binding; historical bindings cannot be updated or deleted.
+- This gate adds no payment recognition, coverage, envelope, Pay Code,
+  notification, or financial posting behavior.
 
 ### Gate 4 — Payment recognition service
 
@@ -252,10 +264,8 @@ Status: **Pending**
 
 ## Immediate Next Move
 
-EMI Core `v2.0.1`, EMI NetBank `v2.3.8`, and x-change `v1.0.37` are released;
-the host migration and encrypted round-trip verification passed. The reversal
-and bounded polling policies are now locked. Begin Gate 3 with the explicit
-campaign entry mode and immutable campaign-revision/address binding. Keep the
-Gate 4 recognition stop condition: adverse provider evidence must have an
-operator-visible quarantine path before any coverage, envelope, Pay Code,
-issuance, or messaging is allowed.
+Gate 3's explicit entry mode and immutable revision/address/QR binding are now
+implemented. Begin Gate 4 only with the durable, operator-visible quarantine
+path for incompatible provider evidence, then add qualifying-payment
+recognition behind that boundary. No coverage, envelope, completion Pay Code,
+issuance, or messaging may occur before the quarantine behavior is proven.
