@@ -27,6 +27,7 @@ use LBHurtado\XChange\Actions\Redemption\PrepareVoucherClaimEvidence;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Actions\Settlement\ApproveCampaignPolicyCompletion;
 use LBHurtado\XChange\Actions\Settlement\BindProvisionalCoverage;
+use LBHurtado\XChange\Actions\Settlement\CheckCampaignPolicyCompletionTransportReadiness;
 use LBHurtado\XChange\Actions\Settlement\IssueCompletionPayCode;
 use LBHurtado\XChange\Actions\Settlement\OrchestrateProvisionalCoverage;
 use LBHurtado\XChange\Actions\Settlement\PrepareCampaignPolicyCompletion;
@@ -929,6 +930,103 @@ it('rolls back terminal policy state when outcome persistence fails', function (
         ->and(PolicyCompletionOutcome::query()->count())->toBe(0);
 });
 
+it('keeps policy completion transport disabled until an exact accepted disposition is ready', function (): void {
+    [$projection, $maker] = auiPolicyCompletionProjection();
+    $checker = actingAsTestUser(0);
+    config()->set('x-change.settlement.policy_completion.maker_ids', [(string) $maker->getKey()]);
+    config()->set('x-change.settlement.policy_completion.checker_ids', [(string) $checker->getKey()]);
+    $request = app(RequestCampaignPolicyCompletion::class)->handle(
+        $projection,
+        $maker,
+        'maker-transport-readiness',
+    );
+    $check = app(CheckCampaignPolicyCompletionTransportReadiness::class);
+    $before = campaignPaymentFinancialCounts();
+    $envelopeVersionCount = EnvelopePayloadVersion::query()->count();
+    Http::fake();
+
+    $notAuthorized = $check->handle($request);
+    expect($notAuthorized->ready)->toBeFalse()
+        ->and($notAuthorized->status)->toBe('not_authorized');
+
+    $approved = app(ApproveCampaignPolicyCompletion::class)->handle(
+        $request,
+        $checker,
+        'checker-transport-readiness',
+    );
+    $notConfigured = $check->handle($approved);
+
+    expect($notConfigured->ready)->toBeFalse()
+        ->and($notConfigured->status)->toBe('not_configured')
+        ->and($notConfigured->missingFields)->toContain('credential_reference')
+        ->and($notConfigured->dispositionFingerprint)->toBeNull();
+
+    config()->set('x-change.settlement.policy_completion.transports', [
+        AuiPersonalAccidentPolicyCompletionDriver::DRIVER_ID.'@'.AuiPersonalAccidentPolicyCompletionDriver::DRIVER_VERSION => [
+            'enabled' => true,
+            'contract_id' => 'aui-policy-completion',
+            'contract_version' => '2026-09-23',
+        ],
+    ]);
+    $incomplete = $check->handle($approved);
+
+    expect($incomplete->ready)->toBeFalse()
+        ->and($incomplete->status)->toBe('incomplete')
+        ->and($incomplete->missingFields)->toContain(
+            'request_schema_version',
+            'credentials_configured',
+        );
+
+    config()->set('x-change.settlement.policy_completion.transports', [
+        AuiPersonalAccidentPolicyCompletionDriver::DRIVER_ID.'@'.AuiPersonalAccidentPolicyCompletionDriver::DRIVER_VERSION => policyCompletionTransportDisposition(),
+    ]);
+    $ready = $check->handle($approved);
+    $replayed = $check->handle($approved);
+    $safePayload = json_encode($ready->toSafeArray(), JSON_THROW_ON_ERROR);
+
+    expect($ready->ready)->toBeTrue()
+        ->and($ready->status)->toBe('ready')
+        ->and($ready->dispositionFingerprint)->toMatch('/^[a-f0-9]{64}$/')
+        ->and($replayed->dispositionFingerprint)->toBe($ready->dispositionFingerprint)
+        ->and($safePayload)->not->toContain('secret-policy-api-token')
+        ->and($safePayload)->not->toContain('policy-completion-production')
+        ->and($request->refresh()->status)->toBe(PolicyCompletionRequestStatus::Authorized)
+        ->and(PolicyCompletionOutcome::query()->count())->toBe(0)
+        ->and(EnvelopePayloadVersion::query()->count())->toBe($envelopeVersionCount)
+        ->and(AccountFundingReceipt::query()->count())->toBe($before['account_funding_receipts'])
+        ->and(FundingSettlement::query()->count())->toBe($before['funding_settlements'])
+        ->and(TreasuryInventoryOperation::query()->count())->toBe($before['treasury_operations']);
+
+    Http::assertNothingSent();
+});
+
+it('requires a transport disposition for the exact completion driver version', function (): void {
+    [$projection, $maker] = auiPolicyCompletionProjection();
+    $checker = actingAsTestUser(0);
+    config()->set('x-change.settlement.policy_completion.maker_ids', [(string) $maker->getKey()]);
+    config()->set('x-change.settlement.policy_completion.checker_ids', [(string) $checker->getKey()]);
+    config()->set('x-change.settlement.policy_completion.transports', [
+        AuiPersonalAccidentPolicyCompletionDriver::DRIVER_ID.'@9.9.9' => policyCompletionTransportDisposition(),
+    ]);
+    $request = app(RequestCampaignPolicyCompletion::class)->handle(
+        $projection,
+        $maker,
+        'maker-exact-transport',
+    );
+    $approved = app(ApproveCampaignPolicyCompletion::class)->handle(
+        $request,
+        $checker,
+        'checker-exact-transport',
+    );
+    Http::fake();
+
+    $readiness = app(CheckCampaignPolicyCompletionTransportReadiness::class)->handle($approved);
+
+    expect($readiness->ready)->toBeFalse()
+        ->and($readiness->status)->toBe('not_configured');
+    Http::assertNothingSent();
+});
+
 it('rolls back the completion voucher when immutable link persistence fails', function (): void {
     configureCampaignCoverageTestDriver();
     [$recognition, $binding] = recognizedCampaignPayment();
@@ -1051,6 +1149,27 @@ function auiPolicyCompletionProjection(): array
     return [
         CompletionClaimEvidenceProjection::query()->sole(),
         $binding->standingFundingAddress->owner,
+    ];
+}
+
+/** @return array<string, bool|int|string> */
+function policyCompletionTransportDisposition(): array
+{
+    return [
+        'enabled' => true,
+        'contract_id' => 'aui-policy-completion',
+        'contract_version' => '2026-09-23',
+        'request_schema_version' => '1.0',
+        'response_schema_version' => '1.0',
+        'idempotency_mechanism' => 'provider-request-key',
+        'connect_timeout_seconds' => 5,
+        'response_timeout_seconds' => 15,
+        'retry_policy' => 'selective-transient-only',
+        'ambiguous_outcome_policy' => 'record-indeterminate-and-reconcile',
+        'reconciliation_mode' => 'provider-status-query',
+        'credential_reference' => 'policy-completion-production',
+        'credentials_configured' => true,
+        'credential_value' => 'secret-policy-api-token',
     ];
 }
 

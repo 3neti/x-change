@@ -251,9 +251,20 @@ failure leaves the request authorized with no partial terminal record. No HTTP,
 queue, message, policy document, envelope mutation, or financial movement was
 added.
 
-The next controlled gate is Gate 7c: document and accept the AUI provider
-transport contract, including credentials, schemas, provider idempotency,
-timeouts, retries, ambiguous outcomes, and reconciliation. Transport remains
-disabled until that disposition and its tests exist.
+Gate 7c is complete as a provider-neutral, fail-closed readiness boundary.
+Only an authorized request with an enabled, complete disposition for its exact
+driver version can report ready. The disposition must explicitly cover the
+accepted contract and schemas, idempotency, timeouts, retry policy, ambiguous
+outcomes, reconciliation, and a configured credential reference. The result
+contains only safe missing-field names and a deterministic fingerprint; it
+does not expose credential references or values. Default, incomplete,
+disabled, wrong-version, and non-authorized cases remain not ready. Readiness
+inspection performs no HTTP, queue, persistence, envelope, outcome, or
+financial side effect.
+
+The next controlled gate is AUI provider-contract intake and acceptance. An
+HTTP adapter remains prohibited until AUI supplies the authoritative endpoint,
+authentication, request/response schemas, idempotency semantics, timeout/retry
+expectations, ambiguous-result handling, and reconciliation protocol.
 
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).

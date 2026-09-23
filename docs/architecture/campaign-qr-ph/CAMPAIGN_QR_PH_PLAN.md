@@ -345,7 +345,7 @@ separate durability improvement rather than widening this gate.
 
 ### Gate 7 — AUI policy completion
 
-Status: **Complete through Gate 7b; provider transport pending disposition**
+Status: **Complete through Gate 7c readiness boundary; provider transport pending disposition**
 
 - Implement the reserved AUI driver as a versioned adapter.
 - Hand completed applicant and settlement-envelope facts to the insurer
@@ -391,12 +391,23 @@ after commit and contain no applicant values. Outcome creation and terminal
 request transition are atomic, and failure rolls the request back to
 `authorized`.
 
-Gate 7b remains transport-free. It performs no HTTP request, queue dispatch,
-insurer message, retry, policy-document creation, envelope mutation, or
-financial movement. Gate 7c requires a documented AUI API and operational
-disposition covering credentials, request/response schemas, provider
-idempotency, timeouts, retries, ambiguous outcomes, and reconciliation before
-any transport adapter may be enabled.
+Gate 7c adds a provider-neutral, read-only transport-readiness boundary. An
+authorized request is ready only when an enabled disposition exists for its
+exact driver and version and explicitly records the accepted contract,
+request/response schemas, idempotency mechanism, connect/response timeouts,
+retry policy, ambiguous-outcome policy, reconciliation mode, and configured
+credential reference. Missing, disabled, incomplete, wrong-version, and
+non-authorized dispositions fail closed. Readiness returns only safe field
+names and a deterministic disposition fingerprint; it never returns or reads
+a credential value.
+
+This gate deliberately does not define a send method or an HTTP adapter. AUI
+has not yet supplied an authoritative endpoint, authentication scheme,
+payload schema, response mapping, or reconciliation protocol. Readiness
+inspection performs no HTTP request, queue dispatch, insurer message, retry,
+policy-document creation, persistence, envelope mutation, or financial
+movement. Transport remains disabled until that provider disposition is
+accepted and regression-protected.
 
 ### Gate 8 — Operator experience and lifecycle acceptance
 
@@ -410,9 +421,9 @@ Status: **Pending**
 
 ## Immediate Next Move
 
-Gate 7b is complete: the deterministic AUI preparation can now enter a durable,
-default-deny maker/checker workflow and record one immutable terminal outcome
-without transport or financial side effects. The next controlled move is Gate
-7c: obtain and codify the AUI provider-transport disposition. Do not enable an
-HTTP adapter until credentials, schemas, provider idempotency, ambiguous
-outcome handling, retries, and reconciliation have explicit acceptance tests.
+Gate 7c is complete as a fail-closed acceptance mechanism. The next controlled
+move is provider-contract intake: obtain the authoritative AUI endpoint,
+authentication, schemas, provider idempotency, timeout/retry expectations,
+ambiguous-outcome handling, and reconciliation protocol. Only after that
+disposition passes the readiness boundary may a separately tested HTTP adapter
+and governed dispatch action be introduced.

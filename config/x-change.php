@@ -2796,6 +2796,10 @@ return [
                 static fn (string $id): string => trim($id),
                 explode(',', (string) env('XCHANGE_POLICY_COMPLETION_OUTCOME_RECORDER_IDS', '')),
             ))),
+            'transports' => [
+                // Exact driver@version transport dispositions belong here after provider acceptance.
+                // Transport remains fail-closed when absent, disabled, or incomplete.
+            ],
         ],
     ],
 

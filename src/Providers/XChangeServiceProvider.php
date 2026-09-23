@@ -178,6 +178,7 @@ use LBHurtado\XChange\Contracts\CampaignBankTransferStatusCheckerContract;
 use LBHurtado\XChange\Contracts\CampaignCoverageDriverContract;
 use LBHurtado\XChange\Contracts\CampaignPolicyCompletionAuthorityContract;
 use LBHurtado\XChange\Contracts\CampaignPolicyCompletionDriverContract;
+use LBHurtado\XChange\Contracts\CampaignPolicyCompletionTransportReadinessContract;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Contracts\Claim\ClaimSurfaceResolverContract;
 use LBHurtado\XChange\Contracts\Claim\ClaimViewerResolverContract;
@@ -497,6 +498,7 @@ use LBHurtado\XChange\Services\Settlement\AuiPersonalAccidentPolicyCompletionDri
 use LBHurtado\XChange\Services\Settlement\CampaignCoverageDriverRegistry;
 use LBHurtado\XChange\Services\Settlement\CampaignPolicyCompletionDriverRegistry;
 use LBHurtado\XChange\Services\Settlement\ConfigCampaignPolicyCompletionAuthority;
+use LBHurtado\XChange\Services\Settlement\ConfigCampaignPolicyCompletionTransportReadiness;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\SettlementEnvelopeReadinessService;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
@@ -813,6 +815,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(
             CampaignPolicyCompletionAuthorityContract::class,
             ConfigCampaignPolicyCompletionAuthority::class,
+        );
+        $this->app->singleton(
+            CampaignPolicyCompletionTransportReadinessContract::class,
+            ConfigCampaignPolicyCompletionTransportReadiness::class,
         );
         $this->app->singleton(
             TreasuryProviderConnectionCatalog::class,
