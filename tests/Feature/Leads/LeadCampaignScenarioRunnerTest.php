@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Http;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\SettlementEnvelope\Models\Envelope;
 use LBHurtado\SettlementEnvelope\Models\EnvelopePayloadVersion;
@@ -13,7 +15,9 @@ use LBHurtado\XChange\Actions\Payment\RecognizeSettlementVoucherCollection;
 use LBHurtado\XChange\Actions\Payment\VerifyPaymentAttempt;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
+use LBHurtado\XChange\Actions\Settlement\ApproveCampaignPolicyCompletion;
 use LBHurtado\XChange\Actions\Settlement\ProjectCompletionClaimEvidence;
+use LBHurtado\XChange\Actions\Settlement\RequestCampaignPolicyCompletion;
 use LBHurtado\XChange\Data\DebitData;
 use LBHurtado\XChange\Data\IssuerData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
@@ -21,6 +25,9 @@ use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
+use LBHurtado\XChange\Enums\PolicyCompletionRequestStatus;
+use LBHurtado\XChange\Events\PolicyCompletionAuthorized;
+use LBHurtado\XChange\Events\PolicyCompletionRequested;
 use LBHurtado\XChange\Models\CampaignPaymentRecognition;
 use LBHurtado\XChange\Models\CampaignPaymentSource;
 use LBHurtado\XChange\Models\CompletionClaimEvidenceProjection;
@@ -28,6 +35,8 @@ use LBHurtado\XChange\Models\CompletionPayCodeIssuance;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Models\PaymentAttempt;
+use LBHurtado\XChange\Models\PolicyCompletionOutcome;
+use LBHurtado\XChange\Models\PolicyCompletionRequest;
 use LBHurtado\XChange\Models\ProvisionalCoverage;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
@@ -328,8 +337,100 @@ it('preserves the AUI settlement target from the endpoint template and offers sa
         ->assertJsonPath('props.run.steps.12.status', 'passed')
         ->assertJsonPath('props.run.steps.13.status', 'waiting_for_person')
         ->assertJsonPath('props.run.steps.13.facts.stage', 'claim_evidence_ready')
+        ->assertJsonPath('props.run.steps.14.status', 'not_started')
         ->assertJsonMissingPath('props.run.private_applicant')
         ->assertJsonMissingPath('props.run.otp');
+
+    $checker = actingAsTestUser(0);
+    config()->set('x-change.settlement.policy_completion.maker_ids', [(string) $operator->getKey()]);
+    config()->set('x-change.settlement.policy_completion.checker_ids', [(string) $checker->getKey()]);
+    Http::fake();
+    Event::fake([
+        PolicyCompletionRequested::class,
+        PolicyCompletionAuthorized::class,
+    ]);
+
+    $projection = CompletionClaimEvidenceProjection::query()->sole();
+    $policyRequest = app(RequestCampaignPolicyCompletion::class)->handle(
+        $projection,
+        $operator,
+        'scenario-maker-authorization',
+    );
+    $requestReplay = app(RequestCampaignPolicyCompletion::class)->handle(
+        $projection,
+        $operator,
+        'scenario-maker-authorization',
+    );
+
+    expect($policyRequest->status)->toBe(PolicyCompletionRequestStatus::AwaitingApproval)
+        ->and($requestReplay->is($policyRequest))->toBeTrue()
+        ->and(PolicyCompletionRequest::query()->count())->toBe(1)
+        ->and(PolicyCompletionOutcome::query()->count())->toBe(0)
+        ->and(EnvelopePayloadVersion::query()->where('envelope_id', $completion->envelope_id)->count())->toBe(2)
+        ->and(VoucherCollection::query()->count())->toBe(1);
+
+    $this->actingAs($operator)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.lead-scenario-runner.runs.show', [
+            'campaign' => $campaign->reference,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('props.run.status', 'running')
+        ->assertJsonPath('props.run.steps.13.status', 'passed')
+        ->assertJsonPath('props.run.steps.13.facts.request_reference', $policyRequest->reference)
+        ->assertJsonPath('props.run.steps.14.status', 'waiting_for_person')
+        ->assertJsonPath('props.run.steps.14.facts.status', 'awaiting_approval')
+        ->assertJsonMissingPath('props.run.steps.13.facts.authorization_reference')
+        ->assertJsonMissingPath('props.run.steps.14.facts.approval_reference');
+
+    $authorized = app(ApproveCampaignPolicyCompletion::class)->handle(
+        $policyRequest,
+        $checker,
+        'scenario-checker-approval',
+    );
+    $approvalReplay = app(ApproveCampaignPolicyCompletion::class)->handle(
+        $policyRequest,
+        $checker,
+        'scenario-checker-approval',
+    );
+
+    expect($authorized->status)->toBe(PolicyCompletionRequestStatus::Authorized)
+        ->and($approvalReplay->status)->toBe(PolicyCompletionRequestStatus::Authorized)
+        ->and(PolicyCompletionRequest::query()->count())->toBe(1)
+        ->and(PolicyCompletionOutcome::query()->count())->toBe(0)
+        ->and(EnvelopePayloadVersion::query()->where('envelope_id', $completion->envelope_id)->count())->toBe(2)
+        ->and(VoucherCollection::query()->count())->toBe(1);
+
+    $this->actingAs($operator)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.lead-scenario-runner.runs.show', [
+            'campaign' => $campaign->reference,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('props.run.status', 'running')
+        ->assertJsonPath('props.run.steps.13.status', 'passed')
+        ->assertJsonPath('props.run.steps.14.status', 'passed')
+        ->assertJsonPath('props.run.steps.14.facts.status', 'authorized')
+        ->assertJsonPath('props.run.artifacts.12.reference', $policyRequest->reference)
+        ->assertJsonMissingPath('props.run.steps.13.facts.authorization_reference')
+        ->assertJsonMissingPath('props.run.steps.14.facts.approval_reference');
+
+    Event::assertDispatchedTimes(PolicyCompletionRequested::class, 1);
+    Event::assertDispatchedTimes(PolicyCompletionAuthorized::class, 1);
+    Event::assertDispatched(PolicyCompletionRequested::class, function (PolicyCompletionRequested $event): bool {
+        $payload = json_encode($event->payload, JSON_THROW_ON_ERROR);
+
+        return ! str_contains($payload, 'scenario-maker-authorization')
+            && ! str_contains($payload, 'Apple Hurtado')
+            && ! str_contains($payload, '09175180722');
+    });
+    Event::assertDispatched(PolicyCompletionAuthorized::class, function (PolicyCompletionAuthorized $event): bool {
+        return ! str_contains(
+            json_encode($event->payload, JSON_THROW_ON_ERROR),
+            'scenario-checker-approval',
+        );
+    });
+    Http::assertNothingSent();
 
     DB::table($collection->getTable())
         ->where('id', $collection->getKey())

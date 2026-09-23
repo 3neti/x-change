@@ -494,7 +494,7 @@ retry, dispatch, provider, transport, or financial behavior.
 
 ### Gate 9 — Browser lifecycle scenario narrative
 
-Status: **Complete through Gate 9d completion-claim acceptance**
+Status: **Complete through Gate 9e maker/checker authorization**
 
 Gate 9a turns the existing AUI browser scenario into a resumable operational
 narrative. Creating the scenario persists a versioned run identity inside the
@@ -556,3 +556,16 @@ The next policy-governance checkpoint remains `waiting_for_person`. The next
 controlled gate is maker/checker policy-completion request and approval. Insurer
 transport remains blocked on an accepted contract disposition; Gate 9d adds no
 provider or financial side effect.
+
+Gate 9e reuses the existing governed policy-completion actions. The campaign
+owner acts as maker and creates one replay-safe request from the immutable claim
+evidence projection. A separately configured checker records one replay-safe
+approval; self-approval remains prohibited by the authoritative action.
+
+The browser ledger exposes separate request and checker-approval checkpoints,
+plus only the safe request reference and status. Authorization references,
+approval references, applicant evidence, and actor identities remain excluded.
+The lifecycle stops at `policy_authorized` and remains running. No transport,
+terminal outcome, policy delivery, envelope update, provider call, collection,
+or financial movement is performed. The next gate must remain fail-closed until
+an accepted insurer transport disposition exists.

@@ -103,7 +103,16 @@ final readonly class LeadCampaignLifecycleScenarioRunReadModel
                         'pay_code' => data_get($lifecycle?->completion, 'pay_code'),
                         'projection_reference' => data_get($lifecycle?->completion, 'projection_reference'),
                     ])),
-            $this->step(14, 'Policy completion governance', $this->policyGovernanceStatus($lifecycle?->stage), $this->policyGovernanceDescription($lifecycle?->stage), $lifecycle?->updatedAt, $lifecycle ? ['stage' => $lifecycle->stage] : []),
+            $this->step(14, 'Policy completion requested', $this->policyRequestStatus($lifecycle?->stage), $this->policyRequestDescription($lifecycle?->stage), data_get($lifecycle?->policy, 'requested_at'), array_filter([
+                'stage' => $lifecycle?->stage,
+                'request_reference' => data_get($lifecycle?->policy, 'request_reference'),
+                'status' => data_get($lifecycle?->policy, 'status'),
+            ])),
+            $this->step(15, 'Checker approval recorded', $this->policyApprovalStatus($lifecycle?->stage), $this->policyApprovalDescription($lifecycle?->stage), data_get($lifecycle?->policy, 'approved_at'), array_filter([
+                'stage' => $lifecycle?->stage,
+                'request_reference' => data_get($lifecycle?->policy, 'request_reference'),
+                'status' => data_get($lifecycle?->policy, 'status'),
+            ])),
         ];
 
         $terminalFailure = collect($steps)->contains(fn (array $step): bool => $step['status'] === 'failed');
@@ -187,6 +196,10 @@ final readonly class LeadCampaignLifecycleScenarioRunReadModel
             if (is_string($completionCode) && $completionCode !== '') {
                 $artifacts[] = ['group' => 'Pay Code', 'label' => 'Completion Pay Code', 'reference' => $completionCode, 'href' => route('x-change.cockpit.pay-codes.show', $completionCode), 'evidence' => 'application_persisted'];
             }
+            $policyRequestReference = data_get($lifecycle->policy, 'request_reference');
+            if (is_string($policyRequestReference) && $policyRequestReference !== '') {
+                $artifacts[] = ['group' => 'Governance', 'label' => 'Policy completion request', 'reference' => $policyRequestReference, 'href' => null, 'evidence' => 'application_persisted'];
+            }
         }
 
         return $artifacts;
@@ -198,26 +211,43 @@ final readonly class LeadCampaignLifecycleScenarioRunReadModel
         return collect($steps)->pluck('occurred_at')->filter()->sort()->last();
     }
 
-    private function policyGovernanceStatus(?string $stage): string
+    private function policyRequestStatus(?string $stage): string
     {
         return match ($stage) {
             'claim_evidence_ready' => 'waiting_for_person',
-            'policy_awaiting_approval', 'policy_authorized' => 'running',
-            'policy_succeeded', 'policy_failed', 'policy_indeterminate' => 'passed',
+            'policy_awaiting_approval', 'policy_authorized', 'policy_succeeded', 'policy_failed', 'policy_indeterminate' => 'passed',
             default => 'not_started',
         };
     }
 
-    private function policyGovernanceDescription(?string $stage): string
+    private function policyRequestDescription(?string $stage): string
     {
         return match ($stage) {
-            'claim_evidence_ready' => 'Claim evidence is ready. Maker/checker authorization remains a separate controlled gate.',
-            'policy_awaiting_approval' => 'A policy completion request is awaiting checker approval.',
-            'policy_authorized' => 'The policy completion request is authorized; provider transport remains separately controlled.',
-            'policy_succeeded' => 'The separately authorized policy completion recorded a successful outcome.',
-            'policy_failed' => 'The separately authorized policy completion recorded a failed outcome.',
-            'policy_indeterminate' => 'The separately authorized policy completion requires reconciliation.',
-            default => 'Policy completion governance has not started.',
+            'claim_evidence_ready' => 'Claim evidence is ready. The authorized campaign owner must request policy completion.',
+            'policy_awaiting_approval' => 'The maker requested policy completion; independent checker approval is pending.',
+            'policy_authorized', 'policy_succeeded', 'policy_failed', 'policy_indeterminate' => 'The maker policy-completion request is recorded.',
+            default => 'Policy completion cannot be requested until claim evidence is ready.',
+        };
+    }
+
+    private function policyApprovalStatus(?string $stage): string
+    {
+        return match ($stage) {
+            'policy_awaiting_approval' => 'waiting_for_person',
+            'policy_authorized', 'policy_succeeded', 'policy_failed', 'policy_indeterminate' => 'passed',
+            default => 'not_started',
+        };
+    }
+
+    private function policyApprovalDescription(?string $stage): string
+    {
+        return match ($stage) {
+            'policy_awaiting_approval' => 'An independent checker must approve the policy-completion request.',
+            'policy_authorized' => 'The independent checker approved policy completion. Provider transport remains separately controlled.',
+            'policy_succeeded' => 'Checker approval preceded the separately recorded successful outcome.',
+            'policy_failed' => 'Checker approval preceded the separately recorded failed outcome.',
+            'policy_indeterminate' => 'Checker approval preceded an outcome that requires reconciliation.',
+            default => 'Checker approval has not started.',
         };
     }
 }

@@ -353,4 +353,16 @@ checkpoint. Maker/checker request and approval form the next controlled gate.
 Provider transport and policy delivery remain blocked until an authoritative
 insurer contract is accepted. No financial or provider side effect was added.
 
+Gate 9e is complete. The scenario owner can produce the canonical maker request,
+and an independent configured checker can authorize it through the existing
+replay-safe domain actions. The execution ledger shows these as distinct
+checkpoints and adds a non-linked safe request artifact. It exposes no applicant
+evidence, actor identity, authorization reference, or approval reference.
+
+The accepted stopping state is `policy_authorized` with the scenario still
+running. No insurer transport, terminal outcome, policy document delivery,
+envelope mutation, provider call, collection, or financial movement occurs.
+Transport remains fail-closed until an authoritative insurer contract and
+disposition are accepted.
+
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).
