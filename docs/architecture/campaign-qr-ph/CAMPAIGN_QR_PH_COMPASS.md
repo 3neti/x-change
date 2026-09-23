@@ -287,4 +287,15 @@ published with the `x-change-policy-completion-transport` tag.
 The external blocker is unchanged: AUI must supply and formally accept the real
 contract artifact before any adapter or dispatch implementation begins.
 
+Gate 8a is complete as the first operator-facing backend contract. A bounded,
+owner-scoped `x-change.campaign-policy-lifecycle.v1` projection now expresses
+the safe lifecycle from payment recognition through provisional coverage,
+completion claim evidence, maker/checker governance, and terminal outcome.
+Failed and indeterminate outcomes are explicitly attention-bearing. The
+projection is read-only and excludes applicant/contact data, provider keys,
+actor identities, approvals, snapshots, hashes, private payloads, credentials,
+and transport readiness. Gate 8b is the next package-controlled move: expose
+this DTO through an authorized read-only Cockpit surface without adding any
+mutation or transport authority.
+
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).

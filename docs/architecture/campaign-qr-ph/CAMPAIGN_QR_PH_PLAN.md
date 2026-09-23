@@ -444,13 +444,29 @@ activate config, call HTTP, dispatch work, or mutate domain or financial state.
 
 ### Gate 8 — Operator experience and lifecycle acceptance
 
-Status: **Pending**
+Status: **Gate 8a read model implemented; presentation pending**
+
+Gate 8a introduces a bounded, owner-scoped, read-only lifecycle projection.
+It combines the safe references and timestamps for recognized payment,
+provisional coverage, completion Pay Code issuance, claim-evidence projection,
+maker/checker request, and terminal policy outcome. The projection uses an
+explicit versioned DTO and never serializes models or exposes applicant data,
+provider transaction keys, actor identities, authorization references,
+encrypted snapshots, hashes, private payloads, or credential material.
+
+The list is capped at 100 rows, newest coverage first, and constrains ownership
+in SQL. Reading it does not call a provider, resolve transport readiness, emit
+events, or mutate envelope, journal, financial, campaign, or policy state.
 
 - Campaign configuration, QR/stamp, transaction list, coverage state,
   envelope state, and completion progress.
 - Browser lifecycle: scan QR Ph, settle payment, receive completion Pay Code,
   finish intake, and observe policy status.
 - Failure, reversal, duplicate, concurrency, and redaction acceptance.
+
+The next controlled Gate 8b may connect this DTO to an authorized Cockpit
+read-only surface. It must retain the owner scope and redaction contract and
+must not add approval, dispatch, retry, provider, or policy mutation controls.
 
 ## Immediate Next Move
 

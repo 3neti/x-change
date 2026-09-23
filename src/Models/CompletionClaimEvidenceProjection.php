@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use LBHurtado\SettlementEnvelope\Models\Envelope;
 use LBHurtado\SettlementEnvelope\Models\EnvelopePayloadVersion;
@@ -50,5 +51,10 @@ final class CompletionClaimEvidenceProjection extends Model
     public function payloadVersion(): BelongsTo
     {
         return $this->belongsTo(EnvelopePayloadVersion::class, 'envelope_payload_version_id');
+    }
+
+    public function policyCompletionRequest(): HasOne
+    {
+        return $this->hasOne(PolicyCompletionRequest::class);
     }
 }

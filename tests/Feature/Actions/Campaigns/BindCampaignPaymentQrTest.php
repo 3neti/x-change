@@ -68,6 +68,8 @@ use LBHurtado\XChange\Models\ProvisionalCoverage;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Models\StandingFundingQrArtifact;
 use LBHurtado\XChange\Services\Cockpit\CampaignPaymentEvidenceAttentionReadModel;
+use LBHurtado\XChange\Services\Cockpit\CampaignPolicyLifecycleReadModel;
+use LBHurtado\XChange\Services\Cockpit\CampaignPolicyLifecycleStageResolver;
 use LBHurtado\XChange\Services\Settlement\AuiPersonalAccidentPolicyCompletionDriver;
 use LBHurtado\XChange\Services\Settlement\CampaignCoverageDriverRegistry;
 use LBHurtado\XChange\Services\Settlement\CampaignPolicyCompletionDriverRegistry;
@@ -899,6 +901,83 @@ it('governs durable policy completion requests and terminal outcomes without tra
     });
     Http::assertNothingSent();
 });
+
+it('projects an owner scoped and redacted campaign policy lifecycle without side effects', function (): void {
+    [$projection, $owner] = auiPolicyCompletionProjection();
+    $otherOwner = actingAsTestUser(0);
+    $before = campaignPaymentFinancialCounts();
+    $modelCounts = [
+        'requests' => PolicyCompletionRequest::query()->count(),
+        'outcomes' => PolicyCompletionOutcome::query()->count(),
+        'payload_versions' => EnvelopePayloadVersion::query()->count(),
+    ];
+    Http::fake();
+    Event::fake([
+        CampaignPaymentRecognized::class,
+        ProvisionalCoverageBound::class,
+        CompletionPayCodeIssued::class,
+        CompletionClaimEvidenceProjected::class,
+        PolicyCompletionRequested::class,
+        PolicyCompletionAuthorized::class,
+        PolicyCompletionOutcomeRecorded::class,
+    ]);
+
+    $rows = app(CampaignPolicyLifecycleReadModel::class)->forOwner($owner);
+    $otherRows = app(CampaignPolicyLifecycleReadModel::class)->forOwner($otherOwner);
+    $row = $rows[0]->toSafeArray();
+    $serialized = json_encode($row, JSON_THROW_ON_ERROR);
+
+    expect($rows)->toHaveCount(1)
+        ->and($otherRows)->toBe([])
+        ->and($row['schema'])->toBe('x-change.campaign-policy-lifecycle.v1')
+        ->and($row['stage'])->toBe('claim_evidence_ready')
+        ->and($row['attention_required'])->toBeFalse()
+        ->and($row['completion']['projection_reference'])->toBe($projection->reference)
+        ->and($row['completion']['claim_number'])->toBe($projection->claim->claim_number)
+        ->and($row['policy'])->toBeNull()
+        ->and($serialized)->not->toContain('Private AUI Applicant')
+        ->and($serialized)->not->toContain('09173011987')
+        ->and($serialized)->not->toContain('provider_transaction_key')
+        ->and($serialized)->not->toContain('authorization_reference')
+        ->and($serialized)->not->toContain('source_snapshot')
+        ->and(PolicyCompletionRequest::query()->count())->toBe($modelCounts['requests'])
+        ->and(PolicyCompletionOutcome::query()->count())->toBe($modelCounts['outcomes'])
+        ->and(EnvelopePayloadVersion::query()->count())->toBe($modelCounts['payload_versions'])
+        ->and(AccountFundingReceipt::query()->count())->toBe($before['account_funding_receipts'])
+        ->and(FundingSettlement::query()->count())->toBe($before['funding_settlements'])
+        ->and(TreasuryInventoryOperation::query()->count())->toBe($before['treasury_operations']);
+
+    Http::assertNothingSent();
+    Event::assertNothingDispatched();
+});
+
+it('resolves every campaign policy lifecycle stage with explicit attention semantics', function (
+    bool $issuance,
+    bool $projection,
+    ?PolicyCompletionRequestStatus $request,
+    ?PolicyCompletionOutcomeStatus $outcome,
+    string $expectedStage,
+    bool $attentionRequired,
+): void {
+    expect(app(CampaignPolicyLifecycleStageResolver::class)->resolve(
+        $issuance,
+        $projection,
+        $request,
+        $outcome,
+    ))->toBe([
+        'stage' => $expectedStage,
+        'attention_required' => $attentionRequired,
+    ]);
+})->with([
+    'coverage' => [false, false, null, null, 'provisional_coverage_active', false],
+    'awaiting claim' => [true, false, null, null, 'awaiting_completion_claim', false],
+    'evidence ready' => [true, true, null, null, 'claim_evidence_ready', false],
+    'awaiting approval' => [true, true, PolicyCompletionRequestStatus::AwaitingApproval, null, 'policy_awaiting_approval', false],
+    'authorized' => [true, true, PolicyCompletionRequestStatus::Authorized, null, 'policy_authorized', false],
+    'succeeded' => [true, true, PolicyCompletionRequestStatus::Succeeded, PolicyCompletionOutcomeStatus::Succeeded, 'policy_succeeded', false],
+    'failed' => [true, true, PolicyCompletionRequestStatus::Failed, PolicyCompletionOutcomeStatus::Failed, 'policy_failed', true],
+    'indeterminate' => [true, true, PolicyCompletionRequestStatus::Indeterminate, PolicyCompletionOutcomeStatus::Indeterminate, 'policy_indeterminate', true],
+]);
 
 it('rolls back terminal policy state when outcome persistence fails', function (): void {
     [$projection, $maker] = auiPolicyCompletionProjection();
