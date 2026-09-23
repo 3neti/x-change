@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Console\Commands\Funding;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Builder;
 use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Jobs\Funding\SyncStandingFundingAddressJob;
 use LBHurtado\XChange\Models\StandingFundingAddress;
@@ -42,11 +43,24 @@ final class SyncStandingFundingAddressesCommand extends Command
         $limit = $requestedLimit === null
             ? $configuredLimit
             : min($configuredLimit, max(1, (int) $requestedLimit));
+        $minimumIntervalSeconds = max(
+            1,
+            (int) config(
+                'x-change.funding.standing_addresses.scheduled_minimum_interval_seconds',
+                60,
+            ),
+        );
+        $dueBefore = now()->subSeconds($minimumIntervalSeconds);
         $queued = 0;
 
         StandingFundingAddress::query()
             ->where('provider_code', $provider)
             ->where('status', FundingAddressStatus::Active)
+            ->where(function (Builder $query) use ($dueBefore): void {
+                $query
+                    ->whereNull('last_checked_at')
+                    ->orWhere('last_checked_at', '<=', $dueBefore);
+            })
             ->oldest('last_checked_at')
             ->oldest('id')
             ->limit($limit)

@@ -96,7 +96,7 @@ Status: **Complete**
 
 ### Gate 1 — NetBank observation characterization
 
-Status: **In progress; safe baseline complete**
+Status: **Complete; provider reversal shape remains a Gate 4 stop condition**
 
 Characterize the existing `FundingAddressPurpose::Payment` path before adding
 recognition logic.
@@ -141,6 +141,31 @@ Remaining qualification requires controlled NetBank evidence for:
 - reusable QR lifetime and expiry behavior;
 - sender institution, account/mobile, and name availability; and
 - replay behavior across polling and webhooks.
+
+Polling policy at this boundary:
+
+- an active reusable campaign address remains eligible for observation for its
+  full active lifetime; x-change does not invent a QR expiry that NetBank has
+  not reported;
+- the minute scheduler is only a dispatcher, and an address is eligible only
+  when its configurable minimum polling interval has elapsed;
+- never-checked addresses are prioritized, then the stalest due addresses,
+  within the configured batch ceiling;
+- the NetBank adapter reads at most ten 100-row VCA-history pages and fails
+  closed if the provider history exceeds that bounded view; and
+- webhooks and operator synchronization may supply fresher evidence without
+  changing the scheduled cadence policy.
+
+Reversal and return policy at this boundary:
+
+- raw provider status is evidence, never an instruction to move money;
+- `reversed`, `refunded`, `charged_back`, `returned`, unknown terminal states,
+  and any transition away from `settled` are incompatible evidence;
+- incompatible evidence must be retained and surfaced for attention, with no
+  coverage, envelope, Pay Code, Client Funds, or Treasury side effect; and
+- NetBank status mapping remains intentionally unimplemented until a
+  documented response or controlled live observation proves whether a return
+  mutates the original transaction or appears as a separate debit/reference.
 
 The first local provider provisioning attempt produced an additional boundary
 finding: the sandbox still uses `netbank-mobile-v1`, and the proposed mobile
@@ -227,9 +252,10 @@ Status: **Pending**
 
 ## Immediate Next Move
 
-EMI Core `v2.0.1` and EMI NetBank `v2.3.8` are released and the x-change
-dependency-integrated migration and persistence suites are green. Release
-x-change, update a host, run the migration, and verify a fresh encrypted
-observation end to end. Next, document reversal semantics and establish the
-bounded polling/window policy. Do not implement coverage, envelope, Pay Code
-issuance, or messaging until those lifecycle semantics are proven.
+EMI Core `v2.0.1`, EMI NetBank `v2.3.8`, and x-change `v1.0.37` are released;
+the host migration and encrypted round-trip verification passed. The reversal
+and bounded polling policies are now locked. Begin Gate 3 with the explicit
+campaign entry mode and immutable campaign-revision/address binding. Keep the
+Gate 4 recognition stop condition: adverse provider evidence must have an
+operator-visible quarantine path before any coverage, envelope, Pay Code,
+issuance, or messaging is allowed.

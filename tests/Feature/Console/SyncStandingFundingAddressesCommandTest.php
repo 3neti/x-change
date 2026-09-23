@@ -45,6 +45,52 @@ it('queues only active provider addresses within the configured batch', function
     );
 });
 
+it('queues only addresses whose scheduled polling cadence is due', function () {
+    Bus::fake();
+    $this->travelTo('2026-09-23 12:00:00');
+    config([
+        'x-change.funding.standing_addresses.enabled' => true,
+        'x-change.funding.standing_addresses.scheduled_batch_size' => 10,
+        'x-change.funding.standing_addresses.scheduled_minimum_interval_seconds' => 120,
+        'x-change.funding.providers.netbank.enabled' => true,
+    ]);
+
+    $neverChecked = standingAddressForCommand([
+        'binding_key' => hash('sha256', 'never-checked-binding'),
+        'funding_address_hash' => hash('sha256', 'never-checked-address'),
+        'last_checked_at' => null,
+    ]);
+    $stale = standingAddressForCommand([
+        'binding_key' => hash('sha256', 'stale-binding'),
+        'funding_address_hash' => hash('sha256', 'stale-address'),
+        'last_checked_at' => now()->subSeconds(121),
+    ]);
+    $notDue = standingAddressForCommand([
+        'binding_key' => hash('sha256', 'not-due-binding'),
+        'funding_address_hash' => hash('sha256', 'not-due-address'),
+        'last_checked_at' => now()->subSeconds(119),
+    ]);
+
+    $this->artisan('xchange:funding:sync-standing', [
+        '--provider' => 'netbank',
+    ])->assertSuccessful()
+        ->expectsOutputToContain('Queued 2 Standing Funding Address synchronization check(s).');
+
+    Bus::assertDispatchedTimes(SyncStandingFundingAddressJob::class, 2);
+    Bus::assertDispatched(
+        SyncStandingFundingAddressJob::class,
+        fn (SyncStandingFundingAddressJob $job): bool => $job->standingFundingAddressId === $neverChecked->getKey(),
+    );
+    Bus::assertDispatched(
+        SyncStandingFundingAddressJob::class,
+        fn (SyncStandingFundingAddressJob $job): bool => $job->standingFundingAddressId === $stale->getKey(),
+    );
+    Bus::assertNotDispatched(
+        SyncStandingFundingAddressJob::class,
+        fn (SyncStandingFundingAddressJob $job): bool => $job->standingFundingAddressId === $notDue->getKey(),
+    );
+});
+
 it('registers the package-owned standing address schedule', function () {
     config([
         'x-change.funding.standing_addresses.enabled' => true,

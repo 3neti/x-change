@@ -119,6 +119,31 @@ it('fails closed on a settled status regression', function () {
     );
 });
 
+it('fails closed on undocumented adverse provider status evolution', function (string $status) {
+    $settled = providerFundingEvidence(
+        transactionId: 'provider-transaction-adverse-'.$status,
+        status: 'settled',
+        payload: 'settled',
+        settledAt: '2026-09-23T03:38:39Z',
+    );
+    $adverse = providerFundingEvidence(
+        transactionId: 'provider-transaction-adverse-'.$status,
+        status: $status,
+        payload: $status,
+        settledAt: '2026-09-23T03:38:39Z',
+    );
+
+    expect(fn () => app(ReduceProviderFundingTransactionEvidence::class)->handle([
+        $settled,
+        $adverse,
+    ]))->toThrow(IncompatibleProviderFundingEvidence::class);
+})->with([
+    'reversed',
+    'refunded',
+    'charged back' => 'charged_back',
+    'returned',
+]);
+
 it('fails closed when settlement time regresses', function () {
     $first = providerFundingEvidence(
         transactionId: 'provider-transaction-time-regression',

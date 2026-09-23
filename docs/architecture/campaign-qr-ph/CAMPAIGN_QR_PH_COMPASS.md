@@ -11,9 +11,11 @@ snapshot from inception, and issues one zero-value completion Pay Code.
 
 ## Current Position
 
-Current gate: **Gate 1 — NetBank observation characterization**
+Current gate: **Gate 2 complete — ready for Gate 3 campaign configuration**
 
-Current state: **Reusable multi-payment characterization complete**
+Current state: **Evidence and bounded polling boundaries locked**
+
+Prior checkpoint: **Reusable multi-payment characterization complete**
 
 The existing payment-purpose standing-address path is now explicitly
 characterized and regression-protected. It persists immutable provider
@@ -75,6 +77,18 @@ provider-returned fields with `providerVerified=false`. Raw payer values remain
 outside metadata, canonical projections, journals, and broadcasts. The
 standing-address adapter also consumes NetBank's bounded multi-page iterator.
 
+Scheduled reusable-address observation is now cadence-bound as well as
+batch-bound. Active addresses remain eligible for their full active lifetime,
+but only never-checked or due addresses enter each fair oldest-first batch.
+NetBank history remains bounded to ten 100-row pages and fails closed when the
+bounded view is exhausted.
+
+Reversal semantics are intentionally conservative. Adverse or undocumented
+status evolution—including any transition away from settled—is incompatible
+canonical evidence and cannot trigger a business side effect. Exact NetBank
+mapping is deferred until provider documentation or controlled live evidence
+shows whether a reversal mutates the credit or arrives as a separate debit.
+
 Redacted evidence: [Gate 1 live characterization report](reports/001-netbank-live-characterization.md).
 
 ## Settled Decisions
@@ -131,8 +145,9 @@ Stop before business recognition if any of these remain ambiguous:
 
 ## Next Controlled Gate
 
-Release x-change, update one host, apply the EMI Core migration, and verify a
-fresh encrypted provider observation end to end. After that, document reversal
-semantics and the bounded polling/window policy before Gate 3 begins.
+Gate 3: add the explicit campaign entry mode and bind one reusable provider
+address/QR to an immutable campaign revision. Preserve the new cadence and
+batch bounds. Do not begin business recognition until incompatible provider
+evidence has a durable, operator-visible quarantine path.
 
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).

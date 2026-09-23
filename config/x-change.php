@@ -1355,6 +1355,10 @@ return [
                 'XCHANGE_STANDING_FUNDING_SCHEDULED_BATCH_SIZE',
                 100,
             ),
+            'scheduled_minimum_interval_seconds' => (int) env(
+                'XCHANGE_STANDING_FUNDING_SCHEDULED_MINIMUM_INTERVAL_SECONDS',
+                60,
+            ),
             'webhook_batch_size' => (int) env(
                 'XCHANGE_STANDING_FUNDING_WEBHOOK_BATCH_SIZE',
                 100,
