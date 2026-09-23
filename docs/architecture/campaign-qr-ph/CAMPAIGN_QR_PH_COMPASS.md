@@ -262,9 +262,17 @@ disabled, wrong-version, and non-authorized cases remain not ready. Readiness
 inspection performs no HTTP, queue, persistence, envelope, outcome, or
 financial side effect.
 
-The next controlled gate is AUI provider-contract intake and acceptance. An
-HTTP adapter remains prohibited until AUI supplies the authoritative endpoint,
-authentication, request/response schemas, idempotency semantics, timeout/retry
-expectations, ambiguous-result handling, and reconciliation protocol.
+Gate 7d is complete as the package-owned intake mechanism. Transport
+dispositions are now typed, schema-versioned, exact-driver artifacts with
+strict HTTPS endpoint, schema-digest, timeout, unknown-field, credential
+reference, and acceptance-provenance validation. Normalization produces a
+stable order-independent fingerprint. Embedded credential values are rejected;
+runtime readiness checks only presence of the referenced Laravel configuration
+secret and does not expose its reference or value. All invalid or absent
+artifacts remain fail-closed, with no HTTP or domain mutation.
+
+No authoritative AUI disposition is included. The next gate therefore depends
+on AUI supplying its real contract and an authorized architecture acceptance.
+Only then can the package add a provider adapter and governed dispatch path.
 
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).

@@ -345,7 +345,7 @@ separate durability improvement rather than widening this gate.
 
 ### Gate 7 — AUI policy completion
 
-Status: **Complete through Gate 7c readiness boundary; provider transport pending disposition**
+Status: **Complete through Gate 7d contract-intake boundary; authoritative AUI disposition pending**
 
 - Implement the reserved AUI driver as a versioned adapter.
 - Hand completed applicant and settlement-envelope facts to the insurer
@@ -409,6 +409,23 @@ policy-document creation, persistence, envelope mutation, or financial
 movement. Transport remains disabled until that provider disposition is
 accepted and regression-protected.
 
+Gate 7d makes the disposition itself a typed, schema-versioned contract
+artifact. The manifest must identify the exact driver version, provider and
+contract, HTTPS submission endpoint, authentication scheme, request/response
+schema references and SHA-256 digests, idempotency declaration, timeout and
+retry policies, ambiguous-outcome and reconciliation rules, credential config
+reference, and acceptance provenance. Unknown fields—including embedded
+credential values—are rejected. Disabled, unaccepted, malformed,
+wrong-identity, invalid-digest, insecure-endpoint, incoherent-timeout, or
+credential-unavailable manifests fail closed with a redacted reason.
+
+The normalized manifest produces an order-independent fingerprint. Credential
+readiness checks only whether the referenced Laravel configuration value is
+present; neither the reference nor its value enters the readiness DTO. The
+package still ships no AUI disposition, endpoint, schema, credential, send
+method, queue job, or HTTP adapter. This gate provides the intake mechanism;
+it does not claim that AUI's contract has been received or accepted.
+
 ### Gate 8 — Operator experience and lifecycle acceptance
 
 Status: **Pending**
@@ -421,9 +438,10 @@ Status: **Pending**
 
 ## Immediate Next Move
 
-Gate 7c is complete as a fail-closed acceptance mechanism. The next controlled
-move is provider-contract intake: obtain the authoritative AUI endpoint,
-authentication, schemas, provider idempotency, timeout/retry expectations,
-ambiguous-outcome handling, and reconciliation protocol. Only after that
-disposition passes the readiness boundary may a separately tested HTTP adapter
-and governed dispatch action be introduced.
+Gate 7d is complete as a fail-closed contract-intake mechanism. The next
+controlled move requires an external artifact: obtain AUI's authoritative
+endpoint, authentication, schemas, provider idempotency, timeout/retry
+expectations, ambiguous-outcome handling, reconciliation protocol, and formal
+acceptance provenance. Only after that real manifest passes the catalog and
+readiness boundary may a separately tested HTTP adapter and governed dispatch
+action be introduced.

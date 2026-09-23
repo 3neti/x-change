@@ -971,25 +971,36 @@ it('keeps policy completion transport disabled until an exact accepted dispositi
     $incomplete = $check->handle($approved);
 
     expect($incomplete->ready)->toBeFalse()
-        ->and($incomplete->status)->toBe('incomplete')
-        ->and($incomplete->missingFields)->toContain(
-            'request_schema_version',
-            'credentials_configured',
-        );
+        ->and($incomplete->status)->toBe('invalid')
+        ->and($incomplete->missingFields)->toBe([]);
 
     config()->set('x-change.settlement.policy_completion.transports', [
         AuiPersonalAccidentPolicyCompletionDriver::DRIVER_ID.'@'.AuiPersonalAccidentPolicyCompletionDriver::DRIVER_VERSION => policyCompletionTransportDisposition(),
     ]);
+    $credentialsUnavailable = $check->handle($approved);
+
+    expect($credentialsUnavailable->ready)->toBeFalse()
+        ->and($credentialsUnavailable->status)->toBe('credentials_unavailable');
+
+    config()->set('services.aui.policy_completion_token', 'secret-policy-api-token');
     $ready = $check->handle($approved);
     $replayed = $check->handle($approved);
+    config()->set('x-change.settlement.policy_completion.transports', [
+        AuiPersonalAccidentPolicyCompletionDriver::DRIVER_ID.'@'.AuiPersonalAccidentPolicyCompletionDriver::DRIVER_VERSION => array_reverse(
+            policyCompletionTransportDisposition(),
+            true,
+        ),
+    ]);
+    $reordered = $check->handle($approved);
     $safePayload = json_encode($ready->toSafeArray(), JSON_THROW_ON_ERROR);
 
     expect($ready->ready)->toBeTrue()
         ->and($ready->status)->toBe('ready')
         ->and($ready->dispositionFingerprint)->toMatch('/^[a-f0-9]{64}$/')
         ->and($replayed->dispositionFingerprint)->toBe($ready->dispositionFingerprint)
+        ->and($reordered->dispositionFingerprint)->toBe($ready->dispositionFingerprint)
         ->and($safePayload)->not->toContain('secret-policy-api-token')
-        ->and($safePayload)->not->toContain('policy-completion-production')
+        ->and($safePayload)->not->toContain('services.aui.policy_completion_token')
         ->and($request->refresh()->status)->toBe(PolicyCompletionRequestStatus::Authorized)
         ->and(PolicyCompletionOutcome::query()->count())->toBe(0)
         ->and(EnvelopePayloadVersion::query()->count())->toBe($envelopeVersionCount)
@@ -1024,6 +1035,47 @@ it('requires a transport disposition for the exact completion driver version', f
 
     expect($readiness->ready)->toBeFalse()
         ->and($readiness->status)->toBe('not_configured');
+
+    $manifestWithSecret = [
+        ...policyCompletionTransportDisposition(),
+        'credential_value' => 'must-never-be-accepted',
+    ];
+    config()->set('x-change.settlement.policy_completion.transports', [
+        AuiPersonalAccidentPolicyCompletionDriver::DRIVER_ID.'@'.AuiPersonalAccidentPolicyCompletionDriver::DRIVER_VERSION => $manifestWithSecret,
+    ]);
+    $invalid = app(CheckCampaignPolicyCompletionTransportReadiness::class)->handle($approved);
+
+    expect($invalid->ready)->toBeFalse()
+        ->and($invalid->status)->toBe('invalid')
+        ->and(json_encode($invalid->toSafeArray(), JSON_THROW_ON_ERROR))
+        ->not->toContain('must-never-be-accepted');
+
+    config()->set('x-change.settlement.policy_completion.transports', [
+        AuiPersonalAccidentPolicyCompletionDriver::DRIVER_ID.'@'.AuiPersonalAccidentPolicyCompletionDriver::DRIVER_VERSION => [
+            ...policyCompletionTransportDisposition(),
+            'accepted' => false,
+        ],
+    ]);
+    expect(app(CheckCampaignPolicyCompletionTransportReadiness::class)->handle($approved)->status)
+        ->toBe('invalid');
+
+    config()->set('x-change.settlement.policy_completion.transports', [
+        AuiPersonalAccidentPolicyCompletionDriver::DRIVER_ID.'@'.AuiPersonalAccidentPolicyCompletionDriver::DRIVER_VERSION => [
+            ...policyCompletionTransportDisposition(),
+            'driver_version' => '9.9.9',
+        ],
+    ]);
+    expect(app(CheckCampaignPolicyCompletionTransportReadiness::class)->handle($approved)->status)
+        ->toBe('invalid');
+
+    config()->set('x-change.settlement.policy_completion.transports', [
+        AuiPersonalAccidentPolicyCompletionDriver::DRIVER_ID.'@'.AuiPersonalAccidentPolicyCompletionDriver::DRIVER_VERSION => [
+            ...policyCompletionTransportDisposition(),
+            'submission_endpoint' => 'http://policy-provider.example.test/v1/completions',
+        ],
+    ]);
+    expect(app(CheckCampaignPolicyCompletionTransportReadiness::class)->handle($approved)->status)
+        ->toBe('invalid');
     Http::assertNothingSent();
 });
 
@@ -1156,20 +1208,32 @@ function auiPolicyCompletionProjection(): array
 function policyCompletionTransportDisposition(): array
 {
     return [
+        'schema' => 'x-change.policy-completion-transport-disposition.v1',
         'enabled' => true,
+        'accepted' => true,
+        'driver_id' => AuiPersonalAccidentPolicyCompletionDriver::DRIVER_ID,
+        'driver_version' => AuiPersonalAccidentPolicyCompletionDriver::DRIVER_VERSION,
+        'provider' => 'synthetic-test-provider',
         'contract_id' => 'aui-policy-completion',
         'contract_version' => '2026-09-23',
+        'submission_endpoint' => 'https://policy-provider.example.test/v1/completions',
+        'authentication_scheme' => 'bearer-token',
+        'request_schema_reference' => 'test://policy-completion-request',
         'request_schema_version' => '1.0',
+        'request_schema_digest' => 'sha256:'.str_repeat('a', 64),
+        'response_schema_reference' => 'test://policy-completion-response',
         'response_schema_version' => '1.0',
+        'response_schema_digest' => 'sha256:'.str_repeat('b', 64),
         'idempotency_mechanism' => 'provider-request-key',
         'connect_timeout_seconds' => 5,
         'response_timeout_seconds' => 15,
         'retry_policy' => 'selective-transient-only',
         'ambiguous_outcome_policy' => 'record-indeterminate-and-reconcile',
         'reconciliation_mode' => 'provider-status-query',
-        'credential_reference' => 'policy-completion-production',
-        'credentials_configured' => true,
-        'credential_value' => 'secret-policy-api-token',
+        'credential_reference' => 'services.aui.policy_completion_token',
+        'acceptance_reference' => 'synthetic-test-acceptance',
+        'accepted_at' => '2026-09-23T00:00:00+00:00',
+        'accepted_by_reference' => 'test-architecture-authority',
     ];
 }
 

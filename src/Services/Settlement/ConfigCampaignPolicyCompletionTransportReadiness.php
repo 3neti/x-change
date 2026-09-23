@@ -4,28 +4,18 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Settlement;
 
+use DomainException;
 use LBHurtado\XChange\Contracts\CampaignPolicyCompletionTransportReadinessContract;
+use LBHurtado\XChange\Data\Settlement\PolicyCompletionTransportDispositionData;
 use LBHurtado\XChange\Data\Settlement\PolicyCompletionTransportReadinessData;
 use LBHurtado\XChange\Enums\PolicyCompletionRequestStatus;
 use LBHurtado\XChange\Models\PolicyCompletionRequest;
 
 final class ConfigCampaignPolicyCompletionTransportReadiness implements CampaignPolicyCompletionTransportReadinessContract
 {
-    /** @var list<string> */
-    private const REQUIRED_FIELDS = [
-        'contract_id',
-        'contract_version',
-        'request_schema_version',
-        'response_schema_version',
-        'idempotency_mechanism',
-        'connect_timeout_seconds',
-        'response_timeout_seconds',
-        'retry_policy',
-        'ambiguous_outcome_policy',
-        'reconciliation_mode',
-        'credential_reference',
-        'credentials_configured',
-    ];
+    public function __construct(
+        private readonly PolicyCompletionTransportDispositionCatalog $dispositions,
+    ) {}
 
     public function for(PolicyCompletionRequest $request): PolicyCompletionTransportReadinessData
     {
@@ -41,42 +31,36 @@ final class ConfigCampaignPolicyCompletionTransportReadiness implements Campaign
             );
         }
 
-        $transports = config('x-change.settlement.policy_completion.transports', []);
-        $disposition = is_array($transports)
-            ? ($transports[$driverId.'@'.$driverVersion] ?? null)
-            : null;
+        try {
+            $disposition = $this->dispositions->for($driverId, $driverVersion);
+        } catch (DomainException) {
+            return $this->notReady(
+                $driverId,
+                $driverVersion,
+                'invalid',
+                'Policy completion transport disposition failed validation.',
+            );
+        }
 
-        if (! is_array($disposition)) {
+        if ($disposition === null) {
             return $this->notReady(
                 $driverId,
                 $driverVersion,
                 'not_configured',
                 'No accepted transport disposition exists for the exact policy completion driver version.',
-                self::REQUIRED_FIELDS,
+                PolicyCompletionTransportDispositionData::REQUIRED_FIELDS,
             );
         }
 
-        if (($disposition['enabled'] ?? false) !== true) {
+        $credential = config($disposition->credentialReference());
+        if (! is_string($credential) || trim($credential) === '') {
             return $this->notReady(
                 $driverId,
                 $driverVersion,
-                'disabled',
-                'Policy completion transport is disabled.',
+                'credentials_unavailable',
+                'Policy completion transport credential reference is not configured.',
             );
         }
-
-        $missing = $this->missingFields($disposition);
-        if ($missing !== []) {
-            return $this->notReady(
-                $driverId,
-                $driverVersion,
-                'incomplete',
-                'Policy completion transport disposition is incomplete.',
-                $missing,
-            );
-        }
-
-        $normalized = $this->normalizedDisposition($disposition);
 
         return new PolicyCompletionTransportReadinessData(
             ready: true,
@@ -84,50 +68,8 @@ final class ConfigCampaignPolicyCompletionTransportReadiness implements Campaign
             reason: 'The exact policy completion transport disposition is accepted and enabled.',
             driverId: $driverId,
             driverVersion: $driverVersion,
-            dispositionFingerprint: hash('sha256', json_encode($normalized, JSON_THROW_ON_ERROR)),
+            dispositionFingerprint: $disposition->fingerprint(),
         );
-    }
-
-    /**
-     * @param  array<string, mixed>  $disposition
-     * @return list<string>
-     */
-    private function missingFields(array $disposition): array
-    {
-        $missing = [];
-
-        foreach (self::REQUIRED_FIELDS as $field) {
-            $value = $disposition[$field] ?? null;
-            $present = $field === 'credentials_configured'
-                ? $value === true
-                : ($field === 'connect_timeout_seconds' || $field === 'response_timeout_seconds'
-                    ? is_int($value) && $value > 0
-                    : is_string($value) && trim($value) !== '');
-
-            if (! $present) {
-                $missing[] = $field;
-            }
-        }
-
-        return $missing;
-    }
-
-    /**
-     * @param  array<string, mixed>  $disposition
-     * @return array<string, bool|int|string>
-     */
-    private function normalizedDisposition(array $disposition): array
-    {
-        $normalized = ['enabled' => true];
-
-        foreach (self::REQUIRED_FIELDS as $field) {
-            $value = $disposition[$field];
-            $normalized[$field] = is_string($value) ? trim($value) : $value;
-        }
-
-        ksort($normalized);
-
-        return $normalized;
     }
 
     /**
