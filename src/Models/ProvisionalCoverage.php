@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use LBHurtado\SettlementEnvelope\Models\Envelope;
 use LBHurtado\XCampaign\Models\EndpointCampaign;
@@ -105,5 +106,10 @@ final class ProvisionalCoverage extends Model
     public function envelope(): BelongsTo
     {
         return $this->belongsTo(Envelope::class);
+    }
+
+    public function completionPayCodeIssuance(): HasOne
+    {
+        return $this->hasOne(CompletionPayCodeIssuance::class);
     }
 }

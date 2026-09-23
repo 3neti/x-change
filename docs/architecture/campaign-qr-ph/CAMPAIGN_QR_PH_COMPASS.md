@@ -204,9 +204,19 @@ without persistence, mismatched term identity is rejected, and eligible replay
 delegates to Gate 5a's atomic/idempotent binder. The registry ships empty; no AUI
 driver or automatic recognition listener has been installed.
 
-The next controlled gate is Gate 6a: define generic zero-denominated completion
-Pay Code issuance from an existing coverage envelope. Do not add the AUI
-adapter, applicant-specific requirements, policy issuance, notification, Client
-Funds, wallet, or Treasury effects in that contract-first slice.
+Gate 6a is complete. One persisted coverage can now issue exactly one generic,
+zero-denominated completion Pay Code through an immutable link. The issuer must
+own the bound payment address; coverage/envelope driver identities and the
+embedded coverage reference must agree. Identical replay converges, conflicting
+replay fails, and voucher/link persistence is atomic. The dedicated
+`campaign_coverage_completion` driver uses normal `/x/claim` evidence and
+redemption while an explicit execution-only policy suppresses external payout.
+Tests prove there is no Account Funding, Treasury, funding settlement, or
+non-zero wallet movement.
+
+The next controlled gate is Gate 6b: append the completed claim evidence to the
+same envelope through a new immutable payload version. Do not add the AUI
+adapter, policy issuance, insurer messages, or product-specific interpretation
+to that projection gate.
 
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).

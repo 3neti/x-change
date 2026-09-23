@@ -19,21 +19,26 @@ use LBHurtado\XChange\Actions\Campaigns\BindCampaignPaymentQr;
 use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
 use LBHurtado\XChange\Actions\Payment\InspectCampaignPaymentEvidence;
 use LBHurtado\XChange\Actions\Payment\RecognizeQualifyingCampaignPayment;
+use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Actions\Settlement\BindProvisionalCoverage;
+use LBHurtado\XChange\Actions\Settlement\IssueCompletionPayCode;
 use LBHurtado\XChange\Actions\Settlement\OrchestrateProvisionalCoverage;
 use LBHurtado\XChange\Data\Settlement\CampaignCoverageDecisionData;
+use LBHurtado\XChange\Data\Settlement\CompletionPayCodeInstructionsData;
 use LBHurtado\XChange\Data\Settlement\ProvisionalCoverageTermsData;
 use LBHurtado\XChange\Enums\CampaignEntryMode;
 use LBHurtado\XChange\Enums\CampaignPaymentAmountMode;
 use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
 use LBHurtado\XChange\Events\CampaignPaymentRecognized;
+use LBHurtado\XChange\Events\CompletionPayCodeIssued;
 use LBHurtado\XChange\Events\ProvisionalCoverageBound;
 use LBHurtado\XChange\Exceptions\CampaignCoverageDriverUnavailable;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\CampaignPaymentEvidenceQuarantine;
 use LBHurtado\XChange\Models\CampaignPaymentQrBinding;
 use LBHurtado\XChange\Models\CampaignPaymentRecognition;
+use LBHurtado\XChange\Models\CompletionPayCodeIssuance;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
@@ -502,6 +507,120 @@ it('leaves no coverage facts when a campaign coverage driver fails', function ()
     ))->toThrow(RuntimeException::class, 'driver evaluation failed')
         ->and(ProvisionalCoverage::query()->count())->toBe(0)
         ->and(Envelope::query()->count())->toBe(0);
+});
+
+it('issues exactly one zero-denominated completion Pay Code without moving money', function (): void {
+    configureCampaignCoverageTestDriver();
+    [$recognition, $binding] = recognizedCampaignPayment();
+    $bound = app(BindProvisionalCoverage::class)->handle(
+        $recognition,
+        campaignCoverageTerms($recognition),
+    );
+    $owner = $binding->standingFundingAddress->owner;
+    $instructions = new CompletionPayCodeInstructionsData(
+        applicantFields: ['name', 'mobile'],
+        message: 'Complete the remaining application details.',
+    );
+    $before = campaignPaymentFinancialCounts();
+    $walletValueBefore = (int) Transaction::query()->sum('amount');
+    Event::fake([CompletionPayCodeIssued::class]);
+
+    $first = app(IssueCompletionPayCode::class)->handle($bound->coverage, $owner, $instructions);
+    $replayed = app(IssueCompletionPayCode::class)->handle($bound->coverage, $owner, $instructions);
+
+    expect($first->created)->toBeTrue()
+        ->and($replayed->created)->toBeFalse()
+        ->and($replayed->voucher->is($first->voucher))->toBeTrue()
+        ->and(CompletionPayCodeIssuance::query()->count())->toBe(1)
+        ->and(Voucher::query()->whereKey($first->voucher->getKey())->count())->toBe(1)
+        ->and((float) data_get($first->voucher->instructions, 'cash.amount'))->toBe(0.0)
+        ->and(data_get($first->voucher->metadata, 'instructions.execution.driver'))
+        ->toBe('campaign_coverage_completion')
+        ->and(data_get($first->voucher->metadata, 'instructions.execution.metadata.post_redemption.mode'))
+        ->toBe('execution_only')
+        ->and(data_get($first->voucher->metadata, 'instructions.claim.default_outcome'))
+        ->toBe('envelope_completion')
+        ->and(AccountFundingReceipt::query()->count())->toBe($before['account_funding_receipts'])
+        ->and(FundingSettlement::query()->count())->toBe($before['funding_settlements'])
+        ->and(TreasuryInventoryOperation::query()->count())->toBe($before['treasury_operations'])
+        ->and((int) Transaction::query()->sum('amount'))->toBe($walletValueBefore);
+
+    Event::assertDispatchedTimes(CompletionPayCodeIssued::class, 1);
+    Event::assertDispatched(CompletionPayCodeIssued::class, function (CompletionPayCodeIssued $event): bool {
+        $payload = json_encode($event->payload, JSON_THROW_ON_ERROR);
+
+        return ! str_contains($payload, 'provider_transaction')
+            && ! str_contains($payload, 'authority_reference')
+            && ! str_contains($payload, 'payer');
+    });
+
+    expect(fn () => $first->issuance->forceFill(['driver_version' => 'changed'])->save())
+        ->toThrow(LogicException::class, 'immutable');
+});
+
+it('rejects completion issuance conflicts and issuer mismatches', function (): void {
+    configureCampaignCoverageTestDriver();
+    [$recognition, $binding] = recognizedCampaignPayment();
+    $bound = app(BindProvisionalCoverage::class)->handle($recognition, campaignCoverageTerms($recognition));
+    $owner = $binding->standingFundingAddress->owner;
+    $action = app(IssueCompletionPayCode::class);
+    $action->handle($bound->coverage, $owner, new CompletionPayCodeInstructionsData(['name']));
+
+    expect(fn () => $action->handle(
+        $bound->coverage,
+        $owner,
+        new CompletionPayCodeInstructionsData(['name', 'mobile']),
+    ))->toThrow(InvalidArgumentException::class, 'does not match')
+        ->and(fn () => $action->handle(
+            $bound->coverage,
+            actingAsTestUser(),
+            new CompletionPayCodeInstructionsData(['name']),
+        ))->toThrow(InvalidArgumentException::class, 'must own')
+        ->and(CompletionPayCodeIssuance::query()->count())->toBe(1);
+});
+
+it('claims a completion Pay Code through its non-financial execution driver', function (): void {
+    configureCampaignCoverageTestDriver();
+    [$recognition, $binding] = recognizedCampaignPayment();
+    $bound = app(BindProvisionalCoverage::class)->handle($recognition, campaignCoverageTerms($recognition));
+    $issued = app(IssueCompletionPayCode::class)->handle(
+        $bound->coverage,
+        $binding->standingFundingAddress->owner,
+        new CompletionPayCodeInstructionsData(['name', 'mobile']),
+    );
+    $before = campaignPaymentFinancialCounts();
+    $walletValueBefore = (int) Transaction::query()->sum('amount');
+
+    $result = app(SubmitPayCodeClaim::class)->handle($issued->voucher, [
+        'mobile' => '09173011987',
+        'inputs' => ['name' => 'Completion Applicant', 'mobile' => '09173011987'],
+    ]);
+
+    expect($result->claimed)->toBeTrue()
+        ->and($result->status)->toBe('redeemed')
+        ->and($issued->voucher->refresh()->redeemed_at)->not->toBeNull()
+        ->and(AccountFundingReceipt::query()->count())->toBe($before['account_funding_receipts'])
+        ->and(FundingSettlement::query()->count())->toBe($before['funding_settlements'])
+        ->and(TreasuryInventoryOperation::query()->count())->toBe($before['treasury_operations'])
+        ->and((int) Transaction::query()->sum('amount'))->toBe($walletValueBefore);
+});
+
+it('rolls back the completion voucher when immutable link persistence fails', function (): void {
+    configureCampaignCoverageTestDriver();
+    [$recognition, $binding] = recognizedCampaignPayment();
+    $bound = app(BindProvisionalCoverage::class)->handle($recognition, campaignCoverageTerms($recognition));
+    $voucherCount = Voucher::query()->count();
+    Event::listen('eloquent.creating: '.CompletionPayCodeIssuance::class, function (): never {
+        throw new RuntimeException('forced completion link failure');
+    });
+
+    expect(fn () => app(IssueCompletionPayCode::class)->handle(
+        $bound->coverage,
+        $binding->standingFundingAddress->owner,
+        new CompletionPayCodeInstructionsData(['name']),
+    ))->toThrow(RuntimeException::class, 'forced completion link failure')
+        ->and(CompletionPayCodeIssuance::query()->count())->toBe(0)
+        ->and(Voucher::query()->count())->toBe($voucherCount);
 });
 
 function campaignPaymentQrOwner(): User

@@ -305,11 +305,29 @@ introduced.
 
 ### Gate 6 — Completion Pay Code
 
-Status: **Pending**
+Status: **6a contract implemented; evidence projection pending**
 
-- Issue one zero-denominated Pay Code from the envelope.
+- Issue one zero-denominated Pay Code from the envelope through an immutable,
+  one-to-one issuance record.
 - Collect only the driver-declared applicant requirements through `/x/claim`.
 - Preserve normal OTP, form-flow, X-Ray, journal, and execution rules.
+
+Gate 6a adds the generic issuance boundary. It requires the issuer to own the
+campaign payment address, verifies the envelope and coverage driver identities,
+and locks the coverage before issuance. Exact replay returns the original Pay
+Code; changed instructions or authority fail closed. Voucher and immutable link
+creation share one transaction, so a link failure rolls back the voucher.
+
+The issued voucher has zero cash value and uses the dedicated
+`campaign_coverage_completion` driver. Its persisted `execution_only` policy
+allows ordinary `/x/claim` evidence collection and redemption while suppressing
+external payout. It creates no Client Funds, Treasury, funding-settlement, or
+non-zero wallet movement. The generic contract contains no AUI fields or policy
+semantics.
+
+Gate 6b will project the already captured claim evidence into a new immutable
+envelope payload version. Until then, successful redemption proves the generic
+completion journey but does not complete an insurer or other product workflow.
 
 ### Gate 7 — AUI policy completion
 
@@ -332,8 +350,8 @@ Status: **Pending**
 
 ## Immediate Next Move
 
-Gate 5b's generic, explicitly invoked driver orchestration contract is
-implemented. The next controlled move is Gate 6a: define the generic,
-zero-denominated completion Pay Code issuance contract from an existing
-coverage envelope. Keep the reserved AUI adapter, applicant-specific fields,
-policy issuance, and insurer messaging outside that contract-first slice.
+Gate 6a's generic zero-denominated completion Pay Code contract is implemented.
+The next controlled move is Gate 6b: project durable claim evidence into the
+existing settlement envelope as a new immutable payload version. Keep the
+reserved AUI adapter, policy issuance, insurer messaging, and product-specific
+interpretation outside that evidence-projection slice.

@@ -427,6 +427,7 @@ use LBHurtado\XChange\Services\Disbursement\LayeredPayoutDestinationValidator;
 use LBHurtado\XChange\Services\Disbursement\UnavailableProviderPayoutDestinationValidation;
 use LBHurtado\XChange\Services\EventLifecycleService;
 use LBHurtado\XChange\Services\Execution\AuthenticatedStoredValueHolderAuthority;
+use LBHurtado\XChange\Services\Execution\CampaignCoverageCompletionExecutionDriver;
 use LBHurtado\XChange\Services\Execution\ExecutionAwarePostRedemptionGate;
 use LBHurtado\XChange\Services\Execution\ExecutionResultHandoffPipeline;
 use LBHurtado\XChange\Services\Execution\LifecycleExecutionCashDisbursementPoller;
@@ -1424,6 +1425,12 @@ class XChangeServiceProvider extends ServiceProvider
             ->register(
                 OnboardingVoucherInstructionPolicy::ExecutionDriver,
                 OnboardingAccountProvisioningExecutionDriver::class,
+            );
+        $this->app
+            ->make(ExecutionDriverRegistry::class)
+            ->register(
+                CampaignCoverageCompletionExecutionDriver::Key,
+                CampaignCoverageCompletionExecutionDriver::class,
             );
 
         $this->app->singleton(
