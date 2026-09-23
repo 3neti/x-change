@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Bavix\Wallet\Models\Transaction;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
@@ -25,6 +26,7 @@ use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Actions\Settlement\BindProvisionalCoverage;
 use LBHurtado\XChange\Actions\Settlement\IssueCompletionPayCode;
 use LBHurtado\XChange\Actions\Settlement\OrchestrateProvisionalCoverage;
+use LBHurtado\XChange\Actions\Settlement\PrepareCampaignPolicyCompletion;
 use LBHurtado\XChange\Actions\Settlement\ProjectCompletionClaimEvidence;
 use LBHurtado\XChange\Data\Settlement\CampaignCoverageDecisionData;
 use LBHurtado\XChange\Data\Settlement\CompletionPayCodeInstructionsData;
@@ -38,6 +40,7 @@ use LBHurtado\XChange\Events\CompletionClaimEvidenceProjected;
 use LBHurtado\XChange\Events\CompletionPayCodeIssued;
 use LBHurtado\XChange\Events\ProvisionalCoverageBound;
 use LBHurtado\XChange\Exceptions\CampaignCoverageDriverUnavailable;
+use LBHurtado\XChange\Exceptions\CampaignPolicyCompletionDriverUnavailable;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\CampaignPaymentEvidenceQuarantine;
 use LBHurtado\XChange\Models\CampaignPaymentQrBinding;
@@ -51,7 +54,9 @@ use LBHurtado\XChange\Models\ProvisionalCoverage;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Models\StandingFundingQrArtifact;
 use LBHurtado\XChange\Services\Cockpit\CampaignPaymentEvidenceAttentionReadModel;
+use LBHurtado\XChange\Services\Settlement\AuiPersonalAccidentPolicyCompletionDriver;
 use LBHurtado\XChange\Services\Settlement\CampaignCoverageDriverRegistry;
+use LBHurtado\XChange\Services\Settlement\CampaignPolicyCompletionDriverRegistry;
 use LBHurtado\XChange\Tests\Fakes\FakeCampaignCoverageDriver;
 use LBHurtado\XChange\Tests\Fakes\User;
 
@@ -668,6 +673,87 @@ it('rolls back the envelope version when completion evidence projection persiste
         ->and(EnvelopeAuditLog::query()->where('envelope_id', $bound->envelope->getKey())->count())->toBe($auditCount);
 });
 
+it('prepares the reserved AUI policy handoff without external or durable side effects', function (): void {
+    configureCampaignCoverageTestDriver();
+    [$recognition, $binding] = recognizedCampaignPayment();
+    $bound = app(BindProvisionalCoverage::class)->handle(
+        $recognition,
+        auiCampaignCoverageTerms($recognition),
+    );
+    $issued = app(IssueCompletionPayCode::class)->handle(
+        $bound->coverage,
+        $binding->standingFundingAddress->owner,
+        new CompletionPayCodeInstructionsData(['name', 'mobile']),
+    );
+    app(SubmitPayCodeClaim::class)->handle($issued->voucher, [
+        'mobile' => '09173011987',
+        'inputs' => ['name' => 'Private AUI Applicant', 'mobile' => '09173011987'],
+    ]);
+    $projection = CompletionClaimEvidenceProjection::query()->sole();
+    $before = campaignPaymentFinancialCounts();
+    $envelopeVersionCount = EnvelopePayloadVersion::query()->count();
+    Http::fake();
+    Event::fake([
+        CampaignPaymentRecognized::class,
+        ProvisionalCoverageBound::class,
+        CompletionPayCodeIssued::class,
+        CompletionClaimEvidenceProjected::class,
+    ]);
+
+    $prepared = app(PrepareCampaignPolicyCompletion::class)->handle($projection);
+    $replayed = app(PrepareCampaignPolicyCompletion::class)->handle($projection->fresh());
+    $safePayload = json_encode($prepared->safeContext(), JSON_THROW_ON_ERROR);
+
+    expect($prepared->driverId)->toBe(AuiPersonalAccidentPolicyCompletionDriver::DRIVER_ID)
+        ->and($prepared->driverVersion)->toBe(AuiPersonalAccidentPolicyCompletionDriver::DRIVER_VERSION)
+        ->and($prepared->idempotencyKey)->toBe('aui-policy-completion:'.$projection->reference)
+        ->and($prepared->fingerprint)->toBe($replayed->fingerprint)
+        ->and($prepared->privateApplicantEvidence())->toBe([
+            'mobile' => '09173011987',
+            'name' => 'Private AUI Applicant',
+        ])
+        ->and($safePayload)->not->toContain('Private AUI Applicant')
+        ->and($safePayload)->not->toContain('09173011987')
+        ->and($safePayload)->not->toContain('artifact_path')
+        ->and(EnvelopePayloadVersion::query()->count())->toBe($envelopeVersionCount)
+        ->and(AccountFundingReceipt::query()->count())->toBe($before['account_funding_receipts'])
+        ->and(FundingSettlement::query()->count())->toBe($before['funding_settlements'])
+        ->and(TreasuryInventoryOperation::query()->count())->toBe($before['treasury_operations']);
+
+    Http::assertNothingSent();
+    Event::assertNothingDispatched();
+});
+
+it('fails closed for unavailable, duplicate, and mismatched policy completion drivers', function (): void {
+    $driver = new AuiPersonalAccidentPolicyCompletionDriver;
+
+    expect(fn () => (new CampaignPolicyCompletionDriverRegistry([]))->for(
+        $driver->driverId(),
+        $driver->driverVersion(),
+    ))->toThrow(CampaignPolicyCompletionDriverUnavailable::class)
+        ->and(fn () => new CampaignPolicyCompletionDriverRegistry([$driver, $driver]))
+        ->toThrow(LogicException::class, 'Multiple campaign policy completion drivers');
+
+    configureCampaignCoverageTestDriver();
+    [$recognition, $binding] = recognizedCampaignPayment();
+    $bound = app(BindProvisionalCoverage::class)->handle(
+        $recognition,
+        campaignCoverageTerms($recognition),
+    );
+    $issued = app(IssueCompletionPayCode::class)->handle(
+        $bound->coverage,
+        $binding->standingFundingAddress->owner,
+        new CompletionPayCodeInstructionsData(['name']),
+    );
+    app(SubmitPayCodeClaim::class)->handle($issued->voucher, [
+        'mobile' => '09173011987',
+        'inputs' => ['name' => 'Not an AUI claim'],
+    ]);
+
+    expect(fn () => $driver->prepare(CompletionClaimEvidenceProjection::query()->sole()))
+        ->toThrow(InvalidArgumentException::class, 'reserved driver identity');
+});
+
 it('rolls back the completion voucher when immutable link persistence fails', function (): void {
     configureCampaignCoverageTestDriver();
     [$recognition, $binding] = recognizedCampaignPayment();
@@ -745,6 +831,25 @@ function campaignCoverageTerms(
         authorization: [
             'authority' => 'campaign-driver',
             'authority_reference' => 'test-authorization',
+        ],
+    );
+}
+
+function auiCampaignCoverageTerms(
+    CampaignPaymentRecognition $recognition,
+): ProvisionalCoverageTermsData {
+    return new ProvisionalCoverageTermsData(
+        driverId: AuiPersonalAccidentPolicyCompletionDriver::DRIVER_ID,
+        driverVersion: AuiPersonalAccidentPolicyCompletionDriver::DRIVER_VERSION,
+        coverageType: 'personal-accident-provisional-cover',
+        currency: 'PHP',
+        effectiveAt: $recognition->settled_at,
+        expiresAt: $recognition->settled_at->addDay(),
+        coverageAmountMinor: $recognition->gross_amount_minor,
+        terms: ['plan' => 'aui-on-demand-personal-accident'],
+        authorization: [
+            'authority' => 'campaign-driver',
+            'authority_reference' => 'aui-test-authorization',
         ],
     );
 }

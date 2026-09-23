@@ -1,0 +1,54 @@
+driver:
+  id: "aui.personal-accident.provisional-cover"
+  version: "1.0.0"
+  title: "AUI Personal Accident Provisional Cover Test Driver"
+  description: "Test-only schema for the reserved AUI policy completion boundary."
+  domain: "campaign-settlement"
+
+payload:
+  schema:
+    id: "x-change.aui-personal-accident-envelope.v1"
+    format: "json_schema"
+    inline:
+      type: "object"
+      properties:
+        schema:
+          type: "string"
+          const: "x-change.campaign-provisional-coverage-envelope.v1"
+        campaign:
+          type: "object"
+        payment:
+          type: "object"
+        coverage:
+          type: "object"
+        authorization:
+          type: "object"
+        applicant:
+          type: "object"
+      required: ["schema", "campaign", "payment", "coverage", "authorization"]
+  storage:
+    mode: "versioned"
+    patch_strategy: "merge"
+
+documents:
+  registry: []
+
+checklist:
+  template: []
+
+signals:
+  definitions: []
+
+gates:
+  definitions: []
+
+audit:
+  enabled: true
+  capture: ["payload_patch", "status_change"]
+
+manifest:
+  enabled: true
+  includes:
+    payload_hash: true
+    attachments_hashes: true
+    envelope_fingerprint: true

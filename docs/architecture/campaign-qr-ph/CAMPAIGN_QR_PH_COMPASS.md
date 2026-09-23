@@ -229,9 +229,20 @@ event is dispatched inside its update transaction. Gate 6b deliberately adds
 no listener or external side effect to it. Any package-wide after-commit change
 must be handled independently with settlement-envelope regression coverage.
 
-The next controlled gate is Gate 7a: implement the reserved AUI driver adapter
-contract against the generic coverage, envelope, payment, and completion facts.
-Do not issue a policy, send insurer messages, or perform an irreversible
-external call in that first adapter-boundary slice.
+Gate 7a is complete. The reserved
+`aui.personal-accident.provisional-cover@1.0.0` adapter is resolved through an
+exact-version, duplicate-rejecting registry and validates the full immutable
+projection, claim, issuance, coverage, recognition, envelope, and payload
+version chain. It returns a deterministic fingerprint and idempotency key.
+Safe references and economic facts are separated from applicant values, which
+exist only in a private, memory-only preparation property with no generic
+serialization surface. Tests prove deterministic replay, unavailable and
+duplicate driver rejection, identity mismatch rejection, no HTTP call, no new
+domain event, no envelope version, and no financial movement.
+
+The next controlled gate is Gate 7b: add a durable, authorization-gated policy
+completion request and outcome state machine. Do not add AUI transport,
+credentials, insurer messaging, retries, or irreversible external calls until
+that provider contract receives a separate disposition.
 
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).

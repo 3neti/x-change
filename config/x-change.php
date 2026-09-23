@@ -2780,6 +2780,9 @@ return [
         'campaign_coverage_drivers' => [
             // Host-defined CampaignCoverageDriverContract implementations.
         ],
+        'campaign_policy_completion_drivers' => [
+            // Additional host-defined CampaignPolicyCompletionDriverContract implementations.
+        ],
     ],
 
     'execution' => [

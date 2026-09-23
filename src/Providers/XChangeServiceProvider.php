@@ -176,6 +176,7 @@ use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
 use LBHurtado\XChange\Contracts\CampaignBankTransferDispatcherContract;
 use LBHurtado\XChange\Contracts\CampaignBankTransferStatusCheckerContract;
 use LBHurtado\XChange\Contracts\CampaignCoverageDriverContract;
+use LBHurtado\XChange\Contracts\CampaignPolicyCompletionDriverContract;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Contracts\Claim\ClaimSurfaceResolverContract;
 use LBHurtado\XChange\Contracts\Claim\ClaimViewerResolverContract;
@@ -491,7 +492,9 @@ use LBHurtado\XChange\Services\ProvisioningAwareOnboardingService;
 use LBHurtado\XChange\Services\Publication\CorePublicationContributor;
 use LBHurtado\XChange\Services\Publication\PublicationCatalog;
 use LBHurtado\XChange\Services\ReconciliationLifecycleService;
+use LBHurtado\XChange\Services\Settlement\AuiPersonalAccidentPolicyCompletionDriver;
 use LBHurtado\XChange\Services\Settlement\CampaignCoverageDriverRegistry;
+use LBHurtado\XChange\Services\Settlement\CampaignPolicyCompletionDriverRegistry;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\SettlementEnvelopeReadinessService;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
@@ -767,6 +770,42 @@ class XChangeServiceProvider extends ServiceProvider
             CampaignCoverageDriverRegistry::class,
             fn ($app): CampaignCoverageDriverRegistry => new CampaignCoverageDriverRegistry(
                 $app->tagged('x-change.campaign-coverage-drivers'),
+            ),
+        );
+        $this->app->singleton(AuiPersonalAccidentPolicyCompletionDriver::class);
+        $this->app->tag(
+            AuiPersonalAccidentPolicyCompletionDriver::class,
+            'x-change.campaign-policy-completion-drivers',
+        );
+        $campaignPolicyCompletionDrivers = config(
+            'x-change.settlement.campaign_policy_completion_drivers',
+            [],
+        );
+
+        if (! is_array($campaignPolicyCompletionDrivers)) {
+            throw new InvalidArgumentException(
+                'Campaign policy completion driver configuration must be an array.',
+            );
+        }
+
+        foreach ($campaignPolicyCompletionDrivers as $campaignPolicyCompletionDriver) {
+            if (! is_string($campaignPolicyCompletionDriver)
+                || ! is_a($campaignPolicyCompletionDriver, CampaignPolicyCompletionDriverContract::class, true)) {
+                throw new InvalidArgumentException(
+                    'Campaign policy completion drivers must implement '.CampaignPolicyCompletionDriverContract::class.'.',
+                );
+            }
+
+            $this->app->singleton($campaignPolicyCompletionDriver);
+            $this->app->tag(
+                $campaignPolicyCompletionDriver,
+                'x-change.campaign-policy-completion-drivers',
+            );
+        }
+        $this->app->singleton(
+            CampaignPolicyCompletionDriverRegistry::class,
+            fn ($app): CampaignPolicyCompletionDriverRegistry => new CampaignPolicyCompletionDriverRegistry(
+                $app->tagged('x-change.campaign-policy-completion-drivers'),
             ),
         );
         $this->app->singleton(

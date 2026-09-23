@@ -345,12 +345,34 @@ separate durability improvement rather than widening this gate.
 
 ### Gate 7 — AUI policy completion
 
-Status: **Pending**
+Status: **7a preparation boundary implemented; durable request and outcome pending**
 
 - Implement the reserved AUI driver as a versioned adapter.
 - Hand completed applicant and settlement-envelope facts to the insurer
   boundary.
 - Record policy success/failure without rewriting payment or coverage facts.
+
+Gate 7a implements the reserved
+`aui.personal-accident.provisional-cover@1.0.0` policy-completion adapter as a
+pure preparation boundary. An exact-version, duplicate-rejecting registry
+resolves the adapter from the immutable completion projection. The adapter
+validates that the projection, completed claim, completion issuance,
+provisional coverage, settled payment recognition, envelope, and payload
+version form one coherent chain before producing a deterministic preparation
+fingerprint and idempotency key.
+
+The preparation object separates a safe reference/economic context from
+private applicant evidence. Raw applicant values are decrypted only into a
+memory-only private property; they have no generic array or serialization
+surface and never enter logs, events, envelope payloads, or public read models.
+Preparing or replaying the handoff performs no HTTP request, insurer message,
+queue dispatch, policy issuance, envelope mutation, financial posting, or
+durable outcome write.
+
+Gate 7b will add the durable, authorization-gated policy-completion request and
+outcome state machine. Provider transport remains prohibited until its API,
+credentials, retry semantics, and idempotency contract receive a separate
+disposition.
 
 ### Gate 8 — Operator experience and lifecycle acceptance
 
@@ -364,9 +386,9 @@ Status: **Pending**
 
 ## Immediate Next Move
 
-Gate 6 is complete: the generic zero-denominated completion Pay Code now records
-its finalized, redacted evidence manifest as an immutable envelope version with
-idempotent replay and atomic rollback. The next controlled move is Gate 7a:
-define and implement the reserved AUI adapter boundary against these generic
-facts. Keep policy issuance, insurer messaging, and irreversible external side
-effects outside the first adapter-contract slice.
+Gate 7a is complete: the reserved AUI adapter can prepare one deterministic,
+private handoff from the immutable generic facts without any durable or
+external side effect. The next controlled move is Gate 7b: define the durable,
+authorization-gated policy-completion request and outcome state machine. Keep
+provider transport, insurer messaging, credentials, and irreversible calls
+outside that state-machine slice.
