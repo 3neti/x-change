@@ -34,7 +34,7 @@ final readonly class IssueCompletionPayCode
         $key = $this->hash(['coverage' => $coverage->reference, 'envelope' => $coverage->envelope_id, 'issuer_type' => $issuerType, 'issuer_id' => $issuerId]);
 
         $result = DB::transaction(function () use ($coverage, $issuer, $snapshot, $instructionHash, $issuerType, $issuerId, $key): array {
-            $locked = ProvisionalCoverage::query()->with(['envelope', 'binding.standingFundingAddress'])->lockForUpdate()->findOrFail($coverage->getKey());
+            $locked = ProvisionalCoverage::query()->with(['envelope', 'recognition.binding.standingFundingAddress', 'recognition.source.campaign.owner'])->lockForUpdate()->findOrFail($coverage->getKey());
             $existing = CompletionPayCodeIssuance::query()->with('voucher')->where('provisional_coverage_id', $locked->getKey())->first();
 
             if ($existing instanceof CompletionPayCodeIssuance) {
@@ -72,11 +72,11 @@ final readonly class IssueCompletionPayCode
         if (! $coverage->exists || $coverage->status !== ProvisionalCoverageStatus::Provisional) {
             throw new InvalidArgumentException('Persisted provisional coverage is required.');
         }
-        $coverage->loadMissing(['envelope', 'binding.standingFundingAddress']);
-        $address = $coverage->binding->standingFundingAddress;
+        $coverage->loadMissing(['envelope', 'recognition.binding.standingFundingAddress', 'recognition.source.campaign.owner']);
+        $owner = $coverage->recognition->ownerRecord();
         $issuerType = $issuer instanceof Model ? $issuer->getMorphClass() : $issuer::class;
-        if ($address->owner_type !== $issuerType || (string) $address->owner_id !== (string) $issuer->getAuthIdentifier()) {
-            throw new InvalidArgumentException('Completion Pay Code issuer must own the bound campaign payment address.');
+        if ($owner->getMorphClass() !== $issuerType || (string) $owner->getKey() !== (string) $issuer->getAuthIdentifier()) {
+            throw new InvalidArgumentException('Completion Pay Code issuer must own the campaign payment source.');
         }
         if (! $coverage->envelope instanceof Envelope || $coverage->envelope->driver_id !== $coverage->driver_id || $coverage->envelope->driver_version !== $coverage->driver_version) {
             throw new InvalidArgumentException('Coverage and envelope driver identities must match.');

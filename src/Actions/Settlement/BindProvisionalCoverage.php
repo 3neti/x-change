@@ -37,7 +37,7 @@ final readonly class BindProvisionalCoverage
 
         $result = DB::transaction(function () use ($recognition, $terms): array {
             $locked = CampaignPaymentRecognition::query()
-                ->with(['binding.campaign', 'binding.standingFundingAddress'])
+                ->with(['binding.campaign', 'binding.standingFundingAddress', 'source.campaign.owner'])
                 ->lockForUpdate()
                 ->findOrFail($recognition->getKey());
             $snapshots = $this->snapshots($locked, $terms);
@@ -82,7 +82,7 @@ final readonly class BindProvisionalCoverage
                     'schema' => 'x-change.campaign-provisional-coverage-context.v1',
                     'coverage_reference' => $coverageReference,
                     'recognition_reference' => $locked->reference,
-                    'campaign_reference' => $locked->binding->campaign->reference,
+                    'campaign_reference' => $locked->campaignRecord()->reference,
                 ],
             );
             $boundAt = now();
@@ -91,8 +91,8 @@ final readonly class BindProvisionalCoverage
                 'coverage_key' => $coverageKey,
                 'campaign_payment_recognition_id' => $locked->getKey(),
                 'envelope_id' => $envelope->getKey(),
-                'endpoint_campaign_id' => $locked->binding->endpoint_campaign_id,
-                'campaign_payment_qr_binding_id' => $locked->binding->getKey(),
+                'endpoint_campaign_id' => $locked->campaignRecord()->getKey(),
+                'campaign_payment_qr_binding_id' => $locked->binding?->getKey(),
                 'campaign_revision_id' => $locked->campaign_revision_id,
                 'driver_id' => $terms->driverId,
                 'driver_version' => $terms->driverVersion,
@@ -124,15 +124,17 @@ final readonly class BindProvisionalCoverage
             $locked = $coverage->recognition->loadMissing([
                 'binding.campaign',
                 'binding.standingFundingAddress',
+                'source.campaign.owner',
             ]);
-            $binding = $locked->binding;
+            $campaign = $locked->campaignRecord();
+            $owner = $locked->ownerRecord();
             $data = new ProvisionalCoverageBoundData(
                 coverageReference: $coverage->reference,
                 envelopeReference: $envelope->reference_code,
                 recognitionReference: $locked->reference,
-                campaignReference: $binding->campaign->reference,
+                campaignReference: $campaign->reference,
                 campaignRevisionId: $coverage->campaign_revision_id,
-                bindingReference: $binding->reference,
+                bindingReference: $locked->sourceReference(),
                 driverId: $coverage->driver_id,
                 driverVersion: $coverage->driver_version,
                 coverageType: $coverage->coverage_type,
@@ -146,8 +148,8 @@ final readonly class BindProvisionalCoverage
                 'financial_side_effects' => false,
             ]);
             ProvisionalCoverageBound::dispatch(
-                ownerType: (string) $binding->standingFundingAddress->owner_type,
-                ownerId: (string) $binding->standingFundingAddress->owner_id,
+                ownerType: $owner->getMorphClass(),
+                ownerId: (string) $owner->getKey(),
                 coverage: $data,
             );
         }
@@ -249,9 +251,9 @@ final readonly class BindProvisionalCoverage
         return $this->canonicalize([
             'schema' => 'x-change.campaign-provisional-coverage-envelope.v1',
             'campaign' => [
-                'campaign_reference' => $recognition->binding->campaign->reference,
+                'campaign_reference' => $recognition->campaignRecord()->reference,
                 'campaign_revision_id' => $recognition->campaign_revision_id,
-                'binding_reference' => $recognition->binding->reference,
+                'binding_reference' => $recognition->sourceReference(),
             ],
             'payment' => $snapshots['payment'],
             'coverage' => [

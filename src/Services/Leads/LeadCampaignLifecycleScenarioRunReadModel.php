@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Services\Leads;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Models\CampaignPaymentSource;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Models\VoucherClaim;
@@ -30,6 +31,10 @@ final readonly class LeadCampaignLifecycleScenarioRunReadModel
         $attempt = $voucher instanceof Voucher
             ? PaymentAttempt::query()->with('events')->where('voucher_id', $voucher->getKey())->latest('id')->first()
             : null;
+        $paymentSource = $attempt instanceof PaymentAttempt
+            ? CampaignPaymentSource::query()->with('recognition')->where('payment_attempt_id', $attempt->getKey())->first()
+            : null;
+        $recognition = $paymentSource?->recognition;
         $lifecycle = collect($this->policyLifecycles->forOwner($owner))
             ->first(fn ($item): bool => data_get($item->campaign, 'reference') === $campaign->reference);
         $driverId = (string) data_get($run, 'envelope_driver_id');
@@ -83,9 +88,11 @@ final readonly class LeadCampaignLifecycleScenarioRunReadModel
             $this->step(11, 'Collection recorded', $collectionRecorded ? 'passed' : ($attemptSettled ? 'running' : 'not_started'), $collectionRecorded
                 ? 'Exactly one voucher collection is linked to the settled payment attempt.'
                 : 'No collection record is linked yet.', $attempt?->verified_at, $collectionRecorded ? ['collection_id' => $attempt->voucher_collection_id] : []),
-            $this->step(12, 'Policy lifecycle projected', $lifecycle ? 'passed' : 'not_started', $lifecycle
+            $this->step(12, 'Campaign lifecycle projected', $lifecycle ? 'passed' : ($recognition ? 'running' : 'not_started'), $lifecycle
                 ? 'Coverage, envelope, completion Pay Code, and policy lifecycle facts are available in the owner-scoped projection.'
-                : 'The settlement-payment recognition bridge has not produced a policy lifecycle for this campaign run.', $lifecycle?->updatedAt, $lifecycle ? ['stage' => $lifecycle->stage] : []),
+                : ($recognition
+                    ? 'The settlement payment is recognized. Provisional coverage and completion issuance remain a separate controlled gate.'
+                    : 'The settlement-payment recognition bridge has not produced a campaign lifecycle for this run.'), $lifecycle?->updatedAt ?? $recognition?->recognized_at, $lifecycle ? ['stage' => $lifecycle->stage] : ($recognition ? ['recognition_reference' => $recognition->reference] : [])),
         ];
 
         $terminalFailure = collect($steps)->contains(fn (array $step): bool => $step['status'] === 'failed');
@@ -107,7 +114,7 @@ final readonly class LeadCampaignLifecycleScenarioRunReadModel
                 'driver_authority' => 'demonstration_only',
             ],
             'steps' => $steps,
-            'artifacts' => $this->artifacts($campaign, $template, $voucher, $claim, $attempt, $lifecycle),
+            'artifacts' => $this->artifacts($campaign, $template, $voucher, $claim, $attempt, $recognition, $lifecycle),
         ];
     }
 
@@ -139,7 +146,7 @@ final readonly class LeadCampaignLifecycleScenarioRunReadModel
     }
 
     /** @return list<array<string, mixed>> */
-    private function artifacts(LeadCampaign $campaign, mixed $template, ?Voucher $voucher, ?VoucherClaim $claim, ?PaymentAttempt $attempt, mixed $lifecycle): array
+    private function artifacts(LeadCampaign $campaign, mixed $template, ?Voucher $voucher, ?VoucherClaim $claim, ?PaymentAttempt $attempt, mixed $recognition, mixed $lifecycle): array
     {
         $artifacts = [
             ['group' => 'Campaign', 'label' => 'Scenario run', 'reference' => data_get($campaign->settings, 'scenario_run.reference'), 'href' => null, 'evidence' => 'application_persisted'],
@@ -156,6 +163,10 @@ final readonly class LeadCampaignLifecycleScenarioRunReadModel
 
         if ($attempt instanceof PaymentAttempt) {
             $artifacts[] = ['group' => 'Payment', 'label' => 'Payment attempt', 'reference' => $attempt->reference, 'href' => null, 'evidence' => $attempt->status?->value === 'settled' ? 'provider_observed' : 'application_persisted'];
+        }
+
+        if ($recognition !== null) {
+            $artifacts[] = ['group' => 'Campaign', 'label' => 'Payment recognition', 'reference' => $recognition->reference, 'href' => null, 'evidence' => 'provider_observed'];
         }
 
         if ($lifecycle !== null) {

@@ -18,11 +18,15 @@ use LogicException;
 
 class SettleVerifiedPaymentAttempt
 {
+    public function __construct(
+        private readonly RecognizeSettlementVoucherCollection $recognizeCampaignPayment,
+    ) {}
+
     public function handle(
         PaymentAttempt $attempt,
         PaymentVerificationTrigger $trigger,
     ): PaymentAttempt {
-        return DB::transaction(function () use ($attempt, $trigger): PaymentAttempt {
+        $settled = DB::transaction(function () use ($attempt, $trigger): PaymentAttempt {
             $locked = PaymentAttempt::query()->lockForUpdate()->findOrFail($attempt->getKey());
 
             if ($locked->status === PaymentAttemptStatus::Settled) {
@@ -112,6 +116,16 @@ class SettleVerifiedPaymentAttempt
 
             return $locked->refresh()->load(['events', 'voucher']);
         }, 5);
+
+        if (is_string(data_get(
+            $settled->voucher->metadata,
+            'instructions.metadata.custom.lead_campaign.campaign_reference',
+        ))) {
+            $collection = VoucherCollection::query()->findOrFail($settled->voucher_collection_id);
+            $this->recognizeCampaignPayment->handle($collection);
+        }
+
+        return $settled;
     }
 
     private function observation(PaymentAttempt $attempt): ProviderFundingObservation

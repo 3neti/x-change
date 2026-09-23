@@ -36,10 +36,10 @@ final readonly class RequestCampaignPolicyCompletion
         }
 
         $prepared = $this->prepare->handle($projection);
-        $projection->loadMissing('issuance.coverage.binding.standingFundingAddress');
-        $address = $projection->issuance->coverage->binding->standingFundingAddress;
-        if (! in_array($address->owner_type, [$requester->getMorphClass(), $requester::class], true)
-            || (string) $address->owner_id !== (string) $requester->getKey()) {
+        $projection->loadMissing(['issuance.coverage.recognition.binding.standingFundingAddress', 'issuance.coverage.recognition.source.campaign.owner']);
+        $owner = $projection->issuance->coverage->recognition->ownerRecord();
+        if (! in_array($owner->getMorphClass(), [$requester->getMorphClass(), $requester::class], true)
+            || (string) $owner->getKey() !== (string) $requester->getKey()) {
             throw new AuthorizationException('Only the campaign owner may request policy completion.');
         }
 

@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
+use LBHurtado\XCampaign\Models\EndpointCampaign;
 
 final class CampaignPaymentRecognition extends Model
 {
@@ -18,6 +20,7 @@ final class CampaignPaymentRecognition extends Model
         'reference',
         'recognition_key',
         'campaign_payment_qr_binding_id',
+        'campaign_payment_source_id',
         'canonical_provider_funding_observation_id',
         'campaign_revision_id',
         'provider_code',
@@ -84,6 +87,11 @@ final class CampaignPaymentRecognition extends Model
         return $this->belongsTo(CampaignPaymentQrBinding::class, 'campaign_payment_qr_binding_id');
     }
 
+    public function source(): BelongsTo
+    {
+        return $this->belongsTo(CampaignPaymentSource::class, 'campaign_payment_source_id');
+    }
+
     public function canonicalObservation(): BelongsTo
     {
         return $this->belongsTo(
@@ -95,5 +103,32 @@ final class CampaignPaymentRecognition extends Model
     public function provisionalCoverage(): HasOne
     {
         return $this->hasOne(ProvisionalCoverage::class, 'campaign_payment_recognition_id');
+    }
+
+    public function campaignRecord(): EndpointCampaign
+    {
+        $this->loadMissing(['binding.campaign', 'source.campaign']);
+
+        return $this->binding?->campaign
+            ?? $this->source?->campaign
+            ?? throw new \LogicException('Campaign payment recognition has no campaign source.');
+    }
+
+    public function ownerRecord(): EloquentModel
+    {
+        $owner = $this->campaignRecord()->owner;
+
+        return $owner instanceof EloquentModel
+            ? $owner
+            : throw new \LogicException('Campaign payment recognition has no persisted owner.');
+    }
+
+    public function sourceReference(): string
+    {
+        $this->loadMissing(['binding', 'source']);
+
+        return (string) ($this->binding?->reference
+            ?? $this->source?->reference
+            ?? throw new \LogicException('Campaign payment recognition has no source reference.'));
     }
 }

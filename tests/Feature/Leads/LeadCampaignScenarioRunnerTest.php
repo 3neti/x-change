@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Enums\VoucherInputField;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Actions\Payment\RecognizeSettlementVoucherCollection;
 use LBHurtado\XChange\Actions\Payment\VerifyPaymentAttempt;
 use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
 use LBHurtado\XChange\Data\DebitData;
@@ -15,6 +17,8 @@ use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
+use LBHurtado\XChange\Models\CampaignPaymentRecognition;
+use LBHurtado\XChange\Models\CampaignPaymentSource;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Models\PaymentAttempt;
@@ -238,7 +242,20 @@ it('preserves the AUI settlement target from the endpoint template and offers sa
 
     expect($settled->status)->toBe(PaymentAttemptStatus::Settled)
         ->and($replay->voucher_collection_id)->toBe($settled->voucher_collection_id)
-        ->and(VoucherCollection::where('voucher_id', $voucher->id)->count())->toBe(1);
+        ->and(VoucherCollection::where('voucher_id', $voucher->id)->count())->toBe(1)
+        ->and(CampaignPaymentSource::query()->count())->toBe(1)
+        ->and(CampaignPaymentRecognition::query()->count())->toBe(1);
+
+    $collection = VoucherCollection::query()->whereKey($settled->voucher_collection_id)->sole();
+    $recognition = CampaignPaymentRecognition::query()->sole();
+    $recognitionReplay = app(RecognizeSettlementVoucherCollection::class)->handle($collection);
+
+    expect($recognitionReplay->is($recognition))->toBeTrue()
+        ->and($recognition->campaign_payment_qr_binding_id)->toBeNull()
+        ->and($recognition->source?->voucher_collection_id)->toBe($collection->getKey())
+        ->and($recognition->source?->payment_attempt_id)->toBe($attempt->getKey())
+        ->and(VoucherCollection::query()->count())->toBe(1)
+        ->and(CampaignPaymentRecognition::query()->count())->toBe(1);
 
     $this->get(route('x-change.pay.show', ['code' => $voucher->code, 'attempt' => $attempt->reference]))
         ->assertOk()
@@ -259,10 +276,19 @@ it('preserves the AUI settlement target from the endpoint template and offers sa
         ->assertJsonPath('props.run.steps.8.status', 'passed')
         ->assertJsonPath('props.run.steps.9.status', 'passed')
         ->assertJsonPath('props.run.steps.10.status', 'passed')
-        ->assertJsonPath('props.run.steps.11.status', 'not_started')
+        ->assertJsonPath('props.run.steps.11.status', 'running')
+        ->assertJsonPath('props.run.steps.11.facts.recognition_reference', $recognition->reference)
         ->assertJsonPath('props.run.artifacts.4.reference', $voucher->code)
         ->assertJsonMissingPath('props.run.private_applicant')
         ->assertJsonMissingPath('props.run.otp');
+
+    DB::table($collection->getTable())
+        ->where('id', $collection->getKey())
+        ->update(['collected_amount_minor' => $collection->collected_amount_minor + 1]);
+
+    expect(fn () => app(RecognizeSettlementVoucherCollection::class)->handle($collection->fresh()))
+        ->toThrow(InvalidArgumentException::class, 'does not match')
+        ->and(CampaignPaymentRecognition::query()->count())->toBe(1);
 });
 
 it('continues the feedback browser scenario through public endpoint generation into claim', function (): void {

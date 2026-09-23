@@ -103,6 +103,11 @@ final class ProvisionalCoverage extends Model
         );
     }
 
+    public function paymentSource(): ?CampaignPaymentSource
+    {
+        return $this->recognition?->source;
+    }
+
     public function envelope(): BelongsTo
     {
         return $this->belongsTo(Envelope::class);

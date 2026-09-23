@@ -524,10 +524,16 @@ collection completed the policy lifecycle.
 
 ## Immediate Next Move
 
-Gate 9b should define the provider-neutral bridge from an already verified
-settlement Pay Code collection into campaign payment recognition. It must reuse
-the canonical provider observation, remain idempotent, reject cross-campaign or
-amount mismatches, and add no second credit. Only after that bridge exists may
-the browser runner continue automatically into provisional coverage and the
-completion Pay Code. Live provider payment and insurer transport remain
-separately authorized gates.
+Gate 9b implements the provider-neutral bridge from an already verified
+settlement Pay Code collection into campaign payment recognition. It reuses the
+canonical provider observation, remains idempotent, rejects cross-campaign or
+amount mismatches, and adds no second credit.
+
+The bridge persists an immutable `CampaignPaymentSource` for the collection and
+one `CampaignPaymentRecognition`. It does not fabricate a reusable standing-QR
+binding for the per-Pay-Code QR Ph. The browser ledger now exposes the safe
+recognition reference and stops at an explicit controlled boundary.
+
+Automatic provisional coverage, settlement-envelope creation, and completion
+Pay Code issuance remain the next separately authorized gate. Live provider
+payment and insurer transport also remain separately authorized gates.

@@ -1,6 +1,6 @@
 # Campaign QR Ph Compass
 
-Last updated: 2026-09-23
+Last updated: 2026-09-24
 
 ## North Star
 
@@ -10,6 +10,13 @@ coverage, creates a first-class settlement envelope containing that coverage
 snapshot from inception, and issues one zero-value completion Pay Code.
 
 ## Current Position
+
+Gate 9b recognition bridge is implemented locally. A provider-verified
+settlement Pay Code collection can now become an idempotent campaign payment
+recognition through an explicit immutable payment source. This path performs no
+second collection, wallet credit, Treasury posting, or provider call. The
+lifecycle runner exposes the recognition and intentionally pauses before
+provisional coverage and completion Pay Code issuance.
 
 Current gate: **Gate 4 complete — qualifying payment recognition operational**
 
