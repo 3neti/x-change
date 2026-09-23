@@ -11,9 +11,10 @@ snapshot from inception, and issues one zero-value completion Pay Code.
 
 ## Current Position
 
-Current gate: **Gate 3 complete — ready for Gate 4 recognition boundary**
+Current gate: **Gate 4a complete — evidence quarantine operational**
 
-Current state: **Campaign payment QR configuration is immutable**
+Current state: **Adverse, unknown, and incompatible payment evidence is
+durably quarantined without financial recognition**
 
 Prior checkpoint: **Reusable multi-payment characterization complete**
 
@@ -97,6 +98,16 @@ artifact. Provider, currency, amount mode, availability, and permitted-payment
 rules are hashed into an immutable configuration. Identical retries converge;
 conflicting or stale bindings fail closed.
 
+The first Gate 4 boundary is now implemented. Payment-purpose synchronization
+looks up the immutable campaign QR binding and evaluates all immutable versions
+of a provider transaction through the canonical reducer. Adverse, unknown, and
+incompatible evidence converges on an immutable, replay-safe quarantine.
+Campaign rows expose only a redacted aggregate `Needs attention` indicator.
+Compatible evidence remains observation-only. Tests prove the quarantine path
+does not create or mutate coverage, settlement envelopes, Pay Codes, Account
+Funding receipts, Client Funds, wallet transactions, funding settlements, or
+Treasury operations.
+
 Redacted evidence: [Gate 1 live characterization report](reports/001-netbank-live-characterization.md).
 
 ## Settled Decisions
@@ -123,6 +134,16 @@ Protected by `StandingFundingAddressProtocolTest`:
 - no Account Funding receipt is created;
 - no Client Funds balance changes;
 - no Treasury inventory operation is created.
+- adverse bound-campaign observations create one durable attention record;
+- the synchronization result remains unapplied and no financial credit occurs.
+
+Protected by `BindCampaignPaymentQrTest` and the Cockpit frontend suite:
+
+- adverse, unknown, and incompatible evidence is classified and replay-safe;
+- quarantine records are immutable;
+- compatible settled evidence does not create attention;
+- Cockpit exposes an aggregate attention count without raw provider evidence;
+- all measured financial and issuance side-effect counts remain unchanged.
 
 Protected by `CampaignQrPhPlanTest`:
 
@@ -153,10 +174,11 @@ Stop before business recognition if any of these remain ambiguous:
 
 ## Next Controlled Gate
 
-Gate 4a: persist an operator-visible quarantine/attention record when canonical
-provider evidence is incompatible, adverse, or unknown. Prove it has zero
-coverage, envelope, Pay Code, Client Funds, or Treasury side effects. Only
-then implement qualifying-payment recognition against the immutable Gate 3
-binding.
+Gate 4b: introduce exactly-once qualifying-payment recognition against the
+immutable Gate 3 binding. Recognition must consume canonical compatible
+evidence, reject any quarantined transaction, snapshot the binding/rule
+decision, and emit DTO-backed events only after commit. It must still create no
+coverage, settlement envelope, completion Pay Code, Client Funds, wallet, or
+Treasury side effects; those remain later gates.
 
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).

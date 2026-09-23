@@ -113,6 +113,36 @@ const endpointCampaign = {
 };
 
 describe('Cockpit campaign worksheets', () => {
+    it('surfaces aggregate payment evidence attention without exposing provider evidence', async () => {
+        const campaignNeedingAttention = {
+            ...endpointCampaign,
+            payment_attention: {
+                count: 2,
+                status: 'needs_attention',
+                label: 'Needs attention',
+                latest_reason: 'incompatible_evidence',
+                latest_opened_at: '2026-09-23T01:00:00Z',
+            },
+        };
+        const wrapper = mount(Campaigns, {
+            props: {
+                worksheets: [],
+                endpoint_campaigns: [campaignNeedingAttention],
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="campaign-flavor-endpoints"]')
+            .trigger('click');
+
+        const attention = wrapper.get(
+            '[data-testid="campaign-payment-evidence-attention"]',
+        );
+        expect(attention.text()).toBe('Needs attention · 2');
+        expect(wrapper.text()).not.toContain('provider_transaction');
+        wrapper.unmount();
+    });
+
     it('keeps identical campaign titles distinguishable and shares the selected endpoint', async () => {
         const second = {
             ...endpointCampaign,

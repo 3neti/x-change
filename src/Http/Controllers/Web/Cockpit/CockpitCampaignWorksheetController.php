@@ -36,6 +36,7 @@ use LBHurtado\XChange\Models\CampaignDisplaySession;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\Cockpit\CampaignPaymentEvidenceAttentionReadModel;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegistry;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityRequirementResolver;
 use Throwable;
@@ -51,6 +52,7 @@ class CockpitCampaignWorksheetController extends Controller
         private readonly ClaimUrlQrRendererContract $claimUrlQrRenderer,
         private readonly EndpointCampaignRepository $endpoints,
         private readonly EndpointCampaignSummary $endpointSummary,
+        private readonly CampaignPaymentEvidenceAttentionReadModel $paymentEvidenceAttention,
     ) {}
 
     public function index(Request $request): Response
@@ -286,10 +288,11 @@ class CockpitCampaignWorksheetController extends Controller
         )
             ->load('payCodeTemplate');
         $progress = $this->endpointProgressFor($campaigns);
+        $attention = $this->paymentEvidenceAttention->forCampaigns($campaigns);
         $creator = $this->endpointCreatorFor($owner);
 
         return $campaigns
-            ->map(function (LeadCampaign $campaign) use ($creator, $progress): array {
+            ->map(function (LeadCampaign $campaign) use ($attention, $creator, $progress): array {
                 $publicUrl = route('x-change.leads.start', [
                     'merchant_slug' => $campaign->merchant_slug,
                     'endpoint_slug' => $campaign->endpoint_slug,
@@ -302,6 +305,7 @@ class CockpitCampaignWorksheetController extends Controller
                     'creator' => $creator,
                     'availability_state' => $this->endpointAvailabilityFor($campaign),
                     'progress' => $progress[$campaign->getKey()] ?? $this->emptyEndpointProgress($campaign),
+                    'payment_attention' => $attention[$campaign->getKey()] ?? null,
                     'actions' => [
                         'template_update_url' => route('x-change.cockpit.campaigns.endpoints.template.update', $campaign->reference),
                         'pause_url' => route('x-change.cockpit.campaigns.endpoints.pause', $campaign->reference),

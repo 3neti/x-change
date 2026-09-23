@@ -10,6 +10,7 @@ use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
 use LBHurtado\EmiCore\Data\Funding\StandingFundingObservationRequestData;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
+use LBHurtado\XChange\Actions\Payment\InspectCampaignPaymentEvidence;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Data\Funding\StandingFundingAddressBindingData;
 use LBHurtado\XChange\Data\Funding\StandingFundingAddressSyncData;
@@ -19,6 +20,7 @@ use LBHurtado\XChange\Enums\FundingRecognitionMode;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Exceptions\StandingFundingAddressBindingTimeUnavailable;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
+use LBHurtado\XChange\Models\CampaignPaymentQrBinding;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressBindingResolver;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressProviderRegistry;
@@ -39,6 +41,7 @@ final class SyncStandingFundingAddress
         private readonly OpenFundingSuspenseCase $openSuspense,
         private readonly AuditLoggerContract $audit,
         private readonly StandingFundingAddressBindingResolver $bindings,
+        private readonly InspectCampaignPaymentEvidence $inspectCampaignPaymentEvidence,
     ) {}
 
     public function handle(
@@ -117,14 +120,21 @@ final class SyncStandingFundingAddress
             }
 
             if ($classified->purpose !== FundingAddressPurpose::AccountFunding) {
+                $campaignBinding = CampaignPaymentQrBinding::query()
+                    ->where('standing_funding_address_id', $classified->getKey())
+                    ->first();
+                $quarantine = $campaignBinding instanceof CampaignPaymentQrBinding
+                    ? $this->inspectCampaignPaymentEvidence->handle($campaignBinding, $observation)
+                    : null;
                 $this->audit->log('funding.standing_address.observation_classified', [
                     'standing_funding_address_reference' => $classified->reference,
                     'provider_observation_id' => $observation->getKey(),
                     'provider' => $classified->provider_code,
                     'purpose' => $classified->purpose->value,
                     'balance_changed' => false,
+                    'quarantined' => $quarantine !== null,
                 ]);
-                $counts['observed']++;
+                $counts[$quarantine === null ? 'observed' : 'suspense']++;
 
                 continue;
             }

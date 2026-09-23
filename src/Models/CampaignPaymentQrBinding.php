@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use LBHurtado\XCampaign\Models\EndpointCampaign;
 use LBHurtado\XChange\Enums\CampaignEntryMode;
@@ -74,6 +75,14 @@ final class CampaignPaymentQrBinding extends Model
         return $this->belongsTo(
             StandingFundingQrArtifact::class,
             'standing_funding_qr_artifact_id',
+        );
+    }
+
+    public function evidenceQuarantines(): HasMany
+    {
+        return $this->hasMany(
+            CampaignPaymentEvidenceQuarantine::class,
+            'campaign_payment_qr_binding_id',
         );
     }
 }

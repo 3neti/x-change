@@ -2,20 +2,29 @@
 
 declare(strict_types=1);
 
+use Bavix\Wallet\Models\Transaction;
 use Carbon\CarbonImmutable;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
+use LBHurtado\EmiCore\Models\ProviderFundingObservation;
+use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\XChange\Actions\Campaigns\BindCampaignPaymentQr;
 use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
+use LBHurtado\XChange\Actions\Payment\InspectCampaignPaymentEvidence;
 use LBHurtado\XChange\Enums\CampaignEntryMode;
 use LBHurtado\XChange\Enums\CampaignPaymentAmountMode;
 use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
+use LBHurtado\XChange\Models\AccountFundingReceipt;
+use LBHurtado\XChange\Models\CampaignPaymentEvidenceQuarantine;
 use LBHurtado\XChange\Models\CampaignPaymentQrBinding;
+use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Models\StandingFundingQrArtifact;
+use LBHurtado\XChange\Services\Cockpit\CampaignPaymentEvidenceAttentionReadModel;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('immutably binds one reusable payment QR to one campaign revision', function (): void {
@@ -121,6 +130,73 @@ it('requires an active payment-purpose static QR and coherent amount availabilit
     ))->toThrow(ValidationException::class, 'payment-purpose QR');
 });
 
+it('quarantines adverse and incompatible campaign payment evidence without financial effects', function (): void {
+    $owner = campaignPaymentQrOwner();
+    $campaign = campaignPaymentQrCampaign($owner, CampaignEntryMode::ReusablePaymentQr);
+    [$address, $artifact] = campaignPaymentQrAddress($owner);
+    $binding = app(BindCampaignPaymentQr::class)->handle(
+        owner: $owner,
+        campaign: $campaign,
+        address: $address,
+        artifact: $artifact,
+        amountMode: CampaignPaymentAmountMode::Open,
+    );
+    $before = campaignPaymentFinancialCounts();
+
+    $returned = campaignPaymentObservation($address, 'transaction-returned', 'returned');
+    $first = app(InspectCampaignPaymentEvidence::class)->handle($binding, $returned);
+    $replayed = app(InspectCampaignPaymentEvidence::class)->handle($binding, $returned);
+    $settled = campaignPaymentObservation($address, 'transaction-conflict', 'settled');
+    campaignPaymentObservation($address, 'transaction-conflict', 'returned');
+    $incompatible = app(InspectCampaignPaymentEvidence::class)->handle($binding, $settled);
+
+    expect($first)->not->toBeNull()
+        ->and($first?->reason_code)->toBe('adverse_status')
+        ->and($first?->reason_detail)->toBe('returned')
+        ->and($replayed?->is($first))->toBeTrue()
+        ->and($incompatible?->reason_code)->toBe('incompatible_evidence')
+        ->and($incompatible?->reason_detail)->toBe('status_transition:settled:returned')
+        ->and(CampaignPaymentEvidenceQuarantine::query()->count())->toBe(2)
+        ->and(campaignPaymentFinancialCounts())->toBe($before);
+
+    expect(fn () => $first?->forceFill(['reason_code' => 'changed'])->save())
+        ->toThrow(LogicException::class, 'immutable');
+    expect(fn () => $first?->delete())
+        ->toThrow(LogicException::class, 'cannot be deleted');
+});
+
+it('keeps compatible evidence clear and exposes only aggregate campaign attention', function (): void {
+    $owner = campaignPaymentQrOwner();
+    $campaign = campaignPaymentQrCampaign($owner, CampaignEntryMode::ReusablePaymentQr);
+    [$address, $artifact] = campaignPaymentQrAddress($owner);
+    $binding = app(BindCampaignPaymentQr::class)->handle(
+        owner: $owner,
+        campaign: $campaign,
+        address: $address,
+        artifact: $artifact,
+        amountMode: CampaignPaymentAmountMode::Open,
+    );
+
+    $settled = campaignPaymentObservation($address, 'transaction-settled', 'settled');
+    $unknown = campaignPaymentObservation($address, 'transaction-unknown', 'mystery');
+
+    expect(app(InspectCampaignPaymentEvidence::class)->handle($binding, $settled))->toBeNull();
+    app(InspectCampaignPaymentEvidence::class)->handle($binding, $unknown);
+
+    $attention = app(CampaignPaymentEvidenceAttentionReadModel::class)
+        ->forCampaigns(LeadCampaign::query()->whereKey($campaign->getKey())->get());
+    $row = $attention[$campaign->getKey()];
+
+    expect($row)->toMatchArray([
+        'count' => 1,
+        'status' => 'needs_attention',
+        'label' => 'Needs attention',
+        'latest_reason' => 'unknown_status',
+    ])
+        ->and(json_encode($row))->not->toContain('transaction-unknown')
+        ->and(json_encode($row))->not->toContain('provider_transaction');
+});
+
 function campaignPaymentQrOwner(): User
 {
     $owner = actingAsTestUser();
@@ -193,4 +269,49 @@ function campaignPaymentQrAddress(
     ]);
 
     return [$address, $artifact];
+}
+
+function campaignPaymentObservation(
+    StandingFundingAddress $address,
+    string $transactionId,
+    string $status,
+): ProviderFundingObservation {
+    return ProviderFundingObservation::query()->create([
+        'observation_key' => hash('sha256', $transactionId.'-'.$status),
+        'provider_code' => 'netbank',
+        'provider_transaction_id' => $transactionId,
+        'provider_operation_id' => 'operation-'.$transactionId,
+        'funding_address' => 'sha256:'.$address->funding_address_hash,
+        'provider_account_reference' => 'sha256:'.hash('sha256', 'campaign-provider-account'),
+        'gross_amount_minor' => 12_200,
+        'fee_amount_minor' => 0,
+        'net_amount_minor' => 12_200,
+        'currency' => 'PHP',
+        'provider_status' => $status,
+        'occurred_at' => CarbonImmutable::parse('2026-09-23T01:00:00Z'),
+        'settled_at' => $status === 'settled'
+            ? CarbonImmutable::parse('2026-09-23T01:01:00Z')
+            : null,
+        'verification_source' => 'campaign-payment-test',
+        'payload_hash' => hash('sha256', $transactionId.'-'.$status.'-payload'),
+        'metadata' => [
+            'destination_verified' => true,
+            'settlement_rail' => 'INSTAPAY',
+            'normalization_version' => 'test-v1',
+        ],
+    ]);
+}
+
+/**
+ * @return array{account_funding_receipts: int, funding_settlements: int, vouchers: int, wallet_transactions: int, treasury_operations: int}
+ */
+function campaignPaymentFinancialCounts(): array
+{
+    return [
+        'account_funding_receipts' => AccountFundingReceipt::query()->count(),
+        'funding_settlements' => FundingSettlement::query()->count(),
+        'vouchers' => Voucher::query()->count(),
+        'wallet_transactions' => Transaction::query()->count(),
+        'treasury_operations' => TreasuryInventoryOperation::query()->count(),
+    ];
 }

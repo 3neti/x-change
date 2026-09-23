@@ -18,6 +18,7 @@ use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
+use LBHurtado\XChange\Actions\Campaigns\BindCampaignPaymentQr;
 use LBHurtado\XChange\Actions\Funding\ActivateStandingFundingAddressBindingMigration;
 use LBHurtado\XChange\Actions\Funding\ApproveStandingFundingAddressBindingMigration;
 use LBHurtado\XChange\Actions\Funding\InspectStandingFundingAddressBindingMigration;
@@ -26,16 +27,21 @@ use LBHurtado\XChange\Actions\Funding\ProvisionStandingFundingAddress;
 use LBHurtado\XChange\Actions\Funding\RepairStandingFundingAddressBindingEffectiveAt;
 use LBHurtado\XChange\Actions\Funding\RequestStandingFundingAddressBindingMigration;
 use LBHurtado\XChange\Actions\Funding\SyncStandingFundingAddress;
+use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
 use LBHurtado\XChange\Contracts\AppendableEventStoreContract;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Enums\AccountFundingReceiptStatus;
+use LBHurtado\XChange\Enums\CampaignEntryMode;
+use LBHurtado\XChange\Enums\CampaignPaymentAmountMode;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
 use LBHurtado\XChange\Enums\StandingFundingAddressBindingMigrationStatus;
 use LBHurtado\XChange\Enums\TreasuryOperatorCapability;
 use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
+use LBHurtado\XChange\Models\CampaignPaymentEvidenceQuarantine;
 use LBHurtado\XChange\Models\FundingSuspenseCase;
+use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Models\StandingFundingAddressBindingEffectiveTimeCorrection;
 use LBHurtado\XChange\Models\StandingFundingAddressBindingHead;
@@ -791,6 +797,67 @@ it('classifies payment-purpose observations without crediting the Account', func
         ->and($observation->provider_status)->toBe('settled')
         ->and(AccountFundingReceipt::query()->count())->toBe(0)
         ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(0);
+});
+
+it('routes adverse campaign payment observations to durable attention without crediting', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    $address = provisionStandingAddress(
+        $user,
+        'campaign:payment-attention',
+        FundingAddressPurpose::Payment,
+        FundingRecognitionMode::ObserveOnly,
+    );
+    $template = PayCodeTemplate::query()->create([
+        'owner_type' => $user->getMorphClass(),
+        'owner_id' => (string) $user->getKey(),
+        'name' => 'Payment attention template',
+        'base_template_key' => 'blank-pay-code',
+        'instructions_ciphertext' => [
+            'cash' => ['amount' => 0, 'currency' => 'PHP'],
+            'count' => 1,
+            'prefix' => 'PAY',
+            'mask' => '****',
+        ],
+        'include_amount' => true,
+        'include_purpose' => true,
+        'status' => 'active',
+    ]);
+    $campaign = app(CreateLeadCampaign::class)->handle($user, $template, [
+        'title' => 'Payment attention campaign',
+        'settings' => ['entry_mode' => CampaignEntryMode::ReusablePaymentQr->value],
+    ]);
+    app(BindCampaignPaymentQr::class)->handle(
+        owner: $user,
+        campaign: $campaign,
+        address: $address,
+        artifact: $address->qrArtifacts()->sole(),
+        amountMode: CampaignPaymentAmountMode::Open,
+    );
+    $provider->observations = [
+        standingFundingObservation(
+            $provider->fundingAddress,
+            providerStatus: 'returned',
+            metadata: [
+                'destination_verified' => true,
+                'address_purpose' => FundingAddressPurpose::Payment->value,
+            ],
+        ),
+    ];
+
+    $result = app(SyncStandingFundingAddress::class)->handle($address);
+
+    expect($result->suspense)->toBe(1)
+        ->and($result->settled)->toBe(0)
+        ->and($result->applied)->toBe(0)
+        ->and(CampaignPaymentEvidenceQuarantine::query()->sole()->reason_code)
+        ->toBe('adverse_status')
+        ->and(AccountFundingReceipt::query()->count())->toBe(0)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(Transaction::query()->count())->toBe(0)
         ->and(TreasuryInventoryOperation::query()->count())->toBe(0);
 });
 

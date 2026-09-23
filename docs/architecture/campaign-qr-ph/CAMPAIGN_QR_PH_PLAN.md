@@ -219,6 +219,24 @@ Status: **Complete; operator UI deferred**
 
 ### Gate 4 — Payment recognition service
 
+Status: **Gate 4a complete; qualifying-payment recognition pending**
+
+#### Gate 4a — Evidence quarantine and operator attention
+
+- Payment-purpose synchronization inspects immutable observations associated
+  with an immutable campaign payment-QR binding.
+- Compatible `pending`, `processing`, and `settled` evidence remains
+  observation-only.
+- Adverse, unknown, or canonically incompatible evidence creates an immutable,
+  replay-safe quarantine record and a redacted audit event.
+- Cockpit campaign rows expose only an aggregate `Needs attention` status and
+  count; raw provider transaction and payer evidence remains private.
+- Regression coverage proves this path creates no coverage, settlement
+  envelope, Pay Code, Account Funding receipt, Client Funds movement, wallet
+  transaction, funding settlement, or Treasury operation.
+
+#### Gate 4b — Qualifying-payment recognition
+
 Status: **Pending**
 
 - Consume immutable provider observations.
@@ -264,8 +282,8 @@ Status: **Pending**
 
 ## Immediate Next Move
 
-Gate 3's explicit entry mode and immutable revision/address/QR binding are now
-implemented. Begin Gate 4 only with the durable, operator-visible quarantine
-path for incompatible provider evidence, then add qualifying-payment
-recognition behind that boundary. No coverage, envelope, completion Pay Code,
-issuance, or messaging may occur before the quarantine behavior is proven.
+Gate 4a's durable evidence quarantine is implemented and operator-visible.
+The next controlled move is Gate 4b: define and persist exactly-once
+qualifying-payment recognition against the immutable Gate 3 binding. It must
+reuse canonical evidence, reject quarantined transactions, and remain free of
+coverage, envelope, completion Pay Code, issuance, or messaging side effects.

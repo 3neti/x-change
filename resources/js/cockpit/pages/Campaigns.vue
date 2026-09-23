@@ -113,6 +113,13 @@ type EndpointCampaign = {
         in_progress: number;
         source: string;
     };
+    payment_attention?: {
+        count: number;
+        status: 'needs_attention';
+        label: string;
+        latest_reason: string | null;
+        latest_opened_at: string | null;
+    } | null;
     actions?: {
         template_update_url: string;
         pause_url: string;
@@ -1444,6 +1451,14 @@ const updatedRelativeTime = (value: string | null): string =>
                                     data-testid="campaign-endpoint-progress"
                                 >
                                     {{ campaignProgress(campaign) }}
+                                </p>
+                                <p
+                                    v-if="campaign.payment_attention"
+                                    class="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900 dark:bg-amber-950 dark:text-amber-200"
+                                    data-testid="campaign-payment-evidence-attention"
+                                >
+                                    {{ campaign.payment_attention.label }} ·
+                                    {{ campaign.payment_attention.count }}
                                 </p>
                                 <p
                                     v-if="campaign.starts_limit"
