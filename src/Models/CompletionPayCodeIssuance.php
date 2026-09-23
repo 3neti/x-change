@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use LBHurtado\SettlementEnvelope\Models\Envelope;
 use LBHurtado\Voucher\Models\Voucher;
@@ -45,5 +46,10 @@ final class CompletionPayCodeIssuance extends Model
     public function voucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class);
+    }
+
+    public function evidenceProjection(): HasOne
+    {
+        return $this->hasOne(CompletionClaimEvidenceProjection::class);
     }
 }

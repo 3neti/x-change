@@ -8,6 +8,7 @@ use BadMethodCallException;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
 use LBHurtado\EmiPaynamicsConstellation\Exceptions\PendingConstellationOtpException;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Actions\Settlement\ProjectCompletionClaimEvidence;
 use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
 use LBHurtado\XChange\Contracts\ClaimApprovalInitiationContract;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
@@ -59,6 +60,7 @@ class SubmitPayCodeClaim
         protected ?NamedVoucherSliceService $namedSlices = null,
         protected ?ClaimPreviewExecutionGuard $previewExecutionGuard = null,
         protected ?VoucherSliceExecutionCoordinator $sliceExecutions = null,
+        protected ?ProjectCompletionClaimEvidence $completionClaimEvidenceProjector = null,
     ) {}
 
     /**
@@ -164,6 +166,7 @@ class SubmitPayCodeClaim
         }
 
         $claim = $this->recordVoucherClaim->handle($voucher, $normalized, $payload);
+        $this->completionClaimEvidenceProjector?->handle($claim);
 
         if ($sliceReservation !== null) {
             $this->sliceExecutions()->succeed($sliceReservation->execution, $claim);

@@ -214,9 +214,24 @@ redemption while an explicit execution-only policy suppresses external payout.
 Tests prove there is no Account Funding, Treasury, funding settlement, or
 non-zero wallet movement.
 
-The next controlled gate is Gate 6b: append the completed claim evidence to the
-same envelope through a new immutable payload version. Do not add the AUI
-adapter, policy issuance, insurer messages, or product-specific interpretation
-to that projection gate.
+Gate 6b is complete. A finalized completion claim now creates one immutable
+evidence projection and one new envelope payload version. The public payload is
+a redacted manifest containing requirement keys, evidence kinds/statuses,
+opaque references, hashes, and timestamps; raw answers, mobile numbers, names,
+and private artifact paths are excluded. The private correlation snapshot is
+encrypted. Exact replay converges without another envelope version or event,
+changed evidence fails closed, and forced projection failure rolls back the
+envelope version and audit record. The projection emits one redacted
+after-commit event and creates no financial movement.
+
+Known package-boundary debt: settlement-envelope's generic `PayloadUpdated`
+event is dispatched inside its update transaction. Gate 6b deliberately adds
+no listener or external side effect to it. Any package-wide after-commit change
+must be handled independently with settlement-envelope regression coverage.
+
+The next controlled gate is Gate 7a: implement the reserved AUI driver adapter
+contract against the generic coverage, envelope, payment, and completion facts.
+Do not issue a policy, send insurer messages, or perform an irreversible
+external call in that first adapter-boundary slice.
 
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).

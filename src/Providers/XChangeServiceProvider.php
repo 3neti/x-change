@@ -63,6 +63,8 @@ use LBHurtado\XChange\Actions\Auth\CreateNewMobileFirstUser;
 use LBHurtado\XChange\Actions\Auth\ResetMobileFirstPin;
 use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
 use LBHurtado\XChange\Actions\Leads\StartLeadCampaign;
+use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
+use LBHurtado\XChange\Actions\Settlement\ProjectCompletionClaimEvidence;
 use LBHurtado\XChange\Console\Commands\AdoptCommissioningManifestCommand;
 use LBHurtado\XChange\Console\Commands\AdoptHostCommand;
 use LBHurtado\XChange\Console\Commands\AdoptXChangeCommand;
@@ -535,6 +537,10 @@ class XChangeServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->when(SubmitPayCodeClaim::class)
+            ->needs(ProjectCompletionClaimEvidence::class)
+            ->give(ProjectCompletionClaimEvidence::class);
+
         $this->app->when([
             CockpitCampaignEndpointController::class,
             CockpitCampaignWorksheetController::class,

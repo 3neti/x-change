@@ -305,7 +305,7 @@ introduced.
 
 ### Gate 6 — Completion Pay Code
 
-Status: **6a contract implemented; evidence projection pending**
+Status: **Complete**
 
 - Issue one zero-denominated Pay Code from the envelope through an immutable,
   one-to-one issuance record.
@@ -325,9 +325,23 @@ external payout. It creates no Client Funds, Treasury, funding-settlement, or
 non-zero wallet movement. The generic contract contains no AUI fields or policy
 semantics.
 
-Gate 6b will project the already captured claim evidence into a new immutable
-envelope payload version. Until then, successful redemption proves the generic
-completion journey but does not complete an insurer or other product workflow.
+Gate 6b projects finalized claim evidence into a new immutable envelope payload
+version only after normal claim completion. The public envelope receives a
+redacted manifest of requirement keys, evidence kinds and statuses, opaque
+references, hashes, and timestamps. Raw values, PII, and private artifact paths
+remain outside the envelope; the projection keeps only an encrypted private
+source snapshot for durable correlation.
+
+The issuance, claim, envelope, and new payload version are locked together.
+Exact replay returns the original projection, changed evidence fails closed,
+and a projection persistence failure rolls back the envelope version and audit
+row. A redacted after-commit event is emitted without creating financial side
+effects. Product interpretation and insurer fulfillment remain outside Gate 6.
+
+The settlement-envelope package currently emits its generic `PayloadUpdated`
+event from inside its transaction. Gate 6b attaches no listeners or external
+side effects to that event; changing that package-level timing is tracked as a
+separate durability improvement rather than widening this gate.
 
 ### Gate 7 — AUI policy completion
 
@@ -350,8 +364,9 @@ Status: **Pending**
 
 ## Immediate Next Move
 
-Gate 6a's generic zero-denominated completion Pay Code contract is implemented.
-The next controlled move is Gate 6b: project durable claim evidence into the
-existing settlement envelope as a new immutable payload version. Keep the
-reserved AUI adapter, policy issuance, insurer messaging, and product-specific
-interpretation outside that evidence-projection slice.
+Gate 6 is complete: the generic zero-denominated completion Pay Code now records
+its finalized, redacted evidence manifest as an immutable envelope version with
+idempotent replay and atomic rollback. The next controlled move is Gate 7a:
+define and implement the reserved AUI adapter boundary against these generic
+facts. Keep policy issuance, insurer messaging, and irreversible external side
+effects outside the first adapter-contract slice.

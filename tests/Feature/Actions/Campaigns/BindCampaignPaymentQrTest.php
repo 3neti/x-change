@@ -10,6 +10,7 @@ use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\SettlementEnvelope\Models\Envelope;
+use LBHurtado\SettlementEnvelope\Models\EnvelopeAuditLog;
 use LBHurtado\SettlementEnvelope\Models\EnvelopePayloadVersion;
 use LBHurtado\SettlementEnvelope\Services\DriverService;
 use LBHurtado\SettlementEnvelope\Services\EnvelopeService;
@@ -19,10 +20,12 @@ use LBHurtado\XChange\Actions\Campaigns\BindCampaignPaymentQr;
 use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
 use LBHurtado\XChange\Actions\Payment\InspectCampaignPaymentEvidence;
 use LBHurtado\XChange\Actions\Payment\RecognizeQualifyingCampaignPayment;
+use LBHurtado\XChange\Actions\Redemption\PrepareVoucherClaimEvidence;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Actions\Settlement\BindProvisionalCoverage;
 use LBHurtado\XChange\Actions\Settlement\IssueCompletionPayCode;
 use LBHurtado\XChange\Actions\Settlement\OrchestrateProvisionalCoverage;
+use LBHurtado\XChange\Actions\Settlement\ProjectCompletionClaimEvidence;
 use LBHurtado\XChange\Data\Settlement\CampaignCoverageDecisionData;
 use LBHurtado\XChange\Data\Settlement\CompletionPayCodeInstructionsData;
 use LBHurtado\XChange\Data\Settlement\ProvisionalCoverageTermsData;
@@ -31,6 +34,7 @@ use LBHurtado\XChange\Enums\CampaignPaymentAmountMode;
 use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
 use LBHurtado\XChange\Events\CampaignPaymentRecognized;
+use LBHurtado\XChange\Events\CompletionClaimEvidenceProjected;
 use LBHurtado\XChange\Events\CompletionPayCodeIssued;
 use LBHurtado\XChange\Events\ProvisionalCoverageBound;
 use LBHurtado\XChange\Exceptions\CampaignCoverageDriverUnavailable;
@@ -38,6 +42,7 @@ use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\CampaignPaymentEvidenceQuarantine;
 use LBHurtado\XChange\Models\CampaignPaymentQrBinding;
 use LBHurtado\XChange\Models\CampaignPaymentRecognition;
+use LBHurtado\XChange\Models\CompletionClaimEvidenceProjection;
 use LBHurtado\XChange\Models\CompletionPayCodeIssuance;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\LeadCampaign;
@@ -590,19 +595,77 @@ it('claims a completion Pay Code through its non-financial execution driver', fu
     );
     $before = campaignPaymentFinancialCounts();
     $walletValueBefore = (int) Transaction::query()->sum('amount');
+    Event::fake([CompletionClaimEvidenceProjected::class]);
 
     $result = app(SubmitPayCodeClaim::class)->handle($issued->voucher, [
         'mobile' => '09173011987',
         'inputs' => ['name' => 'Completion Applicant', 'mobile' => '09173011987'],
     ]);
+    $claim = $issued->voucher->claims()->sole();
+    $projectionReplay = app(ProjectCompletionClaimEvidence::class)->handle($claim);
+    $envelope = $bound->envelope->refresh();
+    $publicPayload = json_encode($envelope->payload, JSON_THROW_ON_ERROR);
 
     expect($result->claimed)->toBeTrue()
         ->and($result->status)->toBe('redeemed')
         ->and($issued->voucher->refresh()->redeemed_at)->not->toBeNull()
+        ->and(CompletionClaimEvidenceProjection::query()->count())->toBe(1)
+        ->and($projectionReplay?->created)->toBeFalse()
+        ->and($envelope->payload_version)->toBe(2)
+        ->and(EnvelopePayloadVersion::query()->where('envelope_id', $envelope->getKey())->count())->toBe(2)
+        ->and(data_get($envelope->payload, 'applicant.evidence.schema'))
+        ->toBe('x-change.completion-claim-evidence-manifest.v1')
+        ->and(data_get($envelope->payload, 'applicant.evidence.items.*.key'))
+        ->toBe(['mobile', 'name'])
+        ->and($publicPayload)->not->toContain('Completion Applicant')
+        ->and($publicPayload)->not->toContain('09173011987')
+        ->and($publicPayload)->not->toContain('artifact_path')
         ->and(AccountFundingReceipt::query()->count())->toBe($before['account_funding_receipts'])
         ->and(FundingSettlement::query()->count())->toBe($before['funding_settlements'])
         ->and(TreasuryInventoryOperation::query()->count())->toBe($before['treasury_operations'])
         ->and((int) Transaction::query()->sum('amount'))->toBe($walletValueBefore);
+
+    Event::assertDispatchedTimes(CompletionClaimEvidenceProjected::class, 1);
+    Event::assertDispatched(CompletionClaimEvidenceProjected::class, function (CompletionClaimEvidenceProjected $event): bool {
+        $payload = json_encode($event->payload, JSON_THROW_ON_ERROR);
+
+        return ! str_contains($payload, 'Completion Applicant')
+            && ! str_contains($payload, '09173011987')
+            && ! str_contains($payload, 'voucher_claim_id');
+    });
+
+    $claim->evidence()->where('requirement_key', 'name')->sole()->forceFill(['status' => 'verified'])->save();
+    expect(fn () => app(ProjectCompletionClaimEvidence::class)->handle($claim->fresh('evidence')))
+        ->toThrow(InvalidArgumentException::class, 'does not match')
+        ->and($envelope->refresh()->payload_version)->toBe(2);
+});
+
+it('rolls back the envelope version when completion evidence projection persistence fails', function (): void {
+    configureCampaignCoverageTestDriver();
+    [$recognition, $binding] = recognizedCampaignPayment();
+    $bound = app(BindProvisionalCoverage::class)->handle($recognition, campaignCoverageTerms($recognition));
+    $issued = app(IssueCompletionPayCode::class)->handle(
+        $bound->coverage,
+        $binding->standingFundingAddress->owner,
+        new CompletionPayCodeInstructionsData(['name']),
+    );
+    $claim = app(PrepareVoucherClaimEvidence::class)->handle($issued->voucher, [
+        'inputs' => ['name' => 'Private Applicant'],
+    ]);
+    $meta = (array) $claim?->meta;
+    data_set($meta, 'evidence.execution_status', 'finalized');
+    $claim?->forceFill(['status' => 'redeemed', 'completed_at' => now(), 'meta' => $meta])->save();
+    $auditCount = EnvelopeAuditLog::query()->where('envelope_id', $bound->envelope->getKey())->count();
+    Event::listen('eloquent.creating: '.CompletionClaimEvidenceProjection::class, function (): never {
+        throw new RuntimeException('forced evidence projection failure');
+    });
+
+    expect(fn () => app(ProjectCompletionClaimEvidence::class)->handle($claim->fresh('evidence')))
+        ->toThrow(RuntimeException::class, 'forced evidence projection failure')
+        ->and(CompletionClaimEvidenceProjection::query()->count())->toBe(0)
+        ->and($bound->envelope->refresh()->payload_version)->toBe(1)
+        ->and(EnvelopePayloadVersion::query()->where('envelope_id', $bound->envelope->getKey())->count())->toBe(1)
+        ->and(EnvelopeAuditLog::query()->where('envelope_id', $bound->envelope->getKey())->count())->toBe($auditCount);
 });
 
 it('rolls back the completion voucher when immutable link persistence fails', function (): void {
