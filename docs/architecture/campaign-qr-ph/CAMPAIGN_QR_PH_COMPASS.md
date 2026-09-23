@@ -341,4 +341,16 @@ stops honestly after voucher collection until Gate 9b provides a canonical,
 idempotent settlement-collection-to-campaign-recognition bridge. No simulated
 provider settlement or financial mutation was added in Gate 9a.
 
+Gate 9d is complete. The scenario continues through the ordinary claim pipeline
+for the zero-value completion Pay Code. A successful claim creates one immutable
+evidence projection, one additional envelope payload version, and the lifecycle
+stage `claim_evidence_ready`. Replay is idempotent, while applicant names, mobile
+numbers, and private artifact paths stay outside the public envelope and runner
+projection.
+
+The run deliberately remains active at a `waiting_for_person` governance
+checkpoint. Maker/checker request and approval form the next controlled gate.
+Provider transport and policy delivery remain blocked until an authoritative
+insurer contract is accepted. No financial or provider side effect was added.
+
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).

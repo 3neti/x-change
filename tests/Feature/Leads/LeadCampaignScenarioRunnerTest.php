@@ -5,12 +5,15 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\SettlementEnvelope\Models\Envelope;
+use LBHurtado\SettlementEnvelope\Models\EnvelopePayloadVersion;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Enums\VoucherInputField;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Actions\Payment\RecognizeSettlementVoucherCollection;
 use LBHurtado\XChange\Actions\Payment\VerifyPaymentAttempt;
+use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
+use LBHurtado\XChange\Actions\Settlement\ProjectCompletionClaimEvidence;
 use LBHurtado\XChange\Data\DebitData;
 use LBHurtado\XChange\Data\IssuerData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
@@ -20,6 +23,7 @@ use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Models\CampaignPaymentRecognition;
 use LBHurtado\XChange\Models\CampaignPaymentSource;
+use LBHurtado\XChange\Models\CompletionClaimEvidenceProjection;
 use LBHurtado\XChange\Models\CompletionPayCodeIssuance;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
@@ -285,7 +289,45 @@ it('preserves the AUI settlement target from the endpoint template and offers sa
         ->assertJsonPath('props.run.steps.10.status', 'passed')
         ->assertJsonPath('props.run.steps.11.status', 'passed')
         ->assertJsonPath('props.run.steps.11.facts.stage', 'awaiting_completion_claim')
+        ->assertJsonPath('props.run.steps.12.status', 'waiting_for_person')
+        ->assertJsonPath('props.run.steps.12.facts.pay_code', CompletionPayCodeIssuance::query()->sole()->voucher->code)
         ->assertJsonPath('props.run.artifacts.4.reference', $voucher->code)
+        ->assertJsonMissingPath('props.run.private_applicant')
+        ->assertJsonMissingPath('props.run.otp');
+
+    $completion = CompletionPayCodeIssuance::query()->with(['voucher', 'envelope'])->sole();
+    $claimResult = app(SubmitPayCodeClaim::class)->handle($completion->voucher, [
+        'mobile' => '09175180722',
+        'inputs' => [
+            'name' => 'Apple Hurtado',
+            'mobile' => '09175180722',
+        ],
+    ]);
+    $completionClaim = $completion->voucher->claims()->sole();
+    $projectionReplay = app(ProjectCompletionClaimEvidence::class)->handle($completionClaim);
+    $publicEnvelope = json_encode($completion->envelope->refresh()->payload, JSON_THROW_ON_ERROR);
+
+    expect($claimResult->claimed)->toBeTrue()
+        ->and($claimResult->status)->toBe('redeemed')
+        ->and($completion->voucher->refresh()->redeemed_at)->not->toBeNull()
+        ->and(CompletionClaimEvidenceProjection::query()->count())->toBe(1)
+        ->and($projectionReplay?->created)->toBeFalse()
+        ->and($completion->envelope->refresh()->payload_version)->toBe(2)
+        ->and(EnvelopePayloadVersion::query()->where('envelope_id', $completion->envelope_id)->count())->toBe(2)
+        ->and($publicEnvelope)->not->toContain('Apple Hurtado')
+        ->and($publicEnvelope)->not->toContain('09175180722')
+        ->and($publicEnvelope)->not->toContain('artifact_path')
+        ->and(VoucherCollection::query()->count())->toBe(1);
+
+    $this->actingAs($operator)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.lead-scenario-runner.runs.show', [
+            'campaign' => $campaign->reference,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('props.run.steps.12.status', 'passed')
+        ->assertJsonPath('props.run.steps.13.status', 'waiting_for_person')
+        ->assertJsonPath('props.run.steps.13.facts.stage', 'claim_evidence_ready')
         ->assertJsonMissingPath('props.run.private_applicant')
         ->assertJsonMissingPath('props.run.otp');
 

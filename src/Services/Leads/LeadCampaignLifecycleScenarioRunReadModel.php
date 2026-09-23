@@ -93,6 +93,17 @@ final readonly class LeadCampaignLifecycleScenarioRunReadModel
                 : ($recognition
                     ? 'The settlement payment is recognized. Provisional coverage and completion issuance remain a separate controlled gate.'
                     : 'The settlement-payment recognition bridge has not produced a campaign lifecycle for this run.'), $lifecycle?->updatedAt ?? $recognition?->recognized_at, $lifecycle ? ['stage' => $lifecycle->stage] : ($recognition ? ['recognition_reference' => $recognition->reference] : [])),
+            $this->step(13, 'Completion Pay Code claimed', data_get($lifecycle?->completion, 'claim_completed_at')
+                ? 'passed'
+                : (data_get($lifecycle?->completion, 'pay_code') ? 'waiting_for_person' : 'not_started'), data_get($lifecycle?->completion, 'claim_completed_at')
+                ? 'The applicant completed the zero-value Pay Code and a redacted evidence manifest was projected into the settlement envelope.'
+                : (data_get($lifecycle?->completion, 'pay_code')
+                    ? 'Open the completion Pay Code and submit the remaining applicant requirements.'
+                    : 'No completion Pay Code is available yet.'), data_get($lifecycle?->completion, 'claim_completed_at'), array_filter([
+                        'pay_code' => data_get($lifecycle?->completion, 'pay_code'),
+                        'projection_reference' => data_get($lifecycle?->completion, 'projection_reference'),
+                    ])),
+            $this->step(14, 'Policy completion governance', $this->policyGovernanceStatus($lifecycle?->stage), $this->policyGovernanceDescription($lifecycle?->stage), $lifecycle?->updatedAt, $lifecycle ? ['stage' => $lifecycle->stage] : []),
         ];
 
         $terminalFailure = collect($steps)->contains(fn (array $step): bool => $step['status'] === 'failed');
@@ -185,5 +196,28 @@ final readonly class LeadCampaignLifecycleScenarioRunReadModel
     private function latestTimestamp(array $steps): ?string
     {
         return collect($steps)->pluck('occurred_at')->filter()->sort()->last();
+    }
+
+    private function policyGovernanceStatus(?string $stage): string
+    {
+        return match ($stage) {
+            'claim_evidence_ready' => 'waiting_for_person',
+            'policy_awaiting_approval', 'policy_authorized' => 'running',
+            'policy_succeeded', 'policy_failed', 'policy_indeterminate' => 'passed',
+            default => 'not_started',
+        };
+    }
+
+    private function policyGovernanceDescription(?string $stage): string
+    {
+        return match ($stage) {
+            'claim_evidence_ready' => 'Claim evidence is ready. Maker/checker authorization remains a separate controlled gate.',
+            'policy_awaiting_approval' => 'A policy completion request is awaiting checker approval.',
+            'policy_authorized' => 'The policy completion request is authorized; provider transport remains separately controlled.',
+            'policy_succeeded' => 'The separately authorized policy completion recorded a successful outcome.',
+            'policy_failed' => 'The separately authorized policy completion recorded a failed outcome.',
+            'policy_indeterminate' => 'The separately authorized policy completion requires reconciliation.',
+            default => 'Policy completion governance has not started.',
+        };
     }
 }

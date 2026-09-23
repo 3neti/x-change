@@ -494,7 +494,7 @@ retry, dispatch, provider, transport, or financial behavior.
 
 ### Gate 9 — Browser lifecycle scenario narrative
 
-Status: **Complete through Gate 9a durable run projection**
+Status: **Complete through Gate 9d completion-claim acceptance**
 
 Gate 9a turns the existing AUI browser scenario into a resumable operational
 narrative. Creating the scenario persists a versioned run identity inside the
@@ -544,3 +544,15 @@ The browser ledger exposes the safe coverage and completion Pay Code references
 and reports `awaiting_completion_claim`. The applicant's completion claim and
 all live insurer transport remain separately controlled gates. The driver and
 terms remain explicitly demonstration-only; no policy issuance is implied.
+
+Gate 9d exercises that completion Pay Code through the ordinary claim pipeline.
+The ledger marks the completion checkpoint passed only after redemption and an
+immutable evidence projection exist, then advances to `claim_evidence_ready`.
+Exact projection replay is idempotent, the envelope receives only one additional
+payload version, and its public payload excludes applicant names, mobile numbers,
+and private artifact paths.
+
+The next policy-governance checkpoint remains `waiting_for_person`. The next
+controlled gate is maker/checker policy-completion request and approval. Insurer
+transport remains blocked on an accepted contract disposition; Gate 9d adds no
+provider or financial side effect.
