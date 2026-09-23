@@ -118,6 +118,7 @@ use LBHurtado\XChange\Console\Commands\Funding\SyncStandingFundingAddressesComma
 use LBHurtado\XChange\Console\Commands\Funding\VerifyFundingRequestBackingCommand;
 use LBHurtado\XChange\Console\Commands\Funding\VerifyOpenFundingIntentsCommand;
 use LBHurtado\XChange\Console\Commands\GenerateDeploymentManifestCommand;
+use LBHurtado\XChange\Console\Commands\GeneratePolicyCompletionTransportDispositionTemplateCommand;
 use LBHurtado\XChange\Console\Commands\InspectXChangeConfigurationCommand;
 use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Keepsake\ExportInstanceKeepsakeCommand;
@@ -168,6 +169,7 @@ use LBHurtado\XChange\Console\Commands\Treasury\ReleaseExpiredPayCodeReservesCom
 use LBHurtado\XChange\Console\Commands\Treasury\RepairMissingDisbursementPostingsCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\SimulateTreasuryProviderDepositCommand;
 use LBHurtado\XChange\Console\Commands\ValidateDeploymentManifestCommand;
+use LBHurtado\XChange\Console\Commands\ValidatePolicyCompletionTransportDispositionCommand;
 use LBHurtado\XChange\Console\Commands\Wallet\GetWalletBalanceCommand;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\AccountProvisioningContract;
@@ -1685,6 +1687,8 @@ class XChangeServiceProvider extends ServiceProvider
                 DeployXChangeCommand::class,
                 GenerateDeploymentManifestCommand::class,
                 ValidateDeploymentManifestCommand::class,
+                GeneratePolicyCompletionTransportDispositionTemplateCommand::class,
+                ValidatePolicyCompletionTransportDispositionCommand::class,
                 InspectXChangeConfigurationCommand::class,
                 DoctorXChangeCommand::class,
                 CommissioningStatusCommand::class,
@@ -2290,6 +2294,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->publishes([
             $this->packagePath('config/x-change.php') => config_path('x-change.php'),
         ], 'x-change-config');
+
+        $this->publishes([
+            $this->packagePath('resources/policy-completion-transports/disposition.template.yaml') => base_path('policy-completion-transport.yaml'),
+        ], 'x-change-policy-completion-transport');
 
         $this->publishes([
             $this->packagePath('config/form-flow-drivers/voucher-redemption.yaml') => config_path('form-flow-drivers/voucher-redemption.yaml'),

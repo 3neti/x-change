@@ -345,7 +345,7 @@ separate durability improvement rather than widening this gate.
 
 ### Gate 7 — AUI policy completion
 
-Status: **Complete through Gate 7d contract-intake boundary; authoritative AUI disposition pending**
+Status: **Complete through Gate 7e offline intake tooling; authoritative AUI disposition pending**
 
 - Implement the reserved AUI driver as a versioned adapter.
 - Hand completed applicant and settlement-envelope facts to the insurer
@@ -426,6 +426,22 @@ package still ships no AUI disposition, endpoint, schema, credential, send
 method, queue job, or HTTP adapter. This gate provides the intake mechanism;
 it does not claim that AUI's contract has been received or accepted.
 
+Gate 7e adds offline operator tooling around that boundary. The package ships a
+disabled, unaccepted, secret-free YAML template and two local-only commands:
+
+```text
+x-change:policy-completion-transport:template
+x-change:policy-completion-transport:validate
+```
+
+Template generation requires an exact driver and version, refuses overwrite,
+and never writes credential values. Validation accepts local YAML files only,
+uses the Gate 7d typed validator, and returns only the exact identity and
+deterministic fingerprint. Parse and validation failures are redacted;
+endpoint, schema references, acceptance actors, credential references, and
+values never appear in output. These commands do not resolve credentials,
+activate config, call HTTP, dispatch work, or mutate domain or financial state.
+
 ### Gate 8 — Operator experience and lifecycle acceptance
 
 Status: **Pending**
@@ -438,8 +454,8 @@ Status: **Pending**
 
 ## Immediate Next Move
 
-Gate 7d is complete as a fail-closed contract-intake mechanism. The next
-controlled move requires an external artifact: obtain AUI's authoritative
+Gate 7e is complete as a fail-closed offline intake toolchain. The next
+controlled move still requires an external artifact: obtain AUI's authoritative
 endpoint, authentication, schemas, provider idempotency, timeout/retry
 expectations, ambiguous-outcome handling, reconciliation protocol, and formal
 acceptance provenance. Only after that real manifest passes the catalog and

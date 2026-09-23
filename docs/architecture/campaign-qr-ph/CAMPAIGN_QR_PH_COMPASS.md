@@ -275,4 +275,16 @@ No authoritative AUI disposition is included. The next gate therefore depends
 on AUI supplying its real contract and an authorized architecture acceptance.
 Only then can the package add a provider adapter and governed dispatch path.
 
+Gate 7e is complete. Operators can now generate a disabled, unaccepted,
+secret-free local YAML template and validate a completed local disposition
+through redacted Artisan output. The generator refuses overwrite; the
+validator refuses URLs and returns only driver identity plus the stable
+fingerprint. Neither command resolves credentials, activates transport, calls
+HTTP, queues work, or mutates persistence. The package-owned reference template
+is available under `resources/policy-completion-transports` and may be
+published with the `x-change-policy-completion-transport` tag.
+
+The external blocker is unchanged: AUI must supply and formally accept the real
+contract artifact before any adapter or dispatch implementation begins.
+
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).
