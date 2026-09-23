@@ -534,6 +534,13 @@ one `CampaignPaymentRecognition`. It does not fabricate a reusable standing-QR
 binding for the per-Pay-Code QR Ph. The browser ledger now exposes the safe
 recognition reference and stops at an explicit controlled boundary.
 
-Automatic provisional coverage, settlement-envelope creation, and completion
-Pay Code issuance remain the next separately authorized gate. Live provider
-payment and insurer transport also remain separately authorized gates.
+Gate 9c now advances an exact AUI demonstration recognition through the
+package-owned coverage driver into one immutable provisional coverage record,
+one settlement envelope, and one zero-value completion Pay Code. Replay
+converges on the same artifacts. This creates no additional collection, wallet
+credit, Treasury posting, or provider call.
+
+The browser ledger exposes the safe coverage and completion Pay Code references
+and reports `awaiting_completion_claim`. The applicant's completion claim and
+all live insurer transport remain separately controlled gates. The driver and
+terms remain explicitly demonstration-only; no policy issuance is implied.

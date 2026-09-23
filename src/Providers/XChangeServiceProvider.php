@@ -496,6 +496,7 @@ use LBHurtado\XChange\Services\ProvisioningAwareOnboardingService;
 use LBHurtado\XChange\Services\Publication\CorePublicationContributor;
 use LBHurtado\XChange\Services\Publication\PublicationCatalog;
 use LBHurtado\XChange\Services\ReconciliationLifecycleService;
+use LBHurtado\XChange\Services\Settlement\AuiPersonalAccidentCampaignCoverageDriver;
 use LBHurtado\XChange\Services\Settlement\AuiPersonalAccidentPolicyCompletionDriver;
 use LBHurtado\XChange\Services\Settlement\CampaignCoverageDriverRegistry;
 use LBHurtado\XChange\Services\Settlement\CampaignPolicyCompletionDriverRegistry;
@@ -749,6 +750,11 @@ class XChangeServiceProvider extends ServiceProvider
             fn ($app) => new StandingFundingAddressProviderRegistry(
                 $app->tagged('emi.standing-funding-address-providers'),
             ),
+        );
+        $this->app->singleton(AuiPersonalAccidentCampaignCoverageDriver::class);
+        $this->app->tag(
+            AuiPersonalAccidentCampaignCoverageDriver::class,
+            'x-change.campaign-coverage-drivers',
         );
         $campaignCoverageDrivers = config(
             'x-change.settlement.campaign_coverage_drivers',

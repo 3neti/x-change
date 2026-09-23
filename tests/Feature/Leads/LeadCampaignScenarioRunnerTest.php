@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
+use LBHurtado\SettlementEnvelope\Models\Envelope;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Enums\VoucherInputField;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
@@ -19,9 +20,11 @@ use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Models\CampaignPaymentRecognition;
 use LBHurtado\XChange\Models\CampaignPaymentSource;
+use LBHurtado\XChange\Models\CompletionPayCodeIssuance;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Models\PaymentAttempt;
+use LBHurtado\XChange\Models\ProvisionalCoverage;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
@@ -255,7 +258,11 @@ it('preserves the AUI settlement target from the endpoint template and offers sa
         ->and($recognition->source?->voucher_collection_id)->toBe($collection->getKey())
         ->and($recognition->source?->payment_attempt_id)->toBe($attempt->getKey())
         ->and(VoucherCollection::query()->count())->toBe(1)
-        ->and(CampaignPaymentRecognition::query()->count())->toBe(1);
+        ->and(CampaignPaymentRecognition::query()->count())->toBe(1)
+        ->and(ProvisionalCoverage::query()->count())->toBe(1)
+        ->and(Envelope::query()->count())->toBe(1)
+        ->and(CompletionPayCodeIssuance::query()->count())->toBe(1)
+        ->and((float) data_get(CompletionPayCodeIssuance::query()->sole()->voucher->instructions, 'cash.amount'))->toBe(0.0);
 
     $this->get(route('x-change.pay.show', ['code' => $voucher->code, 'attempt' => $attempt->reference]))
         ->assertOk()
@@ -276,8 +283,8 @@ it('preserves the AUI settlement target from the endpoint template and offers sa
         ->assertJsonPath('props.run.steps.8.status', 'passed')
         ->assertJsonPath('props.run.steps.9.status', 'passed')
         ->assertJsonPath('props.run.steps.10.status', 'passed')
-        ->assertJsonPath('props.run.steps.11.status', 'running')
-        ->assertJsonPath('props.run.steps.11.facts.recognition_reference', $recognition->reference)
+        ->assertJsonPath('props.run.steps.11.status', 'passed')
+        ->assertJsonPath('props.run.steps.11.facts.stage', 'awaiting_completion_claim')
         ->assertJsonPath('props.run.artifacts.4.reference', $voucher->code)
         ->assertJsonMissingPath('props.run.private_applicant')
         ->assertJsonMissingPath('props.run.otp');

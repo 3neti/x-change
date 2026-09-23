@@ -171,6 +171,11 @@ final readonly class LeadCampaignLifecycleScenarioRunReadModel
 
         if ($lifecycle !== null) {
             $artifacts[] = ['group' => 'Policy', 'label' => 'Policy lifecycle', 'reference' => data_get($lifecycle->completion, 'projection_reference', $campaign->reference), 'href' => route('x-change.cockpit.campaigns.policy-lifecycle.index'), 'evidence' => 'derived_projection'];
+            $artifacts[] = ['group' => 'Coverage', 'label' => 'Provisional coverage', 'reference' => data_get($lifecycle->coverage, 'reference'), 'href' => route('x-change.cockpit.campaigns.policy-lifecycle.index'), 'evidence' => 'application_persisted'];
+            $completionCode = data_get($lifecycle->completion, 'pay_code');
+            if (is_string($completionCode) && $completionCode !== '') {
+                $artifacts[] = ['group' => 'Pay Code', 'label' => 'Completion Pay Code', 'reference' => $completionCode, 'href' => route('x-change.cockpit.pay-codes.show', $completionCode), 'evidence' => 'application_persisted'];
+            }
         }
 
         return $artifacts;

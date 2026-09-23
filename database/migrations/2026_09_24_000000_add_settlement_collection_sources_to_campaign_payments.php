@@ -56,6 +56,19 @@ return new class extends Migration
         $sourceRecognitionIds = DB::table('x_change_campaign_payment_recognitions')
             ->whereNotNull('campaign_payment_source_id')
             ->pluck('id');
+        $sourceCoverageIds = DB::table('x_change_provisional_coverages')
+            ->whereIn('campaign_payment_recognition_id', $sourceRecognitionIds)
+            ->pluck('id');
+        $sourceIssuanceIds = DB::table('x_change_completion_pay_code_issuances')
+            ->whereIn('provisional_coverage_id', $sourceCoverageIds)->pluck('id');
+        $sourceProjectionIds = DB::table('x_change_completion_claim_evidence_projections')
+            ->whereIn('completion_pay_code_issuance_id', $sourceIssuanceIds)->pluck('id');
+        $sourceRequestIds = DB::table('x_change_policy_completion_requests')
+            ->whereIn('completion_claim_evidence_projection_id', $sourceProjectionIds)->pluck('id');
+        DB::table('x_change_policy_completion_outcomes')->whereIn('policy_completion_request_id', $sourceRequestIds)->delete();
+        DB::table('x_change_policy_completion_requests')->whereIn('id', $sourceRequestIds)->delete();
+        DB::table('x_change_completion_claim_evidence_projections')->whereIn('id', $sourceProjectionIds)->delete();
+        DB::table('x_change_completion_pay_code_issuances')->whereIn('id', $sourceIssuanceIds)->delete();
         DB::table('x_change_provisional_coverages')
             ->whereIn('campaign_payment_recognition_id', $sourceRecognitionIds)
             ->delete();

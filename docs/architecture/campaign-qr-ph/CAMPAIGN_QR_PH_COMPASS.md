@@ -18,6 +18,12 @@ second collection, wallet credit, Treasury posting, or provider call. The
 lifecycle runner exposes the recognition and intentionally pauses before
 provisional coverage and completion Pay Code issuance.
 
+Gate 9c is now implemented locally. Exact AUI demonstration runs advance from
+the recognition into immutable provisional coverage, a versioned settlement
+envelope, and one zero-value completion Pay Code. The operational checkpoint is
+`awaiting_completion_claim`; neither a claimed completion nor a live insurer
+submission is inferred.
+
 Current gate: **Gate 4 complete — qualifying payment recognition operational**
 
 Current state: **Compatible qualifying payments are recognized exactly once;

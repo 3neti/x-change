@@ -10,6 +10,7 @@ use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Data\ExecutionInstructionData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\Services\ExecutionEngine;
+use LBHurtado\XChange\Actions\Settlement\AdvanceSettlementCampaignLifecycle;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Models\PaymentAttempt;
@@ -20,6 +21,7 @@ class SettleVerifiedPaymentAttempt
 {
     public function __construct(
         private readonly RecognizeSettlementVoucherCollection $recognizeCampaignPayment,
+        private readonly AdvanceSettlementCampaignLifecycle $advanceCampaignLifecycle,
     ) {}
 
     public function handle(
@@ -122,7 +124,8 @@ class SettleVerifiedPaymentAttempt
             'instructions.metadata.custom.lead_campaign.campaign_reference',
         ))) {
             $collection = VoucherCollection::query()->findOrFail($settled->voucher_collection_id);
-            $this->recognizeCampaignPayment->handle($collection);
+            $recognition = $this->recognizeCampaignPayment->handle($collection);
+            $this->advanceCampaignLifecycle->handle($recognition);
         }
 
         return $settled;
