@@ -323,6 +323,7 @@ abstract class TestCase extends Orchestra
             '2025_01_01_000008_create_webhook_receipts_table.php',
             '2026_07_23_085518_create_provider_funding_observations_table.php',
             '2026_07_23_085520_harden_emi_webhook_receipts_for_funding_evidence.php',
+            '2026_09_23_000001_add_payer_identity_to_provider_funding_observations.php',
         ] as $migration) {
             $this->runMigrationFile($path.'/'.$migration);
         }

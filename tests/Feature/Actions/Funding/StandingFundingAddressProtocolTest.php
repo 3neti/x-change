@@ -780,9 +780,15 @@ it('classifies payment-purpose observations without crediting the Account', func
         standingFundingObservation($provider->fundingAddress),
     ];
 
-    $result = app(SyncStandingFundingAddress::class)->handle($address);
+    $first = app(SyncStandingFundingAddress::class)->handle($address);
+    $second = app(SyncStandingFundingAddress::class)->handle($address->refresh());
+    $observation = ProviderFundingObservation::query()->sole();
 
-    expect($result->observed)->toBe(1)
+    expect($first->observed)->toBe(1)
+        ->and($second->observed)->toBe(1)
+        ->and(ProviderFundingObservation::query()->count())->toBe(1)
+        ->and($observation->provider_transaction_id)->toBe('provider-transaction-1')
+        ->and($observation->provider_status)->toBe('settled')
         ->and(AccountFundingReceipt::query()->count())->toBe(0)
         ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
         ->and(TreasuryInventoryOperation::query()->count())->toBe(0);
