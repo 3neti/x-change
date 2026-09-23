@@ -20,6 +20,8 @@ use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
 use LBHurtado\XChange\Actions\Payment\InspectCampaignPaymentEvidence;
 use LBHurtado\XChange\Actions\Payment\RecognizeQualifyingCampaignPayment;
 use LBHurtado\XChange\Actions\Settlement\BindProvisionalCoverage;
+use LBHurtado\XChange\Actions\Settlement\OrchestrateProvisionalCoverage;
+use LBHurtado\XChange\Data\Settlement\CampaignCoverageDecisionData;
 use LBHurtado\XChange\Data\Settlement\ProvisionalCoverageTermsData;
 use LBHurtado\XChange\Enums\CampaignEntryMode;
 use LBHurtado\XChange\Enums\CampaignPaymentAmountMode;
@@ -27,6 +29,7 @@ use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
 use LBHurtado\XChange\Events\CampaignPaymentRecognized;
 use LBHurtado\XChange\Events\ProvisionalCoverageBound;
+use LBHurtado\XChange\Exceptions\CampaignCoverageDriverUnavailable;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\CampaignPaymentEvidenceQuarantine;
 use LBHurtado\XChange\Models\CampaignPaymentQrBinding;
@@ -38,6 +41,8 @@ use LBHurtado\XChange\Models\ProvisionalCoverage;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Models\StandingFundingQrArtifact;
 use LBHurtado\XChange\Services\Cockpit\CampaignPaymentEvidenceAttentionReadModel;
+use LBHurtado\XChange\Services\Settlement\CampaignCoverageDriverRegistry;
+use LBHurtado\XChange\Tests\Fakes\FakeCampaignCoverageDriver;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('immutably binds one reusable payment QR to one campaign revision', function (): void {
@@ -385,6 +390,120 @@ it('rolls back the envelope when provisional coverage persistence fails', functi
         ->and(EnvelopePayloadVersion::query()->count())->toBe(0);
 });
 
+it('uses an explicitly selected driver to orchestrate coverage and converges on replay', function (): void {
+    configureCampaignCoverageTestDriver();
+    [$recognition] = recognizedCampaignPayment();
+    $before = campaignPaymentFinancialCounts();
+    $driver = new FakeCampaignCoverageDriver(
+        id: 'campaign-provisional-coverage',
+        version: '1.0.0',
+        decision: CampaignCoverageDecisionData::eligible(
+            campaignCoverageTerms($recognition),
+            'recognized_payment_qualified',
+        ),
+    );
+    $orchestrate = campaignCoverageOrchestrator($driver);
+
+    $first = $orchestrate->handle(
+        $recognition,
+        'campaign-provisional-coverage',
+        '1.0.0',
+    );
+    $replayed = $orchestrate->handle(
+        $recognition,
+        'campaign-provisional-coverage',
+        '1.0.0',
+    );
+
+    expect($first->decision->eligible)->toBeTrue()
+        ->and($first->decision->reasonCode)->toBe('recognized_payment_qualified')
+        ->and($first->bound())->toBeTrue()
+        ->and($first->binding?->created)->toBeTrue()
+        ->and($replayed->binding?->created)->toBeFalse()
+        ->and($replayed->binding?->coverage->is($first->binding?->coverage))->toBeTrue()
+        ->and($driver->calls)->toBe(2)
+        ->and(ProvisionalCoverage::query()->count())->toBe(1)
+        ->and(Envelope::query()->count())->toBe(1)
+        ->and(campaignPaymentFinancialCounts())->toBe($before);
+});
+
+it('stops an ineligible driver decision before persistence', function (): void {
+    configureCampaignCoverageTestDriver();
+    [$recognition] = recognizedCampaignPayment();
+    $driver = new FakeCampaignCoverageDriver(
+        id: 'campaign-provisional-coverage',
+        version: '1.0.0',
+        decision: CampaignCoverageDecisionData::ineligible('outside_driver_rules'),
+    );
+
+    $result = campaignCoverageOrchestrator($driver)->handle(
+        $recognition,
+        'campaign-provisional-coverage',
+        '1.0.0',
+    );
+
+    expect($result->decision->eligible)->toBeFalse()
+        ->and($result->decision->reasonCode)->toBe('outside_driver_rules')
+        ->and($result->bound())->toBeFalse()
+        ->and($driver->calls)->toBe(1)
+        ->and(ProvisionalCoverage::query()->count())->toBe(0)
+        ->and(Envelope::query()->count())->toBe(0);
+});
+
+it('fails closed for unavailable or identity-mismatched campaign coverage drivers', function (): void {
+    configureCampaignCoverageTestDriver();
+    [$recognition] = recognizedCampaignPayment();
+    $driver = new FakeCampaignCoverageDriver(
+        id: 'campaign-provisional-coverage',
+        version: '1.0.0',
+        decision: CampaignCoverageDecisionData::eligible(
+            new ProvisionalCoverageTermsData(
+                driverId: 'different-driver',
+                driverVersion: '1.0.0',
+                coverageType: 'provisional-service-coverage',
+                currency: 'PHP',
+                effectiveAt: $recognition->settled_at,
+                authorization: [
+                    'authority' => 'campaign-driver',
+                    'authority_reference' => 'test-authorization',
+                ],
+            ),
+        ),
+    );
+    $orchestrate = campaignCoverageOrchestrator($driver);
+
+    expect(fn () => $orchestrate->handle(
+        $recognition,
+        'campaign-provisional-coverage',
+        '2.0.0',
+    ))->toThrow(CampaignCoverageDriverUnavailable::class)
+        ->and(fn () => $orchestrate->handle(
+            $recognition,
+            'campaign-provisional-coverage',
+            '1.0.0',
+        ))->toThrow(InvalidArgumentException::class, 'different driver identity')
+        ->and(ProvisionalCoverage::query()->count())->toBe(0)
+        ->and(Envelope::query()->count())->toBe(0);
+});
+
+it('leaves no coverage facts when a campaign coverage driver fails', function (): void {
+    configureCampaignCoverageTestDriver();
+    [$recognition] = recognizedCampaignPayment();
+    $driver = new FakeCampaignCoverageDriver(
+        id: 'campaign-provisional-coverage',
+        version: '1.0.0',
+        failure: new RuntimeException('driver evaluation failed'),
+    );
+
+    expect(fn () => campaignCoverageOrchestrator($driver)->handle(
+        $recognition,
+        'campaign-provisional-coverage',
+        '1.0.0',
+    ))->toThrow(RuntimeException::class, 'driver evaluation failed')
+        ->and(ProvisionalCoverage::query()->count())->toBe(0)
+        ->and(Envelope::query()->count())->toBe(0);
+});
+
 function campaignPaymentQrOwner(): User
 {
     $owner = actingAsTestUser();
@@ -445,6 +564,15 @@ function campaignCoverageTerms(
             'authority' => 'campaign-driver',
             'authority_reference' => 'test-authorization',
         ],
+    );
+}
+
+function campaignCoverageOrchestrator(
+    FakeCampaignCoverageDriver $driver,
+): OrchestrateProvisionalCoverage {
+    return new OrchestrateProvisionalCoverage(
+        drivers: new CampaignCoverageDriverRegistry([$driver]),
+        bind: app(BindProvisionalCoverage::class),
     );
 }
 

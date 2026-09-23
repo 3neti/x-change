@@ -173,6 +173,7 @@ use LBHurtado\XChange\Contracts\AppendableEventStoreContract;
 use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
 use LBHurtado\XChange\Contracts\CampaignBankTransferDispatcherContract;
 use LBHurtado\XChange\Contracts\CampaignBankTransferStatusCheckerContract;
+use LBHurtado\XChange\Contracts\CampaignCoverageDriverContract;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Contracts\Claim\ClaimSurfaceResolverContract;
 use LBHurtado\XChange\Contracts\Claim\ClaimViewerResolverContract;
@@ -487,6 +488,7 @@ use LBHurtado\XChange\Services\ProvisioningAwareOnboardingService;
 use LBHurtado\XChange\Services\Publication\CorePublicationContributor;
 use LBHurtado\XChange\Services\Publication\PublicationCatalog;
 use LBHurtado\XChange\Services\ReconciliationLifecycleService;
+use LBHurtado\XChange\Services\Settlement\CampaignCoverageDriverRegistry;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\SettlementEnvelopeReadinessService;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
@@ -730,6 +732,34 @@ class XChangeServiceProvider extends ServiceProvider
             StandingFundingAddressProviderRegistry::class,
             fn ($app) => new StandingFundingAddressProviderRegistry(
                 $app->tagged('emi.standing-funding-address-providers'),
+            ),
+        );
+        $campaignCoverageDrivers = config(
+            'x-change.settlement.campaign_coverage_drivers',
+            [],
+        );
+
+        if (! is_array($campaignCoverageDrivers)) {
+            throw new InvalidArgumentException(
+                'Campaign coverage driver configuration must be an array.',
+            );
+        }
+
+        foreach ($campaignCoverageDrivers as $campaignCoverageDriver) {
+            if (! is_string($campaignCoverageDriver)
+                || ! is_a($campaignCoverageDriver, CampaignCoverageDriverContract::class, true)) {
+                throw new InvalidArgumentException(
+                    'Campaign coverage drivers must implement '.CampaignCoverageDriverContract::class.'.',
+                );
+            }
+
+            $this->app->singleton($campaignCoverageDriver);
+            $this->app->tag($campaignCoverageDriver, 'x-change.campaign-coverage-drivers');
+        }
+        $this->app->singleton(
+            CampaignCoverageDriverRegistry::class,
+            fn ($app): CampaignCoverageDriverRegistry => new CampaignCoverageDriverRegistry(
+                $app->tagged('x-change.campaign-coverage-drivers'),
             ),
         );
         $this->app->singleton(

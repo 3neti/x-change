@@ -2777,6 +2777,9 @@ return [
         'default_driver' => env('XCHANGE_SETTLEMENT_DRIVER', 'philhealth-bst'),
         'default_gate' => env('XCHANGE_SETTLEMENT_GATE', 'settleable'),
         'drivers_path' => config_path('envelope-drivers'),
+        'campaign_coverage_drivers' => [
+            // Host-defined CampaignCoverageDriverContract implementations.
+        ],
     ],
 
     'execution' => [

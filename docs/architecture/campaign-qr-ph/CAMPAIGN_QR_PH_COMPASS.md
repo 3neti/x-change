@@ -197,10 +197,16 @@ rejected, and rollback leaves neither fact behind. The contract validates the
 exact driver/version and schema before persistence and emits only redacted,
 after-commit x-change audit/broadcast evidence.
 
-The next controlled gate is Gate 5b: add the driver-owned orchestration
-boundary that decides whether and with which explicit terms a recognition may
-invoke this binder. Do not add the AUI adapter, completion Pay Code, claim
-intake, policy issuance, notification, Client Funds, wallet, or Treasury effects
-in that orchestration contract.
+Gate 5b is also complete. An explicitly selected, registered
+`CampaignCoverageDriverContract` now owns the eligibility decision and coverage
+terms. Exact driver/version lookup fails closed, an ineligible decision stops
+without persistence, mismatched term identity is rejected, and eligible replay
+delegates to Gate 5a's atomic/idempotent binder. The registry ships empty; no AUI
+driver or automatic recognition listener has been installed.
+
+The next controlled gate is Gate 6a: define generic zero-denominated completion
+Pay Code issuance from an existing coverage envelope. Do not add the AUI
+adapter, applicant-specific requirements, policy issuance, notification, Client
+Funds, wallet, or Treasury effects in that contract-first slice.
 
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).
