@@ -323,6 +323,10 @@ export default defineConfig({
         import.meta.dirname,
         "tests/frontend/stubs/campaign-worksheet-route.ts",
       ),
+      "@/routes/x-change/cockpit/pay-codes": path.resolve(
+        import.meta.dirname,
+        "tests/frontend/stubs/pay-code-detail-route.ts",
+      ),
       "@/routes/x-change/claim/flows": path.resolve(
         import.meta.dirname,
         "tests/frontend/stubs/claim-flow-route.ts",

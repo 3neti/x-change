@@ -306,9 +306,12 @@ Gate 8c is complete as local presentation acceptance. The lifecycle page now
 keeps long safe values inside responsive containers, uses accurate success,
 progress, and attention iconography, presents coverage amount/status and safe
 policy result codes, and replaces ambiguous nullable wording with contextual
-states. Representative lifecycle stages plus the empty state are covered. The
-next controlled move is Gate 8d, a decision gate for authoritative safe
-navigation or separately authorized mutation work; neither is enabled by
-default.
+states. Representative lifecycle stages plus the empty state are covered.
+
+Gate 8d is complete. The issued completion Pay Code conditionally links to the
+existing authenticated Pay Code detail route through Wayfinder. That route
+independently applies owner-aware voucher access. Other lifecycle references
+remain noninteractive because they lack an authoritative owner-scoped detail
+surface. No mutation or transport authority was introduced.
 
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).

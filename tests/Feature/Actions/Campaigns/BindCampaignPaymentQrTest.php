@@ -979,6 +979,23 @@ it('serves the authenticated owner policy lifecycle as a read only cockpit page'
     Http::assertNothingSent();
 });
 
+it('keeps completion Pay Code navigation owner scoped', function (): void {
+    [$projection, $owner] = auiPolicyCompletionProjection();
+    $payCode = $projection->issuance->voucher->code;
+
+    $this->actingAs($owner)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.show', ['code' => $payCode]))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/VoucherDetail');
+
+    $otherOwner = actingAsTestUser(0);
+
+    $this->actingAs($otherOwner)
+        ->get(route('x-change.cockpit.pay-codes.show', ['code' => $payCode]))
+        ->assertNotFound();
+});
+
 it('keeps the campaign policy lifecycle behind cockpit authentication', function (): void {
     $route = app('router')->getRoutes()
         ->getByName('x-change.cockpit.campaigns.policy-lifecycle.index');

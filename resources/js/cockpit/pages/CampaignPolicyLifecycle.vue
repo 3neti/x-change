@@ -3,10 +3,12 @@ import { Link } from "@inertiajs/vue3";
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowUpRight,
   CheckCircle2,
   CircleDashed,
 } from "lucide-vue-next";
 import { index as campaignsIndex } from "@/routes/x-change/cockpit/campaigns";
+import { show as payCodeShow } from "@/routes/x-change/cockpit/pay-codes";
 import type { CampaignPolicyLifecycle } from "../campaignPolicyLifecycle";
 import CockpitLayout from "../layouts/CockpitLayout.vue";
 import type { CockpitHeaderPageProps } from "../types";
@@ -273,6 +275,17 @@ function stageGuidance(item: CampaignPolicyLifecycle): string {
                 class="mt-2 break-words text-sm font-semibold text-slate-950 dark:text-slate-50"
               >
                 {{ item.completion?.pay_code ?? "Not issued" }}
+              </dd>
+              <dd v-if="item.completion?.pay_code" class="mt-2">
+                <Link
+                  :href="payCodeShow(item.completion.pay_code)"
+                  class="inline-flex min-h-9 max-w-full items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                  :aria-label="`View completion Pay Code ${item.completion.pay_code}`"
+                  data-testid="campaign-policy-lifecycle-completion-link"
+                >
+                  <span class="truncate">View completion Pay Code</span>
+                  <ArrowUpRight class="size-3.5 shrink-0" aria-hidden="true" />
+                </Link>
               </dd>
               <dd
                 class="mt-1 break-words text-xs text-slate-500 dark:text-slate-400"

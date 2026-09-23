@@ -444,7 +444,7 @@ activate config, call HTTP, dispatch work, or mutate domain or financial state.
 
 ### Gate 8 — Operator experience and lifecycle acceptance
 
-Status: **Complete through Gate 8c local presentation acceptance**
+Status: **Complete through Gate 8d authoritative read-only navigation**
 
 Gate 8a introduces a bounded, owner-scoped, read-only lifecycle projection.
 It combines the safe references and timestamps for recognized payment,
@@ -481,9 +481,16 @@ amount/status and policy result code. Browser acceptance covers mobile,
 tablet, and desktop widths without adding provider calls, approval, retry,
 dispatch, transport, or financial controls.
 
-The next controlled Gate 8d is a decision gate. It must identify an existing,
-authoritative detail route before adding navigation, or separately authorize
-any mutation capability. Neither is implied by the lifecycle projection.
+Gate 8d confirms that the issued completion Pay Code is the only lifecycle
+reference with an existing authoritative, authenticated, owner-aware detail
+surface. Lifecycle rows now offer a conditional Wayfinder link to that
+read-only Pay Code detail page. The destination independently enforces voucher
+access and returns not found outside the authorized account. Campaign,
+coverage, recognition, request, and outcome references remain plain text
+because no equivalent owner-scoped detail route exists.
+
+Mutation authority remains a separate decision. This gate adds no approval,
+retry, dispatch, provider, transport, or financial behavior.
 
 ## Immediate Next Move
 

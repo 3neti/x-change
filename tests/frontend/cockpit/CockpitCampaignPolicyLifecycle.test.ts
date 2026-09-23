@@ -61,6 +61,7 @@ describe("Cockpit campaign policy lifecycle", () => {
     expect(wrapper.text()).toContain("₱1,000.00");
     expect(wrapper.text()).toContain("Provisional");
     expect(wrapper.text()).toContain("AUI-ABCD");
+    expect(wrapper.text()).toContain("View completion Pay Code");
     expect(wrapper.text()).toContain("Succeeded");
     expect(wrapper.text()).toContain("Accepted");
     expect(wrapper.find("h2").text()).toBe("AUI On-Demand Insurance");
@@ -101,9 +102,28 @@ describe("Cockpit campaign policy lifecycle", () => {
     expect(wrapper.text()).toContain("Completion time unavailable");
     expect(
       wrapper
+        .find('[data-testid="campaign-policy-lifecycle-completion-link"]')
+        .exists(),
+    ).toBe(false);
+    expect(
+      wrapper
         .find('[data-testid="campaign-policy-lifecycle-attention"]')
         .exists(),
     ).toBe(true);
+  });
+
+  it("links an issued completion Pay Code to its authoritative read-only detail route", () => {
+    const wrapper = mount(CampaignPolicyLifecycle, {
+      props: { lifecycles: [lifecycle] },
+    });
+    const link = wrapper.get(
+      '[data-testid="campaign-policy-lifecycle-completion-link"]',
+    );
+
+    expect(link.attributes("href")).toBe("/x/cockpit/pay-codes/AUI-ABCD");
+    expect(link.attributes("aria-label")).toBe(
+      "View completion Pay Code AUI-ABCD",
+    );
   });
 
   it.each([
