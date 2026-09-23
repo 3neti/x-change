@@ -5,60 +5,16 @@ import {
   ArrowLeft,
   CheckCircle2,
   CircleDashed,
-  ShieldCheck,
 } from "lucide-vue-next";
 import { index as campaignsIndex } from "@/routes/x-change/cockpit/campaigns";
+import type { CampaignPolicyLifecycle } from "../campaignPolicyLifecycle";
 import CockpitLayout from "../layouts/CockpitLayout.vue";
 import type { CockpitHeaderPageProps } from "../types";
 import { formatAbsoluteTime } from "../utils/dateTime";
 
-type SafeLifecycle = {
-  schema: "x-change.campaign-policy-lifecycle.v1";
-  stage: string;
-  attention_required: boolean;
-  campaign: {
-    reference: string | null;
-    name: string | null;
-    revision_id: string | null;
-  };
-  payment: {
-    recognition_reference: string | null;
-    gross_amount_minor: number | null;
-    currency: string | null;
-    settled_at: string | null;
-  };
-  coverage: {
-    reference: string;
-    type: string;
-    status: string;
-    amount_minor: number | null;
-    currency: string;
-    effective_at: string | null;
-    expires_at: string | null;
-  };
-  completion: {
-    issuance_reference: string;
-    pay_code: string | null;
-    issued_at: string | null;
-    claim_number: number | null;
-    claim_completed_at: string | null;
-    projection_reference: string | null;
-    projected_at: string | null;
-  } | null;
-  policy: {
-    request_reference: string;
-    status: string;
-    requested_at: string | null;
-    approved_at: string | null;
-    outcome_reference: string | null;
-    outcome_status: string | null;
-    result_code: string | null;
-    recorded_at: string | null;
-  } | null;
-  updated_at: string | null;
+type Props = CockpitHeaderPageProps & {
+  lifecycles: CampaignPolicyLifecycle[];
 };
-
-type Props = CockpitHeaderPageProps & { lifecycles: SafeLifecycle[] };
 const props = defineProps<Props>();
 
 const stageLabels: Record<string, string> = {
@@ -88,7 +44,34 @@ function money(minor: number | null, currency: string | null): string {
 }
 
 function time(value: string | null): string {
-  return value ? formatAbsoluteTime(value) : "Not yet";
+  return value ? formatAbsoluteTime(value) : "Not available";
+}
+
+function stageIcon(item: CampaignPolicyLifecycle): typeof AlertTriangle {
+  if (item.attention_required) return AlertTriangle;
+  if (item.stage === "policy_succeeded") return CheckCircle2;
+  return CircleDashed;
+}
+
+function stageGuidance(item: CampaignPolicyLifecycle): string {
+  const guidance: Record<string, string> = {
+    provisional_coverage_active:
+      "Payment is recognized and provisional coverage is active.",
+    awaiting_completion_claim:
+      "The completion Pay Code is ready for the remaining evidence.",
+    claim_evidence_ready:
+      "Claim evidence is complete and ready for governance review.",
+    policy_awaiting_approval:
+      "Policy completion is waiting for checker approval.",
+    policy_authorized:
+      "Policy completion is authorized and awaiting its recorded outcome.",
+    policy_succeeded: "Policy completion has been recorded successfully.",
+    policy_failed: "Policy completion failed and needs operator review.",
+    policy_indeterminate:
+      "The policy outcome is uncertain and needs operator review.",
+  };
+
+  return guidance[item.stage] ?? "Lifecycle progress is available for review.";
 }
 </script>
 
@@ -123,6 +106,11 @@ function time(value: string | null): string {
             Read-only progress from recognized payment through provisional
             coverage, completion evidence, governance, and policy outcome.
           </p>
+          <span
+            class="mt-3 inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          >
+            Read-only
+          </span>
         </div>
         <Link
           :href="campaignsIndex()"
@@ -171,11 +159,11 @@ function time(value: string | null): string {
             class="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-start sm:justify-between dark:border-slate-800"
           >
             <div class="min-w-0">
-              <p
+              <h2
                 class="break-words text-base font-semibold text-slate-950 dark:text-slate-50"
               >
                 {{ item.campaign.name ?? "Campaign policy lifecycle" }}
-              </p>
+              </h2>
               <p
                 class="mt-1 break-all text-xs text-slate-500 dark:text-slate-400"
               >
@@ -183,16 +171,16 @@ function time(value: string | null): string {
                 {{ item.campaign.revision_id ?? "not available" }}
               </p>
             </div>
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex min-w-0 flex-wrap items-center gap-2">
               <span
-                class="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-200"
+                class="inline-flex max-w-full items-center gap-1.5 whitespace-normal break-words rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-200"
+                data-testid="campaign-policy-lifecycle-stage"
               >
-                <CheckCircle2
-                  v-if="item.stage === 'policy_succeeded'"
-                  class="size-3.5"
+                <component
+                  :is="stageIcon(item)"
+                  class="size-3.5 shrink-0"
                   aria-hidden="true"
                 />
-                <ShieldCheck v-else class="size-3.5" aria-hidden="true" />
                 {{ stageLabels[item.stage] ?? label(item.stage) }}
               </span>
               <span
@@ -206,12 +194,19 @@ function time(value: string | null): string {
             </div>
           </div>
 
+          <p
+            class="border-b border-slate-200 px-4 py-3 text-sm leading-6 text-slate-600 dark:border-slate-800 dark:text-slate-300"
+            data-testid="campaign-policy-lifecycle-guidance"
+          >
+            {{ stageGuidance(item) }}
+          </p>
+
           <dl
             class="grid gap-px bg-slate-200 sm:grid-cols-2 xl:grid-cols-4 dark:bg-slate-800"
           >
-            <div class="bg-white p-4 dark:bg-slate-900">
+            <div class="min-w-0 bg-white p-4 dark:bg-slate-900">
               <dt
-                class="text-xs font-semibold uppercase tracking-wide text-slate-500"
+                class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
               >
                 Payment
               </dt>
@@ -222,62 +217,117 @@ function time(value: string | null): string {
                   money(item.payment.gross_amount_minor, item.payment.currency)
                 }}
               </dd>
-              <dd class="mt-1 text-xs text-slate-500">
-                Settled {{ time(item.payment.settled_at) }}
+              <dd
+                class="mt-1 break-words text-xs text-slate-500 dark:text-slate-400"
+              >
+                {{
+                  item.payment.settled_at
+                    ? `Settled ${time(item.payment.settled_at)}`
+                    : "Settlement pending"
+                }}
               </dd>
             </div>
-            <div class="bg-white p-4 dark:bg-slate-900">
+            <div class="min-w-0 bg-white p-4 dark:bg-slate-900">
               <dt
-                class="text-xs font-semibold uppercase tracking-wide text-slate-500"
+                class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
               >
                 Coverage
               </dt>
               <dd
-                class="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50"
+                class="mt-2 break-words text-sm font-semibold text-slate-950 dark:text-slate-50"
               >
                 {{ label(item.coverage.type) }}
               </dd>
-              <dd class="mt-1 text-xs text-slate-500">
-                Effective {{ time(item.coverage.effective_at) }}
+              <dd
+                class="mt-1 break-words text-xs text-slate-500 dark:text-slate-400"
+              >
+                {{ label(item.coverage.status) }} ·
+                {{ money(item.coverage.amount_minor, item.coverage.currency) }}
               </dd>
-              <dd class="mt-1 text-xs text-slate-500">
-                Expires {{ time(item.coverage.expires_at) }}
+              <dd
+                class="mt-1 break-words text-xs text-slate-500 dark:text-slate-400"
+              >
+                {{
+                  item.coverage.effective_at
+                    ? `Effective ${time(item.coverage.effective_at)}`
+                    : "Effective time unavailable"
+                }}
+              </dd>
+              <dd
+                class="mt-1 break-words text-xs text-slate-500 dark:text-slate-400"
+              >
+                {{
+                  item.coverage.expires_at
+                    ? `Expires ${time(item.coverage.expires_at)}`
+                    : "No expiry recorded"
+                }}
               </dd>
             </div>
-            <div class="bg-white p-4 dark:bg-slate-900">
+            <div class="min-w-0 bg-white p-4 dark:bg-slate-900">
               <dt
-                class="text-xs font-semibold uppercase tracking-wide text-slate-500"
+                class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
               >
                 Completion
               </dt>
               <dd
-                class="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50"
+                class="mt-2 break-words text-sm font-semibold text-slate-950 dark:text-slate-50"
               >
                 {{ item.completion?.pay_code ?? "Not issued" }}
               </dd>
-              <dd class="mt-1 text-xs text-slate-500">
-                Claim {{ item.completion?.claim_number ?? "not completed" }}
+              <dd
+                class="mt-1 break-words text-xs text-slate-500 dark:text-slate-400"
+              >
+                {{
+                  item.completion?.claim_number
+                    ? `Claim ${item.completion.claim_number}`
+                    : "Claim not completed"
+                }}
               </dd>
-              <dd class="mt-1 text-xs text-slate-500">
-                {{ time(item.completion?.claim_completed_at ?? null) }}
+              <dd
+                class="mt-1 break-words text-xs text-slate-500 dark:text-slate-400"
+              >
+                {{
+                  item.completion?.claim_completed_at
+                    ? `Completed ${time(item.completion.claim_completed_at)}`
+                    : "Completion time unavailable"
+                }}
               </dd>
             </div>
-            <div class="bg-white p-4 dark:bg-slate-900">
+            <div class="min-w-0 bg-white p-4 dark:bg-slate-900">
               <dt
-                class="text-xs font-semibold uppercase tracking-wide text-slate-500"
+                class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
               >
                 Governance
               </dt>
               <dd
-                class="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50"
+                class="mt-2 break-words text-sm font-semibold text-slate-950 dark:text-slate-50"
               >
                 {{ label(item.policy?.status ?? null) }}
               </dd>
-              <dd class="mt-1 text-xs text-slate-500">
-                Outcome: {{ label(item.policy?.outcome_status ?? null) }}
+              <dd
+                class="mt-1 break-words text-xs text-slate-500 dark:text-slate-400"
+              >
+                {{
+                  item.policy
+                    ? `Outcome: ${label(item.policy.outcome_status)}`
+                    : "No policy request"
+                }}
               </dd>
-              <dd class="mt-1 text-xs text-slate-500">
-                Updated {{ time(item.updated_at) }}
+              <dd
+                v-if="item.policy?.result_code"
+                class="mt-1 break-words text-xs text-slate-500 dark:text-slate-400"
+                data-testid="campaign-policy-lifecycle-result-code"
+              >
+                Result: {{ label(item.policy.result_code) }}
+              </dd>
+              <dd
+                class="mt-1 break-words text-xs text-slate-500 dark:text-slate-400"
+              >
+                {{
+                  item.updated_at
+                    ? `Updated ${time(item.updated_at)}`
+                    : "Update time unavailable"
+                }}
               </dd>
             </div>
           </dl>

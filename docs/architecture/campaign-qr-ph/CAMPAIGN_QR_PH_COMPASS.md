@@ -300,8 +300,15 @@ Gate 8b is complete. The authenticated Campaigns workspace now links to a
 dedicated owner-scoped Policy lifecycle page. It renders only the Gate 8a DTO,
 handles empty and nullable intermediate states, highlights failed and
 indeterminate outcomes, and provides no approval, retry, dispatch, provider,
-transport, or policy mutation controls. The next controlled move is Gate 8c:
-local browser acceptance and presentation hardening using representative
-lifecycle states; mutation authority remains explicitly out of scope.
+transport, or policy mutation controls.
+
+Gate 8c is complete as local presentation acceptance. The lifecycle page now
+keeps long safe values inside responsive containers, uses accurate success,
+progress, and attention iconography, presents coverage amount/status and safe
+policy result codes, and replaces ambiguous nullable wording with contextual
+states. Representative lifecycle stages plus the empty state are covered. The
+next controlled move is Gate 8d, a decision gate for authoritative safe
+navigation or separately authorized mutation work; neither is enabled by
+default.
 
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).

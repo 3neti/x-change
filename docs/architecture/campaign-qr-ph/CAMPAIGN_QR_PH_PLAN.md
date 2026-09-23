@@ -11,10 +11,10 @@ policy has already been issued.
 
 This mode coexists with the current endpoint campaign:
 
-| Campaign entry mode | Public artifact | First durable business event |
-|---|---|---|
-| Endpoint | Web link or ordinary QR | A fresh Pay Code is issued |
-| Campaign QR Ph | Reusable provider QR Ph | A provider payment is observed and settled |
+| Campaign entry mode | Public artifact         | First durable business event               |
+| ------------------- | ----------------------- | ------------------------------------------ |
+| Endpoint            | Web link or ordinary QR | A fresh Pay Code is issued                 |
+| Campaign QR Ph      | Reusable provider QR Ph | A provider payment is observed and settled |
 
 The two modes must not be inferred from one another or silently converted.
 
@@ -444,7 +444,7 @@ activate config, call HTTP, dispatch work, or mutate domain or financial state.
 
 ### Gate 8 — Operator experience and lifecycle acceptance
 
-Status: **Complete through Gate 8b read-only Cockpit presentation**
+Status: **Complete through Gate 8c local presentation acceptance**
 
 Gate 8a introduces a bounded, owner-scoped, read-only lifecycle projection.
 It combines the safe references and timestamps for recognized payment,
@@ -472,10 +472,18 @@ approval, dispatch, retry, provider, transport, or policy mutation controls.
 The Campaigns endpoint header links to the page through a generated Wayfinder
 controller action.
 
-The next controlled Gate 8c is browser acceptance and presentation hardening
-against representative active, intermediate, failed, and indeterminate records.
-It may add safe navigation to existing detail pages, but it must not broaden
-authority or introduce transport and mutation behavior.
+Gate 8c hardens the read-only presentation against representative active,
+intermediate, failed, indeterminate, and empty records. Long safe references,
+campaign names, stages, result codes, and coverage facts remain contained on
+narrow screens; terminal attention states use warning semantics; nullable
+facts use contextual wording; and the page exposes the already-safe coverage
+amount/status and policy result code. Browser acceptance covers mobile,
+tablet, and desktop widths without adding provider calls, approval, retry,
+dispatch, transport, or financial controls.
+
+The next controlled Gate 8d is a decision gate. It must identify an existing,
+authoritative detail route before adding navigation, or separately authorize
+any mutation capability. Neither is implied by the lifecycle projection.
 
 ## Immediate Next Move
 

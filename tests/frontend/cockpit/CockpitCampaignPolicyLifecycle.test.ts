@@ -58,8 +58,12 @@ describe("Cockpit campaign policy lifecycle", () => {
     expect(wrapper.text()).toContain("Policy completed");
     expect(wrapper.text()).toContain("₱122.00");
     expect(wrapper.text()).toContain("Personal Accident");
+    expect(wrapper.text()).toContain("₱1,000.00");
+    expect(wrapper.text()).toContain("Provisional");
     expect(wrapper.text()).toContain("AUI-ABCD");
     expect(wrapper.text()).toContain("Succeeded");
+    expect(wrapper.text()).toContain("Accepted");
+    expect(wrapper.find("h2").text()).toBe("AUI On-Demand Insurance");
     expect(
       wrapper
         .get('[data-testid="campaign-policy-lifecycle-page"]')
@@ -91,12 +95,121 @@ describe("Cockpit campaign policy lifecycle", () => {
 
     expect(wrapper.text()).toContain("Policy completion failed");
     expect(wrapper.text()).toContain("Needs attention");
+    expect(wrapper.text()).toContain("Declined");
     expect(wrapper.text()).toContain("Not issued");
+    expect(wrapper.text()).toContain("Claim not completed");
+    expect(wrapper.text()).toContain("Completion time unavailable");
     expect(
       wrapper
         .find('[data-testid="campaign-policy-lifecycle-attention"]')
         .exists(),
     ).toBe(true);
+  });
+
+  it.each([
+    ["provisional_coverage_active", "Provisional coverage active"],
+    ["awaiting_completion_claim", "Awaiting completion claim"],
+    ["claim_evidence_ready", "Claim evidence ready"],
+    ["policy_awaiting_approval", "Awaiting checker approval"],
+    ["policy_authorized", "Policy completion authorized"],
+    ["policy_succeeded", "Policy completed"],
+    ["policy_failed", "Policy completion failed"],
+    ["policy_indeterminate", "Policy outcome indeterminate"],
+  ])("renders the %s lifecycle stage coherently", (stage, expected) => {
+    const attentionRequired = [
+      "policy_failed",
+      "policy_indeterminate",
+    ].includes(stage);
+    const wrapper = mount(CampaignPolicyLifecycle, {
+      props: {
+        lifecycles: [
+          {
+            ...lifecycle,
+            stage,
+            attention_required: attentionRequired,
+          },
+        ],
+      },
+    });
+
+    expect(wrapper.text()).toContain(expected);
+    expect(wrapper.text()).toContain("Policy lifecycle");
+    expect(
+      wrapper.find('[data-testid="campaign-policy-lifecycle-guidance"]').text(),
+    ).not.toBe("");
+    expect(
+      wrapper
+        .find('[data-testid="campaign-policy-lifecycle-attention"]')
+        .exists(),
+    ).toBe(attentionRequired);
+  });
+
+  it("keeps long safe values inside responsive containers", () => {
+    const longValue = "very-long-safe-lifecycle-value-".repeat(12);
+    const wrapper = mount(CampaignPolicyLifecycle, {
+      props: {
+        lifecycles: [
+          {
+            ...lifecycle,
+            stage: longValue,
+            campaign: {
+              reference: longValue,
+              name: longValue,
+              revision_id: longValue,
+            },
+            coverage: {
+              ...lifecycle.coverage,
+              type: longValue,
+              status: longValue,
+            },
+            policy: {
+              ...lifecycle.policy,
+              status: longValue,
+              result_code: longValue,
+            },
+          },
+        ],
+      },
+    });
+
+    expect(
+      wrapper.get('[data-testid="campaign-policy-lifecycle-stage"]').classes(),
+    ).toEqual(
+      expect.arrayContaining([
+        "max-w-full",
+        "whitespace-normal",
+        "break-words",
+      ]),
+    );
+    expect(wrapper.findAll(".min-w-0").length).toBeGreaterThan(1);
+  });
+
+  it("uses contextual language for nullable intermediate facts", () => {
+    const wrapper = mount(CampaignPolicyLifecycle, {
+      props: {
+        lifecycles: [
+          {
+            ...lifecycle,
+            payment: { ...lifecycle.payment, settled_at: null },
+            coverage: {
+              ...lifecycle.coverage,
+              effective_at: null,
+              expires_at: null,
+            },
+            completion: null,
+            policy: null,
+            updated_at: null,
+          },
+        ],
+      },
+    });
+
+    expect(wrapper.text()).toContain("Settlement pending");
+    expect(wrapper.text()).toContain("Effective time unavailable");
+    expect(wrapper.text()).toContain("No expiry recorded");
+    expect(wrapper.text()).toContain("No policy request");
+    expect(wrapper.text()).toContain("Update time unavailable");
+    expect(wrapper.text()).not.toContain("Not yet");
   });
 
   it("renders a clear empty state", () => {
