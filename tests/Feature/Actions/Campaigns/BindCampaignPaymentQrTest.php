@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Bavix\Wallet\Models\Transaction;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -23,21 +25,30 @@ use LBHurtado\XChange\Actions\Payment\InspectCampaignPaymentEvidence;
 use LBHurtado\XChange\Actions\Payment\RecognizeQualifyingCampaignPayment;
 use LBHurtado\XChange\Actions\Redemption\PrepareVoucherClaimEvidence;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
+use LBHurtado\XChange\Actions\Settlement\ApproveCampaignPolicyCompletion;
 use LBHurtado\XChange\Actions\Settlement\BindProvisionalCoverage;
 use LBHurtado\XChange\Actions\Settlement\IssueCompletionPayCode;
 use LBHurtado\XChange\Actions\Settlement\OrchestrateProvisionalCoverage;
 use LBHurtado\XChange\Actions\Settlement\PrepareCampaignPolicyCompletion;
 use LBHurtado\XChange\Actions\Settlement\ProjectCompletionClaimEvidence;
+use LBHurtado\XChange\Actions\Settlement\RecordCampaignPolicyCompletionOutcome;
+use LBHurtado\XChange\Actions\Settlement\RequestCampaignPolicyCompletion;
 use LBHurtado\XChange\Data\Settlement\CampaignCoverageDecisionData;
 use LBHurtado\XChange\Data\Settlement\CompletionPayCodeInstructionsData;
+use LBHurtado\XChange\Data\Settlement\PolicyCompletionOutcomeData;
 use LBHurtado\XChange\Data\Settlement\ProvisionalCoverageTermsData;
 use LBHurtado\XChange\Enums\CampaignEntryMode;
 use LBHurtado\XChange\Enums\CampaignPaymentAmountMode;
 use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
+use LBHurtado\XChange\Enums\PolicyCompletionOutcomeStatus;
+use LBHurtado\XChange\Enums\PolicyCompletionRequestStatus;
 use LBHurtado\XChange\Events\CampaignPaymentRecognized;
 use LBHurtado\XChange\Events\CompletionClaimEvidenceProjected;
 use LBHurtado\XChange\Events\CompletionPayCodeIssued;
+use LBHurtado\XChange\Events\PolicyCompletionAuthorized;
+use LBHurtado\XChange\Events\PolicyCompletionOutcomeRecorded;
+use LBHurtado\XChange\Events\PolicyCompletionRequested;
 use LBHurtado\XChange\Events\ProvisionalCoverageBound;
 use LBHurtado\XChange\Exceptions\CampaignCoverageDriverUnavailable;
 use LBHurtado\XChange\Exceptions\CampaignPolicyCompletionDriverUnavailable;
@@ -50,6 +61,8 @@ use LBHurtado\XChange\Models\CompletionPayCodeIssuance;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
+use LBHurtado\XChange\Models\PolicyCompletionOutcome;
+use LBHurtado\XChange\Models\PolicyCompletionRequest;
 use LBHurtado\XChange\Models\ProvisionalCoverage;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Models\StandingFundingQrArtifact;
@@ -754,6 +767,168 @@ it('fails closed for unavailable, duplicate, and mismatched policy completion dr
         ->toThrow(InvalidArgumentException::class, 'reserved driver identity');
 });
 
+it('governs durable policy completion requests and terminal outcomes without transport', function (): void {
+    [$projection, $maker] = auiPolicyCompletionProjection();
+    $checker = actingAsTestUser(0);
+    $recorder = actingAsTestUser(0);
+    $unauthorized = actingAsTestUser(0);
+    $requestAction = app(RequestCampaignPolicyCompletion::class);
+
+    expect(fn () => $requestAction->handle($projection, $maker, 'maker-authorization-1'))
+        ->toThrow(AuthorizationException::class, 'maker authority');
+
+    config()->set('x-change.settlement.policy_completion.maker_ids', [(string) $maker->getKey()]);
+    config()->set('x-change.settlement.policy_completion.checker_ids', [(string) $checker->getKey()]);
+    config()->set('x-change.settlement.policy_completion.outcome_recorder_ids', [(string) $recorder->getKey()]);
+    $before = campaignPaymentFinancialCounts();
+    $envelopeVersionCount = EnvelopePayloadVersion::query()->count();
+    Http::fake();
+    Event::fake([
+        PolicyCompletionRequested::class,
+        PolicyCompletionAuthorized::class,
+        PolicyCompletionOutcomeRecorded::class,
+    ]);
+
+    $request = $requestAction->handle($projection, $maker, 'maker-authorization-1');
+    $replayedRequest = $requestAction->handle($projection, $maker, 'maker-authorization-1');
+    $encryptedPayload = DB::table('x_change_policy_completion_requests')
+        ->where('id', $request->getKey())
+        ->value('private_payload');
+
+    expect($request->status)->toBe(PolicyCompletionRequestStatus::AwaitingApproval)
+        ->and($replayedRequest->is($request))->toBeTrue()
+        ->and((string) $encryptedPayload)->not->toContain('Private AUI Applicant')
+        ->and((string) $encryptedPayload)->not->toContain('09173011987')
+        ->and(fn () => $requestAction->handle($projection, $maker, 'changed-authorization'))
+        ->toThrow(DomainException::class, 'does not match')
+        ->and(fn () => app(ApproveCampaignPolicyCompletion::class)->handle(
+            $request,
+            $unauthorized,
+            'checker-approval-1',
+        ))->toThrow(AuthorizationException::class, 'checker authority')
+        ->and(fn () => app(RecordCampaignPolicyCompletionOutcome::class)->handle(
+            $request,
+            $recorder,
+            new PolicyCompletionOutcomeData(PolicyCompletionOutcomeStatus::Succeeded, 'accepted'),
+        ))->toThrow(DomainException::class, 'authorized');
+
+    expect(fn () => app(RecordCampaignPolicyCompletionOutcome::class)->handle(
+        $request,
+        $recorder,
+        new PolicyCompletionOutcomeData(
+            PolicyCompletionOutcomeStatus::Failed,
+            'declined',
+            safeResult: ['applicant_name' => 'Must not be public'],
+        ),
+    ))->toThrow(DomainException::class, 'is not allowed');
+
+    config()->set('x-change.settlement.policy_completion.checker_ids', [
+        (string) $checker->getKey(),
+        (string) $maker->getKey(),
+    ]);
+    expect(fn () => app(ApproveCampaignPolicyCompletion::class)->handle(
+        $request,
+        $maker,
+        'self-approval',
+    ))->toThrow(DomainException::class, 'independent');
+
+    $approved = app(ApproveCampaignPolicyCompletion::class)->handle(
+        $request,
+        $checker,
+        'checker-approval-1',
+    );
+    $approvalReplay = app(ApproveCampaignPolicyCompletion::class)->handle(
+        $request,
+        $checker,
+        'checker-approval-1',
+    );
+    $outcomeData = new PolicyCompletionOutcomeData(
+        status: PolicyCompletionOutcomeStatus::Succeeded,
+        resultCode: 'accepted',
+        providerReference: 'provider-result-1',
+        safeResult: ['document_ready' => true],
+        privateResult: ['private_receipt' => 'sensitive-result'],
+    );
+    $outcome = app(RecordCampaignPolicyCompletionOutcome::class)->handle(
+        $approved,
+        $recorder,
+        $outcomeData,
+    );
+    $outcomeReplay = app(RecordCampaignPolicyCompletionOutcome::class)->handle(
+        $approved,
+        $recorder,
+        $outcomeData,
+    );
+    $encryptedResult = DB::table('x_change_policy_completion_outcomes')
+        ->where('id', $outcome->getKey())
+        ->value('private_result');
+
+    expect($approved->status)->toBe(PolicyCompletionRequestStatus::Authorized)
+        ->and($approvalReplay->status)->toBe(PolicyCompletionRequestStatus::Authorized)
+        ->and($outcome->status)->toBe(PolicyCompletionOutcomeStatus::Succeeded)
+        ->and($outcomeReplay->is($outcome))->toBeTrue()
+        ->and($request->refresh()->status)->toBe(PolicyCompletionRequestStatus::Succeeded)
+        ->and((string) $encryptedResult)->not->toContain('sensitive-result')
+        ->and(fn () => app(RecordCampaignPolicyCompletionOutcome::class)->handle(
+            $request,
+            $recorder,
+            new PolicyCompletionOutcomeData(PolicyCompletionOutcomeStatus::Failed, 'declined'),
+        ))->toThrow(DomainException::class, 'does not match')
+        ->and(PolicyCompletionRequest::query()->count())->toBe(1)
+        ->and(PolicyCompletionOutcome::query()->count())->toBe(1)
+        ->and(EnvelopePayloadVersion::query()->count())->toBe($envelopeVersionCount)
+        ->and(AccountFundingReceipt::query()->count())->toBe($before['account_funding_receipts'])
+        ->and(FundingSettlement::query()->count())->toBe($before['funding_settlements'])
+        ->and(TreasuryInventoryOperation::query()->count())->toBe($before['treasury_operations']);
+
+    Event::assertDispatchedTimes(PolicyCompletionRequested::class, 1);
+    Event::assertDispatchedTimes(PolicyCompletionAuthorized::class, 1);
+    Event::assertDispatchedTimes(PolicyCompletionOutcomeRecorded::class, 1);
+    Event::assertDispatched(PolicyCompletionRequested::class, function (PolicyCompletionRequested $event): bool {
+        $payload = json_encode($event->payload, JSON_THROW_ON_ERROR);
+
+        return ! str_contains($payload, 'Private AUI Applicant')
+            && ! str_contains($payload, '09173011987');
+    });
+    Event::assertDispatched(PolicyCompletionOutcomeRecorded::class, function (PolicyCompletionOutcomeRecorded $event): bool {
+        return ! str_contains(
+            json_encode($event->payload, JSON_THROW_ON_ERROR),
+            'sensitive-result',
+        );
+    });
+    Http::assertNothingSent();
+});
+
+it('rolls back terminal policy state when outcome persistence fails', function (): void {
+    [$projection, $maker] = auiPolicyCompletionProjection();
+    $checker = actingAsTestUser(0);
+    $recorder = actingAsTestUser(0);
+    config()->set('x-change.settlement.policy_completion.maker_ids', [(string) $maker->getKey()]);
+    config()->set('x-change.settlement.policy_completion.checker_ids', [(string) $checker->getKey()]);
+    config()->set('x-change.settlement.policy_completion.outcome_recorder_ids', [(string) $recorder->getKey()]);
+    $request = app(RequestCampaignPolicyCompletion::class)->handle(
+        $projection,
+        $maker,
+        'maker-authorization-rollback',
+    );
+    $approved = app(ApproveCampaignPolicyCompletion::class)->handle(
+        $request,
+        $checker,
+        'checker-approval-rollback',
+    );
+    Event::listen('eloquent.creating: '.PolicyCompletionOutcome::class, function (): never {
+        throw new RuntimeException('forced policy outcome failure');
+    });
+
+    expect(fn () => app(RecordCampaignPolicyCompletionOutcome::class)->handle(
+        $approved,
+        $recorder,
+        new PolicyCompletionOutcomeData(PolicyCompletionOutcomeStatus::Succeeded, 'accepted'),
+    ))->toThrow(RuntimeException::class, 'forced policy outcome failure')
+        ->and($request->refresh()->status)->toBe(PolicyCompletionRequestStatus::Authorized)
+        ->and(PolicyCompletionOutcome::query()->count())->toBe(0);
+});
+
 it('rolls back the completion voucher when immutable link persistence fails', function (): void {
     configureCampaignCoverageTestDriver();
     [$recognition, $binding] = recognizedCampaignPayment();
@@ -852,6 +1027,31 @@ function auiCampaignCoverageTerms(
             'authority_reference' => 'aui-test-authorization',
         ],
     );
+}
+
+/** @return array{CompletionClaimEvidenceProjection, User} */
+function auiPolicyCompletionProjection(): array
+{
+    configureCampaignCoverageTestDriver();
+    [$recognition, $binding] = recognizedCampaignPayment();
+    $bound = app(BindProvisionalCoverage::class)->handle(
+        $recognition,
+        auiCampaignCoverageTerms($recognition),
+    );
+    $issued = app(IssueCompletionPayCode::class)->handle(
+        $bound->coverage,
+        $binding->standingFundingAddress->owner,
+        new CompletionPayCodeInstructionsData(['name', 'mobile']),
+    );
+    app(SubmitPayCodeClaim::class)->handle($issued->voucher, [
+        'mobile' => '09173011987',
+        'inputs' => ['name' => 'Private AUI Applicant', 'mobile' => '09173011987'],
+    ]);
+
+    return [
+        CompletionClaimEvidenceProjection::query()->sole(),
+        $binding->standingFundingAddress->owner,
+    ];
 }
 
 function campaignCoverageOrchestrator(

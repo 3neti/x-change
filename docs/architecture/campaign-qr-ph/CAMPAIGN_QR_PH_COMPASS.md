@@ -240,9 +240,20 @@ serialization surface. Tests prove deterministic replay, unavailable and
 duplicate driver rejection, identity mismatch rejection, no HTTP call, no new
 domain event, no envelope version, and no financial movement.
 
-The next controlled gate is Gate 7b: add a durable, authorization-gated policy
-completion request and outcome state machine. Do not add AUI transport,
-credentials, insurer messaging, retries, or irreversible external calls until
-that provider contract receives a separate disposition.
+Gate 7b is complete. One completion projection can create one durable request
+under a default-deny, domain-specific authority. The campaign owner/maker and
+independent checker are explicitly configured, and a separately authorized
+recorder can persist one immutable `succeeded`, `failed`, or `indeterminate`
+outcome. Safe context is queryable; applicant and private result evidence are
+encrypted and hidden. Exact replay converges, conflicting replay fails closed,
+all three lifecycle events are redacted and after-commit, and forced outcome
+failure leaves the request authorized with no partial terminal record. No HTTP,
+queue, message, policy document, envelope mutation, or financial movement was
+added.
+
+The next controlled gate is Gate 7c: document and accept the AUI provider
+transport contract, including credentials, schemas, provider idempotency,
+timeouts, retries, ambiguous outcomes, and reconciliation. Transport remains
+disabled until that disposition and its tests exist.
 
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).

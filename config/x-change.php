@@ -2783,6 +2783,20 @@ return [
         'campaign_policy_completion_drivers' => [
             // Additional host-defined CampaignPolicyCompletionDriverContract implementations.
         ],
+        'policy_completion' => [
+            'maker_ids' => array_values(array_filter(array_map(
+                static fn (string $id): string => trim($id),
+                explode(',', (string) env('XCHANGE_POLICY_COMPLETION_MAKER_IDS', '')),
+            ))),
+            'checker_ids' => array_values(array_filter(array_map(
+                static fn (string $id): string => trim($id),
+                explode(',', (string) env('XCHANGE_POLICY_COMPLETION_CHECKER_IDS', '')),
+            ))),
+            'outcome_recorder_ids' => array_values(array_filter(array_map(
+                static fn (string $id): string => trim($id),
+                explode(',', (string) env('XCHANGE_POLICY_COMPLETION_OUTCOME_RECORDER_IDS', '')),
+            ))),
+        ],
     ],
 
     'execution' => [

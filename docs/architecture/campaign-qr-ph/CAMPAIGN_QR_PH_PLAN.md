@@ -345,7 +345,7 @@ separate durability improvement rather than widening this gate.
 
 ### Gate 7 — AUI policy completion
 
-Status: **7a preparation boundary implemented; durable request and outcome pending**
+Status: **Complete through Gate 7b; provider transport pending disposition**
 
 - Implement the reserved AUI driver as a versioned adapter.
 - Hand completed applicant and settlement-envelope facts to the insurer
@@ -369,10 +369,34 @@ Preparing or replaying the handoff performs no HTTP request, insurer message,
 queue dispatch, policy issuance, envelope mutation, financial posting, or
 durable outcome write.
 
-Gate 7b will add the durable, authorization-gated policy-completion request and
-outcome state machine. Provider transport remains prohibited until its API,
-credentials, retry semantics, and idempotency contract receive a separate
-disposition.
+Gate 7b adds a durable, authorization-gated state machine:
+
+```text
+awaiting_approval -> authorized -> succeeded | failed | indeterminate
+```
+
+One completion projection can create one replay-safe request. The campaign
+payment-address owner must also hold explicitly configured policy-completion
+maker authority. An independently configured checker authorizes the request,
+and an explicitly configured outcome recorder may persist one immutable,
+provider-neutral terminal outcome. Authority is domain-specific and defaults
+to deny; onboarding role, Treasury authority, or Commercial authority does not
+implicitly grant it.
+
+The request stores the safe Gate 7a context plus encrypted private applicant
+evidence. The outcome stores a redacted result plus optional encrypted private
+evidence. Exact replays converge; changed authorization, actors, preparation,
+or outcomes fail closed. Request, approval, and outcome events dispatch only
+after commit and contain no applicant values. Outcome creation and terminal
+request transition are atomic, and failure rolls the request back to
+`authorized`.
+
+Gate 7b remains transport-free. It performs no HTTP request, queue dispatch,
+insurer message, retry, policy-document creation, envelope mutation, or
+financial movement. Gate 7c requires a documented AUI API and operational
+disposition covering credentials, request/response schemas, provider
+idempotency, timeouts, retries, ambiguous outcomes, and reconciliation before
+any transport adapter may be enabled.
 
 ### Gate 8 — Operator experience and lifecycle acceptance
 
@@ -386,9 +410,9 @@ Status: **Pending**
 
 ## Immediate Next Move
 
-Gate 7a is complete: the reserved AUI adapter can prepare one deterministic,
-private handoff from the immutable generic facts without any durable or
-external side effect. The next controlled move is Gate 7b: define the durable,
-authorization-gated policy-completion request and outcome state machine. Keep
-provider transport, insurer messaging, credentials, and irreversible calls
-outside that state-machine slice.
+Gate 7b is complete: the deterministic AUI preparation can now enter a durable,
+default-deny maker/checker workflow and record one immutable terminal outcome
+without transport or financial side effects. The next controlled move is Gate
+7c: obtain and codify the AUI provider-transport disposition. Do not enable an
+HTTP adapter until credentials, schemas, provider idempotency, ambiguous
+outcome handling, retries, and reconciliation have explicit acceptance tests.
