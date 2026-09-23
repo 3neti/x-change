@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Bavix\Wallet\Models\Transaction;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
@@ -12,13 +13,16 @@ use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\XChange\Actions\Campaigns\BindCampaignPaymentQr;
 use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
 use LBHurtado\XChange\Actions\Payment\InspectCampaignPaymentEvidence;
+use LBHurtado\XChange\Actions\Payment\RecognizeQualifyingCampaignPayment;
 use LBHurtado\XChange\Enums\CampaignEntryMode;
 use LBHurtado\XChange\Enums\CampaignPaymentAmountMode;
 use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
+use LBHurtado\XChange\Events\CampaignPaymentRecognized;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\CampaignPaymentEvidenceQuarantine;
 use LBHurtado\XChange\Models\CampaignPaymentQrBinding;
+use LBHurtado\XChange\Models\CampaignPaymentRecognition;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
@@ -197,6 +201,108 @@ it('keeps compatible evidence clear and exposes only aggregate campaign attentio
         ->and(json_encode($row))->not->toContain('provider_transaction');
 });
 
+it('recognizes one qualifying fixed campaign payment exactly once and emits a redacted DTO event', function (): void {
+    $owner = campaignPaymentQrOwner();
+    $campaign = campaignPaymentQrCampaign($owner, CampaignEntryMode::ReusablePaymentQr);
+    [$address, $artifact] = campaignPaymentQrAddress($owner);
+    $binding = app(BindCampaignPaymentQr::class)->handle(
+        owner: $owner,
+        campaign: $campaign,
+        address: $address,
+        artifact: $artifact,
+        amountMode: CampaignPaymentAmountMode::Fixed,
+        fixedAmountMinor: 12_200,
+        permittedPaymentRules: [
+            'allowed_rails' => ['INSTAPAY'],
+            'maximum_payments' => 5,
+        ],
+    );
+    $observation = campaignPaymentObservation($address, 'transaction-recognized', 'settled');
+    $before = campaignPaymentFinancialCounts();
+    Event::fake([CampaignPaymentRecognized::class]);
+
+    $first = app(RecognizeQualifyingCampaignPayment::class)->handle($binding, $observation);
+    $replayed = app(RecognizeQualifyingCampaignPayment::class)->handle($binding, $observation);
+
+    expect($first->recognized())->toBeTrue()
+        ->and($replayed->recognition?->is($first->recognition))->toBeTrue()
+        ->and(CampaignPaymentRecognition::query()->count())->toBe(1)
+        ->and(CampaignPaymentEvidenceQuarantine::query()->count())->toBe(0)
+        ->and(campaignPaymentFinancialCounts())->toBe($before);
+
+    Event::assertDispatchedTimes(CampaignPaymentRecognized::class, 1);
+    Event::assertDispatched(CampaignPaymentRecognized::class, function (
+        CampaignPaymentRecognized $event,
+    ): bool {
+        $payload = json_encode($event->broadcastWith(), JSON_THROW_ON_ERROR);
+
+        return $event->recognition->grossAmountMinor === 12_200
+            && ! str_contains($payload, 'transaction-recognized')
+            && ! str_contains($payload, 'provider_transaction')
+            && ! str_contains($payload, 'payer');
+    });
+
+    expect(fn () => $first->recognition?->forceFill(['gross_amount_minor' => 1])->save())
+        ->toThrow(LogicException::class, 'immutable');
+    expect(fn () => $first->recognition?->delete())
+        ->toThrow(LogicException::class, 'cannot be deleted');
+});
+
+it('waits for settlement and quarantines terminal payments that fail binding rules', function (): void {
+    $owner = campaignPaymentQrOwner();
+    $campaign = campaignPaymentQrCampaign($owner, CampaignEntryMode::ReusablePaymentQr);
+    [$address, $artifact] = campaignPaymentQrAddress($owner);
+    $binding = app(BindCampaignPaymentQr::class)->handle(
+        owner: $owner,
+        campaign: $campaign,
+        address: $address,
+        artifact: $artifact,
+        amountMode: CampaignPaymentAmountMode::Fixed,
+        fixedAmountMinor: 10_000,
+        permittedPaymentRules: ['allowed_rails' => ['INSTAPAY']],
+    );
+    $pending = campaignPaymentObservation($address, 'transaction-rule-failure', 'pending');
+
+    $waiting = app(RecognizeQualifyingCampaignPayment::class)->handle($binding, $pending);
+    $settled = campaignPaymentObservation($address, 'transaction-rule-failure', 'settled');
+    $rejected = app(RecognizeQualifyingCampaignPayment::class)->handle($binding, $settled);
+
+    expect($waiting->recognized())->toBeFalse()
+        ->and($waiting->quarantined())->toBeFalse()
+        ->and($rejected->quarantined())->toBeTrue()
+        ->and($rejected->quarantine?->reason_code)->toBe('qualification_rejected')
+        ->and($rejected->quarantine?->reason_detail)->toBe('fixed_amount_mismatch')
+        ->and(CampaignPaymentRecognition::query()->count())->toBe(0);
+});
+
+it('enforces the maximum qualifying payments rule under the binding lock', function (): void {
+    $owner = campaignPaymentQrOwner();
+    $campaign = campaignPaymentQrCampaign($owner, CampaignEntryMode::ReusablePaymentQr);
+    [$address, $artifact] = campaignPaymentQrAddress($owner);
+    $binding = app(BindCampaignPaymentQr::class)->handle(
+        owner: $owner,
+        campaign: $campaign,
+        address: $address,
+        artifact: $artifact,
+        amountMode: CampaignPaymentAmountMode::Open,
+        permittedPaymentRules: ['maximum_payments' => 1],
+    );
+
+    $first = app(RecognizeQualifyingCampaignPayment::class)->handle(
+        $binding,
+        campaignPaymentObservation($address, 'transaction-limit-1', 'settled'),
+    );
+    $second = app(RecognizeQualifyingCampaignPayment::class)->handle(
+        $binding,
+        campaignPaymentObservation($address, 'transaction-limit-2', 'settled'),
+    );
+
+    expect($first->recognized())->toBeTrue()
+        ->and($second->quarantined())->toBeTrue()
+        ->and($second->quarantine?->reason_detail)->toBe('maximum_payments_reached')
+        ->and(CampaignPaymentRecognition::query()->count())->toBe(1);
+});
+
 function campaignPaymentQrOwner(): User
 {
     $owner = actingAsTestUser();
@@ -276,6 +382,8 @@ function campaignPaymentObservation(
     string $transactionId,
     string $status,
 ): ProviderFundingObservation {
+    $occurredAt = now()->addMinute()->toImmutable();
+
     return ProviderFundingObservation::query()->create([
         'observation_key' => hash('sha256', $transactionId.'-'.$status),
         'provider_code' => 'netbank',
@@ -288,9 +396,9 @@ function campaignPaymentObservation(
         'net_amount_minor' => 12_200,
         'currency' => 'PHP',
         'provider_status' => $status,
-        'occurred_at' => CarbonImmutable::parse('2026-09-23T01:00:00Z'),
+        'occurred_at' => $occurredAt,
         'settled_at' => $status === 'settled'
-            ? CarbonImmutable::parse('2026-09-23T01:01:00Z')
+            ? $occurredAt->addMinute()
             : null,
         'verification_source' => 'campaign-payment-test',
         'payload_hash' => hash('sha256', $transactionId.'-'.$status.'-payload'),

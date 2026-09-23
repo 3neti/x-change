@@ -85,4 +85,12 @@ final class CampaignPaymentQrBinding extends Model
             'campaign_payment_qr_binding_id',
         );
     }
+
+    public function paymentRecognitions(): HasMany
+    {
+        return $this->hasMany(
+            CampaignPaymentRecognition::class,
+            'campaign_payment_qr_binding_id',
+        );
+    }
 }

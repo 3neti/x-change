@@ -40,6 +40,7 @@ use LBHurtado\XChange\Enums\TreasuryOperatorCapability;
 use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\CampaignPaymentEvidenceQuarantine;
+use LBHurtado\XChange\Models\CampaignPaymentRecognition;
 use LBHurtado\XChange\Models\FundingSuspenseCase;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Models\StandingFundingAddress;
@@ -855,6 +856,69 @@ it('routes adverse campaign payment observations to durable attention without cr
         ->and($result->applied)->toBe(0)
         ->and(CampaignPaymentEvidenceQuarantine::query()->sole()->reason_code)
         ->toBe('adverse_status')
+        ->and(AccountFundingReceipt::query()->count())->toBe(0)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(Transaction::query()->count())->toBe(0)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(0);
+});
+
+it('recognizes a qualifying campaign payment during synchronization without applying funds', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    $address = provisionStandingAddress(
+        $user,
+        'campaign:payment-recognition',
+        FundingAddressPurpose::Payment,
+        FundingRecognitionMode::ObserveOnly,
+    );
+    $template = PayCodeTemplate::query()->create([
+        'owner_type' => $user->getMorphClass(),
+        'owner_id' => (string) $user->getKey(),
+        'name' => 'Payment recognition template',
+        'base_template_key' => 'blank-pay-code',
+        'instructions_ciphertext' => [
+            'cash' => ['amount' => 0, 'currency' => 'PHP'],
+            'count' => 1,
+            'prefix' => 'PAY',
+            'mask' => '****',
+        ],
+        'include_amount' => true,
+        'include_purpose' => true,
+        'status' => 'active',
+    ]);
+    $campaign = app(CreateLeadCampaign::class)->handle($user, $template, [
+        'title' => 'Payment recognition campaign',
+        'settings' => ['entry_mode' => CampaignEntryMode::ReusablePaymentQr->value],
+    ]);
+    app(BindCampaignPaymentQr::class)->handle(
+        owner: $user,
+        campaign: $campaign,
+        address: $address,
+        artifact: $address->qrArtifacts()->sole(),
+        amountMode: CampaignPaymentAmountMode::Open,
+        permittedPaymentRules: ['allowed_rails' => ['INSTAPAY']],
+    );
+    $provider->observations = [
+        standingFundingObservation(
+            $provider->fundingAddress,
+            metadata: [
+                'destination_verified' => true,
+                'address_purpose' => FundingAddressPurpose::Payment->value,
+                'settlement_rail' => 'INSTAPAY',
+            ],
+        ),
+    ];
+
+    $first = app(SyncStandingFundingAddress::class)->handle($address);
+    $second = app(SyncStandingFundingAddress::class)->handle($address->refresh());
+
+    expect($first->recognized)->toBe(1)
+        ->and($second->recognized)->toBe(1)
+        ->and($first->applied)->toBe(0)
+        ->and(CampaignPaymentRecognition::query()->count())->toBe(1)
+        ->and(CampaignPaymentEvidenceQuarantine::query()->count())->toBe(0)
         ->and(AccountFundingReceipt::query()->count())->toBe(0)
         ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
         ->and(Transaction::query()->count())->toBe(0)

@@ -219,7 +219,7 @@ Status: **Complete; operator UI deferred**
 
 ### Gate 4 — Payment recognition service
 
-Status: **Gate 4a complete; qualifying-payment recognition pending**
+Status: **Complete**
 
 #### Gate 4a — Evidence quarantine and operator attention
 
@@ -237,12 +237,26 @@ Status: **Gate 4a complete; qualifying-payment recognition pending**
 
 #### Gate 4b — Qualifying-payment recognition
 
-Status: **Pending**
+Status: **Complete**
 
-- Consume immutable provider observations.
-- Apply campaign binding and qualifying-payment rules.
-- Use a transaction plus row-level/idempotency locks.
-- Emit DTO-backed internal and broadcast events only after commit.
+- `RecognizeQualifyingCampaignPayment` consumes canonical immutable provider
+  evidence only after Gate 4a inspection.
+- Recognition requires a settled, destination-verified payment matching the
+  exact provider, funding address, currency, active availability interval,
+  amount mode, configured amount limits, allowed rail, and maximum-payment
+  rule.
+- Binding row locks plus unique binding/transaction keys make recognition
+  exactly once. Replays verify the immutable economic and configuration
+  snapshots before returning the existing record.
+- Settled payments that fail a binding rule enter the durable Gate 4a
+  quarantine as `qualification_rejected`; pending and processing evidence
+  remains observation-only.
+- A redacted `CampaignPaymentRecognized` event carries a DTO and dispatches
+  only after commit. Raw provider identifiers and payer evidence are excluded
+  from its broadcast payload.
+- Recognition is explicitly non-financial: it creates no coverage, envelope,
+  Pay Code, Account Funding receipt, Client Funds, wallet transaction, funding
+  settlement, Treasury operation, or message.
 
 ### Gate 5 — Provisional coverage and settlement envelope
 
@@ -282,8 +296,9 @@ Status: **Pending**
 
 ## Immediate Next Move
 
-Gate 4a's durable evidence quarantine is implemented and operator-visible.
-The next controlled move is Gate 4b: define and persist exactly-once
-qualifying-payment recognition against the immutable Gate 3 binding. It must
-reuse canonical evidence, reject quarantined transactions, and remain free of
-coverage, envelope, completion Pay Code, issuance, or messaging side effects.
+Gate 4's quarantine and exactly-once recognition boundaries are implemented.
+The next controlled move is Gate 5a: define the generic authoritative
+`ProvisionalCoverage` and settlement-envelope persistence contracts, including
+their immutable first-version snapshot and atomicity rules. Do not add the AUI
+driver, completion Pay Code, applicant intake, policy issuance, or messaging in
+that contract-first slice.

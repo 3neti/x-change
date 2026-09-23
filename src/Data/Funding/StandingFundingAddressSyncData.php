@@ -12,5 +12,6 @@ final class StandingFundingAddressSyncData
         public readonly int $awaitingApproval,
         public readonly int $suspense,
         public readonly int $applied = 0,
+        public readonly int $recognized = 0,
     ) {}
 }

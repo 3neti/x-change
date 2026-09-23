@@ -11,6 +11,7 @@ use LBHurtado\EmiCore\Data\Funding\StandingFundingObservationRequestData;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\XChange\Actions\Payment\InspectCampaignPaymentEvidence;
+use LBHurtado\XChange\Actions\Payment\RecognizeQualifyingCampaignPayment;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Data\Funding\StandingFundingAddressBindingData;
 use LBHurtado\XChange\Data\Funding\StandingFundingAddressSyncData;
@@ -42,6 +43,7 @@ final class SyncStandingFundingAddress
         private readonly AuditLoggerContract $audit,
         private readonly StandingFundingAddressBindingResolver $bindings,
         private readonly InspectCampaignPaymentEvidence $inspectCampaignPaymentEvidence,
+        private readonly RecognizeQualifyingCampaignPayment $recognizeCampaignPayment,
     ) {}
 
     public function handle(
@@ -93,6 +95,7 @@ final class SyncStandingFundingAddress
             'suspense' => 0,
             'applied' => 0,
             'pre_activation_ignored' => 0,
+            'recognized' => 0,
         ];
 
         foreach ($observations as $data) {
@@ -126,6 +129,11 @@ final class SyncStandingFundingAddress
                 $quarantine = $campaignBinding instanceof CampaignPaymentQrBinding
                     ? $this->inspectCampaignPaymentEvidence->handle($campaignBinding, $observation)
                     : null;
+                $recognition = $campaignBinding instanceof CampaignPaymentQrBinding
+                    && $quarantine === null
+                    ? $this->recognizeCampaignPayment->handle($campaignBinding, $observation)
+                    : null;
+                $quarantine ??= $recognition?->quarantine;
                 $this->audit->log('funding.standing_address.observation_classified', [
                     'standing_funding_address_reference' => $classified->reference,
                     'provider_observation_id' => $observation->getKey(),
@@ -133,8 +141,15 @@ final class SyncStandingFundingAddress
                     'purpose' => $classified->purpose->value,
                     'balance_changed' => false,
                     'quarantined' => $quarantine !== null,
+                    'recognized' => $recognition?->recognized() ?? false,
                 ]);
-                $counts[$quarantine === null ? 'observed' : 'suspense']++;
+                if ($quarantine !== null) {
+                    $counts['suspense']++;
+                } elseif ($recognition?->recognized() === true) {
+                    $counts['recognized']++;
+                } else {
+                    $counts['observed']++;
+                }
 
                 continue;
             }
@@ -191,6 +206,7 @@ final class SyncStandingFundingAddress
             'settled_count' => $counts['settled'],
             'applied_count' => $counts['applied'],
             'suspense_count' => $counts['suspense'],
+            'recognized_count' => $counts['recognized'],
         ]);
 
         return new StandingFundingAddressSyncData(
@@ -199,6 +215,7 @@ final class SyncStandingFundingAddress
             awaitingApproval: $counts['awaiting_approval'],
             suspense: $counts['suspense'],
             applied: $counts['applied'],
+            recognized: $counts['recognized'],
         );
     }
 

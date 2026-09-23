@@ -11,10 +11,10 @@ snapshot from inception, and issues one zero-value completion Pay Code.
 
 ## Current Position
 
-Current gate: **Gate 4a complete — evidence quarantine operational**
+Current gate: **Gate 4 complete — qualifying payment recognition operational**
 
-Current state: **Adverse, unknown, and incompatible payment evidence is
-durably quarantined without financial recognition**
+Current state: **Compatible qualifying payments are recognized exactly once;
+nonqualifying or unsafe evidence is durably quarantined**
 
 Prior checkpoint: **Reusable multi-payment characterization complete**
 
@@ -108,6 +108,16 @@ does not create or mutate coverage, settlement envelopes, Pay Codes, Account
 Funding receipts, Client Funds, wallet transactions, funding settlements, or
 Treasury operations.
 
+Gate 4b now persists one immutable recognition per binding and canonical
+provider transaction. Recognition is serialized by the immutable binding row
+and protected by database uniqueness. It applies only generic binding rules:
+settled status, verified destination, provider/address/currency match,
+availability, fixed/open amount mode, optional amount bounds, allowed rail,
+and maximum-payment capacity. Pending evidence remains observation-only;
+settled rule failures become durable attention records. A DTO-backed,
+redacted event is emitted after commit. Recognition does not credit or move
+funds and does not create coverage, an envelope, a Pay Code, or a message.
+
 Redacted evidence: [Gate 1 live characterization report](reports/001-netbank-live-characterization.md).
 
 ## Settled Decisions
@@ -144,6 +154,11 @@ Protected by `BindCampaignPaymentQrTest` and the Cockpit frontend suite:
 - compatible settled evidence does not create attention;
 - Cockpit exposes an aggregate attention count without raw provider evidence;
 - all measured financial and issuance side-effect counts remain unchanged.
+- qualifying fixed and open payments converge on one recognition;
+- pending evidence waits without a terminal decision;
+- amount and maximum-payment failures enter quarantine;
+- replay emits no duplicate recognition event;
+- broadcast payloads omit raw provider transaction and payer evidence.
 
 Protected by `CampaignQrPhPlanTest`:
 
@@ -174,11 +189,11 @@ Stop before business recognition if any of these remain ambiguous:
 
 ## Next Controlled Gate
 
-Gate 4b: introduce exactly-once qualifying-payment recognition against the
-immutable Gate 3 binding. Recognition must consume canonical compatible
-evidence, reject any quarantined transaction, snapshot the binding/rule
-decision, and emit DTO-backed events only after commit. It must still create no
-coverage, settlement envelope, completion Pay Code, Client Funds, wallet, or
-Treasury side effects; those remain later gates.
+Gate 5a: define and persist the generic `ProvisionalCoverage` and first-version
+settlement-envelope contracts. The two authoritative facts must commit
+atomically from one recognized payment, and the envelope must contain the
+coverage snapshot from inception. Keep the AUI driver, completion Pay Code,
+claim intake, policy issuance, notification, Client Funds, wallet, and Treasury
+effects outside this contract-first gate.
 
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).

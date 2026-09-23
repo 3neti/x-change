@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Payment;
 
-use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
-use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Exceptions\IncompatibleProviderFundingEvidence;
 use LBHurtado\XChange\Models\CampaignPaymentEvidenceQuarantine;
 use LBHurtado\XChange\Models\CampaignPaymentQrBinding;
@@ -20,7 +18,7 @@ final readonly class InspectCampaignPaymentEvidence
 
     public function __construct(
         private ReduceProviderFundingTransactionEvidence $reduce,
-        private AuditLoggerContract $audit,
+        private QuarantineCampaignPaymentEvidence $quarantine,
     ) {}
 
     public function handle(
@@ -75,41 +73,14 @@ final readonly class InspectCampaignPaymentEvidence
         }
 
         $evidenceIds = $evidence->modelKeys();
-        $evidenceFingerprint = hash('sha256', implode('|', array_map('strval', $evidenceIds)));
-        $quarantineKey = hash('sha256', implode('|', [
-            (string) $binding->getKey(),
-            $transactionKey,
-        ]));
 
-        $quarantine = DB::transaction(fn (): CampaignPaymentEvidenceQuarantine => CampaignPaymentEvidenceQuarantine::query()->firstOrCreate(
-            ['quarantine_key' => $quarantineKey],
-            [
-                'campaign_payment_qr_binding_id' => $binding->getKey(),
-                'provider_funding_observation_id' => $observation->getKey(),
-                'provider_code' => $providerCode,
-                'provider_transaction_key' => $transactionKey,
-                'reason_code' => $reasonCode,
-                'reason_detail' => $reasonDetail,
-                'evidence_observation_ids' => $evidenceIds,
-                'evidence_fingerprint' => $evidenceFingerprint,
-                'opened_at' => now(),
-            ],
-        ), attempts: 3);
-
-        if ($quarantine->wasRecentlyCreated) {
-            $this->audit->log('campaign.payment.evidence_quarantined', [
-                'campaign_reference' => $binding->campaign->reference,
-                'campaign_revision_id' => $binding->campaign_revision_id,
-                'binding_reference' => $binding->reference,
-                'quarantine_reference' => $quarantine->reference,
-                'provider' => $providerCode,
-                'reason_code' => $reasonCode,
-                'reason_detail' => $reasonDetail,
-                'evidence_count' => count($evidenceIds),
-                'financial_side_effects' => false,
-            ]);
-        }
-
-        return $quarantine;
+        return $this->quarantine->handle(
+            binding: $binding,
+            trigger: $observation,
+            providerTransactionKey: $transactionKey,
+            reasonCode: $reasonCode,
+            reasonDetail: $reasonDetail,
+            evidenceObservationIds: $evidenceIds,
+        );
     }
 }
