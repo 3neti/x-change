@@ -2309,6 +2309,7 @@ class XChangeServiceProvider extends ServiceProvider
 
         $this->publishes([
             $this->packagePath('config/envelope-drivers/account-funding-review.yaml') => config_path('envelope-drivers/account-funding-review.yaml'),
+            $this->packagePath('config/envelope-drivers/aui.personal-accident.provisional-cover.yaml') => config_path('envelope-drivers/aui.personal-accident.provisional-cover.yaml'),
         ], 'x-change-envelope-drivers');
 
         $this->publishes([

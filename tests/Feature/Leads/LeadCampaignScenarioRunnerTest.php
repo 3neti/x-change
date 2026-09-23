@@ -84,15 +84,20 @@ it('runs the disbursable feedback scenario with a bounded endpoint template', fu
 });
 
 it('keeps the AUI browser scenario executable against voucher input fields', function (): void {
-    actingAsTestUser();
+    $operator = actingAsTestUser();
 
-    $this->post(route('x-change.cockpit.campaigns.lead-scenario-runner.store'), [
+    $response = $this->post(route('x-change.cockpit.campaigns.lead-scenario-runner.store'), [
         'scenario' => 'aui_on_demand_insurance_payment',
-    ])
-        ->assertRedirect();
+    ]);
 
     $template = PayCodeTemplate::query()->sole();
+    $campaign = LeadCampaign::query()->sole();
     $supported = VoucherInputField::values();
+
+    $response->assertRedirect(route(
+        'x-change.cockpit.campaigns.lead-scenario-runner.runs.show',
+        ['campaign' => $campaign->reference],
+    ));
 
     expect(data_get($template->instructions_ciphertext, 'inputs.fields'))
         ->each->toBeIn($supported)
@@ -103,7 +108,33 @@ it('keeps the AUI browser scenario executable against voucher input fields', fun
         ->and(data_get(
             $template->instructions_ciphertext,
             'metadata.custom.lead_campaign.invoice_channels',
-        ))->toBeNull();
+        ))->toBeNull()
+        ->and(data_get($template->instructions_ciphertext, 'metadata.custom.settlement.coverage_driver_id'))
+        ->toBe('aui.personal-accident.provisional-cover')
+        ->and(data_get($campaign->settings, 'scenario_run.schema'))
+        ->toBe('x-change.lead-campaign-lifecycle-run.v1');
+
+    $this->actingAs($operator)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.lead-scenario-runner.runs.show', [
+            'campaign' => $campaign->reference,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/LeadCampaignLifecycleScenarioRun')
+        ->assertJsonPath('props.run.status', 'running')
+        ->assertJsonPath('props.run.declarations.driver_authority', 'demonstration_only')
+        ->assertJsonPath('props.run.steps.0.status', 'passed')
+        ->assertJsonPath('props.run.steps.2.status', 'passed')
+        ->assertJsonPath('props.run.steps.4.status', 'waiting_for_person')
+        ->assertJsonPath('props.run.artifacts.1.label', 'Public endpoint');
+
+    $otherOwner = actingAsTestUser(0);
+
+    $this->actingAs($otherOwner)
+        ->get(route('x-change.cockpit.campaigns.lead-scenario-runner.runs.show', [
+            'campaign' => $campaign->reference,
+        ]))
+        ->assertNotFound();
 });
 
 it('preserves the AUI settlement target from the endpoint template and offers same-code payment after intake', function (): void {
@@ -213,6 +244,25 @@ it('preserves the AUI settlement target from the endpoint template and offers sa
         ->assertOk()
         ->assertJsonPath('props.payment.is_fully_paid', true)
         ->assertJsonPath('props.payment.receipt.amount_paid_minor', 10000);
+
+    $this->actingAs($operator)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.lead-scenario-runner.runs.show', [
+            'campaign' => $campaign->reference,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('props.run.declarations.payment_evidence', 'provider_observed')
+        ->assertJsonPath('props.run.steps.4.status', 'passed')
+        ->assertJsonPath('props.run.steps.5.facts.pay_code', $voucher->code)
+        ->assertJsonPath('props.run.steps.6.status', 'passed')
+        ->assertJsonPath('props.run.steps.7.facts.payment_attempt', $attempt->reference)
+        ->assertJsonPath('props.run.steps.8.status', 'passed')
+        ->assertJsonPath('props.run.steps.9.status', 'passed')
+        ->assertJsonPath('props.run.steps.10.status', 'passed')
+        ->assertJsonPath('props.run.steps.11.status', 'not_started')
+        ->assertJsonPath('props.run.artifacts.4.reference', $voucher->code)
+        ->assertJsonMissingPath('props.run.private_applicant')
+        ->assertJsonMissingPath('props.run.otp');
 });
 
 it('continues the feedback browser scenario through public endpoint generation into claim', function (): void {

@@ -18,6 +18,7 @@ final readonly class RunAuiInsuranceLeadScenario
     public function handle(Model $owner): LeadCampaign
     {
         $suffix = Str::lower(Str::random(6));
+        $runReference = 'RUN-AUI-'.Str::upper(Str::random(10));
         $template = PayCodeTemplate::query()->create([
             'owner_type' => $owner->getMorphClass(),
             'owner_id' => (string) $owner->getKey(),
@@ -34,6 +35,18 @@ final readonly class RunAuiInsuranceLeadScenario
             'title' => 'AUI On-Demand Insurance Payment',
             'endpoint_slug' => 'aui-on-demand-insurance-payment-'.$suffix,
             'description' => 'Public QR/link intake for a prospect who wants insurance payment instructions.',
+            'settings' => [
+                'scenario_run' => [
+                    'schema' => 'x-change.lead-campaign-lifecycle-run.v1',
+                    'reference' => $runReference,
+                    'scenario' => 'aui_on_demand_insurance_payment',
+                    'mode' => 'browser_manual_payment',
+                    'evidence_classification' => 'application_persisted',
+                    'envelope_driver_id' => 'aui.personal-accident.provisional-cover',
+                    'envelope_driver_version' => '1.0.0',
+                    'started_at' => now()->toIso8601String(),
+                ],
+            ],
         ]);
     }
 
@@ -78,7 +91,11 @@ final readonly class RunAuiInsuranceLeadScenario
             'metadata' => [
                 'flow_type' => 'settlement',
                 'custom' => [
-                    'settlement' => ['driver' => 'claim-intake'],
+                    'settlement' => [
+                        'driver' => 'claim-intake',
+                        'coverage_driver_id' => 'aui.personal-accident.provisional-cover',
+                        'coverage_driver_version' => '1.0.0',
+                    ],
                     'payment' => [
                         'qr_delivery_modes' => ['payer_page', 'downloadable'],
                     ],

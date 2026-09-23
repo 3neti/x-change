@@ -15,6 +15,7 @@ use LBHurtado\XChange\Http\Requests\Web\Cockpit\RunLeadCampaignScenarioRequest;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
 use LBHurtado\XChange\Services\Leads\LeadCampaignBrowserScenarioCatalog;
+use LBHurtado\XChange\Services\Leads\LeadCampaignLifecycleScenarioRunReadModel;
 
 final class CockpitLeadCampaignScenarioRunnerController extends Controller
 {
@@ -52,9 +53,35 @@ final class CockpitLeadCampaignScenarioRunnerController extends Controller
             return to_route('x-change.cockpit.quick-generate', ['surface' => 'qr', 'display_session' => $display->reference]);
         }
 
+        if ($request->validated('scenario') === 'aui_on_demand_insurance_payment') {
+            return to_route('x-change.cockpit.campaigns.lead-scenario-runner.runs.show', [
+                'campaign' => $campaign->reference,
+            ]);
+        }
+
         return to_route('x-change.leads.start', [
             'merchant_slug' => $campaign->merchant_slug,
             'endpoint_slug' => $campaign->endpoint_slug,
+        ]);
+    }
+
+    public function run(
+        Request $request,
+        string $campaign,
+        LeadCampaignLifecycleScenarioRunReadModel $runs,
+    ): Response {
+        $this->ensureEnabled();
+        $owner = $request->user();
+        $run = LeadCampaign::query()
+            ->where('reference', $campaign)
+            ->where('owner_type', $owner->getMorphClass())
+            ->where('owner_id', (string) $owner->getAuthIdentifier())
+            ->firstOrFail();
+
+        abort_unless(data_get($run->settings, 'scenario_run.schema') === 'x-change.lead-campaign-lifecycle-run.v1', 404);
+
+        return Inertia::render('x-change/cockpit/LeadCampaignLifecycleScenarioRun', [
+            'run' => $runs->for($run, $owner),
         ]);
     }
 

@@ -395,6 +395,10 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             [CockpitLeadCampaignScenarioRunnerController::class, 'store'],
         )->middleware('throttle:6,1')
             ->name('x-change.cockpit.campaigns.lead-scenario-runner.store');
+        Route::get(
+            'campaigns/lead-scenario-runner/runs/{campaign}',
+            [CockpitLeadCampaignScenarioRunnerController::class, 'run'],
+        )->name('x-change.cockpit.campaigns.lead-scenario-runner.runs.show');
         Route::post('campaigns/intakes', [CockpitCampaignWorksheetIntakeController::class, 'store'])
             ->middleware('throttle:12,1')
             ->name('x-change.cockpit.campaigns.intakes.store');

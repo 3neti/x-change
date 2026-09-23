@@ -44,8 +44,9 @@ final class CorePublicationContributor implements XChangePublicationContributor
             config_path('link-preview-drivers/spotify.yaml'),
             config_path('link-preview-drivers/youtube.yaml'),
         ]);
-        yield $this->build('x-change.envelope-driver', '3neti/x-change', 'x-change-envelope-drivers', 'Account funding settlement-envelope driver.', [
+        yield $this->build('x-change.envelope-driver', '3neti/x-change', 'x-change-envelope-drivers', 'X-Change settlement-envelope drivers.', [
             config_path('envelope-drivers/account-funding-review.yaml'),
+            config_path('envelope-drivers/aui.personal-accident.provisional-cover.yaml'),
         ]);
         yield $this->build('form-flow.drivers', '3neti/form-flow', 'form-flow-drivers', 'Form Flow package-owned drivers.', [
             config_path('form-flow-drivers'),

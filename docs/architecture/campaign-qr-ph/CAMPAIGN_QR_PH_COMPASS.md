@@ -314,4 +314,18 @@ independently applies owner-aware voucher access. Other lifecycle references
 remain noninteractive because they lack an authoritative owner-scoped detail
 surface. No mutation or transport authority was introduced.
 
+Gate 9a is complete. Starting the AUI browser scenario now creates a durable,
+versioned run identity on its owner-scoped endpoint campaign and opens a
+polling execution ledger. The ledger derives its checkpoints and artifact
+links from authoritative campaign, template, Pay Code, claim, payment,
+collection, and lifecycle records. It declares whether evidence is observed,
+whether money is real, and whether the driver or insurer contract is only a
+demonstration. Private evidence and provider material are excluded.
+
+The exact AUI provisional-cover YAML is now a package-owned published
+demonstration driver. It does not claim an accepted insurer contract. The run
+stops honestly after voucher collection until Gate 9b provides a canonical,
+idempotent settlement-collection-to-campaign-recognition bridge. No simulated
+provider settlement or financial mutation was added in Gate 9a.
+
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).

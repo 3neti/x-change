@@ -492,12 +492,42 @@ because no equivalent owner-scoped detail route exists.
 Mutation authority remains a separate decision. This gate adds no approval,
 retry, dispatch, provider, transport, or financial behavior.
 
+### Gate 9 — Browser lifecycle scenario narrative
+
+Status: **Complete through Gate 9a durable run projection**
+
+Gate 9a turns the existing AUI browser scenario into a resumable operational
+narrative. Creating the scenario persists a versioned run identity inside the
+owner-scoped endpoint campaign and redirects the operator to a dedicated run
+page. The page polls a read model that reconstructs chronological checkpoints
+and safe artifacts from the authoritative campaign, pinned template, issued
+Pay Code, claim, payment attempt, collection, and policy-lifecycle records.
+
+The run explicitly distinguishes not started, running, waiting for a person,
+waiting for a provider, passed, and failed states. It labels provider evidence,
+financial mode, insurer-contract readiness, and demonstration-driver authority.
+Private applicant answers, OTP values, QR payloads, provider secrets, account
+numbers, and raw provider evidence are not copied into the run projection.
+
+The package now includes and publishes the exact
+`aui.personal-accident.provisional-cover@1.0.0` demonstration envelope schema.
+It is intentionally labelled demonstration-only and is not an accepted AUI
+transport contract. The initial settlement Pay Code continues to use the
+claim-intake envelope driver while carrying the exact post-payment coverage
+driver identity separately.
+
+Gate 9a does not simulate payment, create provider evidence, credit funds,
+recognize a settlement-voucher collection as a campaign payment, bind coverage,
+or dispatch insurer transport. It makes the currently missing post-payment
+recognition bridge visible instead of claiming that QR generation or voucher
+collection completed the policy lifecycle.
+
 ## Immediate Next Move
 
-Gate 7e is complete as a fail-closed offline intake toolchain. The next
-controlled move still requires an external artifact: obtain AUI's authoritative
-endpoint, authentication, schemas, provider idempotency, timeout/retry
-expectations, ambiguous-outcome handling, reconciliation protocol, and formal
-acceptance provenance. Only after that real manifest passes the catalog and
-readiness boundary may a separately tested HTTP adapter and governed dispatch
-action be introduced.
+Gate 9b should define the provider-neutral bridge from an already verified
+settlement Pay Code collection into campaign payment recognition. It must reuse
+the canonical provider observation, remain idempotent, reject cross-campaign or
+amount mismatches, and add no second credit. Only after that bridge exists may
+the browser runner continue automatically into provisional coverage and the
+completion Pay Code. Live provider payment and insurer transport remain
+separately authorized gates.
