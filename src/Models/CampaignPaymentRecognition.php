@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 
@@ -89,5 +90,10 @@ final class CampaignPaymentRecognition extends Model
             ProviderFundingObservation::class,
             'canonical_provider_funding_observation_id',
         );
+    }
+
+    public function provisionalCoverage(): HasOne
+    {
+        return $this->hasOne(ProvisionalCoverage::class, 'campaign_payment_recognition_id');
     }
 }

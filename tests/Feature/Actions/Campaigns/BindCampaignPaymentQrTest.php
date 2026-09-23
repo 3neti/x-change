@@ -5,20 +5,28 @@ declare(strict_types=1);
 use Bavix\Wallet\Models\Transaction;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
+use LBHurtado\SettlementEnvelope\Models\Envelope;
+use LBHurtado\SettlementEnvelope\Models\EnvelopePayloadVersion;
+use LBHurtado\SettlementEnvelope\Services\DriverService;
+use LBHurtado\SettlementEnvelope\Services\EnvelopeService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\XChange\Actions\Campaigns\BindCampaignPaymentQr;
 use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
 use LBHurtado\XChange\Actions\Payment\InspectCampaignPaymentEvidence;
 use LBHurtado\XChange\Actions\Payment\RecognizeQualifyingCampaignPayment;
+use LBHurtado\XChange\Actions\Settlement\BindProvisionalCoverage;
+use LBHurtado\XChange\Data\Settlement\ProvisionalCoverageTermsData;
 use LBHurtado\XChange\Enums\CampaignEntryMode;
 use LBHurtado\XChange\Enums\CampaignPaymentAmountMode;
 use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
 use LBHurtado\XChange\Events\CampaignPaymentRecognized;
+use LBHurtado\XChange\Events\ProvisionalCoverageBound;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\CampaignPaymentEvidenceQuarantine;
 use LBHurtado\XChange\Models\CampaignPaymentQrBinding;
@@ -26,6 +34,7 @@ use LBHurtado\XChange\Models\CampaignPaymentRecognition;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
+use LBHurtado\XChange\Models\ProvisionalCoverage;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Models\StandingFundingQrArtifact;
 use LBHurtado\XChange\Services\Cockpit\CampaignPaymentEvidenceAttentionReadModel;
@@ -303,12 +312,140 @@ it('enforces the maximum qualifying payments rule under the binding lock', funct
         ->and(CampaignPaymentRecognition::query()->count())->toBe(1);
 });
 
+it('atomically binds recognized payment to immutable provisional coverage and envelope', function (): void {
+    configureCampaignCoverageTestDriver();
+    [$recognition] = recognizedCampaignPayment();
+    $before = campaignPaymentFinancialCounts();
+    $terms = campaignCoverageTerms($recognition);
+    Event::fake([ProvisionalCoverageBound::class]);
+
+    $first = app(BindProvisionalCoverage::class)->handle($recognition, $terms);
+    $replayed = app(BindProvisionalCoverage::class)->handle($recognition, $terms);
+
+    expect($first->created)->toBeTrue()
+        ->and($replayed->created)->toBeFalse()
+        ->and($replayed->coverage->is($first->coverage))->toBeTrue()
+        ->and($replayed->envelope->is($first->envelope))->toBeTrue()
+        ->and(ProvisionalCoverage::query()->count())->toBe(1)
+        ->and(Envelope::query()->count())->toBe(1)
+        ->and(EnvelopePayloadVersion::query()->count())->toBe(1)
+        ->and($first->envelope->payload_version)->toBe(1)
+        ->and($first->envelope->reference_type)->toBe($recognition::class)
+        ->and((int) $first->envelope->reference_id)->toBe($recognition->getKey())
+        ->and(data_get($first->envelope->payload, 'coverage.coverage_reference'))
+        ->toBe($first->coverage->reference)
+        ->and(campaignPaymentFinancialCounts())->toBe($before);
+
+    Event::assertDispatchedTimes(ProvisionalCoverageBound::class, 1);
+    Event::assertDispatched(ProvisionalCoverageBound::class, function (
+        ProvisionalCoverageBound $event,
+    ): bool {
+        $payload = json_encode($event->broadcastWith(), JSON_THROW_ON_ERROR);
+
+        return ! str_contains($payload, 'transaction-coverage')
+            && ! str_contains($payload, 'provider_transaction')
+            && ! str_contains($payload, 'authority_reference')
+            && ! str_contains($payload, 'payer');
+    });
+
+    expect(fn () => $first->coverage->forceFill(['coverage_type' => 'changed'])->save())
+        ->toThrow(LogicException::class, 'immutable');
+    expect(fn () => $first->coverage->delete())
+        ->toThrow(LogicException::class, 'cannot be deleted');
+});
+
+it('rejects conflicting coverage replay without changing the original facts', function (): void {
+    configureCampaignCoverageTestDriver();
+    [$recognition] = recognizedCampaignPayment();
+    $action = app(BindProvisionalCoverage::class);
+    $first = $action->handle($recognition, campaignCoverageTerms($recognition));
+    $conflict = campaignCoverageTerms($recognition, ['plan' => 'different']);
+
+    expect(fn () => $action->handle($recognition, $conflict))
+        ->toThrow(InvalidArgumentException::class, 'does not match')
+        ->and(ProvisionalCoverage::query()->count())->toBe(1)
+        ->and(Envelope::query()->count())->toBe(1)
+        ->and(EnvelopePayloadVersion::query()->count())->toBe(1)
+        ->and(ProvisionalCoverage::query()->sole()->is($first->coverage))->toBeTrue();
+});
+
+it('rolls back the envelope when provisional coverage persistence fails', function (): void {
+    configureCampaignCoverageTestDriver();
+    [$recognition] = recognizedCampaignPayment();
+    Event::listen('eloquent.creating: '.ProvisionalCoverage::class, function (): never {
+        throw new RuntimeException('forced coverage persistence failure');
+    });
+
+    expect(fn () => app(BindProvisionalCoverage::class)->handle(
+        $recognition,
+        campaignCoverageTerms($recognition),
+    ))->toThrow(RuntimeException::class, 'forced coverage persistence failure')
+        ->and(ProvisionalCoverage::query()->count())->toBe(0)
+        ->and(Envelope::query()->count())->toBe(0)
+        ->and(EnvelopePayloadVersion::query()->count())->toBe(0);
+});
+
 function campaignPaymentQrOwner(): User
 {
     $owner = actingAsTestUser();
     $owner->forceFill(['name' => 'AUI Insurance'])->save();
 
     return $owner;
+}
+
+function configureCampaignCoverageTestDriver(): void
+{
+    config()->set('filesystems.disks.envelope-drivers', [
+        'driver' => 'local',
+        'root' => dirname(__DIR__, 3).'/Fixtures/envelope-drivers',
+        'throw' => true,
+    ]);
+    config()->set('settlement-envelope.driver_disk', 'envelope-drivers');
+    Storage::forgetDisk('envelope-drivers');
+    app()->forgetInstance(DriverService::class);
+    app()->forgetInstance(EnvelopeService::class);
+}
+
+/** @return array{CampaignPaymentRecognition, CampaignPaymentQrBinding} */
+function recognizedCampaignPayment(): array
+{
+    $owner = campaignPaymentQrOwner();
+    $campaign = campaignPaymentQrCampaign($owner, CampaignEntryMode::ReusablePaymentQr);
+    [$address, $artifact] = campaignPaymentQrAddress($owner);
+    $binding = app(BindCampaignPaymentQr::class)->handle(
+        owner: $owner,
+        campaign: $campaign,
+        address: $address,
+        artifact: $artifact,
+        amountMode: CampaignPaymentAmountMode::Fixed,
+        fixedAmountMinor: 12_200,
+    );
+    $result = app(RecognizeQualifyingCampaignPayment::class)->handle(
+        $binding,
+        campaignPaymentObservation($address, 'transaction-coverage-'.str()->ulid(), 'settled'),
+    );
+
+    return [$result->recognition, $binding];
+}
+
+function campaignCoverageTerms(
+    CampaignPaymentRecognition $recognition,
+    array $terms = ['plan' => 'test-coverage'],
+): ProvisionalCoverageTermsData {
+    return new ProvisionalCoverageTermsData(
+        driverId: 'campaign-provisional-coverage',
+        driverVersion: '1.0.0',
+        coverageType: 'provisional-service-coverage',
+        currency: 'PHP',
+        effectiveAt: $recognition->settled_at,
+        expiresAt: $recognition->settled_at->addDay(),
+        coverageAmountMinor: $recognition->gross_amount_minor,
+        terms: $terms,
+        authorization: [
+            'authority' => 'campaign-driver',
+            'authority_reference' => 'test-authorization',
+        ],
+    );
 }
 
 function campaignPaymentQrCampaign(User $owner, CampaignEntryMode $entryMode): LeadCampaign

@@ -260,12 +260,29 @@ Status: **Complete**
 
 ### Gate 5 — Provisional coverage and settlement envelope
 
-Status: **Pending**
+Status: **Gate 5a complete; driver orchestration pending**
 
 - Persist the authoritative coverage record and envelope atomically.
 - Snapshot the qualifying payment, coverage terms, campaign revision, driver,
   effective time, expiry, and authorization provenance.
 - Prove failure rolls back both facts.
+
+Gate 5a now provides a generic `BindProvisionalCoverage` boundary. It accepts
+one immutable payment recognition and explicit, versioned driver terms; locks
+the recognition; validates the exact envelope driver and its JSON schema; and
+commits one immutable `ProvisionalCoverage` with envelope payload version 1 in
+one database transaction. Deterministic fingerprints make identical replay a
+no-op and reject conflicting replay. Its audit and broadcast event expose only
+references and non-sensitive coverage metadata, dispatch after commit, and
+declare zero financial side effects.
+
+The envelope refers to the recognition as its source fact and contains the
+coverage reference from its first payload version. No AUI driver is shipped by
+this slice. No listener invokes the binder automatically yet; that remains an
+explicit driver-orchestration gate. The settlement-envelope package's own
+model-level `EnvelopeCreated` event is not currently an after-commit event; no
+x-change listener relies on it, and hardening that package event remains
+separate package debt.
 
 ### Gate 6 — Completion Pay Code
 
@@ -296,9 +313,8 @@ Status: **Pending**
 
 ## Immediate Next Move
 
-Gate 4's quarantine and exactly-once recognition boundaries are implemented.
-The next controlled move is Gate 5a: define the generic authoritative
-`ProvisionalCoverage` and settlement-envelope persistence contracts, including
-their immutable first-version snapshot and atomicity rules. Do not add the AUI
-driver, completion Pay Code, applicant intake, policy issuance, or messaging in
-that contract-first slice.
+Gate 5a's generic coverage/envelope contract is implemented. The next
+controlled move is Gate 5b: define the driver-owned orchestration boundary that
+selects explicit coverage terms for a recognition and calls the generic binder.
+Keep the reserved AUI adapter, completion Pay Code, applicant intake, policy
+issuance, and messaging outside that boundary until their respective gates.

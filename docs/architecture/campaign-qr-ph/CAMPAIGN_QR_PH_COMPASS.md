@@ -189,11 +189,18 @@ Stop before business recognition if any of these remain ambiguous:
 
 ## Next Controlled Gate
 
-Gate 5a: define and persist the generic `ProvisionalCoverage` and first-version
-settlement-envelope contracts. The two authoritative facts must commit
-atomically from one recognized payment, and the envelope must contain the
-coverage snapshot from inception. Keep the AUI driver, completion Pay Code,
-claim intake, policy issuance, notification, Client Funds, wallet, and Treasury
-effects outside this contract-first gate.
+Gate 5a is complete. A recognized payment can now be bound explicitly to one
+immutable generic `ProvisionalCoverage` and one settlement envelope whose first
+payload version already contains the coverage reference and snapshots. The two
+facts commit atomically; identical replay returns them, conflicting replay is
+rejected, and rollback leaves neither fact behind. The contract validates the
+exact driver/version and schema before persistence and emits only redacted,
+after-commit x-change audit/broadcast evidence.
+
+The next controlled gate is Gate 5b: add the driver-owned orchestration
+boundary that decides whether and with which explicit terms a recognition may
+invoke this binder. Do not add the AUI adapter, completion Pay Code, claim
+intake, policy issuance, notification, Client Funds, wallet, or Treasury effects
+in that orchestration contract.
 
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).

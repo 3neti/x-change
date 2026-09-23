@@ -1,0 +1,52 @@
+driver:
+  id: "campaign-provisional-coverage"
+  version: "1.0.0"
+  title: "Campaign Provisional Coverage Test Driver"
+  description: "Test-only driver for the generic campaign coverage contract."
+  domain: "campaign-settlement"
+
+payload:
+  schema:
+    id: "x-change.campaign-provisional-coverage-envelope.v1"
+    format: "json_schema"
+    inline:
+      type: "object"
+      properties:
+        schema:
+          type: "string"
+          const: "x-change.campaign-provisional-coverage-envelope.v1"
+        campaign:
+          type: "object"
+        payment:
+          type: "object"
+        coverage:
+          type: "object"
+        authorization:
+          type: "object"
+      required: ["schema", "campaign", "payment", "coverage", "authorization"]
+  storage:
+    mode: "versioned"
+    patch_strategy: "merge"
+
+documents:
+  registry: []
+
+checklist:
+  template: []
+
+signals:
+  definitions: []
+
+gates:
+  definitions: []
+
+audit:
+  enabled: true
+  capture: ["payload_patch", "status_change"]
+
+manifest:
+  enabled: true
+  includes:
+    payload_hash: true
+    attachments_hashes: true
+    envelope_fingerprint: true
