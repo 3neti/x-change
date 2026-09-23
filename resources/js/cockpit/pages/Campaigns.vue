@@ -7,6 +7,7 @@ import {
     FileSpreadsheet,
     Globe2,
     HandCoins,
+    HeartPulse,
     Link2,
     LockKeyhole,
     PauseCircle,
@@ -29,6 +30,7 @@ import {
     watch,
 } from 'vue';
 import { show as showScenarioRunner } from '@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitLeadCampaignScenarioRunnerController';
+import showPolicyLifecycle from '@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitCampaignPolicyLifecyclePageController';
 import { destroy, show, store } from '@/routes/x-change/cockpit/campaigns';
 import authorizations from '@/routes/x-change/cockpit/campaigns/authorizations';
 import { store as storeIntake } from '@/routes/x-change/cockpit/campaigns/intakes';
@@ -1345,6 +1347,17 @@ const updatedRelativeTime = (value: string | null): string =>
                             </h2>
                         </div>
                         <div class="flex flex-wrap items-center gap-2">
+                            <Link
+                                :href="showPolicyLifecycle()"
+                                class="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-indigo-700 dark:hover:text-indigo-300"
+                                data-testid="campaign-policy-lifecycle-link"
+                            >
+                                <HeartPulse
+                                    class="size-3.5"
+                                    aria-hidden="true"
+                                />
+                                Policy lifecycle
+                            </Link>
                             <Link
                                 :href="showScenarioRunner.url()"
                                 class="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-emerald-700 dark:hover:text-emerald-300"

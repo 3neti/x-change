@@ -294,8 +294,14 @@ completion claim evidence, maker/checker governance, and terminal outcome.
 Failed and indeterminate outcomes are explicitly attention-bearing. The
 projection is read-only and excludes applicant/contact data, provider keys,
 actor identities, approvals, snapshots, hashes, private payloads, credentials,
-and transport readiness. Gate 8b is the next package-controlled move: expose
-this DTO through an authorized read-only Cockpit surface without adding any
-mutation or transport authority.
+and transport readiness.
+
+Gate 8b is complete. The authenticated Campaigns workspace now links to a
+dedicated owner-scoped Policy lifecycle page. It renders only the Gate 8a DTO,
+handles empty and nullable intermediate states, highlights failed and
+indeterminate outcomes, and provides no approval, retry, dispatch, provider,
+transport, or policy mutation controls. The next controlled move is Gate 8c:
+local browser acceptance and presentation hardening using representative
+lifecycle states; mutation authority remains explicitly out of scope.
 
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).

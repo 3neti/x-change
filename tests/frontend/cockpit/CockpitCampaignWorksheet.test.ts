@@ -134,6 +134,11 @@ describe('Cockpit campaign worksheets', () => {
         await wrapper
             .get('[data-testid="campaign-flavor-endpoints"]')
             .trigger('click');
+        expect(
+            wrapper
+                .get('[data-testid="campaign-policy-lifecycle-link"]')
+                .attributes('href'),
+        ).toBe('/x/cockpit/campaigns/policy-lifecycle');
 
         const attention = wrapper.get(
             '[data-testid="campaign-payment-evidence-attention"]',

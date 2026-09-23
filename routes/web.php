@@ -21,6 +21,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountScenarioControl
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignApprovalDeliveryController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignDisplaySessionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignEndpointController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignPolicyLifecyclePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignVoucherBlueprintController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetAuthorizationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetBankTransferDispatchController;
@@ -368,6 +369,8 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             ->name('x-change.cockpit.commercial.commission_payout_batches.retries.store');
         Route::get('campaigns', [CockpitCampaignWorksheetController::class, 'index'])
             ->name('x-change.cockpit.campaigns.index');
+        Route::get('campaigns/policy-lifecycle', CockpitCampaignPolicyLifecyclePageController::class)
+            ->name('x-change.cockpit.campaigns.policy-lifecycle.index');
         Route::post('campaigns', [CockpitCampaignWorksheetController::class, 'store'])
             ->middleware('throttle:20,1')
             ->name('x-change.cockpit.campaigns.store');

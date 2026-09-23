@@ -106,6 +106,11 @@ export default defineConfig({
           import.meta.dirname,
           "tests/frontend/stubs/lead-campaign-scenario-runner-route.ts",
         ),
+      "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitCampaignPolicyLifecyclePageController":
+        path.resolve(
+          import.meta.dirname,
+          "tests/frontend/stubs/campaign-policy-lifecycle-route.ts",
+        ),
       "@/actions/LBHurtado/XChange/Http/Controllers/Web/StoredValueInstrumentPageController":
         path.resolve(
           import.meta.dirname,

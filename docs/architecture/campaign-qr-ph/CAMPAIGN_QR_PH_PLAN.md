@@ -444,7 +444,7 @@ activate config, call HTTP, dispatch work, or mutate domain or financial state.
 
 ### Gate 8 — Operator experience and lifecycle acceptance
 
-Status: **Gate 8a read model implemented; presentation pending**
+Status: **Complete through Gate 8b read-only Cockpit presentation**
 
 Gate 8a introduces a bounded, owner-scoped, read-only lifecycle projection.
 It combines the safe references and timestamps for recognized payment,
@@ -464,9 +464,18 @@ events, or mutate envelope, journal, financial, campaign, or policy state.
   finish intake, and observe policy status.
 - Failure, reversal, duplicate, concurrency, and redaction acceptance.
 
-The next controlled Gate 8b may connect this DTO to an authorized Cockpit
-read-only surface. It must retain the owner scope and redaction contract and
-must not add approval, dispatch, retry, provider, or policy mutation controls.
+Gate 8b exposes that DTO through the authenticated Campaigns workspace at
+`/x/cockpit/campaigns/policy-lifecycle`. The dedicated page shows payment,
+coverage, completion claim, governance, outcome, and attention state while
+preserving nullable intermediate stages and a clear empty state. It contains no
+approval, dispatch, retry, provider, transport, or policy mutation controls.
+The Campaigns endpoint header links to the page through a generated Wayfinder
+controller action.
+
+The next controlled Gate 8c is browser acceptance and presentation hardening
+against representative active, intermediate, failed, and indeterminate records.
+It may add safe navigation to existing detail pages, but it must not broaden
+authority or introduce transport and mutation behavior.
 
 ## Immediate Next Move
 

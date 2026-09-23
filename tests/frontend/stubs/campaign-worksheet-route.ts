@@ -1,3 +1,8 @@
+export const index = () => ({
+    url: '/x/cockpit/campaigns',
+    method: 'get' as const,
+});
+
 export const store = () => ({
     url: '/x/cockpit/campaigns',
     method: 'post' as const,

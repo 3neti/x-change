@@ -951,6 +951,42 @@ it('projects an owner scoped and redacted campaign policy lifecycle without side
     Event::assertNothingDispatched();
 });
 
+it('serves the authenticated owner policy lifecycle as a read only cockpit page', function (): void {
+    [$projection, $owner] = auiPolicyCompletionProjection();
+    $before = campaignPaymentFinancialCounts();
+    Http::preventStrayRequests();
+
+    $response = $this->actingAs($owner)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.policy-lifecycle.index'));
+
+    $response->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/CampaignPolicyLifecycle')
+        ->assertJsonCount(1, 'props.lifecycles')
+        ->assertJsonPath('props.lifecycles.0.schema', 'x-change.campaign-policy-lifecycle.v1')
+        ->assertJsonPath('props.lifecycles.0.stage', 'claim_evidence_ready')
+        ->assertJsonPath('props.lifecycles.0.completion.projection_reference', $projection->reference)
+        ->assertJsonMissingPath('props.lifecycles.0.payment.provider_transaction_key')
+        ->assertJsonMissingPath('props.lifecycles.0.policy.authorization_reference');
+
+    $serialized = $response->getContent();
+    expect($serialized)->not->toContain('Private AUI Applicant')
+        ->and($serialized)->not->toContain('09173011987')
+        ->and(AccountFundingReceipt::query()->count())->toBe($before['account_funding_receipts'])
+        ->and(FundingSettlement::query()->count())->toBe($before['funding_settlements'])
+        ->and(TreasuryInventoryOperation::query()->count())->toBe($before['treasury_operations']);
+
+    Http::assertNothingSent();
+});
+
+it('keeps the campaign policy lifecycle behind cockpit authentication', function (): void {
+    $route = app('router')->getRoutes()
+        ->getByName('x-change.cockpit.campaigns.policy-lifecycle.index');
+
+    expect($route)->not->toBeNull()
+        ->and($route->gatherMiddleware())->toContain('auth');
+});
+
 it('resolves every campaign policy lifecycle stage with explicit attention semantics', function (
     bool $issuance,
     bool $projection,
