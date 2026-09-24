@@ -11,6 +11,86 @@ snapshot from inception, and issues one zero-value completion Pay Code.
 
 ## Current Position
 
+### Demonstration summary and follow-up SMS — local gate, 2026-09-24
+
+This supersedes the earlier statement that no follow-up presentation exists.
+The package now provides a **demonstration policy summary**, not an insurer
+policy document. Pipedream's v1 response contract remains unchanged with
+`document_ready=false`. No insurer availability or real coverage is inferred.
+
+The continuation is:
+
+1. Completed claim projects declared evidence into the envelope.
+2. Existing maker request, independent checker approval, and authorized
+   recorder persist a successful `policy_issued_demo` outcome.
+3. `PolicyCompletionOutcomeRecorded` queues summary notification after commit.
+4. The worker reloads and validates the outcome, then uses the existing
+   journaled feedback/SMS pipeline and the original GCash/Maya payer mobile.
+5. The SMS opens `/x/demo/policies/{outcome-reference}` through a temporary
+   signed URL. The scenario runner's outcome artifact points to the same page
+   when enabled. The link is bearer access: recipients should not share it.
+
+New package configuration (all host activation remains a separate gate):
+
+| Environment key | Default | Meaning |
+| --- | --- | --- |
+| `XCHANGE_DEMO_POLICY_SUMMARY_ENABLED` | `false` | Allow the redacted demo page/link |
+| `XCHANGE_DEMO_POLICY_SUMMARY_SMS_ENABLED` | `false` | Queue the follow-up SMS after eligible outcomes |
+| `XCHANGE_DEMO_POLICY_SUMMARY_LINK_TTL_HOURS` | `168` | Link lifetime from outcome recording; clamped to 1–720 hours |
+
+Both enable flags must be true for automatic SMS preparation. The page is
+read-only, signed, throttled, no-store, no-referrer, and noindex. It shows only
+the demo reference, product, authoritative demo dates, recording time, and
+explicit non-insurance disclaimer. No applicant answers, contact information,
+bank details, claim tokens, or insurer private result are returned. The page
+has no Cockpit shell or additional data-entry workflow.
+
+Job identity is `campaign-demo-policy:{outcome-reference}`. Unique dispatch,
+overlap protection, and the existing feedback delivery key prevent ordinary
+replay from creating a second delivery record. This is not an exactly-once
+provider-send guarantee: retain the existing SMS provider ambiguity/runbook
+controls. The link expiry does not extend on retries. Disabling the flags
+prevents new summary preparation; it does not recall a generic encrypted SMS
+delivery job already queued. Inspect exact delivery jobs rather than flushing
+the entire queue. SMS failure must never rewrite the policy outcome.
+
+Release acceptance remains pending: publish/adopt the package and built page,
+recover `POLI-W23C` claim 145's projection, and complete the governed demo
+request/approval/outcome stages with authorized actors. Enable the two flags
+only with explicit host/SMS approval. If an eligible outcome predates listener
+activation, dispatch `SendDemonstrationPolicySummaryJob` for that exact outcome
+reference; do not rerun payment, claim, insurer transport, or outcome issuance.
+Inspect its `campaign-demo-policy:` correlation and obtain the link privately.
+No automatic maker/checker approval is introduced. Testing Cloud and x-PayOut
+are unchanged by this local gate.
+
+Verification: related Campaign QR/lifecycle runner/Pipedream suites passed
+82 tests / 742 assertions; shared journaled delivery passed 7 tests / 47
+assertions. Strengthened guest-access and duplicate-event checks passed on
+focused reruns (21 and 10 assertions). The new Vue test passed (1 test).
+Pint and diff whitespace validation passed. No browser acceptance, host
+publication, production build, live transport, release, or deployment was
+performed; those remain the host-adoption gate.
+
+Implementation inventory (all paths relative to the x-change package):
+
+- `src/Services/Settlement/DemonstrationPolicySummary.php`: eligibility, expiry, signed link, redacted presentation.
+- `src/Services/Settlement/CampaignWalletPayerMobile.php`: shared existing wallet-mobile rule.
+- `src/Actions/Campaigns/SendCampaignPaymentCompletionSms.php`: reuse that shared rule without changing the first SMS.
+- `src/Actions/Campaigns/SendDemonstrationPolicySummarySms.php`: journaled, default-off follow-up SMS.
+- `src/Jobs/Campaigns/SendDemonstrationPolicySummaryJob.php`: unique, bounded-retry notification orchestration.
+- `src/Listeners/QueueDemonstrationPolicySummary.php`: successful-outcome listener.
+- `src/Providers/XChangeServiceProvider.php`: package listener registration.
+- `src/Http/Controllers/Web/Claim/DemonstrationPolicySummaryController.php`: read-only public presentation and privacy headers.
+- `routes/web.php`: signed, throttled route.
+- `config/x-change.php`: activation flags and bounded lifetime.
+- `resources/js/pages/x-change/claim/DemonstrationPolicySummary.vue`: public claim-shell summary.
+- `src/Services/Leads/LeadCampaignLifecycleScenarioRunReadModel.php`: link the existing outcome artifact.
+- `tests/Feature/Actions/Campaigns/BindCampaignPaymentQrTest.php`: security, replay, rollback, delivery, and disabled-state coverage.
+- `tests/Feature/Leads/LeadCampaignScenarioRunnerTest.php`: gated artifact link coverage.
+- `tests/frontend/DemonstrationPolicySummary.test.ts`: explicit demo wording and PHT presentation.
+- This compass: activation, recovery, limitations, and acceptance record.
+
 ### Completion evidence corrective slice — 2026-09-24
 
 The user confirmed receipt of the initial SMS and completed `POLI-W23C`.

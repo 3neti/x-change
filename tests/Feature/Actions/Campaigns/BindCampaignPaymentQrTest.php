@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
@@ -23,6 +24,7 @@ use LBHurtado\SettlementEnvelope\Services\EnvelopeService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\XChange\Actions\Campaigns\BindCampaignPaymentQr;
+use LBHurtado\XChange\Actions\Campaigns\SendDemonstrationPolicySummarySms;
 use LBHurtado\XChange\Actions\Claim\SubmitCompiledFormClaim;
 use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
 use LBHurtado\XChange\Actions\Payment\InspectCampaignPaymentEvidence;
@@ -60,6 +62,7 @@ use LBHurtado\XChange\Events\ProvisionalCoverageBound;
 use LBHurtado\XChange\Exceptions\CampaignCoverageDriverUnavailable;
 use LBHurtado\XChange\Exceptions\CampaignPolicyCompletionDriverUnavailable;
 use LBHurtado\XChange\Jobs\Campaigns\AdvanceCampaignPaymentLifecycleJob;
+use LBHurtado\XChange\Jobs\Campaigns\SendDemonstrationPolicySummaryJob;
 use LBHurtado\XChange\Jobs\Feedback\DeliverQueuedFeedbackSmsJob;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\CampaignPaymentEvidenceQuarantine;
@@ -82,6 +85,8 @@ use LBHurtado\XChange\Services\Settlement\AuiPersonalAccidentCampaignCoverageDri
 use LBHurtado\XChange\Services\Settlement\AuiPersonalAccidentPolicyCompletionDriver;
 use LBHurtado\XChange\Services\Settlement\CampaignCoverageDriverRegistry;
 use LBHurtado\XChange\Services\Settlement\CampaignPolicyCompletionDriverRegistry;
+use LBHurtado\XChange\Services\Settlement\DemonstrationPolicySummary;
+use LBHurtado\XChange\Services\Settlement\GenerateAuiDemonstrationPolicyResponse;
 use LBHurtado\XChange\Tests\Fakes\FakeCampaignCoverageDriver;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XFeedback\Contracts\FeedbackChannelDriverContract;
@@ -1559,6 +1564,153 @@ it('refuses an inline SMS driver for campaign completion delivery', function ():
     Http::assertNothingSent();
 });
 
+it('queues the approved demo summary once after commit and reuses its journaled SMS delivery', function (): void {
+    Queue::fake();
+    Http::fake();
+    config()->set('x-feedback.transports.sms.driver', 'engagespark');
+    config()->set('x-change.settlement.policy_completion.demonstration_summary', ['enabled' => true, 'sms_enabled' => true]);
+    DB::beginTransaction();
+    $outcome = auiDemoSummaryOutcome();
+    Queue::assertNotPushed(SendDemonstrationPolicySummaryJob::class);
+    DB::commit();
+    Queue::assertPushed(SendDemonstrationPolicySummaryJob::class, 1);
+    PolicyCompletionOutcomeRecorded::dispatch(['outcome_reference' => $outcome->reference]);
+    Queue::assertPushed(SendDemonstrationPolicySummaryJob::class, 1);
+    $before = campaignPaymentFinancialCounts();
+    $job = new SendDemonstrationPolicySummaryJob($outcome->reference);
+    app()->call([$job, 'handle']);
+    app()->call([$job, 'handle']);
+    $record = FeedbackDeliveryRecord::query()->sole();
+    expect($record->status)->toBe('queued')->and($record->attempt_count)->toBe(1)
+        ->and($outcome->refresh()->status)->toBe(PolicyCompletionOutcomeStatus::Succeeded)
+        ->and(campaignPaymentFinancialCounts())->toBe($before);
+    $delivery = app(FeedbackDeliveryAttemptRecorderContract::class)->forCorrelation('campaign-demo-policy:'.$outcome->reference)[0];
+    expect($delivery->recipient->phone)->toBe('639173011987');
+    Queue::assertPushed(DeliverQueuedFeedbackSmsJob::class, fn ($sms): bool => str_contains($sms->message, 'DEMONSTRATION ONLY')
+        && str_contains($sms->message, '/x/demo/policies/')
+        && ! str_contains($sms->message, 'Private AUI Applicant'));
+    Http::assertNothingSent();
+});
+
+it('serves only a signed redacted demo summary and rejects tampered expired or disabled links', function (): void {
+    Queue::fake();
+    Http::fake();
+    config()->set('x-change.settlement.policy_completion.demonstration_summary.enabled', true);
+    $outcome = auiDemoSummaryOutcome();
+    $summaries = app(DemonstrationPolicySummary::class);
+    $url = $summaries->url($outcome);
+    $before = campaignPaymentFinancialCounts();
+    auth()->logout();
+    $this->assertGuest();
+    $response = $this->get($url, ['X-Inertia' => 'true']);
+    $response->assertSuccessful()->assertHeader('Referrer-Policy', 'no-referrer')
+        ->assertHeader('X-Robots-Tag', 'noindex, nofollow')
+        ->assertJsonPath('component', 'x-change/claim/DemonstrationPolicySummary')
+        ->assertJsonCount(6, 'props.summary')
+        ->assertJsonPath('props.summary.reference', $outcome->provider_reference)
+        ->assertJsonPath('props.summary.notice', 'Demonstration only. This is not an issued insurance policy and does not establish insurance coverage.');
+    expect($response->headers->get('Cache-Control'))->toContain('no-store')
+        ->and($response->getContent())->not->toContain('Private AUI Applicant', '09173011987', 'private_payload', 'applicant_evidence')
+        ->and(campaignPaymentFinancialCounts())->toBe($before);
+    $this->get(route('x-change.demo-policy.show', ['outcome' => $outcome->reference]))->assertForbidden();
+    $this->get($url.'&extra=changed')->assertForbidden();
+    $this->get(str_replace($outcome->reference, str_repeat('0', 26), $url))->assertNotFound();
+    config()->set('x-change.settlement.policy_completion.demonstration_summary.enabled', false);
+    $this->get($url)->assertNotFound();
+    config()->set('x-change.settlement.policy_completion.demonstration_summary.enabled', true);
+    $this->travel(8)->days();
+    $this->get($url)->assertForbidden();
+    expect($summaries->url($outcome))->toBeNull();
+    Queue::assertNotPushed(SendDemonstrationPolicySummaryJob::class);
+    Http::assertNothingSent();
+});
+
+it('does not expose or notify a demo summary for unsafe outcomes', function (string $change): void {
+    Queue::fake();
+    Http::fake();
+    $outcome = auiDemoSummaryOutcome();
+    config()->set('x-change.settlement.policy_completion.demonstration_summary', ['enabled' => true, 'sms_enabled' => true]);
+    $request = $outcome->request;
+    match ($change) {
+        'failed' => $outcome->status = PolicyCompletionOutcomeStatus::Failed,
+        'not_demo' => $outcome->result_code = 'policy_issued',
+        'document_claim' => $outcome->safe_result = [...$outcome->safe_result, 'document_ready' => true],
+        'no_approval' => $request->approved_at = null,
+        'self_approval' => $request->approver_id = $request->requester_id,
+        'wrong_driver' => $request->driver_id = 'another-driver',
+        'pending' => $request->status = PolicyCompletionRequestStatus::AwaitingApproval,
+        'disabled' => config()->set('x-change.settlement.policy_completion.demonstration_summary.enabled', false),
+    };
+    expect(app(DemonstrationPolicySummary::class)->url($outcome))->toBeNull();
+    app(SendDemonstrationPolicySummarySms::class)->handle($outcome);
+    expect(FeedbackDeliveryRecord::query()->count())->toBe(0);
+    Queue::assertNotPushed(DeliverQueuedFeedbackSmsJob::class);
+    Http::assertNothingSent();
+})->with(['failed', 'not_demo', 'document_claim', 'no_approval', 'self_approval', 'wrong_driver', 'pending', 'disabled']);
+
+it('does not send demo summary SMS to unsupported source accounts', function (): void {
+    Queue::fake();
+    Http::fake();
+    $outcome = auiDemoSummaryOutcome(['payer_institution_ciphertext' => 'MYDBPHM2XXX', 'payer_account_ciphertext' => '09173011987']);
+    config()->set('x-change.settlement.policy_completion.demonstration_summary', ['enabled' => true, 'sms_enabled' => true]);
+    app(SendDemonstrationPolicySummarySms::class)->handle($outcome);
+    expect(FeedbackDeliveryRecord::query()->count())->toBe(0);
+    Queue::assertNotPushed(DeliverQueuedFeedbackSmsJob::class);
+    Http::assertNothingSent();
+});
+
+it('requires a queued driver for demo summary SMS without changing the policy outcome', function (): void {
+    Queue::fake();
+    Http::fake();
+    $outcome = auiDemoSummaryOutcome();
+    config()->set('x-change.settlement.policy_completion.demonstration_summary', ['enabled' => true, 'sms_enabled' => true]);
+    $registry = Mockery::mock(FeedbackChannelRegistryContract::class);
+    $registry->shouldReceive('driver')->with('sms')->once()->andReturn(Mockery::mock(FeedbackChannelDriverContract::class));
+    app()->instance(FeedbackChannelRegistryContract::class, $registry);
+    expect(fn () => app(SendDemonstrationPolicySummarySms::class)->handle($outcome))
+        ->toThrow(RuntimeException::class, 'requires the queued SMS driver')
+        ->and($outcome->refresh()->status)->toBe(PolicyCompletionOutcomeStatus::Succeeded);
+    Http::assertNothingSent();
+});
+
+it('does not enqueue a demo summary for a rolled back outcome', function (): void {
+    Queue::fake();
+    Http::fake();
+    config()->set('x-change.settlement.policy_completion.demonstration_summary', ['enabled' => true, 'sms_enabled' => true]);
+    DB::beginTransaction();
+    auiDemoSummaryOutcome();
+    DB::rollBack();
+    Queue::assertNotPushed(SendDemonstrationPolicySummaryJob::class);
+    expect(PolicyCompletionOutcome::query()->count())->toBe(0);
+});
+
+it('rejects a correctly signed demo summary link for a persisted failed outcome', function (): void {
+    Queue::fake();
+    Http::fake();
+    config()->set('x-change.settlement.policy_completion.demonstration_summary', ['enabled' => true, 'sms_enabled' => true]);
+    $outcome = auiDemoSummaryOutcome(result: new PolicyCompletionOutcomeData(PolicyCompletionOutcomeStatus::Failed, 'declined'));
+    $url = URL::temporarySignedRoute('x-change.demo-policy.show', now()->addHour(), ['outcome' => $outcome->reference]);
+    $this->get($url)->assertNotFound();
+    Queue::assertNotPushed(SendDemonstrationPolicySummaryJob::class);
+    expect(FeedbackDeliveryRecord::query()->count())->toBe(0);
+});
+
+function auiDemoSummaryOutcome(array $payer = [], ?PolicyCompletionOutcomeData $result = null): PolicyCompletionOutcome
+{
+    [$projection, $maker] = auiPolicyCompletionProjection($payer ?: [
+        'payer_institution_ciphertext' => 'GXCHPHM2XXX', 'payer_account_ciphertext' => '09173011987',
+    ]);
+    $checker = actingAsTestUser(0);
+    config()->set('x-change.settlement.policy_completion.maker_ids', [(string) $maker->getKey()]);
+    config()->set('x-change.settlement.policy_completion.checker_ids', [(string) $checker->getKey()]);
+    config()->set('x-change.settlement.policy_completion.outcome_recorder_ids', [(string) $checker->getKey()]);
+    $request = app(RequestCampaignPolicyCompletion::class)->handle($projection, $maker, 'demo-summary-maker');
+    app(ApproveCampaignPolicyCompletion::class)->handle($request, $checker, 'demo-summary-checker');
+    $response = app(GenerateAuiDemonstrationPolicyResponse::class)->handle(app(PrepareCampaignPolicyCompletion::class)->handle($projection));
+
+    return app(RecordCampaignPolicyCompletionOutcome::class)->handle($request, $checker, $result ?? $response->outcome());
+}
+
 /** @return array{CampaignPaymentRecognition, CampaignPaymentQrBinding} */
 function auiRecognizedPaymentForContinuation(array $payer = []): array
 {
@@ -1668,10 +1820,10 @@ function auiCampaignCoverageTerms(
 }
 
 /** @return array{CompletionClaimEvidenceProjection, User} */
-function auiPolicyCompletionProjection(): array
+function auiPolicyCompletionProjection(array $payer = []): array
 {
     configureCampaignCoverageTestDriver();
-    [$recognition, $binding] = recognizedCampaignPayment();
+    [$recognition, $binding] = recognizedCampaignPayment(12_200, $payer);
     $bound = app(BindProvisionalCoverage::class)->handle(
         $recognition,
         auiCampaignCoverageTerms($recognition),

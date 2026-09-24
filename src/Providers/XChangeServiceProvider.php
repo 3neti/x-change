@@ -309,6 +309,7 @@ use LBHurtado\XChange\Contracts\XChangeProviderTopologyResolverContract;
 use LBHurtado\XChange\Events\CampaignPaymentRecognized;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Events\DisbursementRejected;
+use LBHurtado\XChange\Events\PolicyCompletionOutcomeRecorded;
 use LBHurtado\XChange\Exceptions\CommercialPricingChanged;
 use LBHurtado\XChange\Exceptions\ExternalReferenceConflict;
 use LBHurtado\XChange\Exceptions\FundingIntentConflict;
@@ -338,6 +339,7 @@ use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleUserModelResolver;
 use LBHurtado\XChange\Listeners\HandleConfirmedDisbursement;
 use LBHurtado\XChange\Listeners\HandleRejectedDisbursement;
 use LBHurtado\XChange\Listeners\QueueCampaignPaymentLifecycle;
+use LBHurtado\XChange\Listeners\QueueDemonstrationPolicySummary;
 use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
 use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Models\LeadCampaign;
@@ -1710,6 +1712,7 @@ class XChangeServiceProvider extends ServiceProvider
         }
 
         Event::listen(CampaignPaymentRecognized::class, QueueCampaignPaymentLifecycle::class);
+        Event::listen(PolicyCompletionOutcomeRecorded::class, QueueDemonstrationPolicySummary::class);
 
         Event::listen(
             VoucherDisbursementSucceeded::class,

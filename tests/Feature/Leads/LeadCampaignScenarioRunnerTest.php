@@ -42,6 +42,7 @@ use LBHurtado\XChange\Models\PolicyCompletionRequest;
 use LBHurtado\XChange\Models\ProvisionalCoverage;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
+use LBHurtado\XChange\Services\Settlement\DemonstrationPolicySummary;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 
 it('renders the disbursable feedback endpoint as the default browser scenario', function (): void {
@@ -468,7 +469,14 @@ it('preserves the AUI settlement target from the endpoint template and offers sa
         ->assertJsonPath('props.run.steps.15.status', 'passed')
         ->assertJsonPath('props.run.steps.15.facts.result_code', 'policy_issued_demo')
         ->assertJsonPath('props.run.actions.record_demonstration_policy', false)
-        ->assertJsonPath('props.run.artifacts.13.label', 'Demonstration policy outcome');
+        ->assertJsonPath('props.run.artifacts.13.label', 'Demonstration policy outcome')
+        ->assertJsonPath('props.run.artifacts.13.href', null);
+
+    config()->set('x-change.settlement.policy_completion.demonstration_summary.enabled', true);
+    $this->actingAs($operator)->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.lead-scenario-runner.runs.show', ['campaign' => $campaign->reference]))
+        ->assertOk()
+        ->assertJsonPath('props.run.artifacts.13.href', app(DemonstrationPolicySummary::class)->url($outcome));
 
     Event::assertDispatchedTimes(PolicyCompletionRequested::class, 1);
     Event::assertDispatchedTimes(PolicyCompletionAuthorized::class, 1);

@@ -2788,6 +2788,12 @@ return [
             // Additional host-defined CampaignPolicyCompletionDriverContract implementations.
         ],
         'policy_completion' => [
+            'demonstration_summary' => [
+                'enabled' => (bool) env('XCHANGE_DEMO_POLICY_SUMMARY_ENABLED', false),
+                'sms_enabled' => (bool) env('XCHANGE_DEMO_POLICY_SUMMARY_SMS_ENABLED', false),
+                // Fixed from outcome recording, not extended by reads or delivery retries.
+                'link_ttl_hours' => (int) env('XCHANGE_DEMO_POLICY_SUMMARY_LINK_TTL_HOURS', 168),
+            ],
             'maker_ids' => array_values(array_filter(array_map(
                 static fn (string $id): string => trim($id),
                 explode(',', (string) env('XCHANGE_POLICY_COMPLETION_MAKER_IDS', '')),

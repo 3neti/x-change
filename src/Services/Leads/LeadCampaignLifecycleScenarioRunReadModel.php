@@ -11,14 +11,17 @@ use LBHurtado\XChange\Contracts\CampaignPolicyCompletionAuthorityContract;
 use LBHurtado\XChange\Models\CampaignPaymentSource;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PaymentAttempt;
+use LBHurtado\XChange\Models\PolicyCompletionOutcome;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Cockpit\CampaignPolicyLifecycleReadModel;
+use LBHurtado\XChange\Services\Settlement\DemonstrationPolicySummary;
 
 final readonly class LeadCampaignLifecycleScenarioRunReadModel
 {
     public function __construct(
         private CampaignPolicyLifecycleReadModel $policyLifecycles,
         private CampaignPolicyCompletionAuthorityContract $policyAuthority,
+        private DemonstrationPolicySummary $demoSummaries,
     ) {}
 
     /** @return array<string, mixed> */
@@ -215,7 +218,10 @@ final readonly class LeadCampaignLifecycleScenarioRunReadModel
             }
             $policyOutcomeReference = data_get($lifecycle->policy, 'outcome_reference');
             if (is_string($policyOutcomeReference) && $policyOutcomeReference !== '') {
-                $artifacts[] = ['group' => 'Policy', 'label' => 'Demonstration policy outcome', 'reference' => $policyOutcomeReference, 'href' => null, 'evidence' => 'application_persisted'];
+                $outcome = config('x-change.settlement.policy_completion.demonstration_summary.enabled', false)
+                    ? PolicyCompletionOutcome::query()->where('reference', $policyOutcomeReference)->first()
+                    : null;
+                $artifacts[] = ['group' => 'Policy', 'label' => 'Demonstration policy outcome', 'reference' => $policyOutcomeReference, 'href' => $outcome === null ? null : $this->demoSummaries->url($outcome), 'evidence' => 'application_persisted'];
             }
         }
 

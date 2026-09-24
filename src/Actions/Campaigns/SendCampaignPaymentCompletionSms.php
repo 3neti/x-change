@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Log;
 use LBHurtado\XChange\Actions\Feedback\DeliverAndJournalFeedback;
 use LBHurtado\XChange\Models\ProvisionalCoverage;
 use LBHurtado\XChange\Services\Feedback\QueuedEngageSparkSmsFeedbackChannelDriver;
-use LBHurtado\XChange\Support\Auth\MobileNumber;
+use LBHurtado\XChange\Services\Settlement\CampaignWalletPayerMobile;
 use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
 use LBHurtado\XFeedback\Data\FeedbackChannelData;
 use LBHurtado\XFeedback\Data\FeedbackIntentData;
@@ -21,20 +21,16 @@ final readonly class SendCampaignPaymentCompletionSms
     public function __construct(
         private DeliverAndJournalFeedback $feedback,
         private FeedbackChannelRegistryContract $channels,
+        private CampaignWalletPayerMobile $payerMobile,
     ) {}
 
     public function handle(ProvisionalCoverage $coverage): void
     {
         $coverage->loadMissing(['recognition.canonicalObservation', 'completionPayCodeIssuance.voucher']);
         $recognition = $coverage->recognition;
-        $observation = $recognition->canonicalObservation;
-        $institution = strtoupper(trim((string) $observation?->payer_institution_ciphertext));
-        $account = trim((string) $observation?->payer_account_ciphertext);
-        $mobile = MobileNumber::normalize($account);
+        $mobile = $this->payerMobile->resolve($recognition);
 
-        if (! in_array($institution, ['GXCHPHM2XXX', 'PAPHPHM1XXX', 'GCASH', 'MAYA', 'PAYMAYA'], true)
-            || ! preg_match('/^(?:0|63|\+63)9[0-9]{9}$/', $account)
-            || ! preg_match('/^639[0-9]{9}$/', (string) $mobile)) {
+        if ($mobile === null) {
             Log::warning('Campaign completion SMS requires a supported wallet mobile source account.', [
                 'recognition_reference' => $recognition->reference,
                 'reason' => 'unsupported_or_invalid_source_account',

@@ -16,6 +16,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimShareCardController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimStartController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSubmitController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Claim\DemonstrationPolicySummaryController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountScenarioController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAuiDemonstrationPolicyOutcomeController;
@@ -723,6 +724,10 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
     Route::post('provider-wallets/paynamics', LinkPaynamicsWalletController::class)
         ->name('x-change.provider-wallets.paynamics.store');
 });
+
+Route::get('x/demo/policies/{outcome:reference}', DemonstrationPolicySummaryController::class)
+    ->middleware(['web', 'signed', 'throttle:30,1'])
+    ->name('x-change.demo-policy.show');
 
 // Public claim routes (no auth required)
 Route::prefix('x')->middleware(['web', ShareXChangeBranding::class, GuardPairedCampaignClaim::class])->group(function (): void {
