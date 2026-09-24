@@ -228,6 +228,44 @@ it('creates an endpoint campaign from an owned Pay Code template', function (): 
         ]);
 });
 
+it('does not expose campaign payment QR provisioning across account boundaries', function (): void {
+    $owner = actingAsTestUser();
+    $template = PayCodeTemplate::query()->create([
+        'owner_type' => $owner->getMorphClass(),
+        'owner_id' => (string) $owner->getKey(),
+        'name' => 'Reusable payment campaign',
+        'base_template_key' => 'blank-pay-code',
+        'instructions_ciphertext' => [
+            'cash' => ['amount' => 0, 'currency' => 'PHP'],
+            'voucher_type' => 'settlement',
+            'target_amount' => 50,
+        ],
+        'include_amount' => true,
+        'include_purpose' => true,
+        'status' => 'active',
+    ]);
+    $campaign = LeadCampaign::query()->create([
+        'owner_type' => $owner->getMorphClass(),
+        'owner_id' => (string) $owner->getKey(),
+        'pay_code_template_id' => $template->getKey(),
+        'active_template_version_id' => app(LeadCampaignTemplateVersionId::class)->forTemplate($template),
+        'merchant_display_name' => 'AUI',
+        'merchant_slug' => 'aui',
+        'endpoint_slug' => 'cubao-lucena',
+        'title' => 'Cubao to Lucena Personal Accident Plan',
+        'status' => 'active',
+        'settings' => [
+            'entry_mode' => 'reusable_payment_qr',
+            'scenario_run' => ['product' => ['premium_minor' => 5_000]],
+        ],
+    ]);
+    $otherOwner = actingAsTestUser();
+
+    $this->actingAs($otherOwner)
+        ->post(route('x-change.cockpit.campaigns.endpoints.payment-qr.store', $campaign->reference))
+        ->assertNotFound();
+});
+
 it('updates an endpoint template for future starts without changing the public endpoint or counters', function (): void {
     $owner = actingAsTestUser();
     $firstTemplate = PayCodeTemplate::query()->create([

@@ -18,6 +18,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSubmitController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountScenarioController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAuiDemonstrationPolicyOutcomeController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignApprovalDeliveryController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignDisplaySessionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignEndpointController;
@@ -377,6 +378,9 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::post('campaigns/endpoints', [CockpitCampaignEndpointController::class, 'store'])
             ->middleware('throttle:12,1')
             ->name('x-change.cockpit.campaigns.endpoints.store');
+        Route::post('campaigns/endpoints/{campaign}/payment-qr', [CockpitCampaignEndpointController::class, 'provisionPaymentQr'])
+            ->middleware('throttle:6,1')
+            ->name('x-change.cockpit.campaigns.endpoints.payment-qr.store');
         Route::patch('campaigns/endpoints/{campaign}/template', [CockpitCampaignEndpointController::class, 'updateTemplate'])
             ->middleware('throttle:12,1')
             ->name('x-change.cockpit.campaigns.endpoints.template.update');
@@ -399,6 +403,11 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             'campaigns/lead-scenario-runner/runs/{campaign}',
             [CockpitLeadCampaignScenarioRunnerController::class, 'run'],
         )->name('x-change.cockpit.campaigns.lead-scenario-runner.runs.show');
+        Route::post(
+            'campaigns/lead-scenario-runner/runs/{campaign}/demonstration-policy-outcome',
+            CockpitAuiDemonstrationPolicyOutcomeController::class,
+        )->middleware('throttle:6,1')
+            ->name('x-change.cockpit.campaigns.lead-scenario-runner.runs.demonstration-policy-outcome.store');
         Route::post('campaigns/intakes', [CockpitCampaignWorksheetIntakeController::class, 'store'])
             ->middleware('throttle:12,1')
             ->name('x-change.cockpit.campaigns.intakes.store');

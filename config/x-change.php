@@ -2687,6 +2687,10 @@ return [
     'leads' => [
         'scenario_runner' => [
             'enabled' => env('XCHANGE_LEADS_SCENARIO_RUNNER_ENABLED', ! app()->isProduction()),
+            'demonstration_policy_response_enabled' => env(
+                'XCHANGE_LEADS_DEMONSTRATION_POLICY_RESPONSE_ENABLED',
+                ! app()->isProduction(),
+            ),
         ],
         'public_view_middleware' => [
             'throttle:x-change-leads-view',

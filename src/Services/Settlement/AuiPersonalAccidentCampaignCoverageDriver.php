@@ -29,10 +29,25 @@ final class AuiPersonalAccidentCampaignCoverageDriver implements CampaignCoverag
     {
         $campaign = $recognition->campaignRecord();
         $run = (array) data_get($campaign->settings, 'scenario_run', []);
+        $premiumMinor = data_get($run, 'product.premium_minor');
+        $insuredAmountMinor = data_get($run, 'product.insured_amount_minor');
+        $coverageDurationHours = data_get($run, 'product.coverage_duration_hours');
+        $productCurrency = data_get($run, 'product.currency');
+        $productName = data_get($run, 'product.name');
 
         if (data_get($run, 'scenario') !== 'aui_on_demand_insurance_payment'
             || data_get($run, 'envelope_driver_id') !== self::DRIVER_ID
             || data_get($run, 'envelope_driver_version') !== self::DRIVER_VERSION
+            || ! is_int($premiumMinor)
+            || ! is_int($insuredAmountMinor)
+            || ! is_int($coverageDurationHours)
+            || $premiumMinor <= 0
+            || $insuredAmountMinor <= 0
+            || $coverageDurationHours <= 0
+            || $recognition->gross_amount_minor !== $premiumMinor
+            || $recognition->currency !== $productCurrency
+            || ! is_string($productName)
+            || trim($productName) === ''
             || $recognition->provider_status !== 'settled'
             || ! $recognition->destination_verified
             || $recognition->settled_at === null) {
@@ -46,10 +61,12 @@ final class AuiPersonalAccidentCampaignCoverageDriver implements CampaignCoverag
                 coverageType: 'personal-accident-provisional-cover',
                 currency: $recognition->currency,
                 effectiveAt: $recognition->settled_at,
-                expiresAt: $recognition->settled_at->addDay(),
-                coverageAmountMinor: $recognition->gross_amount_minor,
+                expiresAt: $recognition->settled_at->addHours($coverageDurationHours),
+                coverageAmountMinor: $insuredAmountMinor,
                 terms: [
-                    'plan' => 'aui-on-demand-personal-accident',
+                    'plan' => $productName,
+                    'premium_minor' => $premiumMinor,
+                    'coverage_duration_hours' => $coverageDurationHours,
                     'contract_authority' => 'demonstration_only',
                 ],
                 authorization: [

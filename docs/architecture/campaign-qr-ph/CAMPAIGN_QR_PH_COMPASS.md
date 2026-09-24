@@ -365,4 +365,76 @@ envelope mutation, provider call, collection, or financial movement occurs.
 Transport remains fail-closed until an authoritative insurer contract and
 disposition are accepted.
 
+Gate 9f is complete as a local demonstration-response contract. The package
+now owns a strict JSON Schema and deterministic responder for the reserved AUI
+driver. It returns an `AUI-DEMO-*` reference and explicitly states
+`issued_demo`, `demonstration_only`, and `document_ready=false`. Exact replay
+returns the same response; wrong-driver and missing-evidence requests fail
+closed. Applicant values never enter the safe response or outcome projection.
+
+The responder remains transport-free. Gate 9g now gives the owner-scoped
+browser ledger a local demonstration action only when the request is
+checker-authorized, the feature is explicitly enabled, and the authenticated
+operator has outcome-recorder authority. It delegates persistence to the
+existing governed, replay-safe terminal-outcome action.
+
+The lifecycle becomes `policy_succeeded` with
+`result_code=policy_issued_demo`; replay creates no second outcome. The ledger
+shows only a safe outcome reference and continues to exclude applicant
+evidence. No HTTP/Pipedream call, insurer message, policy document, envelope
+mutation, collection, or financial movement occurs. The next boundary is an
+accepted test-transport disposition, not a real insurer integration.
+
+Gate 9h is complete as a constrained Pipedream test-transport boundary. The
+adapter remains dormant unless an exact accepted disposition and referenced
+credential are configured. It permits only a `pipedream-test` provider at a
+Pipedream HTTPS host, uses the canonical idempotency key, enforces bounded
+timeouts, and validates the strict demonstration response without retrying.
+
+The outbound DTO deliberately withholds all applicant/contact/evidence fields.
+Only the user-authorized references, amounts, timestamps, fingerprint, and
+idempotency key may leave X-Change. This gate is verified with a mocked HTTP
+transport: no live request, outcome persistence, policy document, envelope
+mutation, collection, or financial movement occurs. A live characterization
+requires an explicit endpoint/credential disposition and a separate controlled
+execution approval.
+
+Gate 9i is complete locally. The AUI demonstration product is now explicit:
+Cubao to Lucena Personal Accident Plan, ₱50.00 premium, ₱5,000.00 insured
+amount, and 24 hours of provisional coverage beginning at authoritative
+settlement. The driver rejects a payment whose amount or currency does not
+match the configured product and no longer mistakes premium for insured
+amount. The completion Pay Code uses the normal OTP claim flow to collect name,
+mobile, email, address, and birth date.
+
+The next boundary is notification initiation. It must not assume the provider
+source account is a mobile number. Before an automatic post-payment SMS can be
+enabled, the system needs either provider-verified payer mobile evidence or a
+separately verified contact acquisition mechanism tied idempotently to the
+recognized payment. Printed reusable QR provisioning and policy-document
+delivery also remain separate gates.
+
+Gate 10a is complete locally. Campaign QR Ph now has a package-level
+provisioning action built from the same Standing Funding Address machinery used
+by the Cockpit Funding QR Ph tab. The pinned campaign revision becomes the
+stable HMAC input, while the resulting NetBank address is explicitly
+`payment`/`observe_only`. The canonical merchant profile and persisted reusable
+QR artifact are reused, then bound immutably to the campaign's amount,
+availability, and permitted-payment rules.
+
+Focused tests prove exact replay makes only one provider request and creates
+one address/binding, while cross-account and invalid-term attempts fail before
+the provider boundary. No financial or messaging side effect is introduced.
+Gate 10b is complete locally. The Campaigns page now distinguishes a reusable
+payment-QR campaign from an ordinary public endpoint. Only the campaign owner
+can invoke the throttled provisioning command. The resulting fixed ₱50 QR Ph
+is displayed as a campaign payment stamp with enlarge, download, and print
+controls; the raw provider artifact remains confined to the authenticated
+owner read model. The AUI scenario declares this entry mode explicitly.
+
+The next controlled move is a real low-value GCash/Maya observation against the
+new campaign binding, followed by evidence inspection. No notification or
+coverage transition may infer payer identity from an unverified provider
+account field.
+
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).

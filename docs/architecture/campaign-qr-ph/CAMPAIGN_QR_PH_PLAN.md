@@ -494,7 +494,7 @@ retry, dispatch, provider, transport, or financial behavior.
 
 ### Gate 9 — Browser lifecycle scenario narrative
 
-Status: **Complete through Gate 9e maker/checker authorization**
+Status: **Complete through Gate 9i AUI demonstration product lock**
 
 Gate 9a turns the existing AUI browser scenario into a resumable operational
 narrative. Creating the scenario persists a versioned run identity inside the
@@ -569,3 +569,93 @@ The lifecycle stops at `policy_authorized` and remains running. No transport,
 terminal outcome, policy delivery, envelope update, provider call, collection,
 or financial movement is performed. The next gate must remain fail-closed until
 an accepted insurer transport disposition exists.
+
+Gate 9f introduces the first package-owned fake insurer response boundary for
+local characterization. `GenerateAuiDemonstrationPolicyResponse` accepts only
+the exact reserved AUI driver/version and completed applicant evidence. It
+derives a deterministic `AUI-DEMO-*` policy reference from the existing stable
+idempotency key and preparation fingerprint, preserves the authoritative
+coverage effective/expiry timestamps, and returns the strict published
+`x-change.aui-demonstration-policy-response.v1` shape.
+
+The safe response and its provider-neutral outcome contain no applicant
+evidence. They are unambiguously marked `issued_demo`, `demonstration_only`,
+and `document_ready=false`. This gate performs no HTTP request, Pipedream call,
+queue dispatch, durable outcome write, envelope mutation, document generation,
+or financial movement. It does not constitute an accepted AUI disposition.
+
+Gate 9g adds that local-only continuation. After maker request and independent
+checker approval, an explicitly configured outcome recorder may invoke the
+deterministic responder from the browser ledger. The response is persisted by
+the existing atomic, replay-safe terminal-outcome action and advances the run
+to `policy_succeeded` with result code `policy_issued_demo`.
+
+The control is separately environment-gated, owner-scoped, authority-checked,
+and unavailable before authorization or after outcome persistence. Replay
+converges on the same outcome. No HTTP/Pipedream call, insurer message, policy
+document, envelope change, collection, or financial movement is introduced.
+Pipedream transport remains a later gate and must use an accepted demonstration
+manifest, environment-managed credential, explicit timeouts, and the same
+idempotency key.
+
+Gate 9h introduces that transport as an isolated adapter, not as an automatic
+scenario action. It accepts only the exact reserved AUI driver/version and an
+accepted disposition whose provider is `pipedream-test`, authentication is a
+bearer token resolved from approved configuration, and HTTPS endpoint belongs
+to `pipedream.net`. It applies bounded connect/response timeouts and never
+retries an ambiguous submission.
+
+The published request contract contains only the specifically authorized
+demonstration fields: durable references, amounts, coverage/payment timestamps,
+idempotency key, and preparation fingerprint. Applicant name, mobile, email,
+address, birth date, account number, OTP, uploaded evidence, and private
+evidence payloads are withheld. The response must match the strict demo schema
+and preserve the authoritative coverage period. This gate does not wire live
+browser dispatch, record an outcome, or send a real request.
+
+Gate 9i locks the initial demonstration product without coupling the generic
+payment observer to insurance meaning. The scenario configuration declares
+`Cubao to Lucena Personal Accident Plan`, a fixed ₱50.00 qualifying premium,
+₱5,000.00 insured amount, PHP currency, and an exact 24-hour coverage period.
+The AUI coverage driver fails closed unless the settled recognition matches the
+configured premium and currency. Coverage starts at the authoritative provider
+settlement timestamp; insured amount is no longer derived from premium.
+
+The zero-value completion Pay Code now requests name, mobile, email, address,
+and birth date through the ordinary claim pipeline and requires mobile OTP.
+This gate does not send the initial SMS, infer a mobile number from a provider
+account, publish a reusable QR artifact, invoke Pipedream, or deliver a policy.
+Those remain separate controlled gates because provider payer-mobile evidence
+is not guaranteed by the characterized NetBank observation contract.
+
+### Gate 10 — Campaign-specific reusable VCA provisioning
+
+Status: **Gate 10b owner Cockpit surface complete locally**
+
+`ProvisionCampaignPaymentQr` now composes the established funding primitives
+instead of introducing another QR implementation. It derives a stable account
+reference from the campaign reference and pinned template revision, provisions
+a NetBank Standing Funding Address with purpose `payment` and recognition mode
+`observe_only`, resolves the canonical merchant profile, reuses the persisted
+provider QR artifact, and creates the immutable `CampaignPaymentQrBinding`.
+
+Provisioning is replay-safe. The same owner, campaign revision, merchant
+profile, and payment configuration converge on one Standing Funding Address,
+one active QR artifact, and one campaign binding. Cross-account access,
+ordinary endpoint campaigns, missing revisions, incoherent amounts, and invalid
+availability windows fail before any provider request. The action creates no
+Account Funding receipt, wallet transaction, Treasury movement, recognition,
+coverage, envelope, Pay Code, or notification.
+
+Gate 10b adds the owner-authorized Campaigns surface. The AUI scenario now
+declares `reusable_payment_qr`; an authenticated owner can provision the fixed
+₱50 QR Ph through a throttled endpoint, then view, enlarge, download, or print
+the persisted provider artifact. The read model returns the decrypted image
+only inside that owner's Cockpit response. Cross-account provisioning returns
+404 before the provider boundary.
+
+The next Gate 10 slice is payment-observation characterization against this
+campaign binding. It must prove that a real GCash or Maya payment is linked to
+the binding without treating a provider account identifier as a verified mobile
+number, and without starting coverage or sending SMS until the exact evidence
+contract is satisfied.

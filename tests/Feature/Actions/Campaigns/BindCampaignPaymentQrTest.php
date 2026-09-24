@@ -70,6 +70,7 @@ use LBHurtado\XChange\Models\StandingFundingQrArtifact;
 use LBHurtado\XChange\Services\Cockpit\CampaignPaymentEvidenceAttentionReadModel;
 use LBHurtado\XChange\Services\Cockpit\CampaignPolicyLifecycleReadModel;
 use LBHurtado\XChange\Services\Cockpit\CampaignPolicyLifecycleStageResolver;
+use LBHurtado\XChange\Services\Settlement\AuiPersonalAccidentCampaignCoverageDriver;
 use LBHurtado\XChange\Services\Settlement\AuiPersonalAccidentPolicyCompletionDriver;
 use LBHurtado\XChange\Services\Settlement\CampaignCoverageDriverRegistry;
 use LBHurtado\XChange\Services\Settlement\CampaignPolicyCompletionDriverRegistry;
@@ -456,6 +457,69 @@ it('uses an explicitly selected driver to orchestrate coverage and converges on 
         ->and(ProvisionalCoverage::query()->count())->toBe(1)
         ->and(Envelope::query()->count())->toBe(1)
         ->and(campaignPaymentFinancialCounts())->toBe($before);
+});
+
+it('separates the AUI premium from the insured amount and starts 24-hour coverage at settlement', function (): void {
+    [$recognition] = recognizedCampaignPayment(5_000);
+    $campaign = $recognition->campaignRecord();
+    $campaign->forceFill([
+        'settings' => [
+            'entry_mode' => CampaignEntryMode::ReusablePaymentQr->value,
+            'scenario_run' => [
+                'reference' => 'RUN-AUI-PRODUCT-TERMS',
+                'scenario' => 'aui_on_demand_insurance_payment',
+                'envelope_driver_id' => AuiPersonalAccidentCampaignCoverageDriver::DRIVER_ID,
+                'envelope_driver_version' => AuiPersonalAccidentCampaignCoverageDriver::DRIVER_VERSION,
+                'product' => [
+                    'name' => 'Cubao to Lucena Personal Accident Plan',
+                    'premium_minor' => 5_000,
+                    'insured_amount_minor' => 500_000,
+                    'currency' => 'PHP',
+                    'coverage_duration_hours' => 24,
+                ],
+            ],
+        ],
+    ])->save();
+
+    $decision = app(AuiPersonalAccidentCampaignCoverageDriver::class)->decide($recognition);
+
+    expect($decision->eligible)->toBeTrue()
+        ->and($decision->terms?->coverageAmountMinor)->toBe(500_000)
+        ->and($decision->terms?->effectiveAt?->equalTo($recognition->settled_at))->toBeTrue()
+        ->and($decision->terms?->expiresAt?->equalTo($recognition->settled_at?->addHours(24)))->toBeTrue()
+        ->and($decision->terms?->terms)->toMatchArray([
+            'plan' => 'Cubao to Lucena Personal Accident Plan',
+            'premium_minor' => 5_000,
+            'coverage_duration_hours' => 24,
+        ]);
+});
+
+it('rejects an AUI payment that does not match the configured premium', function (): void {
+    [$recognition] = recognizedCampaignPayment(4_999);
+    $campaign = $recognition->campaignRecord();
+    $campaign->forceFill([
+        'settings' => [
+            'entry_mode' => CampaignEntryMode::ReusablePaymentQr->value,
+            'scenario_run' => [
+                'reference' => 'RUN-AUI-PREMIUM-MISMATCH',
+                'scenario' => 'aui_on_demand_insurance_payment',
+                'envelope_driver_id' => AuiPersonalAccidentCampaignCoverageDriver::DRIVER_ID,
+                'envelope_driver_version' => AuiPersonalAccidentCampaignCoverageDriver::DRIVER_VERSION,
+                'product' => [
+                    'name' => 'Cubao to Lucena Personal Accident Plan',
+                    'premium_minor' => 5_000,
+                    'insured_amount_minor' => 500_000,
+                    'currency' => 'PHP',
+                    'coverage_duration_hours' => 24,
+                ],
+            ],
+        ],
+    ])->save();
+
+    $decision = app(AuiPersonalAccidentCampaignCoverageDriver::class)->decide($recognition);
+
+    expect($decision->eligible)->toBeFalse()
+        ->and($decision->reasonCode)->toBe('campaign_or_payment_not_qualified');
 });
 
 it('stops an ineligible driver decision before persistence', function (): void {
@@ -1251,7 +1315,7 @@ function configureCampaignCoverageTestDriver(): void
 }
 
 /** @return array{CampaignPaymentRecognition, CampaignPaymentQrBinding} */
-function recognizedCampaignPayment(): array
+function recognizedCampaignPayment(int $amountMinor = 12_200): array
 {
     $owner = campaignPaymentQrOwner();
     $campaign = campaignPaymentQrCampaign($owner, CampaignEntryMode::ReusablePaymentQr);
@@ -1262,11 +1326,11 @@ function recognizedCampaignPayment(): array
         address: $address,
         artifact: $artifact,
         amountMode: CampaignPaymentAmountMode::Fixed,
-        fixedAmountMinor: 12_200,
+        fixedAmountMinor: $amountMinor,
     );
     $result = app(RecognizeQualifyingCampaignPayment::class)->handle(
         $binding,
-        campaignPaymentObservation($address, 'transaction-coverage-'.str()->ulid(), 'settled'),
+        campaignPaymentObservation($address, 'transaction-coverage-'.str()->ulid(), 'settled', $amountMinor),
     );
 
     return [$result->recognition, $binding];
@@ -1448,6 +1512,7 @@ function campaignPaymentObservation(
     StandingFundingAddress $address,
     string $transactionId,
     string $status,
+    int $amountMinor = 12_200,
 ): ProviderFundingObservation {
     $occurredAt = now()->addMinute()->toImmutable();
 
@@ -1458,9 +1523,9 @@ function campaignPaymentObservation(
         'provider_operation_id' => 'operation-'.$transactionId,
         'funding_address' => 'sha256:'.$address->funding_address_hash,
         'provider_account_reference' => 'sha256:'.hash('sha256', 'campaign-provider-account'),
-        'gross_amount_minor' => 12_200,
+        'gross_amount_minor' => $amountMinor,
         'fee_amount_minor' => 0,
-        'net_amount_minor' => 12_200,
+        'net_amount_minor' => $amountMinor,
         'currency' => 'PHP',
         'provider_status' => $status,
         'occurred_at' => $occurredAt,

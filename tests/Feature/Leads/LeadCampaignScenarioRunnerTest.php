@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
@@ -27,6 +28,7 @@ use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Enums\PolicyCompletionRequestStatus;
 use LBHurtado\XChange\Events\PolicyCompletionAuthorized;
+use LBHurtado\XChange\Events\PolicyCompletionOutcomeRecorded;
 use LBHurtado\XChange\Events\PolicyCompletionRequested;
 use LBHurtado\XChange\Models\CampaignPaymentRecognition;
 use LBHurtado\XChange\Models\CampaignPaymentSource;
@@ -55,7 +57,7 @@ it('renders the disbursable feedback endpoint as the default browser scenario', 
         ->assertJsonPath('props.scenario.claim_surface', '/x/claim/{code}')
         ->assertJsonPath('props.scenario.fields.0', 'Disbursable')
         ->assertJsonPath('props.scenarios.1.key', 'aui_on_demand_insurance_payment')
-        ->assertJsonPath('props.scenarios.1.amount', '₱0.00 disbursement · ₱100.00 collection target')
+        ->assertJsonPath('props.scenarios.1.amount', '₱50.00 premium · ₱5,000.00 insured for 24 hours')
         ->assertJsonPath('props.recent_lead_campaigns', []);
 });
 
@@ -132,7 +134,14 @@ it('keeps the AUI browser scenario executable against voucher input fields', fun
         ->and(data_get($template->instructions_ciphertext, 'metadata.custom.settlement.coverage_driver_id'))
         ->toBe('aui.personal-accident.provisional-cover')
         ->and(data_get($campaign->settings, 'scenario_run.schema'))
-        ->toBe('x-change.lead-campaign-lifecycle-run.v1');
+        ->toBe('x-change.lead-campaign-lifecycle-run.v1')
+        ->and(data_get($campaign->settings, 'scenario_run.product'))->toBe([
+            'name' => 'Cubao to Lucena Personal Accident Plan',
+            'premium_minor' => 5_000,
+            'insured_amount_minor' => 500_000,
+            'currency' => 'PHP',
+            'coverage_duration_hours' => 24,
+        ]);
 
     $this->actingAs($operator)
         ->withHeader('X-Inertia', 'true')
@@ -174,7 +183,7 @@ it('preserves the AUI settlement target from the endpoint template and offers sa
 
     $instructions = $fakeIssuer->payloads[0];
     expect($instructions['voucher_type'])->toBe('settlement')
-        ->and($instructions['target_amount'])->toBe(100)
+        ->and($instructions['target_amount'])->toBe(50)
         ->and(data_get($instructions, 'cash.amount'))->toBe(0)
         ->and(data_get($instructions, 'metadata.flow_type'))->toBe('settlement')
         ->and(data_get($instructions, 'metadata.custom.settlement.driver'))->toBe('claim-intake')
@@ -221,7 +230,7 @@ it('preserves the AUI settlement target from the endpoint template and offers sa
     $this->withHeader('X-Inertia', 'true')
         ->get(route('x-change.pay.show', ['code' => $voucher->code]))
         ->assertOk()
-        ->assertJsonPath('props.payment.amount_due_minor', 10000)
+        ->assertJsonPath('props.payment.amount_due_minor', 5000)
         ->assertJsonPath('props.payment.can_create_attempt', true);
 
     $this->withHeader('X-Inertia', 'false')
@@ -233,7 +242,7 @@ it('preserves the AUI settlement target from the endpoint template and offers sa
         ->get(route('x-change.pay.show', ['code' => $voucher->code, 'attempt' => $attempt->reference]))
         ->assertOk()
         ->assertJsonPath('props.payment.attempt.status', 'awaiting_payment')
-        ->assertJsonPath('props.payment.attempt.amount_minor', 10000)
+        ->assertJsonPath('props.payment.attempt.amount_minor', 5000)
         ->assertJsonPath('props.payment.attempt.qr_code.mime_type', 'image/png')
         ->assertJsonStructure(['props' => ['payment' => ['attempt' => ['qr_code' => ['base64_payload']]]]]);
 
@@ -241,9 +250,9 @@ it('preserves the AUI settlement target from the endpoint template and offers sa
     $adapter->fundingObservation = new ProviderFundingObservationData(
         provider: 'netbank',
         providerTransactionId: 'aui-demo-payment',
-        grossAmountMinor: 10000,
+        grossAmountMinor: 5000,
         feeAmountMinor: 0,
-        netAmountMinor: 10000,
+        netAmountMinor: 5000,
         currency: 'PHP',
         providerStatus: 'settled',
         verificationSource: 'fake-authoritative-api',
@@ -280,7 +289,7 @@ it('preserves the AUI settlement target from the endpoint template and offers sa
     $this->get(route('x-change.pay.show', ['code' => $voucher->code, 'attempt' => $attempt->reference]))
         ->assertOk()
         ->assertJsonPath('props.payment.is_fully_paid', true)
-        ->assertJsonPath('props.payment.receipt.amount_paid_minor', 10000);
+        ->assertJsonPath('props.payment.receipt.amount_paid_minor', 5000);
 
     $this->actingAs($operator)
         ->withHeader('X-Inertia', 'true')
@@ -310,6 +319,10 @@ it('preserves the AUI settlement target from the endpoint template and offers sa
         'inputs' => [
             'name' => 'Apple Hurtado',
             'mobile' => '09175180722',
+            'email' => 'apple.hurtado@example.test',
+            'address' => 'AUI scenario test address',
+            'birth_date' => '1990-01-01',
+            'otp' => ['verified' => true],
         ],
     ]);
     $completionClaim = $completion->voucher->claims()->sole();
@@ -344,10 +357,13 @@ it('preserves the AUI settlement target from the endpoint template and offers sa
     $checker = actingAsTestUser(0);
     config()->set('x-change.settlement.policy_completion.maker_ids', [(string) $operator->getKey()]);
     config()->set('x-change.settlement.policy_completion.checker_ids', [(string) $checker->getKey()]);
+    config()->set('x-change.settlement.policy_completion.outcome_recorder_ids', [(string) $operator->getKey()]);
+    config()->set('x-change.leads.scenario_runner.demonstration_policy_response_enabled', true);
     Http::fake();
     Event::fake([
         PolicyCompletionRequested::class,
         PolicyCompletionAuthorized::class,
+        PolicyCompletionOutcomeRecorded::class,
     ]);
 
     $projection = CompletionClaimEvidenceProjection::query()->sole();
@@ -411,12 +427,52 @@ it('preserves the AUI settlement target from the endpoint template and offers sa
         ->assertJsonPath('props.run.steps.13.status', 'passed')
         ->assertJsonPath('props.run.steps.14.status', 'passed')
         ->assertJsonPath('props.run.steps.14.facts.status', 'authorized')
+        ->assertJsonPath('props.run.steps.15.status', 'waiting_for_person')
+        ->assertJsonPath('props.run.actions.record_demonstration_policy', true)
         ->assertJsonPath('props.run.artifacts.12.reference', $policyRequest->reference)
         ->assertJsonMissingPath('props.run.steps.13.facts.authorization_reference')
         ->assertJsonMissingPath('props.run.steps.14.facts.approval_reference');
 
+    $outcomeRoute = route(
+        'x-change.cockpit.campaigns.lead-scenario-runner.runs.demonstration-policy-outcome.store',
+        ['campaign' => $campaign->reference],
+    );
+    $this->withoutMiddleware(ThrottleRequests::class)
+        ->actingAs($operator)->post($outcomeRoute)->assertRedirect(route(
+            'x-change.cockpit.campaigns.lead-scenario-runner.runs.show',
+            ['campaign' => $campaign->reference],
+        ));
+    $this->withoutMiddleware(ThrottleRequests::class)
+        ->actingAs($operator)->post($outcomeRoute)->assertRedirect();
+
+    $outcome = PolicyCompletionOutcome::query()->sole();
+    expect($outcome->result_code)->toBe('policy_issued_demo')
+        ->and($outcome->provider_reference)->toStartWith('AUI-DEMO-')
+        ->and($outcome->safe_result)->toMatchArray([
+            'decision' => 'issued_demo',
+            'document_ready' => false,
+            'provider_status' => 'issued_demo',
+            'reason_code' => 'demonstration_only',
+        ])
+        ->and(PolicyCompletionOutcome::query()->count())->toBe(1)
+        ->and(EnvelopePayloadVersion::query()->where('envelope_id', $completion->envelope_id)->count())->toBe(2)
+        ->and(VoucherCollection::query()->count())->toBe(1);
+
+    $this->actingAs($operator)
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.lead-scenario-runner.runs.show', [
+            'campaign' => $campaign->reference,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('props.run.status', 'completed')
+        ->assertJsonPath('props.run.steps.15.status', 'passed')
+        ->assertJsonPath('props.run.steps.15.facts.result_code', 'policy_issued_demo')
+        ->assertJsonPath('props.run.actions.record_demonstration_policy', false)
+        ->assertJsonPath('props.run.artifacts.13.label', 'Demonstration policy outcome');
+
     Event::assertDispatchedTimes(PolicyCompletionRequested::class, 1);
     Event::assertDispatchedTimes(PolicyCompletionAuthorized::class, 1);
+    Event::assertDispatchedTimes(PolicyCompletionOutcomeRecorded::class, 1);
     Event::assertDispatched(PolicyCompletionRequested::class, function (PolicyCompletionRequested $event): bool {
         $payload = json_encode($event->payload, JSON_THROW_ON_ERROR);
 

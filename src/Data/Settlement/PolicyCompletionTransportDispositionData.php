@@ -158,6 +158,31 @@ final readonly class PolicyCompletionTransportDispositionData
         return $this->credentialReference;
     }
 
+    public function provider(): string
+    {
+        return $this->normalized['provider'];
+    }
+
+    public function submissionEndpoint(): string
+    {
+        return $this->normalized['submission_endpoint'];
+    }
+
+    public function authenticationScheme(): string
+    {
+        return $this->normalized['authentication_scheme'];
+    }
+
+    public function connectTimeoutSeconds(): int
+    {
+        return $this->normalized['connect_timeout_seconds'];
+    }
+
+    public function responseTimeoutSeconds(): int
+    {
+        return $this->normalized['response_timeout_seconds'];
+    }
+
     public function fingerprint(): string
     {
         return hash('sha256', json_encode($this->normalized, JSON_THROW_ON_ERROR));

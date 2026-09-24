@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Services\Leads;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\CampaignPolicyCompletionAuthorityContract;
 use LBHurtado\XChange\Models\CampaignPaymentSource;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PaymentAttempt;
@@ -17,6 +18,7 @@ final readonly class LeadCampaignLifecycleScenarioRunReadModel
 {
     public function __construct(
         private CampaignPolicyLifecycleReadModel $policyLifecycles,
+        private CampaignPolicyCompletionAuthorityContract $policyAuthority,
     ) {}
 
     /** @return array<string, mixed> */
@@ -113,6 +115,11 @@ final readonly class LeadCampaignLifecycleScenarioRunReadModel
                 'request_reference' => data_get($lifecycle?->policy, 'request_reference'),
                 'status' => data_get($lifecycle?->policy, 'status'),
             ])),
+            $this->step(16, 'Demonstration policy response recorded', $this->demonstrationOutcomeStatus($lifecycle?->stage, data_get($lifecycle?->policy, 'result_code')), $this->demonstrationOutcomeDescription($lifecycle?->stage, data_get($lifecycle?->policy, 'result_code')), data_get($lifecycle?->policy, 'recorded_at'), array_filter([
+                'outcome_reference' => data_get($lifecycle?->policy, 'outcome_reference'),
+                'status' => data_get($lifecycle?->policy, 'outcome_status'),
+                'result_code' => data_get($lifecycle?->policy, 'result_code'),
+            ])),
         ];
 
         $terminalFailure = collect($steps)->contains(fn (array $step): bool => $step['status'] === 'failed');
@@ -132,6 +139,12 @@ final readonly class LeadCampaignLifecycleScenarioRunReadModel
                 'financial_mode' => 'real_provider_when_paid',
                 'insurer_contract' => 'not_configured',
                 'driver_authority' => 'demonstration_only',
+            ],
+            'campaign_reference' => $campaign->reference,
+            'actions' => [
+                'record_demonstration_policy' => (bool) config('x-change.leads.scenario_runner.demonstration_policy_response_enabled', ! app()->isProduction())
+                    && $lifecycle?->stage === 'policy_authorized'
+                    && $this->policyAuthority->mayRecordOutcome($owner),
             ],
             'steps' => $steps,
             'artifacts' => $this->artifacts($campaign, $template, $voucher, $claim, $attempt, $recognition, $lifecycle),
@@ -200,6 +213,10 @@ final readonly class LeadCampaignLifecycleScenarioRunReadModel
             if (is_string($policyRequestReference) && $policyRequestReference !== '') {
                 $artifacts[] = ['group' => 'Governance', 'label' => 'Policy completion request', 'reference' => $policyRequestReference, 'href' => null, 'evidence' => 'application_persisted'];
             }
+            $policyOutcomeReference = data_get($lifecycle->policy, 'outcome_reference');
+            if (is_string($policyOutcomeReference) && $policyOutcomeReference !== '') {
+                $artifacts[] = ['group' => 'Policy', 'label' => 'Demonstration policy outcome', 'reference' => $policyOutcomeReference, 'href' => null, 'evidence' => 'application_persisted'];
+            }
         }
 
         return $artifacts;
@@ -248,6 +265,36 @@ final readonly class LeadCampaignLifecycleScenarioRunReadModel
             'policy_failed' => 'Checker approval preceded the separately recorded failed outcome.',
             'policy_indeterminate' => 'Checker approval preceded an outcome that requires reconciliation.',
             default => 'Checker approval has not started.',
+        };
+    }
+
+    private function demonstrationOutcomeStatus(?string $stage, mixed $resultCode): string
+    {
+        if ($stage === 'policy_succeeded' && $resultCode === 'policy_issued_demo') {
+            return 'passed';
+        }
+
+        return match ($stage) {
+            'policy_authorized' => 'waiting_for_person',
+            'policy_failed' => 'failed',
+            'policy_indeterminate' => 'indeterminate',
+            'policy_succeeded' => 'failed',
+            default => 'not_started',
+        };
+    }
+
+    private function demonstrationOutcomeDescription(?string $stage, mixed $resultCode): string
+    {
+        if ($stage === 'policy_succeeded' && $resultCode === 'policy_issued_demo') {
+            return 'The deterministic local responder recorded a demonstration-only issued outcome. No insurer was contacted and no policy document was created.';
+        }
+
+        return match ($stage) {
+            'policy_authorized' => 'Checker authorization is complete. An authorized operator may now run the local demonstration responder.',
+            'policy_failed' => 'The recorded policy completion outcome failed.',
+            'policy_indeterminate' => 'The recorded policy completion outcome requires reconciliation.',
+            'policy_succeeded' => 'A successful non-demonstration outcome is recorded.',
+            default => 'The demonstration responder remains gated until policy completion is authorized.',
         };
     }
 }

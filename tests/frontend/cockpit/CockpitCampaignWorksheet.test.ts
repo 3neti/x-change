@@ -85,6 +85,8 @@ const endpointCampaign = {
         reason: 'Accepting new starts.',
     },
     limits: {},
+    entry_mode: 'pay_code_on_open' as const,
+    payment_qr: null,
     creator: {
         name: 'Lester Hurtado',
         type: 'user',
@@ -98,9 +100,12 @@ const endpointCampaign = {
     actions: {
         template_update_url:
             '/x/cockpit/campaigns/endpoints/01KYENDPOINT0000000000000/template',
-        pause_url: '/x/cockpit/campaigns/endpoints/01KYENDPOINT0000000000000/pause',
+        pause_url:
+            '/x/cockpit/campaigns/endpoints/01KYENDPOINT0000000000000/pause',
         resume_url:
             '/x/cockpit/campaigns/endpoints/01KYENDPOINT0000000000000/resume',
+        payment_qr_provision_url:
+            '/x/cockpit/campaigns/endpoints/01KYENDPOINT0000000000000/payment-qr',
     },
     template: {
         id: 12,
@@ -113,6 +118,65 @@ const endpointCampaign = {
 };
 
 describe('Cockpit campaign worksheets', () => {
+    it('shows an owner campaign QR Ph stamp with enlargement, download, and print actions', async () => {
+        const paymentCampaign = {
+            ...endpointCampaign,
+            entry_mode: 'reusable_payment_qr' as const,
+            payment_qr: {
+                reference: '01KYPAYMENTQR0000000000',
+                amount_mode: 'fixed' as const,
+                fixed_amount_minor: 5000,
+                currency: 'PHP',
+                qr_data_uri: 'data:image/png;base64,QRPH',
+                generated_at: '2026-09-24T08:00:00+08:00',
+            },
+        };
+        const wrapper = mount(Campaigns, {
+            props: {
+                worksheets: [],
+                endpoint_campaigns: [paymentCampaign],
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="campaign-flavor-endpoints"]')
+            .trigger('click');
+        await wrapper
+            .get(
+                `[data-testid="campaign-payment-qr-show-${paymentCampaign.reference}"]`,
+            )
+            .trigger('click');
+
+        expect(
+            wrapper.get('[data-testid="campaign-payment-qr-stamp"]').text(),
+        ).toContain('Reusable payment QR Ph');
+        expect(
+            wrapper.get('[data-testid="campaign-payment-qr-stamp"]').text(),
+        ).toContain('₱50.00');
+        expect(
+            wrapper
+                .get('[data-testid="campaign-payment-qr-image"]')
+                .attributes('src'),
+        ).toBe(paymentCampaign.payment_qr.qr_data_uri);
+        expect(
+            wrapper
+                .get('[data-testid="campaign-payment-qr-download"]')
+                .attributes('download'),
+        ).toContain('insurance-application-qr-ph.png');
+        expect(
+            wrapper.find('[data-testid="campaign-payment-qr-print"]').exists(),
+        ).toBe(true);
+
+        await wrapper
+            .get('[data-testid="campaign-payment-qr-enlarge"]')
+            .trigger('click');
+        expect(
+            wrapper
+                .get('[data-testid="campaign-payment-qr-enlarge"]')
+                .attributes('aria-expanded'),
+        ).toBe('true');
+    });
+
     it('surfaces aggregate payment evidence attention without exposing provider evidence', async () => {
         const campaignNeedingAttention = {
             ...endpointCampaign,

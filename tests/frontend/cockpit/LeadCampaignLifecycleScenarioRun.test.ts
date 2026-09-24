@@ -11,11 +11,13 @@ vi.mock("@inertiajs/vue3", async (importOriginal) => ({
       "<a :href=\"typeof href === 'string' ? href : href.url\"><slot /></a>",
   },
   usePoll: vi.fn(),
+  useForm: vi.fn(() => ({ processing: false, post: vi.fn() })),
 }));
 
 const run = {
   schema: "x-change.cockpit.lead-campaign-lifecycle-run.v1",
   reference: "RUN-AUI-EXAMPLE",
+  campaign_reference: "CAMPAIGN-AUI-EXAMPLE",
   scenario: "aui_on_demand_insurance_payment",
   title: "AUI On-Demand Insurance Payment",
   mode: "browser_manual_payment",
@@ -28,6 +30,7 @@ const run = {
     insurer_contract: "not_configured",
     driver_authority: "demonstration_only",
   },
+  actions: { record_demonstration_policy: true },
   steps: [
     {
       sequence: 1,
@@ -87,6 +90,8 @@ describe("Lead Campaign lifecycle scenario run", () => {
     expect(wrapper.text()).toContain("Artifacts");
     expect(wrapper.text()).toContain("Envelope driver");
     expect(wrapper.text()).toContain("demonstration only");
+    expect(wrapper.text()).toContain("Generate demonstration policy");
+    expect(wrapper.text()).toContain("No insurer is contacted");
     expect(
       wrapper.get('[aria-label="Open Public endpoint"]').attributes("href"),
     ).toBe("https://example.test/x/o/aui/demo");

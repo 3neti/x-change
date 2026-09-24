@@ -85,9 +85,9 @@ final class LeadCampaignBrowserScenarioCatalog
             'person_type' => 'Prospect',
             'pay_code_generation' => 'On scan',
             'claim_surface' => '/x/claim/{code}',
-            'amount' => '₱0.00 disbursement · ₱100.00 collection target',
+            'amount' => '₱50.00 premium · ₱5,000.00 insured for 24 hours',
             'details_label' => 'Claim UX intake fields',
-            'details_description' => 'Complete the application, choose Continue to payment, then generate or download the ₱100.00 QR Ph on the payment page.',
+            'details_description' => 'A settled ₱50.00 payment starts ₱5,000.00 provisional personal-accident coverage for 24 hours. The completion claim collects the policy-holder details.',
             'fields' => [
                 'Name',
                 'Mobile',

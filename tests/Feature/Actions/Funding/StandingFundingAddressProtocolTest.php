@@ -19,6 +19,7 @@ use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\XChange\Actions\Campaigns\BindCampaignPaymentQr;
+use LBHurtado\XChange\Actions\Campaigns\ProvisionCampaignPaymentQr;
 use LBHurtado\XChange\Actions\Funding\ActivateStandingFundingAddressBindingMigration;
 use LBHurtado\XChange\Actions\Funding\ApproveStandingFundingAddressBindingMigration;
 use LBHurtado\XChange\Actions\Funding\InspectStandingFundingAddressBindingMigration;
@@ -40,6 +41,7 @@ use LBHurtado\XChange\Enums\TreasuryOperatorCapability;
 use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\CampaignPaymentEvidenceQuarantine;
+use LBHurtado\XChange\Models\CampaignPaymentQrBinding;
 use LBHurtado\XChange\Models\CampaignPaymentRecognition;
 use LBHurtado\XChange\Models\FundingSuspenseCase;
 use LBHurtado\XChange\Models\PayCodeTemplate;
@@ -57,6 +59,7 @@ beforeEach(function () {
     enableNetbankTreasuryForTests();
 });
 use Carbon\CarbonImmutable;
+use Illuminate\Validation\ValidationException;
 use LBHurtado\XChange\Exceptions\StandingFundingAddressBindingTimeUnavailable;
 use LBHurtado\XChange\Exceptions\StandingFundingAddressConflict;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressProviderRegistry;
@@ -117,6 +120,146 @@ it('persists an immutable purpose-bound address without storing plaintext', func
         ->and($stored->reference_length)->toBe(11)
         ->and($storedQr->payload_ciphertext)
         ->not->toContain($first->providerAddress->qrCode->base64Payload);
+});
+
+it('provisions and binds one reusable campaign payment QR idempotently', function () {
+    $owner = actingAsTestUser(0);
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    configureSharedCampaignPaymentDestination();
+    $template = PayCodeTemplate::query()->create([
+        'owner_type' => $owner->getMorphClass(),
+        'owner_id' => (string) $owner->getKey(),
+        'name' => 'Cubao to Lucena Personal Accident Plan',
+        'base_template_key' => 'blank-pay-code',
+        'instructions_ciphertext' => [
+            'cash' => ['amount' => 0, 'currency' => 'PHP'],
+            'count' => 1,
+            'prefix' => 'POLI',
+            'mask' => '****',
+        ],
+        'include_amount' => true,
+        'include_purpose' => true,
+        'status' => 'active',
+    ]);
+    $campaign = app(CreateLeadCampaign::class)->handle($owner, $template, [
+        'title' => 'Cubao to Lucena Personal Accident Plan',
+        'settings' => ['entry_mode' => CampaignEntryMode::ReusablePaymentQr->value],
+    ]);
+    $action = app(ProvisionCampaignPaymentQr::class);
+    $rules = [
+        'allowed_rails' => ['INSTAPAY'],
+        'allowed_institutions' => ['GCASH', 'MAYA'],
+    ];
+
+    $first = $action->handle(
+        owner: $owner,
+        campaign: $campaign,
+        amountMode: CampaignPaymentAmountMode::Fixed,
+        fixedAmountMinor: 5_000,
+        permittedPaymentRules: $rules,
+    );
+    $replayed = $action->handle(
+        owner: $owner,
+        campaign: $campaign,
+        amountMode: CampaignPaymentAmountMode::Fixed,
+        fixedAmountMinor: 5_000,
+        permittedPaymentRules: $rules,
+    );
+
+    $expectedAccountReference = implode(':', [
+        'campaign',
+        $campaign->reference,
+        'revision',
+        $campaign->active_template_version_id,
+    ]);
+
+    expect($replayed->is($first))->toBeTrue()
+        ->and($first->fixed_amount_minor)->toBe(5_000)
+        ->and($first->standingFundingAddress->purpose)->toBe(FundingAddressPurpose::Payment)
+        ->and($first->standingFundingAddress->recognition_mode)->toBe(FundingRecognitionMode::ObserveOnly)
+        ->and($first->qrArtifact->qr_mode)->toBe('static')
+        ->and($first->qrArtifact->embedded_amount)->toBeFalse()
+        ->and($provider->requests)->toHaveCount(1)
+        ->and($provider->requests[0]->accountReference)->toBe($expectedAccountReference)
+        ->and($provider->requests[0]->purpose)->toBe(FundingAddressPurpose::Payment)
+        ->and(StandingFundingAddress::query()->count())->toBe(1)
+        ->and(CampaignPaymentQrBinding::query()->count())->toBe(1)
+        ->and(AccountFundingReceipt::query()->count())->toBe(0)
+        ->and(Transaction::query()->count())->toBe(0)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(0);
+});
+
+it('rejects cross-account campaign payment QR provisioning before calling the provider', function () {
+    $owner = actingAsTestUser(0);
+    $otherAccount = actingAsTestUser(0);
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    configureSharedCampaignPaymentDestination();
+    $template = PayCodeTemplate::query()->create([
+        'owner_type' => $owner->getMorphClass(),
+        'owner_id' => (string) $owner->getKey(),
+        'name' => 'Owned campaign template',
+        'base_template_key' => 'blank-pay-code',
+        'instructions_ciphertext' => [
+            'cash' => ['amount' => 0, 'currency' => 'PHP'],
+            'count' => 1,
+            'prefix' => 'POLI',
+            'mask' => '****',
+        ],
+        'include_amount' => true,
+        'include_purpose' => true,
+        'status' => 'active',
+    ]);
+    $campaign = app(CreateLeadCampaign::class)->handle($owner, $template, [
+        'title' => 'Owned campaign',
+        'settings' => ['entry_mode' => CampaignEntryMode::ReusablePaymentQr->value],
+    ]);
+
+    expect(fn () => app(ProvisionCampaignPaymentQr::class)->handle(
+        owner: $otherAccount,
+        campaign: $campaign,
+        amountMode: CampaignPaymentAmountMode::Fixed,
+        fixedAmountMinor: 5_000,
+    ))->toThrow(ValidationException::class, 'must belong')
+        ->and($provider->requests)->toBeEmpty()
+        ->and(StandingFundingAddress::query()->count())->toBe(0)
+        ->and(CampaignPaymentQrBinding::query()->count())->toBe(0);
+});
+
+it('rejects invalid campaign payment terms before calling the provider', function () {
+    $owner = actingAsTestUser(0);
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    configureSharedCampaignPaymentDestination();
+    $template = PayCodeTemplate::query()->create([
+        'owner_type' => $owner->getMorphClass(),
+        'owner_id' => (string) $owner->getKey(),
+        'name' => 'Invalid terms template',
+        'base_template_key' => 'blank-pay-code',
+        'instructions_ciphertext' => [
+            'cash' => ['amount' => 0, 'currency' => 'PHP'],
+            'count' => 1,
+            'prefix' => 'POLI',
+            'mask' => '****',
+        ],
+        'include_amount' => true,
+        'include_purpose' => true,
+        'status' => 'active',
+    ]);
+    $campaign = app(CreateLeadCampaign::class)->handle($owner, $template, [
+        'title' => 'Invalid terms campaign',
+        'settings' => ['entry_mode' => CampaignEntryMode::ReusablePaymentQr->value],
+    ]);
+
+    expect(fn () => app(ProvisionCampaignPaymentQr::class)->handle(
+        owner: $owner,
+        campaign: $campaign,
+        amountMode: CampaignPaymentAmountMode::Fixed,
+        fixedAmountMinor: 0,
+    ))->toThrow(ValidationException::class, 'inconsistent')
+        ->and($provider->requests)->toBeEmpty()
+        ->and(StandingFundingAddress::query()->count())->toBe(0);
 });
 
 it('resolves the stable Client Funds ledger instead of the legacy default wallet', function () {
@@ -1256,6 +1399,13 @@ function bindStandingFundingProvider(StandingFundingAddressProviderFake $provide
         StandingFundingAddressProviderRegistry::class,
         new StandingFundingAddressProviderRegistry([$provider]),
     );
+}
+
+function configureSharedCampaignPaymentDestination(): void
+{
+    config()->set('payment-gateway.netbank.funding.corporate_account_number', '113-001-00001-9');
+    config()->set('payment-gateway.netbank.funding.corporate_account_name', 'X-Change Test');
+    config()->set('payment-gateway.netbank.funding.vca_alias', '91500');
 }
 
 function provisionStandingAddress(

@@ -9,8 +9,10 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use LBHurtado\XCampaign\Contracts\EndpointCampaignRepository;
+use LBHurtado\XChange\Actions\Campaigns\ProvisionCampaignPaymentQr;
 use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
+use LBHurtado\XChange\Enums\CampaignPaymentAmountMode;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\StoreCampaignEndpointRequest;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\UpdateCampaignEndpointTemplateRequest;
 use LBHurtado\XChange\Models\LeadCampaign;
@@ -69,6 +71,34 @@ final class CockpitCampaignEndpointController extends Controller
 
         return to_route('x-change.cockpit.campaigns.index')
             ->with('campaign_notice', sprintf('%s is paused. Existing Pay Codes remain untouched.', $endpoint->title));
+    }
+
+    public function provisionPaymentQr(
+        Request $request,
+        string $campaign,
+        ProvisionCampaignPaymentQr $provision,
+    ): RedirectResponse {
+        $endpoint = $this->endpointForOwner($request, $campaign);
+        $premiumMinor = data_get($endpoint->settings, 'scenario_run.product.premium_minor');
+        $fixedAmountMinor = is_numeric($premiumMinor) ? (int) $premiumMinor : null;
+
+        $provision->handle(
+            owner: $request->user(),
+            campaign: $endpoint,
+            amountMode: $fixedAmountMinor === null
+                ? CampaignPaymentAmountMode::Open
+                : CampaignPaymentAmountMode::Fixed,
+            fixedAmountMinor: $fixedAmountMinor,
+            availableFrom: $endpoint->created_at?->toImmutable(),
+            availableUntil: $endpoint->expires_at?->toImmutable(),
+            permittedPaymentRules: [
+                'rails' => ['INSTAPAY'],
+                'payer_applications' => ['GCash', 'Maya'],
+            ],
+        );
+
+        return to_route('x-change.cockpit.campaigns.index')
+            ->with('campaign_notice', sprintf('%s QR Ph is ready to display and print.', $endpoint->title));
     }
 
     public function resume(Request $request, string $campaign, AuditLoggerContract $audit): RedirectResponse

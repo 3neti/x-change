@@ -49,9 +49,10 @@ final readonly class AdvanceSettlementCampaignLifecycle
             $orchestration->binding->coverage,
             $owner,
             new CompletionPayCodeInstructionsData(
-                applicantFields: ['name', 'mobile'],
+                applicantFields: ['name', 'mobile', 'email', 'address', 'birth_date'],
+                requiresOtp: true,
                 prefix: 'POLI',
-                message: 'Complete the policy delivery requirements.',
+                message: 'Complete your personal details to prepare your policy.',
             ),
         );
 

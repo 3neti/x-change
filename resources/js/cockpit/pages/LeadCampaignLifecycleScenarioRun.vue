@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Head, Link, usePoll } from "@inertiajs/vue3";
+import { Head, Link, useForm, usePoll } from "@inertiajs/vue3";
+import CockpitAuiDemonstrationPolicyOutcomeController from "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitAuiDemonstrationPolicyOutcomeController";
 import { show as scenarioRunnerShow } from "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitLeadCampaignScenarioRunnerController";
 import {
   AlertTriangle,
@@ -10,6 +11,7 @@ import {
   Clock3,
   FileArchive,
   LoaderCircle,
+  Sparkles,
 } from "lucide-vue-next";
 import CockpitLayout from "../layouts/CockpitLayout.vue";
 import type { CockpitHeaderReadModel } from "../types";
@@ -36,6 +38,7 @@ type ScenarioArtifact = {
 type ScenarioRun = {
   schema: string;
   reference: string;
+  campaign_reference: string;
   scenario: string;
   title: string;
   mode: string;
@@ -43,6 +46,7 @@ type ScenarioRun = {
   started_at: string | null;
   updated_at: string | null;
   declarations: Record<string, string>;
+  actions: { record_demonstration_policy: boolean };
   steps: ScenarioStep[];
   artifacts: ScenarioArtifact[];
 };
@@ -53,6 +57,17 @@ const props = defineProps<{
 }>();
 
 usePoll(5000, { only: ["run"] });
+
+const demonstrationPolicyForm = useForm({});
+
+function recordDemonstrationPolicy(): void {
+  demonstrationPolicyForm.post(
+    CockpitAuiDemonstrationPolicyOutcomeController({
+      campaign: props.run.campaign_reference,
+    }).url,
+    { preserveScroll: true },
+  );
+}
 
 function readable(value: string): string {
   return value.replaceAll("_", " ");
@@ -166,6 +181,31 @@ function statusClass(status: string): string {
             </dd>
           </div>
         </dl>
+
+        <div
+          v-if="props.run.actions.record_demonstration_policy"
+          class="mt-5 flex flex-col gap-3 rounded-xl border border-violet-200 bg-violet-50 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-violet-900 dark:bg-violet-950/30"
+          data-testid="campaign-demonstration-policy-action"
+        >
+          <div>
+            <p class="text-sm font-semibold text-violet-950 dark:text-violet-100">
+              Demonstration policy response ready
+            </p>
+            <p class="mt-1 text-xs text-violet-800 dark:text-violet-200">
+              Records a deterministic demo outcome. No insurer is contacted and no policy document is created.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-violet-700 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-800 disabled:cursor-not-allowed disabled:opacity-60"
+            :disabled="demonstrationPolicyForm.processing"
+            @click="recordDemonstrationPolicy"
+          >
+            <LoaderCircle v-if="demonstrationPolicyForm.processing" class="size-4 animate-spin" aria-hidden="true" />
+            <Sparkles v-else class="size-4" aria-hidden="true" />
+            Generate demonstration policy
+          </button>
+        </div>
       </section>
 
       <section

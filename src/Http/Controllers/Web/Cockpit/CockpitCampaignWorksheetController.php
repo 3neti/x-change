@@ -33,6 +33,7 @@ use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRequest;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRowRequest;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
 use LBHurtado\XChange\Models\CampaignDisplaySession;
+use LBHurtado\XChange\Models\CampaignPaymentQrBinding;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Models\VoucherClaim;
@@ -287,16 +288,24 @@ class CockpitCampaignWorksheetController extends Controller
             (string) $owner->getAuthIdentifier(),
         )
             ->load('payCodeTemplate');
+        $paymentQrBindings = CampaignPaymentQrBinding::query()
+            ->with(['qrArtifact', 'standingFundingAddress'])
+            ->whereIn('endpoint_campaign_id', $campaigns->modelKeys())
+            ->get()
+            ->keyBy('endpoint_campaign_id');
         $progress = $this->endpointProgressFor($campaigns);
         $attention = $this->paymentEvidenceAttention->forCampaigns($campaigns);
         $creator = $this->endpointCreatorFor($owner);
 
         return $campaigns
-            ->map(function (LeadCampaign $campaign) use ($attention, $creator, $progress): array {
+            ->map(function (LeadCampaign $campaign) use ($attention, $creator, $progress, $paymentQrBindings): array {
                 $publicUrl = route('x-change.leads.start', [
                     'merchant_slug' => $campaign->merchant_slug,
                     'endpoint_slug' => $campaign->endpoint_slug,
                 ]);
+                $paymentQrBinding = $paymentQrBindings->get($campaign->getKey());
+                $paymentQrArtifact = $paymentQrBinding?->qrArtifact;
+                $paymentQrPayload = $paymentQrArtifact?->payload_ciphertext;
 
                 return [
                     ...$this->endpointSummary->forCampaign($campaign),
@@ -306,10 +315,22 @@ class CockpitCampaignWorksheetController extends Controller
                     'availability_state' => $this->endpointAvailabilityFor($campaign),
                     'progress' => $progress[$campaign->getKey()] ?? $this->emptyEndpointProgress($campaign),
                     'payment_attention' => $attention[$campaign->getKey()] ?? null,
+                    'entry_mode' => (string) data_get($campaign->settings, 'entry_mode', 'pay_code_on_open'),
+                    'payment_qr' => $paymentQrBinding === null ? null : [
+                        'reference' => $paymentQrBinding->reference,
+                        'amount_mode' => $paymentQrBinding->amount_mode->value,
+                        'fixed_amount_minor' => $paymentQrBinding->fixed_amount_minor,
+                        'currency' => $paymentQrBinding->currency,
+                        'qr_data_uri' => filled($paymentQrPayload)
+                            ? sprintf('data:%s;base64,%s', $paymentQrArtifact->mime_type, $paymentQrPayload)
+                            : null,
+                        'generated_at' => $paymentQrArtifact?->generated_at?->toIso8601String(),
+                    ],
                     'actions' => [
                         'template_update_url' => route('x-change.cockpit.campaigns.endpoints.template.update', $campaign->reference),
                         'pause_url' => route('x-change.cockpit.campaigns.endpoints.pause', $campaign->reference),
                         'resume_url' => route('x-change.cockpit.campaigns.endpoints.resume', $campaign->reference),
+                        'payment_qr_provision_url' => route('x-change.cockpit.campaigns.endpoints.payment-qr.store', $campaign->reference),
                     ],
                     'template' => $campaign->payCodeTemplate instanceof PayCodeTemplate ? [
                         'id' => $campaign->payCodeTemplate->getKey(),

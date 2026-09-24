@@ -6,11 +6,18 @@ namespace LBHurtado\XChange\Actions\Leads;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use LBHurtado\XChange\Enums\CampaignEntryMode;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 
 final readonly class RunAuiInsuranceLeadScenario
 {
+    private const PREMIUM_MINOR = 5_000;
+
+    private const INSURED_AMOUNT_MINOR = 500_000;
+
+    private const COVERAGE_DURATION_HOURS = 24;
+
     public function __construct(
         private CreateLeadCampaign $createLeadCampaign,
     ) {}
@@ -36,6 +43,7 @@ final readonly class RunAuiInsuranceLeadScenario
             'endpoint_slug' => 'aui-on-demand-insurance-payment-'.$suffix,
             'description' => 'Public QR/link intake for a prospect who wants insurance payment instructions.',
             'settings' => [
+                'entry_mode' => CampaignEntryMode::ReusablePaymentQr->value,
                 'scenario_run' => [
                     'schema' => 'x-change.lead-campaign-lifecycle-run.v1',
                     'reference' => $runReference,
@@ -44,6 +52,13 @@ final readonly class RunAuiInsuranceLeadScenario
                     'evidence_classification' => 'application_persisted',
                     'envelope_driver_id' => 'aui.personal-accident.provisional-cover',
                     'envelope_driver_version' => '1.0.0',
+                    'product' => [
+                        'name' => 'Cubao to Lucena Personal Accident Plan',
+                        'premium_minor' => self::PREMIUM_MINOR,
+                        'insured_amount_minor' => self::INSURED_AMOUNT_MINOR,
+                        'currency' => 'PHP',
+                        'coverage_duration_hours' => self::COVERAGE_DURATION_HOURS,
+                    ],
                     'started_at' => now()->toIso8601String(),
                 ],
             ],
@@ -75,15 +90,15 @@ final readonly class RunAuiInsuranceLeadScenario
             ],
             'feedback' => [],
             'voucher_type' => 'settlement',
-            'target_amount' => 100,
+            'target_amount' => self::PREMIUM_MINOR / 100,
             'rules' => [
-                'min_payment' => 100,
-                'max_payment' => 100,
+                'min_payment' => self::PREMIUM_MINOR / 100,
+                'max_payment' => self::PREMIUM_MINOR / 100,
                 'allow_overpayment' => false,
                 'auto_close_on_full_payment' => true,
             ],
             'rider' => [
-                'message' => 'Application received. Continue to payment to pay the ₱100.00 insurance premium.',
+                'message' => 'Application received. Continue to payment to pay the ₱50.00 insurance premium.',
             ],
             'count' => 1,
             'prefix' => 'AUI',
