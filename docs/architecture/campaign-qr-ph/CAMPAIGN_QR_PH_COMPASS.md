@@ -1,6 +1,6 @@
 # Campaign QR Ph Compass
 
-Last updated: 2026-09-24
+Last updated: 2026-09-25
 
 ## North Star
 
@@ -10,6 +10,30 @@ coverage, creates a first-class settlement envelope containing that coverage
 snapshot from inception, and issues one zero-value completion Pay Code.
 
 ## Current Position
+
+### Payment activity local host acceptance — 2026-09-25
+
+Commit `5c4cc459` passed isolated host adoption from sandbox commit `3873d386`.
+The disposable host `/private/tmp/x-change-campaign-activity-gate` used a temporary
+Composer path override, not a released version. Build publication verified all
+15 resources; strict asset doctor passed; production Vite build passed (3,705
+modules). The host policy transport configuration test passed (1 / 5 assertions).
+Build warnings about third-party pure annotations and chunk size were non-fatal.
+
+Real Chromium acceptance against intercepted synthetic Inertia responses and the
+production-built assets passed at 1440, 375, and 320px. Each width had matching
+document clientWidth/scrollWidth, no JavaScript errors, the expected 7 payments /
+6 submitted / 6 demo summaries / 1 awaiting claim, the PHP 50 premium, and a
+generated campaign-filtered activity href. This is built-UI acceptance, not a
+live authenticated lifecycle run. No server, provider, SMS, or financial action
+was invoked. The first fixture used the old Inertia page attribute; switching
+to Inertia v3's JSON script element resolved fixture loading without source edits.
+
+Screenshots and the isolated browser spec are retained under the sandbox's
+untracked `output/campaign-payment-progress-gate/` directory. No existing sandbox
+source, Composer files, or environment credentials were changed. No push, tag,
+release, or deployment occurred. Next: explicit publication authorization, then
+tagged host adoption and testing-instance verification against persisted records.
 
 ### Entry-mode-aware campaign activity — 2026-09-24 (local)
 
