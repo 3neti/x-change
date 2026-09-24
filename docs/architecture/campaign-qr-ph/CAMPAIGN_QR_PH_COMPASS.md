@@ -490,3 +490,24 @@ After the final SMS-result guard and inline-driver rejection test, focused SMS
 coverage passed 10 tests / 42 assertions. All providers were faked or mocked.
 Pint and diff whitespace validation passed. No live SMS or recognition replay
 has been executed by this slice. Release and testing deployment remain pending.
+
+### Testing release acceptance — 2026-09-24
+
+The preceding pending-release status is superseded by this acceptance.
+With explicit user approval, package commit `23973d23` was published as
+`v1.0.43`, and host dependency-only commit `895280ea` was pushed. Deployment
+`depl-a2d21f97-169d-4c2f-aea5-4c672b3f4d90` succeeded on the testing instance.
+Host integration checks passed (3 tests); isolated build publication, asset
+doctor, and production build passed. The temporary checkout required explicit
+`APP_ENV=local` because it intentionally contained no `.env`. Existing build
+annotation/chunk-size warnings remain. Unrelated sandbox edits were preserved.
+
+The exact recognition above was dispatched once using the recovery command.
+Workers produced coverage `01M394991D37G1ZF9635FT4FAN` and completion Pay Code
+`POLI-W23C`. Feedback delivery `0bed21b4-eb4e-4e0a-a200-74bdc69cb4a9` is `sent`,
+with EngageSpark status `ACCEPTED` at `2026-09-24T07:15:12Z`. Provider acceptance
+is not handset delivery confirmation. The link opened successfully in the
+in-app browser; no claim was submitted. No new payment or collection occurred.
+The x-PayOut instance was not changed. Next: user confirms SMS receipt and
+completes the personal-details journey, followed by the fake-insurer policy
+response gate. This remains demonstration-only, not proof of real insurance.
