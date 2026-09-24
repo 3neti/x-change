@@ -4,18 +4,55 @@ declare(strict_types=1);
 
 use Composer\InstalledVersions;
 use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
+use LBHurtado\FormFlowManager\Services\DriverService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
+use LBHurtado\XChange\Data\Claim\ClaimWorkflowDescriptorData;
 use LBHurtado\XChange\Enums\ClaimAuthenticationMode;
 use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetAuthorizationExecutionService;
 use LBHurtado\XChange\Services\Claim\ClaimExperienceCompiler;
 use LBHurtado\XChange\Services\Claim\DefaultClaimWorkflowResolver;
 use LBHurtado\XChange\Services\Claim\FormFlowClaimWorkflowMutator;
 use LBHurtado\XChange\Services\Claim\VoucherClaimFlowCompiler;
+use Symfony\Component\Yaml\Yaml;
 
 it('binds the shared claim workflow resolver', function () {
     expect(app(ClaimWorkflowResolverContract::class))->toBeInstanceOf(DefaultClaimWorkflowResolver::class);
 });
+
+it('scopes intermediate completion copy without changing the final confirmation or other workflows', function (string $key, bool $completion): void {
+    $workflow = new ClaimWorkflowDescriptorData(
+        key: $key,
+        requires_mobile: true,
+        requires_destination: false,
+        requires_amount: false,
+        title: 'Complete Your Details',
+        description: 'Original description',
+        confirmation_label: 'Submit Details',
+        confirmation_title: 'Review your details',
+    );
+    $steps = array_map(fn (string $name): array => [
+        'handler' => $name === 'otp_verification' ? 'otp' : 'form',
+        'config' => [
+            'step_name' => $name,
+            'fields' => [['name' => 'mobile', 'group' => 'redeemer']],
+        ],
+    ], ['wallet_info', 'bio_fields', 'otp_verification']);
+    $result = app(FormFlowClaimWorkflowMutator::class)->mutate(['steps' => $steps], $workflow);
+
+    foreach (array_slice($result['steps'], 0, 2) as $step) {
+        expect($step['config']['claim_workflow']['title'])->toBe($completion ? 'Payment received' : $workflow->title)
+            ->and($step['config']['claim_workflow']['confirmation_label'])->toBe($completion ? 'Continue' : 'Submit Details')
+            ->and($step['config']['fields'][0]['group'] ?? null)->toBe($completion ? null : 'redeemer');
+    }
+    expect($result['steps'][2]['config']['claim_workflow']['confirmation_label'])->toBe('Submit Details')
+        ->and($result['metadata']['claim_workflow']['confirmation_label'])->toBe('Submit Details')
+        ->and($result['metadata']['claim_workflow']['confirmation_title'])->toBe('Review your details')
+        ->and($workflow->confirmation_label)->toBe('Submit Details');
+})->with([
+    'completion only' => ['campaign.coverage-completion.v1', true],
+    'unrelated workflow unchanged' => ['custom.claim.v1', false],
+]);
 
 it('requires an authenticated officer before campaign authorization can execute', function () {
     $voucher = Mockery::mock(Voucher::class);
@@ -499,6 +536,13 @@ it('uses the issuer-authoritative rail to filter claim destinations', function (
 ]);
 
 it('resolves an automatic claim rail from the actual payout amount', function (): void {
+    app()->instance(DriverService::class, new class extends DriverService
+    {
+        public function __construct()
+        {
+            $this->config = Yaml::parseFile(__DIR__.'/../../../config/form-flow-drivers/voucher-redemption.yaml');
+        }
+    });
     $voucher = issueVoucher(validVoucherInstructions(
         amount: 750,
         settlementRail: null,

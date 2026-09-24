@@ -9,6 +9,8 @@ use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Data\ExecutionResultData;
 use LBHurtado\Voucher\Services\DefaultExecutionDriver;
 use LBHurtado\XChange\Models\CompletionPayCodeIssuance;
+use LBHurtado\XChange\Services\Settlement\CampaignWalletPayerMobile;
+use LBHurtado\XChange\Support\Auth\MobileNumber;
 
 final readonly class CampaignCoverageCompletionExecutionDriver implements ExecutionDriverContract
 {
@@ -42,6 +44,11 @@ final readonly class CampaignCoverageCompletionExecutionDriver implements Execut
             || data_get($completion, 'driver_id') !== $issuance->driver_id
             || data_get($completion, 'driver_version') !== $issuance->driver_version) {
             return ExecutionResultData::failed($this->key(), 'invalid_completion_voucher');
+        }
+
+        $payerMobile = (new CampaignWalletPayerMobile)->resolve($issuance->coverage->recognition);
+        if ($payerMobile !== null && MobileNumber::normalize($context->contact?->mobile) !== $payerMobile) {
+            return ExecutionResultData::failed($this->key(), 'completion_mobile_mismatch');
         }
 
         $result = $this->defaultDriver->execute($context);

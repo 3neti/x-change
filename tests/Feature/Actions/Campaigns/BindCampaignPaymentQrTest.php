@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Bavix\Wallet\Models\Transaction;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
@@ -12,16 +13,23 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\Contact\Models\Contact;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\EngageSpark\Classes\ServiceMode;
 use LBHurtado\EngageSpark\EngageSpark;
+use LBHurtado\FormFlowManager\Data\FormFlowStepData;
+use LBHurtado\FormFlowManager\Handlers\FormHandler;
+use LBHurtado\FormHandlerOtp\OtpHandler;
 use LBHurtado\SettlementEnvelope\Models\Envelope;
 use LBHurtado\SettlementEnvelope\Models\EnvelopeAuditLog;
 use LBHurtado\SettlementEnvelope\Models\EnvelopePayloadVersion;
 use LBHurtado\SettlementEnvelope\Services\DriverService;
 use LBHurtado\SettlementEnvelope\Services\EnvelopeService;
+use LBHurtado\Voucher\Data\ExecutionContextData;
+use LBHurtado\Voucher\Data\ExecutionResultData;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Voucher\Services\DefaultExecutionDriver;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\XChange\Actions\Campaigns\BindCampaignPaymentQr;
 use LBHurtado\XChange\Actions\Campaigns\SendDemonstrationPolicySummarySms;
@@ -41,6 +49,7 @@ use LBHurtado\XChange\Actions\Settlement\PrepareCampaignPolicyCompletion;
 use LBHurtado\XChange\Actions\Settlement\ProjectCompletionClaimEvidence;
 use LBHurtado\XChange\Actions\Settlement\RecordCampaignPolicyCompletionOutcome;
 use LBHurtado\XChange\Actions\Settlement\RequestCampaignPolicyCompletion;
+use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Data\PreparedCompiledClaimData;
 use LBHurtado\XChange\Data\Settlement\CampaignCoverageDecisionData;
@@ -80,9 +89,11 @@ use LBHurtado\XChange\Models\PolicyCompletionRequest;
 use LBHurtado\XChange\Models\ProvisionalCoverage;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Models\StandingFundingQrArtifact;
+use LBHurtado\XChange\Services\Claim\VoucherClaimFlowCompiler;
 use LBHurtado\XChange\Services\Cockpit\CampaignPaymentEvidenceAttentionReadModel;
 use LBHurtado\XChange\Services\Cockpit\CampaignPolicyLifecycleReadModel;
 use LBHurtado\XChange\Services\Cockpit\CampaignPolicyLifecycleStageResolver;
+use LBHurtado\XChange\Services\Execution\CampaignCoverageCompletionExecutionDriver;
 use LBHurtado\XChange\Services\Settlement\AuiPersonalAccidentCampaignCoverageDriver;
 use LBHurtado\XChange\Services\Settlement\AuiPersonalAccidentPolicyCompletionDriver;
 use LBHurtado\XChange\Services\Settlement\CampaignCoverageDriverRegistry;
@@ -95,6 +106,7 @@ use LBHurtado\XFeedback\Contracts\FeedbackChannelDriverContract;
 use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
 use LBHurtado\XFeedback\Contracts\FeedbackDeliveryAttemptRecorderContract;
 use LBHurtado\XFeedback\Models\FeedbackDeliveryRecord;
+use Symfony\Component\Yaml\Yaml;
 
 it('immutably binds one reusable payment QR to one campaign revision', function (): void {
     $owner = campaignPaymentQrOwner();
@@ -688,6 +700,92 @@ it('rejects completion issuance conflicts and issuer mismatches', function (): v
         ->and(CompletionPayCodeIssuance::query()->count())->toBe(1);
 });
 
+it('compiles payment completion with a locked payer mobile and no payout fields', function (): void {
+    Queue::fake();
+    config()->set('form-flow.handlers.otp', OtpHandler::class);
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_institution_ciphertext' => 'GXCHPHM2XXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]);
+    app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']);
+    $voucher = $recognition->provisionalCoverage->completionPayCodeIssuance->voucher;
+    $workflow = app(ClaimWorkflowResolverContract::class)->resolve($voucher);
+    app()->instance(LBHurtado\FormFlowManager\Services\DriverService::class, new class extends LBHurtado\FormFlowManager\Services\DriverService
+    {
+        public function __construct()
+        {
+            $this->config = Yaml::parseFile(__DIR__.'/../../../../config/form-flow-drivers/voucher-redemption.yaml');
+        }
+    });
+    $flow = app(VoucherClaimFlowCompiler::class)->compile($voucher)->instructions->toArray();
+    $walletStep = collect($flow['steps'])->first(fn ($step) => data_get($step, 'config.step_name') === 'wallet_info');
+    $fields = collect($walletStep['config']['fields'])->keyBy('name');
+    expect($workflow->key)->toBe('campaign.coverage-completion.v1')
+        ->and($workflow->requires_destination)->toBeFalse()
+        ->and($workflow->requires_amount)->toBeFalse()
+        ->and($workflow->review['bound_mobile'])->toBe('639173011987')
+        ->and(data_get($voucher->metadata, 'instructions.cash.validation.mobile'))->toBe('639173011987')
+        ->and($fields->keys()->all())->not->toContain('bank_code', 'account_number', 'settlement_rail', 'amount')
+        ->and($fields['mobile']['default'])->toBe('639173011987')
+        ->and($fields['mobile']['readonly'])->toBeTrue()
+        ->and($fields['mobile']['persist'])->toBeFalse()
+        ->and($fields['mobile'])->not->toHaveKey('group')
+        ->and($walletStep['config']['title'])->toBe('Complete Your Details')
+        ->and($walletStep['config']['claim_workflow']['title'])->toBe('Payment received')
+        ->and($walletStep['config']['claim_workflow']['confirmation_label'])->toBe('Continue')
+        ->and($flow['metadata']['claim_workflow']['confirmation_label'])->toBe('Submit Details')
+        ->and($workflow->confirmation_title)->toBe('Review your details')
+        ->and($fields['mobile']['validation'])->toContain('in:639173011987,+639173011987,09173011987')
+        ->and(collect($flow['steps'])->pluck('handler')->all())->toContain('otp');
+
+    $step = FormFlowStepData::from($walletStep);
+    $handler = app(FormHandler::class);
+    foreach (['639173011987', '+639173011987', '09173011987'] as $mobile) {
+        expect($handler->validateStep($step, ['mobile' => $mobile]))->toBeTrue();
+    }
+    expect(fn () => $handler->validateStep($step, ['mobile' => '639175180722']))
+        ->toThrow(ValidationException::class);
+    Http::assertNothingSent();
+});
+
+it('rejects a different payer mobile in the completion execution driver', function (): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_institution_ciphertext' => 'PAPHPHM1XXX',
+        'payer_account_ciphertext' => '639173011987',
+    ]);
+    app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']);
+    $voucher = $recognition->provisionalCoverage->completionPayCodeIssuance->voucher;
+    $default = Mockery::mock(DefaultExecutionDriver::class);
+    $default->shouldNotReceive('execute');
+    $driver = new CampaignCoverageCompletionExecutionDriver($default);
+    $contact = (new Contact)->forceFill(['mobile' => '09175180722']);
+    $result = $driver->execute(ExecutionContextData::fromRedemption($voucher, $contact, $voucher->code));
+    expect($result->successful)->toBeFalse()
+        ->and($result->failure)->toBe('completion_mobile_mismatch')
+        ->and($voucher->refresh()->redeemed_at)->toBeNull();
+    Http::assertNothingSent();
+});
+
+it('accepts the bound payer mobile without payout details or financial movement', function (string $mobile): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_institution_ciphertext' => 'GXCHPHM2XXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]);
+    app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']);
+    $voucher = $recognition->provisionalCoverage->completionPayCodeIssuance->voucher;
+    $default = Mockery::mock(DefaultExecutionDriver::class);
+    $default->shouldReceive('execute')->once()->andReturn(ExecutionResultData::succeeded('default'));
+    $driver = new CampaignCoverageCompletionExecutionDriver($default);
+    $contact = (new Contact)->forceFill(['mobile' => $mobile]);
+    $before = campaignPaymentFinancialCounts();
+    $result = $driver->execute(ExecutionContextData::fromRedemption($voucher, $contact, $voucher->code));
+    expect($result->successful)->toBeTrue()
+        ->and(campaignPaymentFinancialCounts())->toBe($before);
+    Http::assertNothingSent();
+})->with(['09173011987', '639173011987', '+639173011987']);
+
 it('claims a completion Pay Code through its non-financial execution driver', function (): void {
     configureCampaignCoverageTestDriver();
     [$recognition, $binding] = recognizedCampaignPayment();
@@ -744,9 +842,9 @@ it('claims a completion Pay Code through its non-financial execution driver', fu
         ->and($envelope->refresh()->payload_version)->toBe(2);
 });
 
-it('projects only declared completion evidence from the compiled browser claim and replays safely', function (): void {
+it('projects only declared completion evidence from the compiled browser claim and replays safely', function (array $payer, string $mobile, ?string $boundMobile): void {
     configureCampaignCoverageTestDriver();
-    [$recognition, $binding] = recognizedCampaignPayment();
+    [$recognition, $binding] = recognizedCampaignPayment(payer: $payer);
     $bound = app(BindProvisionalCoverage::class)->handle($recognition, auiCampaignCoverageTerms($recognition));
     $issued = app(IssueCompletionPayCode::class)->handle(
         $bound->coverage,
@@ -754,10 +852,10 @@ it('projects only declared completion evidence from the compiled browser claim a
         new CompletionPayCodeInstructionsData(['name', 'mobile', 'email', 'address', 'birth_date'], requiresOtp: true),
     );
     $inputs = [
-        'name' => 'Browser Applicant', 'mobile' => '09173011987',
+        'name' => 'Browser Applicant', 'mobile' => $mobile,
         'email' => 'applicant@example.test', 'address' => 'Test address', 'birth_date' => '1990-01-01',
         'otp' => ['verified' => true], 'otp_verified' => true,
-        '_step_name' => 'confirmation', 'account_number' => '', 'bank_code' => '',
+        '_step_name' => 'confirmation',
         'completed_at' => now()->toIso8601String(), 'full_name' => 'Browser Applicant',
         'kyc' => [], 'splash_viewed' => true, 'viewed_at' => now()->toIso8601String(),
     ];
@@ -774,6 +872,8 @@ it('projects only declared completion evidence from the compiled browser claim a
     $prepared = app(PrepareCampaignPolicyCompletion::class)->handle($projection);
 
     expect($result->claimed)->toBeTrue()
+        ->and($issued->voucher->refresh()->redeemed_at)->not->toBeNull()
+        ->and(data_get($issued->voucher->metadata, 'instructions.cash.validation.mobile'))->toBe($boundMobile)
         ->and($claim->evidence()->count())->toBeGreaterThan(6)
         ->and($claim->evidence()->where('requirement_key', 'splash_viewed')->exists())->toBeTrue()
         ->and(data_get($bound->envelope->refresh()->payload, 'applicant.evidence.items.*.key'))->toBe($expected)
@@ -788,7 +888,17 @@ it('projects only declared completion evidence from the compiled browser claim a
         ->and($bound->envelope->refresh()->payload_version)->toBe(2);
     Event::assertDispatchedTimes(CompletionClaimEvidenceProjected::class, 1);
     Http::assertNothingSent();
-});
+})->with([
+    'unbound completion remains supported' => [[], '09173011987', null],
+    'GCash national mobile' => [[
+        'payer_institution_ciphertext' => 'GXCHPHM2XXX',
+        'payer_account_ciphertext' => '09173011987',
+    ], '09173011987', '639173011987'],
+    'Maya international mobile' => [[
+        'payer_institution_ciphertext' => 'PAPHPHM1XXX',
+        'payer_account_ciphertext' => '639173011987',
+    ], '+639173011987', '639173011987'],
+]);
 
 it('recovers a completed claim without re-executing it but rejects missing declared evidence', function (): void {
     configureCampaignCoverageTestDriver();
@@ -1475,6 +1585,66 @@ it('inspects an exact recognized payment and dispatches recovery only when reque
     $this->artisan('x-change:campaigns:resume-payment', ['recognition' => 'missing', '--dispatch' => true])
         ->assertFailed();
     Queue::assertPushed(AdvanceCampaignPaymentLifecycleJob::class, 1);
+});
+
+it('reports campaign SMS timing without replaying payment or exposing payer evidence', function (): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_institution_ciphertext' => 'GXCHPHM2XXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]);
+    app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']);
+    $settled = CarbonImmutable::parse('2026-09-24T08:48:26Z');
+    DB::table($recognition->getTable())->where('id', $recognition->id)->update([
+        'settled_at' => $settled, 'recognized_at' => $settled->addSeconds(96),
+    ]);
+    $issuance = $recognition->provisionalCoverage->completionPayCodeIssuance;
+    DB::table($issuance->getTable())->where('id', $issuance->id)->update(['issued_at' => $settled->addSeconds(97)]);
+    $delivery = FeedbackDeliveryRecord::query()->sole();
+    $delivery->update([
+        'status' => 'sent', 'provider_status' => 'ACCEPTED',
+        'created_at' => $settled->addSeconds(97), 'last_attempted_at' => $settled->addSeconds(98),
+    ]);
+    Queue::fake();
+    $before = campaignPaymentFinancialCounts();
+    expect(Artisan::call('x-change:campaigns:resume-payment', ['recognition' => $recognition->reference]))->toBe(0);
+    $output = Artisan::output();
+    $report = json_decode($output, true, flags: JSON_THROW_ON_ERROR);
+    expect($report['latency_seconds'])->toBe([
+        'settlement_to_recognition' => 96, 'recognition_to_issuance' => 1,
+        'sms_queue_to_submission' => 1, 'settlement_to_sms_submission' => 98,
+    ])->and($report['timeline']['sms_delivered_at'])->toBeNull()
+        ->and($output)->not->toContain('09173011987', 'payer_account');
+    expect(campaignPaymentFinancialCounts())->toBe($before);
+    Queue::assertNothingPushed();
+    Http::assertNothingSent();
+});
+
+it('does not report queued SMS attempts as successful submissions', function (): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_institution_ciphertext' => 'GXCHPHM2XXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]);
+    app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']);
+    FeedbackDeliveryRecord::query()->sole()->update(['last_attempted_at' => now()]);
+    expect(Artisan::call('x-change:campaigns:resume-payment', ['recognition' => $recognition->reference]))->toBe(0);
+    $report = json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
+    expect($report['timeline']['sms_submitted_at'])->toBeNull()
+        ->and($report['latency_seconds']['settlement_to_sms_submission'])->toBeNull();
+});
+
+it('reports missing and reversed payment timing as unknown', function (): void {
+    Queue::fake();
+    [$recognition] = recognizedCampaignPayment(5_000);
+    Queue::fake();
+    DB::table($recognition->getTable())->where('id', $recognition->id)->update([
+        'settled_at' => now()->addMinute(), 'recognized_at' => now(),
+    ]);
+    expect(Artisan::call('x-change:campaigns:resume-payment', ['recognition' => $recognition->reference]))->toBe(0);
+    $report = json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
+    expect($report['latency_seconds'])->each->toBeNull();
+    Queue::assertNothingPushed();
 });
 
 it('queues one durable completion SMS for wallet source accounts across lifecycle replays', function (string $institution, string $account): void {

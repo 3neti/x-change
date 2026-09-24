@@ -11,6 +11,251 @@ snapshot from inception, and issues one zero-value completion Pay Code.
 
 ## Current Position
 
+### Local release-candidate gate — 2026-09-24
+
+The accumulated completion workflow, payer-mobile binding/tamper guard, per-step
+copy polish, and read-only payment-to-SMS timing diagnostics passed the complete
+affected suites together: `BindCampaignPaymentQrTest.php` and
+`ClaimWorkflowTest.php`, 103 tests / 753 assertions (159.21 seconds). Composer
+strict validation, Pint, and `git diff --check` passed. Independent review found
+no blocking issue. This is not a claim that the entire package suite was run.
+
+Browser acceptance is the synthetic, nonfinancial local inspection recorded
+below, not a fresh live payment. No frontend source/dependencies/migrations change;
+no new frontend build was needed. Host v1.0.45 remains restored with committed
+Composer files unchanged and unrelated host edits preserved.
+
+Prepare this as a local commit on main. Proposed next release is v1.0.46, subject
+to checking remote tag availability at publication. Push/tag and testing-host
+adoption/deployment need explicit authorization; none occurred in this gate.
+Do not change polling or promise the 30-second target as part of this release.
+OTP-proof hardening remains a separate security follow-up.
+
+### Completion form copy polish — 2026-09-24 (local, unreleased)
+
+The exact `campaign.coverage-completion.v1` workflow now supplies a distinct
+Payment received summary and Continue action to intermediate generic Form Flow
+steps. The main Complete Your Details heading is retained. Mobile no longer uses
+the Redeemer field group. Top-level workflow metadata remains Review your details
+/ Submit Details for final confirmation; OTP and other handlers are unchanged.
+This uses existing per-step configuration, with no upstream contract or frontend
+component change and no change to mobile binding, evidence, or money movement.
+
+Verification: ClaimWorkflowTest passed 15 tests / 134 assertions; the real compiled
+completion regression passed 1 test / 22 assertions. Pint passed. A temporary local
+Composer link and synthetic session-only preview verified the revised first form
+in the in-app browser (1280x720), then Continue advanced to OTP. No code was sent.
+The preview used YAML fields and the real resolver/mutator with synthetic mobile
+binding, not an issued voucher or paid lifecycle. The temporary host route and
+fixture were removed, and the locked v1.0.45 package restored. No build was needed
+because no frontend source changed. No push/tag/release/deployment.
+
+Next: prepare the accumulated local completion UX changes and diagnostics for a
+reviewed release gate. Stronger OTP proof validation and SMS detection latency are
+still separate outstanding work; this copy change does not claim to solve them.
+
+### Local rendered completion-form acceptance — 2026-09-24
+
+Temporarily adopted the unpublished package via the documented alternate Composer
+path workflow. The dry run and install changed only x-change. A temporary,
+local-host-only fixture constructed wallet/bio fields from the package YAML and
+applied the real completion workflow resolver/mutator with a synthetic bound
+mobile. It created only Form Flow session state, not a voucher, recognition,
+coverage record, or financial entry. This is rendered-form acceptance, not a new
+end-to-end paid campaign run or proof of payment-to-mobile resolution.
+
+In-app browser evidence:
+- Complete Your Details displayed the prefilled, read-only synthetic mobile.
+- No amount, rail, bank, or account-number inputs appeared.
+- Submitting the mobile step without entering payout details reached Personal
+  Information (name, email, birth date, address).
+- Synthetic personal details advanced to OTP; the same mobile appeared read-only.
+- Stopped before Send Verification Code; no OTP or policy SMS was requested.
+- At 375px, document clientWidth/scrollWidth were both 375; OTP was also inspected
+  at 1440px with a centered card and action. No browser console errors reported.
+
+Observed polish follow-up: the mobile group still says Redeemer, the introductory
+title repeats, and Submit Details appears on intermediate steps. Refine these
+through the shared Form Flow UI contract, scoped to this workflow, before claiming
+the complete onboarding-style polish is finished. OTP evidence hardening and SMS
+latency remain separate outstanding gates.
+
+The temporary route/file and alternate Composer files were removed. Composer
+restored the non-symlink v1.0.45 installation; committed Composer files and routes
+were unchanged. No frontend files were published or rebuilt (no frontend source
+changed). The preview tab was closed and viewport reset; uncompleted synthetic
+session data expires normally. No push, tag, release, or Cloud deployment.
+
+### Completion submission integration gate — 2026-09-24 (local, unreleased)
+
+Expanded the real `SubmitCompiledFormClaim` regression to cover GCash national
+and Maya international payer-mobile formats, plus the existing unbound case.
+The test no longer supplies even empty bank/account fields. It executes the real
+claim pipeline and completion driver, verifies redemption and the persisted mobile
+instruction, projects only declared evidence, checks projection replay, and proves
+financial record counts remain unchanged with no outgoing HTTP requests. OTP is
+fixture evidence here, not a live OTP delivery/proof-verification test.
+
+The three integration cases passed 45 assertions. Browser acceptance was not
+performed: the sandbox still installs released v1.0.45, not this working tree.
+No Composer override, host publication, live claim, payment, SMS, or deployment
+was performed. Next gate: temporary documented local package adoption with an
+isolated completion fixture and browser inspection, then restore the host's locked
+dependency state. Do not report browser acceptance from these PHP tests.
+
+### Completion claim workflow gate — 2026-09-24 (local, unreleased)
+
+Added an exact `campaign_coverage_completion` workflow: Complete Your Details,
+Review your details, Submit Details. It uses the existing claimant handoff and
+Form Flow, removes amount/rail/bank/account fields, and does not create an account
+or assign onboarding roles. Ordinary payout and onboarding branches are unchanged.
+
+New completion vouchers carry the resolved GCash/Maya payer mobile in the existing
+`cash.validation.mobile` instruction. The workflow independently resolves the
+mobile from the persisted issuance -> coverage -> recognition -> observation
+chain, including for older completion vouchers without that instruction. Mobile
+is read-only and prefilled, with local persistence disabled so another user's
+remembered number cannot replace it. Form validation permits equivalent 09/639/
++639 formats only; the execution driver rechecks normalized contact mobile against
+the authoritative payer. No mobile is placed in a query string. Unsupported
+source institutions retain explicit mobile collection; no arbitrary bank account
+is inferred to be a mobile number.
+
+The mobile field remains in collected Form Flow data for the existing OTP handler;
+the claimant does not type it. OTP requirements and provider calls are unchanged.
+This slice does not upgrade the generic OTP evidence model: independent review
+found completion evidence accepts OTP booleans, unlike onboarding's proof-shape/
+purpose/mobile/TTL checks. Record that as a separate security hardening gate before
+claiming onboarding-equivalent identity assurance; payer binding alone is not KYC.
+
+No host/vendor edits, live messages, provider calls, deployment, or dependency
+changes. Browser acceptance remains for host adoption; package tests compile the
+actual YAML and exercise the real Form Handler validation with fake providers.
+
+Validation: the combined campaign/claim run passed all 86 campaign tests and 12
+claim tests, with one existing claim test blocked by its unpublished Testbench
+YAML assumption. That test now explicitly loads the authoritative package YAML;
+the complete claim file rerun passed 13 tests / 114 assertions. Pint (host binary)
+and whitespace checks passed. The source is uncommitted alongside the prior
+local diagnostics slice; no Composer path override or generated host changes
+were introduced. The scoped form and execution tests cover wrong-mobile rejection
+and equivalent national/international mobile formats.
+
+### Payment-to-SMS diagnostics gate — 2026-09-24 (local, unreleased)
+
+Extended the existing read-only default of `x-change:campaigns:resume-payment`
+with settlement, observation, recognition, issuance, SMS queue/submission and
+handset-delivery timestamps, source and webhook-presence indicators, and stage
+durations. No payload, mobile, credential, or signed URL is included. Queued
+and failed attempts are not presented as successful SMS submissions; missing
+or reversed timestamps produce null durations. `--dispatch` remains an explicit
+separate mutation, unchanged by the report.
+
+Testing runtime read-only inspection confirmed for the new `POLI-QPTW` payment:
+settled 08:48:26 UTC, observed/recognized 08:50:02 UTC, source
+`netbank-vca-transaction-history`, no linked webhook receipt. Scheduled standing
+sync is enabled with a 60-second minimum interval. Claim completed 08:52:21 UTC.
+Previously verified first-SMS provider submission was 08:50:04 UTC: 96 seconds
+to detection, two more to submission. These timestamps cannot separate past
+scheduler wait, queue wait and provider latency.
+
+Code-level hypothesis: the once-per-minute scheduler applies the 60-second
+eligibility window to `last_checked_at`, which is saved after provider work.
+A check completing at :02 misses the next minute's :00 tick, potentially making
+effective polling nearly two minutes. Runtime interval matches this hypothesis;
+per-job timing is still needed before attributing all delay to it.
+
+Webhook readiness: the existing NetBank route is
+`POST /api/x/v1/funding/webhooks/netbank`. It authenticates via exact source-IP
+allowlist and `text/plain`, persists receipts, and queues authoritative provider
+verification; it does not trust an incoming notification as payment truth.
+Pipedream forwarding requires a reviewed authenticated relay contract; do not
+allow broad shared IP ranges or bypass content/authentication checks. The legacy
+Pipedream destination was not inspected or changed in this gate.
+
+Claim UX assessment: `envelope_completion` currently has no dedicated branch in
+`DefaultClaimWorkflowResolver`, so it falls back to disbursement requirements.
+Next separate correction: recognize the exact completion driver, suppress payout
+fields, bind the mobile from authoritative payment evidence, preserve OTP and
+server-side tamper rejection, and reuse Form Flow without account creation.
+No claim UX or polling behavior was changed in this diagnostics gate. No Cloud
+configuration, provider requests, financial postings or new SMS were triggered.
+
+Operator inspection (omit `--dispatch`):
+
+```bash
+php artisan x-change:campaigns:resume-payment <recognition-reference>
+```
+
+Validation: full `BindCampaignPaymentQrTest.php` passed 81 tests / 548
+assertions; post-format focused diagnostics and standing-sync checks passed
+7 tests / 38 assertions. Pint and `git diff --check` passed. Package Pint was
+absent, so the installed host Pint binary formatted package files. An initial
+restricted test run could not write Testbench logs; the permitted rerun passed.
+No frontend change, build or browser acceptance was needed for this console-only
+slice. Source remains local and uncommitted; no push, tag, host Composer update,
+or deployment was performed. Existing unrelated host changes were preserved.
+
+### Testing activation and existing-claim continuation — 2026-09-24
+
+The user explicitly authorized copying the existing Pipedream completion token
+and endpoint into Laravel Cloud secrets for testing only, activating campaign
+`01M390MEHA17TMETD5NZFQ5Z28`, and sending the follow-up for `POLI-W23C`.
+Both values were securely attached only to the testing environment; no values
+were exposed or rotated. This supersedes the activation stop recorded below.
+
+Deployment `depl-a2d24128-1afe-4dc4-8f44-b02bdb69b1ff` succeeded, retaining
+x-change `v1.0.45` and host `9941c05a`. Runtime checks confirmed transport,
+single-campaign automation, summary and SMS activation. The existing projection
+`01M396Z7AMXSFZ9JY6GXC5X95P` was queued once after guarding claim 145,
+voucher `POLI-W23C`, its existing redemption, and absence of a prior request.
+No payment, claim, or human approval was replayed or fabricated.
+
+The normal worker completed request `01M399DQWFN0H4WPGBTEFDKX17` and outcome
+`01M399DVBYANDDMCFTCVDE28W3` successfully with result `policy_issued_demo`.
+Feedback delivery record 20 reports `sent`, provider status `ACCEPTED`, with
+one matching delivery record and last attempt at 2026-09-24 08:45:03 UTC.
+Handset receipt remains for the user to confirm; `sent` is not proof of handset
+delivery.
+
+The signed SMS destination was verified in the in-app browser: demo reference
+`AUI-DEMO-923FBFB062E8B01D`, demonstration period September 24–25, 2026 at
+2:19 PM PHT, prominent DEMONSTRATION ONLY notice, no applicant/payment-account
+details or Cockpit shell. The signed bearer URL is intentionally not persisted
+here. This is not an issued insurance policy or proof of coverage. The full
+fresh-payment-to-SMS 30-second target remains unmeasured; this run resumed an
+older completed claim. x-PayOut and other campaigns were not activated.
+
+### v1.0.45 testing adoption — 2026-09-24
+
+Published package commit `4a843626` as `v1.0.45`. Host commit `9941c05a`
+adopts that version and adds testing-host Pipedream disposition configuration
+(`config/campaign-policy.php`, `AppServiceProvider`, focused configuration
+test). This is host-specific endpoint/credential/acceptance wiring, not copied
+business logic. Other transport entries are preserved; environment reads stay
+in configuration files. The credential reference uses the approved
+`services.pipedream.policy_completion_token` namespace. Schema digests derive
+from the installed package contracts. No endpoint or secret value is committed.
+
+Host test passed (1 test / 5 assertions); formatting, isolated package
+publication/assets doctor, production frontend build, and whitespace checks
+passed. Testing deployment `depl-a2d23df9-5d89-4103-a2e3-1e908bb726cd`
+succeeded and runtime verified `v1.0.45`. Unrelated sandbox edits were excluded.
+x-PayOut was not changed.
+
+**Activation stop:** the approval system rejected copying the existing local
+Pipedream token into Cloud secrets without explicit authorization naming that
+credential and destination. No workaround was attempted. Neither endpoint nor
+token was copied; all transport/automation/summary/SMS flags remain false.
+`POLI-W23C` still has its recovered projection and zero policy requests.
+No second SMS was sent. Obtain authorization to copy the existing
+`PIPEDREAM_AUI_POLICY_COMPLETION_TOKEN` and
+`PIPEDREAM_AUI_POLICY_COMPLETION_ENDPOINT` from the sandbox `.env` into secrets
+attached only to testing environment `env-a26631ca-18ab-47b2-b676-cc986aea1a69`.
+Then activate only campaign `01M390MEHA17TMETD5NZFQ5Z28`, deploy configuration,
+verify readiness, and enqueue exact projection `01M396Z7AMXSFZ9JY6GXC5X95P`.
+No new payment, claim, maker/checker identity, or credential rotation is needed.
+
 ### Automatic post-claim demonstration completion — 2026-09-24
 
 The user explicitly replaced the per-claim maker/checker requirement for this

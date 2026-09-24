@@ -68,6 +68,12 @@ final class FormFlowClaimWorkflowMutator
         $step['config']['claim_workflow'] = $this->workflowPayload($workflow);
         $step['config'] = $this->applyClaimUiContract($step['config']);
 
+        if ($workflow->key === 'campaign.coverage-completion.v1' && ($step['handler'] ?? null) === 'form') {
+            $step['config']['claim_workflow']['title'] = 'Payment received';
+            $step['config']['claim_workflow']['description'] = 'Complete the required personal details to continue.';
+            $step['config']['claim_workflow']['confirmation_label'] = 'Continue';
+        }
+
         if (($workflow->review['onboarding'] ?? false) === true) {
             $step['config']['app_name'] = config('app.name', 'X-Change');
         }
@@ -89,6 +95,10 @@ final class FormFlowClaimWorkflowMutator
             $step['config']['fields'] = $this->markRequiredFields(
                 (array) ($step['config']['fields'] ?? []),
                 $workflow,
+            );
+            $step['config']['fields'] = array_map(
+                fn (array $field): array => $this->bindCompletionMobile($field, $workflow),
+                $step['config']['fields'],
             );
 
             return $step;
@@ -261,6 +271,33 @@ final class FormFlowClaimWorkflowMutator
             $field['default'] = $rail;
             $field['readonly'] = true;
             $field['persist'] = false;
+        }
+
+        return $this->bindCompletionMobile($field, $workflow);
+    }
+
+    /** @param array<string, mixed> $field
+     * @return array<string, mixed>
+     */
+    private function bindCompletionMobile(array $field, ClaimWorkflowDescriptorData $workflow): array
+    {
+        if ($workflow->key === 'campaign.coverage-completion.v1'
+            && ($field['name'] ?? null) === 'mobile'
+            && ($field['group'] ?? null) === 'redeemer') {
+            unset($field['group']);
+        }
+
+        $mobile = $workflow->review['bound_mobile'] ?? null;
+        if (($field['name'] ?? null) === 'mobile'
+            && ($workflow->review['coverage_completion'] ?? false) === true
+            && is_string($mobile) && preg_match('/^639[0-9]{9}$/', $mobile) === 1) {
+            $field['default'] = $mobile;
+            $field['readonly'] = true;
+            $field['persist'] = false;
+            $field['help_text'] = 'Mobile number used for this payment.';
+            $field['validation'] = array_merge((array) ($field['validation'] ?? []), [
+                'in:'.$mobile.',+'.$mobile.',0'.substr($mobile, 2),
+            ]);
         }
 
         return $field;

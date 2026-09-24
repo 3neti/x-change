@@ -8,13 +8,35 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Data\Claim\ClaimWorkflowDescriptorData;
 use LBHurtado\XChange\Enums\ClaimAuthenticationMode;
+use LBHurtado\XChange\Services\Execution\CampaignCoverageCompletionExecutionDriver;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
+use LBHurtado\XChange\Services\Settlement\CampaignWalletPayerMobile;
 
 final class DefaultClaimWorkflowResolver implements ClaimWorkflowResolverContract
 {
     public function resolve(Voucher $voucher): ClaimWorkflowDescriptorData
     {
         $driver = $this->executionDriver($voucher);
+
+        if ($driver === CampaignCoverageCompletionExecutionDriver::Key) {
+            return new ClaimWorkflowDescriptorData(
+                key: 'campaign.coverage-completion.v1',
+                requires_mobile: true,
+                requires_destination: false,
+                requires_amount: false,
+                title: 'Complete Your Details',
+                description: 'Your payment has been received. Complete the required personal details to continue.',
+                confirmation_label: 'Submit Details',
+                confirmation_title: 'Review your details',
+                authentication_mode: ClaimAuthenticationMode::ClaimantHandoff,
+                required_claim_fields: ['mobile'],
+                review: [
+                    'coverage_completion' => true,
+                    'bound_mobile' => (new CampaignWalletPayerMobile)->forCompletionVoucher($voucher),
+                    'completion_destination' => 'claim_success',
+                ],
+            );
+        }
 
         if ($this->isCampaignPayoutRecovery($voucher)) {
             return new ClaimWorkflowDescriptorData(

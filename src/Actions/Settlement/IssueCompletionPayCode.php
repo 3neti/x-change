@@ -19,6 +19,7 @@ use LBHurtado\XChange\Events\CompletionPayCodeIssued;
 use LBHurtado\XChange\Models\CompletionPayCodeIssuance;
 use LBHurtado\XChange\Models\ProvisionalCoverage;
 use LBHurtado\XChange\Services\Execution\CampaignCoverageCompletionExecutionDriver;
+use LBHurtado\XChange\Services\Settlement\CampaignWalletPayerMobile;
 
 final readonly class IssueCompletionPayCode
 {
@@ -88,13 +89,18 @@ final readonly class IssueCompletionPayCode
 
     private function payload(ProvisionalCoverage $coverage, array $snapshot): array
     {
+        $validation = ['country' => 'PH'];
+        $mobile = (new CampaignWalletPayerMobile)->resolve($coverage->recognition);
+        if ($mobile !== null) {
+            $validation['mobile'] = $mobile;
+        }
         $fields = $snapshot['applicant_fields'];
         if ($snapshot['requires_otp']) {
             $fields[] = 'otp';
         }
 
         return [
-            'cash' => ['amount' => 0, 'currency' => $coverage->currency, 'validation' => ['country' => 'PH']],
+            'cash' => ['amount' => 0, 'currency' => $coverage->currency, 'validation' => $validation],
             'inputs' => ['fields' => $fields], 'feedback' => [], 'count' => 1,
             'prefix' => $snapshot['prefix'], 'mask' => $snapshot['mask'], 'voucher_type' => 'redeemable',
             'rider' => ['message' => $snapshot['message']],
