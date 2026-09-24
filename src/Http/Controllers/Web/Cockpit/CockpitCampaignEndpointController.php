@@ -92,8 +92,7 @@ final class CockpitCampaignEndpointController extends Controller
             availableFrom: $endpoint->created_at?->toImmutable(),
             availableUntil: $endpoint->expires_at?->toImmutable(),
             permittedPaymentRules: [
-                'rails' => ['INSTAPAY'],
-                'payer_applications' => ['GCash', 'Maya'],
+                'allowed_rails' => ['INSTAPAY'],
             ],
         );
 

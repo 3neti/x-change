@@ -191,6 +191,46 @@ it('provisions and binds one reusable campaign payment QR idempotently', functio
         ->and(TreasuryInventoryOperation::query()->count())->toBe(0);
 });
 
+it('persists only recognition-supported rules when provisioning a campaign payment QR from the cockpit', function () {
+    config()->set('payment-gateway.netbank.funding.standing_address.scheme', 'netbank-account-hmac-v2');
+    $owner = actingAsTestUser(0);
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    configureSharedCampaignPaymentDestination();
+    $template = PayCodeTemplate::query()->create([
+        'owner_type' => $owner->getMorphClass(),
+        'owner_id' => (string) $owner->getKey(),
+        'name' => 'Campaign payment QR controller contract',
+        'base_template_key' => 'blank-pay-code',
+        'instructions_ciphertext' => [
+            'cash' => ['amount' => 0, 'currency' => 'PHP'],
+            'count' => 1,
+            'prefix' => 'POLI',
+            'mask' => '****',
+        ],
+        'include_amount' => true,
+        'include_purpose' => true,
+        'status' => 'active',
+    ]);
+    $campaign = app(CreateLeadCampaign::class)->handle($owner, $template, [
+        'title' => 'Campaign payment QR controller contract',
+        'settings' => [
+            'entry_mode' => CampaignEntryMode::ReusablePaymentQr->value,
+            'scenario_run' => ['product' => ['premium_minor' => 5_000]],
+        ],
+    ]);
+
+    $this->actingAs($owner)
+        ->post(route('x-change.cockpit.campaigns.endpoints.payment-qr.store', $campaign->reference))
+        ->assertRedirect(route('x-change.cockpit.campaigns.index'));
+
+    $binding = CampaignPaymentQrBinding::query()->sole();
+
+    expect($binding->permitted_payment_rules)->toBe([
+        'allowed_rails' => ['INSTAPAY'],
+    ]);
+});
+
 it('uses the verified Account mobile when provisioning a mobile-derived campaign payment QR', function () {
     config()->set('payment-gateway.netbank.funding.standing_address.scheme', 'netbank-mobile-v1');
     $owner = actingAsTestUser(0);
