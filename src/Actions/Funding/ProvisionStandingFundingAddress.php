@@ -50,6 +50,7 @@ final class ProvisionStandingFundingAddress
         ?FundingDestinationData $destination = null,
         ?string $routingReference = null,
         ?FundingQrMerchantData $qrMerchant = null,
+        ?int $qrAmountMinor = null,
     ): StandingFundingAddressProvisionData {
         $provider = strtolower(trim($provider));
         $accountReference = trim($accountReference);
@@ -78,6 +79,7 @@ final class ProvisionStandingFundingAddress
                 ownerReference: $ownerReference,
                 purpose: $purpose,
                 qrMerchant: $qrMerchant,
+                qrAmountMinor: $qrAmountMinor,
             );
         }
 
@@ -94,6 +96,7 @@ final class ProvisionStandingFundingAddress
                     routingReference: $routingReference,
                     derivationCounter: $counter,
                     qrMerchant: $qrMerchant,
+                    qrAmountMinor: $qrAmountMinor,
                 ),
             );
             $fundingAddressHash = hash('sha256', $providerAddress->fundingAddress);
@@ -216,6 +219,7 @@ final class ProvisionStandingFundingAddress
                         ownerReference: $ownerReference,
                         purpose: $purpose,
                         qrMerchant: $qrMerchant,
+                        qrAmountMinor: $qrAmountMinor,
                     );
                 }
 
@@ -235,10 +239,11 @@ final class ProvisionStandingFundingAddress
                         ownerReference: $ownerReference,
                         purpose: $purpose,
                         qrMerchant: $qrMerchant,
+                        qrAmountMinor: $qrAmountMinor,
                     );
                 }
 
-                $this->persistQrArtifact($address, $providerAddress, $qrMerchant);
+                $this->persistQrArtifact($address, $providerAddress, $qrMerchant, $qrAmountMinor);
                 $provisioned = new StandingFundingAddressProvisionData($address, $providerAddress);
 
                 break;
@@ -262,6 +267,7 @@ final class ProvisionStandingFundingAddress
                         ownerReference: $ownerReference,
                         purpose: $purpose,
                         qrMerchant: $qrMerchant,
+                        qrAmountMinor: $qrAmountMinor,
                     );
                 }
 
@@ -307,6 +313,7 @@ final class ProvisionStandingFundingAddress
         string $ownerReference,
         FundingAddressPurpose $purpose,
         ?FundingQrMerchantData $qrMerchant,
+        ?int $qrAmountMinor,
     ): StandingFundingAddressProvisionData {
         $lock = Cache::lock(
             'x-change:standing-funding-address:'.$address->getKey(),
@@ -318,6 +325,7 @@ final class ProvisionStandingFundingAddress
             $ownerReference,
             $purpose,
             $qrMerchant,
+            $qrAmountMinor,
         ));
     }
 
@@ -326,6 +334,7 @@ final class ProvisionStandingFundingAddress
         string $ownerReference,
         FundingAddressPurpose $purpose,
         ?FundingQrMerchantData $qrMerchant,
+        ?int $qrAmountMinor,
     ): StandingFundingAddressProvisionData {
         if ($address->status !== FundingAddressStatus::Active) {
             throw new InvalidArgumentException('The Standing Funding Address is not active.');
@@ -339,7 +348,7 @@ final class ProvisionStandingFundingAddress
         }
 
         $binding = $this->bindings->current($address);
-        $fingerprint = $this->qrArtifacts->fingerprint($address, $qrMerchant);
+        $fingerprint = $this->qrArtifacts->fingerprint($address, $qrMerchant, $qrAmountMinor);
         $artifact = $this->qrArtifacts->find($address, $fingerprint);
 
         if ($artifact === null) {
@@ -360,6 +369,7 @@ final class ProvisionStandingFundingAddress
                     $ownerReference,
                     $purpose,
                     $qrMerchant,
+                    $qrAmountMinor,
                     $fingerprint,
                     $binding,
                 ) {
@@ -383,6 +393,7 @@ final class ProvisionStandingFundingAddress
                             derivationCounter: $address->derivation_counter,
                             existingFundingAddress: $address->funding_address_ciphertext,
                             qrMerchant: $qrMerchant,
+                            qrAmountMinor: $qrAmountMinor,
                         ));
                     $this->assertProviderBinding($address, $binding, $providerAddress, $purpose);
 
@@ -410,11 +421,12 @@ final class ProvisionStandingFundingAddress
         StandingFundingAddress $address,
         StandingFundingAddressData $providerAddress,
         ?FundingQrMerchantData $qrMerchant,
+        ?int $qrAmountMinor,
     ): void {
         $this->qrArtifacts->persist(
             $address,
             $providerAddress,
-            $this->qrArtifacts->fingerprint($address, $qrMerchant),
+            $this->qrArtifacts->fingerprint($address, $qrMerchant, $qrAmountMinor),
             $qrMerchant,
         );
     }

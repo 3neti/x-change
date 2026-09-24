@@ -17,11 +17,13 @@ final class StandingFundingQrArtifactStore
     public function fingerprint(
         StandingFundingAddress $address,
         ?FundingQrMerchantData $merchant,
+        ?int $amountMinor = null,
     ): string {
         return hash('sha256', implode("\0", [
             $address->funding_address_hash,
             $address->provider_code,
             $merchant?->profileFingerprint ?? 'provider-config-default',
+            $amountMinor === null ? 'open-amount' : 'amount:'.$amountMinor,
             (string) config(
                 'x-change.funding.standing_addresses.qr_artifact_version',
                 'standing-funding-qr-v1',

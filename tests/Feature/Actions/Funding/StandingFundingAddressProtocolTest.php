@@ -179,11 +179,13 @@ it('provisions and binds one reusable campaign payment QR idempotently', functio
         ->and($first->fixed_amount_minor)->toBe(5_000)
         ->and($first->standingFundingAddress->purpose)->toBe(FundingAddressPurpose::Payment)
         ->and($first->standingFundingAddress->recognition_mode)->toBe(FundingRecognitionMode::ObserveOnly)
-        ->and($first->qrArtifact->qr_mode)->toBe('static')
-        ->and($first->qrArtifact->embedded_amount)->toBeFalse()
+        ->and($first->qrArtifact->qr_mode)->toBe('dynamic')
+        ->and($first->qrArtifact->embedded_amount)->toBeTrue()
+        ->and(data_get($first->qrArtifact->display_snapshot_ciphertext, 'amount_minor'))->toBe(5_000)
         ->and($provider->requests)->toHaveCount(1)
         ->and($provider->requests[0]->accountReference)->toBe($expectedAccountReference)
         ->and($provider->requests[0]->purpose)->toBe(FundingAddressPurpose::Payment)
+        ->and($provider->requests[0]->qrAmountMinor)->toBe(5_000)
         ->and(StandingFundingAddress::query()->count())->toBe(1)
         ->and(CampaignPaymentQrBinding::query()->count())->toBe(1)
         ->and(AccountFundingReceipt::query()->count())->toBe(0)
@@ -228,7 +230,12 @@ it('persists only recognition-supported rules when provisioning a campaign payme
 
     expect($binding->permitted_payment_rules)->toBe([
         'allowed_rails' => ['INSTAPAY'],
-    ]);
+    ])->and($binding->fixed_amount_minor)->toBe(5_000)
+        ->and($binding->qrArtifact->qr_mode)->toBe('dynamic')
+        ->and($binding->qrArtifact->embedded_amount)->toBeTrue()
+        ->and(data_get($binding->qrArtifact->display_snapshot_ciphertext, 'amount_minor'))->toBe(5_000)
+        ->and($provider->requests)->toHaveCount(1)
+        ->and($provider->requests[0]->qrAmountMinor)->toBe(5_000);
 });
 
 it('uses the verified Account mobile when provisioning a mobile-derived campaign payment QR', function () {
@@ -1631,9 +1638,9 @@ final class StandingFundingAddressProviderFake implements StandingFundingAddress
             qrCode: new FundingQrCodeData(
                 mimeType: 'image/png',
                 base64Payload: 'cG5n',
-                qrMode: 'static',
+                qrMode: $request->qrAmountMinor === null ? 'static' : 'dynamic',
                 transactionType: 'p2m',
-                embeddedAmount: false,
+                embeddedAmount: $request->qrAmountMinor !== null,
                 providerGenerated: true,
             ),
             displayData: [
@@ -1648,6 +1655,7 @@ final class StandingFundingAddressProviderFake implements StandingFundingAddress
                     ? $request->derivationCounter
                     : null,
                 'reference_length' => 11,
+                'amount_minor' => $request->qrAmountMinor,
             ],
         );
     }

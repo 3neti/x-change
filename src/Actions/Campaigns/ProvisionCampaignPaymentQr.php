@@ -69,10 +69,16 @@ final readonly class ProvisionCampaignPaymentQr
             destination: $destination,
             routingReference: $this->routingReference($owner),
             qrMerchant: $merchant,
+            qrAmountMinor: $amountMode === CampaignPaymentAmountMode::Fixed
+                ? $fixedAmountMinor
+                : null,
         );
         $fingerprint = $this->qrArtifacts->fingerprint(
             $provisioned->address,
             $merchant,
+            $amountMode === CampaignPaymentAmountMode::Fixed
+                ? $fixedAmountMinor
+                : null,
         );
         $artifact = $this->qrArtifacts->find(
             $provisioned->address,

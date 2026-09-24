@@ -164,7 +164,7 @@ final readonly class BindCampaignPaymentQr
             || $address->status !== FundingAddressStatus::Active
             || ! $artifact->standingFundingAddress->is($address)
             || $artifact->status !== 'active'
-            || ! in_array(strtolower((string) $artifact->qr_mode), ['static', 'reusable'], true)) {
+            || ! in_array(strtolower((string) $artifact->qr_mode), ['static', 'reusable', 'dynamic'], true)) {
             throw ValidationException::withMessages([
                 'payment_qr' => 'An active reusable payment-purpose QR is required.',
             ]);
@@ -184,6 +184,17 @@ final readonly class BindCampaignPaymentQr
                     && $fixedAmountMinor > (int) $address->maximum_amount_minor))) {
             throw ValidationException::withMessages([
                 'amount' => 'The fixed campaign payment amount is outside the provider address limits.',
+            ]);
+        }
+
+        $embeddedAmountMinor = data_get($artifact->display_snapshot_ciphertext, 'amount_minor');
+
+        if ($artifact->embedded_amount
+            && ($amountMode !== CampaignPaymentAmountMode::Fixed
+                || ! is_numeric($embeddedAmountMinor)
+                || (int) $embeddedAmountMinor !== $fixedAmountMinor)) {
+            throw ValidationException::withMessages([
+                'payment_qr' => 'The QR Ph embedded amount must match the campaign fixed payment amount.',
             ]);
         }
 
