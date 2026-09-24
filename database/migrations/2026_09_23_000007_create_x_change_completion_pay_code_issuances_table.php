@@ -15,9 +15,24 @@ return new class extends Migration
             $table->ulid('reference')->unique();
             $table->char('issuance_key', 64)->unique();
             $table->char('instruction_hash', 64);
-            $table->foreignId('provisional_coverage_id')->unique()->constrained('x_change_provisional_coverages')->restrictOnDelete();
-            $table->foreignId('envelope_id')->unique()->constrained('envelopes')->restrictOnDelete();
-            $table->foreignId('voucher_id')->unique()->constrained('vouchers')->restrictOnDelete();
+            $table->foreignId('provisional_coverage_id');
+            $table->unique('provisional_coverage_id', 'xchg_completion_coverage_unique');
+            $table->foreign('provisional_coverage_id', 'xchg_completion_coverage_foreign')
+                ->references('id')
+                ->on('x_change_provisional_coverages')
+                ->restrictOnDelete();
+            $table->foreignId('envelope_id');
+            $table->unique('envelope_id', 'xchg_completion_envelope_unique');
+            $table->foreign('envelope_id', 'xchg_completion_envelope_foreign')
+                ->references('id')
+                ->on('envelopes')
+                ->restrictOnDelete();
+            $table->foreignId('voucher_id');
+            $table->unique('voucher_id', 'xchg_completion_voucher_unique');
+            $table->foreign('voucher_id', 'xchg_completion_voucher_foreign')
+                ->references('id')
+                ->on('vouchers')
+                ->restrictOnDelete();
             $table->string('issuer_type');
             $table->string('issuer_id');
             $table->string('driver_id', 128);

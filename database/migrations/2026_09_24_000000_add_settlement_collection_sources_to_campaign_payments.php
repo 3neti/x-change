@@ -15,8 +15,18 @@ return new class extends Migration
             $table->id();
             $table->ulid('reference')->unique();
             $table->foreignId('endpoint_campaign_id')->constrained('x_change_lead_campaigns')->restrictOnDelete();
-            $table->foreignId('voucher_collection_id')->unique()->constrained('voucher_collections')->restrictOnDelete();
-            $table->foreignId('payment_attempt_id')->unique()->constrained('x_change_payment_attempts')->restrictOnDelete();
+            $table->foreignId('voucher_collection_id');
+            $table->unique('voucher_collection_id', 'xchg_campaign_source_collection_unique');
+            $table->foreign('voucher_collection_id', 'xchg_campaign_source_collection_foreign')
+                ->references('id')
+                ->on('voucher_collections')
+                ->restrictOnDelete();
+            $table->foreignId('payment_attempt_id');
+            $table->unique('payment_attempt_id', 'xchg_campaign_source_attempt_unique');
+            $table->foreign('payment_attempt_id', 'xchg_campaign_source_attempt_foreign')
+                ->references('id')
+                ->on('x_change_payment_attempts')
+                ->restrictOnDelete();
             $table->string('source_kind', 64);
             $table->string('campaign_revision_id', 80);
             $table->string('provider_code', 64);

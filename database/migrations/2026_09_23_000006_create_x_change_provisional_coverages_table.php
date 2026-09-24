@@ -14,13 +14,17 @@ return new class extends Migration
             $table->id();
             $table->ulid('reference')->unique();
             $table->char('coverage_key', 64)->unique();
-            $table->foreignId('campaign_payment_recognition_id')
-                ->unique()
-                ->constrained('x_change_campaign_payment_recognitions')
+            $table->foreignId('campaign_payment_recognition_id');
+            $table->unique('campaign_payment_recognition_id', 'xchg_provisional_recognition_unique');
+            $table->foreign('campaign_payment_recognition_id', 'xchg_provisional_recognition_foreign')
+                ->references('id')
+                ->on('x_change_campaign_payment_recognitions')
                 ->restrictOnDelete();
-            $table->foreignId('envelope_id')
-                ->unique()
-                ->constrained('envelopes')
+            $table->foreignId('envelope_id');
+            $table->unique('envelope_id', 'xchg_provisional_envelope_unique');
+            $table->foreign('envelope_id', 'xchg_provisional_envelope_foreign')
+                ->references('id')
+                ->on('envelopes')
                 ->restrictOnDelete();
             $table->foreignId('endpoint_campaign_id')
                 ->constrained('x_change_lead_campaigns')
