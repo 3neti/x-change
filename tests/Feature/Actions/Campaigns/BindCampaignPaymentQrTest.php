@@ -736,7 +736,8 @@ it('compiles payment completion with a locked payer mobile and no payout fields'
         ->and($flow['metadata']['claim_workflow']['confirmation_label'])->toBe('Submit Details')
         ->and($workflow->confirmation_title)->toBe('Review your details')
         ->and($fields['mobile']['validation'])->toContain('in:639173011987,+639173011987,09173011987')
-        ->and(collect($flow['steps'])->pluck('handler')->all())->toContain('otp');
+        ->and(collect($flow['steps'])->pluck('handler')->all())->not->toContain('otp')
+        ->and($voucher->expires_at->equalTo($voucher->created_at->addHours(12)))->toBeTrue();
 
     $step = FormFlowStepData::from($walletStep);
     $handler = app(FormHandler::class);
@@ -745,6 +746,118 @@ it('compiles payment completion with a locked payer mobile and no payout fields'
     }
     expect(fn () => $handler->validateStep($step, ['mobile' => '639175180722']))
         ->toThrow(ValidationException::class);
+    Http::assertNothingSent();
+});
+
+it('completes wallet campaign details without OTP evidence and without a second claim', function (string $institution, string $mobile): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_institution_ciphertext' => $institution,
+        'payer_account_ciphertext' => $mobile,
+    ]);
+    $job = new AdvanceCampaignPaymentLifecycleJob($recognition->reference);
+    app()->call([$job, 'handle']);
+    app()->call([$job, 'handle']);
+    $issuance = $recognition->provisionalCoverage->completionPayCodeIssuance;
+    $voucher = $issuance->voucher;
+    $before = campaignPaymentFinancialCounts();
+    $inputs = [
+        'mobile' => $mobile, 'name' => 'Demo Applicant',
+        'email' => 'demo@example.test', 'address' => 'Test address', 'birth_date' => '1990-01-01',
+    ];
+    $preparedClaim = new PreparedCompiledClaimData($voucher->code, $voucher->getKey(), $inputs);
+    $result = app(SubmitCompiledFormClaim::class)->handle($voucher, $preparedClaim);
+    $claim = $voucher->claims()->sole();
+    $projection = CompletionClaimEvidenceProjection::query()->sole();
+    $prepared = app(PrepareCampaignPolicyCompletion::class)->handle($projection);
+
+    expect($result->claimed)->toBeTrue()
+        ->and($issuance->requirements_snapshot['requires_otp'])->toBeFalse()
+        ->and($voucher->refresh()->redeemed_at)->not->toBeNull()
+        ->and($voucher->instructions->inputs->fields)->not->toContain('otp')
+        ->and($claim->evidence()->where('requirement_key', 'otp')->exists())->toBeFalse()
+        ->and(array_keys($prepared->privateApplicantEvidence()))->toBe(['address', 'birth_date', 'email', 'mobile', 'name'])
+        ->and(CompletionPayCodeIssuance::query()->count())->toBe(1)
+        ->and(campaignPaymentFinancialCounts())->toBe($before);
+
+    $replay = app(CampaignCoverageCompletionExecutionDriver::class)->execute(ExecutionContextData::fromRedemption(
+        $voucher, Contact::query()->where('mobile', '09173011987')->firstOrFail(), $voucher->code,
+    ));
+    expect($replay->successful)->toBeFalse()
+        ->and($voucher->claims()->count())->toBe(1)
+        ->and(CompletionClaimEvidenceProjection::query()->count())->toBe(1);
+    Http::assertNothingSent();
+})->with([
+    'GCash' => ['GXCHPHM2XXX', '09173011987'],
+    'Maya' => ['PAPHPHM1XXX', '639173011987'],
+]);
+
+it('retains OTP for unknown or malformed campaign payer accounts', function (array $payer): void {
+    Queue::fake();
+    config()->set('form-flow.handlers.otp', OtpHandler::class);
+    [$recognition] = auiRecognizedPaymentForContinuation($payer);
+    app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']);
+    $issuance = $recognition->provisionalCoverage->completionPayCodeIssuance;
+    expect($issuance->requirements_snapshot['requires_otp'])->toBeTrue();
+    app()->instance(LBHurtado\FormFlowManager\Services\DriverService::class, new class extends LBHurtado\FormFlowManager\Services\DriverService
+    {
+        public function __construct()
+        {
+            $this->config = Yaml::parseFile(__DIR__.'/../../../../config/form-flow-drivers/voucher-redemption.yaml');
+        }
+    });
+    $flow = app(VoucherClaimFlowCompiler::class)->compile($issuance->voucher)->instructions->toArray();
+    expect(collect($flow['steps'])->pluck('handler')->all())->toContain('otp');
+    Http::assertNothingSent();
+})->with([
+    'no payer' => [[]],
+    'other bank' => [['payer_institution_ciphertext' => 'BNORPHMMXXX', 'payer_account_ciphertext' => '09173011987']],
+    'malformed wallet mobile' => [['payer_institution_ciphertext' => 'GCASH', 'payer_account_ciphertext' => '123']],
+]);
+
+it('preserves an existing OTP completion issuance on lifecycle retry', function (): void {
+    Queue::fake();
+    [$recognition, $binding] = auiRecognizedPaymentForContinuation([
+        'payer_institution_ciphertext' => 'GCASH', 'payer_account_ciphertext' => '09173011987',
+    ]);
+    $bound = app(OrchestrateProvisionalCoverage::class)->handle(
+        $recognition, AuiPersonalAccidentCampaignCoverageDriver::DRIVER_ID, AuiPersonalAccidentCampaignCoverageDriver::DRIVER_VERSION,
+    )->binding;
+    $issued = app(IssueCompletionPayCode::class)->handle(
+        $bound->coverage, $binding->standingFundingAddress->owner,
+        new CompletionPayCodeInstructionsData(
+            ['name', 'mobile', 'email', 'address', 'birth_date'], requiresOtp: true,
+            prefix: 'POLI', message: 'Complete your personal details to prepare your policy.',
+        ),
+    );
+    $originalExpiry = $issued->voucher->expires_at->toIso8601String();
+    app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']);
+    expect(CompletionPayCodeIssuance::query()->count())->toBe(1)
+        ->and($issued->issuance->refresh()->requirements_snapshot['requires_otp'])->toBeTrue()
+        ->and($issued->voucher->refresh()->expires_at->toIso8601String())->toBe($originalExpiry);
+    Http::assertNothingSent();
+});
+
+it('rejects an OTP-free completion after its existing voucher deadline', function (): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_institution_ciphertext' => 'GCASH', 'payer_account_ciphertext' => '09173011987',
+    ]);
+    app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']);
+    $voucher = $recognition->provisionalCoverage->completionPayCodeIssuance->voucher;
+    $this->travelTo($voucher->expires_at->addSecond());
+    try {
+        expect(fn () => app(SubmitCompiledFormClaim::class)->handle($voucher, new PreparedCompiledClaimData(
+            $voucher->code, $voucher->getKey(), [
+                'mobile' => '09173011987', 'name' => 'Demo Applicant', 'email' => 'demo@example.test',
+                'address' => 'Test address', 'birth_date' => '1990-01-01',
+            ],
+        )))->toThrow(RuntimeException::class, 'Failed to redeem voucher.');
+        expect($voucher->refresh()->redeemed_at)->toBeNull()
+            ->and(CompletionClaimEvidenceProjection::query()->count())->toBe(0);
+    } finally {
+        $this->travelBack();
+    }
     Http::assertNothingSent();
 });
 

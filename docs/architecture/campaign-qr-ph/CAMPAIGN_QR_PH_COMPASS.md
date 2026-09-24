@@ -11,6 +11,52 @@ snapshot from inception, and issues one zero-value completion Pay Code.
 
 ## Current Position
 
+### Wallet-bound completion without OTP — 2026-09-24 (local)
+
+The user confirmed the v1.0.46 live lifecycle worked, then approved removing OTP
+from this demonstration completion journey. New completion instructions from the
+exact AUI demo driver omit OTP only when the canonical payment observation resolves
+to a supported GCash/Maya Philippine mobile. Unknown institutions and malformed or
+missing payer accounts keep OTP. Existing issuance snapshots remain authoritative
+on retries; no old voucher is rewritten or downgraded. Ordinary claims, onboarding,
+and explicitly requested OTP instructions are unchanged.
+
+The prefilled readonly mobile and server-side normalized payer binding remain.
+This is an SMS-link-based lower-assurance flow, not OTP verification or independent
+KYC. A forwarded link can be used to submit details for the bound mobile. The
+voucher engine's existing 12-hour expiry from issuance remains unchanged (distinct
+from the 24-hour provisional coverage period). The default execution driver still
+rejects expired and already-redeemed vouchers. No financial behavior changes.
+
+Regression coverage exercises compiled forms without OTP, real completion claim
+submission and policy evidence without fabricated OTP data, GCash/Maya formats,
+unknown/malformed payer fallback, historical OTP issuance retry, mobile tampering,
+expiry rejection, and second-redemption rejection. Both complete affected suites
+(`BindCampaignPaymentQrTest.php`, `ClaimWorkflowTest.php`) passed: 110 tests /
+796 assertions, 155.95 seconds. Pint and whitespace checks passed. Independent
+review found no blockers. No browser integration was performed for this local
+slice; compiled-form and submission behavior were exercised in package tests.
+No live SMS/payment, host adoption, or deployment occurred.
+
+Immediate follow-up: a duplicate direct `SubmitCompiledFormClaim` invocation was
+observed to hit a `voucher_claims` uniqueness error while preparing evidence. This
+slice verifies execution-level second-redemption rejection, not graceful duplicate
+browser submission. Investigate and add a dedicated regression in a separate gate;
+do not weaken uniqueness or replay controls.
+
+### v1.0.46 testing release acceptance — 2026-09-24
+
+Authorized package commit `b7b5b555` was published as `v1.0.46`. Host commit
+`57b47a60` deployed successfully in testing via
+`depl-a2d26d62-024c-4450-89b1-93038931cc03`. Runtime source/version and strict asset
+doctor passed; the public claim page rendered in the in-app browser. Local package
+checks passed 103 tests / 753 assertions; host focused checks passed 3 tests /
+7 assertions, publication verified 15 resources, and production build passed.
+The unrelated host boundary test's literal-version/caret-constraint mismatch was
+reproduced on the preceding release. Unrelated local host edits were preserved.
+The user subsequently confirmed a fresh paid lifecycle worked. No new timing
+measurement was independently collected; the 30-second target is not established.
+
 ### Local release-candidate gate — 2026-09-24
 
 The accumulated completion workflow, payer-mobile binding/tamper guard, per-step

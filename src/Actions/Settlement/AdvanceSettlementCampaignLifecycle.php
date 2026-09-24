@@ -9,6 +9,7 @@ use LBHurtado\XChange\Data\Settlement\CompletionPayCodeInstructionsData;
 use LBHurtado\XChange\Models\CampaignPaymentRecognition;
 use LBHurtado\XChange\Models\ProvisionalCoverage;
 use LBHurtado\XChange\Services\Settlement\AuiPersonalAccidentCampaignCoverageDriver;
+use LBHurtado\XChange\Services\Settlement\CampaignWalletPayerMobile;
 
 final readonly class AdvanceSettlementCampaignLifecycle
 {
@@ -45,12 +46,17 @@ final readonly class AdvanceSettlementCampaignLifecycle
             throw new \LogicException('Campaign owner must be authenticatable to issue the completion Pay Code.');
         }
 
+        $existing = $orchestration->binding->coverage->completionPayCodeIssuance()->first();
+        $requiresOtp = $existing !== null
+            ? (bool) data_get($existing->requirements_snapshot, 'requires_otp', true)
+            : (new CampaignWalletPayerMobile)->resolve($recognition) === null;
+
         $this->completionPayCode->handle(
             $orchestration->binding->coverage,
             $owner,
             new CompletionPayCodeInstructionsData(
                 applicantFields: ['name', 'mobile', 'email', 'address', 'birth_date'],
-                requiresOtp: true,
+                requiresOtp: $requiresOtp,
                 prefix: 'POLI',
                 message: 'Complete your personal details to prepare your policy.',
             ),
