@@ -123,6 +123,7 @@ it('persists an immutable purpose-bound address without storing plaintext', func
 });
 
 it('provisions and binds one reusable campaign payment QR idempotently', function () {
+    config()->set('payment-gateway.netbank.funding.standing_address.scheme', 'netbank-account-hmac-v2');
     $owner = actingAsTestUser(0);
     $provider = new StandingFundingAddressProviderFake;
     bindStandingFundingProvider($provider);
@@ -188,6 +189,88 @@ it('provisions and binds one reusable campaign payment QR idempotently', functio
         ->and(AccountFundingReceipt::query()->count())->toBe(0)
         ->and(Transaction::query()->count())->toBe(0)
         ->and(TreasuryInventoryOperation::query()->count())->toBe(0);
+});
+
+it('uses the verified Account mobile when provisioning a mobile-derived campaign payment QR', function () {
+    config()->set('payment-gateway.netbank.funding.standing_address.scheme', 'netbank-mobile-v1');
+    $owner = actingAsTestUser(0);
+    $owner->forceFill([
+        'mobile' => '09175180722',
+        'mobile_verified_at' => now(),
+    ])->save();
+    $provider = new StandingFundingAddressProviderFake;
+    $provider->scheme = 'netbank-mobile-v1';
+    bindStandingFundingProvider($provider);
+    configureSharedCampaignPaymentDestination();
+    $template = PayCodeTemplate::query()->create([
+        'owner_type' => $owner->getMorphClass(),
+        'owner_id' => (string) $owner->getKey(),
+        'name' => 'Mobile-routed campaign template',
+        'base_template_key' => 'blank-pay-code',
+        'instructions_ciphertext' => [
+            'cash' => ['amount' => 0, 'currency' => 'PHP'],
+            'count' => 1,
+            'prefix' => 'POLI',
+            'mask' => '****',
+        ],
+        'include_amount' => true,
+        'include_purpose' => true,
+        'status' => 'active',
+    ]);
+    $campaign = app(CreateLeadCampaign::class)->handle($owner, $template, [
+        'title' => 'Mobile-routed campaign',
+        'settings' => ['entry_mode' => CampaignEntryMode::ReusablePaymentQr->value],
+    ]);
+
+    app(ProvisionCampaignPaymentQr::class)->handle(
+        owner: $owner,
+        campaign: $campaign,
+        amountMode: CampaignPaymentAmountMode::Fixed,
+        fixedAmountMinor: 5_000,
+    );
+
+    expect($provider->requests)->toHaveCount(1)
+        ->and($provider->requests[0]->routingReference)->toBe('09175180722');
+});
+
+it('rejects mobile-derived campaign payment QR provisioning without a verified Account mobile', function () {
+    config()->set('payment-gateway.netbank.funding.standing_address.scheme', 'netbank-mobile-v1');
+    $owner = actingAsTestUser(0);
+    $owner->forceFill([
+        'mobile' => '09175180722',
+        'mobile_verified_at' => null,
+    ])->save();
+    $provider = new StandingFundingAddressProviderFake;
+    $provider->scheme = 'netbank-mobile-v1';
+    bindStandingFundingProvider($provider);
+    configureSharedCampaignPaymentDestination();
+    $template = PayCodeTemplate::query()->create([
+        'owner_type' => $owner->getMorphClass(),
+        'owner_id' => (string) $owner->getKey(),
+        'name' => 'Unverified mobile campaign template',
+        'base_template_key' => 'blank-pay-code',
+        'instructions_ciphertext' => [
+            'cash' => ['amount' => 0, 'currency' => 'PHP'],
+            'count' => 1,
+            'prefix' => 'POLI',
+            'mask' => '****',
+        ],
+        'include_amount' => true,
+        'include_purpose' => true,
+        'status' => 'active',
+    ]);
+    $campaign = app(CreateLeadCampaign::class)->handle($owner, $template, [
+        'title' => 'Unverified mobile campaign',
+        'settings' => ['entry_mode' => CampaignEntryMode::ReusablePaymentQr->value],
+    ]);
+
+    expect(fn () => app(ProvisionCampaignPaymentQr::class)->handle(
+        owner: $owner,
+        campaign: $campaign,
+        amountMode: CampaignPaymentAmountMode::Fixed,
+        fixedAmountMinor: 5_000,
+    ))->toThrow(ValidationException::class, 'Verify the Account mobile')
+        ->and($provider->requests)->toBeEmpty();
 });
 
 it('rejects cross-account campaign payment QR provisioning before calling the provider', function () {
