@@ -2788,6 +2788,10 @@ return [
             // Additional host-defined CampaignPolicyCompletionDriverContract implementations.
         ],
         'policy_completion' => [
+            'automatic_demo' => [
+                'enabled' => (bool) env('XCHANGE_AUTOMATIC_DEMO_POLICY_ENABLED', false),
+                'campaign_references' => array_values(array_filter(array_map('trim', explode(',', (string) env('XCHANGE_AUTOMATIC_DEMO_POLICY_CAMPAIGNS', ''))))),
+            ],
             'demonstration_summary' => [
                 'enabled' => (bool) env('XCHANGE_DEMO_POLICY_SUMMARY_ENABLED', false),
                 'sms_enabled' => (bool) env('XCHANGE_DEMO_POLICY_SUMMARY_SMS_ENABLED', false),

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\URL;
 use LBHurtado\XChange\Enums\PolicyCompletionOutcomeStatus;
 use LBHurtado\XChange\Enums\PolicyCompletionRequestStatus;
 use LBHurtado\XChange\Models\PolicyCompletionOutcome;
+use LBHurtado\XChange\Models\PolicyCompletionRequest;
 
 final class DemonstrationPolicySummary
 {
@@ -24,12 +25,7 @@ final class DemonstrationPolicySummary
         return $request !== null && $coverage !== null
             && $outcome->status === PolicyCompletionOutcomeStatus::Succeeded
             && $request->status === PolicyCompletionRequestStatus::Succeeded
-            && $request->approved_at !== null
-            && filled($request->approval_reference)
-            && filled($request->approver_type) && filled($request->approver_id)
-            && filled($request->requester_type) && filled($request->requester_id)
-            && ! ($request->approver_type === $request->requester_type
-                && (string) $request->approver_id === (string) $request->requester_id)
+            && ((new AutomaticDemonstrationPolicy)->matches($request) || $this->independentlyApproved($request))
             && $request->driver_id === AuiPersonalAccidentPolicyCompletionDriver::DRIVER_ID
             && $request->driver_version === AuiPersonalAccidentPolicyCompletionDriver::DRIVER_VERSION
             && $coverage->driver_id === $request->driver_id
@@ -41,6 +37,16 @@ final class DemonstrationPolicySummary
             && data_get($outcome->safe_result, 'document_ready') === false
             && preg_match('/^AUI-DEMO-[A-Za-z0-9-]{1,100}$/', (string) $outcome->provider_reference) === 1
             && $outcome->recorded_at !== null;
+    }
+
+    private function independentlyApproved(PolicyCompletionRequest $request): bool
+    {
+        return $request->approved_at !== null
+            && filled($request->approval_reference)
+            && filled($request->approver_type) && filled($request->approver_id)
+            && filled($request->requester_type) && filled($request->requester_id)
+            && ! ($request->approver_type === $request->requester_type
+                && (string) $request->approver_id === (string) $request->requester_id);
     }
 
     public function url(PolicyCompletionOutcome $outcome): ?string

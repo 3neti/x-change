@@ -11,6 +11,113 @@ snapshot from inception, and issues one zero-value completion Pay Code.
 
 ## Current Position
 
+### Automatic post-claim demonstration completion — 2026-09-24
+
+The user explicitly replaced the per-claim maker/checker requirement for this
+campaign journey: pay the printed Campaign QR Ph, receive the completion SMS,
+claim through the existing Form Flow, then receive a policy link. The earlier
+request to designate actors is superseded for this opted-in demonstration path.
+Manual policy-completion actions retain their existing authorization checks.
+
+Implemented locally: `CompletionClaimEvidenceProjected` dispatches a unique,
+after-commit `CompleteAutomaticDemonstrationPolicyJob`. It rechecks an explicit
+campaign allowlist and the exact reserved demo driver/version, prepares the
+existing verified evidence chain, and persists an automatically authorized
+request. The existing campaign owner is attribution only; the durable
+`authorization_mode=automatic_demo` and `automatic-demo:{projection-reference}`
+identify the system action. No human checker, approval reference, or approval
+timestamp is fabricated. Existing manual requests are never converted.
+
+The existing accepted Pipedream test transport is reused, including its limited
+payload, credentials, stable idempotency key, and strict demo response checks.
+HTTP runs outside database transactions. Outcome persistence reuses fingerprint
+validation, encryption, safe-field validation, immutable hashes, uniqueness,
+and the existing outcome event. That event uses the same journaled follow-up
+SMS and signed summary page as the manual path. A persisted outcome is returned
+before any repeat HTTP request. Worker uniqueness/overlap locks complement DB
+uniqueness; they do not promise exactly-once external delivery after a crash.
+
+Activation requires:
+
+- `XCHANGE_AUTOMATIC_DEMO_POLICY_ENABLED=true`
+- `XCHANGE_AUTOMATIC_DEMO_POLICY_CAMPAIGNS=<exact campaign reference(s)>`
+- the accepted Pipedream test disposition and credential
+- the existing demo-summary and demo-summary-SMS flags enabled
+- a continuously running worker consuming the configured feedback queue
+
+Defaults remain disabled and the campaign list empty. Disabling automation
+stops jobs before they start the transport; it does not recall in-flight HTTP
+or an already queued SMS. The signed page remains available according to its
+own feature flag and expiry, independently of the automation switch.
+
+The existing `POLI-W23C` projection can be explicitly enqueued by its reference
+after release and activation. Do not pay again, redeem again, or flush a whole
+queue. Verify one automatic request/outcome, one feedback correlation, provider
+acceptance, and the signed summary in a browser. This local implementation has
+not yet sent a live second SMS or been released/deployed.
+
+Thirty seconds is a performance target, not a demonstrated SLA. Measure payment
+settlement/observation, first SMS enqueue/provider acceptance, claim completion,
+insurer response, and second SMS enqueue/provider acceptance separately. Human
+data-entry time, bank confirmation, polling cadence, and carrier delivery are
+not controlled by this job. An actual insurance policy still requires a real
+accepted insurer integration: Pipedream returns `document_ready=false`, and the
+current link is explicitly a demonstration summary, never proof of coverage.
+
+Local verification: campaign payment/coverage/completion, lifecycle runner,
+and Pipedream suites passed **88 tests / 779 assertions**. The six new automatic
+flow tests cover no-checker success, one HTTP/outcome/SMS delivery on replay,
+disabled/unlisted campaigns, after-commit dispatch, worker rechecks, provider
+failure recovery, and preservation of manual requests. All external calls
+were mocked. No Cloud configuration or live records changed in this slice.
+
+Files in this slice (relative to the package):
+
+- `src/Services/Settlement/AutomaticDemonstrationPolicy.php`
+- `src/Actions/Settlement/CompleteAutomaticDemonstrationPolicy.php`
+- `src/Actions/Settlement/RecordCampaignPolicyCompletionOutcome.php`
+- `src/Services/Settlement/DemonstrationPolicySummary.php`
+- `src/Jobs/Campaigns/CompleteAutomaticDemonstrationPolicyJob.php`
+- `src/Listeners/QueueAutomaticDemonstrationPolicy.php`
+- `src/Providers/XChangeServiceProvider.php`
+- `config/x-change.php`
+- `tests/Feature/Actions/Campaigns/BindCampaignPaymentQrTest.php`
+- This compass.
+
+### Testing release and exact-claim recovery — 2026-09-24
+
+Published `v1.0.44` at package commit `9075f6b2`. Sandbox adoption commit
+`1cfa5d06` changed only its Composer requirement and lock. Testing deployment
+`depl-a2d23202-b436-45ef-a218-20e1b6c51afa` succeeded. Runtime reports
+`v1.0.44`, and the built manifest contains `DemonstrationPolicySummary.vue`.
+x-PayOut was not changed. Both demonstration-summary activation flags remain
+false; no policy authority was granted and no second SMS was sent.
+
+Recovered only `POLI-W23C` (voucher 334, completed claim 145) through
+`ProjectCompletionClaimEvidence::handle()`. Projection
+`01M396Z7AMXSFZ9JY6GXC5X95P` contains the six declared fields: address,
+birth_date, email, mobile, name, and otp. All 15 source evidence records remain.
+An immediate replay returned `created=false`, with one projection and unchanged
+redemption time. Read-only policy preparation succeeded with six evidence
+fields. No policy request exists. No payment, redemption, insurer transport,
+or financial posting was replayed.
+
+**Next controlled gate:** explicitly designate the testing policy-completion
+maker, independent checker, and outcome recorder. All three configured ID lists
+were empty. Do not invent actors or substitute an operator's identity. Then
+authorize the governed demonstration request/approval/transport/outcome flow
+and the two feature flags, verify the exact outcome's journaled second SMS,
+and inspect its signed demonstration summary in the browser. This is not a
+real insurer policy. No additional payment or completion claim is required.
+
+Host verification: isolated package publication/assets doctor and production
+build passed; the new page is in the manifest. Host checks reported six passes
+and two baseline failures: the migration test hardcodes EMI `v2.0.0-beta.5`
+although the unchanged lock uses `v2.0.2`; the boundary test rejects the existing
+untracked local `packages/x-change` directory. These were not rewritten or
+removed. Unrelated host edits were excluded from the release. End-to-end
+second-SMS/browser acceptance remains pending the authority gate above.
+
 ### Demonstration summary and follow-up SMS — local gate, 2026-09-24
 
 This supersedes the earlier statement that no follow-up presentation exists.

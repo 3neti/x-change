@@ -34,6 +34,7 @@ use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Actions\Settlement\ApproveCampaignPolicyCompletion;
 use LBHurtado\XChange\Actions\Settlement\BindProvisionalCoverage;
 use LBHurtado\XChange\Actions\Settlement\CheckCampaignPolicyCompletionTransportReadiness;
+use LBHurtado\XChange\Actions\Settlement\CompleteAutomaticDemonstrationPolicy;
 use LBHurtado\XChange\Actions\Settlement\IssueCompletionPayCode;
 use LBHurtado\XChange\Actions\Settlement\OrchestrateProvisionalCoverage;
 use LBHurtado\XChange\Actions\Settlement\PrepareCampaignPolicyCompletion;
@@ -62,6 +63,7 @@ use LBHurtado\XChange\Events\ProvisionalCoverageBound;
 use LBHurtado\XChange\Exceptions\CampaignCoverageDriverUnavailable;
 use LBHurtado\XChange\Exceptions\CampaignPolicyCompletionDriverUnavailable;
 use LBHurtado\XChange\Jobs\Campaigns\AdvanceCampaignPaymentLifecycleJob;
+use LBHurtado\XChange\Jobs\Campaigns\CompleteAutomaticDemonstrationPolicyJob;
 use LBHurtado\XChange\Jobs\Campaigns\SendDemonstrationPolicySummaryJob;
 use LBHurtado\XChange\Jobs\Feedback\DeliverQueuedFeedbackSmsJob;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
@@ -1820,6 +1822,113 @@ function auiCampaignCoverageTerms(
 }
 
 /** @return array{CompletionClaimEvidenceProjection, User} */
+it('automatically completes an opted in demo claim without a checker and queues its summary once', function (): void {
+    Queue::fake();
+    [$projection, $owner] = auiPolicyCompletionProjection([
+        'payer_institution_ciphertext' => 'GXCHPHM2XXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]);
+    configureAutomaticDemoPolicy($projection);
+    $before = campaignPaymentFinancialCounts();
+    $complete = app(CompleteAutomaticDemonstrationPolicy::class);
+    $outcome = $complete->handle($projection);
+    $replay = $complete->handle($projection->fresh());
+    $request = $outcome->request;
+    expect($outcome->is($replay))->toBeTrue()
+        ->and($outcome->status)->toBe(PolicyCompletionOutcomeStatus::Succeeded)
+        ->and($request->safe_context['authorization_mode'])->toBe('automatic_demo')
+        ->and($request->approved_at)->toBeNull()
+        ->and($request->approver_id)->toBeNull()
+        ->and(PolicyCompletionRequest::query()->count())->toBe(1)
+        ->and(PolicyCompletionOutcome::query()->count())->toBe(1)
+        ->and(campaignPaymentFinancialCounts())->toBe($before)
+        ->and(app(DemonstrationPolicySummary::class)->url($outcome))->not->toBeNull();
+    Http::assertSentCount(1);
+    Queue::assertPushed(SendDemonstrationPolicySummaryJob::class, 1);
+    app()->call([new SendDemonstrationPolicySummaryJob($outcome->reference), 'handle']);
+    app()->call([new SendDemonstrationPolicySummaryJob($outcome->reference), 'handle']);
+    Queue::assertPushed(DeliverQueuedFeedbackSmsJob::class, 1);
+    expect(fn () => app(RequestCampaignPolicyCompletion::class)->handle($projection, $owner, 'not-authorized'))
+        ->toThrow(AuthorizationException::class);
+});
+
+it('does not automatically complete disabled or unlisted campaigns', function (bool $enabled): void {
+    Queue::fake();
+    [$projection] = auiPolicyCompletionProjection();
+    Http::preventStrayRequests();
+    config()->set('x-change.settlement.policy_completion.automatic_demo', ['enabled' => $enabled, 'campaign_references' => []]);
+    expect(fn () => app(CompleteAutomaticDemonstrationPolicy::class)->handle($projection))
+        ->toThrow(DomainException::class, 'not enabled');
+    CompletionClaimEvidenceProjected::dispatch(['projection_reference' => $projection->reference]);
+    Queue::assertNotPushed(CompleteAutomaticDemonstrationPolicyJob::class);
+    expect(PolicyCompletionRequest::query()->count())->toBe(0);
+    Http::assertNothingSent();
+})->with([false, true]);
+
+it('queues automatic demo completion only after commit and rechecks activation in the worker', function (): void {
+    Queue::fake();
+    [$projection] = auiPolicyCompletionProjection();
+    configureAutomaticDemoPolicy($projection);
+    DB::beginTransaction();
+    CompletionClaimEvidenceProjected::dispatch(['projection_reference' => $projection->reference]);
+    Queue::assertNotPushed(CompleteAutomaticDemonstrationPolicyJob::class);
+    DB::commit();
+    CompletionClaimEvidenceProjected::dispatch(['projection_reference' => $projection->reference]);
+    Queue::assertPushed(CompleteAutomaticDemonstrationPolicyJob::class, 1);
+    config()->set('x-change.settlement.policy_completion.automatic_demo.enabled', false);
+    app()->call([new CompleteAutomaticDemonstrationPolicyJob($projection->reference), 'handle']);
+    Http::assertNothingSent();
+    expect(PolicyCompletionRequest::query()->count())->toBe(0);
+});
+
+it('resumes an automatic demo transport failure with the same request', function (): void {
+    Queue::fake();
+    [$projection] = auiPolicyCompletionProjection();
+    configureAutomaticDemoPolicy($projection, failFirst: true);
+    $complete = app(CompleteAutomaticDemonstrationPolicy::class);
+    expect(fn () => $complete->handle($projection))->toThrow(DomainException::class);
+    $request = PolicyCompletionRequest::query()->sole();
+    expect($request->status)->toBe(PolicyCompletionRequestStatus::Authorized)
+        ->and(PolicyCompletionOutcome::query()->count())->toBe(0);
+    $outcome = $complete->handle($projection->fresh());
+    expect($outcome->policy_completion_request_id)->toBe($request->id);
+    Http::assertSentCount(2);
+});
+
+it('does not turn a manual request into an automatic demo request', function (): void {
+    Queue::fake();
+    [$other, $maker] = auiPolicyCompletionProjection();
+    configureAutomaticDemoPolicy($other);
+    config()->set('x-change.settlement.policy_completion.maker_ids', [(string) $maker->id]);
+    app(RequestCampaignPolicyCompletion::class)->handle($other, $maker, 'manual-request');
+    expect(fn () => app(CompleteAutomaticDemonstrationPolicy::class)->handle($other))->toThrow(DomainException::class, 'does not match');
+    Http::assertNothingSent();
+});
+
+function configureAutomaticDemoPolicy(CompletionClaimEvidenceProjection $projection, bool $failFirst = false): void
+{
+    config()->set('x-change.settlement.policy_completion.automatic_demo', [
+        'enabled' => true,
+        'campaign_references' => [$projection->issuance->coverage->campaign->reference],
+    ]);
+    config()->set('x-change.settlement.policy_completion.demonstration_summary', ['enabled' => true, 'sms_enabled' => true]);
+    config()->set('x-feedback.transports.sms.driver', 'engagespark');
+    $disposition = array_replace(policyCompletionTransportDisposition(), [
+        'provider' => 'pipedream-test',
+        'submission_endpoint' => 'https://demo.m.pipedream.net/policy-completion',
+    ]);
+    config()->set('x-change.settlement.policy_completion.transports', [AuiPersonalAccidentPolicyCompletionDriver::DRIVER_ID.'@'.AuiPersonalAccidentPolicyCompletionDriver::DRIVER_VERSION => $disposition]);
+    config()->set('services.aui.policy_completion_token', 'test-only-token');
+    $response = app(GenerateAuiDemonstrationPolicyResponse::class)->handle(app(PrepareCampaignPolicyCompletion::class)->handle($projection));
+    Http::preventStrayRequests();
+    $sequence = Http::sequence();
+    if ($failFirst) {
+        $sequence->push([], 503);
+    }
+    $sequence->push($response->toArray());
+    Http::fake(['https://demo.m.pipedream.net/*' => $sequence]);
+}
+
 function auiPolicyCompletionProjection(array $payer = []): array
 {
     configureCampaignCoverageTestDriver();

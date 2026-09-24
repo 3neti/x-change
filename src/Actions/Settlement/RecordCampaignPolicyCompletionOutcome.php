@@ -9,11 +9,13 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\XChange\Contracts\CampaignPolicyCompletionAuthorityContract;
+use LBHurtado\XChange\Data\Settlement\AuiDemonstrationPolicyResponseData;
 use LBHurtado\XChange\Data\Settlement\PolicyCompletionOutcomeData;
 use LBHurtado\XChange\Enums\PolicyCompletionRequestStatus;
 use LBHurtado\XChange\Events\PolicyCompletionOutcomeRecorded;
 use LBHurtado\XChange\Models\PolicyCompletionOutcome;
 use LBHurtado\XChange\Models\PolicyCompletionRequest;
+use LBHurtado\XChange\Services\Settlement\AutomaticDemonstrationPolicy;
 
 final readonly class RecordCampaignPolicyCompletionOutcome
 {
@@ -30,6 +32,28 @@ final readonly class RecordCampaignPolicyCompletionOutcome
         if (! $this->authority->mayRecordOutcome($recorder)) {
             throw new AuthorizationException('Policy completion outcome authority is required.');
         }
+
+        return $this->record($request, $recorder, $data);
+    }
+
+    public function handleAutomaticDemonstration(PolicyCompletionRequest $request, AuiDemonstrationPolicyResponseData $response): PolicyCompletionOutcome
+    {
+        $policy = new AutomaticDemonstrationPolicy;
+        $policy->assertEnabled($request->projection);
+        if (! $policy->matches($request)) {
+            throw new DomainException('Automatic demonstration request provenance is required.');
+        }
+        $owner = $request->projection->issuance->coverage->recognition->ownerRecord();
+        if ($request->requester_type !== $owner->getMorphClass()
+            || (string) $request->requester_id !== (string) $owner->getKey()) {
+            throw new DomainException('Automatic demonstration owner attribution does not match.');
+        }
+
+        return $this->record($request, $owner, $response->outcome());
+    }
+
+    private function record(PolicyCompletionRequest $request, Model $recorder, PolicyCompletionOutcomeData $data): PolicyCompletionOutcome
+    {
         if (trim($data->resultCode) === '') {
             throw new DomainException('Policy completion outcome requires a result code.');
         }

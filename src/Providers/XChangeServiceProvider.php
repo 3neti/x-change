@@ -307,6 +307,7 @@ use LBHurtado\XChange\Contracts\WithdrawalValidationContract;
 use LBHurtado\XChange\Contracts\XChangeOnboardingGatewayContract;
 use LBHurtado\XChange\Contracts\XChangeProviderTopologyResolverContract;
 use LBHurtado\XChange\Events\CampaignPaymentRecognized;
+use LBHurtado\XChange\Events\CompletionClaimEvidenceProjected;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Events\DisbursementRejected;
 use LBHurtado\XChange\Events\PolicyCompletionOutcomeRecorded;
@@ -338,6 +339,7 @@ use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRepository;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleUserModelResolver;
 use LBHurtado\XChange\Listeners\HandleConfirmedDisbursement;
 use LBHurtado\XChange\Listeners\HandleRejectedDisbursement;
+use LBHurtado\XChange\Listeners\QueueAutomaticDemonstrationPolicy;
 use LBHurtado\XChange\Listeners\QueueCampaignPaymentLifecycle;
 use LBHurtado\XChange\Listeners\QueueDemonstrationPolicySummary;
 use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
@@ -1713,6 +1715,7 @@ class XChangeServiceProvider extends ServiceProvider
 
         Event::listen(CampaignPaymentRecognized::class, QueueCampaignPaymentLifecycle::class);
         Event::listen(PolicyCompletionOutcomeRecorded::class, QueueDemonstrationPolicySummary::class);
+        Event::listen(CompletionClaimEvidenceProjected::class, QueueAutomaticDemonstrationPolicy::class);
 
         Event::listen(
             VoucherDisbursementSucceeded::class,
