@@ -23,6 +23,7 @@ use LBHurtado\SettlementEnvelope\Services\EnvelopeService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\XChange\Actions\Campaigns\BindCampaignPaymentQr;
+use LBHurtado\XChange\Actions\Claim\SubmitCompiledFormClaim;
 use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
 use LBHurtado\XChange\Actions\Payment\InspectCampaignPaymentEvidence;
 use LBHurtado\XChange\Actions\Payment\RecognizeQualifyingCampaignPayment;
@@ -38,6 +39,7 @@ use LBHurtado\XChange\Actions\Settlement\ProjectCompletionClaimEvidence;
 use LBHurtado\XChange\Actions\Settlement\RecordCampaignPolicyCompletionOutcome;
 use LBHurtado\XChange\Actions\Settlement\RequestCampaignPolicyCompletion;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
+use LBHurtado\XChange\Data\PreparedCompiledClaimData;
 use LBHurtado\XChange\Data\Settlement\CampaignCoverageDecisionData;
 use LBHurtado\XChange\Data\Settlement\CompletionPayCodeInstructionsData;
 use LBHurtado\XChange\Data\Settlement\PolicyCompletionOutcomeData;
@@ -733,6 +735,76 @@ it('claims a completion Pay Code through its non-financial execution driver', fu
     expect(fn () => app(ProjectCompletionClaimEvidence::class)->handle($claim->fresh('evidence')))
         ->toThrow(InvalidArgumentException::class, 'does not match')
         ->and($envelope->refresh()->payload_version)->toBe(2);
+});
+
+it('projects only declared completion evidence from the compiled browser claim and replays safely', function (): void {
+    configureCampaignCoverageTestDriver();
+    [$recognition, $binding] = recognizedCampaignPayment();
+    $bound = app(BindProvisionalCoverage::class)->handle($recognition, auiCampaignCoverageTerms($recognition));
+    $issued = app(IssueCompletionPayCode::class)->handle(
+        $bound->coverage,
+        $binding->standingFundingAddress->owner,
+        new CompletionPayCodeInstructionsData(['name', 'mobile', 'email', 'address', 'birth_date'], requiresOtp: true),
+    );
+    $inputs = [
+        'name' => 'Browser Applicant', 'mobile' => '09173011987',
+        'email' => 'applicant@example.test', 'address' => 'Test address', 'birth_date' => '1990-01-01',
+        'otp' => ['verified' => true], 'otp_verified' => true,
+        '_step_name' => 'confirmation', 'account_number' => '', 'bank_code' => '',
+        'completed_at' => now()->toIso8601String(), 'full_name' => 'Browser Applicant',
+        'kyc' => [], 'splash_viewed' => true, 'viewed_at' => now()->toIso8601String(),
+    ];
+    $before = campaignPaymentFinancialCounts();
+    Http::fake();
+    Event::fake([CompletionClaimEvidenceProjected::class]);
+
+    $result = app(SubmitCompiledFormClaim::class)->handle($issued->voucher, new PreparedCompiledClaimData(
+        $issued->voucher->code, $issued->voucher->getKey(), $inputs,
+    ));
+    $claim = $issued->voucher->claims()->sole();
+    $projection = CompletionClaimEvidenceProjection::query()->sole();
+    $expected = ['address', 'birth_date', 'email', 'mobile', 'name', 'otp'];
+    $prepared = app(PrepareCampaignPolicyCompletion::class)->handle($projection);
+
+    expect($result->claimed)->toBeTrue()
+        ->and($claim->evidence()->count())->toBeGreaterThan(6)
+        ->and($claim->evidence()->where('requirement_key', 'splash_viewed')->exists())->toBeTrue()
+        ->and(data_get($bound->envelope->refresh()->payload, 'applicant.evidence.items.*.key'))->toBe($expected)
+        ->and($projection->source_snapshot['evidence_record_ids'])->toHaveCount(6)
+        ->and(array_keys($prepared->privateApplicantEvidence()))->toBe($expected)
+        ->and(campaignPaymentFinancialCounts())->toBe($before);
+    Event::assertDispatched(CompletionClaimEvidenceProjected::class, fn ($event): bool => $event->payload['evidence_count'] === 6);
+
+    $claim->evidence()->where('requirement_key', 'splash_viewed')->sole()->forceFill(['payload' => ['value' => false]])->save();
+    expect(app(ProjectCompletionClaimEvidence::class)->handle($claim)?->created)->toBeFalse()
+        ->and(CompletionClaimEvidenceProjection::query()->count())->toBe(1)
+        ->and($bound->envelope->refresh()->payload_version)->toBe(2);
+    Event::assertDispatchedTimes(CompletionClaimEvidenceProjected::class, 1);
+    Http::assertNothingSent();
+});
+
+it('recovers a completed claim without re-executing it but rejects missing declared evidence', function (): void {
+    configureCampaignCoverageTestDriver();
+    [$recognition, $binding] = recognizedCampaignPayment();
+    $bound = app(BindProvisionalCoverage::class)->handle($recognition, campaignCoverageTerms($recognition));
+    $issued = app(IssueCompletionPayCode::class)->handle(
+        $bound->coverage, $binding->standingFundingAddress->owner,
+        new CompletionPayCodeInstructionsData(['name']),
+    );
+    $claim = app(PrepareVoucherClaimEvidence::class)->handle($issued->voucher, ['inputs' => ['name' => 'Applicant', 'splash_viewed' => true]]);
+    $meta = (array) $claim->meta;
+    data_set($meta, 'evidence.execution_status', 'finalized');
+    $claim->forceFill(['status' => 'redeemed', 'completed_at' => now(), 'meta' => $meta])->save();
+    $evidence = $claim->evidence()->where('requirement_key', 'name')->sole();
+    $evidence->forceFill(['requirement_key' => 'unexpected'])->save();
+    expect(fn () => app(ProjectCompletionClaimEvidence::class)->handle($claim))
+        ->toThrow(InvalidArgumentException::class, 'incomplete')
+        ->and(CompletionClaimEvidenceProjection::query()->count())->toBe(0);
+    $evidence->forceFill(['requirement_key' => 'name'])->save();
+    $before = campaignPaymentFinancialCounts();
+    expect(app(ProjectCompletionClaimEvidence::class)->handle($claim)?->created)->toBeTrue()
+        ->and(app(ProjectCompletionClaimEvidence::class)->handle($claim)?->created)->toBeFalse()
+        ->and(campaignPaymentFinancialCounts())->toBe($before);
 });
 
 it('rolls back the envelope version when completion evidence projection persistence fails', function (): void {

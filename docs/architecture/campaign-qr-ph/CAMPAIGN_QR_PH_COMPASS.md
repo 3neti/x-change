@@ -11,6 +11,39 @@ snapshot from inception, and issues one zero-value completion Pay Code.
 
 ## Current Position
 
+### Completion evidence corrective slice — 2026-09-24
+
+The user confirmed receipt of the initial SMS and completed `POLI-W23C`.
+Read-only testing diagnostics found claim 145 redeemed at 07:20:36 UTC,
+with finalized persisted evidence, but no completion evidence projection or
+policy request. The browser persisted ancillary Form Flow fields alongside
+the six declared requirements. Exact equality against all evidence keys
+rejected projection after redemption had already been recorded.
+
+The local correction requires every declared field, ignores ancillary fields
+for projection, and retains the complete original claim evidence. Manifest,
+private source references, event count, and insurer preparation now use only
+the selected evidence. Missing or duplicate declared evidence still fails
+closed; replay remains hash-checked and creates no duplicate envelope version.
+
+Release acceptance must recover the existing claim through
+`ProjectCompletionClaimEvidence::handle()` using its exact persisted identity,
+verify one projection and the declared-field manifest, then prepare the existing
+policy workflow. Do not redeem again, request another payment, or reissue the
+completion Pay Code. This slice does not send a second SMS automatically.
+Publication, testing deployment, and exact-claim recovery remain pending.
+
+The demonstration insurer contract still explicitly returns
+`document_ready=false`; there is no downloadable policy URL or policy-link SMS
+implementation. A separate controlled gate must define that demonstration
+document and notification contract, retaining existing maker/checker authority.
+Do not present the fake policy result as actual insurer coverage.
+
+Local verification: Campaign QR and Pipedream transport suites passed 62 tests
+/ 442 assertions; compiled-claim and lifecycle-runner suites passed 9 tests
+/ 237 assertions. Pint and `git diff --check` passed. All external transports
+were mocked; no Cloud record, payment, or SMS was changed by this correction.
+
 Gate 9b recognition bridge is implemented locally. A provider-verified
 settlement Pay Code collection can now become an idempotent campaign payment
 recognition through an explicit immutable payment source. This path performs no

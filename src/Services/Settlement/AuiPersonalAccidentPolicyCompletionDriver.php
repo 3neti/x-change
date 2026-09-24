@@ -95,6 +95,8 @@ final class AuiPersonalAccidentPolicyCompletionDriver implements CampaignPolicyC
         }
 
         $applicantEvidence = $claim->evidence
+            ->whereIn('id', (array) data_get($projection->source_snapshot, 'evidence_record_ids', []))
+            ->whereIn('requirement_key', array_column($manifest['items'] ?? [], 'key'))
             ->sortBy('requirement_key')
             ->mapWithKeys(static fn (VoucherClaimEvidence $evidence): array => [
                 $evidence->requirement_key => data_get($evidence->payload, 'value'),

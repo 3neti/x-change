@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Settlement;
 
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use LBHurtado\SettlementEnvelope\Models\Envelope;
@@ -58,7 +59,7 @@ final readonly class ProjectCompletionClaimEvidence
                 'envelope_payload_version_id' => $payloadVersion->getKey(),
                 'manifest_hash' => $manifestHash,
                 'projection_hash' => $projectionHash,
-                'source_snapshot' => ['schema' => 'x-change.completion-claim-evidence-source.v1', 'voucher_claim_id' => $lockedClaim->getKey(), 'evidence_record_ids' => $lockedClaim->evidence->pluck('id')->sort()->values()->all()],
+                'source_snapshot' => ['schema' => 'x-change.completion-claim-evidence-source.v1', 'voucher_claim_id' => $lockedClaim->getKey(), 'evidence_record_ids' => $this->declaredEvidence($lockedIssuance, $lockedClaim)->pluck('id')->sort()->values()->all()],
                 'projected_at' => now(),
             ]);
 
@@ -73,7 +74,7 @@ final readonly class ProjectCompletionClaimEvidence
                 'issuance_reference' => $issuance->reference,
                 'envelope_reference' => $issuance->envelope->reference_code,
                 'claim_number' => $claim->claim_number,
-                'evidence_count' => $claim->evidence()->count(),
+                'evidence_count' => count($projection->source_snapshot['evidence_record_ids']),
             ];
             $this->audit->log('campaign.completion_claim_evidence.projected', $payload + ['financial_side_effects' => false]);
             CompletionClaimEvidenceProjected::dispatch($payload);
@@ -97,12 +98,8 @@ final readonly class ProjectCompletionClaimEvidence
             throw new InvalidArgumentException('Completion issuance and envelope identities do not match.');
         }
 
-        $expected = collect((array) data_get($issuance->requirements_snapshot, 'applicant_fields', []));
-        if (data_get($issuance->requirements_snapshot, 'requires_otp') === true) {
-            $expected->push('otp');
-        }
-        $expected = $expected->map(static fn (mixed $key): string => trim((string) $key))->filter()->unique()->sort()->values();
-        $actual = $claim->evidence->pluck('requirement_key')->map(static fn (mixed $key): string => trim((string) $key))->filter()->unique()->sort()->values();
+        $expected = $this->declaredKeys($issuance);
+        $actual = $this->declaredEvidence($issuance, $claim)->pluck('requirement_key')->sort()->values();
 
         if ($expected->all() !== $actual->all()
             || ($expected->isNotEmpty() && data_get($claim->meta, 'evidence.persisted') !== true)
@@ -111,13 +108,30 @@ final readonly class ProjectCompletionClaimEvidence
         }
     }
 
+    /** @return Collection<int, string> */
+    private function declaredKeys(CompletionPayCodeIssuance $issuance): Collection
+    {
+        $keys = collect((array) data_get($issuance->requirements_snapshot, 'applicant_fields', []));
+        if (data_get($issuance->requirements_snapshot, 'requires_otp') === true) {
+            $keys->push('otp');
+        }
+
+        return $keys->map(static fn (mixed $key): string => trim((string) $key))->filter()->unique()->sort()->values();
+    }
+
+    /** @return Collection<int, VoucherClaimEvidence> */
+    private function declaredEvidence(CompletionPayCodeIssuance $issuance, VoucherClaim $claim): Collection
+    {
+        return $claim->evidence->whereIn('requirement_key', $this->declaredKeys($issuance)->all());
+    }
+
     /** @return array<string, mixed> */
     private function manifest(CompletionPayCodeIssuance $issuance, VoucherClaim $claim): array
     {
         return [
             'schema' => 'x-change.completion-claim-evidence-manifest.v1',
             'claim_number' => $claim->claim_number,
-            'items' => $claim->evidence->sortBy('requirement_key')->values()->map(fn (VoucherClaimEvidence $evidence): array => [
+            'items' => $this->declaredEvidence($issuance, $claim)->sortBy('requirement_key')->values()->map(fn (VoucherClaimEvidence $evidence): array => [
                 'key' => $evidence->requirement_key,
                 'kind' => $evidence->kind->value,
                 'status' => $evidence->status->value,
