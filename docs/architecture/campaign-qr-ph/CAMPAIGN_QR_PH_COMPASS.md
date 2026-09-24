@@ -438,3 +438,55 @@ coverage transition may infer payer identity from an unverified provider
 account field.
 
 See [the implementation plan](CAMPAIGN_QR_PH_PLAN.md).
+
+## Campaign payment continuation corrective gate — 2026-09-24
+
+The fixed PHP 50 testing payment was recognized automatically on v1.0.42.
+Recognition `01M39140N3ED60FJ9T3KCS5YAD` settled at 06:19:24 UTC and was
+recognized at 06:19:50 UTC, without quarantine. It had no coverage because
+the standing-address path emitted `CampaignPaymentRecognized` without a
+registered lifecycle listener.
+
+The corrective slice registers a package listener that queues the existing
+coverage/completion processor on `x-change-funding`, after commit. The job
+reloads the durable recognition, uses bounded retries and overlap protection,
+and preserves the existing transactional idempotency of coverage and issuance.
+Only Campaign QR recognitions enter this listener; the individual settlement
+payment path retains its existing continuation. A partial issuance failure
+must retry even when a coverage record already exists.
+
+Recovery is explicit and scoped to one recognition:
+
+```bash
+php artisan x-change:campaigns:resume-payment 01M39140N3ED60FJ9T3KCS5YAD --no-interaction
+php artisan x-change:campaigns:resume-payment 01M39140N3ED60FJ9T3KCS5YAD --dispatch --no-interaction
+```
+
+The first command only inspects. The second requests queued continuation,
+without another provider payment or collection. The funding queue worker must
+be running. Re-inspect after processing to obtain the completion Pay Code.
+Use this recovery after a missing enqueue as well as for historical recognized
+payments; recognition events themselves are emitted only on first creation.
+
+SMS initiation now uses the existing queued, journaled feedback path. Per the
+operator's explicit policy, identifiable GCash/Maya Wallet source accounts in
+valid Philippine mobile format are the SMS destinations (09, 639, or +639).
+This inference does not change canonical provider identity verification.
+Unknown institutions, Maya Bank, and malformed numbers are skipped with a
+redacted warning. No new identity/KYC prerequisite is introduced for sending.
+Stable recognition-based feedback keys reuse delivery evidence on replay;
+the existing provider acceptance/recording crash window is not an exactly-once
+transport guarantee. Both funding and feedback workers must run. The exact
+recovery command reports persisted SMS status as well as the completion code.
+The driver remains demonstration-only; a provisional record does not
+prove real insurer coverage or policy issuance. Publication, testing-host
+adoption, and replay of the above recognition remain the release acceptance
+steps for this corrective slice.
+
+Local verification: Campaign QR suite 55 passed / 397 assertions; journaled
+feedback, payment-attempt lifecycle, and settlement collection suites 34 passed
+/ 196 assertions; standing-address protocol 29 passed / 277 assertions.
+After the final SMS-result guard and inline-driver rejection test, focused SMS
+coverage passed 10 tests / 42 assertions. All providers were faked or mocked.
+Pint and diff whitespace validation passed. No live SMS or recognition replay
+has been executed by this slice. Release and testing deployment remain pending.

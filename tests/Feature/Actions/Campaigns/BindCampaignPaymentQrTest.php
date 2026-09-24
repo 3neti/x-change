@@ -8,10 +8,13 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
+use LBHurtado\EngageSpark\Classes\ServiceMode;
+use LBHurtado\EngageSpark\EngageSpark;
 use LBHurtado\SettlementEnvelope\Models\Envelope;
 use LBHurtado\SettlementEnvelope\Models\EnvelopeAuditLog;
 use LBHurtado\SettlementEnvelope\Models\EnvelopePayloadVersion;
@@ -34,6 +37,7 @@ use LBHurtado\XChange\Actions\Settlement\PrepareCampaignPolicyCompletion;
 use LBHurtado\XChange\Actions\Settlement\ProjectCompletionClaimEvidence;
 use LBHurtado\XChange\Actions\Settlement\RecordCampaignPolicyCompletionOutcome;
 use LBHurtado\XChange\Actions\Settlement\RequestCampaignPolicyCompletion;
+use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Data\Settlement\CampaignCoverageDecisionData;
 use LBHurtado\XChange\Data\Settlement\CompletionPayCodeInstructionsData;
 use LBHurtado\XChange\Data\Settlement\PolicyCompletionOutcomeData;
@@ -53,6 +57,8 @@ use LBHurtado\XChange\Events\PolicyCompletionRequested;
 use LBHurtado\XChange\Events\ProvisionalCoverageBound;
 use LBHurtado\XChange\Exceptions\CampaignCoverageDriverUnavailable;
 use LBHurtado\XChange\Exceptions\CampaignPolicyCompletionDriverUnavailable;
+use LBHurtado\XChange\Jobs\Campaigns\AdvanceCampaignPaymentLifecycleJob;
+use LBHurtado\XChange\Jobs\Feedback\DeliverQueuedFeedbackSmsJob;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\CampaignPaymentEvidenceQuarantine;
 use LBHurtado\XChange\Models\CampaignPaymentQrBinding;
@@ -76,6 +82,10 @@ use LBHurtado\XChange\Services\Settlement\CampaignCoverageDriverRegistry;
 use LBHurtado\XChange\Services\Settlement\CampaignPolicyCompletionDriverRegistry;
 use LBHurtado\XChange\Tests\Fakes\FakeCampaignCoverageDriver;
 use LBHurtado\XChange\Tests\Fakes\User;
+use LBHurtado\XFeedback\Contracts\FeedbackChannelDriverContract;
+use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
+use LBHurtado\XFeedback\Contracts\FeedbackDeliveryAttemptRecorderContract;
+use LBHurtado\XFeedback\Models\FeedbackDeliveryRecord;
 
 it('immutably binds one reusable payment QR to one campaign revision', function (): void {
     $owner = campaignPaymentQrOwner();
@@ -1293,6 +1303,216 @@ it('rolls back the completion voucher when immutable link persistence fails', fu
         ->and(Voucher::query()->count())->toBe($voucherCount);
 });
 
+it('queues the registered campaign payment continuation only after recognition commits', function (): void {
+    Queue::fake();
+
+    DB::beginTransaction();
+    [$recognition] = recognizedCampaignPayment(5_000);
+    Queue::assertNothingPushed();
+    DB::commit();
+
+    Queue::assertPushed(AdvanceCampaignPaymentLifecycleJob::class, fn ($job): bool => $job->recognitionReference === $recognition->reference && $job->queue === 'x-change-funding');
+    Queue::assertPushed(AdvanceCampaignPaymentLifecycleJob::class, 1);
+});
+
+it('does not enqueue campaign lifecycle work for a rolled back recognition', function (): void {
+    Queue::fake();
+    DB::beginTransaction();
+    recognizedCampaignPayment(5_000);
+    DB::rollBack();
+
+    Queue::assertNothingPushed();
+    expect(CampaignPaymentRecognition::query()->count())->toBe(0);
+});
+
+it('advances a recognized campaign payment once across duplicate job deliveries', function (): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation();
+    $before = campaignPaymentFinancialCounts();
+    $job = new AdvanceCampaignPaymentLifecycleJob($recognition->reference);
+    app()->call([$job, 'handle']);
+    app()->call([$job, 'handle']);
+
+    $coverage = ProvisionalCoverage::query()->sole();
+    $issuance = CompletionPayCodeIssuance::query()->with('voucher')->sole();
+    expect(Envelope::query()->count())->toBe(1)
+        ->and($coverage->coverage_amount_minor)->toBe(500_000)
+        ->and($coverage->effective_at->equalTo($recognition->settled_at))->toBeTrue()
+        ->and($coverage->expires_at->equalTo($recognition->settled_at->addHours(24)))->toBeTrue()
+        ->and($issuance->voucher->code)->toStartWith('POLI')
+        ->and(data_get($issuance->requirements_snapshot, 'requires_otp'))->toBeTrue()
+        ->and(campaignPaymentFinancialCounts())->toMatchArray([
+            'account_funding_receipts' => $before['account_funding_receipts'],
+            'funding_settlements' => $before['funding_settlements'],
+            'treasury_operations' => $before['treasury_operations'],
+            'vouchers' => $before['vouchers'] + 1,
+        ]);
+    Http::assertNothingSent();
+});
+
+it('resumes completion issuance after a failure following durable coverage creation', function (): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation();
+    $realIssuer = app(PayCodeIssuanceContract::class);
+    $issuer = Mockery::mock(PayCodeIssuanceContract::class);
+    $issuer->shouldReceive('issue')->once()->andThrow(new RuntimeException('temporary issuance failure'));
+    app()->instance(PayCodeIssuanceContract::class, $issuer);
+    $job = new AdvanceCampaignPaymentLifecycleJob($recognition->reference);
+
+    expect(fn () => app()->call([$job, 'handle']))
+        ->toThrow(RuntimeException::class, 'temporary issuance failure');
+    expect(ProvisionalCoverage::query()->count())->toBe(1)
+        ->and(CompletionPayCodeIssuance::query()->count())->toBe(0);
+
+    app()->instance(PayCodeIssuanceContract::class, $realIssuer);
+    app()->call([$job, 'handle']);
+    expect(ProvisionalCoverage::query()->count())->toBe(1)
+        ->and(CompletionPayCodeIssuance::query()->count())->toBe(1)
+        ->and(Envelope::query()->count())->toBe(1);
+});
+
+it('leaves campaigns without a qualified coverage driver unchanged', function (): void {
+    Queue::fake();
+    [$recognition] = recognizedCampaignPayment(5_000);
+    $before = campaignPaymentFinancialCounts();
+    app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']);
+
+    expect(ProvisionalCoverage::query()->count())->toBe(0)
+        ->and(CompletionPayCodeIssuance::query()->count())->toBe(0)
+        ->and(campaignPaymentFinancialCounts())->toBe($before);
+});
+
+it('inspects an exact recognized payment and dispatches recovery only when requested', function (): void {
+    Queue::fake();
+    [$recognition] = recognizedCampaignPayment(5_000);
+    Queue::fake();
+
+    $this->artisan('x-change:campaigns:resume-payment', ['recognition' => $recognition->reference])
+        ->assertSuccessful();
+    Queue::assertNothingPushed();
+    $this->artisan('x-change:campaigns:resume-payment', ['recognition' => $recognition->reference, '--dispatch' => true])
+        ->assertSuccessful();
+    Queue::assertPushed(AdvanceCampaignPaymentLifecycleJob::class, fn ($job): bool => $job->recognitionReference === $recognition->reference);
+    $this->artisan('x-change:campaigns:resume-payment', ['recognition' => 'missing', '--dispatch' => true])
+        ->assertFailed();
+    Queue::assertPushed(AdvanceCampaignPaymentLifecycleJob::class, 1);
+});
+
+it('queues one durable completion SMS for wallet source accounts across lifecycle replays', function (string $institution, string $account): void {
+    Queue::fake();
+    config()->set('x-feedback.transports.sms.driver', 'engagespark');
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_institution_ciphertext' => $institution,
+        'payer_account_ciphertext' => $account,
+    ]);
+    $job = new AdvanceCampaignPaymentLifecycleJob($recognition->reference);
+    app()->call([$job, 'handle']);
+    app()->call([$job, 'handle']);
+
+    $record = FeedbackDeliveryRecord::query()->sole();
+    expect($record->status)->toBe('queued')
+        ->and($record->attempt_count)->toBe(1)
+        ->and($recognition->canonicalObservation->payer_identity_provider_verified)->toBeFalse();
+    $delivery = app(FeedbackDeliveryAttemptRecorderContract::class)
+        ->forCorrelation('campaign-payment-completion:'.$recognition->reference)[0];
+    expect($delivery->recipient->phone)->toBe('639173011987');
+    Queue::assertPushed(DeliverQueuedFeedbackSmsJob::class,
+        fn ($sms): bool => $sms->deliveryId === $record->delivery_id
+            && str_contains($sms->message, '/x/claim/POLI')
+            && str_contains($sms->message, 'demonstration only'));
+    Http::assertNothingSent();
+})->with([
+    ['GXCHPHM2XXX', '09173011987'],
+    ['PAPHPHM1XXX', '639173011987'],
+    ['PAPHPHM1XXX', '+639173011987'],
+]);
+
+it('sends the campaign completion link through the feedback worker once after provider acceptance', function (): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_institution_ciphertext' => 'GXCHPHM2XXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]);
+    $job = new AdvanceCampaignPaymentLifecycleJob($recognition->reference);
+    app()->call([$job, 'handle']);
+    $sms = Queue::pushed(DeliverQueuedFeedbackSmsJob::class)->first();
+    $provider = Mockery::mock(EngageSpark::class);
+    $provider->shouldReceive('getOrgId')->once()->andReturn('test-org');
+    $provider->shouldReceive('send')->once()
+        ->with(Mockery::on(fn (array $payload): bool => $payload['to'] === '639173011987'
+            && str_contains($payload['message'], '/x/claim/POLI')),
+            ServiceMode::SMS)
+        ->andReturn(['message_id' => 'test-campaign-sms', 'status' => 'ACCEPTED']);
+    app()->instance(EngageSpark::class, $provider);
+    app()->call([$sms, 'handle']);
+    app()->call([$sms, 'handle']);
+    app()->call([$job, 'handle']);
+
+    expect(FeedbackDeliveryRecord::query()->sole()->status)->toBe('sent');
+    Queue::assertPushed(DeliverQueuedFeedbackSmsJob::class, 1);
+});
+
+it('does not route completion SMS to unsupported or invalid source accounts', function (string $institution, string $account): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_institution_ciphertext' => $institution,
+        'payer_account_ciphertext' => $account,
+    ]);
+    app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']);
+    expect(FeedbackDeliveryRecord::query()->count())->toBe(0);
+    Queue::assertNotPushed(DeliverQueuedFeedbackSmsJob::class);
+    Http::assertNothingSent();
+})->with([
+    ['MYDBPHM2XXX', '09173011987'],
+    ['UNKNOWN', '09173011987'],
+    ['PAPHPHM1XXX', '12345'],
+    ['GXCHPHM2XXX', ''],
+    ['GXCHPHM2XXX', 'abc09173011987'],
+]);
+
+it('refuses an inline SMS driver for campaign completion delivery', function (): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_institution_ciphertext' => 'PAPHPHM1XXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]);
+    $registry = Mockery::mock(FeedbackChannelRegistryContract::class);
+    $registry->shouldReceive('driver')->with('sms')->once()
+        ->andReturn(Mockery::mock(FeedbackChannelDriverContract::class));
+    app()->instance(FeedbackChannelRegistryContract::class, $registry);
+
+    expect(fn () => app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']))
+        ->toThrow(RuntimeException::class, 'Campaign completion SMS requires the queued SMS driver.');
+    expect(FeedbackDeliveryRecord::query()->count())->toBe(0);
+    Http::assertNothingSent();
+});
+
+/** @return array{CampaignPaymentRecognition, CampaignPaymentQrBinding} */
+function auiRecognizedPaymentForContinuation(array $payer = []): array
+{
+    configureCampaignCoverageTestDriver();
+    Http::fake();
+    [$recognition, $binding] = recognizedCampaignPayment(5_000, $payer);
+    $recognition->campaignRecord()->forceFill(['settings' => [
+        'entry_mode' => CampaignEntryMode::ReusablePaymentQr->value,
+        'scenario_run' => [
+            'reference' => 'RUN-AUI-CONTINUATION',
+            'scenario' => 'aui_on_demand_insurance_payment',
+            'envelope_driver_id' => AuiPersonalAccidentCampaignCoverageDriver::DRIVER_ID,
+            'envelope_driver_version' => AuiPersonalAccidentCampaignCoverageDriver::DRIVER_VERSION,
+            'product' => [
+                'name' => 'Cubao to Lucena Personal Accident Plan',
+                'premium_minor' => 5_000,
+                'insured_amount_minor' => 500_000,
+                'currency' => 'PHP',
+                'coverage_duration_hours' => 24,
+            ],
+        ],
+    ]])->save();
+
+    return [$recognition, $binding];
+}
+
 function campaignPaymentQrOwner(): User
 {
     $owner = actingAsTestUser();
@@ -1315,7 +1535,7 @@ function configureCampaignCoverageTestDriver(): void
 }
 
 /** @return array{CampaignPaymentRecognition, CampaignPaymentQrBinding} */
-function recognizedCampaignPayment(int $amountMinor = 12_200): array
+function recognizedCampaignPayment(int $amountMinor = 12_200, array $payer = []): array
 {
     $owner = campaignPaymentQrOwner();
     $campaign = campaignPaymentQrCampaign($owner, CampaignEntryMode::ReusablePaymentQr);
@@ -1330,7 +1550,7 @@ function recognizedCampaignPayment(int $amountMinor = 12_200): array
     );
     $result = app(RecognizeQualifyingCampaignPayment::class)->handle(
         $binding,
-        campaignPaymentObservation($address, 'transaction-coverage-'.str()->ulid(), 'settled', $amountMinor),
+        campaignPaymentObservation($address, 'transaction-coverage-'.str()->ulid(), 'settled', $amountMinor, $payer),
     );
 
     return [$result->recognition, $binding];
@@ -1513,10 +1733,12 @@ function campaignPaymentObservation(
     string $transactionId,
     string $status,
     int $amountMinor = 12_200,
+    array $payer = [],
 ): ProviderFundingObservation {
     $occurredAt = now()->addMinute()->toImmutable();
 
     return ProviderFundingObservation::query()->create([
+        ...$payer,
         'observation_key' => hash('sha256', $transactionId.'-'.$status),
         'provider_code' => 'netbank',
         'provider_transaction_id' => $transactionId,

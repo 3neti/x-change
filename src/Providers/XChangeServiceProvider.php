@@ -147,6 +147,7 @@ use LBHurtado\XChange\Console\Commands\ReconcilePendingDisbursementsCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\CollectRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\ShowPendingRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Settlement\EvaluateSettlementEnvelopeCommand;
+use LBHurtado\XChange\Console\Commands\Settlement\ResumeCampaignPaymentLifecycleCommand;
 use LBHurtado\XChange\Console\Commands\SetupXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Slices\DeliverVoucherSliceExecutionJournalCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\AttestCommercialAccountingCommand;
@@ -305,6 +306,7 @@ use LBHurtado\XChange\Contracts\WithdrawalProcessorContract;
 use LBHurtado\XChange\Contracts\WithdrawalValidationContract;
 use LBHurtado\XChange\Contracts\XChangeOnboardingGatewayContract;
 use LBHurtado\XChange\Contracts\XChangeProviderTopologyResolverContract;
+use LBHurtado\XChange\Events\CampaignPaymentRecognized;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Events\DisbursementRejected;
 use LBHurtado\XChange\Exceptions\CommercialPricingChanged;
@@ -335,6 +337,7 @@ use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRepository;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleUserModelResolver;
 use LBHurtado\XChange\Listeners\HandleConfirmedDisbursement;
 use LBHurtado\XChange\Listeners\HandleRejectedDisbursement;
+use LBHurtado\XChange\Listeners\QueueCampaignPaymentLifecycle;
 use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
 use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Models\LeadCampaign;
@@ -1651,6 +1654,7 @@ class XChangeServiceProvider extends ServiceProvider
                 ShowPendingRevenueCommand::class,
 
                 EvaluateSettlementEnvelopeCommand::class,
+                ResumeCampaignPaymentLifecycleCommand::class,
                 RunLifecycleScenarioGroupCommand::class,
                 BackfillDisbursementSettlementJournalCommand::class,
                 AttestCommercialAccountingCommand::class,
@@ -1704,6 +1708,8 @@ class XChangeServiceProvider extends ServiceProvider
                 ValidateLinkPreviewDriversCommand::class,
             ]);
         }
+
+        Event::listen(CampaignPaymentRecognized::class, QueueCampaignPaymentLifecycle::class);
 
         Event::listen(
             VoucherDisbursementSucceeded::class,
