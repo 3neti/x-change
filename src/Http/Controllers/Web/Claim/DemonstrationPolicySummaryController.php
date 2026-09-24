@@ -15,8 +15,10 @@ final class DemonstrationPolicySummaryController
     public function __invoke(Request $request, PolicyCompletionOutcome $outcome, DemonstrationPolicySummary $summaries): Response
     {
         abort_unless($summaries->url($outcome) !== null, 404);
+        Inertia::encryptHistory();
         $response = Inertia::render('x-change/claim/DemonstrationPolicySummary', [
             'summary' => $summaries->present($outcome),
+            'applicant' => $summaries->privateApplicantDetails($outcome),
         ])->toResponse($request);
         $response->headers->set('Cache-Control', 'private, no-store');
         $response->headers->set('Referrer-Policy', 'no-referrer');

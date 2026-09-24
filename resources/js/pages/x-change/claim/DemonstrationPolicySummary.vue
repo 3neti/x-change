@@ -13,7 +13,16 @@ defineProps<{
         recorded_at: string;
         notice: string;
     };
+    applicant?: Partial<Record<'name' | 'address' | 'birth_date' | 'mobile' | 'email', string | null>>;
 }>();
+
+const applicantFields = [
+    { key: 'name', label: 'Full name' },
+    { key: 'address', label: 'Address' },
+    { key: 'birth_date', label: 'Date of birth' },
+    { key: 'mobile', label: 'Mobile number' },
+    { key: 'email', label: 'Email address' },
+] as const;
 
 function dateLabel(value: string | null): string {
     if (!value) return 'Not specified';
@@ -49,7 +58,19 @@ function dateLabel(value: string | null): string {
                 <div><dt class="text-muted-foreground">Demonstration period ends</dt><dd>{{ dateLabel(summary.expires_at) }}</dd></div>
                 <div><dt class="text-muted-foreground">Response recorded</dt><dd>{{ dateLabel(summary.recorded_at) }}</dd></div>
             </dl>
-            <p class="text-xs text-muted-foreground">This page intentionally excludes your personal and payment-account details. The link expires and should not be shared.</p>
+            <section class="flex min-w-0 flex-col gap-4" aria-labelledby="applicant-details-title" data-testid="demo-policy-applicant">
+                <div>
+                    <h2 id="applicant-details-title" class="text-lg font-semibold">Applicant details submitted</h2>
+                    <p class="text-sm text-muted-foreground">These are the details submitted during the claim, not independently verified identity information.</p>
+                </div>
+                <dl class="grid min-w-0 grid-cols-1 gap-4 text-sm sm:grid-cols-2">
+                    <div v-for="field in applicantFields" :key="field.key" class="min-w-0">
+                        <dt class="text-muted-foreground">{{ field.label }}</dt>
+                        <dd class="whitespace-pre-line wrap-anywhere font-medium" :data-testid="`demo-policy-applicant-${field.key}`">{{ applicant?.[field.key] || 'Not provided' }}</dd>
+                    </div>
+                </dl>
+            </section>
+            <p class="text-xs text-muted-foreground">This private page contains personal information and excludes payment-account details. The link expires and should not be shared. Anyone with this link can view the submitted details while it remains valid.</p>
         </article>
     </ClaimStepShell>
 </template>

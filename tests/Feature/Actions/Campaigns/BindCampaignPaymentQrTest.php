@@ -1877,7 +1877,7 @@ it('queues the approved demo summary once after commit and reuses its journaled 
     Http::assertNothingSent();
 });
 
-it('serves only a signed redacted demo summary and rejects tampered expired or disabled links', function (): void {
+it('serves submitted details only on a signed demo summary and rejects tampered expired or disabled links', function (): void {
     Queue::fake();
     Http::fake();
     config()->set('x-change.settlement.policy_completion.demonstration_summary.enabled', true);
@@ -1892,10 +1892,17 @@ it('serves only a signed redacted demo summary and rejects tampered expired or d
         ->assertHeader('X-Robots-Tag', 'noindex, nofollow')
         ->assertJsonPath('component', 'x-change/claim/DemonstrationPolicySummary')
         ->assertJsonCount(6, 'props.summary')
+        ->assertJsonCount(5, 'props.applicant')
+        ->assertJsonPath('props.applicant.name', 'Private AUI Applicant')
+        ->assertJsonPath('props.applicant.mobile', '09173011987')
+        ->assertJsonPath('props.applicant.address', null)
+        ->assertJsonPath('encryptHistory', true)
         ->assertJsonPath('props.summary.reference', $outcome->provider_reference)
         ->assertJsonPath('props.summary.notice', 'Demonstration only. This is not an issued insurance policy and does not establish insurance coverage.');
     expect($response->headers->get('Cache-Control'))->toContain('no-store')
-        ->and($response->getContent())->not->toContain('Private AUI Applicant', '09173011987', 'private_payload', 'applicant_evidence')
+        ->and($response->getContent())->not->toContain('private_payload', 'applicant_evidence', 'artifact_path', 'payer_account')
+        ->and($url)->not->toContain('Private', '09173011987')
+        ->and(json_encode($summaries->present($outcome)))->not->toContain('Private AUI Applicant', '09173011987')
         ->and(campaignPaymentFinancialCounts())->toBe($before);
     $this->get(route('x-change.demo-policy.show', ['outcome' => $outcome->reference]))->assertForbidden();
     $this->get($url.'&extra=changed')->assertForbidden();
@@ -1907,6 +1914,27 @@ it('serves only a signed redacted demo summary and rejects tampered expired or d
     $this->get($url)->assertForbidden();
     expect($summaries->url($outcome))->toBeNull();
     Queue::assertNotPushed(SendDemonstrationPolicySummaryJob::class);
+    Http::assertNothingSent();
+});
+
+it('shows only the five allowed submitted fields without changing policy transport or SMS payloads', function (): void {
+    Queue::fake();
+    Http::fake();
+    config()->set('x-change.settlement.policy_completion.demonstration_summary.enabled', true);
+    $outcome = auiDemoSummaryOutcome(applicant: [
+        'name' => '<script>alert(1)</script>', 'mobile' => '09173011987',
+        'email' => 'demo@example.test', 'address' => '123 Demo Street', 'birth_date' => '1990-01-02',
+    ]);
+    $summaries = app(DemonstrationPolicySummary::class);
+    $response = $this->get($summaries->url($outcome), ['X-Inertia' => 'true']);
+    $response->assertSuccessful()
+        ->assertJsonPath('props.applicant.name', '<script>alert(1)</script>')
+        ->assertJsonPath('props.applicant.email', 'demo@example.test')
+        ->assertJsonPath('props.applicant.address', '123 Demo Street')
+        ->assertJsonPath('props.applicant.birth_date', '1990-01-02')
+        ->assertJsonCount(5, 'props.applicant');
+    expect(json_encode($outcome->safe_result))->not->toContain('Demo Street', 'demo@example.test', '1990-01-02')
+        ->and($summaries->url($outcome))->not->toContain('demo@example.test', '1990-01-02');
     Http::assertNothingSent();
 });
 
@@ -1980,11 +2008,11 @@ it('rejects a correctly signed demo summary link for a persisted failed outcome'
     expect(FeedbackDeliveryRecord::query()->count())->toBe(0);
 });
 
-function auiDemoSummaryOutcome(array $payer = [], ?PolicyCompletionOutcomeData $result = null): PolicyCompletionOutcome
+function auiDemoSummaryOutcome(array $payer = [], ?PolicyCompletionOutcomeData $result = null, ?array $applicant = null): PolicyCompletionOutcome
 {
     [$projection, $maker] = auiPolicyCompletionProjection($payer ?: [
         'payer_institution_ciphertext' => 'GXCHPHM2XXX', 'payer_account_ciphertext' => '09173011987',
-    ]);
+    ], $applicant);
     $checker = actingAsTestUser(0);
     config()->set('x-change.settlement.policy_completion.maker_ids', [(string) $maker->getKey()]);
     config()->set('x-change.settlement.policy_completion.checker_ids', [(string) $checker->getKey()]);
@@ -2212,8 +2240,9 @@ function configureAutomaticDemoPolicy(CompletionClaimEvidenceProjection $project
     Http::fake(['https://demo.m.pipedream.net/*' => $sequence]);
 }
 
-function auiPolicyCompletionProjection(array $payer = []): array
+function auiPolicyCompletionProjection(array $payer = [], ?array $applicant = null): array
 {
+    $applicant ??= ['name' => 'Private AUI Applicant', 'mobile' => '09173011987'];
     configureCampaignCoverageTestDriver();
     [$recognition, $binding] = recognizedCampaignPayment(12_200, $payer);
     $bound = app(BindProvisionalCoverage::class)->handle(
@@ -2223,11 +2252,11 @@ function auiPolicyCompletionProjection(array $payer = []): array
     $issued = app(IssueCompletionPayCode::class)->handle(
         $bound->coverage,
         $binding->standingFundingAddress->owner,
-        new CompletionPayCodeInstructionsData(['name', 'mobile']),
+        new CompletionPayCodeInstructionsData(array_keys($applicant)),
     );
     app(SubmitPayCodeClaim::class)->handle($issued->voucher, [
         'mobile' => '09173011987',
-        'inputs' => ['name' => 'Private AUI Applicant', 'mobile' => '09173011987'],
+        'inputs' => $applicant,
     ]);
 
     return [

@@ -11,6 +11,29 @@ snapshot from inception, and issues one zero-value completion Pay Code.
 
 ## Current Position
 
+### Private demo-summary applicant details — 2026-09-24
+
+The user approved showing submitted name, address, birth date, mobile, and email
+on the expiring signed demo summary and publishing/deploying to testing. The page
+reads only those five scalar fields from the existing policy preparation's
+persisted claim-evidence projection. Missing/non-string values are not guessed.
+No provider payer-name fallback, payment-account fields, OTP proof, raw metadata,
+artifact paths, or identity-verification assertion is exposed. The public-safe
+summary and SMS/transport/outcome payloads remain unchanged.
+
+Signed-link validation and expiry, private no-store/no-referrer/noindex headers,
+and escaped Vue rendering remain; Inertia history encryption is now enabled for
+this response. A valid link is a bearer credential, not authenticated identity:
+anyone holding it can view the fields, including recipients of older unexpired
+links. The page warns not to share it. Demonstration-only/not-insurance notice is
+retained. No payment or claim processing is changed; duplicate-submission work
+remains deferred.
+
+Verification: full affected campaign suite 96 passed / 678 assertions; Vue summary
+tests 2 passed (including escaped applicant text and missing values); Pint and
+whitespace checks passed. Independent privacy review found no blockers. Testing
+publication/deployment is authorized for this slice; no live SMS or claim replay.
+
 ### Wallet-bound completion without OTP — 2026-09-24 (local)
 
 The user confirmed the v1.0.46 live lifecycle worked, then approved removing OTP

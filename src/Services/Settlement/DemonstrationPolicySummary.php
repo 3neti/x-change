@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Settlement;
 
 use Illuminate\Support\Facades\URL;
+use InvalidArgumentException;
+use LBHurtado\XChange\Actions\Settlement\PrepareCampaignPolicyCompletion;
 use LBHurtado\XChange\Enums\PolicyCompletionOutcomeStatus;
 use LBHurtado\XChange\Enums\PolicyCompletionRequestStatus;
 use LBHurtado\XChange\Models\PolicyCompletionOutcome;
@@ -79,5 +81,26 @@ final class DemonstrationPolicySummary
             'recorded_at' => $outcome->recorded_at->toIso8601String(),
             'notice' => 'Demonstration only. This is not an issued insurance policy and does not establish insurance coverage.',
         ];
+    }
+
+    /** @return array<string, string|null> */
+    public function privateApplicantDetails(PolicyCompletionOutcome $outcome): array
+    {
+        abort_unless($this->eligible($outcome), 404);
+
+        try {
+            $evidence = app(PrepareCampaignPolicyCompletion::class)
+                ->handle($outcome->request->projection)->privateApplicantEvidence();
+        } catch (InvalidArgumentException) {
+            abort(404);
+        }
+
+        $details = [];
+        foreach (['name', 'address', 'birth_date', 'mobile', 'email'] as $key) {
+            $value = $evidence[$key] ?? null;
+            $details[$key] = is_string($value) && trim($value) !== '' ? trim($value) : null;
+        }
+
+        return $details;
     }
 }
