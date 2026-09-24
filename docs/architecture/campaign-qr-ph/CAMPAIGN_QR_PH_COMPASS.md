@@ -11,6 +11,45 @@ snapshot from inception, and issues one zero-value completion Pay Code.
 
 ## Current Position
 
+### Entry-mode-aware campaign activity — 2026-09-24 (local)
+
+The Endpoint Campaign row previously used only `usage_count` and display sessions.
+Printed payment-first QR Ph journeys do not enter that path, so seven recognized
+payments and six completed demo journeys could appear as zero activity.
+
+The local correction adds `CampaignPaymentProgressReadModel`: five grouped reads
+over recognition-backed journeys, scoped to the owner's selected payment-first
+campaigns, with no full history hydration. It reports recognized payment count,
+gross amounts separately by currency, completed claim-evidence projections,
+successful demo outcomes, pending claims, and payments awaiting invitation
+issuance. Retries do not create extra counts. Demo success requires successful
+request and outcome statuses plus `policy_issued_demo`; it is not real insurance.
+
+Campaign rows now lead with Show Payment QR Ph and View Activity, show the bound
+fixed premium (or open-amount wording), and distinguish the secondary public-link
+QR. View Activity filters the existing lifecycle page by an owner-checked campaign
+reference before its bounded list limit. Public-link progress remains unchanged.
+Quarantine remains a separate attention badge and is not recognized revenue.
+
+Owning files: `src/Services/Cockpit/CampaignPaymentProgressReadModel.php`,
+`CampaignPolicyLifecycleReadModel.php` in the same directory;
+`src/Http/Controllers/Web/Cockpit/CockpitCampaignWorksheetController.php` and
+`CockpitCampaignPolicyLifecyclePageController.php`; campaign and policy-lifecycle
+Vue pages; their focused frontend tests/route stub; and
+`tests/Feature/Actions/Campaigns/BindCampaignPaymentQrTest.php`.
+
+Verification: affected backend suites 146 passed / 1,132 assertions; final focused
+regressions (including two additional unsuccessful demo-code cases) 7 passed /
+53 assertions; full Cockpit frontend suite 556 passed across 67 files. No provider
+requests, live claims, financial mutations, dependencies, schema, `usage_count`,
+limits, journal semantics, or pause behavior changed. The unrelated dirty sandbox
+is untouched. No host asset publication/build, browser acceptance, release, or
+Cloud deployment is included in this local gate. Next gate: release/adopt in an
+isolated host, build, then verify the testing rows against current persisted data.
+Provider-side behavior when pausing an already printed QR Ph remains a separate
+safety investigation. SMS delivery detail and expanded quarantine drill-down are
+not part of this slice.
+
 ### Private demo-summary applicant details — 2026-09-24
 
 The user approved showing submitted name, address, birth date, mobile, and email

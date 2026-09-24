@@ -16,6 +16,11 @@ import { formatAbsoluteTime } from "../utils/dateTime";
 
 type Props = CockpitHeaderPageProps & {
   lifecycles: CampaignPolicyLifecycle[];
+  campaign_filter?: {
+    reference: string;
+    title: string;
+    endpoint_slug: string;
+  } | null;
 };
 const props = defineProps<Props>();
 
@@ -55,7 +60,19 @@ function stageIcon(item: CampaignPolicyLifecycle): typeof AlertTriangle {
   return CircleDashed;
 }
 
+function isDemoSummaryReady(item: CampaignPolicyLifecycle): boolean {
+  return (
+    item.stage === "policy_succeeded" &&
+    item.policy?.status === "succeeded" &&
+    item.policy?.outcome_status === "succeeded" &&
+    item.policy?.result_code === "policy_issued_demo"
+  );
+}
+
 function stageGuidance(item: CampaignPolicyLifecycle): string {
+  if (isDemoSummaryReady(item)) {
+    return "A demonstration summary was recorded. This is not an issued insurance policy.";
+  }
   const guidance: Record<string, string> = {
     provisional_coverage_active:
       "Payment is recognized and provisional coverage is active.",
@@ -102,6 +119,14 @@ function stageGuidance(item: CampaignPolicyLifecycle): string {
           >
             Policy lifecycle
           </h1>
+          <p
+            v-if="props.campaign_filter"
+            data-testid="campaign-policy-lifecycle-filter"
+            class="mt-2 break-words text-sm font-semibold"
+          >
+            {{ props.campaign_filter.title }} ·
+            {{ props.campaign_filter.endpoint_slug }}
+          </p>
           <p
             class="mt-1 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300"
           >
@@ -183,7 +208,11 @@ function stageGuidance(item: CampaignPolicyLifecycle): string {
                   class="size-3.5 shrink-0"
                   aria-hidden="true"
                 />
-                {{ stageLabels[item.stage] ?? label(item.stage) }}
+                {{
+                  isDemoSummaryReady(item)
+                    ? "Demo summary ready"
+                    : (stageLabels[item.stage] ?? label(item.stage))
+                }}
               </span>
               <span
                 v-if="item.attention_required"

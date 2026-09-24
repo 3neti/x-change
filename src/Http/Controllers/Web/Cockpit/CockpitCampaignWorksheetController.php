@@ -38,6 +38,7 @@ use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Cockpit\CampaignPaymentEvidenceAttentionReadModel;
+use LBHurtado\XChange\Services\Cockpit\CampaignPaymentProgressReadModel;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegistry;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityRequirementResolver;
 use Throwable;
@@ -54,6 +55,7 @@ class CockpitCampaignWorksheetController extends Controller
         private readonly EndpointCampaignRepository $endpoints,
         private readonly EndpointCampaignSummary $endpointSummary,
         private readonly CampaignPaymentEvidenceAttentionReadModel $paymentEvidenceAttention,
+        private readonly CampaignPaymentProgressReadModel $paymentProgress,
     ) {}
 
     public function index(Request $request): Response
@@ -294,11 +296,12 @@ class CockpitCampaignWorksheetController extends Controller
             ->get()
             ->keyBy('endpoint_campaign_id');
         $progress = $this->endpointProgressFor($campaigns);
+        $paymentProgress = $this->paymentProgress->forCampaigns($campaigns);
         $attention = $this->paymentEvidenceAttention->forCampaigns($campaigns);
         $creator = $this->endpointCreatorFor($owner);
 
         return $campaigns
-            ->map(function (LeadCampaign $campaign) use ($attention, $creator, $progress, $paymentQrBindings): array {
+            ->map(function (LeadCampaign $campaign) use ($attention, $creator, $progress, $paymentProgress, $paymentQrBindings): array {
                 $publicUrl = route('x-change.leads.start', [
                     'merchant_slug' => $campaign->merchant_slug,
                     'endpoint_slug' => $campaign->endpoint_slug,
@@ -314,6 +317,7 @@ class CockpitCampaignWorksheetController extends Controller
                     'creator' => $creator,
                     'availability_state' => $this->endpointAvailabilityFor($campaign),
                     'progress' => $progress[$campaign->getKey()] ?? $this->emptyEndpointProgress($campaign),
+                    'payment_progress' => $paymentProgress[$campaign->getKey()] ?? null,
                     'payment_attention' => $attention[$campaign->getKey()] ?? null,
                     'entry_mode' => (string) data_get($campaign->settings, 'entry_mode', 'pay_code_on_open'),
                     'payment_qr' => $paymentQrBinding === null ? null : [

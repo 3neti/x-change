@@ -16,12 +16,13 @@ final readonly class CampaignPolicyLifecycleReadModel
     public function __construct(private CampaignPolicyLifecycleStageResolver $stages) {}
 
     /** @return list<CampaignPolicyLifecycleData> */
-    public function forOwner(Model $owner, int $limit = 50): array
+    public function forOwner(Model $owner, int $limit = 50, ?string $campaignReference = null): array
     {
         $campaignIds = LeadCampaign::query()
             ->select('id')
             ->where('owner_type', $owner->getMorphClass())
-            ->where('owner_id', (string) $owner->getKey());
+            ->where('owner_id', (string) $owner->getKey())
+            ->when($campaignReference !== null, fn ($query) => $query->where('reference', $campaignReference));
 
         return ProvisionalCoverage::query()
             ->select(['id', 'reference', 'campaign_payment_recognition_id', 'endpoint_campaign_id', 'campaign_revision_id', 'status', 'coverage_type', 'coverage_amount_minor', 'currency', 'effective_at', 'expires_at', 'bound_at'])

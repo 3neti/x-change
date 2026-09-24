@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Bavix\Wallet\Models\Transaction;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Testing\Fluent\AssertableJson;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
@@ -91,6 +93,7 @@ use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Models\StandingFundingQrArtifact;
 use LBHurtado\XChange\Services\Claim\VoucherClaimFlowCompiler;
 use LBHurtado\XChange\Services\Cockpit\CampaignPaymentEvidenceAttentionReadModel;
+use LBHurtado\XChange\Services\Cockpit\CampaignPaymentProgressReadModel;
 use LBHurtado\XChange\Services\Cockpit\CampaignPolicyLifecycleReadModel;
 use LBHurtado\XChange\Services\Cockpit\CampaignPolicyLifecycleStageResolver;
 use LBHurtado\XChange\Services\Execution\CampaignCoverageCompletionExecutionDriver;
@@ -1275,6 +1278,84 @@ it('governs durable policy completion requests and terminal outcomes without tra
             'sensitive-result',
         );
     });
+    Http::assertNothingSent();
+});
+
+it('counts payment first activity independently of endpoint starts without replay inflation or writes', function (): void {
+    $outcome = auiDemoSummaryOutcome();
+    $coverage = $outcome->request->projection->issuance->coverage;
+    $binding = $coverage->binding;
+    $campaign = $coverage->campaign;
+    $owner = $campaign->owner;
+    $observation = campaignPaymentObservation($binding->standingFundingAddress, 'activity-pending', 'settled');
+    $recognizer = app(RecognizeQualifyingCampaignPayment::class);
+    $pending = $recognizer->handle($binding, $observation)->recognition;
+    $recognizer->handle($binding, $observation);
+    $unclaimed = app(BindProvisionalCoverage::class)->handle($pending, auiCampaignCoverageTerms($pending));
+    app(IssueCompletionPayCode::class)->handle($unclaimed->coverage, $owner, new CompletionPayCodeInstructionsData(['name', 'mobile']));
+    $recognizer->handle($binding, campaignPaymentObservation($binding->standingFundingAddress, 'activity-no-coverage', 'settled'));
+    $empty = campaignPaymentQrCampaign($owner, CampaignEntryMode::ReusablePaymentQr);
+    $ordinary = campaignPaymentQrCampaign($owner, CampaignEntryMode::PayCodeOnOpen);
+    $before = campaignPaymentFinancialCounts();
+    Http::fake();
+    Event::fake();
+    $reader = app(CampaignPaymentProgressReadModel::class);
+    $rows = $reader->forCampaigns(LeadCampaign::query()->whereKey([$campaign->id, $empty->id, $ordinary->id])->get());
+
+    expect($rows[$campaign->id])->toMatchArray([
+        'payments_received' => 3,
+        'received_amounts' => [['currency' => 'PHP', 'amount_minor' => 36_600]],
+        'details_submitted' => 1,
+        'demo_summaries_ready' => 1,
+        'awaiting_claim' => 1,
+        'awaiting_invitation' => 1,
+    ])->and($rows[$empty->id]['payments_received'])->toBe(0)
+        ->and($rows)->not->toHaveKey($ordinary->id)
+        ->and($campaign->fresh()->usage_count)->toBe(0)
+        ->and($reader->forCampaigns(new Collection))->toBe([])
+        ->and(campaignPaymentFinancialCounts())->toBe($before);
+
+    $this->actingAs($owner)->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.index'))
+        ->assertOk()->assertJson(fn (AssertableJson $json) => $json
+        ->where('props.endpoint_campaigns', fn ($campaigns) => collect($campaigns)->firstWhere('reference', $campaign->reference)['payment_progress']['payments_received'] === 3)
+        ->etc());
+    Http::assertNothingSent();
+    Event::assertNotDispatched(CampaignPaymentRecognized::class);
+});
+
+it('does not count non demo or unsuccessful outcomes as ready demo summaries', function (PolicyCompletionOutcomeStatus $status, string $code): void {
+    $outcome = auiDemoSummaryOutcome(result: new PolicyCompletionOutcomeData($status, $code));
+    $campaign = $outcome->request->projection->issuance->coverage->campaign;
+    $rows = app(CampaignPaymentProgressReadModel::class)
+        ->forCampaigns(LeadCampaign::query()->whereKey($campaign->id)->get());
+    expect($rows[$campaign->id]['payments_received'])->toBe(1)
+        ->and($rows[$campaign->id]['details_submitted'])->toBe(1)
+        ->and($rows[$campaign->id]['demo_summaries_ready'])->toBe(0)
+        ->and($rows[$campaign->id]['awaiting_claim'])->toBe(0);
+})->with([
+    [PolicyCompletionOutcomeStatus::Succeeded, 'accepted'],
+    [PolicyCompletionOutcomeStatus::Failed, 'declined'],
+    [PolicyCompletionOutcomeStatus::Indeterminate, 'unknown'],
+    [PolicyCompletionOutcomeStatus::Failed, 'policy_issued_demo'],
+    [PolicyCompletionOutcomeStatus::Indeterminate, 'policy_issued_demo'],
+]);
+
+it('filters policy activity by an owned campaign and rejects foreign unknown or malformed filters', function (): void {
+    [$projection, $owner] = auiPolicyCompletionProjection();
+    $campaign = $projection->issuance->coverage->campaign;
+    $empty = campaignPaymentQrCampaign($owner, CampaignEntryMode::ReusablePaymentQr);
+    Http::fake();
+    $url = fn ($reference) => route('x-change.cockpit.campaigns.policy-lifecycle.index', ['campaign' => $reference]);
+    $this->actingAs($owner)->withHeader('X-Inertia', 'true')->get($url($campaign->reference))
+        ->assertOk()->assertJsonCount(1, 'props.lifecycles')
+        ->assertJsonPath('props.campaign_filter.reference', $campaign->reference);
+    $this->get($url($empty->reference))->assertOk()->assertJsonCount(0, 'props.lifecycles');
+    $this->get($url('unknown'))->assertNotFound();
+    $this->get($url(['invalid']))->assertNotFound();
+    $other = actingAsTestUser(0);
+    $this->actingAs($other)->get($url($campaign->reference))->assertNotFound();
+    expect(app(CampaignPolicyLifecycleReadModel::class)->forOwner($other, campaignReference: $campaign->reference))->toBe([]);
     Http::assertNothingSent();
 });
 

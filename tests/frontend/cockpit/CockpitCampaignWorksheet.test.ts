@@ -118,6 +118,62 @@ const endpointCampaign = {
 };
 
 describe('Cockpit campaign worksheets', () => {
+    it('shows payment first milestones instead of endpoint starts and links to campaign scoped activity', async () => {
+        const campaign = {
+            ...endpointCampaign,
+            usage_count: 0,
+            entry_mode: 'reusable_payment_qr' as const,
+            payment_qr: {
+                reference: 'QR1',
+                amount_mode: 'fixed' as const,
+                fixed_amount_minor: 5000,
+                currency: 'PHP',
+                qr_data_uri: 'data:image/png;base64,QRPH',
+                generated_at: null,
+            },
+            payment_progress: {
+                payments_received: 7,
+                received_amounts: [{ currency: 'PHP', amount_minor: 35000 }],
+                details_submitted: 6,
+                demo_summaries_ready: 6,
+                awaiting_claim: 1,
+                awaiting_invitation: 0,
+            },
+        };
+        const wrapper = mount(Campaigns, {
+            props: { worksheets: [], endpoint_campaigns: [campaign] },
+        });
+        await wrapper
+            .get('[data-testid="campaign-flavor-endpoints"]')
+            .trigger('click');
+        const row = wrapper.get(
+            `[data-testid="campaign-endpoint-card-${campaign.reference}"]`,
+        );
+        expect(row.text()).toContain('7 payments received');
+        expect(row.text()).toContain('₱350.00 received');
+        expect(row.text()).toContain(
+            '6 details submitted · 6 demo summaries ready',
+        );
+        expect(row.text()).toContain('1 awaiting claim');
+        expect(row.text()).toContain('₱50.00 per payment');
+        expect(row.text()).toContain('Show Payment QR Ph');
+        expect(row.text()).not.toContain('No principal');
+        expect(
+            row.find('[data-testid="campaign-endpoint-progress"]').exists(),
+        ).toBe(false);
+        expect(
+            row
+                .get(
+                    `[data-testid="campaign-payment-activity-${campaign.reference}"]`,
+                )
+                .attributes('href'),
+        ).toContain(`campaign=${campaign.reference}`);
+        await wrapper.setProps({
+            endpoint_campaigns: [{ ...campaign, payment_progress: null }],
+        });
+        expect(row.text()).toContain('Payment activity unavailable');
+    });
+
     it('shows an owner campaign QR Ph stamp with enlargement, download, and print actions', async () => {
         const paymentCampaign = {
             ...endpointCampaign,

@@ -49,6 +49,57 @@ const lifecycle = {
 };
 
 describe("Cockpit campaign policy lifecycle", () => {
+  it.each(["failed", "indeterminate"])(
+    "keeps %s demo-coded outcomes in attention state",
+    (status) => {
+      const wrapper = mount(CampaignPolicyLifecycle, {
+        props: {
+          lifecycles: [
+            {
+              ...lifecycle,
+              stage: `policy_${status}`,
+              attention_required: true,
+              policy: {
+                ...lifecycle.policy,
+                status,
+                outcome_status: status,
+                result_code: "policy_issued_demo",
+              },
+            },
+          ],
+        },
+      });
+      expect(wrapper.text()).not.toContain("Demo summary ready");
+      expect(
+        wrapper
+          .find('[data-testid="campaign-policy-lifecycle-attention"]')
+          .exists(),
+      ).toBe(true);
+    },
+  );
+  it("identifies the filtered campaign and never labels a demo outcome as a real policy", () => {
+    const wrapper = mount(CampaignPolicyLifecycle, {
+      props: {
+        campaign_filter: {
+          reference: "01CAMPAIGN",
+          title: "AUI demo",
+          endpoint_slug: "aui-unique",
+        },
+        lifecycles: [
+          {
+            ...lifecycle,
+            policy: { ...lifecycle.policy, result_code: "policy_issued_demo" },
+          },
+        ],
+      },
+    });
+    expect(
+      wrapper.get('[data-testid="campaign-policy-lifecycle-filter"]').text(),
+    ).toContain("aui-unique");
+    expect(wrapper.text()).toContain("Demo summary ready");
+    expect(wrapper.text()).toContain("not an issued insurance policy");
+    expect(wrapper.text()).not.toContain("Policy completed");
+  });
   it("renders a coherent read-only lifecycle without private or mutation surfaces", () => {
     const wrapper = mount(CampaignPolicyLifecycle, {
       props: { lifecycles: [lifecycle] },
