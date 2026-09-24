@@ -13,7 +13,12 @@ return new class extends Migration
         Schema::create('x_change_policy_completion_requests', function (Blueprint $table): void {
             $table->id();
             $table->ulid('reference')->unique();
-            $table->foreignId('completion_claim_evidence_projection_id')->unique()->constrained('x_change_completion_claim_evidence_projections')->restrictOnDelete();
+            $table->foreignId('completion_claim_evidence_projection_id');
+            $table->unique('completion_claim_evidence_projection_id', 'xchg_policy_request_projection_unique');
+            $table->foreign('completion_claim_evidence_projection_id', 'xchg_policy_request_projection_foreign')
+                ->references('id')
+                ->on('x_change_completion_claim_evidence_projections')
+                ->restrictOnDelete();
             $table->string('driver_id');
             $table->string('driver_version');
             $table->string('idempotency_key')->unique();
@@ -33,7 +38,12 @@ return new class extends Migration
         Schema::create('x_change_policy_completion_outcomes', function (Blueprint $table): void {
             $table->id();
             $table->ulid('reference')->unique();
-            $table->foreignId('policy_completion_request_id')->unique()->constrained('x_change_policy_completion_requests')->restrictOnDelete();
+            $table->foreignId('policy_completion_request_id');
+            $table->unique('policy_completion_request_id', 'xchg_policy_outcome_request_unique');
+            $table->foreign('policy_completion_request_id', 'xchg_policy_outcome_request_foreign')
+                ->references('id')
+                ->on('x_change_policy_completion_requests')
+                ->restrictOnDelete();
             $table->string('status')->index();
             $table->string('result_code');
             $table->string('provider_reference')->nullable();
