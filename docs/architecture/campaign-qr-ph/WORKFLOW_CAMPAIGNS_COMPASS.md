@@ -12,6 +12,34 @@ The customer stays in the existing Pay Code claim/payment experience.
 
 ## Current position
 
+### Gate 4c complete — publication and local adoption (2026-09-25)
+
+User explicitly approved main `8c57bfb3` and v1.0.51 publication plus local
+sandbox adoption. Main and annotated tag were pushed atomically. Packagist
+independently resolves v1.0.51 to `8c57bfb3d2435a8aa18ca41db851b2f9f2d40317`.
+
+Sandbox normal Composer adoption changed only x-change v1.0.50 → v1.0.51;
+constraint is now ^1.0.51. No path override or vendor edits. Scripts were withheld
+during installation, followed by explicit package discovery, targeted additive
+migration (already applied in local acceptance), and 15-resource build publication.
+Host workflow-adoption, policy-transport configuration and funding-wiring tests:
+5 passed / 25 assertions. Strict Composer validation, asset doctor, production
+build (3,711 modules), and diff checks pass. Existing annotation/chunk-size build
+warnings and abandoned eloquent/enumeration warning remain; Composer reported no
+security advisories.
+
+Local host commit: `8c2a9ffebe9d427ed7ca243091e8dfe7659ea181` (not pushed).
+Changed host files are composer.json, composer.lock, generated Campaigns.vue and
+CockpitCampaignWorkflowDraftEditor.vue. Other generated wrapper/routes/build
+outputs follow existing ignored-file publication rules. Unrelated host work is
+preserved. No host grants or live activation were added; no Cloud/x-PayOut change,
+payment, SMS, insurer call or new browser lifecycle was performed in this gate.
+Prior local browser evidence is retained below.
+
+Next: explicitly authorize a host account/workflow for acceptance of the installed
+release, or authorize a separate testing deployment gate. PhilHealth publication
+and live transport remain outside this completed gate.
+
 ### Gate 4c — controlled release review (2026-09-25)
 
 Candidate reviewed against main `447abd4b`, with v1.0.51 proposed (not tagged).
