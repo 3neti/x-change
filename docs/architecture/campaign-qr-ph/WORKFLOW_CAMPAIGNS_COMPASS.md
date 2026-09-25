@@ -1,6 +1,6 @@
 # Workflow-driven campaigns compass
 
-Updated: 2026-09-25
+Updated: 2026-09-26
 Plan: [WORKFLOW_CAMPAIGNS_PLAN.md](WORKFLOW_CAMPAIGNS_PLAN.md)
 
 ## North star
@@ -12,25 +12,34 @@ The customer stays in the existing Pay Code claim/payment experience.
 
 ## Current position
 
-### Prepaid completion release — testing push awaiting guard approval (2026-09-26)
+### Prepaid completion release — testing deployed and verified (2026-09-26)
 
 Published x-change `v1.0.54` at `053bf65eca1471ecdc166d7601465e0644862ba3`.
-The sandbox installed that exact released source. Local host commit `ac209db4`
+The sandbox installed that exact released source. Published host commit `ac209db4`
 changes only the Composer requirement/lock; unrelated host work remains excluded.
 Strict Composer validation, 15-resource asset verification, production build and
 eight host tests / 30 assertions passed.
 
-Read-only in-app browser inspection of existing paid claim AUI-P5E7 still shows
-the old “Continue to payment” message before rollout. No claim, payment, policy
-request or SMS was repeated.
+The user explicitly authorized the production guard after the initial safety
+pause. Production push-to-deploy was temporarily disabled and independently
+verified before the shared main push. Testing's automatic deployment
+`depl-a2d54e22-5416-422c-9e8d-832198730186` succeeded at 2026-09-25 21:06:23 UTC
+from exact host source `ac209db44b1d3d7159d4243712691bef8044765d`.
+The CLI monitor was invoked but remained silent after completion; authoritative
+deployment details established success, then the idle monitor was stopped.
 
-Testing and production both track the sandbox `main` branch with push-to-deploy
-enabled. The safety review rejected the proposed temporary production
-push-to-deploy guard because that exact production setting change requires
-explicit user approval. No production setting changed, no host push occurred,
-and no Cloud deployment was initiated. Do not retry through another API path.
-Next: obtain explicit permission to disable production push-to-deploy temporarily,
-verify it, push/deploy testing, then restore and verify the original setting.
+Runtime confirms x-change `v1.0.54`; strict asset doctor passed (command
+`comm-a2d54f90-0008-4062-bb5f-4bb5923edc9c`). Read-only persisted projection of
+AUI-P5E7 reports `ready`. The in-app browser showed “Policy result ready” and
+confirmed payment received/details submitted, replacing the earlier “Continue
+to payment” rider. No payment action or private policy CTA appeared for this
+older claim/new session; the existing signed SMS link remains the fallback.
+No claim, payment, policy request or SMS was repeated.
+
+Production push-to-deploy was restored to its original `true` and independently
+verified; its current deployment remains null. No production deployment was
+requested. Broader journey-classifier/simulator work remains a separate gate;
+a fresh live payment/SMS acceptance run requires explicit authorization.
 
 ### Post-payment completion success correction — local only (2026-09-25)
 
