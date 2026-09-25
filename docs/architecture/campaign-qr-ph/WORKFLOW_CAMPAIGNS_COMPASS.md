@@ -12,6 +12,23 @@ The customer stays in the existing Pay Code claim/payment experience.
 
 ## Current position
 
+### Package discovery release gate (2026-09-25)
+
+User authorized shipping. Dependency-order publication completed:
+- settlement-envelope v1.4.0: `b874a44229c968dc12bf753842de2df7a176b972`.
+- AUI v1.1.0: `6415930d07266ed7f69ad8e96f9d08e898c8445e`.
+- PhilHealth v1.1.0: `9fcf987c07b20294776b2eaedbd967a155b236fe`.
+
+Both integrations now require envelope ^1.4. Packagist confirms all three source
+references. Full dependency suites passed against normal published dependencies
+(193 upstream / 4 existing skips, 90 AUI, 27 BST). x-change now requires envelope
+^1.4 and both integrations ^1.1; its normal lock changes only those dependencies.
+No temporary manifests, path overrides or fixture-copy installation steps remain.
+x-change release regressions passed: 94 tests / 424 assertions against published
+dependencies. Strict Composer validation and whitespace checks pass. Testing
+rollout follows package publication; production auto-deploy is temporarily
+disabled and independently verified before the upcoming host push.
+
 ### Package-provided discovery — local acceptance complete (2026-09-25)
 
 The user approved removing the manual host-fixture requirement. Upstream owns

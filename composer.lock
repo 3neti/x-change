@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5c892a8c6447ce534a434390bad89583",
+    "content-hash": "a861c557f1e090e7c3542e1b372b5f02",
     "packages": [
         {
             "name": "3neti/cash",
@@ -1201,16 +1201,16 @@
         },
         {
             "name": "3neti/settlement-envelope",
-            "version": "v1.3.0",
+            "version": "v1.4.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/settlement-envelope.git",
-                "reference": "a1b4576b7b8e89c8962154aabbc884f743c37af5"
+                "reference": "b874a44229c968dc12bf753842de2df7a176b972"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/settlement-envelope/zipball/a1b4576b7b8e89c8962154aabbc884f743c37af5",
-                "reference": "a1b4576b7b8e89c8962154aabbc884f743c37af5",
+                "url": "https://api.github.com/repos/3neti/settlement-envelope/zipball/b874a44229c968dc12bf753842de2df7a176b972",
+                "reference": "b874a44229c968dc12bf753842de2df7a176b972",
                 "shasum": ""
             },
             "require": {
@@ -1253,26 +1253,26 @@
             "description": "Driver-based evidence envelope system for settlement gating",
             "support": {
                 "issues": "https://github.com/3neti/settlement-envelope/issues",
-                "source": "https://github.com/3neti/settlement-envelope/tree/v1.3.0"
+                "source": "https://github.com/3neti/settlement-envelope/tree/v1.4.0"
             },
-            "time": "2026-09-25T04:23:50+00:00"
+            "time": "2026-09-25T10:11:13+00:00"
         },
         {
             "name": "3neti/settlement-envelope-aui",
-            "version": "v1.0.0",
+            "version": "v1.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/settlement-envelope-aui.git",
-                "reference": "449e5c7cc15bd9059788d8d569730a1cf6fc445d"
+                "reference": "6415930d07266ed7f69ad8e96f9d08e898c8445e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/settlement-envelope-aui/zipball/449e5c7cc15bd9059788d8d569730a1cf6fc445d",
-                "reference": "449e5c7cc15bd9059788d8d569730a1cf6fc445d",
+                "url": "https://api.github.com/repos/3neti/settlement-envelope-aui/zipball/6415930d07266ed7f69ad8e96f9d08e898c8445e",
+                "reference": "6415930d07266ed7f69ad8e96f9d08e898c8445e",
                 "shasum": ""
             },
             "require": {
-                "3neti/settlement-envelope": "^1.3",
+                "3neti/settlement-envelope": "^1.4",
                 "illuminate/contracts": "^12.0 || ^13.0",
                 "illuminate/http": "^12.0 || ^13.0",
                 "illuminate/support": "^12.0 || ^13.0",
@@ -1284,6 +1284,13 @@
                 "pestphp/pest": "^3.0 || ^4.0"
             },
             "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "ThreeNeti\\SettlementEnvelopeAui\\SettlementEnvelopeAuiServiceProvider"
+                    ]
+                }
+            },
             "autoload": {
                 "psr-4": {
                     "ThreeNeti\\SettlementEnvelopeAui\\": "src/"
@@ -1296,26 +1303,26 @@
             "description": "Standalone demonstration-only AUI workflow transport for Settlement Envelope.",
             "support": {
                 "issues": "https://github.com/3neti/settlement-envelope-aui/issues",
-                "source": "https://github.com/3neti/settlement-envelope-aui/tree/v1.0.0"
+                "source": "https://github.com/3neti/settlement-envelope-aui/tree/v1.1.0"
             },
-            "time": "2026-09-25T04:27:25+00:00"
+            "time": "2026-09-25T12:09:04+00:00"
         },
         {
             "name": "3neti/settlement-envelope-philhealth",
-            "version": "v1.0.0",
+            "version": "v1.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/settlement-envelope-philhealth.git",
-                "reference": "dd6796e2b46efff6d6a7966efc4ff88d6c8eec96"
+                "reference": "9fcf987c07b20294776b2eaedbd967a155b236fe"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/settlement-envelope-philhealth/zipball/dd6796e2b46efff6d6a7966efc4ff88d6c8eec96",
-                "reference": "dd6796e2b46efff6d6a7966efc4ff88d6c8eec96",
+                "url": "https://api.github.com/repos/3neti/settlement-envelope-philhealth/zipball/9fcf987c07b20294776b2eaedbd967a155b236fe",
+                "reference": "9fcf987c07b20294776b2eaedbd967a155b236fe",
                 "shasum": ""
             },
             "require": {
-                "3neti/settlement-envelope": "^1.3",
+                "3neti/settlement-envelope": "^1.4",
                 "illuminate/contracts": "^12.0 || ^13.0",
                 "php": "^8.2"
             },
@@ -1326,6 +1333,13 @@
                 "pestphp/pest-plugin-laravel": "^3.0 || ^4.0"
             },
             "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "ThreeNeti\\SettlementEnvelopePhilhealth\\SettlementEnvelopePhilhealthServiceProvider"
+                    ]
+                }
+            },
             "autoload": {
                 "psr-4": {
                     "ThreeNeti\\SettlementEnvelopePhilhealth\\": "src/"
@@ -1338,9 +1352,9 @@
             "description": "Synthetic PhilHealth BST demonstration integration for settlement envelopes",
             "support": {
                 "issues": "https://github.com/3neti/settlement-envelope-philhealth/issues",
-                "source": "https://github.com/3neti/settlement-envelope-philhealth/tree/v1.0.0"
+                "source": "https://github.com/3neti/settlement-envelope-philhealth/tree/v1.1.0"
             },
-            "time": "2026-09-25T04:27:29+00:00"
+            "time": "2026-09-25T12:09:08+00:00"
         },
         {
             "name": "3neti/voucher",
