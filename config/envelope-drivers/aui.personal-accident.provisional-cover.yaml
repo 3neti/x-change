@@ -5,6 +5,33 @@ driver:
   description: "Demonstration-only campaign settlement schema. It does not represent an accepted insurer transport contract."
   domain: "campaign-settlement"
 
+# Discovery metadata only. The existing accepted transport disposition still governs submission.
+workflow:
+  service: aui-demo
+  title: Purchase demonstration personal accident cover
+  entry_methods: [payment_qr]
+  connection: aui-demo
+  requires_review: false
+  plans:
+    - code: PA5000_DAY
+      version: '1'
+      title: One-day personal accident demonstration
+      currency: PHP
+      premium_minor: 5000
+      benefit_minor: 500000
+      coverage:
+        basis: day
+        duration_days: 1
+  notifications:
+    - event: payment_recognized
+      sms: 'Your demonstration payment was received. Complete your details: {claim_url}'
+      placeholders: [claim_url]
+      allow_override: false
+    - event: demonstration_completed
+      sms: 'Your demonstration summary is ready: {result_url}'
+      placeholders: [result_url]
+      allow_override: false
+
 payload:
   schema:
     id: "x-change.aui-personal-accident-envelope.v1"

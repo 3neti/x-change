@@ -19,7 +19,7 @@ it('sends only the authorized limited payload and validates the demonstration re
         'https://demo.m.pipedream.net/*' => Http::response([
             'schema' => AuiDemonstrationPolicyResponseData::SCHEMA,
             'status' => 'issued_demo',
-            'policy_reference' => 'AUI-DEMO-PIPEDREAM01',
+            'policy_reference' => 'AUI-DEMO-0123456789ABCDEF',
             'product_code' => 'AUI-PA-DEMO',
             'effective_at' => $preparation->coverageEffectiveAt->toIso8601String(),
             'expires_at' => $preparation->coverageExpiresAt?->toIso8601String(),
@@ -30,7 +30,7 @@ it('sends only the authorized limited payload and validates the demonstration re
 
     $result = app(DispatchAuiDemonstrationPolicyViaPipedream::class)->handle($preparation);
 
-    expect($result->policyReference)->toBe('AUI-DEMO-PIPEDREAM01')
+    expect($result->policyReference)->toBe('AUI-DEMO-0123456789ABCDEF')
         ->and($result->outcome()->resultCode)->toBe('policy_issued_demo');
 
     $request = Http::recorded()->sole()[0];
@@ -65,7 +65,7 @@ it('rejects a response that changes the authoritative coverage period', function
         'https://demo.m.pipedream.net/*' => Http::response([
             'schema' => AuiDemonstrationPolicyResponseData::SCHEMA,
             'status' => 'issued_demo',
-            'policy_reference' => 'AUI-DEMO-PIPEDREAM01',
+            'policy_reference' => 'AUI-DEMO-0123456789ABCDEF',
             'product_code' => 'AUI-PA-DEMO',
             'effective_at' => $preparation->coverageEffectiveAt->addDay()->toIso8601String(),
             'expires_at' => $preparation->coverageExpiresAt?->toIso8601String(),
