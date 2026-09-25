@@ -155,9 +155,14 @@ plan/version/terms, entry method, source fingerprint, actor and timestamp. This 
 draft intent, not an executable voucher instruction or a publication authorization.
 Existing active-template lists and endpoint creation exclude these drafts.
 
-The host must explicitly bind `WorkflowAccessPolicy` and configure the driver disk.
-The editor uses the existing `WorkflowCatalog`; it does not globally allow installed
-integrations. Actor and account IDs are both the authenticated owner's
+The host configures its driver disk. The editor's contextual `WorkflowCatalog`
+is available to every signed-in account by default, without per-account workflow
+grants. `x-change-workflows.enabled` (`XCHANGE_WORKFLOW_DRAFTS_ENABLED`, default
+true) can disable discovery, draft creation and publication host-wide. Legacy
+`accounts` grants are ignored. This does not change the global catalog policy,
+enable private connections or bypass publication/execution/reviewer safeguards.
+Pennant integration is deferred; no rollout dependency is added for this switch.
+Actor and account IDs are both the authenticated owner's
 `{morph-class}:{primary-key}`, derived server-side (no browser-supplied account).
 No URLs, tokens or connection objects are accepted from the browser. Catalog props
 omit even the private connection reference; the encrypted snapshot retains its

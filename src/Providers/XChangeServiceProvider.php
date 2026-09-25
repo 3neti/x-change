@@ -587,10 +587,6 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->when(CampaignWorkflowDraftEditor::class)
             ->needs(WorkflowCatalog::class)
             ->give(function ($app) {
-                if (config('x-change-workflows.accounts', []) === []) {
-                    return $app->make(WorkflowCatalog::class);
-                }
-
                 return new YamlWorkflowCatalog(
                     $app->make(DriverService::class),
                     new ConfiguredCampaignWorkflowAccess,

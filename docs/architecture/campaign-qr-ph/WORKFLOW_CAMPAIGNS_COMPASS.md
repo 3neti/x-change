@@ -12,6 +12,91 @@ The customer stays in the existing Pay Code claim/payment experience.
 
 ## Current position
 
+### Host-wide workflow access — local implementation (2026-09-25)
+
+User requested enabled features for all users rather than individual grants.
+The campaign editor now uses `x-change-workflows.enabled`, default true, with
+`XCHANGE_WORKFLOW_DRAFTS_ENABLED` as the host override. All signed-in accounts can
+discover available workflows and create their own drafts. Legacy account grants
+are ignored. The global envelope catalog policy remains unchanged.
+
+Owned templates/drafts, exact workflow and plan versions, connection readiness,
+immutable publication snapshots, AUI demo-only publication and BST reviewer gates
+remain enforced. No live provider, payment, SMS or insurer capability is enabled
+by this switch. Pennant rollout integration is deferred; no dependency was added.
+
+Focused access and adjacent campaign regressions: 27 tests / 191 assertions
+passed. Pint and whitespace checks pass. No package publication, host
+upgrade or Cloud change has occurred for this slice. Testing still runs v1.0.51
+with the previous grant-based behavior until the next controlled release.
+
+Next: release review and host upgrade. No account-grant
+copying is needed after the host-wide access release is installed.
+
+### Testing v1.0.51 deployed and verified (2026-09-25)
+
+User approved the protected testing rollout. Production push-to-deploy was
+temporarily disabled via the supported single-field API update and verified
+before any host push. Remote/local host histories were reconciled in an isolated
+worktree; merge `39f1e944744db0dd912a2bab04f2ab483032d90e` has the exact same Git
+tree as tested local `8c2a9ffe`. It was pushed to host main and local main was
+fast-forwarded without altering unrelated uncommitted work.
+
+Testing auto-deployment `depl-a2d4447e-f5ff-4609-89cd-111fa792ec6f` succeeded at
+08:43:17 UTC. Runtime confirms x-change v1.0.51 at approved package commit
+`8c57bfb3d2435a8aa18ca41db851b2f9f2d40317`. Strict asset doctor passed and the
+workflow-publications migration ran in batch 38. Production push-to-deploy was
+restored to true and independently verified; its deployment history is unchanged.
+No production deployment occurred. Local test-account grants and PhilHealth test
+driver fixture were not committed or copied to testing. No live campaign
+activation, insurer, payment or SMS action was performed.
+
+At this deployed version, browser acceptance still requires host account grants.
+The newer local host-wide access slice above supersedes that requirement only
+after publication and host adoption.
+
+### Testing redeployment — unchanged host lock (2026-09-25)
+
+User requested package publication and testing redeployment without a testing-only
+branch. v1.0.51 was already published. No host main push was performed because both
+testing and sibling production auto-deploy that branch. The unchanged testing
+environment was explicitly redeployed as requested:
+`depl-a2d43c73-b7f1-4e32-a67b-52502edda161`, succeeded at 08:21:16 UTC.
+Runtime verification confirms host commit `ab5fa193` and x-change **v1.0.49**;
+strict asset doctor passes. This is NOT deployment acceptance for v1.0.51.
+The installed release remains governed by the host lockfile. Reaching v1.0.51 in
+testing still requires a reviewed host-source upgrade with the production
+auto-deploy consequence explicitly resolved. No branch/configuration changes,
+local grant propagation, provider actions or financial mutations were performed.
+
+### Installed v1.0.51 draft browser acceptance (2026-09-25)
+
+User authorized exact AUI and PhilHealth draft workflow access for the previously
+identified synthetic local account 7 (`Workflow Draft Browser`, identity verified
+before granting). Host-only uncommitted config/x-change-workflows.php grants the
+two exact v1.0.0 workflows only under APP_ENV=local. The shipped PhilHealth demo
+YAML was copied unchanged into the host's driver discovery directory. No private
+connection or credential was configured. These local fixture files must not be
+promoted to Cloud or included in a deployment configuration cache.
+
+Installed-package Playwright acceptance: 1 passed (both draft journeys), desktop
+1440x1000 and mobile 375x812, no page errors or horizontal overflow. Publication
+was explicitly excluded using WORKFLOW_BROWSER_PUBLISH=0 and the draft test filter.
+Database readback confirms the two new AUI/PhilHealth records have status `draft`.
+This is Chromium browser verification, not the desktop in-app tab. The initial
+restricted Chromium launch failed at macOS process permissions; authorized launch
+succeeded. Pint, strict asset doctor and whitespace checks pass.
+
+- [AUI desktop](/Users/rli/PhpstormProjects/x-change-sandbox/output/workflow-v1051-draft-acceptance/aui-demo-draft.png)
+- [AUI mobile](/Users/rli/PhpstormProjects/x-change-sandbox/output/workflow-v1051-draft-acceptance/aui-demo-mobile-draft.png)
+- [PhilHealth desktop](/Users/rli/PhpstormProjects/x-change-sandbox/output/workflow-v1051-draft-acceptance/philhealth-demo-draft.png)
+- [PhilHealth mobile](/Users/rli/PhpstormProjects/x-change-sandbox/output/workflow-v1051-draft-acceptance/philhealth-demo-mobile-draft.png)
+
+The catalog grant is not a distinct draft-only authorization primitive; publication
+was not exercised and no connection readiness was added. Any publication/transport
+acceptance requires its own scoped gate. No release, Cloud deployment, payment,
+SMS or insurer operation occurred here. Both new drafts remain for inspection.
+
 ### Gate 4c complete — publication and local adoption (2026-09-25)
 
 User explicitly approved main `8c57bfb3` and v1.0.51 publication plus local

@@ -25,18 +25,6 @@ beforeEach(function (): void {
     ]);
     config()->set('settlement-envelope.driver_disk', 'draft-test-drivers');
     app()->forgetInstance(DriverService::class);
-    $identity = $this->operator->getMorphClass().':'.$this->operator->getKey();
-    app()->bind(WorkflowAccessPolicy::class, fn () => new class($identity) implements WorkflowAccessPolicy
-    {
-        public function __construct(private string $identity) {}
-
-        public function allows(WorkflowContext $context, string $id, string $version): bool
-        {
-            return $context->actorId === $this->identity && $context->accountId === $this->identity
-                && in_array($id, ['aui.personal-accident.provisional-cover', 'philhealth.bst.demo'], true)
-                && $version === '1.0.0';
-        }
-    });
     $this->source = PayCodeTemplate::query()->create([
         'owner_type' => $this->operator->getMorphClass(),
         'owner_id' => (string) $this->operator->getKey(),
@@ -131,15 +119,16 @@ it('keeps reviewed BST publication unavailable instead of bypassing its evidence
     expect(LeadCampaign::query()->count())->toBe(0);
 });
 
-it('applies exact host-configured grants without changing the global workflow catalog', function (): void {
+it('enables the editor by default without account grants or changing the global workflow catalog', function (): void {
     app()->bind(WorkflowAccessPolicy::class, DenyWorkflowAccess::class);
     $identity = $this->operator->getMorphClass().':'.$this->operator->getKey();
-    config()->set('x-change-workflows.accounts', [$identity => ['aui.personal-accident.provisional-cover@1.0.0']]);
-    expect(app(CampaignWorkflowDraftEditor::class)->for($this->operator)['workflows'])->toHaveCount(1)
+    expect(config('x-change-workflows.enabled'))->toBeTrue()
+        ->and(app(CampaignWorkflowDraftEditor::class)->for($this->operator)['workflows'])->toHaveCount(2)
         ->and(app(WorkflowCatalog::class)->available(new WorkflowContext($identity, $identity)))->toBe([]);
     $policy = new ConfiguredCampaignWorkflowAccess;
-    expect($policy->allows(new WorkflowContext($identity, $identity), $this->payload['workflow_id'], '2.0.0'))->toBeFalse()
+    expect($policy->allows(new WorkflowContext($identity, $identity), $this->payload['workflow_id'], '1.0.0'))->toBeTrue()
         ->and($policy->allows(new WorkflowContext('other:1', $identity), $this->payload['workflow_id'], '1.0.0'))->toBeFalse();
+    expect(fn () => new WorkflowContext('', ''))->toThrow(InvalidArgumentException::class);
 });
 
 it('saves a private inactive template snapshot without publishing a campaign', function (): void {
@@ -209,14 +198,22 @@ it('refuses a payment QR backed by a disbursable template', function (): void {
     $this->post(route('x-change.cockpit.campaigns.workflow-drafts.store'), $this->payload)->assertSessionHasErrors('pay_code_template_id');
 });
 
-it('scopes template lookup and workflow visibility to the authenticated account', function (): void {
+it('shares workflow discovery but isolates templates and drafts between accounts', function (): void {
     $this->post(route('x-change.cockpit.campaigns.workflow-drafts.store'), $this->payload)->assertRedirect();
     expect(PayCodeTemplate::query()->where('status', 'draft')->count())->toBe(1);
-    actingAsTestUser();
+    $other = actingAsTestUser();
     $this->post(route('x-change.cockpit.campaigns.workflow-drafts.store'), $this->payload)->assertNotFound();
     $this->withHeader('X-Inertia', 'true')->get(route('x-change.cockpit.campaigns.index'))
-        ->assertOk()->assertJsonPath('props.workflow_drafts.workflows', [])
+        ->assertOk()->assertJsonCount(2, 'props.workflow_drafts.workflows')
         ->assertJsonPath('props.workflow_drafts.drafts', []);
+    $source = $this->source->replicate();
+    $source->reference = null;
+    $source->owner_id = (string) $other->getKey();
+    $source->save();
+    $this->post(route('x-change.cockpit.campaigns.workflow-drafts.store'), array_replace($this->payload, [
+        'pay_code_template_id' => $source->getKey(),
+    ]))->assertSessionHasNoErrors()->assertRedirect();
+    expect(PayCodeTemplate::query()->where('status', 'draft')->count())->toBe(2);
 });
 
 it('does not expose connection references or credentials in the editor props', function (): void {
@@ -227,12 +224,25 @@ it('does not expose connection references or credentials in the editor props', f
         ->and($props['workflows'][0])->not->toHaveKey('connection');
 });
 
-it('fails closed when host authorization is absent or revoked between preview and save', function (): void {
+it('fails closed when the host disables workflows between preview and save', function (): void {
     expect(app(CampaignWorkflowDraftEditor::class)->for($this->operator)['workflows'])->toHaveCount(2);
-    app()->bind(WorkflowAccessPolicy::class, DenyWorkflowAccess::class);
+    config()->set('x-change-workflows.enabled', false);
     $this->post(route('x-change.cockpit.campaigns.workflow-drafts.store'), $this->payload)->assertSessionHasErrors('workflow_id');
     expect(app(CampaignWorkflowDraftEditor::class)->for($this->operator)['workflows'])->toBe([])
         ->and(PayCodeTemplate::query()->count())->toBe(1);
+});
+
+it('rejects publication when workflows are disabled or the draft belongs to another account', function (): void {
+    $draft = preparePublishableWorkflowDraft($this);
+    $url = route('x-change.cockpit.campaigns.workflow-drafts.publish', ['draft' => $draft->reference]);
+    $payload = ['expected_snapshot_hash' => app(CampaignWorkflowPublicationSnapshot::class)->hash($draft->instructions_ciphertext)];
+    config()->set('x-change-workflows.enabled', false);
+    $this->post($url, $payload)->assertSessionHasErrors('draft');
+    config()->set('x-change-workflows.enabled', true);
+    actingAsTestUser();
+    $this->post($url, $payload)->assertNotFound();
+    expect(CampaignWorkflowPublication::query()->count())->toBe(0)
+        ->and($draft->refresh()->status)->toBe('draft');
 });
 
 it('rejects incomplete or incompatible source instructions without creating a draft', function (array $instructions): void {
