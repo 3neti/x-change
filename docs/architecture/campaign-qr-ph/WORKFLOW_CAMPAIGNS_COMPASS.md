@@ -14,9 +14,10 @@ The customer stays in the existing Pay Code claim/payment experience.
 
 Gates 1 and 2 and standalone integration extraction are implemented. Envelope
 v1.3.0 and both integration v1.0.0 releases are published and indexed by Packagist.
-x-change's release lock is synchronized against those immutable versions, with
-171 affected PHP tests passing. Gate 3c now proceeds to x-change publication and
-local sandbox adoption. Cloud deployment is outside this gate.
+x-change v1.0.50 is published and its release lock is synchronized against those
+immutable versions, with 171 affected PHP tests passing. Gate 3c local sandbox
+adoption is complete: host tests, strict asset verification and build pass.
+Cloud deployment is outside this gate.
 
 The legacy BST and canonical stub differ in both format and meaning. Neither is
 being overwritten. A separately identified test-only canonical workflow proves
@@ -66,7 +67,7 @@ PhilHealth policy or a production adjudication/payout implementation.
 | --- | --- |
 | 1. Baselines/reconciliation | Complete |
 | 2. Typed discovery contracts | Released in envelope v1.3.0 |
-| 3. Integration extraction | Integrations released; x-change lock verified; host adoption gate in progress |
+| 3. Integration extraction | Released; ordinary Composer adoption verified in local sandbox |
 | 4. Draft/template editor | Pending |
 | 5. Private claim documents | Pending |
 | 6. AUI browser runner extension | Pending |
@@ -85,9 +86,10 @@ PhilHealth policy or a production adjudication/payout implementation.
 
 ## Next clean move
 
-Publish the verified x-change candidate, then upgrade the local sandbox from its
-normal Composer lock, publish build inputs, run host acceptance and build checks.
-Both new packages now resolve normally from Packagist without extra repositories.
+Proceed to Gate 4's template-backed draft editor integration, explicitly handling
+host workflow authorization, validated input and publication snapshots. Both
+reference integrations now resolve normally from Packagist without extra
+repositories. AUI/PhilHealth browser lifecycle extensions remain later gates.
 Keep the existing authorized completion action in charge of after-commit
 processing and durable replay checks.
 Host authorization binding, schema-to-form fields, provider product-code mapping
@@ -248,3 +250,18 @@ as exact v1.0.48 package projections (ignoring generated headers); other overlap
 untracked campaign files match current package source. A local archive was taken
 at `/tmp/xchange-v1050-host-preservation/generated-before.tar` before publication.
 Unrelated Pipedream/settings/deployment-skill changes must remain untouched.
+
+### Gate 3c complete
+
+Published x-change v1.0.50 at `e923478df4fba28d8b65b71a24f5ffc894dad1d6`.
+Local sandbox upgraded v1.0.45 → v1.0.50, adopting all three released dependencies.
+Composer scripts were withheld during dependency install, then package discovery
+and the documented build publication ran explicitly. No broad installer or
+commissioning was run. Strict Composer validation, 3 host tests / 23 assertions,
+15-resource build publication, strict asset doctor, production build and whitespace
+checks pass. Campaign frontend regressions: 20 tests / two files pass.
+
+The host uses no local path overrides or additional integration repositories.
+No Cloud deployment, live provider operation or browser lifecycle was performed.
+Full release and local adoption record:
+[WORKFLOW_INTEGRATION_RELEASE_GATE.md](WORKFLOW_INTEGRATION_RELEASE_GATE.md).
