@@ -12,6 +12,35 @@ The customer stays in the existing Pay Code claim/payment experience.
 
 ## Current position
 
+### v1.0.52 publication and testing rollout (2026-09-25)
+
+User authorized publication and testing deployment. Published package main/tag
+v1.0.52 at `1eb2b8117572928779ac544441cbedd7c026748c`; Packagist independently
+confirms that source. Host main `0dedc63a90baac0b82804435a48a22be61748c1e`
+updates only composer.json/lock from v1.0.51 to v1.0.52. Unrelated host work and
+local fixture files were excluded. No migration or frontend source change.
+
+Release checks: 27 package tests / 191 assertions; 5 host tests / 25 assertions;
+strict Composer validation, 15-resource build publication, strict asset doctor,
+production build and whitespace checks pass. Build retains third-party PURE
+annotation/chunk-size warnings; Composer reports abandoned eloquent/enumeration.
+No security advisories were reported during the upgrade.
+
+Production auto-deployment was disabled and independently verified before the
+host push. Testing deployment `depl-a2d457e1-58b1-473c-9438-dd1960d5d97b`
+succeeded at 09:37:20 UTC with the expected host commit and package source.
+Read-only runtime verification confirms enabled=true, one available AUI workflow
+for an existing account without grants, global catalog still denied, and strict
+asset doctor passing. The local PhilHealth driver fixture was not deployed; this
+release opens discovered workflows, not undiscovered driver definitions.
+
+Production push-to-deploy was restored to true and independently verified with
+unchanged deployment history. No financial or provider operation occurred.
+Interactive browser verification was unavailable; acceptance used deployed
+backend checks, not a clicked-through session. Package worktree has only this
+release-record update; host retains its pre-existing unrelated dirty/untracked
+work. No local Composer overrides were introduced. Gate complete.
+
 ### Host-wide workflow access — local implementation (2026-09-25)
 
 User requested enabled features for all users rather than individual grants.
