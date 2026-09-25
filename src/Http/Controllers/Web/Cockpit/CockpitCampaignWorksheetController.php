@@ -39,6 +39,7 @@ use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Cockpit\CampaignPaymentEvidenceAttentionReadModel;
 use LBHurtado\XChange\Services\Cockpit\CampaignPaymentProgressReadModel;
+use LBHurtado\XChange\Services\Cockpit\CampaignWorkflowDraftEditor;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegistry;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityRequirementResolver;
 use Throwable;
@@ -58,7 +59,7 @@ class CockpitCampaignWorksheetController extends Controller
         private readonly CampaignPaymentProgressReadModel $paymentProgress,
     ) {}
 
-    public function index(Request $request): Response
+    public function index(Request $request, CampaignWorkflowDraftEditor $workflowDrafts): Response
     {
         $owner = $request->user();
 
@@ -69,6 +70,7 @@ class CockpitCampaignWorksheetController extends Controller
             'endpoint_capabilities' => $this->endpointCapabilities(),
             'pay_code_templates' => $this->payCodeTemplatesFor($owner),
             'endpoint_campaigns' => $this->endpointCampaignsFor($owner),
+            'workflow_drafts' => $workflowDrafts->for($owner),
             'endpoint_campaign_form' => [
                 'action_url' => route('x-change.cockpit.campaigns.endpoints.store'),
                 'default_timezone' => config('app.timezone', 'UTC'),
@@ -331,7 +333,8 @@ class CockpitCampaignWorksheetController extends Controller
                         'generated_at' => $paymentQrArtifact?->generated_at?->toIso8601String(),
                     ],
                     'actions' => [
-                        'template_update_url' => route('x-change.cockpit.campaigns.endpoints.template.update', $campaign->reference),
+                        'template_update_url' => data_get($campaign->settings, 'workflow_publication') === null
+                            ? route('x-change.cockpit.campaigns.endpoints.template.update', $campaign->reference) : '',
                         'pause_url' => route('x-change.cockpit.campaigns.endpoints.pause', $campaign->reference),
                         'resume_url' => route('x-change.cockpit.campaigns.endpoints.resume', $campaign->reference),
                         'payment_qr_provision_url' => route('x-change.cockpit.campaigns.endpoints.payment-qr.store', $campaign->reference),

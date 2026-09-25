@@ -44,6 +44,10 @@ use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
 use LBHurtado\PaymentGateway\Contracts\WalletProxy;
 use LBHurtado\PaymentGateway\Funding\NetbankReusableFundingAddressProvider;
 use LBHurtado\ReportRegistry\Contracts\ReportResolverInterface;
+use LBHurtado\SettlementEnvelope\Contracts\WorkflowCatalog;
+use LBHurtado\SettlementEnvelope\Services\DriverService;
+use LBHurtado\SettlementEnvelope\Services\WorkflowConnectionReadiness;
+use LBHurtado\SettlementEnvelope\Services\YamlWorkflowCatalog;
 use LBHurtado\Voucher\Contracts\PayableCollectionExecutionGateway;
 use LBHurtado\Voucher\Contracts\SettlementEnvelopeExecutionGateway;
 use LBHurtado\Voucher\Contracts\StoredValueExecutionGateway;
@@ -61,6 +65,7 @@ use LBHurtado\XCampaign\Repositories\EloquentEndpointCampaignRepository;
 use LBHurtado\XChange\Actions\Auth\AuthenticateMobileFirstUser;
 use LBHurtado\XChange\Actions\Auth\CreateNewMobileFirstUser;
 use LBHurtado\XChange\Actions\Auth\ResetMobileFirstPin;
+use LBHurtado\XChange\Actions\Cockpit\PublishCampaignWorkflowDraft;
 use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
 use LBHurtado\XChange\Actions\Leads\StartLeadCampaign;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
@@ -363,7 +368,9 @@ use LBHurtado\XChange\Services\Claim\DefaultRiderStampRecipientResolver;
 use LBHurtado\XChange\Services\Claim\GdRiderStampClaimShareCardRenderer;
 use LBHurtado\XChange\Services\Claim\RiderStampClaimShareMetadataResolver;
 use LBHurtado\XChange\Services\Claim\StoredRiderStampClaimShareCardRenderer;
+use LBHurtado\XChange\Services\Cockpit\CampaignWorkflowDraftEditor;
 use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeDetailProjection;
+use LBHurtado\XChange\Services\Cockpit\ConfiguredCampaignWorkflowAccess;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitCampaignIssuanceDraftAdapter;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitIssuanceDraftAuditMetadataBuilder;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitIssuanceDraftCompiler;
@@ -562,6 +569,7 @@ class XChangeServiceProvider extends ServiceProvider
             CockpitCampaignEndpointController::class,
             CockpitCampaignWorksheetController::class,
             CreateLeadCampaign::class,
+            PublishCampaignWorkflowDraft::class,
             StartLeadCampaign::class,
             LeadCampaignPublicSlugService::class,
             LeadCampaignEndpointController::class,
@@ -575,6 +583,20 @@ class XChangeServiceProvider extends ServiceProvider
             $this->packagePath('config/x-change.php'),
             'x-change'
         );
+        $this->mergeConfigFrom($this->packagePath('config/x-change-workflows.php'), 'x-change-workflows');
+        $this->app->when(CampaignWorkflowDraftEditor::class)
+            ->needs(WorkflowCatalog::class)
+            ->give(function ($app) {
+                if (config('x-change-workflows.accounts', []) === []) {
+                    return $app->make(WorkflowCatalog::class);
+                }
+
+                return new YamlWorkflowCatalog(
+                    $app->make(DriverService::class),
+                    new ConfiguredCampaignWorkflowAccess,
+                    $app->make(WorkflowConnectionReadiness::class),
+                );
+            });
         $this->app->singleton(
             ProvisioningActorGuardContract::class,
             XChangeProvisioningActorGuard::class,

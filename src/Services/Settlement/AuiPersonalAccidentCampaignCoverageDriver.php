@@ -15,6 +15,8 @@ final class AuiPersonalAccidentCampaignCoverageDriver implements CampaignCoverag
 
     public const DRIVER_VERSION = '1.0.0';
 
+    public function __construct(private CampaignWorkflowPublicationResolver $publications) {}
+
     public function driverId(): string
     {
         return self::DRIVER_ID;
@@ -28,6 +30,10 @@ final class AuiPersonalAccidentCampaignCoverageDriver implements CampaignCoverag
     public function decide(CampaignPaymentRecognition $recognition): CampaignCoverageDecisionData
     {
         $campaign = $recognition->campaignRecord();
+        $publication = $this->publications->forCampaignRevision($campaign, (string) $recognition->campaign_revision_id);
+        if ($publication !== null) {
+            return $this->decidePublished($recognition, $publication);
+        }
         $run = (array) data_get($campaign->settings, 'scenario_run', []);
         $premiumMinor = data_get($run, 'product.premium_minor');
         $insuredAmountMinor = data_get($run, 'product.insured_amount_minor');
@@ -76,5 +82,38 @@ final class AuiPersonalAccidentCampaignCoverageDriver implements CampaignCoverag
             ),
             'recognized_settlement_payment_qualified',
         );
+    }
+
+    /** @param array<string, mixed> $publication */
+    private function decidePublished(CampaignPaymentRecognition $recognition, array $publication): CampaignCoverageDecisionData
+    {
+        $plan = $publication['plan'];
+        if ($recognition->gross_amount_minor !== $plan['premium_minor']
+            || $recognition->currency !== $plan['currency']
+            || $recognition->provider_status !== 'settled'
+            || ! $recognition->destination_verified || $recognition->settled_at === null) {
+            return CampaignCoverageDecisionData::ineligible('campaign_or_payment_not_qualified');
+        }
+
+        return CampaignCoverageDecisionData::eligible(new ProvisionalCoverageTermsData(
+            driverId: self::DRIVER_ID,
+            driverVersion: self::DRIVER_VERSION,
+            coverageType: 'personal-accident-provisional-cover',
+            currency: $recognition->currency,
+            effectiveAt: $recognition->settled_at,
+            expiresAt: $recognition->settled_at->addDays($plan['coverage']['duration_days']),
+            coverageAmountMinor: $plan['benefit_minor'],
+            terms: [
+                'plan' => $plan['title'],
+                'plan_code' => $plan['code'], 'plan_version' => $plan['version'],
+                'premium_minor' => $plan['premium_minor'],
+                'coverage_duration_hours' => $plan['coverage']['duration_days'] * 24,
+                'contract_authority' => 'demonstration_only',
+            ],
+            authorization: [
+                'authority' => 'x-change-campaign-workflow-publication',
+                'authority_reference' => $publication['publication_reference'],
+            ],
+        ), 'recognized_settlement_payment_qualified');
     }
 }

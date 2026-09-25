@@ -12,6 +12,92 @@ The customer stays in the existing Pay Code claim/payment experience.
 
 ## Current position
 
+### Gate 4c — controlled release review (2026-09-25)
+
+Candidate reviewed against main `447abd4b`, with v1.0.51 proposed (not tagged).
+Independent Laravel security/migration review found one defect: the draft editor
+accepted 120 characters while the existing template column allows 80. Validation
+and the HTML limit now match 80; PHP proves 81 is rejected without insertion and
+80 is saved intact. The Vue limit has regression coverage. No schema widening.
+No other concrete authorization, immutable-revision or template-bypass blocker
+was found in that review.
+
+Fresh release checks: the 72-test Cockpit suite passes (580 assertions), plus the
+new boundary test (7 assertions); editor/wrapper frontend tests pass (10 tests).
+The wider binding/lifecycle, transport-disposition and acquisition-scenario gate
+also passes: 126 tests / 830 assertions. Total fresh PHP coverage across these
+non-overlapping runs: 199 tests / 1,417 assertions. This is affected-suite coverage,
+not a claim that the entire package suite was run.
+Package and host strict Composer validation, Pint, whitespace checks and the host
+strict assets doctor pass. Prior desktop/mobile browser evidence remains above;
+this gate does not claim a new live/browser lifecycle run.
+
+Host upgrade is prepared but not applied: the repository requires explicit
+push/tag approval before ordinary Composer adoption. Remote main was verified as
+`447abd4b`; remote v1.0.51 does not exist. The local host remains v1.0.50, with no
+Composer override, lockfile change, host configuration grant or live activation.
+No x-PayOut or Cloud changes belong to this gate.
+
+After explicit package publication approval:
+1. Push the reviewed main commit and create immutable v1.0.51 (recheck refs first).
+2. Confirm registry indexing, then update only x-change through normal Composer
+   in x-change-sandbox; review the lock diff before acceptance.
+3. Run package discovery and the additive publication-table migration before
+   exposing new code to requests/workers. No broad installer or commissioning.
+4. Publish build inputs, rebuild, run strict asset doctor and focused host tests.
+5. Keep workflow grants empty until an exact host account is authorized. A UI
+   upgrade is not permission for real QR provisioning, SMS or insurer transport.
+6. Commit only generated package projections and dependency changes separately;
+   preserve the unrelated Pipedream/settings/deployment-skill work. Cloud release
+   needs separate authorization. Do not roll back/drop publication history after
+   use; retain the additive table on an application rollback.
+
+### Gate 4b — local draft publication and claim integration (2026-09-25)
+
+Implemented locally, not released. Exact host account/workflow-version grants now
+enable the draft catalog without opening the global catalog. Real Chromium tests
+saved both AUI and BST drafts at desktop and 375px, then published the AUI demo.
+They caught and fixed the generated Inertia wrapper dropping `workflow_drafts`.
+
+Publication is transactional and idempotent, with stale-draft protection and an
+encrypted immutable campaign revision. The AUI runtime consumes that exact
+revision through the existing completion Pay Code/claim path. Connection destination
+settings are fingerprinted; credential rotation does not change the fingerprint.
+Legacy template replacement cannot mutate a published workflow campaign.
+
+Scope remains the exact AUI demonstration plan, PA5000_DAY v1 (PHP50 premium,
+PHP5,000 benefit, one day), zero disbursement principal. This is not a generalized
+production insurance publisher. BST publication remains denied until reviewer and
+evidence authority integration is implemented. Driver notification defaults are
+snapshotted, but existing SMS rendering and automatic transport allowlists remain
+unchanged. No live QR, SMS, insurer request or financial movement was performed.
+
+Browser evidence (synthetic local owner 7; no real identity/funds):
+- [AUI desktop](/Users/rli/PhpstormProjects/x-change-sandbox/output/workflow-draft-gate/aui-demo-draft.png)
+- [AUI mobile](/Users/rli/PhpstormProjects/x-change-sandbox/output/workflow-draft-gate/aui-demo-mobile-draft.png)
+- [BST desktop](/Users/rli/PhpstormProjects/x-change-sandbox/output/workflow-draft-gate/philhealth-demo-draft.png)
+- [BST mobile](/Users/rli/PhpstormProjects/x-change-sandbox/output/workflow-draft-gate/philhealth-demo-mobile-draft.png)
+- [Published demo](/Users/rli/PhpstormProjects/x-change-sandbox/output/workflow-draft-gate/published-demo.png)
+
+Verified: 72 affected Cockpit PHP tests (580 assertions); 2 browser tests;
+9 editor/wrapper frontend tests; 122 binding/lifecycle
+tests (775 assertions); immutable-template guard focused test (18 assertions).
+Production build passed with existing chunk-size warnings. Browser tests use
+Chromium via Playwright, not the desktop in-app tab. Temporary local host grants,
+fake connection configuration and alternate Composer files are removed after
+acceptance; synthetic fixtures and the additive publication table remain locally.
+The host is restored to ordinary Composer v1.0.50 with unchanged committed lock,
+released asset publication and a successful production rebuild. Unrelated host
+work is preserved. Initial restricted test attempts hit log/cache permission
+errors; the authorized reruns above passed. Pint and `git diff --check` pass.
+
+Next gate: review/release this constrained candidate, migrate before enabling it,
+then explicitly authorize the target host. Do not automatically enable real AUI
+transport or BST publication. Merchant overrides, arbitrary plans, notification
+editing and reviewed BST execution remain separate controlled work.
+
+### Previous released baseline
+
 Gates 1 and 2 and standalone integration extraction are implemented. Envelope
 v1.3.0 and both integration v1.0.0 releases are published and indexed by Packagist.
 x-change v1.0.50 is published and its release lock is synchronized against those
@@ -68,7 +154,7 @@ PhilHealth policy or a production adjudication/payout implementation.
 | 1. Baselines/reconciliation | Complete |
 | 2. Typed discovery contracts | Released in envelope v1.3.0 |
 | 3. Integration extraction | Released; ordinary Composer adoption verified in local sandbox |
-| 4. Draft/template editor | Pending |
+| 4. Draft/template editor | 4a inactive draft creation implemented locally; publication/runtime bridge pending |
 | 5. Private claim documents | Pending |
 | 6. AUI browser runner extension | Pending |
 | 7. PhilHealth browser runner | Pending |
@@ -86,16 +172,47 @@ PhilHealth policy or a production adjudication/payout implementation.
 
 ## Next clean move
 
-Proceed to Gate 4's template-backed draft editor integration, explicitly handling
-host workflow authorization, validated input and publication snapshots. Both
-reference integrations now resolve normally from Packagist without extra
-repositories. AUI/PhilHealth browser lifecycle extensions remain later gates.
+Proceed to Gate 4b: authorize specific host accounts, support revision of saved
+drafts, then close full template/schema validation and immutable publication
+snapshots before bridging workflow references to existing claim execution.
+Do not turn a draft active or use legacy endpoint creation as a shortcut.
+AUI/PhilHealth browser lifecycle extensions remain later gates.
 Keep the existing authorized completion action in charge of after-commit
 processing and durable replay checks.
 Host authorization binding, schema-to-form fields, provider product-code mapping
 and publication snapshots still need their later integration/editor gates.
 Browser scenario runners remain downstream deliverables.
 No publication/deployment approval is inferred from this implementation request.
+
+## Gate 4a — inactive campaign workflow drafts (2026-09-25)
+
+- Endpoint Campaigns gains an invokable workflow draft modal and a recent draft
+  list. Select an owned source template, service, exact workflow version, optional
+  exact plan version and supported entry method. Driver terms, SMS defaults,
+  document declarations and checklist/reviewer requirements are read-only.
+- New authenticated/throttled `POST campaigns/workflow-drafts` uses the catalog's
+  existing default-deny authorization. It derives owner context server-side and
+  re-resolves on save, including when permission was revoked after preview.
+- A fresh encrypted template is saved as `draft`; source instructions and existing
+  campaigns are untouched. Workflow/plan terms and source fingerprint are captured.
+  No new table, migration, financial mutation, provider call, QR, SMS or Pay Code.
+- Unknown versions/plans, unsupported entries, cross-owner templates, private
+  configuration injection, disbursable payment-QR templates and currency mismatch
+  are rejected. Connection readiness may be incomplete at draft time, visibly;
+  it is not permission to publish or execute.
+- Verification: **68 PHP tests passed** across the new draft file and existing
+  template/campaign files. Additional focused reruns strengthened inactive-template
+  publication rejection and isolation with an existing other-account draft.
+  Frontend: **3 files / 36 passed**, including 4 new editor component tests.
+  Pint and diff checks passed. No real-browser lifecycle or host production build
+  was performed; these are isolated package tests, not Cloud acceptance.
+- Default host authorization is deliberately unchanged. No host was upgraded,
+  no release created and no Cloud deployment performed in this gate.
+
+Known bounded limitation: the recent draft list reads at most 50 owner draft
+templates and filters workflow intent after decryption. It is a recent list, not
+an exhaustive archive/pagination contract. Publication, editing saved drafts,
+merchant locking, stamp preview and JSON-schema-to-claim mapping remain Gate 4b.
 
 ## Gate 2 — typed discovery (2026-09-25)
 

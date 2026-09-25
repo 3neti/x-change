@@ -17,6 +17,8 @@ final class AuiPersonalAccidentPolicyCompletionDriver implements CampaignPolicyC
 
     public const DRIVER_VERSION = '1.0.0';
 
+    public function __construct(private CampaignWorkflowPublicationResolver $publications) {}
+
     public function driverId(): string
     {
         return self::DRIVER_ID;
@@ -47,6 +49,7 @@ final class AuiPersonalAccidentPolicyCompletionDriver implements CampaignPolicyC
         $issuance = $projection->issuance;
         $coverage = $issuance->coverage;
         $recognition = $coverage->recognition;
+        $this->publications->forCampaignRevision($recognition->campaignRecord(), (string) $recognition->campaign_revision_id);
         $envelope = $projection->envelope;
         $payloadVersion = $projection->payloadVersion;
         $claim = $projection->claim;

@@ -25,6 +25,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignDisplaySession
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignEndpointController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignPolicyLifecyclePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignVoucherBlueprintController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorkflowDraftController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetAuthorizationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetBankTransferDispatchController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignWorksheetBankTransferReconciliationController;
@@ -379,6 +380,12 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::post('campaigns/endpoints', [CockpitCampaignEndpointController::class, 'store'])
             ->middleware('throttle:12,1')
             ->name('x-change.cockpit.campaigns.endpoints.store');
+        Route::post('campaigns/workflow-drafts', [CockpitCampaignWorkflowDraftController::class, 'store'])
+            ->middleware('throttle:12,1')
+            ->name('x-change.cockpit.campaigns.workflow-drafts.store');
+        Route::post('campaigns/workflow-drafts/{draft}/publish', [CockpitCampaignWorkflowDraftController::class, 'publish'])
+            ->middleware('throttle:6,1')
+            ->name('x-change.cockpit.campaigns.workflow-drafts.publish');
         Route::post('campaigns/endpoints/{campaign}/payment-qr', [CockpitCampaignEndpointController::class, 'provisionPaymentQr'])
             ->middleware('throttle:6,1')
             ->name('x-change.cockpit.campaigns.endpoints.payment-qr.store');

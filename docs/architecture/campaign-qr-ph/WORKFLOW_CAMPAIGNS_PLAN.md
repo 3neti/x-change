@@ -124,6 +124,12 @@ Acceptance: common adapter contract suite and workflow-specific negative cases.
 
 ## Gate 4 — Template-backed campaign draft
 
+Implement in two controlled slices. Gate 4a is the inactive draft editor (now
+implemented locally); Gate 4b is publication and runtime adoption (still pending).
+The current endpoint creation action publishes immediately, and legacy starts
+read the current template rather than a durable publication snapshot. Do not use
+that action to publish new workflow drafts before Gate 4b closes those boundaries.
+
 Editor sequence: service → workflow → optional plan → supported entry method →
 permitted parameters → claim/stamp and SMS preview → validate → publish.
 
@@ -141,6 +147,30 @@ events, not assumed insurance or payout success.
 Payment identity defaults from the account's merchant profile and may be edited
 before provider QR creation. Capture requested and provider-confirmed identity;
 lock it after successful creation. Profile edits never update printed QRs.
+
+Gate 4a stores a new encrypted `PayCodeTemplate` with `status=draft`, copying the
+owned active source template without modifying it. Its
+`metadata.custom.campaign_workflow_draft` records the exact descriptor, selected
+plan/version/terms, entry method, source fingerprint, actor and timestamp. This is
+draft intent, not an executable voucher instruction or a publication authorization.
+Existing active-template lists and endpoint creation exclude these drafts.
+
+The host must explicitly bind `WorkflowAccessPolicy` and configure the driver disk.
+The editor uses the existing `WorkflowCatalog`; it does not globally allow installed
+integrations. Actor and account IDs are both the authenticated owner's
+`{morph-class}:{primary-key}`, derived server-side (no browser-supplied account).
+No URLs, tokens or connection objects are accepted from the browser. Catalog props
+omit even the private connection reference; the encrypted snapshot retains its
+reference, never credentials. A missing connection can be prepared as a draft,
+with a visible warning, but must fail publication readiness later.
+
+Gate 4a permits no parameter, pricing or SMS overrides. It shows driver defaults,
+document declarations, required checklist items and reviewer requirements. Saving
+a draft neither generates fields from JSON schema nor grants reviewer authority.
+Only basic template shape/currency/entry compatibility is checked here; full
+schema, target/premium consistency, evidence and financial validation belong to
+Gate 4b before publication. Editing existing drafts, merchant identity preparation,
+stamp preview, and runtime mapping remain pending; do not mark all Gate 4 complete.
 
 Acceptance: AUI and BST editor behavior; incompatible templates and unavailable
 entry methods; version/snapshot isolation; existing campaign tests green.
@@ -212,6 +242,25 @@ Live payments, SMS, insurer submission and payout each require explicit scoped
 authorization. Opening a runner never starts live operations.
 
 ## Next implementation contract decision
+
+### Implemented Gate 4b boundary
+
+Host-authorized local browser acceptance and AUI-only immutable draft publication
+are implemented in x-change. Publication does not provision a payment QR or issue
+a Pay Code. Recognition/completion consumes the saved revision through existing
+claim execution. Exact plan, field compatibility, current workflow access,
+connection readiness and destination fingerprint are checked server-side. Legacy
+future-template updates are forbidden for these immutable publications.
+
+BST remains draft-only: discovery is not reviewer authority, and publication must
+not bypass document verification or approval. Driver-defined notification defaults
+are recorded, not yet a replacement for the established SMS renderer. AUI live
+transport activation still requires the existing explicit acceptance/allowlist.
+
+Local acceptance uses a synthetic owner, fake named connection and no networked
+insurer/payment/SMS operations. See the compass for tests and screenshots. Release
+and target-host migration/authorization are subsequent gates, not implicit in this
+implementation.
 
 Before Gate 2 changes public APIs, review the catalog/adapter DTO shapes with both
 reference fixtures. Versioned driver resolution must be exact (no silent latest

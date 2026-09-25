@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Campaigns from '../../../cockpit/pages/Campaigns.vue';
+import type { CampaignWorkflowDraftCatalog } from '../../../cockpit/components/CockpitCampaignWorkflowDraftEditor.vue';
 import type { CockpitHeaderPageProps } from '../../../cockpit/types';
 
 type CampaignWorksheet = {
@@ -23,6 +24,7 @@ type CampaignsPageProps = CockpitHeaderPageProps & {
     pay_code_templates?: Record<string, unknown>[];
     endpoint_campaigns?: Record<string, unknown>[];
     endpoint_campaign_form?: Record<string, unknown>;
+    workflow_drafts?: CampaignWorkflowDraftCatalog;
 };
 
 const props = defineProps<CampaignsPageProps>();

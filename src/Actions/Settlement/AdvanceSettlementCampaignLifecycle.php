@@ -10,21 +10,24 @@ use LBHurtado\XChange\Models\CampaignPaymentRecognition;
 use LBHurtado\XChange\Models\ProvisionalCoverage;
 use LBHurtado\XChange\Services\Settlement\AuiPersonalAccidentCampaignCoverageDriver;
 use LBHurtado\XChange\Services\Settlement\CampaignWalletPayerMobile;
+use LBHurtado\XChange\Services\Settlement\CampaignWorkflowPublicationResolver;
 
 final readonly class AdvanceSettlementCampaignLifecycle
 {
     public function __construct(
         private OrchestrateProvisionalCoverage $coverage,
         private IssueCompletionPayCode $completionPayCode,
+        private CampaignWorkflowPublicationResolver $publications,
     ) {}
 
     public function handle(CampaignPaymentRecognition $recognition): ?ProvisionalCoverage
     {
-        $driverId = (string) data_get(
+        $publication = $this->publications->forCampaignRevision($recognition->campaignRecord(), (string) $recognition->campaign_revision_id);
+        $driverId = $publication['workflow_id'] ?? (string) data_get(
             $recognition->campaignRecord()->settings,
             'scenario_run.envelope_driver_id',
         );
-        $driverVersion = (string) data_get(
+        $driverVersion = $publication['workflow_version'] ?? (string) data_get(
             $recognition->campaignRecord()->settings,
             'scenario_run.envelope_driver_version',
         );
@@ -49,16 +52,17 @@ final readonly class AdvanceSettlementCampaignLifecycle
         $existing = $orchestration->binding->coverage->completionPayCodeIssuance()->first();
         $requiresOtp = $existing !== null
             ? (bool) data_get($existing->requirements_snapshot, 'requires_otp', true)
-            : (new CampaignWalletPayerMobile)->resolve($recognition) === null;
+            : ((bool) data_get($publication, 'completion.requires_otp', false) || (new CampaignWalletPayerMobile)->resolve($recognition) === null);
 
         $this->completionPayCode->handle(
             $orchestration->binding->coverage,
             $owner,
             new CompletionPayCodeInstructionsData(
-                applicantFields: ['name', 'mobile', 'email', 'address', 'birth_date'],
+                applicantFields: $publication['completion']['applicant_fields'] ?? ['name', 'mobile', 'email', 'address', 'birth_date'],
                 requiresOtp: $requiresOtp,
-                prefix: 'POLI',
-                message: 'Complete your personal details to prepare your policy.',
+                prefix: $publication['completion']['prefix'] ?? 'POLI',
+                mask: $publication['completion']['mask'] ?? '****',
+                message: $publication !== null ? $publication['completion']['message'] : 'Complete your personal details to prepare your policy.',
             ),
         );
 

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Validation\ValidationException;
 use LBHurtado\XCampaign\Contracts\EndpointCampaignRepository;
 use LBHurtado\XChange\Actions\Campaigns\ProvisionCampaignPaymentQr;
 use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
@@ -15,9 +16,11 @@ use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Enums\CampaignPaymentAmountMode;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\StoreCampaignEndpointRequest;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\UpdateCampaignEndpointTemplateRequest;
+use LBHurtado\XChange\Models\CampaignWorkflowPublication;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Services\Leads\LeadCampaignTemplateVersionId;
+use LBHurtado\XChange\Services\Settlement\CampaignWorkflowPublicationResolver;
 
 final class CockpitCampaignEndpointController extends Controller
 {
@@ -77,9 +80,13 @@ final class CockpitCampaignEndpointController extends Controller
         Request $request,
         string $campaign,
         ProvisionCampaignPaymentQr $provision,
+        CampaignWorkflowPublicationResolver $publications,
     ): RedirectResponse {
         $endpoint = $this->endpointForOwner($request, $campaign);
-        $premiumMinor = data_get($endpoint->settings, 'scenario_run.product.premium_minor');
+        $publication = $publications->forCampaignRevision($endpoint, (string) $endpoint->active_template_version_id);
+        $premiumMinor = $publication === null
+            ? data_get($endpoint->settings, 'scenario_run.product.premium_minor')
+            : $publication['plan']['premium_minor'];
         $fixedAmountMinor = is_numeric($premiumMinor) ? (int) $premiumMinor : null;
 
         $provision->handle(
@@ -116,6 +123,12 @@ final class CockpitCampaignEndpointController extends Controller
         LeadCampaignTemplateVersionId $templateVersions,
     ): RedirectResponse {
         $endpoint = $this->endpointForOwner($request, $campaign);
+        if (data_get($endpoint->settings, 'workflow_publication') !== null
+            || CampaignWorkflowPublication::query()->where('endpoint_campaign_id', $endpoint->getKey())->exists()) {
+            throw ValidationException::withMessages([
+                'template' => 'Published workflow revisions are immutable. Prepare a new workflow draft.',
+            ]);
+        }
         $owner = $request->user();
         $validated = $request->validated();
 

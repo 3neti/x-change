@@ -81,6 +81,7 @@ use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\CampaignPaymentEvidenceQuarantine;
 use LBHurtado\XChange\Models\CampaignPaymentQrBinding;
 use LBHurtado\XChange\Models\CampaignPaymentRecognition;
+use LBHurtado\XChange\Models\CampaignWorkflowPublication;
 use LBHurtado\XChange\Models\CompletionClaimEvidenceProjection;
 use LBHurtado\XChange\Models\CompletionPayCodeIssuance;
 use LBHurtado\XChange\Models\FundingSettlement;
@@ -101,7 +102,9 @@ use LBHurtado\XChange\Services\Settlement\AuiPersonalAccidentCampaignCoverageDri
 use LBHurtado\XChange\Services\Settlement\AuiPersonalAccidentPolicyCompletionDriver;
 use LBHurtado\XChange\Services\Settlement\CampaignCoverageDriverRegistry;
 use LBHurtado\XChange\Services\Settlement\CampaignPolicyCompletionDriverRegistry;
+use LBHurtado\XChange\Services\Settlement\CampaignWorkflowPublicationSnapshot;
 use LBHurtado\XChange\Services\Settlement\DemonstrationPolicySummary;
+use LBHurtado\XChange\Services\Settlement\DispatchAuiDemonstrationPolicyViaPipedream;
 use LBHurtado\XChange\Services\Settlement\GenerateAuiDemonstrationPolicyResponse;
 use LBHurtado\XChange\Tests\Fakes\FakeCampaignCoverageDriver;
 use LBHurtado\XChange\Tests\Fakes\User;
@@ -1120,7 +1123,7 @@ it('prepares the reserved AUI policy handoff without external or durable side ef
 });
 
 it('fails closed for unavailable, duplicate, and mismatched policy completion drivers', function (): void {
-    $driver = new AuiPersonalAccidentPolicyCompletionDriver;
+    $driver = app(AuiPersonalAccidentPolicyCompletionDriver::class);
 
     expect(fn () => (new CampaignPolicyCompletionDriverRegistry([]))->for(
         $driver->driverId(),
@@ -2088,6 +2091,167 @@ it('rejects a correctly signed demo summary link for a persisted failed outcome'
     Queue::assertNotPushed(SendDemonstrationPolicySummaryJob::class);
     expect(FeedbackDeliveryRecord::query()->count())->toBe(0);
 });
+
+it('uses the immutable published AUI plan even after campaign and template changes', function (): void {
+    Queue::fake();
+    Http::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation();
+    $publication = publishTestAuiWorkflow($recognition);
+    $campaign = $recognition->campaignRecord();
+    $campaign->update(['settings' => ['scenario_run' => ['product' => ['premium_minor' => 999]]]]);
+    PayCodeTemplate::query()->findOrFail($campaign->pay_code_template_id)->update(['instructions_ciphertext' => ['cash' => ['amount' => 999]]]);
+
+    $decision = app(AuiPersonalAccidentCampaignCoverageDriver::class)->decide($recognition);
+    expect($decision->eligible)->toBeTrue()
+        ->and($decision->terms->coverageAmountMinor)->toBe(500000)
+        ->and($decision->terms->terms['plan_code'])->toBe('PA5000_DAY')
+        ->and($decision->terms->authorization['authority_reference'])->toBe($publication->reference)
+        ->and($publication->getRawOriginal('snapshot'))->not->toContain('PA5000_DAY');
+    Http::assertNothingSent();
+});
+
+it('runs the existing claim execution path with the published completion fields and no bank destination', function (): void {
+    Queue::fake();
+    Http::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_institution_ciphertext' => 'GXCHPHM2XXX', 'payer_account_ciphertext' => '09173011987',
+    ]);
+    publishTestAuiWorkflow($recognition);
+    $job = new AdvanceCampaignPaymentLifecycleJob($recognition->reference);
+    app()->call([$job, 'handle']);
+    app()->call([$job, 'handle']);
+    $issuance = CompletionPayCodeIssuance::query()->sole();
+    $voucher = $issuance->voucher;
+    $workflow = app(ClaimWorkflowResolverContract::class)->resolve($voucher);
+    expect($issuance->requirements_snapshot['applicant_fields'])->toContain('reference_code')
+        ->and($issuance->requirements_snapshot['requires_otp'])->toBeFalse()
+        ->and($issuance->requirements_snapshot['message'])->toBe('Published application details')
+        ->and($workflow->requires_destination)->toBeFalse()
+        ->and($workflow->title)->toBe('Complete Your Details');
+    $result = app(SubmitCompiledFormClaim::class)->handle($voucher, new PreparedCompiledClaimData(
+        $voucher->code, $voucher->getKey(), [
+            'mobile' => '09173011987', 'name' => 'Synthetic Applicant', 'email' => 'synthetic@example.test',
+            'address' => 'Synthetic address', 'birth_date' => '1990-01-01', 'reference_code' => 'SYNTHETIC-001',
+        ],
+    ));
+    expect($result->claimed)->toBeTrue()
+        ->and(CompletionClaimEvidenceProjection::query()->count())->toBe(1)
+        ->and($voucher->refresh()->claims()->count())->toBe(1)
+        ->and(PolicyCompletionRequest::query()->count())->toBe(0);
+    Http::assertNothingSent();
+});
+
+it('does not fall back to scenario metadata when a published revision is missing or corrupt', function (bool $corrupt): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation();
+    $publication = publishTestAuiWorkflow($recognition);
+    if ($corrupt) {
+        DB::table($publication->getTable())->where('id', $publication->getKey())->update(['snapshot_hash' => str_repeat('0', 64)]);
+    } else {
+        $recognition->campaign_revision_id = 'missing-revision';
+    }
+    expect(fn () => app(AuiPersonalAccidentCampaignCoverageDriver::class)->decide($recognition))->toThrow(DomainException::class)
+        ->and(ProvisionalCoverage::query()->count())->toBe(0)
+        ->and(CompletionPayCodeIssuance::query()->count())->toBe(0);
+})->with([true, false]);
+
+it('permits token rotation but rejects published destination and timeout drift', function (string $field, mixed $value, bool $allowed): void {
+    Queue::fake();
+    Http::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation();
+    publishTestAuiWorkflow($recognition);
+    config()->set('settlement-envelope.connections.aui-demo.'.$field, $value);
+    $resolve = fn () => app(AuiPersonalAccidentCampaignCoverageDriver::class)->decide($recognition);
+    if ($allowed) {
+        expect($resolve()->eligible)->toBeTrue();
+    } else {
+        expect($resolve)->toThrow(DomainException::class);
+    }
+    Http::assertNothingSent();
+})->with([
+    ['auth.token', 'synthetic-rotated-token', true],
+    ['base_url', 'https://different.pipedream.net/policy', false],
+    ['timeout', 16, false], ['auth.type', 'none', false],
+]);
+
+it('blocks changed transport dispositions even if the named connection is unchanged', function (): void {
+    Queue::fake();
+    Http::fake();
+    [$projection] = auiPolicyCompletionProjection();
+    $recognition = $projection->issuance->coverage->recognition;
+    publishTestAuiWorkflow($recognition);
+    $prepared = app(PrepareCampaignPolicyCompletion::class)->handle($projection);
+    config()->set('x-change.settlement.policy_completion.transports', [
+        AuiPersonalAccidentPolicyCompletionDriver::DRIVER_ID.'@'.AuiPersonalAccidentPolicyCompletionDriver::DRIVER_VERSION => array_replace(policyCompletionTransportDisposition(), [
+            'provider' => 'pipedream-test', 'submission_endpoint' => 'https://different.pipedream.net/policy',
+        ]),
+    ]);
+    expect(fn () => app(DispatchAuiDemonstrationPolicyViaPipedream::class)->handle($prepared))
+        ->toThrow(DomainException::class, 'does not match the published workflow connection');
+    Http::assertNothingSent();
+});
+
+it('does not mutate or delete a campaign workflow publication', function (): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation();
+    $publication = publishTestAuiWorkflow($recognition);
+    expect(fn () => $publication->update(['snapshot_hash' => str_repeat('0', 64)]))->toThrow(LogicException::class)
+        ->and(fn () => $publication->fresh()->delete())->toThrow(LogicException::class);
+});
+
+it('refuses unsupported or financially incompatible AUI publications', function (string $path, mixed $value): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation();
+    $snapshot = publishTestAuiWorkflow($recognition)->snapshot;
+    data_set($snapshot, $path, $value);
+    expect(fn () => app(CampaignWorkflowPublicationSnapshot::class)->validate($snapshot))
+        ->toThrow(DomainException::class);
+})->with([
+    ['workflow_id', 'philhealth.bst.demo'], ['entry_method', 'public_endpoint'], ['plan.premium_minor', 500],
+    ['plan.coverage.duration_days', 2], ['connection', 'another-server'], ['instructions.cash.amount', 1],
+    ['instructions.target_amount', 49], ['completion.applicant_fields', ['name', 'mobile']],
+    ['completion.applicant_fields', ['name', 'mobile', 'email', 'address', 'birth_date', 'bank_account']],
+]);
+
+function publishTestAuiWorkflow(CampaignPaymentRecognition $recognition): CampaignWorkflowPublication
+{
+    config()->set('settlement-envelope.connections.aui-demo', [
+        'driver' => 'http', 'base_url' => 'https://synthetic.pipedream.net/policy',
+        'auth' => ['type' => 'bearer', 'token' => 'synthetic-test-token'], 'connect_timeout' => 3, 'timeout' => 15,
+    ]);
+    $campaign = $recognition->campaignRecord();
+    $owner = $recognition->ownerRecord();
+    $instructions = [
+        'cash' => ['amount' => 0, 'currency' => 'PHP'], 'voucher_type' => 'settlement', 'target_amount' => 50,
+        'inputs' => ['fields' => ['name', 'mobile', 'email', 'address', 'birth_date', 'reference_code']],
+        'rider' => ['message' => 'Published application details'],
+    ];
+    $draft = PayCodeTemplate::query()->create([
+        'owner_type' => $owner->getMorphClass(), 'owner_id' => (string) $owner->getKey(),
+        'name' => 'Published AUI draft', 'base_template_key' => 'blank-pay-code', 'instructions_ciphertext' => $instructions,
+        'include_amount' => true, 'include_purpose' => true, 'status' => 'published',
+    ]);
+    $snapshots = app(CampaignWorkflowPublicationSnapshot::class);
+    $snapshot = $snapshots->fromDraft([
+        'state' => 'draft_only', 'parameters' => [], 'entry_method' => 'payment_qr',
+        'workflow' => [
+            'id' => AuiPersonalAccidentCampaignCoverageDriver::DRIVER_ID,
+            'version' => AuiPersonalAccidentCampaignCoverageDriver::DRIVER_VERSION,
+            'workflow' => ['connection' => 'aui-demo', 'requires_review' => false, 'notifications' => []],
+        ],
+        'plan' => [
+            'code' => 'PA5000_DAY', 'version' => '1', 'title' => 'Published one-day demonstration',
+            'currency' => 'PHP', 'premium_minor' => 5000, 'benefit_minor' => 500000,
+            'coverage' => ['basis' => 'day', 'duration_days' => 1],
+        ],
+    ], $instructions);
+
+    return CampaignWorkflowPublication::query()->create([
+        'endpoint_campaign_id' => $campaign->getKey(), 'campaign_revision_id' => $recognition->campaign_revision_id,
+        'draft_template_id' => $draft->getKey(), 'snapshot' => $snapshot, 'snapshot_hash' => $snapshots->hash($snapshot),
+        'published_by_type' => $owner->getMorphClass(), 'published_by_id' => (string) $owner->getKey(), 'published_at' => now(),
+    ]);
+}
 
 function auiDemoSummaryOutcome(array $payer = [], ?PolicyCompletionOutcomeData $result = null, ?array $applicant = null): PolicyCompletionOutcome
 {

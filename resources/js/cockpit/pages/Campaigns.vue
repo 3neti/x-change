@@ -35,6 +35,9 @@ import { destroy, show, store } from '@/routes/x-change/cockpit/campaigns';
 import authorizations from '@/routes/x-change/cockpit/campaigns/authorizations';
 import { store as storeIntake } from '@/routes/x-change/cockpit/campaigns/intakes';
 import CockpitCampaignIntakeDialog from '../components/CockpitCampaignIntakeDialog.vue';
+import CockpitCampaignWorkflowDraftEditor, {
+    type CampaignWorkflowDraftCatalog,
+} from '../components/CockpitCampaignWorkflowDraftEditor.vue';
 import CockpitCampaignEndpointStamp from '../components/CockpitCampaignEndpointStamp.vue';
 import CockpitCampaignPaymentQrStamp from '../components/CockpitCampaignPaymentQrStamp.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
@@ -163,6 +166,7 @@ type CampaignsPageProps = CockpitHeaderPageProps & {
     endpoint_capabilities?: CampaignEndpointCapability[];
     pay_code_templates?: CampaignPayCodeTemplate[];
     endpoint_campaigns?: EndpointCampaign[];
+    workflow_drafts?: CampaignWorkflowDraftCatalog;
     endpoint_campaign_form?: {
         action_url: string;
         default_timezone: string;
@@ -1381,6 +1385,11 @@ const updatedRelativeTime = (value: string | null): string =>
                 class="grid min-w-0 gap-5"
                 data-testid="campaign-endpoint-canvas"
             >
+                <CockpitCampaignWorkflowDraftEditor
+                    v-if="workflow_drafts"
+                    :catalog="workflow_drafts"
+                    :templates="pay_code_templates ?? []"
+                />
                 <div
                     class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 >

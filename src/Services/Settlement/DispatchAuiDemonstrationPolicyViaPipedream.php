@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Http;
 use LBHurtado\XChange\Data\Settlement\AuiDemonstrationPolicyResponseData;
 use LBHurtado\XChange\Data\Settlement\AuiDemonstrationPolicyTransportRequestData;
 use LBHurtado\XChange\Data\Settlement\PolicyCompletionPreparationData;
+use LBHurtado\XChange\Models\CampaignPaymentRecognition;
 use ThreeNeti\SettlementEnvelopeAui\Data\AuiPolicySubmission;
 use ThreeNeti\SettlementEnvelopeAui\Services\AuiPolicyTransport;
 use ThreeNeti\SettlementEnvelopeAui\Services\ParseAuiPolicyResponse;
@@ -17,6 +18,8 @@ final readonly class DispatchAuiDemonstrationPolicyViaPipedream
 {
     public function __construct(
         private PolicyCompletionTransportDispositionCatalog $dispositions,
+        private CampaignWorkflowPublicationResolver $publications,
+        private CampaignWorkflowPublicationSnapshot $snapshots,
         private ParseAuiDemonstrationPolicyResponse $responses = new ParseAuiDemonstrationPolicyResponse,
         private ?AuiPolicyTransport $transport = null,
     ) {}
@@ -34,6 +37,17 @@ final readonly class DispatchAuiDemonstrationPolicyViaPipedream
             || $disposition->authenticationScheme() !== 'bearer-token'
             || ! $this->isPipedreamEndpoint($disposition->submissionEndpoint())) {
             throw new DomainException('An accepted Pipedream test transport disposition is required.');
+        }
+
+        $recognition = CampaignPaymentRecognition::query()->where('reference', $preparation->paymentRecognitionReference)->first();
+        if ($recognition !== null) {
+            $publication = $this->publications->forCampaignRevision($recognition->campaignRecord(), (string) $recognition->campaign_revision_id);
+            if ($publication !== null && ! hash_equals($publication['connection_fingerprint'], $this->snapshots->connectionFingerprint([
+                'driver' => 'http', 'base_url' => $disposition->submissionEndpoint(), 'auth' => ['type' => 'bearer'],
+                'connect_timeout' => $disposition->connectTimeoutSeconds(), 'timeout' => $disposition->responseTimeoutSeconds(),
+            ]))) {
+                throw new DomainException('The accepted transport destination does not match the published workflow connection.');
+            }
         }
 
         $credential = config($disposition->credentialReference());
