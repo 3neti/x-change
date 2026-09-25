@@ -124,6 +124,27 @@ Acceptance: common adapter contract suite and workflow-specific negative cases.
 
 ## Gate 4 — Template-backed campaign draft
 
+### Package-provided discovery follow-up (2026-09-25)
+
+Composer installation must make each installed integration discoverable without
+copying YAML into the host. Settlement-envelope owns a named driver-source
+registry; integration Laravel providers register bundled versioned resources.
+The same source selection must drive listing, exact-version loading, inheritance
+and schema resolution. Identical host copies may deduplicate; conflicting exact
+versions must fail unless the host explicitly opts into a reviewed override.
+
+AUI and PhilHealth register independently and together. Registration is not
+execution: it must not make HTTP calls, issue Pay Codes, send messages or approve
+claims. AUI retains x-change's accepted-transport wrapper; PhilHealth remains a
+synthetic reviewed workflow. Missing connections remain visible as readiness
+restrictions. Existing published snapshots and ownership safeguards are unchanged.
+
+Acceptance requires empty-host-driver tests, duplicate/override/source-cache and
+schema tests, both package providers, existing claim/publication regressions,
+and local browser draft creation for both workflows. Publish dependencies first,
+then synchronize minimum versions and release locks before host adoption. Never
+deploy temporary Composer path overrides or require manual fixture copying.
+
 Implement in two controlled slices. Gate 4a is the inactive draft editor (now
 implemented locally); Gate 4b is publication and runtime adoption (still pending).
 The current endpoint creation action publishes immediately, and legacy starts

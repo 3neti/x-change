@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\ServiceProvider;
 use LBHurtado\XChange\Enums\PublicationInvocation;
 use LBHurtado\XChange\Enums\PublicationOverwritePolicy;
 use LBHurtado\XChange\Enums\PublicationScope;
+use LBHurtado\XChange\Providers\XChangeServiceProvider;
 use LBHurtado\XChange\Services\Publication\CorePublicationContributor;
 use LBHurtado\XChange\Services\Publication\PublicationCatalog;
 
@@ -104,4 +106,19 @@ it('keeps configuration overrides out of automatic build publication', function 
         ->not->toContain('x-change-config', 'form-flow-config', 'otp-handler-config', 'x-ray-config')
         ->and($advancedTargets)
         ->toContain('x-change-config', 'form-flow-config', 'otp-handler-config', 'x-ray-config');
+});
+
+it('leaves integration drivers with their owning packages rather than publishing host copies', function (): void {
+    $definition = collect((new PublicationCatalog([new CorePublicationContributor]))
+        ->definitions(PublicationScope::Build))->firstWhere('id', 'x-change.envelope-driver');
+
+    expect($definition->verificationPaths)->toBe([config_path('envelope-drivers/account-funding-review.yaml')]);
+    $paths = ServiceProvider::pathsToPublish(
+        XChangeServiceProvider::class,
+        'x-change-envelope-drivers',
+    );
+    expect(array_values($paths))->not->toContain(
+        config_path('envelope-drivers/aui.personal-accident.provisional-cover.yaml'),
+        config_path('envelope-drivers/philhealth.bst.demo.yaml'),
+    );
 });

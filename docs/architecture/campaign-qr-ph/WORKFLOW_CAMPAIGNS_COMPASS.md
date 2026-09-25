@@ -12,6 +12,50 @@ The customer stays in the existing Pay Code claim/payment experience.
 
 ## Current position
 
+### Package-provided discovery — local acceptance complete (2026-09-25)
+
+The user approved removing the manual host-fixture requirement. Upstream owns
+DriverSourceRegistry; AUI/PhilHealth providers register their bundled sources.
+x-change stops publishing the AUI integration YAML, and its catalog/draft tests
+now require both workflows to work with an empty host driver disk. Existing
+host files are not deleted; identical definitions are compatibility copies.
+
+Verification:
+- settlement-envelope: 193 passed / 587 assertions, 4 existing skips.
+- AUI integration: 90 passed / 144 assertions.
+- PhilHealth integration: 27 passed / 71 assertions.
+- x-change discovery, draft, publication and adjacent runtime: 62 passed / 364 assertions.
+- Browser: 1 passed, both AUI and BST drafts at 1440x1000 and 375x812,
+  no JS errors or horizontal overflow. Both host YAML copies were temporarily
+  absent during the run and restored afterward. No campaign was published.
+- Pint, whitespace checks and candidate host strict asset doctor passed.
+
+Screenshots: [AUI](/Users/rli/PhpstormProjects/x-change-sandbox/output/workflow-package-discovery/aui-demo-draft.png),
+[AUI mobile](/Users/rli/PhpstormProjects/x-change-sandbox/output/workflow-package-discovery/aui-demo-mobile-draft.png),
+[PhilHealth](/Users/rli/PhpstormProjects/x-change-sandbox/output/workflow-package-discovery/philhealth-demo-draft.png),
+[PhilHealth mobile](/Users/rli/PhpstormProjects/x-change-sandbox/output/workflow-package-discovery/philhealth-demo-mobile-draft.png).
+
+Review caught legacy host definitions missing driver identity/version; upstream
+now preserves their prior defaults without relaxing workflow/package exactness.
+Unknown absent package versions now return DriverNotFoundException rather than
+the old flat-file identity mismatch. AUI keeps its x-change transport wrapper;
+its package lazily binds transport, not a fabricated workflow adapter.
+
+Temporary Composer overrides were removed and normal host/package locks restored.
+Composer initially refused to replace the host's source symlink; only that
+verified generated symlink was unlinked, then normal installation succeeded.
+Generated package/service caches were rebuilt after restoration. Source edits,
+host configuration copies and unrelated work were preserved. Sandbox is back on
+published v1.0.52; candidate browser drafts remain inactive for inspection.
+
+No push, tag, release, Cloud operation, SMS, payment or insurer request occurred.
+Next controlled gate: publish envelope registry support (proposed v1.4.0), raise
+both integration minimums to ^1.4 and publish them (proposed v1.1.0), then raise
+x-change minimums (^1.4 envelope / ^1.1 integrations), synchronize its normal
+release lock, rerun acceptance and publish. Current integration manifests still
+use ^1.3 and MUST NOT be released before that minimum-version step. New x-change
+tests require candidate dependencies until the release lock is synchronized.
+
 ### v1.0.52 publication and testing rollout (2026-09-25)
 
 User authorized publication and testing deployment. Published package main/tag

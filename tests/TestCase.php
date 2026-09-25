@@ -93,6 +93,8 @@ abstract class TestCase extends Orchestra
             $this->optionalProvider('LBHurtado\\XFeedback\\XFeedbackServiceProvider'),
             $this->optionalProvider('LBHurtado\\XCampaign\\XCampaignServiceProvider'),
             $this->optionalProvider('LBHurtado\\SettlementEnvelope\\SettlementEnvelopeServiceProvider'),
+            $this->optionalProvider('ThreeNeti\\SettlementEnvelopeAui\\SettlementEnvelopeAuiServiceProvider'),
+            $this->optionalProvider('ThreeNeti\\SettlementEnvelopePhilhealth\\SettlementEnvelopePhilhealthServiceProvider'),
             XCommerceServiceProvider::class,
             XProvisioningServiceProvider::class,
             XChangeServiceProvider::class,

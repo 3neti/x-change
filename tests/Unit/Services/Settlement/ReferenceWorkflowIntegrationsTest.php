@@ -6,12 +6,12 @@ use Carbon\CarbonImmutable;
 use Composer\InstalledVersions;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use LBHurtado\SettlementEnvelope\Contracts\WorkflowAccessPolicy;
 use LBHurtado\SettlementEnvelope\Contracts\WorkflowCatalog;
 use LBHurtado\SettlementEnvelope\Data\WorkflowContext;
 use LBHurtado\SettlementEnvelope\Enums\WorkflowIntegrationStatus;
 use LBHurtado\SettlementEnvelope\Exceptions\DriverNotFoundException;
-use LBHurtado\SettlementEnvelope\Exceptions\InvalidDriverException;
 use LBHurtado\SettlementEnvelope\Models\Envelope;
 use LBHurtado\SettlementEnvelope\Services\DriverService;
 use LBHurtado\XChange\Data\Settlement\AuiDemonstrationPolicyResponseData;
@@ -29,9 +29,7 @@ use ThreeNeti\SettlementEnvelopePhilhealth\WorkflowAssets;
 
 beforeEach(function (): void {
     Http::preventStrayRequests();
-    config()->set('filesystems.disks.integration-drivers', [
-        'driver' => 'local', 'root' => dirname(__DIR__, 4).'/config/envelope-drivers',
-    ]);
+    Storage::fake('integration-drivers');
     config()->set('settlement-envelope.driver_disk', 'integration-drivers');
     app()->forgetInstance(DriverService::class);
     $this->context = new WorkflowContext('actor-demo', 'account-demo');
@@ -52,6 +50,7 @@ it('consumes standalone integration resources through Composer without resource 
 });
 
 it('discovers both reference definitions without activating either integration', function (): void {
+    expect(Storage::disk('integration-drivers')->allFiles())->toBe([]);
     expect(app(WorkflowCatalog::class)->available($this->context))->toBe([]);
     allowReferenceWorkflows();
     configureReferenceAuiConnection();
@@ -67,7 +66,7 @@ it('discovers both reference definitions without activating either integration',
     $registry = app(ReferenceWorkflowIntegrations::class)->registry();
     expect($registry->resolve($aui->id, $aui->version, $this->context))->toBeInstanceOf(AuiDemonstrationWorkflowAdapter::class)
         ->and($registry->resolve($bst->id, $bst->version, $this->context))->toBeInstanceOf(PhilhealthBstDemoWorkflowAdapter::class)
-        ->and(fn () => $registry->resolve($aui->id, '9.0.0', $this->context))->toThrow(InvalidDriverException::class)
+        ->and(fn () => $registry->resolve($aui->id, '9.0.0', $this->context))->toThrow(DriverNotFoundException::class)
         ->and(fn () => $registry->resolve($bst->id, $bst->version, new WorkflowContext('actor-other', 'account-other')))->toThrow(DriverNotFoundException::class);
     Http::assertNothingSent();
 });

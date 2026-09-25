@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use LBHurtado\SettlementEnvelope\Contracts\WorkflowAccessPolicy;
 use LBHurtado\SettlementEnvelope\Contracts\WorkflowCatalog;
 use LBHurtado\SettlementEnvelope\Data\WorkflowContext;
@@ -20,9 +21,7 @@ use LBHurtado\XChange\Services\Settlement\CampaignWorkflowPublicationSnapshot;
 beforeEach(function (): void {
     $this->operator = actingAsTestUser();
     Http::preventStrayRequests();
-    config()->set('filesystems.disks.draft-test-drivers', [
-        'driver' => 'local', 'root' => dirname(__DIR__, 3).'/config/envelope-drivers',
-    ]);
+    Storage::fake('draft-test-drivers');
     config()->set('settlement-envelope.driver_disk', 'draft-test-drivers');
     app()->forgetInstance(DriverService::class);
     $this->source = PayCodeTemplate::query()->create([
