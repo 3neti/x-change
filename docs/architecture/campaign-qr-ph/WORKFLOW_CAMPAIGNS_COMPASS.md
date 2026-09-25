@@ -12,6 +12,31 @@ The customer stays in the existing Pay Code claim/payment experience.
 
 ## Current position
 
+### Bounded status updates — v1.0.55 deployed to testing (2026-09-26)
+
+Published main/tag `v1.0.55` at `0423638354e83482add2c67af4a767cb6d1380dd`.
+Host `3a3f418b52fc8c9233bbe3244b859508d4efea15` updates only the Composer pair;
+exactly one dependency changed. Reverified 133 frontend tests, nine host tests /
+36 assertions, Composer validation, 15-resource publication, strict asset doctor,
+production build and diff checks. Existing dependency annotation/chunk-size
+build warnings remain non-blocking. Unrelated host changes were excluded.
+
+Production push-to-deploy was guarded false and independently verified before
+the host push. Testing deployment `depl-a2d562f8-caf2-4faa-bca8-6c900574e9b0`
+succeeded from that exact host commit; deployment monitor exited successfully.
+Runtime v1.0.55 verified at 2026-09-25 22:04:55–57 UTC
+(`cexe-a2d563ff-e444-4646-a8c7-0bf4f9aa509a`), strict asset doctor passed at
+22:05:02 (`comm-a2d56405-220d-4591-bf23-52749273afc4`). Production's original
+true setting was restored and independently verified; its latest ten deployment
+IDs remain unchanged and no production deployment was triggered.
+
+In-app browser reload of AUI-8JKT shows Policy result ready, payment received,
+and no payment instruction. Its private CTA is withheld after the 30-minute
+receipt cutoff at 22:04:19 UTC; the signed SMS remains the fallback. No new
+payment, claim or SMS was initiated. This completed claim cannot demonstrate
+the processing-to-ready transition: that is covered by automated tests and
+remains available for a separately authorized fresh live acceptance run.
+
 ### Bounded completion status updates — local implementation (2026-09-26)
 
 User confirmed receipt of AUI-8JKT's policy-link SMS, completing the prior live
