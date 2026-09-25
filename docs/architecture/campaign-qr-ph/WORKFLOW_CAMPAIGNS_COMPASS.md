@@ -12,6 +12,26 @@ The customer stays in the existing Pay Code claim/payment experience.
 
 ## Current position
 
+### Prepaid completion release — testing push awaiting guard approval (2026-09-26)
+
+Published x-change `v1.0.54` at `053bf65eca1471ecdc166d7601465e0644862ba3`.
+The sandbox installed that exact released source. Local host commit `ac209db4`
+changes only the Composer requirement/lock; unrelated host work remains excluded.
+Strict Composer validation, 15-resource asset verification, production build and
+eight host tests / 30 assertions passed.
+
+Read-only in-app browser inspection of existing paid claim AUI-P5E7 still shows
+the old “Continue to payment” message before rollout. No claim, payment, policy
+request or SMS was repeated.
+
+Testing and production both track the sandbox `main` branch with push-to-deploy
+enabled. The safety review rejected the proposed temporary production
+push-to-deploy guard because that exact production setting change requires
+explicit user approval. No production setting changed, no host push occurred,
+and no Cloud deployment was initiated. Do not retry through another API path.
+Next: obtain explicit permission to disable production push-to-deploy temporarily,
+verify it, push/deploy testing, then restore and verify the original setting.
+
 ### Post-payment completion success correction — local only (2026-09-25)
 
 Live acceptance campaign 11/payment recognition 9 produced AUI-P5E7 after the
