@@ -358,6 +358,22 @@ Authorization seam path.
 
 # Current Status
 
+## Prepaid completion status refresh (2026-09-26, local only)
+
+Only `campaign.coverage-completion.v1` with authoritative `processing` state and
+legacy-rider suppression activates bounded presentation polling. The existing
+success GET is reused through Inertia partial reloads of `success_presentation`
+and `success_action`; no client-side policy URL is constructed. The server's
+claim-session receipt remains required to expose a private demo-policy action.
+
+Checks run every five seconds without overlap, pause while hidden, and stop
+after two minutes, on errors, on terminal state or when the component unmounts.
+Timeout/error offers a manual Check status and SMS fallback. A manual check does
+not restart the automatic window. No claim submission or processing retry is
+performed by this UI. Normal onboarding, payout and payment handoff do not poll.
+Local verification: 133 frontend tests and 12 success-controller tests pass.
+Host build/browser acceptance and publication remain the next controlled gate.
+
 The compiler migration is effectively complete.
 
 The system is no longer proving that the compiler can coexist with the legacy flow.

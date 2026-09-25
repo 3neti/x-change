@@ -12,6 +12,7 @@ import type {
     RiderExperience,
 } from '@/components/x-rider/types';
 import { useClaimSuccessRedirect } from './useClaimSuccessRedirect';
+import { useCompletionStatusPoll } from './useCompletionStatusPoll';
 import { resolveSuccessRedirectOwnershipViewModel } from '@/components/x-change/successRedirectOwnershipViewModel';
 import {
     resolveRedirectRuntimeStages,
@@ -59,6 +60,7 @@ interface Props {
     compiled_claim_result?: CompiledClaimResultPayload;
     destination?: PayoutDestinationSnapshot | null;
     success_presentation?: {
+        state?: string | null;
         suppress_legacy_rider?: boolean;
         intent?: string | null;
         eyebrow?: string | null;
@@ -88,6 +90,13 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+
+const completionProcessing = computed(() =>
+    props.claimWorkflowKey === 'campaign.coverage-completion.v1'
+    && props.success_presentation?.suppress_legacy_rider === true
+    && props.success_presentation?.state === 'processing',
+);
+const completionPoll = useCompletionStatusPoll(completionProcessing);
 
 const suppressLegacyRider = computed(() => props.success_presentation?.suppress_legacy_rider === true);
 const hasPaymentHandoff = computed(() =>
@@ -394,6 +403,21 @@ const successAction = computed(() => {
                 >
                     {{ successAction.label }}
                 </a>
+
+                <div v-if="completionProcessing" data-testid="completion-status-check" class="space-y-3">
+                    <p role="status" aria-live="polite" class="text-sm text-muted-foreground">
+                        {{ completionPoll.message.value }}
+                    </p>
+                    <button
+                        v-if="completionPoll.stopped.value"
+                        type="button"
+                        :disabled="completionPoll.checking.value"
+                        class="inline-flex min-h-11 items-center justify-center rounded-md border px-6 py-2 text-sm font-semibold disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring"
+                        @click="completionPoll.check"
+                    >
+                        {{ completionPoll.checking.value ? 'Checking…' : 'Check status' }}
+                    </button>
+                </div>
 
                 <div
                     v-if="compiledClaimResult.visible"

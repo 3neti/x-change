@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import Success from '../../resources/js/pages/x-change/claim/Success.vue';
+import { router } from '@inertiajs/vue3';
 
 vi.mock('@inertiajs/vue3', () => ({
     Head: {
@@ -9,6 +10,7 @@ vi.mock('@inertiajs/vue3', () => ({
     },
     router: {
         visit: vi.fn(),
+        reload: vi.fn(),
     },
 }));
 
@@ -45,6 +47,53 @@ const baseProps = {
 };
 
 describe('claim Success destination route rendering', () => {
+    it('checks prepaid processing then replaces it with the authorized ready action', async () => {
+        vi.useFakeTimers();
+        vi.mocked(router.reload).mockClear();
+        const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+        const presentation = { suppress_legacy_rider: true, state: 'processing', title: 'Details submitted', body: 'Payment received.' };
+        const wrapper = mount(Success, { props: {
+            ...baseProps,
+            claimWorkflowKey: 'campaign.coverage-completion.v1',
+            success_presentation: presentation,
+        } });
+        try {
+            expect(wrapper.text()).toContain('update automatically');
+            await vi.advanceTimersByTimeAsync(5000);
+            expect(router.reload).toHaveBeenCalledOnce();
+            await wrapper.setProps({
+                success_presentation: { ...presentation, state: 'ready', title: 'Policy result ready' },
+                success_action: { intent: 'demo_policy_summary', label: 'View demo policy', enabled: true, target: { url: '/private-demo' } },
+            });
+            expect(wrapper.text()).toContain('Policy result ready');
+            expect(wrapper.find('[data-testid="completion-status-check"]').exists()).toBe(false);
+            expect(wrapper.get('[data-testid="claim-success-primary-action"]').attributes('href')).toBe('/private-demo');
+            await vi.advanceTimersByTimeAsync(10000);
+            expect(router.reload).toHaveBeenCalledOnce();
+            await wrapper.setProps({ success_action: null });
+            expect(wrapper.find('[data-testid="claim-success-primary-action"]').exists()).toBe(false);
+        } finally {
+            wrapper.unmount();
+            visibility.mockRestore();
+            vi.useRealTimers();
+        }
+    });
+
+    it('offers a bounded manual check after the automatic window expires', async () => {
+        vi.useFakeTimers();
+        const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+        const wrapper = mount(Success, { props: {
+            ...baseProps, claimWorkflowKey: 'campaign.coverage-completion.v1',
+            success_presentation: { suppress_legacy_rider: true, state: 'processing', title: 'Details submitted' },
+        } });
+        try {
+            await vi.advanceTimersByTimeAsync(120000);
+            expect(wrapper.text()).toContain('Check status');
+            expect(wrapper.text()).toContain('SMS');
+        } finally {
+            wrapper.unmount(); visibility.mockRestore(); vi.useRealTimers();
+        }
+    });
     it('renders the payout route with an icon and label when a destination snapshot is present', () => {
         const wrapper = mount(Success, {
             props: {

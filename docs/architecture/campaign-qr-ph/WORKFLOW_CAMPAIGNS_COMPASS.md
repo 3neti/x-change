@@ -12,6 +12,65 @@ The customer stays in the existing Pay Code claim/payment experience.
 
 ## Current position
 
+### Bounded completion status updates — local implementation (2026-09-26)
+
+User confirmed receipt of AUI-8JKT's policy-link SMS, completing the prior live
+acceptance. The next polish is implemented in package source only: processing
+completion pages request the existing success GET's presentation/action props
+every five seconds, serially, for at most two minutes. Hidden tabs send no checks;
+ready/attention/unverified states and unmount stop polling. Network/HTTP failures
+stop automatic checks. Timeout/error copy offers a one-shot Check status action
+and preserves the independent SMS fallback. No new endpoint, execution job,
+notification, route, dependency or authorization rule was introduced.
+
+Verification: 133 frontend tests across 12 files; success controller 12 tests /
+76 assertions; diff whitespace check passed. No PHP implementation changed.
+Local browser acceptance and host production build are pending normal package
+integration; the installed host remains on v1.0.54. Nothing pushed, tagged,
+published or deployed for this polish. The prior Cloud acceptance below tested
+manual refresh, not this new polling implementation.
+
+### Fresh prepaid completion acceptance — browser verified (2026-09-26)
+
+User authorized one existing PHP 50 campaign QR payment, the resulting first SMS,
+same-session claim verification, authorized demo-policy CTA and policy-link SMS
+verification. Read-only testing preflight at 2026-09-25 21:18:29 UTC confirms
+v1.0.54, campaign 11 open, binding 3 active, artifact 15 fixed at 5000 PHP minor
+units, and standing address 6 active with fresh monitoring. Automatic demo
+processing and both notification settings are enabled. The scheduler and one
+database worker consuming funding, feedback and default queues are configured;
+relevant queues are empty and no failed jobs were recorded in the last hour.
+
+Scoped baseline: one recognition (9), coverage (9), issuance (9), claim projection
+(7), policy request (7), outcome (7), and two sent feedback records (33 and 34).
+Correlate the new payment through these linked records; unrelated traffic must
+not be counted as this run. Provider acceptance still depends on the payer app.
+
+The user paid once and completed AUI-8JKT in the in-app browser. Payment settled
+at 2026-09-25 21:29:40 UTC, recognition 10 followed at 21:29:49, coverage 10 at
+21:29:50, issuance 10 at 21:29:51, and first SMS 35 was marked sent at 21:29:52
+(12 seconds after payment). Claim 154 and projection 8 completed at 21:34:19.
+Automatic request 8 and outcome 8 succeeded at 21:34:26; second SMS 36 was marked
+sent at 21:34:27 (8 seconds after claim). Read-only evidence command:
+`cexe-a2d5595d-dc60-46d5-a462-ea1d651f4b53` at 21:35:13 UTC.
+
+Exactly one linked recognition, coverage, issuance, projection, request and
+outcome exists for this payment, with one SMS record per notification stage.
+No relevant queue failures were recorded since payment. No manual provider call,
+retry, resend or replay was performed. SMS provider acceptance is verified;
+handset receipt remains subject to user confirmation (delivered_at is null).
+
+Same-session browser first showed “Details submitted” with payment received and
+policy being prepared, not another payment instruction. One explicit refresh
+after backend readiness showed “Policy result ready” and “View demo policy”.
+The action opened the authorized private demo summary with submitted applicant
+details and the demonstration-only disclaimer. No applicant details or signed
+URL are persisted here. This is not actual insurance coverage.
+
+Remaining UX follow-up: success does not automatically transition to ready;
+the acceptance used a same-tab refresh. Broader classifier/simulator gates remain
+separate from this verified prepaid-completion correction.
+
 ### Prepaid completion release — testing deployed and verified (2026-09-26)
 
 Published x-change `v1.0.54` at `053bf65eca1471ecdc166d7601465e0644862ba3`.
