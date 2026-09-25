@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services\Claim;
 
 use LBHurtado\Voucher\Enums\VoucherSlicePlanMode;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Data\Claim\ClaimExperienceData;
 use LBHurtado\XChange\Data\Claim\ClaimExperienceDiagnosticsData;
 use LBHurtado\XChange\Data\Claim\ClaimPhaseData;
@@ -32,6 +33,10 @@ class ClaimExperienceCompiler
         $hasRiderSplash = filled(data_get($rider, 'splash'));
         $hasRiderMessage = filled(data_get($rider, 'message'));
         $redirectUrl = data_get($rider, 'redirect_url') ?? data_get($rider, 'url');
+        if (app(ClaimWorkflowResolverContract::class)->resolve($voucher)->key === 'campaign.coverage-completion.v1') {
+            $hasRiderMessage = false;
+            $redirectUrl = null;
+        }
         $isOfficerAuthorization = $this->isOfficerAuthorization($instructions);
 
         $phases = [];

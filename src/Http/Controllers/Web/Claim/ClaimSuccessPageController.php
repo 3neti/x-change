@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Http\Controllers\Web\Claim;
 
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Inertia\Response;
+use Inertia\Response as InertiaResponse;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
@@ -16,13 +15,16 @@ use LBHurtado\XChange\Services\Claim\DefaultClaimWorkflowResolver;
 use LBHurtado\XChange\Services\Claim\OnboardingSuccessActionResolver;
 use LBHurtado\XChange\Services\Claim\VoucherRiderFallbackPolicy;
 use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
+use LBHurtado\XChange\Services\Settlement\DemonstrationPolicySummary;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LBHurtado\XChange\Services\XRay\VoucherXRayProjectionBuilder;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSuccessPayload;
+use LBHurtado\XChange\Support\Claim\CompletionClaimReceipt;
 use LBHurtado\XChange\Support\Rider\XChangeRiderOutcomeResolver;
 use LBHurtado\XChange\Support\Rider\XChangeRiderSubjectFactory;
 use LBHurtado\XRider\Contracts\RiderExperienceResolverContract;
+use Symfony\Component\HttpFoundation\Response;
 
 class ClaimSuccessPageController
 {
@@ -39,7 +41,7 @@ class ClaimSuccessPageController
         VoucherCollectionProgressService $collectionProgress,
         Request $request,
         CampaignDisplaySessions $displays,
-    ): Response|JsonResponse {
+    ): InertiaResponse|Response {
         $voucher = Voucher::query()
             ->where('code', $code)
             ->firstOrFail();
@@ -52,7 +54,7 @@ class ClaimSuccessPageController
         $instructions = $voucher->instructions?->toArray() ?? [];
         $successPresentation = $this->successPresentation($voucher, $xray);
 
-        $experience = $riderFallbacks->shouldResolve($instructions)
+        $experience = ! ($successPresentation['suppress_legacy_rider'] ?? false) && $riderFallbacks->shouldResolve($instructions)
             ? $riders->resolve($subject, [
                 'state' => $state->value,
                 'rider' => data_get($instructions, 'rider', []),
@@ -64,7 +66,7 @@ class ClaimSuccessPageController
             : null;
 
         $props = [
-            'paired_payment' => $display !== null && $capabilities->resolve($voucher)->can_collect
+            'paired_payment' => ! ($successPresentation['suppress_legacy_rider'] ?? false) && $display !== null && $capabilities->resolve($voucher)->can_collect
                 && ! $collectionProgress->compute($voucher)->is_fully_collected,
             'voucher' => [
                 'code' => (string) $voucher->code,
@@ -92,10 +94,24 @@ class ClaimSuccessPageController
         ];
 
         if (request()->wantsJson()) {
-            return response()->json($props);
+            return response()->json($props)->withHeaders(($successPresentation['suppress_legacy_rider'] ?? false) ? [
+                'Cache-Control' => 'private, no-store',
+                'Referrer-Policy' => 'no-referrer',
+            ] : []);
         }
 
-        return Inertia::render('x-change/claim/Success', $props);
+        if (! ($successPresentation['suppress_legacy_rider'] ?? false)) {
+            return Inertia::render('x-change/claim/Success', $props);
+        }
+
+        if (($props['success_action']['intent'] ?? null) === 'demo_policy_summary') {
+            Inertia::encryptHistory();
+        }
+        $response = Inertia::render('x-change/claim/Success', $props)->toResponse($request);
+        $response->headers->set('Cache-Control', 'private, no-store');
+        $response->headers->set('Referrer-Policy', 'no-referrer');
+
+        return $response;
     }
 
     /**
@@ -109,6 +125,22 @@ class ClaimSuccessPageController
         VoucherFlowCapabilityResolverContract $capabilities,
         VoucherCollectionProgressService $collectionProgress,
     ): ?array {
+        if ($successPresentation['suppress_legacy_rider'] ?? false) {
+            $outcome = ($successPresentation['state'] ?? null) === 'ready'
+                ? app(CompletionClaimReceipt::class)->outcome($voucher) : null;
+            $url = $outcome === null ? null : app(DemonstrationPolicySummary::class)->url($outcome);
+
+            return $url === null ? null : [
+                'key' => 'x-change.claim-success.view-demo-policy',
+                'label' => 'View demo policy',
+                'intent' => 'demo_policy_summary',
+                'description' => 'View your demonstration policy summary. This is not actual insurance coverage.',
+                'enabled' => true,
+                'target' => ['type' => 'url', 'url' => $url, 'method' => 'GET', 'redirectable' => false, 'external' => false],
+                'source' => 'claim_result',
+            ];
+        }
+
         if ($successPresentation !== null) {
             $onboardingAction = $onboardingActions->resolve($successPresentation);
 

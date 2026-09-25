@@ -20,6 +20,7 @@ use LBHurtado\XChange\Support\Claim\ClaimEvidenceSynchronizer;
 use LBHurtado\XChange\Support\Claim\ClaimFlowStateGuard;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
+use LBHurtado\XChange\Support\Claim\CompletionClaimReceipt;
 use LBHurtado\XChange\Support\Claim\FormFlowClaimPayloadNormalizer;
 
 class ClaimSubmitController extends Controller
@@ -121,7 +122,10 @@ class ClaimSubmitController extends Controller
         try {
             $this->evidenceSynchronizer->sync($payload);
 
+            $receipt = app(CompletionClaimReceipt::class);
+            $pendingIssuanceId = $receipt->pendingIssuanceId($voucher);
             $result = $this->submitAction->handle($voucher, $payload);
+            $receipt->remember($voucher, $result, $pendingIssuanceId, $idempotencyKey);
 
             if ($result->status === 'approval_required') {
                 $this->compiledClaimResultSession->put($result);

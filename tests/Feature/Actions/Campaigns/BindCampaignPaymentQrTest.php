@@ -22,6 +22,7 @@ use LBHurtado\EngageSpark\Classes\ServiceMode;
 use LBHurtado\EngageSpark\EngageSpark;
 use LBHurtado\FormFlowManager\Data\FormFlowStepData;
 use LBHurtado\FormFlowManager\Handlers\FormHandler;
+use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\FormHandlerOtp\OtpHandler;
 use LBHurtado\SettlementEnvelope\Models\Envelope;
 use LBHurtado\SettlementEnvelope\Models\EnvelopeAuditLog;
@@ -54,6 +55,7 @@ use LBHurtado\XChange\Actions\Settlement\RequestCampaignPolicyCompletion;
 use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Data\PreparedCompiledClaimData;
+use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Data\Settlement\CampaignCoverageDecisionData;
 use LBHurtado\XChange\Data\Settlement\CompletionPayCodeInstructionsData;
 use LBHurtado\XChange\Data\Settlement\PolicyCompletionOutcomeData;
@@ -73,6 +75,7 @@ use LBHurtado\XChange\Events\PolicyCompletionRequested;
 use LBHurtado\XChange\Events\ProvisionalCoverageBound;
 use LBHurtado\XChange\Exceptions\CampaignCoverageDriverUnavailable;
 use LBHurtado\XChange\Exceptions\CampaignPolicyCompletionDriverUnavailable;
+use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
 use LBHurtado\XChange\Jobs\Campaigns\AdvanceCampaignPaymentLifecycleJob;
 use LBHurtado\XChange\Jobs\Campaigns\CompleteAutomaticDemonstrationPolicyJob;
 use LBHurtado\XChange\Jobs\Campaigns\SendDemonstrationPolicySummaryJob;
@@ -92,6 +95,8 @@ use LBHurtado\XChange\Models\PolicyCompletionRequest;
 use LBHurtado\XChange\Models\ProvisionalCoverage;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Models\StandingFundingQrArtifact;
+use LBHurtado\XChange\Services\Claim\ClaimExperienceCompiler;
+use LBHurtado\XChange\Services\Claim\CoverageCompletionSuccessPresentation;
 use LBHurtado\XChange\Services\Claim\VoucherClaimFlowCompiler;
 use LBHurtado\XChange\Services\Cockpit\CampaignPaymentEvidenceAttentionReadModel;
 use LBHurtado\XChange\Services\Cockpit\CampaignPaymentProgressReadModel;
@@ -106,6 +111,9 @@ use LBHurtado\XChange\Services\Settlement\CampaignWorkflowPublicationSnapshot;
 use LBHurtado\XChange\Services\Settlement\DemonstrationPolicySummary;
 use LBHurtado\XChange\Services\Settlement\DispatchAuiDemonstrationPolicyViaPipedream;
 use LBHurtado\XChange\Services\Settlement\GenerateAuiDemonstrationPolicyResponse;
+use LBHurtado\XChange\Services\XRay\VoucherXRayProjectionBuilder;
+use LBHurtado\XChange\Support\Claim\CompletionClaimReceipt;
+use LBHurtado\XChange\Support\Claim\FormFlowClaimPayloadNormalizer;
 use LBHurtado\XChange\Tests\Fakes\FakeCampaignCoverageDriver;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XFeedback\Contracts\FeedbackChannelDriverContract;
@@ -113,6 +121,159 @@ use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
 use LBHurtado\XFeedback\Contracts\FeedbackDeliveryAttemptRecorderContract;
 use LBHurtado\XFeedback\Models\FeedbackDeliveryRecord;
 use Symfony\Component\Yaml\Yaml;
+
+it('grants a bounded policy link only to the browser that successfully submitted completion details', function (): void {
+    config()->set('settlement-envelope.driver_host_overrides', ['aui.personal-accident.provisional-cover@1.0.0']);
+    config()->set('x-change.settlement.policy_completion.demonstration_summary.enabled', true);
+    configureCampaignCoverageTestDriver();
+    [$recognition, $binding] = recognizedCampaignPayment(12_200);
+    $bound = app(BindProvisionalCoverage::class)->handle($recognition, auiCampaignCoverageTerms($recognition));
+    $maker = $binding->standingFundingAddress->owner;
+    $issued = app(IssueCompletionPayCode::class)->handle($bound->coverage, $maker, new CompletionPayCodeInstructionsData(['name', 'mobile']));
+    $voucher = $issued->voucher;
+    $receipts = app(CompletionClaimReceipt::class);
+    $pendingId = $receipts->pendingIssuanceId($voucher);
+    expect($pendingId)->not->toBeNull();
+    session()->put(CompletionClaimReceipt::KEY,
+        collect(range(10000, 10011))->mapWithKeys(fn ($id): array => [$id => ['expires_at' => now()->addMinutes(5)->timestamp]])->all());
+    $flow = Mockery::mock(FormFlowService::class);
+    $flow->shouldReceive('getFlowState')->once()->with('receipt-flow')->andReturn([
+        'flow_id' => 'receipt-flow', 'instructions' => ['metadata' => ['voucher_code' => $voucher->code]],
+        'collected_data' => [],
+    ]);
+    $flow->shouldReceive('clearFlow')->once()->with('receipt-flow');
+    app()->instance(FormFlowService::class, $flow);
+    $normalizer = Mockery::mock(FormFlowClaimPayloadNormalizer::class);
+    $normalizer->shouldReceive('normalize')->once()->andReturn([
+        'mobile' => '09173011987', 'inputs' => ['name' => 'Private Applicant', 'mobile' => '09173011987'],
+    ]);
+    app()->instance(FormFlowClaimPayloadNormalizer::class, $normalizer);
+    $this->withoutMiddleware(ShareXChangeBranding::class)
+        ->post(route('x-change.claim.submit', ['code' => $voucher->code]), ['flow_id' => 'receipt-flow'])
+        ->assertRedirect(route('x-change.claim.success', ['code' => $voucher->code]));
+    expect(session()->get(CompletionClaimReceipt::KEY))->toHaveCount(10)
+        ->and($receipts->pendingIssuanceId($voucher))->toBeNull()
+        ->and($receipts->outcome($voucher))->toBeNull();
+    $this->getJson(route('x-change.claim.success', ['code' => $voucher->code]))->assertOk()->assertJsonPath('success_action', null);
+
+    $projection = CompletionClaimEvidenceProjection::query()->sole();
+    $checker = actingAsTestUser(0);
+    config()->set('x-change.settlement.policy_completion.maker_ids', [(string) $maker->getKey()]);
+    config()->set('x-change.settlement.policy_completion.checker_ids', [(string) $checker->getKey()]);
+    config()->set('x-change.settlement.policy_completion.outcome_recorder_ids', [(string) $checker->getKey()]);
+    $request = app(RequestCampaignPolicyCompletion::class)->handle($projection, $maker, 'receipt-maker');
+    app(ApproveCampaignPolicyCompletion::class)->handle($request, $checker, 'receipt-checker');
+    $response = app(GenerateAuiDemonstrationPolicyResponse::class)->handle(app(PrepareCampaignPolicyCompletion::class)->handle($projection));
+    $outcome = app(RecordCampaignPolicyCompletionOutcome::class)->handle($request, $checker, $response->outcome());
+    auth()->logout();
+    $successUrl = route('x-change.claim.success', ['code' => $voucher->code]);
+    $this->getJson($successUrl)->assertOk()
+        ->assertHeader('Cache-Control', 'no-store, private')
+        ->assertHeader('Referrer-Policy', 'no-referrer')
+        ->assertJsonPath('success_action.intent', 'demo_policy_summary')
+        ->assertJsonPath('success_action.target.redirectable', false)
+        ->assertJsonPath('success_action.target.url', app(DemonstrationPolicySummary::class)->url($outcome));
+    $publicProjection = app(VoucherXRayProjectionBuilder::class)->build($voucher);
+    expect($publicProjection)->not->toHaveKey('success_action')
+        ->and(json_encode($publicProjection))->not->toContain('signature=');
+    $saved = session()->get(CompletionClaimReceipt::KEY);
+    config()->set('x-change.settlement.policy_completion.demonstration_summary.enabled', false);
+    $this->getJson($successUrl)->assertOk()->assertJsonPath('success_action', null);
+    config()->set('x-change.settlement.policy_completion.demonstration_summary.enabled', true);
+    $other = issueVoucher(validVoucherInstructions());
+    expect($receipts->outcome($other))->toBeNull();
+    $mismatched = $saved;
+    $mismatched[(string) $voucher->getKey()]['claim_id'] = 999999;
+    session()->put(CompletionClaimReceipt::KEY, $mismatched);
+    $this->getJson($successUrl)->assertOk()->assertJsonPath('success_action', null);
+    session()->forget(CompletionClaimReceipt::KEY);
+    $this->getJson($successUrl)->assertOk()->assertJsonPath('success_action', null);
+    expect(session()->has(CompletionClaimReceipt::KEY))->toBeFalse();
+    $receipts->remember($voucher, new SubmitPayCodeClaimResultData(
+        voucher_code: $voucher->code, claim_type: 'redeem', claimed: true, status: 'redeemed',
+    ), $pendingId, 'different-submission');
+    expect(session()->has(CompletionClaimReceipt::KEY))->toBeFalse();
+    $receipts->remember($voucher, new SubmitPayCodeClaimResultData(
+        voucher_code: $voucher->code, claim_type: 'redeem', claimed: true, status: 'redeemed',
+    ), $receipts->pendingIssuanceId($voucher), 'different-submission');
+    expect(session()->has(CompletionClaimReceipt::KEY))->toBeFalse();
+    session()->put(CompletionClaimReceipt::KEY, $saved);
+    $this->travel(31)->minutes();
+    $this->getJson($successUrl)->assertOk()->assertJsonPath('success_action', null);
+    $this->travel(169)->hours();
+    expect(app(DemonstrationPolicySummary::class)->url($outcome))->toBeNull();
+    $this->getJson($successUrl)->assertOk()->assertJsonPath('success_action', null);
+    Http::assertNothingSent();
+});
+
+it('projects post-payment completion from linked persisted evidence without changing records', function (): void {
+    config()->set('settlement-envelope.driver_host_overrides', ['aui.personal-accident.provisional-cover@1.0.0']);
+    [$projection] = auiPolicyCompletionProjection();
+    $voucher = $projection->issuance->voucher;
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.rider.message', 'Continue to payment to pay the premium.');
+    data_set($metadata, 'instructions.rider.url', 'https://example.test/pay-again');
+    data_set($metadata, 'instructions.metadata.presentation.claim.intent', 'payable_collection');
+    $voucher->metadata = $metadata;
+    $before = campaignPaymentFinancialCounts();
+
+    $xray = app(VoucherXRayProjectionBuilder::class)->build($voucher);
+    $experience = app(ClaimExperienceCompiler::class)->compile($voucher)->toArray();
+
+    expect(data_get($xray, 'presentation.intent'))->toBe('campaign.coverage-completion.v1')
+        ->and(data_get($xray, 'presentation.success.state'))->toBe('processing')
+        ->and(data_get($xray, 'presentation.success.suppress_legacy_rider'))->toBeTrue()
+        ->and(data_get($xray, 'presentation.success.body'))->toContain('payment has been received')
+        ->and(collect($experience['phases'])->pluck('key')->all())->not->toContain('success_rider', 'redirect')
+        ->and($experience['options']['show_redirect_countdown'])->toBeFalse()
+        ->and(campaignPaymentFinancialCounts())->toBe($before);
+    Http::assertNothingSent();
+});
+
+it('projects details required before a paid completion voucher has claim evidence', function (): void {
+    config()->set('settlement-envelope.driver_host_overrides', ['aui.personal-accident.provisional-cover@1.0.0']);
+    configureCampaignCoverageTestDriver();
+    [$recognition, $binding] = recognizedCampaignPayment();
+    $bound = app(BindProvisionalCoverage::class)->handle($recognition, campaignCoverageTerms($recognition));
+    $issued = app(IssueCompletionPayCode::class)->handle($bound->coverage, $binding->standingFundingAddress->owner, new CompletionPayCodeInstructionsData(['name']));
+
+    $presentation = app(CoverageCompletionSuccessPresentation::class)->forVoucher($issued->voucher);
+    expect($presentation['state'])->toBe('details_required')
+        ->and($presentation['body'])->toContain('payment has been received')
+        ->and(CompletionClaimEvidenceProjection::query()->count())->toBe(0);
+    Http::assertNothingSent();
+});
+
+it('does not report payment received for malformed completion linkage', function (): void {
+    config()->set('settlement-envelope.driver_host_overrides', ['aui.personal-accident.provisional-cover@1.0.0']);
+    [$projection] = auiPolicyCompletionProjection();
+    $voucher = $projection->issuance->voucher;
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.execution.metadata.completion.coverage_reference', 'unrelated-coverage');
+    $voucher->metadata = $metadata;
+
+    $presentation = app(CoverageCompletionSuccessPresentation::class)->forVoucher($voucher);
+    expect($presentation['state'])->toBe('payment_unverified')
+        ->and($presentation['body'])->not->toContain('payment has been received')
+        ->and($presentation['suppress_legacy_rider'])->toBeTrue();
+    Http::assertNothingSent();
+});
+
+it('projects recorded policy completion outcomes without exposing private results', function (PolicyCompletionOutcomeStatus $status, string $expected): void {
+    config()->set('settlement-envelope.driver_host_overrides', ['aui.personal-accident.provisional-cover@1.0.0']);
+    $outcome = auiDemoSummaryOutcome(result: new PolicyCompletionOutcomeData($status, $status->value, privateResult: ['token' => 'private-policy-secret']));
+    $voucher = $outcome->request->projection->issuance->voucher;
+    $presentation = app(CoverageCompletionSuccessPresentation::class)->forVoucher($voucher);
+
+    expect($presentation['state'])->toBe($expected)
+        ->and(json_encode($presentation))->not->toContain('private-policy-secret', 'Continue to payment')
+        ->and($presentation)->not->toHaveKey('primary_action_intent');
+    Http::assertNothingSent();
+})->with([
+    [PolicyCompletionOutcomeStatus::Succeeded, 'ready'],
+    [PolicyCompletionOutcomeStatus::Failed, 'needs_attention'],
+    [PolicyCompletionOutcomeStatus::Indeterminate, 'needs_attention'],
+]);
 
 it('immutably binds one reusable payment QR to one campaign revision', function (): void {
     $owner = campaignPaymentQrOwner();

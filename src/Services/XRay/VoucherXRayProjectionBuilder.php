@@ -8,7 +8,9 @@ use BackedEnum;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Route;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
+use LBHurtado\XChange\Services\Claim\CoverageCompletionSuccessPresentation;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 use LBHurtado\XChange\Services\VoucherCollectionOutcomeProjection;
@@ -120,6 +122,21 @@ class VoucherXRayProjectionBuilder
      */
     protected function presentation(mixed $voucher, array $instructions, string $status, ?Voucher $sliceVoucher = null): array
     {
+        if ($sliceVoucher instanceof Voucher) {
+            $workflow = app(ClaimWorkflowResolverContract::class)->resolve($sliceVoucher);
+            if ($workflow->key === 'campaign.coverage-completion.v1') {
+                return [
+                    'title' => $workflow->title,
+                    'primary_action_label' => 'Continue',
+                    'confirmation_title' => $workflow->confirmation_title,
+                    'confirmation_label' => $workflow->confirmation_label,
+                    'intent' => $workflow->key,
+                    'source' => 'workflow',
+                    'success' => app(CoverageCompletionSuccessPresentation::class)->forVoucher($sliceVoucher),
+                ];
+            }
+        }
+
         $default = $this->defaultPresentation($voucher, $instructions, $status, $sliceVoucher);
         $override = $this->presentationOverride($instructions);
 

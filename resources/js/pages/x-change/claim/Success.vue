@@ -59,6 +59,7 @@ interface Props {
     compiled_claim_result?: CompiledClaimResultPayload;
     destination?: PayoutDestinationSnapshot | null;
     success_presentation?: {
+        suppress_legacy_rider?: boolean;
         intent?: string | null;
         eyebrow?: string | null;
         title?: string | null;
@@ -75,6 +76,7 @@ interface Props {
     } | null;
     success_action?: {
         key?: string | null;
+        intent?: string | null;
         label?: string | null;
         enabled?: boolean | null;
         target?: {
@@ -87,6 +89,7 @@ interface Props {
 
 const props = defineProps<Props>();
 
+const suppressLegacyRider = computed(() => props.success_presentation?.suppress_legacy_rider === true);
 const hasPaymentHandoff = computed(() =>
     props.success_action?.key === 'x-change.claim-success.continue-to-payment'
     && props.success_action.enabled !== false
@@ -94,10 +97,10 @@ const hasPaymentHandoff = computed(() =>
     && Boolean(props.success_action.target?.url?.trim()),
 );
 const suppressAutomaticRedirects = computed(() =>
-    props.paired_payment || hasPaymentHandoff.value,
+    props.paired_payment || hasPaymentHandoff.value || suppressLegacyRider.value,
 );
 
-const riderContent = computed(() => props.rider?.success ?? null);
+const riderContent = computed(() => suppressLegacyRider.value ? null : props.rider?.success ?? null);
 const riderRedirect = computed(() =>
     suppressAutomaticRedirects.value ? null : props.rider?.redirect ?? null,
 );
@@ -116,7 +119,7 @@ const displayedRiderContent = computed(() =>
 );
 
 const successVisualStages = computed<RawRiderStage[]>(() =>
-    resolveSuccessVisualStages(props.claim_experience, props.rider, {
+    suppressLegacyRider.value ? [] : resolveSuccessVisualStages(props.claim_experience, props.rider, {
         claimOutcome: props.claimOutcome,
         riderState: props.rider?.state,
     }),
@@ -233,6 +236,9 @@ const successPresentation = computed(() => {
 
 const successAction = computed(() => {
     const action = props.success_action;
+    if (suppressLegacyRider.value && action?.intent !== 'demo_policy_summary') {
+        return null;
+    }
     const url = action?.target?.url?.trim();
 
     if (!action?.label?.trim() || !url || action.enabled === false) {
@@ -382,6 +388,7 @@ const successAction = computed(() => {
                 <a
                     v-if="successAction"
                     :href="successAction.url"
+                    referrerpolicy="no-referrer"
                     data-testid="claim-success-primary-action"
                     class="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >

@@ -12,6 +12,74 @@ The customer stays in the existing Pay Code claim/payment experience.
 
 ## Current position
 
+### Post-payment completion success correction — local only (2026-09-25)
+
+Live acceptance campaign 11/payment recognition 9 produced AUI-P5E7 after the
+PHP 50 payment. The claimant completed the details flow, but its final page
+displayed the original intake template's “Continue to payment” rider. This is
+a presentation defect; it is not evidence that another payment is required.
+
+The approved surgical correction reuses the existing workflow resolver and
+projects linked payment/claim/policy evidence through X-Ray. Only
+`campaign.coverage-completion.v1` suppresses inherited success rider content and
+redirects. Existing campaign snapshots and issued instructions are not mutated.
+All financial, execution, transport and SMS behavior remains unchanged.
+
+Claim UX ownership and follow-ups are documented in
+[claim UX migration](../../todo/claim-ux-migration.md) and
+[activation slices](../../todo/claim-ux-activation-plan.md).
+Full classifier consolidation and simulated outcome controls in the preview are
+deferred. The private policy-link CTA is implemented for newly completed form-flow
+claims with a matching bounded server-session receipt. Existing claims keep the
+signed SMS-link fallback. This local correction is not a Cloud release.
+
+Frontend verification: 90 tests across six success/redirect suites passed.
+Backend verification: seven new persisted-state/receipt tests / 65 assertions passed
+(six state cases plus the final 37-assertion receipt case);
+24 submit/success controller tests / 172 assertions passed. Earlier adjacent run:
+49 adjacent controller, X-Ray, compiler and preview tests passed. Two preview
+tests fail because generated `voucher-redemption.yaml` is missing. An older
+coverage rollback test also has a bundled-driver/host-fixture conflict. The wider
+ClaimStart suite also retains one missing-driver-fixture failure (30 passed, one
+skipped). These failures reproduce with original HEAD classes; none was silently fixed
+or counted as passing. New coverage tests explicitly select their test fixture
+through the existing host-override option, never production configuration.
+Local candidate adoption used an alternate Composer manifest; publication of all
+15 build-input resources, strict asset doctor and production build passed.
+Eight Chromium synthetic presentation cases passed at 375x900 and 1440x900:
+processing, ready, ready without session proof, and unverified payment. No JS
+errors or horizontal overflow; no payment action or inherited rider redirect.
+These are browser rendering checks, not a live lifecycle replay. Artifacts:
+`/Users/rli/PhpstormProjects/x-change-sandbox/output/claim-completion-20260925`.
+The host was restored to its committed v1.0.53 installation and generated assets
+after acceptance; alternate Composer files and the source symlink were removed.
+No live provider calls, messages, financial mutations, record repairs, remote
+publication or Cloud deployment were performed.
+
+Next gate: finish release review of this surgical correction, publish with explicit
+release authority, upgrade testing, and inspect the existing paid claim. A new
+paid/SMS lifecycle requires explicit authorization. Do not repeat payment merely
+to obtain a receipt for an older claim.
+
+Scoped source files:
+- `src/Services/Claim/CoverageCompletionSuccessPresentation.php`
+- `src/Support/Claim/CompletionClaimReceipt.php`
+- `src/Http/Controllers/Web/Claim/ClaimSubmitController.php`
+- `src/Http/Controllers/Web/Claim/ClaimSuccessPageController.php`
+- `src/Services/Claim/ClaimExperienceCompiler.php`
+- `src/Services/XRay/VoucherXRayProjectionBuilder.php`
+- `resources/js/pages/x-change/claim/Success.vue`
+- `tests/Feature/Actions/Campaigns/BindCampaignPaymentQrTest.php`
+- `tests/Feature/Claim/ClaimSuccessPageControllerTest.php`
+- `tests/frontend/Success.redirect-countdown.test.ts`
+- `tests/browser/claim-completion-presentation.spec.mjs`
+- `tests/browser/playwright.config.mjs`
+- this compass, `docs/todo/claim-ux-migration.md`, and
+  `docs/todo/claim-ux-activation-plan.md`.
+
+Pint and whitespace checks passed. The package is prepared for a focused local
+review commit; host unrelated changes are preserved and not part of the release.
+
 ### Package discovery release gate (2026-09-25)
 
 User authorized shipping. Dependency-order publication completed:

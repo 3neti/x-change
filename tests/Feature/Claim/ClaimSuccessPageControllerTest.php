@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Services\Execution\CampaignCoverageCompletionExecutionDriver;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 use LBHurtado\XRider\Contracts\RiderExperienceResolverContract;
@@ -56,6 +57,25 @@ BLADE);
         ->name('x-change.cockpit.quick-generate');
     Route::get('/x/pay/{code}', fn (string $code) => response('pay '.$code))
         ->name('x-change.pay.show');
+});
+
+it('suppresses legacy rider payment instructions for an unlinked completion claim without asserting payment', function (): void {
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => ['message' => 'Continue to payment', 'url' => 'https://example.test/pay-again'],
+    ]));
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.execution.driver', CampaignCoverageCompletionExecutionDriver::Key);
+    $voucher->forceFill(['metadata' => $metadata])->save();
+    $this->withoutMiddleware()->getJson(route('x-change.claim.success', ['code' => $voucher->code]))
+        ->assertOk()
+        ->assertJsonPath('success_presentation.intent', 'campaign.coverage-completion.v1')
+        ->assertJsonPath('success_presentation.state', 'payment_unverified')
+        ->assertJsonPath('success_presentation.suppress_legacy_rider', true)
+        ->assertJsonPath('success_presentation.title', 'Payment verification unavailable')
+        ->assertJsonPath('rider', null)
+        ->assertJsonPath('success_action', null)
+        ->assertJsonPath('redirect.show_countdown', false)
+        ->assertJsonPath('paired_payment', false);
 });
 
 it('exposes claim experience redirect countdown metadata to the success page', function () {

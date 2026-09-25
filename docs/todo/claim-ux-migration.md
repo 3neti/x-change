@@ -1,5 +1,65 @@
 # Claim UX Compiler Migration Summary (Replacement for claim-ux.md)
 
+## Campaign QR Ph completion correction — 2026-09-25
+
+The intended journey comes from voucher instructions through the existing
+`ClaimWorkflowResolverContract` / `DefaultClaimWorkflowResolver`. Persisted
+records establish actual progress. X-Ray projects presentation; it must not
+execute payments, send SMS, or request a policy when a page is read.
+
+The immediate correction is deliberately limited to
+`campaign.coverage-completion.v1`. This is the details-after-payment journey,
+not ordinary settlement intake followed by payment. Its original template may
+contain a rider saying “Continue to payment”; that is not authoritative once
+the template has produced a completion Pay Code.
+
+For this journey only:
+
+- Obtain classification through the existing workflow contract, not a second
+  set of voucher-type rules.
+- Read the immutable completion issuance and linked payment/envelope evidence
+  before using paid wording; missing or mismatched evidence is unverified.
+- Project details required, processing, ready, or attention states through
+  X-Ray's success presentation. Policy readiness requires a recorded result.
+- Suppress inherited post-claim rider content and automatic redirects; preserve
+  the pre-claim experience. The frontend consumes the server-owned
+  `suppress_legacy_rider` flag rather than classifying the voucher again.
+- Never offer a second payment action on this completion journey.
+- Resolve a `View demo policy` action outside X-Ray, only for an eligible
+  recorded demo result and a matching successful claimant session receipt.
+  Code possession alone must never disclose the signed applicant-details URL.
+
+### Private result action
+
+The actual form-flow submit path records a receipt only after successful claim
+execution and persisted evidence projection. It matches voucher, issuance,
+projection, claim, and the server-generated submission idempotency key. A
+pre-submit snapshot prevents later replays from creating a fresh receipt.
+Receipts expire after 30 minutes and are capped at ten per session.
+
+The success page rechecks the chain and delegates URL eligibility and fixed
+expiry to `DemonstrationPolicySummary`. Disabled summaries, missing outcomes,
+expired links/receipts, other sessions, and mismatched records produce no action.
+Completion responses are private/no-store with no-referrer protection; a response
+containing the private action uses encrypted Inertia history. X-Ray contains no
+signed URL or applicant fields. Reads do not send SMS or execute a policy request.
+
+Older claims cannot acquire a receipt by revisiting the success page. They retain
+the existing signed SMS-link route. The compiled-submit path does not yet carry
+the exact persisted submission-key proof and therefore does not mint this receipt;
+unifying that path is a separate gate, not an authorization shortcut.
+
+Existing vouchers benefit at read time. No instruction, campaign snapshot,
+payment, Treasury, claim, or policy record is rewritten. Onboarding (including
+Maker/Checker invitations), campaign officer authorization, ordinary intake,
+disbursement, recovery, account funding, and stored-value behavior are unchanged.
+
+The existing Claim-tab preview shares claim compilation, so inherited completion
+rider/redirect phases are suppressed there too. A state-selectable preview with
+simulated payment/policy records remains a separate follow-up;
+this slice does not claim complete preview/runtime outcome parity. Wider journey
+centralization is deferred to avoid disturbing working flows.
+
 ## Purpose
 
 This document replaces the original Claim UX Compiler Strategy.

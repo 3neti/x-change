@@ -93,6 +93,68 @@ const baseProps = {
 };
 
 describe('claim Success redirect countdown rendering', () => {
+    it('shows an authorized demo-policy action without reviving payment or rider redirects', async () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                success_presentation: {
+                    title: 'Demo policy ready',
+                    body: 'Your payment has been received. This is a demonstration, not actual insurance coverage.',
+                    suppress_legacy_rider: true,
+                },
+                success_action: {
+                    key: 'x-change.claim-success.view-demo-policy',
+                    intent: 'demo_policy_summary',
+                    label: 'View demo policy', enabled: true,
+                    target: { url: '/demo-policy/synthetic?signature=test-only', redirectable: false },
+                },
+            },
+        });
+
+        expect(wrapper.get('[data-testid="claim-success-primary-action"]').text()).toBe('View demo policy');
+        expect(wrapper.get('a[href="/demo-policy/synthetic?signature=test-only"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="rider-runtime"]').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('Continue to payment');
+
+        await wrapper.setProps({ success_action: null });
+        expect(wrapper.find('[data-testid="claim-success-primary-action"]').exists()).toBe(false);
+        expect(wrapper.text()).toContain('Demo policy ready');
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(false);
+        wrapper.unmount();
+    });
+
+    it('honors authoritative completion presentation instead of inherited payment copy and redirects', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                success_presentation: {
+                    title: 'Details submitted',
+                    body: 'Your payment has been received. Your demo policy is being prepared.',
+                    suppress_legacy_rider: true,
+                },
+                rider: {
+                    ...baseProps.rider,
+                    success: { enabled: true, type: 'text', content: 'Continue to payment to pay the premium.' },
+                    redirect: { enabled: true, url: '/x/pay/TEST123', timeout: 1 },
+                },
+                success_action: {
+                    key: 'x-change.claim-success.continue-to-payment',
+                    label: 'Continue to payment', enabled: true,
+                    target: { url: '/x/pay/TEST123' },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Details submitted');
+        expect(wrapper.text()).toContain('Your payment has been received.');
+        expect(wrapper.text()).not.toContain('Continue to payment');
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="rider-runtime"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="claim-success-primary-action"]').exists()).toBe(false);
+        wrapper.unmount();
+    });
+
     it.each(['claim-widget', 'x-rider'])('keeps the canonical payment handoff ahead of %s redirects', async (owner) => {
         const action = {
             key: 'x-change.claim-success.continue-to-payment',

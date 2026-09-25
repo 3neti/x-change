@@ -1,6 +1,6 @@
 export default {
     testDir: '.',
-    testMatch: 'campaign-workflow-draft.spec.mjs',
+    testMatch: process.env.WORKFLOW_BROWSER_SPEC ?? 'campaign-workflow-draft.spec.mjs',
     timeout: 30000,
     workers: 1,
     outputDir: process.env.WORKFLOW_BROWSER_ARTIFACTS,

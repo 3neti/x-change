@@ -1,5 +1,30 @@
 # Claim UX Compiler — Visible Behavior Activation Slices
 
+## Current narrow priority: prepaid completion success
+
+See [the scoped correction contract](claim-ux-migration.md#campaign-qr-ph-completion-correction--2026-09-25).
+Preserve all working journeys. Use the existing workflow resolver to identify
+Campaign QR Ph details completion, then let read-only persisted outcome evidence
+drive X-Ray success copy. Suppress the inherited payment rider and redirect for
+that journey only. Do not replace the form-flow or execution engine, reclassify
+all voucher types, or rewrite historical instructions.
+
+Acceptance: already-paid completion never invites another payment; missing
+evidence never asserts payment; processing/ready/attention reflect stored records;
+ordinary intake payment handoff and onboarding/approval behavior remain green.
+Local verification precedes any separately authorized release or deployment.
+
+The private result-action gate now adds a bounded successful-claim session receipt
+for form-flow completion. The signed demo-policy URL is never part of public
+X-Ray. Existing claims and compiled-submit flows without that proof retain the
+SMS-link fallback. See the migration document for receipt expiry and privacy rules.
+
+Browser acceptance uses synthetic Inertia state fixtures with installed candidate
+assets at 375px and 1440px. This proves rendering, not live payment/SMS transport.
+Persisted-state and actual form-flow POST authorization are separate Pest tests.
+Broader workflow consolidation and state-selectable Claim-tab simulation remain
+deferred. Do not describe the five-gate journey program as fully implemented.
+
 ## Goal
 
 We have preserved the old claim UX while moving ownership into explicit compiler/result contracts.
