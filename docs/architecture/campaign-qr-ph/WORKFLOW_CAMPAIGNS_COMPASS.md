@@ -26,8 +26,34 @@ references. Full dependency suites passed against normal published dependencies
 No temporary manifests, path overrides or fixture-copy installation steps remain.
 x-change release regressions passed: 94 tests / 424 assertions against published
 dependencies. Strict Composer validation and whitespace checks pass. Testing
-rollout follows package publication; production auto-deploy is temporarily
-disabled and independently verified before the upcoming host push.
+rollout follows package publication; production auto-deploy was temporarily
+disabled and independently verified before the host push.
+
+x-change v1.0.53 published at `d450438d1f8b461dcdfb233b37871dff9ea419b0`.
+Host main `26ac5b5c0e440ad3aaa0f75bb6601e64fc286762` upgrades exactly the four
+packages through normal Composer. All installed sources are non-symlinks.
+Unrelated host edits and local-only fixtures were excluded from the push.
+Host tests: 5 / 25 assertions; strict Composer/asset validation, 15-resource
+publication and production build passed. Existing build annotation/chunk-size
+and abandoned dependency warnings remain nonblocking.
+
+Released-package browser acceptance passed both workflows without host YAML
+copies, with those files restored afterward. Desktop 1440x1000/mobile375x812;
+no JS errors or horizontal overflow; inactive synthetic drafts only.
+[AUI screenshot](/Users/rli/PhpstormProjects/x-change-sandbox/output/workflow-v1053-release/aui-demo-draft.png),
+[PhilHealth screenshot](/Users/rli/PhpstormProjects/x-change-sandbox/output/workflow-v1053-release/philhealth-demo-draft.png).
+Testing deployment `depl-a2d49149-1cb9-42f8-959a-1fb2ade244d7` succeeded.
+Runtime confirms all four expected versions, enabled=true, both registered
+package sources and two editor workflows (AUI and philhealth.bst.demo) for an
+existing account. No grants or fixture copies were added. Global catalog remains
+denied by default; strict asset doctor passed. Runtime verification was read-only;
+Cloud interactive browser acceptance was unavailable (local browser passed).
+Production push-to-deploy restored to true and independently verified; deployment
+history unchanged. Finished 2026-09-25 12:18:16 UTC. Gate complete.
+
+Discovery is not execution readiness: AUI reports its named connection not
+configured; PhilHealth demo reports configured and requires review. No workflow
+was executed, and existing live transport/financial settings were not changed.
 
 ### Package-provided discovery — local acceptance complete (2026-09-25)
 
