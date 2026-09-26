@@ -136,6 +136,74 @@ Both commands must report `read_only: true`, `moves_money: false`, and
 `safe_to_reset: false`. A successful plan is evidence for review, not permission to
 delete the source or credit the destination.
 
+## Read-only closing balance report
+
+Before a cleanroom rehearsal, cutover, or shutdown decision, capture a closing
+balance report from the source host with an explicit UTC cut-off:
+
+```bash
+php artisan x-change:continuity:balance-report \
+  --as-of=2026-09-27T08:00:00+00:00 \
+  --json --pretty
+```
+
+Run the same command without `--json` to obtain the human-readable rendering.
+Both renderings come from the same `x-change.instance-balance-report.v1` read
+model. The JSON envelope records the canonical report JSON checksum, the human
+report checksum, and a semantic report checksum. Store both captured artifacts,
+their command transcript, the explicit `--as-of` value, and independently
+calculated file hashes in private operator-controlled evidence storage.
+
+The report reads only persisted facts. It does not refresh a provider, create a
+wallet, write cache or journal data, mutate Treasury or Pay Codes, move money,
+restore an Account, or authorize a later financial action. It reports:
+
+- persisted provider snapshot values and their freshness;
+- each configured provider connection, currency, inventory, Treasury positions,
+  and its inventory-to-position conservation difference;
+- masked Account identifiers, Client Funds, Outstanding Pay Codes, and Issuance
+  Capacity inputs for each provisioned connection;
+- Pay Code record counts by persisted state, explicitly separated from the
+  Treasury Pay Code Reserve that remains the monetary authority; and
+- blockers and warnings for missing, stale, ambiguous, or inconsistent evidence.
+
+Provider connections and currencies are never combined. A stale/missing provider
+snapshot or inventory/position mismatch makes the command exit unsuccessfully
+with `status: incomplete`; it is never silently normalized. A complete report is
+still evidence only and must not be interpreted as permission to credit, transfer,
+settle, recreate, or delete anything.
+
+A sanitized envelope has this shape (values are illustrative):
+
+```json
+{
+  "schema": "x-change.instance-balance-report-envelope.v1",
+  "status": "complete",
+  "report": {
+    "schema": "x-change.instance-balance-report.v1",
+    "as_of": "2026-09-27T08:00:00+00:00",
+    "source_instance": {"id": "source-host", "x_change_version": "v1.x"},
+    "safety": {"read_only": true, "provider_calls": false, "moves_money": false},
+    "treasury_connections": [],
+    "accounts": [],
+    "blockers": [],
+    "warnings": []
+  },
+  "artifact_checksums": {
+    "canonical_report_json_sha256": "<sha256>",
+    "human_report_text_sha256": "<sha256>"
+  },
+  "report_sha256": "<sha256>"
+}
+```
+
+An independent reviewer must verify the instance ID, package/runtime identity,
+cut-off, configured connection inventory, snapshot freshness, conservation
+controls, masking, blockers, and all three checksums. Report files can contain
+sensitive financial evidence even though direct identifiers are masked; retain
+them under the same private access, encryption, retention, and destruction rules
+as continuity evidence.
+
 ## Offline provider attribution audit
 
 When a persisted Treasury balance differs from the provider statement, normalize the

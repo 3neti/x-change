@@ -1,5 +1,13 @@
 # Remaining Activities Checklist
 
+## Shared Host Production Beta
+
+The immediate, fail-closed path toward an allowlisted shared-host real-money
+beta is maintained in the
+[Shared Host Production Beta Readiness checklist](./PRODUCTION_BETA_READINESS.md).
+Balance migration is deferred; the current continuity requirement is an
+encrypted keepsake plus a read-only closing balance report.
+
 ## Immediate Critical Update — Paid Pay Codes Shown as Payable/Expired
 
 **Priority 0, presentation/read-model correctness.** The September 22, 2026
