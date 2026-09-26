@@ -214,6 +214,41 @@ actions. The Cloud lifecycle must confirm the first SMS, details completion,
 processing-to-ready presentation, authorized policy action, policy-link SMS,
 and absence of duplicate processing before the gate is finally closed.
 
+### Gate 5 testing Cloud acceptance — 2026-09-26
+
+Gate 5 is closed on the Laravel Cloud testing instance with x-change
+`v1.0.56` (`f9a5bf39`). The host was upgraded and deployed from its isolated
+testing branch; production push-to-deploy was temporarily disabled for that
+host-only push and restored afterward. Production was not deployed.
+
+The fresh authorized lifecycle used completion Pay Code `AUI-P5VS`:
+
+- the PHP 50 payment settled at `2026-09-26T12:50:06Z` and was recognized at
+  `12:51:19Z`;
+- the completion Pay Code was issued and its first SMS was accepted by the
+  provider at `12:51:22Z`;
+- the claimant completed the details journey at `12:56:48Z`;
+- the demonstration policy request succeeded at `12:56:58Z`, and policy result
+  `01M3EWMPJMTKFA5KM5EHNC09BC` was recorded at `12:57:01Z`;
+- the policy-link SMS was accepted at `12:57:02Z`, and the user confirmed both
+  handset receipt and successful opening of the private demo-policy summary;
+- the success page presented policy processing/ready state and an authorized
+  `View demo policy` action. It did not ask for payment again;
+- one projection, one policy request, one policy outcome, and one policy-link
+  SMS record were present, confirming no duplicate processing; and
+- the final strict doctor passed 31 of 31 checks.
+
+Testing housekeeping retired nine obsolete active AUI saved templates whose
+settlement instructions had zero or missing `cash.amount` and could no longer
+pass current issuance validation. Retirement removes them from future authoring
+selection only. Their nine linked campaign records, public endpoints, immutable
+snapshots, issued Pay Codes, and financial records were not deleted, paused, or
+rewritten.
+
+The objective of this controlled migration is therefore complete: declared
+instructions select the journey, persisted evidence selects its progress, and
+the tested prepaid completion journey never invents a second payment step.
+
 ## Purpose
 
 This document replaces the original Claim UX Compiler Strategy.
@@ -512,7 +547,7 @@ Authorization seam path.
 
 # Current Status
 
-## Prepaid completion status refresh (2026-09-26, local only)
+## Prepaid completion status refresh (2026-09-26, accepted in testing)
 
 Only `campaign.coverage-completion.v1` with authoritative `processing` state and
 legacy-rider suppression activates bounded presentation polling. The existing
@@ -525,8 +560,9 @@ after two minutes, on errors, on terminal state or when the component unmounts.
 Timeout/error offers a manual Check status and SMS fallback. A manual check does
 not restart the automatic window. No claim submission or processing retry is
 performed by this UI. Normal onboarding, payout and payment handoff do not poll.
-Local verification: 133 frontend tests and 12 success-controller tests pass.
-Host build/browser acceptance and publication remain the next controlled gate.
+Local verification passed 133 frontend tests and 12 success-controller tests.
+The implementation was published in x-change `v1.0.56`, installed in the
+testing host, and accepted through the fresh paid lifecycle recorded above.
 
 The compiler migration is effectively complete.
 

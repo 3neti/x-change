@@ -179,7 +179,8 @@ it('lists endpoint summaries with batched template loading and no endpoint write
 
     expect($endpointQueries)->toHaveCount(1)
         ->and(strtolower($endpointQueries->sole()))->toStartWith('select')
-        ->and($templateQueries)->toHaveCount(2)
+        ->and($templateQueries)->toHaveCount(3)
+        ->and($templateQueries->every(fn (string $sql): bool => str_starts_with(strtolower($sql), 'select')))->toBeTrue()
         ->and(LeadCampaign::query()->orderBy('id')->get()->map->getAttributes()->all())->toBe($before);
 });
 

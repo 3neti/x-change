@@ -1108,3 +1108,25 @@ in-app browser; no claim was submitted. No new payment or collection occurred.
 The x-PayOut instance was not changed. Next: user confirms SMS receipt and
 completes the personal-details journey, followed by the fake-insurer policy
 response gate. This remains demonstration-only, not proof of real insurance.
+
+## Final claim-journey acceptance — 2026-09-26
+
+x-change `v1.0.56` completed the Campaign QR Ph claim-presentation migration on
+the Laravel Cloud testing instance. Fresh completion Pay Code `AUI-P5VS` was
+created from a recognized PHP 50 payment. The first SMS reached the claimant,
+details were submitted, the demo policy result was recorded, the policy-link
+SMS reached the claimant, and the private demo-policy summary opened
+successfully.
+
+The success surface followed persisted progress: payment received, details
+completion, processing, then policy ready. It did not inherit the source
+template's obsolete continue-to-payment Rider. Automatic bounded refresh and
+the manual status check remained read-only; neither retried policy execution nor
+sent SMS. The lifecycle produced exactly one projection, policy request, policy
+outcome, and policy-link SMS record. Strict doctor passed 31 of 31 checks.
+
+As testing-only housekeeping, nine obsolete AUI saved templates with invalid
+zero/missing settlement cash amounts were retired from authoring selection.
+Their linked campaign records and public endpoints remain preserved and active;
+no immutable snapshot, issued Pay Code, payment, Treasury, or policy record was
+rewritten. Production and x-PayOut were not deployed by this acceptance gate.
