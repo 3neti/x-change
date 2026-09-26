@@ -295,15 +295,19 @@ it('uses the ordinary claim entry and instruction-driven otp workflow for recove
         ->assertJsonPath('props.claim_surface.state.terminal', false);
 
     $components = collect($response->json('props.claim_surface.components'));
-    $requirements = collect($components->firstWhere('type', 'xray_preview')['props']['requirements']);
+    $xrayPreview = $components->firstWhere('type', 'xray_preview')['props'];
+    $requirements = collect($xrayPreview['requirements']);
     expect($components->pluck('type'))->toContain('xray_preview')
-        ->and($requirements->pluck('key')->all())->toContain('mobile', 'otp', 'assigned_mobile');
+        ->and($requirements->pluck('key')->all())->toContain('mobile', 'otp', 'assigned_mobile')
+        ->and(data_get($xrayPreview, 'claim_workflow.key'))->toBe('campaign.payout-recovery.v1');
 
     $this->postJson('/api/x/v1/pay-codes/x-ray', [
         'code' => $fixture['voucher']->code,
         'channel' => 'claim',
     ])->assertOk()
-        ->assertJsonPath('data.xray.status', 'claimable');
+        ->assertJsonPath('data.xray.status', 'claimable')
+        ->assertJsonPath('data.xray.claim_workflow.state', 'resolved')
+        ->assertJsonPath('data.xray.claim_workflow.key', 'campaign.payout-recovery.v1');
 
     $workflow = app(ClaimWorkflowResolverContract::class)->resolve($fixture['voucher']->refresh());
     expect($workflow->key)->toBe('campaign.payout-recovery.v1')

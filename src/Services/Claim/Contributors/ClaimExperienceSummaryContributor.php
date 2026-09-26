@@ -8,6 +8,7 @@ use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
 use LBHurtado\XChange\Contracts\Claim\ClaimSurfaceContributor;
 use LBHurtado\XChange\Data\Claim\ClaimSurfaceContextData;
 use LBHurtado\XChange\Services\Claim\ClaimSurfaceBuilder;
+use LBHurtado\XChange\Services\Claim\ClaimWorkflowReadModelProjector;
 use LBHurtado\XChange\Services\Cockpit\RiderUrlArtworkPreviewResolver;
 
 /**
@@ -22,6 +23,7 @@ final class ClaimExperienceSummaryContributor implements ClaimSurfaceContributor
     public function __construct(
         private readonly ResolveClaimExperience $claimExperience,
         private readonly RiderUrlArtworkPreviewResolver $riderUrlArtwork,
+        private readonly ClaimWorkflowReadModelProjector $claimWorkflows,
     ) {}
 
     public function contribute(ClaimSurfaceBuilder $surface, ClaimSurfaceContextData $context): void
@@ -29,6 +31,20 @@ final class ClaimExperienceSummaryContributor implements ClaimSurfaceContributor
         $isIssuerViewer = in_array($context->viewer->role, self::ISSUER_ROLES, true);
 
         if (! $context->state->terminal && ! ($isIssuerViewer && $context->hasClaimActivity())) {
+            return;
+        }
+
+        $workflow = $this->claimWorkflows->project($context->voucher);
+
+        if ($workflow->requiresAttention()) {
+            $surface
+                ->addComponent('claim_workflow_attention', [
+                    'key' => $workflow->attention_key,
+                    'label' => $workflow->attention_label,
+                    'message' => $workflow->attention_message,
+                ])
+                ->suppressActions();
+
             return;
         }
 

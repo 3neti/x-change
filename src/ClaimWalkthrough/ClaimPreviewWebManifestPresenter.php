@@ -44,6 +44,7 @@ final class ClaimPreviewWebManifestPresenter
                 'viewport' => $this->viewport($artifact),
                 'step_count' => count($steps),
                 'steps' => $steps,
+                'simulation' => data_get($artifact->metadata, 'journey.simulation', []),
             ],
             'exports' => [
                 'pdf_url' => $this->exportUrl($artifact, 'pdf'),

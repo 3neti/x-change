@@ -15,6 +15,7 @@ use LBHurtado\XChange\Contracts\CockpitIssuanceDraftCompilerContract;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftValidatorContract;
 use LBHurtado\XChange\Contracts\CockpitQuickGenerateDraftFactoryContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitIssuanceDraftValidationResultData;
+use LBHurtado\XChange\Enums\ClaimPreviewProgressState;
 use LBHurtado\XChange\Http\Requests\GeneratePayCodeRequest;
 use LBHurtado\XChange\Models\ClaimPreviewArtifact;
 use LBHurtado\XChange\Services\Cockpit\CompileCockpitQuickGenerateClaimPolicy;
@@ -32,6 +33,16 @@ final class CockpitQuickGenerateClaimPreviewController extends Controller
         ClaimExperiencePreviewService $previews,
         ClaimPreviewWebManifestPresenter $presenter,
     ): JsonResponse {
+        $progressState = ClaimPreviewProgressState::tryFrom(
+            (string) $request->input('preview_state', ClaimPreviewProgressState::Current->value),
+        );
+
+        if ($progressState === null) {
+            throw ValidationException::withMessages([
+                'preview_state' => 'The selected claim preview state is invalid.',
+            ]);
+        }
+
         $payload = $this->normalizePayloadForIssuance($request->validated());
         $key = $idempotency->extractKey($request);
         $correlationId = $request->header((string) config('x-change.api.correlation.header', 'X-Correlation-ID'));
@@ -61,6 +72,7 @@ final class CockpitQuickGenerateClaimPreviewController extends Controller
                 mobile: (string) $request->input('preview_mobile', '09173011987'),
                 bankCode: (string) $request->input('preview_bank_code', 'GXCHPHM2XXX'),
                 accountNumber: (string) $request->input('preview_account_number', '09173011987'),
+                progressState: $progressState,
             ),
         );
         $artifact = ClaimPreviewArtifact::query()

@@ -31,6 +31,10 @@ vi.mock('@/components/ui/button', () => ({
 }));
 
 vi.mock('lucide-vue-next', () => ({
+    AlertTriangle: {
+        name: 'AlertTriangle',
+        template: '<span data-testid="attention-icon" />',
+    },
     CheckCircle2: {
         name: 'CheckCircle2',
         template: '<span data-testid="check-icon" />',
@@ -93,6 +97,38 @@ const baseProps = {
 };
 
 describe('claim Success redirect countdown rendering', () => {
+    it('renders workflow attention without payout-pending copy, actions, or redirects', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                claimOutcome: null,
+                claimWorkflowKey: null,
+                rider: null,
+                redirectEndpoint: null,
+                claim_experience: null,
+                redirect: { show_countdown: false, owner: null, delay_seconds: null },
+                compiled_claim_result: null,
+                success_presentation: {
+                    state: 'needs_attention',
+                    suppress_legacy_rider: true,
+                    intent: 'claim.journey-attention',
+                    eyebrow: 'Pay Code',
+                    title: 'Claim journey needs attention',
+                    body: 'Contact the issuer before continuing.',
+                },
+                success_action: null,
+            },
+        });
+
+        expect(wrapper.get('[data-testid="attention-icon"]').exists()).toBe(true);
+        expect(wrapper.text()).toContain('Claim journey needs attention');
+        expect(wrapper.text()).toContain('Contact the issuer before continuing.');
+        expect(wrapper.find('[data-testid="provider-payout-pending-region"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="claim-success-primary-action"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="rider-runtime"]').exists()).toBe(false);
+    });
+
     it('shows an authorized demo-policy action without reviving payment or rider redirects', async () => {
         const wrapper = mount(Success, {
             props: {

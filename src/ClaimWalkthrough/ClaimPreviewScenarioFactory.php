@@ -5,31 +5,22 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\ClaimWalkthrough;
 
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
-use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Services\Claim\ClaimExperienceCompiler;
 use LBHurtado\XChange\Services\Cockpit\RiderUrlArtworkPreviewResolver;
 
 final class ClaimPreviewScenarioFactory
 {
     public function __construct(
-        private readonly ClaimExperienceCompiler $claimExperience,
         private readonly RiderUrlArtworkPreviewResolver $urlArtwork,
     ) {}
 
     /**
      * @return array<string, mixed>
      */
-    public function fromInstructions(VoucherInstructionsData $instructions): array
-    {
+    public function fromInstructions(
+        VoucherInstructionsData $instructions,
+        array $experience = [],
+    ): array {
         $payload = $instructions->toArray();
-        $experience = $this->claimExperience
-            ->compile((new Voucher)->forceFill([
-                'code' => 'PREVIEW',
-                'metadata' => [
-                    'instructions' => $payload,
-                ],
-            ]))
-            ->toArray();
         $fixture = [
             'amount' => (string) data_get($payload, 'cash.amount', '0.00'),
             'money_movement' => false,

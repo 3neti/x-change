@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
-import { CheckCircle2, Clock3 } from 'lucide-vue-next';
+import { AlertTriangle, CheckCircle2, Clock3 } from 'lucide-vue-next';
 import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
 import RiderRenderer from '@/components/x-rider/RiderRenderer.vue';
 import RiderCountdown from '@/components/x-rider/RiderCountdown.vue';
@@ -217,6 +217,7 @@ const pageTone = computed(() =>
         claimOutcome: props.claimOutcome,
         claimWorkflowKey: props.claimWorkflowKey,
         riderState: props.rider?.state,
+        successPresentationState: props.success_presentation?.state,
     }),
 );
 
@@ -266,7 +267,7 @@ const successAction = computed(() => {
     <Head :title="successPresentation?.title ?? 'Claim Successful'" />
 
     <ClaimStepShell
-        :tone="pageTone.isPending ? 'warning' : 'success'"
+        :tone="pageTone.isWarning ? 'warning' : 'success'"
         :brand-placement="successPresentation ? 'center' : 'top_left'"
         :brand-size="successPresentation ? 'brand' : 'header'"
         :show-theme-picker="!successPresentation"
@@ -275,7 +276,7 @@ const successAction = computed(() => {
         <div class="space-y-8">
             <div class="space-y-4 pt-4 text-center">
                 <component
-                    :is="pageTone.isPending ? Clock3 : CheckCircle2"
+                    :is="pageTone.isAttention ? AlertTriangle : pageTone.isPending ? Clock3 : CheckCircle2"
                     class="mx-auto h-12 w-12"
                     :class="pageTone.iconClass"
                 />

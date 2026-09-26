@@ -3,17 +3,21 @@
 declare(strict_types=1);
 
 use Composer\InstalledVersions;
+use Illuminate\Validation\ValidationException;
 use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
 use LBHurtado\FormFlowManager\Services\DriverService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Data\Claim\ClaimWorkflowDescriptorData;
 use LBHurtado\XChange\Enums\ClaimAuthenticationMode;
+use LBHurtado\XChange\Enums\ClaimWorkflowInterpretationState;
 use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetAuthorizationExecutionService;
 use LBHurtado\XChange\Services\Claim\ClaimExperienceCompiler;
+use LBHurtado\XChange\Services\Claim\ClaimWorkflowReadModelProjector;
 use LBHurtado\XChange\Services\Claim\DefaultClaimWorkflowResolver;
 use LBHurtado\XChange\Services\Claim\FormFlowClaimWorkflowMutator;
 use LBHurtado\XChange\Services\Claim\VoucherClaimFlowCompiler;
+use LBHurtado\XChange\Services\Execution\CampaignCoverageCompletionExecutionDriver;
 use Symfony\Component\Yaml\Yaml;
 
 it('binds the shared claim workflow resolver', function () {
@@ -533,6 +537,152 @@ it('uses the issuer-authoritative rail to filter claim destinations', function (
 })->with([
     'InstaPay' => ['INSTAPAY', 'GXCHPHM2XXX', null],
     'PESONet' => ['PESONET', 'BNORPHMMXXX', 'GXCHPHM2XXX'],
+]);
+
+it('characterizes declared journey precedence without using entry point or amount', function (?string $driver, ?string $outcome, string $key): void {
+    $voucher = Mockery::mock(Voucher::class);
+    $voucher->shouldReceive('getAttribute')->with('metadata')->andReturn([
+        'instructions' => [
+            'execution' => ['driver' => $driver],
+            'claim' => ['default_outcome' => $outcome],
+            'cash' => ['amount' => 100],
+            'metadata' => ['custom' => ['campaign' => ['endpoint' => '/x/o/demo/test']]],
+        ],
+    ]);
+    $workflow = (new DefaultClaimWorkflowResolver)->resolve($voucher);
+    expect($workflow)->toBeInstanceOf(ClaimWorkflowDescriptorData::class)
+        ->and($workflow->key)->toBe($key);
+})->with([
+    'legacy absent' => [null, null, 'disbursement.v1'],
+    'explicit ordinary' => ['default', 'provider_disbursement', 'disbursement.v1'],
+    'live cash' => ['x_change_live_cash', 'provider_disbursement', 'disbursement.v1'],
+    'envelope legacy' => ['settlement_envelope', null, 'disbursement.v1'],
+    'collection legacy' => ['payable_collection', null, 'disbursement.v1'],
+    'provider funding payment record' => ['x_change_provider_funding', null, 'disbursement.v1'],
+    'account funding payment record' => ['x_change_account_funding', null, 'disbursement.v1'],
+    'funding' => [null, 'account_funding', 'account-funding.v1'],
+    'intake' => ['default', 'lead_intake', 'lead-intake.v1'],
+    'settlement intake' => ['settlement_envelope', 'lead_intake', 'lead-intake.v1'],
+    'onboarding' => ['onboarding_account_provisioning', null, 'onboarding.account-provisioning.v1'],
+    'funded onboarding' => ['onboarding_account_provisioning', 'account_funding', 'onboarding.account-provisioning.v1'],
+    'legacy commissioning' => ['onboarding_account_provisioning', 'provider_disbursement', 'onboarding.account-provisioning.v1'],
+    'officer' => ['campaign_worksheet_authorization', 'authorize_campaign', 'campaign.officer-authorization.v1'],
+    'stored value' => ['stored_value', null, 'stored-value.activation.v1'],
+    'stored value legacy outcome' => ['stored_value', 'provider_disbursement', 'stored-value.activation.v1'],
+]);
+
+it('classifies a valid coverage completion intent without collecting a payout destination', function (): void {
+    $voucher = Mockery::mock(Voucher::class);
+    $voucher->shouldReceive('getAttribute')->with('metadata')->andReturn([
+        'instructions' => [
+            'execution' => ['driver' => CampaignCoverageCompletionExecutionDriver::Key],
+            'claim' => ['default_outcome' => 'envelope_completion'],
+        ],
+    ]);
+    $voucher->shouldReceive('getKey')->andReturn(-1);
+
+    $workflow = (new DefaultClaimWorkflowResolver)->resolve($voucher);
+
+    expect($workflow->key)->toBe('campaign.coverage-completion.v1')
+        ->and($workflow->requires_mobile)->toBeTrue()
+        ->and($workflow->requires_destination)->toBeFalse()
+        ->and($workflow->authentication_mode)->toBe(ClaimAuthenticationMode::ClaimantHandoff);
+});
+
+it('rejects unsupported or conflicting explicit intent before payout fallback', function (mixed $driver, mixed $outcome): void {
+    $voucher = Mockery::mock(Voucher::class);
+    $voucher->shouldReceive('getAttribute')->with('metadata')->andReturn([
+        'instructions' => ['execution' => ['driver' => $driver], 'claim' => ['default_outcome' => $outcome]],
+    ]);
+    expect(fn () => (new DefaultClaimWorkflowResolver)->resolve($voucher))
+        ->toThrow(ValidationException::class);
+})->with([
+    ['unknown', null], ['', null], [[], null], [false, null],
+    [null, 'unknown'], [null, ''], [null, []], [null, false],
+    [null, 'envelope_completion'], [null, 'authorize_campaign'],
+    ['campaign_worksheet_authorization', 'provider_disbursement'],
+    ['stored_value', 'account_funding'],
+    ['onboarding_account_provisioning', 'lead_intake'],
+    ['x_change_provider_funding', 'provider_disbursement'],
+    ['x_change_account_funding', 'account_funding'],
+    [CampaignCoverageCompletionExecutionDriver::Key, 'lead_intake'],
+]);
+
+it('projects supported and conflicting claim journeys for read-only consumers', function (mixed $driver, ClaimWorkflowInterpretationState $state): void {
+    $voucher = Mockery::mock(Voucher::class);
+    $voucher->shouldReceive('getAttribute')->with('metadata')->andReturn([
+        'instructions' => ['execution' => ['driver' => $driver]],
+    ]);
+
+    $interpretation = app(ClaimWorkflowReadModelProjector::class)->project($voucher);
+
+    expect($interpretation->state)->toBe($state)
+        ->and($interpretation->workflow?->key)->toBe(
+            $state === ClaimWorkflowInterpretationState::Resolved ? 'disbursement.v1' : null,
+        )
+        ->and($interpretation->requiresAttention())->toBe(
+            $state === ClaimWorkflowInterpretationState::NeedsAttention,
+        );
+})->with([
+    'resolved' => [null, ClaimWorkflowInterpretationState::Resolved],
+    'needs attention' => ['unsupported', ClaimWorkflowInterpretationState::NeedsAttention],
+]);
+
+it('does not hide unexpected resolver failures in the read-only workflow projector', function (): void {
+    $resolver = Mockery::mock(ClaimWorkflowResolverContract::class);
+    $resolver->shouldReceive('resolve')->andThrow(new RuntimeException('unexpected resolver failure'));
+    $voucher = Mockery::mock(Voucher::class);
+
+    expect(fn () => (new ClaimWorkflowReadModelProjector($resolver))->project($voucher))
+        ->toThrow(RuntimeException::class, 'unexpected resolver failure');
+});
+
+it('keeps mutable claim compilation fail closed for unsupported intent', function (): void {
+    $voucher = issueVoucher();
+    $metadata = $voucher->getAttribute('metadata');
+    data_set($metadata, 'instructions.execution.driver', 'unsupported_runtime_driver');
+    $voucher->forceFill(['metadata' => $metadata])->save();
+
+    expect(fn () => app(VoucherClaimFlowCompiler::class)->compile($voucher->refresh()))
+        ->toThrow(ValidationException::class);
+});
+
+it('rejects conflicting recovery instructions but preserves ordinary recovery', function (?string $driver, ?string $outcome, bool $valid): void {
+    $voucher = Mockery::mock(Voucher::class);
+    $voucher->shouldReceive('getAttribute')->with('metadata')->andReturn([
+        'treasury' => ['pay_code_reservation' => ['status' => 'recovery_pending']],
+        'instructions' => [
+            'execution' => ['driver' => $driver], 'claim' => ['default_outcome' => $outcome],
+            'metadata' => ['custom' => ['campaign' => ['claim_activation' => 'provider_rejection']]],
+        ],
+    ]);
+    if ($valid) {
+        expect((new DefaultClaimWorkflowResolver)->resolve($voucher)->key)->toBe('campaign.payout-recovery.v1');
+    } else {
+        expect(fn () => (new DefaultClaimWorkflowResolver)->resolve($voucher))
+            ->toThrow(ValidationException::class);
+    }
+})->with([
+    [null, null, true], ['x_change_live_cash', 'provider_disbursement', true],
+    ['onboarding_account_provisioning', null, false], ['default', 'lead_intake', false],
+    ['campaign_worksheet_authorization', 'authorize_campaign', false],
+]);
+
+it('does not infer payout recovery from only one recovery marker', function (array $metadata): void {
+    $voucher = Mockery::mock(Voucher::class);
+    $voucher->shouldReceive('getAttribute')->with('metadata')->andReturn($metadata);
+
+    expect((new DefaultClaimWorkflowResolver)->resolve($voucher)->key)->toBe('disbursement.v1');
+})->with([
+    'provider rejection without pending reservation' => [[
+        'instructions' => [
+            'metadata' => ['custom' => ['campaign' => ['claim_activation' => 'provider_rejection']]],
+        ],
+    ]],
+    'pending reservation without provider rejection' => [[
+        'treasury' => ['pay_code_reservation' => ['status' => 'recovery_pending']],
+        'instructions' => [],
+    ]],
 ]);
 
 it('resolves an automatic claim rail from the actual payout amount', function (): void {

@@ -61,6 +61,10 @@ class InspectPayCodeXRayController extends Controller
             $xray['presentation'] = $projected['presentation'];
         }
 
+        if (is_array($projected['claim_workflow'] ?? null)) {
+            $xray['claim_workflow'] = $projected['claim_workflow'];
+        }
+
         return response()->json([
             'success' => true,
             'data' => [

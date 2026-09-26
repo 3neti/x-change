@@ -10,8 +10,9 @@ use Inertia\Response as InertiaResponse;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
+use LBHurtado\XChange\Data\Claim\ClaimWorkflowInterpretationData;
 use LBHurtado\XChange\Models\VoucherClaim;
-use LBHurtado\XChange\Services\Claim\DefaultClaimWorkflowResolver;
+use LBHurtado\XChange\Services\Claim\ClaimWorkflowReadModelProjector;
 use LBHurtado\XChange\Services\Claim\OnboardingSuccessActionResolver;
 use LBHurtado\XChange\Services\Claim\VoucherRiderFallbackPolicy;
 use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
@@ -36,7 +37,7 @@ class ClaimSuccessPageController
         VoucherRiderFallbackPolicy $riderFallbacks,
         VoucherXRayProjectionBuilder $xray,
         OnboardingSuccessActionResolver $onboardingActions,
-        DefaultClaimWorkflowResolver $workflowResolver,
+        ClaimWorkflowReadModelProjector $workflowReadModel,
         VoucherFlowCapabilityResolverContract $capabilities,
         VoucherCollectionProgressService $collectionProgress,
         Request $request,
@@ -45,6 +46,12 @@ class ClaimSuccessPageController
         $voucher = Voucher::query()
             ->where('code', $code)
             ->firstOrFail();
+
+        $workflow = $workflowReadModel->project($voucher);
+
+        if ($workflow->requiresAttention()) {
+            return $this->attentionResponse($voucher, $workflow, $request);
+        }
 
         $display = $displays->forPayer($voucher, $request);
 
@@ -74,7 +81,7 @@ class ClaimSuccessPageController
                 'currency' => data_get($voucher, 'cash.currency'),
             ],
             'claimOutcome' => $state->value,
-            'claimWorkflowKey' => $workflowResolver->resolve($voucher)->key,
+            'claimWorkflowKey' => $workflow->workflow?->key,
             'rider' => $experience?->toArray(),
             'redirectEndpoint' => route('x-change.claim.redirect', [
                 'code' => $voucher->code,
@@ -110,6 +117,68 @@ class ClaimSuccessPageController
         $response = Inertia::render('x-change/claim/Success', $props)->toResponse($request);
         $response->headers->set('Cache-Control', 'private, no-store');
         $response->headers->set('Referrer-Policy', 'no-referrer');
+
+        return $response;
+    }
+
+    private function attentionResponse(
+        Voucher $voucher,
+        ClaimWorkflowInterpretationData $workflow,
+        Request $request,
+    ): InertiaResponse|Response {
+        $props = [
+            'paired_payment' => false,
+            'voucher' => [
+                'code' => (string) $voucher->code,
+                'amount' => data_get($voucher, 'cash.amount'),
+                'currency' => data_get($voucher, 'cash.currency'),
+            ],
+            'claimOutcome' => null,
+            'claimWorkflowKey' => null,
+            'claim_workflow' => [
+                'state' => $workflow->state->value,
+                'key' => null,
+                'attention' => [
+                    'key' => $workflow->attention_key,
+                    'label' => $workflow->attention_label,
+                    'message' => $workflow->attention_message,
+                ],
+            ],
+            'rider' => null,
+            'redirectEndpoint' => null,
+            'claim_experience' => null,
+            'redirect' => [
+                'show_countdown' => false,
+                'owner' => null,
+                'delay_seconds' => null,
+            ],
+            'compiled_claim_result' => null,
+            'destination' => null,
+            'success_presentation' => [
+                'state' => $workflow->state->value,
+                'suppress_legacy_rider' => true,
+                'intent' => 'claim.journey-attention',
+                'eyebrow' => 'Pay Code',
+                'title' => $workflow->attention_label,
+                'body' => $workflow->attention_message,
+                'source' => 'workflow',
+            ],
+            'success_action' => null,
+        ];
+        $headers = [
+            'Cache-Control' => 'private, no-store',
+            'Referrer-Policy' => 'no-referrer',
+        ];
+
+        if ($request->wantsJson()) {
+            return response()->json($props)->withHeaders($headers);
+        }
+
+        $response = Inertia::render('x-change/claim/Success', $props)->toResponse($request);
+
+        foreach ($headers as $name => $value) {
+            $response->headers->set($name, $value);
+        }
 
         return $response;
     }

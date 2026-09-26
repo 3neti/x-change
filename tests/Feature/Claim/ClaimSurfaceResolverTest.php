@@ -370,6 +370,74 @@ it('adds claim requirements and claim experience for the issuer review surface',
         ->and($componentTypes)->toContain('claim_experience_summary');
 });
 
+it('shows safe workflow attention on a terminal public surface without compiling rider content', function (): void {
+    Http::fake();
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => [
+            'message' => 'Unsafe historical completion copy.',
+            'url' => 'https://example.test/unsafe-history',
+        ],
+    ]));
+    $metadata = $voucher->getAttribute('metadata');
+    data_set($metadata, 'instructions.execution.driver', 'unsupported_historical_driver');
+    $voucher->forceFill([
+        'metadata' => $metadata,
+        'redeemed_at' => now(),
+    ])->save();
+    auth()->logout();
+
+    $surface = claimSurfaceResolver()->resolve($voucher->refresh(), null);
+    $componentTypes = collect($surface->components)->pluck('type');
+
+    expect($surface->state->terminal)->toBeTrue()
+        ->and($componentTypes)->toContain('claim_workflow_attention')
+        ->and($componentTypes)->not->toContain('claim_experience_summary')
+        ->and(data_get(collect($surface->components)->firstWhere('type', 'claim_workflow_attention'), 'props.key'))
+        ->toBe('unsupported_claim_journey')
+        ->and($surface->actions)->toBe([]);
+
+    Http::assertNothingSent();
+});
+
+it('suppresses issuer actions for an unsupported historical claim journey', function (): void {
+    Http::fake();
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => [
+            'message' => 'Unsafe historical completion copy.',
+            'url' => 'https://example.test/unsafe-history',
+        ],
+    ]));
+    recordClaimWithEvidence($voucher, []);
+    $metadata = $voucher->getAttribute('metadata');
+    data_set($metadata, 'instructions.execution.driver', 'unsupported_historical_driver');
+    $voucher->forceFill(['metadata' => $metadata])->save();
+
+    test()->mock(ClaimApprovalStatusResolver::class, function ($mock): void {
+        $mock->shouldReceive('resolve')->andReturn(new ApprovalStatusData(
+            status: 'approval_required',
+            voucher_code: 'attention-test',
+            messages: ['Payout OTP approval required.'],
+            provider: 'paynamics',
+            authorization_type: 'otp',
+            reference_id: 'attention-test-09173011987',
+            otp_required: true,
+            message: 'Paynamics payout OTP is pending.',
+        ));
+    });
+
+    $surface = claimSurfaceResolver()->resolve($voucher->refresh(), $issuer);
+    $componentTypes = collect($surface->components)->pluck('type');
+
+    expect($surface->visibility)->toBe('issuer_console')
+        ->and($componentTypes)->toContain('claim_workflow_attention')
+        ->and($componentTypes)->toContain('claim_requirement_summary')
+        ->and($componentTypes)->not->toContain('claim_experience_summary')
+        ->and($surface->actions)->toBe([]);
+
+    Http::assertNothingSent();
+});
+
 it('does not add the static claim experience summary for an active claimable Pay Code', function () {
     $issuer = actingAsTestUser();
     $voucher = issueVoucher(validVoucherInstructions(overrides: [

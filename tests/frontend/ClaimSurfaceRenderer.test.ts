@@ -4,8 +4,8 @@ import ClaimSurfaceRenderer from '../../resources/js/components/x-change/ClaimSu
 
 vi.mock('@/components/x-change/IssuerClaimReviewPanel.vue', () => ({
     default: {
-        props: ['headline', 'description', 'outcomePanel', 'requirementItems', 'claimExperience', 'payoutRoute', 'actions'],
-        template: '<div data-testid="issuer-claim-review-panel-stub">{{ headline }} {{ claimExperience ? "has-experience" : "" }}</div>',
+        props: ['headline', 'description', 'outcomePanel', 'requirementItems', 'claimExperience', 'workflowAttention', 'payoutRoute', 'actions'],
+        template: '<div data-testid="issuer-claim-review-panel-stub">{{ headline }} {{ claimExperience ? "has-experience" : "" }} {{ workflowAttention?.label }}</div>',
     },
 }));
 
@@ -91,5 +91,46 @@ describe('ClaimSurfaceRenderer', () => {
         expect(wrapper.find('[data-testid="issuer-claim-review-panel-stub"]').exists()).toBe(true);
         expect(wrapper.text()).toContain('has-experience');
         expect(wrapper.find('[data-testid="claim-surface-outcome"]').exists()).toBe(false);
+    });
+
+    it('renders authoritative workflow attention on terminal and issuer audit surfaces', () => {
+        const attention = {
+            type: 'claim_workflow_attention',
+            props: {
+                key: 'unsupported_claim_journey',
+                label: 'Claim journey needs attention',
+                message: 'Contact the issuer before continuing.',
+            },
+        };
+        const terminal = mount(ClaimSurfaceRenderer, {
+            props: {
+                surface: {
+                    visibility: 'public_preview',
+                    headline: 'Already claimed',
+                    state: { terminal: true },
+                    components: [
+                        { type: 'outcome_panel', props: { status_key: 'redeemed', status_label: 'Already claimed' } },
+                        attention,
+                    ],
+                    actions: [],
+                },
+            },
+        });
+        const issuer = mount(ClaimSurfaceRenderer, {
+            props: {
+                surface: {
+                    visibility: 'issuer_console',
+                    headline: 'Your Pay Code was claimed',
+                    state: { terminal: true },
+                    components: [attention],
+                    actions: [],
+                },
+            },
+        });
+
+        expect(terminal.get('[data-testid="claim-workflow-attention"]').text())
+            .toContain('Claim journey needs attention');
+        expect(terminal.text()).toContain('Contact the issuer before continuing.');
+        expect(issuer.text()).toContain('Claim journey needs attention');
     });
 });

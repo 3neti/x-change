@@ -2,6 +2,8 @@
 import { computed } from 'vue';
 import ClaimExperienceSummary from '@/components/x-change/ClaimExperienceSummary.vue';
 import type { ClaimExperienceSummaryProps } from '@/components/x-change/ClaimExperienceSummary.vue';
+import ClaimWorkflowAttention from '@/components/x-change/ClaimWorkflowAttention.vue';
+import type { ClaimWorkflowAttentionProps } from '@/components/x-change/ClaimWorkflowAttention.vue';
 import IssuerClaimReviewPanel from '@/components/x-change/IssuerClaimReviewPanel.vue';
 import PayCodeOutcomePanel from '@/components/x-change/PayCodeOutcomePanel.vue';
 import type {
@@ -60,6 +62,10 @@ const claimExperienceSummary = computed(() =>
     componentProps<ClaimExperienceSummaryProps>('claim_experience_summary'),
 );
 
+const workflowAttention = computed(() =>
+    componentProps<ClaimWorkflowAttentionProps>('claim_workflow_attention'),
+);
+
 const payoutRoute = computed(() =>
     componentProps<ClaimSurfacePayoutRouteProps>('payout_route'),
 );
@@ -84,6 +90,7 @@ const showOutcomeOnly = computed(
         :outcome-panel="outcomePanel"
         :requirement-items="requirementSummary"
         :claim-experience="claimExperienceSummary"
+        :workflow-attention="workflowAttention"
         :payout-route="payoutRoute"
         :actions="surface.actions ?? []"
     />
@@ -104,6 +111,11 @@ const showOutcomeOnly = computed(
             :formatted-amount="outcomePanel.formatted_amount"
             :redeemed-at="outcomePanel.redeemed_at"
             :payout-status="outcomePanel.payout_status"
+        />
+
+        <ClaimWorkflowAttention
+            v-if="workflowAttention"
+            v-bind="workflowAttention"
         />
 
         <ClaimExperienceSummary

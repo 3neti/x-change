@@ -38,6 +38,8 @@ type ClaimPreviewScreen = {
     } | null;
     component?: string | null;
     props?: Record<string, unknown> | null;
+    progress_state?: string | null;
+    simulated?: boolean | null;
 };
 
 const props = defineProps<{
@@ -462,6 +464,53 @@ const actualScreenComponent = computed<Component | null>(() => {
                     class="bg-card rounded-xl border p-3 text-xs font-medium"
                 >
                     {{ screen.message }}
+                </p>
+            </div>
+        </template>
+
+        <template
+            v-else-if="
+                screen.kind === 'claim_progress' ||
+                screen.kind === 'claim_attention'
+            "
+        >
+            <div
+                class="via-background to-background flex min-h-0 flex-1 flex-col justify-center gap-5 bg-gradient-to-b px-5 py-6 text-center"
+                :class="
+                    screen.kind === 'claim_attention'
+                        ? 'from-amber-500/10'
+                        : 'from-emerald-500/10'
+                "
+                data-testid="cockpit-claim-preview-progress"
+                :data-progress-state="screen.progress_state"
+            >
+                <LoaderCircle
+                    v-if="screen.progress_state === 'processing'"
+                    class="mx-auto size-14 animate-spin text-cyan-500 motion-reduce:animate-none"
+                />
+                <ShieldCheck
+                    v-else-if="screen.kind === 'claim_attention'"
+                    class="mx-auto size-14 text-amber-500"
+                />
+                <CheckCircle2
+                    v-else
+                    class="mx-auto size-14 text-emerald-500"
+                />
+                <div class="grid gap-2">
+                    <span
+                        v-if="screen.simulated"
+                        class="mx-auto rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.14em] text-cyan-700 dark:text-cyan-200"
+                    >
+                        Simulated preview
+                    </span>
+                    <h3 class="text-lg font-semibold">{{ screen.title }}</h3>
+                    <p class="text-muted-foreground text-[11px] leading-4">
+                        {{ screen.description }}
+                    </p>
+                </div>
+                <p class="text-muted-foreground text-[10px] leading-4">
+                    This is not a verified live outcome. No claim, payment, or
+                    provider action occurs in preview.
                 </p>
             </div>
         </template>

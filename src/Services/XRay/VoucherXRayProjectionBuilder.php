@@ -8,8 +8,10 @@ use BackedEnum;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Route;
 use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
+use LBHurtado\XChange\Data\Claim\ClaimWorkflowDescriptorData;
+use LBHurtado\XChange\Data\Claim\ClaimWorkflowInterpretationData;
+use LBHurtado\XChange\Services\Claim\ClaimWorkflowReadModelProjector;
 use LBHurtado\XChange\Services\Claim\CoverageCompletionSuccessPresentation;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
@@ -22,6 +24,8 @@ class VoucherXRayProjectionBuilder
         private readonly VoucherSlicePlanProjection $slicePlans,
         private readonly VoucherFlowCapabilityResolverContract $capabilities,
         private readonly VoucherCollectionProgressService $progress,
+        private readonly ClaimWorkflowReadModelProjector $claimWorkflows,
+        private readonly CoverageCompletionSuccessPresentation $coverageCompletionSuccess,
     ) {}
 
     /**
@@ -31,14 +35,23 @@ class VoucherXRayProjectionBuilder
     {
         $instructions = (array) data_get($voucher, 'instructions', []);
         $sliceVoucher = $voucher instanceof Voucher ? $voucher : $sliceSource;
-        $status = $sliceVoucher instanceof Voucher && $this->isCampaignPayoutRecovery($sliceVoucher)
-            ? 'claimable'
-            : $this->xrayStatus(
+        $workflowInterpretation = $sliceVoucher instanceof Voucher
+            ? $this->claimWorkflows->project($sliceVoucher)
+            : null;
+        $requiresAttention = $workflowInterpretation?->requiresAttention() === true;
+
+        if ($requiresAttention) {
+            $status = 'needs_attention';
+        } elseif ($sliceVoucher instanceof Voucher && $this->isCampaignPayoutRecovery($sliceVoucher)) {
+            $status = 'claimable';
+        } else {
+            $status = $this->xrayStatus(
                 (string) data_get($voucher, 'status', 'unknown'),
                 $sliceVoucher instanceof Voucher && $this->capabilities->canCollect($sliceVoucher)
                     ? $sliceVoucher
                     : $voucher,
             );
+        }
         $slicePlan = $sliceVoucher instanceof Voucher
             ? $this->slicePlans->forVoucher($sliceVoucher)
             : [];
@@ -49,6 +62,14 @@ class VoucherXRayProjectionBuilder
             ? $this->collectionProgress($sliceVoucher)
             : null;
 
+        $presentation = $this->presentation(
+            $voucher,
+            $instructions,
+            $status,
+            $sliceVoucher,
+            $workflowInterpretation,
+        );
+
         return [
             'status' => $status,
             'amount' => $this->formatAmount(
@@ -57,20 +78,23 @@ class VoucherXRayProjectionBuilder
             ),
             'issuer' => data_get($voucher, 'issuer_id'),
             'requirements' => $this->requirements($instructions),
-            'presentation' => $this->presentation($voucher, $instructions, $status, $sliceVoucher),
+            'presentation' => $presentation,
+            'claim_workflow' => $this->claimWorkflowProjection($workflowInterpretation),
             'collection_progress' => $collectionProgress,
             'slice_plan' => $slicePlan,
             'remaining_slices' => $sliceVoucher instanceof Voucher
                 ? data_get($slicePlan, 'rows', [])
                 : $this->remainingSlices($instructions),
-            'redirect_url' => data_get($instructions, 'rider.url'),
-            'stages' => $this->stages($voucher, $instructions),
-            'next_actions' => $this->nextActions($status, (string) data_get($voucher, 'code', ''), $sliceVoucher),
+            'redirect_url' => $requiresAttention ? null : data_get($instructions, 'rider.url'),
+            'stages' => $requiresAttention ? [] : $this->stages($voucher, $instructions),
+            'next_actions' => $requiresAttention
+                ? []
+                : $this->nextActions($status, (string) data_get($voucher, 'code', ''), $sliceVoucher),
             'allow' => [
                 'amount' => false,
                 'issuer' => false,
                 'remaining_slices' => $slicePlan !== [],
-                'rider_preclaim' => true,
+                'rider_preclaim' => ! $requiresAttention,
                 'redirect_url' => false,
             ],
         ];
@@ -120,24 +144,27 @@ class VoucherXRayProjectionBuilder
      * @param  array<string, mixed>  $instructions
      * @return array{title: string, primary_action_label: string, confirmation_title?: string, confirmation_label?: string, subtitle?: string, eyebrow?: string, subject_label?: string, intent: string, source: string, success?: array<string, mixed>}
      */
-    protected function presentation(mixed $voucher, array $instructions, string $status, ?Voucher $sliceVoucher = null): array
-    {
-        if ($sliceVoucher instanceof Voucher) {
-            $workflow = app(ClaimWorkflowResolverContract::class)->resolve($sliceVoucher);
-            if ($workflow->key === 'campaign.coverage-completion.v1') {
-                return [
-                    'title' => $workflow->title,
-                    'primary_action_label' => 'Continue',
-                    'confirmation_title' => $workflow->confirmation_title,
-                    'confirmation_label' => $workflow->confirmation_label,
-                    'intent' => $workflow->key,
-                    'source' => 'workflow',
-                    'success' => app(CoverageCompletionSuccessPresentation::class)->forVoucher($sliceVoucher),
-                ];
-            }
+    protected function presentation(
+        mixed $voucher,
+        array $instructions,
+        string $status,
+        ?Voucher $sliceVoucher = null,
+        ?ClaimWorkflowInterpretationData $workflowInterpretation = null,
+    ): array {
+        if ($workflowInterpretation?->requiresAttention() === true) {
+            return $this->attentionPresentation($workflowInterpretation);
         }
 
-        $default = $this->defaultPresentation($voucher, $instructions, $status, $sliceVoucher);
+        $workflow = $workflowInterpretation?->workflow;
+
+        if ($sliceVoucher instanceof Voucher && $workflow?->key === 'campaign.coverage-completion.v1') {
+            return [
+                ...$this->workflowPresentation($workflow),
+                'success' => $this->coverageCompletionSuccess->forVoucher($sliceVoucher),
+            ];
+        }
+
+        $default = $this->defaultPresentation($voucher, $instructions, $status, $sliceVoucher, $workflow);
         $override = $this->presentationOverride($instructions);
 
         if ($override === []) {
@@ -179,14 +206,20 @@ class VoucherXRayProjectionBuilder
      * @param  array<string, mixed>  $instructions
      * @return array{title: string, primary_action_label: string, confirmation_title?: string, confirmation_label?: string, eyebrow: string, subject_label: string, intent: string, source: string, success?: array<string, mixed>}
      */
-    protected function defaultPresentation(mixed $voucher, array $instructions, string $status, ?Voucher $sliceVoucher = null): array
-    {
-        if ($this->isOnboardingVoucher($voucher, $instructions, $sliceVoucher)) {
+    protected function defaultPresentation(
+        mixed $voucher,
+        array $instructions,
+        string $status,
+        ?Voucher $sliceVoucher = null,
+        ?ClaimWorkflowDescriptorData $workflow = null,
+    ): array {
+        if ($workflow?->key === OnboardingVoucherInstructionPolicy::WorkflowKey
+            || $this->isOnboardingVoucher($voucher, $instructions, $sliceVoucher)) {
             return [
-                'title' => 'Accept Invitation',
+                'title' => $workflow?->title ?? 'Accept Invitation',
                 'primary_action_label' => 'Continue',
-                'confirmation_title' => 'Review your details',
-                'confirmation_label' => 'Create my account',
+                'confirmation_title' => $workflow?->confirmation_title ?? 'Review your details',
+                'confirmation_label' => $workflow?->confirmation_label ?? 'Create my account',
                 'eyebrow' => 'Invitation code',
                 'subject_label' => 'Invitation code',
                 'intent' => 'commissioning_invitation',
@@ -206,6 +239,10 @@ class VoucherXRayProjectionBuilder
             ];
         }
 
+        if ($workflow !== null) {
+            return $this->workflowPresentation($workflow);
+        }
+
         return [
             'title' => 'Claim Pay Code',
             'primary_action_label' => 'Start Claim',
@@ -214,6 +251,64 @@ class VoucherXRayProjectionBuilder
             'intent' => 'claim',
             'source' => 'fallback',
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function workflowPresentation(ClaimWorkflowDescriptorData $workflow): array
+    {
+        return array_filter([
+            'title' => $workflow->title,
+            'primary_action_label' => 'Continue',
+            'confirmation_title' => $workflow->confirmation_title,
+            'confirmation_label' => $workflow->confirmation_label,
+            'eyebrow' => 'Pay Code',
+            'subject_label' => 'Pay Code',
+            'intent' => $workflow->key,
+            'source' => 'workflow',
+        ], static fn (mixed $value): bool => $value !== null && $value !== '');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function attentionPresentation(ClaimWorkflowInterpretationData $interpretation): array
+    {
+        return [
+            'title' => $interpretation->attention_label,
+            'primary_action_label' => 'Contact issuer',
+            'subtitle' => $interpretation->attention_message,
+            'eyebrow' => 'Pay Code',
+            'subject_label' => 'Pay Code',
+            'intent' => 'claim.journey-attention',
+            'source' => 'workflow',
+            'attention' => [
+                'key' => $interpretation->attention_key,
+                'label' => $interpretation->attention_label,
+                'message' => $interpretation->attention_message,
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function claimWorkflowProjection(?ClaimWorkflowInterpretationData $interpretation): ?array
+    {
+        if ($interpretation === null) {
+            return null;
+        }
+
+        return array_filter([
+            'state' => $interpretation->state->value,
+            'key' => $interpretation->workflow?->key,
+            'attention' => $interpretation->requiresAttention() ? [
+                'key' => $interpretation->attention_key,
+                'label' => $interpretation->attention_label,
+                'message' => $interpretation->attention_message,
+            ] : null,
+        ], static fn (mixed $value): bool => $value !== null);
     }
 
     /**

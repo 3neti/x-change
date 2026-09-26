@@ -54,11 +54,165 @@ payment, Treasury, claim, or policy record is rewritten. Onboarding (including
 Maker/Checker invitations), campaign officer authorization, ordinary intake,
 disbursement, recovery, account funding, and stored-value behavior are unchanged.
 
+### Gate 1 journey classifier contract — 2026-09-26
+
+`DefaultClaimWorkflowResolver` remains the single claim-journey classifier and
+returns the existing typed `ClaimWorkflowDescriptorData`. It interprets declared
+instructions only; persisted payment, claim, or policy records establish progress
+after classification. A campaign endpoint, QR scan, amount, voucher type, or rider
+message does not select a claim journey.
+
+The classifier applies this precedence:
+
+1. `campaign_coverage_completion` execution;
+2. the paired `provider_rejection` and `recovery_pending` recovery markers;
+3. campaign officer authorization;
+4. onboarding/account provisioning;
+5. stored-value activation;
+6. `account_funding` claim outcome;
+7. `lead_intake` claim outcome;
+8. the legacy disbursement default.
+
+Ordinary `default`, live-cash, settlement-envelope, and payable-collection
+drivers may use the established disbursement, account-funding, or lead-intake
+outcomes. Special drivers accept only their compatible outcomes. The two
+`x_change_*_funding` payment-only drivers remain recognized for legacy read-model
+compatibility but do not declare a new claim journey. Recovery requires both
+markers; one marker alone remains an incomplete legacy signal and does not acquire
+recovery semantics.
+
+Unknown drivers, unknown outcomes, and conflicting explicit combinations now
+fail closed before the legacy disbursement fallback. Read-only consumers that
+surface old unsupported instructions must eventually translate that validation
+failure into an attention presentation instead of an HTTP 500; that is part of
+the shared-consumer gate, not classifier execution.
+
+### Gate 3a read-only X-Ray adoption — 2026-09-26
+
+`ClaimWorkflowReadModelProjector` is a narrow adapter over the authoritative
+resolver. It contains no classification rules. It returns the same typed workflow
+descriptor for supported instructions and translates only the resolver's known
+validation conflict into a typed `needs_attention` interpretation. Unexpected
+exceptions continue to escape.
+
+X-Ray now consumes that interpretation once per persisted voucher. Supported
+claimable vouchers use the resolver-owned title, confirmation copy, and intent.
+Unsupported historical instructions receive generic attention copy, no claim or
+payment action, no Rider stage, and no redirect. `needs_attention` is an x-change
+X-Ray status extension; it does not change the voucher lifecycle or claim-surface
+operational state.
+
+Mutable claim, authentication, compilation, submission, and execution paths still
+call `resolve()` directly and therefore fail closed. Success pages and terminal
+issuer audit surfaces are covered by Gate 3b below; broad exception catches remain
+prohibited.
+
 The existing Claim-tab preview shares claim compilation, so inherited completion
 rider/redirect phases are suppressed there too. A state-selectable preview with
 simulated payment/policy records remains a separate follow-up;
 this slice does not claim complete preview/runtime outcome parity. Wider journey
 centralization is deferred to avoid disturbing working flows.
+
+### Gate 3b historical success and audit adoption — 2026-09-26
+
+Historical success pages now project the workflow interpretation before resolving
+campaign display state, claim experience, Rider, payment actions, destinations, or
+compiled session results. A supported journey continues through the existing path
+unchanged. An unsupported historical journey returns a private/no-store,
+no-referrer attention-only payload: no workflow key, Rider, redirect, countdown,
+payment/policy/onboarding action, paired-payment flag, destination, or compiled
+result is exposed. The underlying driver or conflicting instruction is not shown.
+
+Terminal and issuer claim surfaces use the same projector. Unsupported historical
+instructions add a dedicated `claim_workflow_attention` component and skip claim
+experience and artwork resolution. `ClaimSurfaceBuilder::suppressActions()` is
+sticky: it clears actions already added and prevents later contributors from
+reintroducing Open Pay Code or approval actions. Requirement and payout summaries
+may remain visible to an authorized issuer because they are read-only evidence;
+the unsafe next action does not.
+
+The Vue success page renders `needs_attention` as its own warning state rather
+than provider-payout pending. The claim-surface renderer displays the typed label
+and message on both terminal and issuer views. Active claim entry, authentication,
+claim compilation, receipt authorization, submission, and execution still use the
+strict resolver and do not receive this fallback.
+
+Focused local verification covers hostile historical Rider/payment copy, skipped
+Rider resolution and external artwork reads, terminal and approval-required issuer
+surfaces, sticky action suppression, warning rendering, and all existing valid
+success/surface cases. Claim Workflow and X-Ray regression suites remain green.
+
+### Gate 4 Quick Generate Claim-tab parity — 2026-09-26
+
+The existing Quick Generate Claim tab now classifies its temporary preview
+voucher through `ClaimWorkflowReadModelProjector`, the same read-only
+interpretation used by X-Ray and historical claim surfaces. The preview no
+longer performs an independent raw-instruction classification before the
+temporary voucher exists. Live compilation remains strict for resolved
+workflows; a known unsupported instruction combination produces only an inert
+workflow-attention preview.
+
+Simulation state is a preview option, not a voucher instruction. It is never
+written to voucher metadata, payment evidence, claim records, settlement
+envelopes, or policy results. The manifest identifies it as simulated and
+unverified, and all preview safety flags continue to prohibit interaction,
+money movement, provider calls, and claim submission. The state is included in
+the artifact fingerprint so a processing preview cannot be reused as a ready
+preview.
+
+Supported explicit states are journey-scoped:
+
+- intake can show its instruction-default journey or payment outstanding;
+- campaign coverage completion can show instruction default, prepaid/details
+  outstanding, processing, ready, or processing-needs-attention;
+- other journeys retain the instruction-default walkthrough;
+- classifier attention always overrides an issuer-selected simulated state.
+
+Coverage completion previews and live success pages use the same
+state-to-presentation mapping. Preview-ready copy does not imply that a policy
+exists, and its policy action remains visual/inert. The Claim tab labels the
+selector and outcome as a simulated, non-live presentation. Existing
+engineering-preview JSON, ordinary claim walkthroughs, onboarding,
+Maker/Checker, disbursement, recovery, account funding, and stored-value
+contracts remain unchanged.
+
+Focused evidence: seven state/projector tests (including exact live/preview copy
+equivalence), the preview service and controller suites, live success and X-Ray
+regressions, and the Quick Generate/Claim-preview Vue suites. The remaining
+gate is final cross-journey browser verification and release/deployment review;
+no package publication or Cloud mutation is part of Gate 4 itself.
+
+### Gate 5 local release acceptance — 2026-09-26
+
+The cross-journey acceptance matrix has been exercised locally without changing
+financial rules, provider behavior, or historical records. It covers onboarding
+and Maker/Checker presentation, campaign officer authorization, ordinary intake,
+prepaid completion, disbursement, payout recovery, historical Rider behavior,
+X-Ray, terminal claim surfaces, and the Quick Generate Claim preview.
+
+Local evidence:
+
+- 144 of 145 backend tests passed in one combined process (781 assertions).
+  The only combined-process failure was a reused x-journal idempotency key in
+  the campaign-officer test fixture; that complete suite passed 3 of 3 tests
+  (19 assertions) when rerun in isolation. This is recorded as test-order
+  contamination, not accepted as product-behavior evidence.
+- Seven frontend suites passed: 130 tests covering success destinations,
+  redirects, tones, claim surfaces, X-Ray, the Claim preview, and Quick Generate.
+- The real-browser success-page matrix passed 8 of 8 cases at 375px and 1440px.
+  Processing, ready, ready-without-receipt, and payment-unverified states showed
+  no repeat-payment prompt, no horizontal overflow, and no JavaScript errors.
+  The private policy action appeared only with an eligible receipt.
+- Gate 4's new Claim-tab state selector is covered by package-level frontend
+  tests. Browser acceptance in the host remains pending until this package
+  revision is published and installed; the current local host still consumes
+  x-change v1.0.55.
+
+This completes the local part of Gate 5. Publication, host upgrade, testing-only
+deployment, and one fresh authorized paid lifecycle remain separate release
+actions. The Cloud lifecycle must confirm the first SMS, details completion,
+processing-to-ready presentation, authorized policy action, policy-link SMS,
+and absence of duplicate processing before the gate is finally closed.
 
 ## Purpose
 

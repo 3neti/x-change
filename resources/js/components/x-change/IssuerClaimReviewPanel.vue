@@ -2,6 +2,8 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import ClaimExperienceSummary from '@/components/x-change/ClaimExperienceSummary.vue';
 import type { ClaimExperienceSummaryProps } from '@/components/x-change/ClaimExperienceSummary.vue';
+import ClaimWorkflowAttention from '@/components/x-change/ClaimWorkflowAttention.vue';
+import type { ClaimWorkflowAttentionProps } from '@/components/x-change/ClaimWorkflowAttention.vue';
 import ClaimRequirementSummary from '@/components/x-change/ClaimRequirementSummary.vue';
 import type { ClaimRequirementSummaryItem } from '@/components/x-change/ClaimRequirementSummary.vue';
 import PayCodeOutcomePanel from '@/components/x-change/PayCodeOutcomePanel.vue';
@@ -43,6 +45,7 @@ defineProps<{
     outcomePanel?: ClaimSurfaceOutcomePanelProps | null;
     requirementItems?: ClaimRequirementSummaryItem[] | null;
     claimExperience?: ClaimExperienceSummaryProps | null;
+    workflowAttention?: ClaimWorkflowAttentionProps | null;
     payoutRoute?: ClaimSurfacePayoutRouteProps | null;
     actions?: ClaimSurfaceActionLike[];
 }>();
@@ -66,6 +69,11 @@ function actionButtonClass(variant?: string): string {
         </CardHeader>
 
         <CardContent class="space-y-4">
+            <ClaimWorkflowAttention
+                v-if="workflowAttention"
+                v-bind="workflowAttention"
+            />
+
             <PayCodeOutcomePanel
                 v-if="outcomePanel"
                 :status-key="outcomePanel.status_key"

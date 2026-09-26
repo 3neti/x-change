@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\ClaimWalkthrough;
 
 use Illuminate\Contracts\Auth\Authenticatable;
+use LBHurtado\XChange\Enums\ClaimPreviewProgressState;
 
 final class ClaimExperiencePreviewOptions
 {
@@ -20,5 +21,6 @@ final class ClaimExperiencePreviewOptions
         public readonly string $bankCode = 'GXCHPHM2XXX',
         public readonly string $accountNumber = '09173011987',
         public readonly bool $submitClaim = false,
+        public readonly ClaimPreviewProgressState $progressState = ClaimPreviewProgressState::Current,
     ) {}
 }

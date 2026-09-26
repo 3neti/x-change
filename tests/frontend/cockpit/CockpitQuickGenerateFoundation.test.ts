@@ -5084,6 +5084,22 @@ describe('Cockpit Quick Generate foundation', () => {
                             width: 390,
                             height: 844,
                         },
+                        simulation: {
+                            schema: 'x-change.claim-preview-simulation.v1',
+                            mode: 'simulated',
+                            state: 'current',
+                            verified_live_outcome: false,
+                            source: 'issuer_selected_preview',
+                            workflow_state: 'resolved',
+                            workflow_key: 'campaign.coverage-completion.v1',
+                            allowed_states: [
+                                'current',
+                                'details_required',
+                                'processing',
+                                'ready',
+                                'needs_attention',
+                            ],
+                        },
                         step_count: 2,
                         steps: [
                             {
@@ -5184,6 +5200,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(options.method).toBe('POST');
         expect(payload.cash.amount).toBe(25);
         expect(payload.preview_profile).toBe('issuer');
+        expect(payload.preview_state).toBe('current');
         expect(wrapper.text()).not.toContain('Claim Experience Preview');
         expect(wrapper.text()).not.toContain('Preview Only');
         expect(wrapper.text()).not.toContain('Recipient Journey');

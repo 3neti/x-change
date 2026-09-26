@@ -8,6 +8,8 @@ use InvalidArgumentException;
 use LBHurtado\FormFlowManager\Services\FormFlowPreviewCompiler;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Services\Claim\ClaimPreviewProgressPresentation;
+use LBHurtado\XChange\Services\Claim\ClaimWorkflowReadModelProjector;
 use LBHurtado\XChange\Services\Claim\VoucherClaimFlowCompiler;
 use RuntimeException;
 
@@ -25,6 +27,8 @@ final class ClaimExperiencePreviewService
         private readonly ClaimPreviewVoucherDisposer $previewVouchers,
         private readonly VoucherClaimFlowCompiler $claimFlows,
         private readonly FormFlowPreviewCompiler $formFlowPreviews,
+        private readonly ClaimWorkflowReadModelProjector $workflowReadModel,
+        private readonly ClaimPreviewProgressPresentation $progressPresentations,
     ) {}
 
     /**
@@ -48,6 +52,8 @@ final class ClaimExperiencePreviewService
             'mobile' => $options->mobile,
             'bank_code' => $options->bankCode,
             'account_number' => $options->accountNumber,
+            'progress_state' => $options->progressState->value,
+            'workflow_projection_version' => 1,
         ]);
 
         if (! $options->refresh) {
@@ -81,13 +87,26 @@ final class ClaimExperiencePreviewService
             $previewVoucherId = $issued['voucher_id'] ?? null;
             $payCode = (string) $issued['code'];
             $previewVoucher = Voucher::query()->findOrFail($previewVoucherId);
-            $compiled = $this->claimFlows->compile($previewVoucher);
-            $screens = $this->formFlowPreviews->compile($compiled->instructions, [
-                'mobile' => $options->mobile,
-                'preview_mobile' => $options->mobile,
-                'voucher_code' => $payCode,
-                'claim_experience' => $compiled->experience->toArray(),
-            ]);
+            $workflow = $this->workflowReadModel->project($previewVoucher);
+            $simulation = $this->progressPresentations->project(
+                $workflow,
+                $options->progressState,
+            );
+            $screens = [];
+
+            if (! $workflow->requiresAttention()) {
+                $compiled = $this->claimFlows->compile($previewVoucher);
+                $scenario = $this->scenarios->fromInstructions(
+                    $instructions,
+                    $compiled->experience->toArray(),
+                );
+                $screens = $this->formFlowPreviews->compile($compiled->instructions, [
+                    'mobile' => $options->mobile,
+                    'preview_mobile' => $options->mobile,
+                    'voucher_code' => $payCode,
+                    'claim_experience' => $compiled->experience->toArray(),
+                ]);
+            }
 
             $report = $captureAvailable
                 ? $this->recordOrBuildStoryboard(
@@ -106,7 +125,12 @@ final class ClaimExperiencePreviewService
                         : 'compiled_claim_flow',
                 );
 
-            $journey = $this->journeys->fromReport($report, $scenario, $screens);
+            $journey = $this->journeys->fromReport(
+                $report,
+                $scenario,
+                $screens,
+                $simulation,
+            );
             $artifact = $this->cache->rememberRendered(
                 scenario: $scenario,
                 fingerprint: $context['fingerprint'],

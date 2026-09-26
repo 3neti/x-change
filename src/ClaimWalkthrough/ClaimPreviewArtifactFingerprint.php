@@ -14,7 +14,7 @@ final class ClaimPreviewArtifactFingerprint
     public function make(array $scenario, array $options = []): array
     {
         $payload = $this->canonicalize([
-            'schema_version' => 'x-change.claim-preview.fingerprint.v1',
+            'schema_version' => 'x-change.claim-preview.fingerprint.v2',
             'scenario_key' => $scenario['key'] ?? null,
             'scenario_version' => $scenario['version'] ?? 1,
             'fixture' => $scenario['fixture'] ?? [],
@@ -24,6 +24,8 @@ final class ClaimPreviewArtifactFingerprint
             'mobile' => $options['mobile'] ?? null,
             'bank_code' => $options['bank_code'] ?? null,
             'account_number' => $options['account_number'] ?? null,
+            'progress_state' => $options['progress_state'] ?? 'current',
+            'workflow_projection_version' => $options['workflow_projection_version'] ?? 1,
             'viewport' => $options['viewport'] ?? 'desktop',
             'locale' => app()->getLocale(),
             'asset_fingerprint' => $this->assetFingerprint(),

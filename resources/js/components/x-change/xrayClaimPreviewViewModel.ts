@@ -1,5 +1,6 @@
 import type { Component } from 'vue';
 import {
+    AlertCircle,
     Camera,
     CheckCircle2,
     Clock,
@@ -38,8 +39,8 @@ export interface XRayRequirementViewModel {
 
 /**
  * Friendly, redeemer-facing copy for every x-ray claimability status. This is
- * presentation-only: the underlying disclosure policy and voucher lifecycle
- * status strings are untouched -- see
+ * presentation-only. `needs_attention` is an x-change read-model extension for
+ * an unsupported claim journey; other lifecycle status strings are untouched. See
  * `LBHurtado\XChange\Services\XRay\VoucherXRayProjectionBuilder` and
  * `LBHurtado\XRay\Policies\DefaultXRayDisclosurePolicy`.
  */
@@ -81,6 +82,13 @@ const STATUS_VIEW_MODELS: Record<string, XRayStatusViewModel> = {
             "We couldn't find a Pay Code with that code. Double-check it and try again.",
         badgeVariant: 'destructive',
         icon: HelpCircle,
+    },
+    needs_attention: {
+        label: 'Needs attention',
+        description:
+            'This Pay Code has conflicting or unsupported claim instructions. Contact the issuer before continuing.',
+        badgeVariant: 'destructive',
+        icon: AlertCircle,
     },
 };
 

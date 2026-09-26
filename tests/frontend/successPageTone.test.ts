@@ -5,6 +5,8 @@ describe('success page tone', () => {
     it('uses success tone by default', () => {
         expect(resolveSuccessPageTone({})).toEqual({
             isPending: false,
+            isAttention: false,
+            isWarning: false,
             iconClass: 'text-green-500',
         });
     });
@@ -16,6 +18,8 @@ describe('success page tone', () => {
             riderState: 'success',
         })).toEqual({
             isPending: true,
+            isAttention: false,
+            isWarning: true,
             iconClass: 'text-amber-500',
         });
     });
@@ -46,6 +50,8 @@ describe('success page tone', () => {
             claimWorkflowKey: 'lead-intake.v1',
         })).toEqual({
             isPending: false,
+            isAttention: false,
+            isWarning: false,
             iconClass: 'text-green-500',
         });
     });
@@ -68,7 +74,20 @@ describe('success page tone', () => {
             riderState: 'completed',
         })).toEqual({
             isPending: false,
+            isAttention: false,
+            isWarning: false,
             iconClass: 'text-green-500',
+        });
+    });
+
+    it('uses a distinct warning state for unsupported historical journeys', () => {
+        expect(resolveSuccessPageTone({
+            successPresentationState: 'needs_attention',
+        })).toEqual({
+            isPending: false,
+            isAttention: true,
+            isWarning: true,
+            iconClass: 'text-amber-500',
         });
     });
 });

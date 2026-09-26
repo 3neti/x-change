@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Claim;
 
+use Illuminate\Validation\ValidationException;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Data\Claim\ClaimWorkflowDescriptorData;
@@ -16,6 +17,7 @@ final class DefaultClaimWorkflowResolver implements ClaimWorkflowResolverContrac
 {
     public function resolve(Voucher $voucher): ClaimWorkflowDescriptorData
     {
+        $this->assertSupportedIntent($voucher);
         $driver = $this->executionDriver($voucher);
 
         if ($driver === CampaignCoverageCompletionExecutionDriver::Key) {
@@ -181,6 +183,50 @@ final class DefaultClaimWorkflowResolver implements ClaimWorkflowResolverContrac
     private function executionDriver(Voucher $voucher): ?string
     {
         return data_get($voucher->getAttribute('metadata'), 'instructions.execution.driver');
+    }
+
+    /**
+     * Validate declared intent before applying legacy precedence. Null signals
+     * retain their existing defaults; unknown signals must never become payout.
+     */
+    private function assertSupportedIntent(Voucher $voucher): void
+    {
+        $metadata = $voucher->getAttribute('metadata');
+        $driver = data_get($metadata, 'instructions.execution.driver');
+        $outcome = data_get($metadata, 'instructions.claim.default_outcome');
+        $ordinaryOutcomes = [null, 'provider_disbursement', 'account_funding', 'lead_intake'];
+        $allowed = [
+            'default' => $ordinaryOutcomes,
+            'x_change_live_cash' => $ordinaryOutcomes,
+            'settlement_envelope' => $ordinaryOutcomes,
+            'payable_collection' => $ordinaryOutcomes,
+            'x_change_provider_funding' => [null],
+            'x_change_account_funding' => [null],
+            OnboardingVoucherInstructionPolicy::ExecutionDriver => [null, 'provider_disbursement', 'account_funding'],
+            'stored_value' => [null, 'provider_disbursement'],
+            'campaign_worksheet_authorization' => [null, 'authorize_campaign'],
+            CampaignCoverageCompletionExecutionDriver::Key => [null, 'envelope_completion'],
+        ];
+
+        if ($driver !== null && (! is_string($driver) || ! array_key_exists($driver, $allowed))) {
+            throw ValidationException::withMessages([
+                'instructions.execution.driver' => 'This execution driver has no supported claim journey.',
+            ]);
+        }
+
+        if (! in_array($outcome, $allowed[$driver ?? 'default'], true)) {
+            throw ValidationException::withMessages([
+                'instructions.claim.default_outcome' => 'The declared claim outcome is unsupported or conflicts with its execution driver.',
+            ]);
+        }
+
+        if ($this->isCampaignPayoutRecovery($voucher)
+            && (! in_array($driver, [null, 'default', 'x_change_live_cash', 'settlement_envelope'], true)
+                || ! in_array($outcome, [null, 'provider_disbursement'], true))) {
+            throw ValidationException::withMessages([
+                'instructions.execution.driver' => 'Payout recovery cannot be combined with a different claim journey.',
+            ]);
+        }
     }
 
     private function defaultOutcome(Voucher $voucher): ?string

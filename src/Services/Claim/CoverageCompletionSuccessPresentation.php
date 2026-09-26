@@ -31,14 +31,14 @@ final class CoverageCompletionSuccessPresentation
             || (string) $coverage->envelope_id !== (string) $issuance->envelope_id
             || $recognition === null || $recognition->recognized_at === null
             || ! $recognition->destination_verified || $recognition->gross_amount_minor <= 0) {
-            return $this->presentation('payment_unverified', 'Payment verification unavailable', 'We cannot verify the payment linked to this details request. Please contact the campaign operator. Do not pay again.');
+            return $this->forState('payment_unverified');
         }
 
         $projection = $issuance->evidenceProjection;
         if ($projection === null || $projection->projected_at === null
             || (string) $projection->envelope_id !== (string) $issuance->envelope_id
             || (string) $projection->claim?->voucher_id !== (string) $voucher->getKey()) {
-            return $this->presentation('details_required', 'Complete your details', 'Your payment has been received. Complete the required personal details to continue.');
+            return $this->forState('details_required');
         }
 
         $request = $projection->policyCompletionRequest;
@@ -46,14 +46,27 @@ final class CoverageCompletionSuccessPresentation
         if ($request?->status === PolicyCompletionRequestStatus::Succeeded
             && $outcome?->status === PolicyCompletionOutcomeStatus::Succeeded
             && $outcome->recorded_at !== null) {
-            return $this->presentation('ready', 'Policy result ready', 'Your payment has been received and your details have been submitted. Your policy result is ready. Use the link provided by the campaign. A demonstration result is not actual insurance coverage.');
+            return $this->forState('ready');
         }
 
         if ($request?->status?->terminal() || $outcome !== null) {
-            return $this->presentation('needs_attention', 'Details submitted — processing needs attention', 'Your payment has been received. The policy result is not confirmed. Please contact the campaign operator; do not pay again.');
+            return $this->forState('needs_attention');
         }
 
-        return $this->presentation('processing', 'Details submitted', 'Your payment has been received. Your policy result is being prepared. You will be notified when it is ready.');
+        return $this->forState('processing');
+    }
+
+    /** @return array<string, mixed> */
+    public function forState(string $state): array
+    {
+        return match ($state) {
+            'payment_unverified' => $this->presentation('payment_unverified', 'Payment verification unavailable', 'We cannot verify the payment linked to this details request. Please contact the campaign operator. Do not pay again.'),
+            'details_required' => $this->presentation('details_required', 'Complete your details', 'Your payment has been received. Complete the required personal details to continue.'),
+            'processing' => $this->presentation('processing', 'Details submitted', 'Your payment has been received. Your policy result is being prepared. You will be notified when it is ready.'),
+            'ready' => $this->presentation('ready', 'Policy result ready', 'Your payment has been received and your details have been submitted. Your policy result is ready. Use the link provided by the campaign. A demonstration result is not actual insurance coverage.'),
+            'needs_attention' => $this->presentation('needs_attention', 'Details submitted — processing needs attention', 'Your payment has been received. The policy result is not confirmed. Please contact the campaign operator; do not pay again.'),
+            default => throw new \InvalidArgumentException("Unsupported coverage completion presentation state [{$state}]."),
+        };
     }
 
     /** @return array<string, mixed> */

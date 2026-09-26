@@ -17,7 +17,9 @@ use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewVoucherDisposer;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewVoucherIssuer;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewVoucherPayloadFactory;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
+use LBHurtado\XChange\Enums\ClaimPreviewProgressState;
 use LBHurtado\XChange\Models\ClaimPreviewArtifact;
+use LBHurtado\XChange\Services\Execution\CampaignCoverageCompletionExecutionDriver;
 
 beforeEach(function (): void {
     config()->set('form-flow.handlers', [
@@ -172,6 +174,65 @@ it('compiles conditional redeemer journey steps from the instruction contract', 
         ->and($steps->where('phase', 'form_flow')->every(
             fn (array $step): bool => data_get($step, 'screen.props.preview_mode') === true,
         ))->toBeTrue();
+});
+
+it('projects explicit prepaid completion states without fabricating live outcomes', function (): void {
+    $issuer = actingAsTestUser();
+    $voucherCountBefore = Voucher::query()->count();
+    $instructions = validVoucherInstructions(50.00, overrides: [
+        'claim' => [
+            'outcomes' => [
+                ['key' => 'envelope_completion'],
+            ],
+            'default_outcome' => 'envelope_completion',
+        ],
+        'execution' => [
+            'schema' => 'voucher.execution.v1',
+            'driver' => CampaignCoverageCompletionExecutionDriver::Key,
+            'metadata' => [
+                'completion' => [
+                    'schema' => 'x-change.campaign-coverage-completion.v1',
+                    'coverage_reference' => 'coverage-preview',
+                    'envelope_reference' => 'envelope-preview',
+                    'driver_id' => 'aui.personal-accident.provisional-cover',
+                    'driver_version' => '1.0.0',
+                ],
+            ],
+        ],
+    ]);
+    $service = app(ClaimExperiencePreviewService::class);
+
+    $processing = $service->renderFromInstructions(
+        $instructions,
+        new ClaimExperiencePreviewOptions(
+            issuer: $issuer,
+            baseUrl: 'http://x-change-sandbox.test',
+            dryRun: true,
+            refresh: true,
+            progressState: ClaimPreviewProgressState::Processing,
+        ),
+    );
+    $ready = $service->renderFromInstructions(
+        $instructions,
+        new ClaimExperiencePreviewOptions(
+            issuer: $issuer,
+            baseUrl: 'http://x-change-sandbox.test',
+            dryRun: true,
+            refresh: true,
+            progressState: ClaimPreviewProgressState::Ready,
+        ),
+    );
+
+    expect(data_get($processing, 'journey.simulation.state'))->toBe('processing')
+        ->and(data_get($processing, 'journey.simulation.verified_live_outcome'))->toBeFalse()
+        ->and(data_get($processing, 'journey.simulation.workflow_key'))->toBe('campaign.coverage-completion.v1')
+        ->and(data_get($processing, 'journey.steps.'.(count(data_get($processing, 'journey.steps')) - 1).'.screen.kind'))
+        ->toBe('claim_progress')
+        ->and(data_get($processing, 'journey.steps.'.(count(data_get($processing, 'journey.steps')) - 1).'.screen.progress_state'))
+        ->toBe('processing')
+        ->and(data_get($ready, 'journey.simulation.state'))->toBe('ready')
+        ->and($ready['fingerprint'])->not->toBe($processing['fingerprint'])
+        ->and(Voucher::query()->count())->toBe($voucherCountBefore);
 });
 
 it('deletes only temporary preview vouchers after capture', function (): void {

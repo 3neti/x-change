@@ -31,17 +31,20 @@ const props = withDefaults(
         safePresentation?: boolean;
         autoplay?: boolean;
         autoplayIntervalMs?: number;
+        simulationState?: string;
     }>(),
     {
         safePresentation: false,
         autoplay: false,
         autoplayIntervalMs: 3800,
+        simulationState: 'current',
     },
 );
 
 const emit = defineEmits<{
     generate: [];
     refresh: [];
+    simulationStateChange: [state: string];
 }>();
 
 const currentStepIndex = ref(0);
@@ -56,6 +59,25 @@ const steps = computed(() =>
     ),
 );
 const currentStep = computed(() => steps.value[currentStepIndex.value] ?? null);
+const simulationStates = computed(
+    () => props.manifest?.journey.simulation?.allowed_states ?? [],
+);
+const simulationLabels: Record<string, string> = {
+    current: 'Instruction default',
+    payment_outstanding: 'Payment outstanding',
+    details_required: 'Prepaid · details outstanding',
+    processing: 'Details submitted · processing',
+    ready: 'Policy result ready',
+    needs_attention: 'Processing needs attention',
+};
+
+function changeSimulationState(event: Event): void {
+    const target = event.target;
+
+    if (target instanceof HTMLSelectElement) {
+        emit('simulationStateChange', target.value);
+    }
+}
 
 watch(
     () => props.manifest?.fingerprint,
@@ -220,6 +242,34 @@ watch(
             v-else
             class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
         >
+            <div
+                v-if="simulationStates.length > 1"
+                class="flex shrink-0 items-center gap-2 border-b border-cyan-300/15 bg-cyan-300/5 px-3 py-2"
+                data-testid="cockpit-claim-preview-simulation-control"
+            >
+                <label
+                    for="claim-preview-simulation-state"
+                    class="shrink-0 text-[9px] font-bold uppercase tracking-[0.12em] text-cyan-200"
+                >
+                    Simulate
+                </label>
+                <select
+                    id="claim-preview-simulation-state"
+                    :value="simulationState"
+                    class="min-w-0 flex-1 rounded-lg border border-white/15 bg-slate-900 px-2 py-1 text-[10px] font-semibold text-white"
+                    data-testid="cockpit-claim-preview-simulation-state"
+                    @change="changeSimulationState"
+                >
+                    <option
+                        v-for="state in simulationStates"
+                        :key="state"
+                        :value="state"
+                    >
+                        {{ simulationLabels[state] ?? state }}
+                    </option>
+                </select>
+                <span class="text-[9px] text-slate-400">Not live</span>
+            </div>
             <header
                 class="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-3 py-2"
             >

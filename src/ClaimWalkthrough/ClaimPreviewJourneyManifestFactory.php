@@ -18,8 +18,12 @@ final class ClaimPreviewJourneyManifestFactory
      * @param  array<string, mixed>  $scenario
      * @return array<string, mixed>
      */
-    public function fromReport(array $report, array $scenario, array $formFlowScreens = []): array
-    {
+    public function fromReport(
+        array $report,
+        array $scenario,
+        array $formFlowScreens = [],
+        array $simulation = [],
+    ): array {
         $canonical = $this->canonicalSteps($scenario);
         $storyboard = $this->storyboard($report);
         $captured = collect(data_get($storyboard, 'checkpoints', []))
@@ -50,6 +54,8 @@ final class ClaimPreviewJourneyManifestFactory
             $steps = $this->withCompiledFormFlowScreens($steps, $formFlowScreens);
         }
 
+        $steps = $this->withSimulation($steps, $simulation);
+
         return [
             'schema' => 'x-change.claim-experience-preview.journey.v2',
             'viewport' => [
@@ -59,7 +65,61 @@ final class ClaimPreviewJourneyManifestFactory
             ],
             'step_count' => count($steps),
             'steps' => $steps,
+            'simulation' => $simulation,
         ];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $steps
+     * @param  array<string, mixed>  $simulation
+     * @return array<int, array<string, mixed>>
+     */
+    private function withSimulation(array $steps, array $simulation): array
+    {
+        $presentation = data_get($simulation, 'presentation');
+
+        if (! is_array($presentation)) {
+            return $steps;
+        }
+
+        $successIndex = collect($steps)->search(
+            fn (array $step): bool => ($step['key'] ?? null) === 'claim-success-rider-message',
+        );
+        $step = [
+            'key' => 'claim-progress',
+            'phase' => 'completion',
+            'title' => (string) ($presentation['title_template'] ?? 'Claim progress'),
+            'description' => (string) ($presentation['body'] ?? ''),
+            'actor' => 'redeemer',
+            'render_kind' => 'live_screen',
+            'status' => 'rendered',
+            'frame' => null,
+            'screen' => [
+                'kind' => ($presentation['state'] ?? null) === 'needs_attention'
+                    ? 'claim_attention'
+                    : 'claim_progress',
+                'code' => 'PREVIEW',
+                'title' => (string) ($presentation['title_template'] ?? 'Claim progress'),
+                'description' => (string) ($presentation['body'] ?? ''),
+                'progress_state' => (string) ($presentation['state'] ?? 'current'),
+                'simulated' => true,
+            ],
+        ];
+
+        if ($successIndex === false) {
+            $steps[] = $step;
+        } else {
+            $steps[$successIndex] = $step;
+        }
+
+        return collect($steps)
+            ->values()
+            ->map(function (array $item, int $index): array {
+                $item['sequence'] = $index + 1;
+
+                return $item;
+            })
+            ->all();
     }
 
     /**

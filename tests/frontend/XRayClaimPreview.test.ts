@@ -79,6 +79,7 @@ describe('XRayClaimPreview', () => {
             ['expired', 'Expired'],
             ['hidden', 'Unavailable'],
             ['not_found', 'Not found'],
+            ['needs_attention', 'Needs attention'],
         ];
 
         for (const [status, label] of cases) {

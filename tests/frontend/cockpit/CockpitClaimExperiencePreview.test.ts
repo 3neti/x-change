@@ -365,4 +365,93 @@ describe('Cockpit claim experience preview', () => {
         expect(wrapper.emitted('generate')).toBeUndefined();
         expect(wrapper.emitted('refresh')).toBeUndefined();
     });
+
+    it('labels simulated progress and requests an explicit preview state', async () => {
+        const wrapper = mount(CockpitClaimExperiencePreview, {
+            global: {
+                stubs: {
+                    Teleport: true,
+                },
+            },
+            props: {
+                status: 'ready',
+                processing: false,
+                message: 'Ready.',
+                canGenerate: true,
+                simulationState: 'processing',
+                manifest: {
+                    schema: 'x-change.claim-experience-preview.manifest.v1',
+                    status: 'ready',
+                    reference: 'completion-preview',
+                    fingerprint: 'completion-preview-fingerprint',
+                    generated_at: '2026-09-26T00:00:00Z',
+                    cache_hit: false,
+                    safety: {
+                        preview_only: true,
+                        interactive: false,
+                        money_movement: false,
+                        provider_calls: false,
+                        claim_submission: false,
+                    },
+                    journey: {
+                        viewport: {
+                            profile: 'mobile_claim_v1',
+                            width: 360,
+                            height: 720,
+                        },
+                        step_count: 1,
+                        simulation: {
+                            schema: 'x-change.claim-preview-simulation.v1',
+                            mode: 'simulated',
+                            state: 'processing',
+                            verified_live_outcome: false,
+                            source: 'issuer_selected_preview',
+                            workflow_state: 'resolved',
+                            workflow_key: 'campaign.coverage-completion.v1',
+                            allowed_states: [
+                                'current',
+                                'details_required',
+                                'processing',
+                                'ready',
+                                'needs_attention',
+                            ],
+                        },
+                        steps: [
+                            {
+                                sequence: 1,
+                                key: 'claim-progress',
+                                phase: 'completion',
+                                title: 'Details submitted',
+                                description: 'Your policy result is being prepared.',
+                                actor: 'redeemer',
+                                render_kind: 'live_screen',
+                                status: 'rendered',
+                                preview_url: '/preview/steps/claim-progress',
+                                frame: null,
+                                screen: {
+                                    kind: 'claim_progress',
+                                    title: 'Details submitted',
+                                    description: 'Your policy result is being prepared.',
+                                    progress_state: 'processing',
+                                    simulated: true,
+                                },
+                            },
+                        ],
+                    },
+                    exports: {},
+                },
+            },
+        });
+
+        const selector = wrapper.get(
+            '[data-testid="cockpit-claim-preview-simulation-state"]',
+        );
+
+        expect(selector.element).toHaveProperty('value', 'processing');
+        expect(wrapper.text()).toContain('Not live');
+
+        await selector.setValue('ready');
+
+        expect(wrapper.emitted('simulationStateChange')).toEqual([['ready']]);
+    });
 });

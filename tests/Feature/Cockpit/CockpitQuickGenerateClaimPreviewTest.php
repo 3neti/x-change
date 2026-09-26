@@ -92,6 +92,28 @@ it('renders a dry-run claim preview from quick generate instructions', function 
         ->not->toContain('09173011987');
 });
 
+it('rejects an unknown simulated claim progress state', function (): void {
+    actingAsTestUser();
+
+    $this->withHeaders([
+        'Accept' => 'application/json',
+    ])->post(route('x-change.cockpit.quick-generate.claim-previews.store'), [
+        'cash' => [
+            'amount' => 25,
+            'currency' => 'PHP',
+        ],
+        'inputs' => ['fields' => []],
+        'feedback' => ['mobile' => null],
+        'rider' => [
+            'message' => null,
+            'url' => null,
+            'splash' => null,
+        ],
+        'preview_state' => 'fabricated_success',
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors('preview_state');
+});
+
 it('renders a recorded claim preview for an issuer with no available funds', function (): void {
     Process::fake([
         '*' => Process::result(output: json_encode([

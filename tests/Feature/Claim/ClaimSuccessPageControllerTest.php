@@ -78,6 +78,49 @@ it('suppresses legacy rider payment instructions for an unlinked completion clai
         ->assertJsonPath('paired_payment', false);
 });
 
+it('renders unsupported historical claim instructions as read-only attention without actions or rider resolution', function (): void {
+    $resolver = Mockery::mock(RiderExperienceResolverContract::class);
+    $resolver->shouldNotReceive('resolve');
+    $this->app->instance(RiderExperienceResolverContract::class, $resolver);
+
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => [
+            'message' => 'Continue to payment immediately.',
+            'url' => 'https://example.test/unsafe-next-step',
+        ],
+    ]));
+    $metadata = $voucher->getAttribute('metadata');
+    data_set($metadata, 'instructions.execution.driver', 'unsupported_historical_driver');
+    $voucher->forceFill(['metadata' => $metadata])->save();
+
+    $response = $this->getJson(route('x-change.claim.success', [
+        'code' => $voucher->code,
+    ]))
+        ->assertOk()
+        ->assertHeader('Referrer-Policy', 'no-referrer')
+        ->assertJsonPath('claimWorkflowKey', null)
+        ->assertJsonPath('claim_workflow.state', 'needs_attention')
+        ->assertJsonPath('claim_workflow.attention.key', 'unsupported_claim_journey')
+        ->assertJsonPath('paired_payment', false)
+        ->assertJsonPath('rider', null)
+        ->assertJsonPath('redirectEndpoint', null)
+        ->assertJsonPath('claim_experience', null)
+        ->assertJsonPath('redirect.show_countdown', false)
+        ->assertJsonPath('compiled_claim_result', null)
+        ->assertJsonPath('success_action', null)
+        ->assertJsonPath('success_presentation.state', 'needs_attention')
+        ->assertJsonPath('success_presentation.suppress_legacy_rider', true)
+        ->assertJsonPath('success_presentation.title', 'Claim journey needs attention');
+
+    expect($response->headers->get('Cache-Control'))
+        ->toContain('private')
+        ->toContain('no-store')
+        ->and($response->getContent())
+        ->not->toContain('unsupported_historical_driver')
+        ->not->toContain('Continue to payment immediately')
+        ->not->toContain('unsafe-next-step');
+});
+
 it('exposes claim experience redirect countdown metadata to the success page', function () {
     $this->withoutMiddleware();
 

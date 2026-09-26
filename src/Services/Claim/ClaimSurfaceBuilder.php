@@ -27,6 +27,8 @@ final class ClaimSurfaceBuilder
     /** @var list<ClaimSurfaceActionData> */
     private array $actions = [];
 
+    private bool $actionsSuppressed = false;
+
     /** @var list<string> */
     private array $warnings = [];
 
@@ -91,7 +93,19 @@ final class ClaimSurfaceBuilder
         string $method = 'get',
         string $variant = 'secondary',
     ): self {
+        if ($this->actionsSuppressed) {
+            return $this;
+        }
+
         $this->actions[] = new ClaimSurfaceActionData($key, $label, $href, $method, $variant);
+
+        return $this;
+    }
+
+    public function suppressActions(): self
+    {
+        $this->actions = [];
+        $this->actionsSuppressed = true;
 
         return $this;
     }

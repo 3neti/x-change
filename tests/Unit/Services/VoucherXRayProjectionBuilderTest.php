@@ -276,3 +276,49 @@ it('projects payable vouchers with collection progress and pay action', function
         ])
         ->and($projection['next_actions'][0]['url'])->toContain($voucher->code);
 });
+
+it('uses the shared workflow descriptor for a persisted claimable voucher', function (): void {
+    $voucher = issueVoucher();
+
+    $projection = app(VoucherXRayProjectionBuilder::class)->build($voucher);
+
+    expect(data_get($projection, 'claim_workflow.state'))->toBe('resolved')
+        ->and(data_get($projection, 'claim_workflow.key'))->toBe('disbursement.v1')
+        ->and(data_get($projection, 'presentation.title'))->toBe('Disbursement Details')
+        ->and(data_get($projection, 'presentation.intent'))->toBe('disbursement.v1')
+        ->and(data_get($projection, 'presentation.source'))->toBe('workflow');
+});
+
+it('projects conflicting historical claim intent as attention without actions or rider redirects', function (): void {
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => [
+            'message' => 'Continue immediately.',
+            'url' => 'https://example.test/unsafe-next-step',
+        ],
+    ]));
+    $metadata = $voucher->getAttribute('metadata');
+    data_set($metadata, 'instructions.execution.driver', 'unsupported_historical_driver');
+    $voucher->forceFill(['metadata' => $metadata])->save();
+
+    $projection = app(VoucherXRayProjectionBuilder::class)->build($voucher->refresh());
+
+    expect($projection['status'])->toBe('needs_attention')
+        ->and(data_get($projection, 'claim_workflow.state'))->toBe('needs_attention')
+        ->and(data_get($projection, 'claim_workflow.key'))->toBeNull()
+        ->and(data_get($projection, 'claim_workflow.attention.key'))->toBe('unsupported_claim_journey')
+        ->and(data_get($projection, 'presentation.intent'))->toBe('claim.journey-attention')
+        ->and(data_get($projection, 'presentation.source'))->toBe('workflow')
+        ->and($projection['next_actions'])->toBe([])
+        ->and($projection['redirect_url'])->toBeNull()
+        ->and($projection['stages'])->toBe([])
+        ->and(data_get($projection, 'allow.rider_preclaim'))->toBeFalse();
+
+    $this->postJson('/api/x/v1/pay-codes/x-ray', [
+        'code' => $voucher->code,
+        'channel' => 'claim',
+    ])->assertOk()
+        ->assertJsonPath('data.xray.status', 'needs_attention')
+        ->assertJsonPath('data.xray.claim_workflow.state', 'needs_attention')
+        ->assertJsonPath('data.xray.claim_workflow.attention.key', 'unsupported_claim_journey')
+        ->assertJsonPath('data.xray.next_actions', []);
+});

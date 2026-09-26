@@ -59,6 +59,10 @@ final class XRayPreviewContributor implements ClaimSurfaceContributor
             $xray['presentation'] = $projected['presentation'];
         }
 
+        if (is_array($projected['claim_workflow'] ?? null)) {
+            $xray['claim_workflow'] = $projected['claim_workflow'];
+        }
+
         $surface->addComponent('xray_preview', $xray);
     }
 }
