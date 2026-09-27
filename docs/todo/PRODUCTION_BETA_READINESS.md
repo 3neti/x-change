@@ -26,8 +26,8 @@ credit, transfer, settlement, or recreation of an Account or Pay Code.
 ## Gate 1 — Read-only balance report
 
 **Owner:** X-Change package maintainer
-**Status:** Implemented and released; sandbox evidence captured and variance
-dispositioned; independent review pending
+**Status:** Complete — implemented, released, evidenced, variance dispositioned,
+and reviewed on 2026-09-27
 **Required before:** cleanroom production rehearsal
 
 - [x] Define one stable, versioned balance-report schema.
@@ -98,7 +98,7 @@ dispositioned; independent review pending
   disposition is valid only for sandbox evidence; the production-beta host must
   use a dedicated provider account or another reviewed topology that permits
   complete per-host reconciliation.
-- [ ] Reviewer and review date:
+- [x] Reviewer and review date: Lester Hurtado — 2026-09-27.
 
 ## Gate 2 — Exact-version cleanroom commissioning rehearsal
 
