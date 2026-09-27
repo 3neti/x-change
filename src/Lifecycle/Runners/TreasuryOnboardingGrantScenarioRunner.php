@@ -222,7 +222,10 @@ final readonly class TreasuryOnboardingGrantScenarioRunner implements ScenarioRu
                         'name' => $name,
                         'email' => $email,
                         'mobile' => $mobile,
-                    ] + $this->verificationEvidence($verificationRequired),
+                    ] + $this->verificationEvidence(
+                        $verificationRequired,
+                        $mobile,
+                    ),
                 ]);
                 $claimed = $result instanceof SubmitPayCodeClaimResultData
                     && $result->claimed;
@@ -385,18 +388,25 @@ final readonly class TreasuryOnboardingGrantScenarioRunner implements ScenarioRu
     /**
      * @return array<string, mixed>
      */
-    private function verificationEvidence(bool $required): array
+    private function verificationEvidence(bool $required, string $mobile): array
     {
         if (! $required) {
             return [];
         }
 
+        $verifiedAt = now()->toIso8601String();
+
         return [
-            'verified_at' => now()->toIso8601String(),
             'otp' => [
-                'verified' => true,
-                'verified_at' => now()->toIso8601String(),
+                'mobile' => $mobile,
+                'verified_at' => $verifiedAt,
+                'verification_reference' => 'simulation:'.hash('sha256', $verifiedAt),
+                'verification_purpose' => (string) config(
+                    'x-change.onboarding.identity_otp.purpose',
+                    'onboarding.account',
+                ),
             ],
+            'otp_verified' => true,
         ];
     }
 

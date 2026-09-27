@@ -125,6 +125,39 @@ it('claims the grant into the newly provisioned Sofia Account without changing I
     fakePayoutProvider()->assertNoDisbursementAttempted();
 });
 
+it('supplies canonical mobile verification evidence when the onboarding grant requires otp', function (): void {
+    config()->set('x-change.onboarding.voucher.require_otp', true);
+
+    $system = enableNetbankTreasuryForTests();
+    fundTestSystemAccountFundingReserve(
+        $system,
+        1_802,
+        'treasury-onboarding-grant-verified-claim',
+    );
+
+    $run = runTreasuryOnboardingGrant([
+        '--claim-mobile' => '09285243657',
+        '--claim-name' => 'Verified Recipient',
+        '--claim-email' => 'verified.recipient@example.test',
+        '--run-reference' => 'treasury-onboarding-grant-verified-claim-20260927-001',
+        '--json' => true,
+    ]);
+
+    $recipient = User::query()
+        ->where('mobile', '639285243657')
+        ->sole();
+
+    expect($run['exit_code'])->toBe(0, $run['rendered'])
+        ->and(data_get($run, 'payload.pay_code.claimed'))->toBeTrue()
+        ->and(data_get($run, 'payload.recipient.account_id'))->toBe($recipient->getKey())
+        ->and(data_get($run, 'payload.recipient.positions.client_funds_minor'))
+        ->toBe(1_500)
+        ->and(data_get($run, 'payload.controls.claim_count'))->toBe(2)
+        ->and(data_get($run, 'payload.controls.provider_calls'))->toBeFalse();
+
+    fakePayoutProvider()->assertNoDisbursementAttempted();
+});
+
 it('funds an existing verified Account without forcing onboarding again', function (): void {
     $system = enableNetbankTreasuryForTests();
     fundTestSystemAccountFundingReserve(
