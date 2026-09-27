@@ -26,7 +26,8 @@ credit, transfer, settlement, or recreation of an Account or Pay Code.
 ## Gate 1 — Read-only balance report
 
 **Owner:** X-Change package maintainer
-**Status:** Implemented and released; independent review pending
+**Status:** Masked forensic report released; private roster implemented locally;
+publication and independent review pending
 **Required before:** cleanroom production rehearsal
 
 - [x] Define one stable, versioned balance-report schema.
@@ -53,6 +54,14 @@ credit, transfer, settlement, or recreation of an Account or Pay Code.
   and arithmetic consistency.
 - [x] Document the operator command, evidence-retention rules, and independent
   verification procedure in the continuity runbook.
+- [x] Add a separate, explicitly acknowledged private roster showing `As of`,
+  Account name, mobile number, and Client Funds for one exact active connection.
+  Keep the masked forensic report as the authoritative conservation artifact.
+- [x] Require an external authorization reference and sensitive-output
+  acknowledgement for the private roster; state that the reference records but
+  does not grant operator authority.
+- [x] Prove the private roster makes no provider call and performs no financial,
+  database, cache, journal, Treasury, Pay Code, or Account mutation.
 
 **Completion evidence**
 
@@ -66,6 +75,11 @@ credit, transfer, settlement, or recreation of an Account or Pay Code.
 - [x] Example sanitized JSON/report and checksum fields: continuity runbook,
   **Read-only closing balance report**.
 - [x] Git commit and released package version: `v1.0.58`.
+- [x] Private roster focused test result: Gate 1 combined command suite, 5 passed
+  and 82 assertions (2026-09-27).
+- [x] Private roster implementation commit: `43eac149`.
+- [ ] Private roster released package version:
+- [ ] Private roster operator evidence checksum and private storage reference:
 - [ ] Reviewer and review date:
 
 ## Gate 2 — Exact-version cleanroom commissioning rehearsal

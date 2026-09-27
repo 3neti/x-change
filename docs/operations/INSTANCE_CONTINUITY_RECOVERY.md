@@ -204,6 +204,33 @@ sensitive financial evidence even though direct identifiers are masked; retain
 them under the same private access, encryption, retention, and destruction rules
 as continuity evidence.
 
+### Private Client Funds roster
+
+When an authorized operator needs a human roster rather than the masked forensic
+report, generate it separately for one exact active Treasury connection:
+
+```bash
+php artisan x-change:continuity:client-funds-roster \
+  --connection=netbank-primary \
+  --authorization-reference=<APPROVAL_OR_TICKET_REFERENCE> \
+  --confirm-sensitive-output
+```
+
+The output records an `As of` timestamp and contains exactly these roster
+columns: `Name`, `Mobile Number`, and `Client Funds`. `As of` is the time the
+persisted X-Change positions were observed; it is not a claim that provider
+inventory was refreshed at that time. The command does not call a provider,
+refresh liquidity, move money, or write financial records.
+
+This is a private supplementary operator report, not a replacement for the
+masked forensic balance report. It deliberately emits full names and mobile
+numbers, requires an exact connection, an external authorization reference, and
+an explicit sensitive-output acknowledgement, and produces a semantic SHA-256
+checksum. The authorization reference records the approval relied upon; it does
+not authenticate the terminal operator. Capture and retain the output only in
+approved private evidence storage. Do not paste it into chat, tickets, ordinary
+application logs, or public deployment output.
+
 ## Offline provider attribution audit
 
 When a persisted Treasury balance differs from the provider statement, normalize the
