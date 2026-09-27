@@ -26,8 +26,8 @@ credit, transfer, settlement, or recreation of an Account or Pay Code.
 ## Gate 1 — Read-only balance report
 
 **Owner:** X-Change package maintainer
-**Status:** Masked forensic report released; private roster implemented locally;
-publication and independent review pending
+**Status:** Implemented and released; sandbox evidence captured; independent
+review and reported reconciliation blocker pending
 **Required before:** cleanroom production rehearsal
 
 - [x] Define one stable, versioned balance-report schema.
@@ -78,8 +78,21 @@ publication and independent review pending
 - [x] Private roster focused test result: Gate 1 combined command suite, 5 passed
   and 82 assertions (2026-09-27).
 - [x] Private roster implementation commit: `43eac149`.
-- [ ] Private roster released package version:
-- [ ] Private roster operator evidence checksum and private storage reference:
+- [x] Private roster released package version: `v1.0.59`.
+- [x] Sandbox private roster evidence: generated from `netbank-primary` at
+  `2026-09-27T02:17:51+00:00`; semantic SHA-256
+  `0d1445677302379861163d9fbcaeedbd14fb6b7a60372aa4472a918ab01a1ea6`.
+- [x] Sandbox masked forensic evidence: generated at
+  `2026-09-27T02:18:27+00:00`; canonical JSON SHA-256
+  `587d91e79baec9ebd645c5e6f5dd219ad32c650dec5aa521736839b2cc383653`;
+  human report SHA-256
+  `4d298ed8d4c67bda77bf8b6d378aa680f86ebfe92b0ed28525d3ca48276216b4`;
+  semantic report SHA-256
+  `06e41280196abf4b3add439b556493841a1cbf336cad27413ace2ff0a6cc6de6`.
+- [ ] Resolve or disposition the sandbox `provider_snapshot_stale` blocker. The
+  provider refresh observed PHP `399245` minor while recognized Treasury
+  Inventory is PHP `2577702` minor and correctly marked the snapshot
+  `review_required`; no financial posting occurred.
 - [ ] Reviewer and review date:
 
 ## Gate 2 — Exact-version cleanroom commissioning rehearsal
