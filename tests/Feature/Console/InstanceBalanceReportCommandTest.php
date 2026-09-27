@@ -14,6 +14,7 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryPositionRecognitionData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
+use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Models\ProviderBalanceSnapshot;
 use LBHurtado\XChange\Services\Continuity\InstanceBalanceReportTextRenderer;
 use LBHurtado\XChange\Services\Keepsake\CanonicalKeepsakeJson;
@@ -245,4 +246,79 @@ it('provides evidence-only help and a human-readable report from the same read m
         ->and($output)->toContain('Canonical report JSON SHA-256:')
         ->and($output)->toContain('Human report text SHA-256:')
         ->and($output)->toContain('Report SHA-256:');
+});
+
+it('provides an explicitly authorized private client funds roster with an as-of timestamp', function (): void {
+    prepareBalanceReportFixture(withUsdConnection: false);
+    $account = User::query()->create([
+        'name' => 'Amelia Hurtado',
+        'email' => 'amelia@example.test',
+        'password' => 'not-a-login-credential',
+    ]);
+    $account->forceFill(['mobile' => '09175180722'])->save();
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision(
+        $account,
+        ['netbank-primary'],
+    );
+    treasuryClientFundsLedger($account)->deposit(1_557_230, [
+        'source' => 'client-funds-roster-test',
+    ]);
+    $walletCount = Wallet::query()->count();
+    $positionCount = TreasuryPosition::query()->count();
+    $auditCount = fakeAuditLogger()->count();
+    $mutatingQueries = [];
+
+    DB::listen(function (QueryExecuted $query) use (&$mutatingQueries): void {
+        if (preg_match('/^\s*(insert|update|delete|replace|alter|create|drop|truncate)\b/i', $query->sql) === 1) {
+            $mutatingQueries[] = $query->sql;
+        }
+    });
+
+    expect(Artisan::call('x-change:continuity:client-funds-roster', [
+        '--connection' => 'netbank-primary',
+        '--authorization-reference' => 'OPS-2026-09-27-001',
+        '--confirm-sensitive-output' => true,
+    ]))->toBe(0);
+    $output = Artisan::output();
+
+    expect($output)->toContain('PRIVATE REPORT')
+        ->and($output)->toContain('As of: 2026-09-27T08:00:00+00:00')
+        ->and($output)->toContain('Name')
+        ->and($output)->toContain('Mobile Number')
+        ->and($output)->toContain('Client Funds')
+        ->and($output)->toContain('Amelia Hurtado')
+        ->and($output)->toContain('09175180722')
+        ->and($output)->toContain('₱15,572.30')
+        ->and($output)->not->toContain('amelia@example.test')
+        ->and($output)->toContain('Roster SHA-256:')
+        ->and($mutatingQueries)->toBe([])
+        ->and(Wallet::query()->count())->toBe($walletCount)
+        ->and(TreasuryPosition::query()->count())->toBe($positionCount)
+        ->and(fakeAuditLogger()->count())->toBe($auditCount);
+
+    fakePayoutProvider()->assertNoDisbursementAttempted();
+    expect(fakePayoutProvider()->checkStatusCallCount)->toBe(0);
+});
+
+it('refuses to disclose the private roster without scope and explicit acknowledgement', function (): void {
+    prepareBalanceReportFixture(withUsdConnection: false);
+
+    expect(Artisan::call('x-change:continuity:client-funds-roster', [
+        '--connection' => 'netbank-primary',
+        '--authorization-reference' => 'OPS-2026-09-27-001',
+    ]))->toBe(1)
+        ->and(Artisan::output())->toContain('--confirm-sensitive-output');
+
+    expect(Artisan::call('x-change:continuity:client-funds-roster', [
+        '--connection' => 'netbank-primary',
+        '--confirm-sensitive-output' => true,
+    ]))->toBe(1)
+        ->and(Artisan::output())->toContain('--authorization-reference');
+
+    expect(Artisan::call('x-change:continuity:client-funds-roster', [
+        '--connection' => 'paynamics-primary',
+        '--authorization-reference' => 'OPS-2026-09-27-001',
+        '--confirm-sensitive-output' => true,
+    ]))->toBe(1)
+        ->and(Artisan::output())->toContain('Unknown or disabled Treasury connections');
 });

@@ -102,6 +102,7 @@ use LBHurtado\XChange\Console\Commands\ConfigureXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Continuity\CaptureProviderStatementCommand;
 use LBHurtado\XChange\Console\Commands\Continuity\PlanInstanceContinuityCommand;
 use LBHurtado\XChange\Console\Commands\Continuity\ProposeProviderStatementAttributionCommand;
+use LBHurtado\XChange\Console\Commands\Continuity\ReportClientFundsRosterCommand;
 use LBHurtado\XChange\Console\Commands\Continuity\ReportInstanceBalancesCommand;
 use LBHurtado\XChange\Console\Commands\DeployXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\CheckDisbursementStatusCommand;
@@ -1628,6 +1629,7 @@ class XChangeServiceProvider extends ServiceProvider
                 GenerateInstanceKeepsakeKeyCommand::class,
                 InspectInstanceKeepsakeCommand::class,
                 PlanInstanceContinuityCommand::class,
+                ReportClientFundsRosterCommand::class,
                 ReportInstanceBalancesCommand::class,
                 CaptureProviderStatementCommand::class,
                 ProposeProviderStatementAttributionCommand::class,
