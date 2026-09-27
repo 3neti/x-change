@@ -145,10 +145,26 @@ final readonly class PlanInstanceKeepsakeExport
 
         if (! $allUsers) {
             $query->where(function (Builder $query) use ($identifiers, $instance): void {
-                $query->whereIn($instance->getKeyName(), $identifiers);
+                $hasLookup = false;
+
+                $keyIdentifiers = $instance->getKeyType() === 'int'
+                    ? array_values(array_filter($identifiers, ctype_digit(...)))
+                    : $identifiers;
+
+                if ($keyIdentifiers !== []) {
+                    $query->whereIn($instance->getKeyName(), $keyIdentifiers);
+                    $hasLookup = true;
+                }
 
                 if (Schema::hasColumn($instance->getTable(), 'email')) {
-                    $query->orWhereIn('email', $identifiers);
+                    $hasLookup
+                        ? $query->orWhereIn('email', $identifiers)
+                        : $query->whereIn('email', $identifiers);
+                    $hasLookup = true;
+                }
+
+                if (! $hasLookup) {
+                    $query->whereRaw('1 = 0');
                 }
             });
         }

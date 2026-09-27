@@ -103,10 +103,10 @@ and reviewed on 2026-09-27
 ## Gate 2 — Exact-version cleanroom commissioning rehearsal
 
 **Owner:** DevOps, witnessed by an independent reviewer
-**Status:** In progress — local and Cloud rehearsals completed on 2026-09-27;
-the Cloud rehearsal exposed a runtime-tier precedence defect that is fixed and
-tested locally but not yet released. A fresh published-artifact rerun remains
-required.
+**Status:** In progress — the exact-version local and fresh published-artifact
+Cloud rehearsals completed on 2026-09-27. Commissioning, reconciliation,
+idempotency, and public readiness passed. Independent keepsake verification,
+an on-demand database recovery point, and independent review remain open.
 **Required before:** production host commissioning
 
 - [x] Pin the host application, X-Change, integration packages, PHP, Node, and
@@ -116,7 +116,7 @@ required.
 - [x] Apply secrets through the deployment secret manager; never place secret
   values in chat, source control, manifests, or command arguments.
 - [x] Run the canonical pre-commission strict doctor and retain its output.
-- [ ] Commission once using the reviewed production manifest and retain the
+- [x] Commission once using the reviewed production manifest and retain the
   installation manifest, command transcript, and package inventory.
 - [ ] Confirm workers, scheduler, private durable storage, database backups,
   logging, alerting, and provider configuration are operational.
@@ -131,10 +131,11 @@ required.
 
 **Completion evidence**
 
-- [x] Exact package/runtime inventory: x-PayOut `v1.0.0-beta.47`, X-Change
-  `v1.0.59`, Laravel `13.33.0`, PHP `8.5.10`, Composer `2.10.3`, and Node
-  `24.21.0` in Cloud. The host source was exact commit
-  `862deb9f719e61d1d00b2006d02b43e6129b68b7`.
+- [x] Exact package/runtime inventory: x-PayOut `v1.0.0-beta.48`, X-Change
+  `v1.0.60`, Laravel `13.33.0`, PHP `8.5.10`, Composer `2.10.3`, and Node
+  `24` in Cloud. The host source was exact commit
+  `4857d809b3566e8d178202b9d6ade4e535fc7621`; X-Change resolved to commit
+  `3e640316b76bf8ff799d1a7404bfaaf007f0c630`.
 - [x] Pre-commission and final doctor reports: pre-commission `24/24`; final
   strict doctor `31/31`, with runtime tier `production`, private durable `s3`
   claim evidence, database sessions/cache/queue, EngageSpark SMS, TXTCMDR OTP,
@@ -147,18 +148,25 @@ required.
   Replaying bootstrap returned the same Maker and Checker as `existing` and
   left counts unchanged at 2 vouchers, 4 Treasury position operations, and 1
   installation manifest.
-- [ ] Keepsake and balance-report checksums: the Cloud balance report completed
-  with no blockers or warnings; report SHA-256
-  `340cfbae0a923d1c43b7e6078ab2eb6c3b905f7ad3356e96ac00ea1fe972340e`,
+- [ ] Keepsake and balance-report checksums: the fresh Cloud balance report
+  completed with no blockers or warnings; report SHA-256
+  `48449d55ec4ea6ead5eae0587ef23d9b7b8c2722bf22950a6e5a97efbd977993`,
   canonical JSON SHA-256
-  `a2a8d460ca62afa976c64e778d9ff695b729e2e84bfce31482194f1fab1476b5`,
+  `8637214907fa9d71fb3751afd30bf80a5ee409fc67b608d64f745c82111ed93a`,
   and human report SHA-256
-  `d8de33128c96e7c1b1d8b98e92d917d72133504d78ba9e0e0ea8f806787ff389`.
-  Independent Cloud keepsake download and verification remain outstanding.
+  `8ef3c921768b54eb46958a472b37486956b8b79a9dc7a1f59ab99c48e1822fa0`.
+  The keepsake dry-run was complete with plan hash
+  `cb94caedbcad3ad6773363545a2148b0856984a06431eed8c4517fff76f92da1`,
+  but archive creation failed closed because every newly issued bucket key was
+  denied with HTTP 403. A fourth dedicated read/write key was issued, attached
+  to the existing environment secrets, and deployed as
+  `depl-a2d80b4c-4c3d-4d81-a6d9-e9ee60dc3e78`; the reversible
+  write/read/delete probe still failed on the first existence check. No archive,
+  grant, or journal record was created.
 - [x] Cleanroom URL or environment reference:
-  `https://x-payout-gate2-20260927-production-d5qpvz.laravel.cloud`, environment
-  `env-a2d7cbf3-6c6d-4486-bf9d-fa9d31aeea43`. `/x/ready` and both unclaimed
-  invitation pages returned HTTP 200 after guarded production adoption.
+  `https://x-payout-gate2-final-20260927-production-kq3zom.laravel.cloud`,
+  environment `env-a2d7f47c-c4ec-4ae0-8a68-337a8e0e5c5a`. `/x/ready` and both
+  unclaimed invitation pages returned HTTP 200 without guarded adoption.
 - [ ] DevOps operator, independent reviewer, and rehearsal date: Codex operated
   the rehearsal under Lester Hurtado's explicit authorization on 2026-09-27;
   an independent reviewer is not yet recorded.
@@ -176,13 +184,30 @@ required.
   moving funds or replacing invitations.
 - Package commit `e9a5c50a` preserves an explicitly configured non-local runtime
   tier when a reusable manifest supplies `local` as its default. Focused
-  regression evidence: 16 tests, 150 assertions. This fix must be released and
-  the cleanroom rehearsal repeated from published artifacts before Gate 2 may
-  be marked complete.
+  regression evidence: 16 tests, 150 assertions. The fix shipped in X-Change
+  `v1.0.60`; the fresh published-artifact Cloud rehearsal remained at runtime
+  tier `production` and reached an operational manifest without guarded
+  adoption.
 - A managed database snapshot could not yet be retained because the current
   Cloud CLI rejected the snapshot request without accepting a snapshot name.
-  Database-backup, logging/alerting, and independent encrypted keepsake evidence
-  therefore remain open.
+  The CLI reports `name is required`, while an added positional name is rejected
+  as an unexpected argument. The fresh cluster currently lists no snapshots.
+- The dedicated private evidence bucket is available and configured, but all
+  four bucket-scoped read/write keys issued by Laravel Cloud returned HTTP 403
+  for list, head, put, or existence-check operations. The fourth-key repair was
+  deployed successfully and resolved to the expected private R2 endpoint,
+  bucket, `auto` region, path-style configuration, and non-empty credentials;
+  the probe still failed. The readiness doctor currently validates configuration
+  shape rather than an actual object-storage write, so durable claim-evidence
+  and keepsake storage must not be accepted until an I/O probe passes.
+- The keepsake email selector attempted to compare an email with the PostgreSQL
+  bigint user ID. The selector now separates numeric model-key candidates from
+  email candidates before building the query. Focused regression evidence is 9
+  passing tests and 56 assertions, including proof that an email selector does
+  not produce an integer-ID predicate. This package change remains unreleased.
+- Database backup, alerting ownership, independent encrypted keepsake evidence,
+  and the named independent reviewer therefore remain open. The two invitations
+  must remain unclaimed until these controls are closed or formally dispositioned.
 
 ## Gate 3 — Written Philippine counsel disposition
 

@@ -190,3 +190,33 @@ it('requires sensitive confirmation whenever claim evidence is in scope', functi
     ])->expectsOutputToContain('confirmation_required')
         ->assertFailed();
 });
+
+it('accepts an email selector when the user model has an integer key', function () {
+    User::query()->create([
+        'name' => 'Keepsake User',
+        'email' => 'keepsake@example.test',
+        'password' => 'secret',
+    ]);
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+
+    $exitCode = Artisan::call('x-change:instance-keepsake:export', [
+        '--user' => ['keepsake@example.test'],
+        '--include' => ['accounts'],
+        '--include-personal-data' => true,
+        '--confirm-sensitive-export' => true,
+        '--json' => true,
+    ]);
+    $payload = json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
+    $userLookup = collect(DB::getQueryLog())
+        ->first(fn (array $query): bool => str_contains($query['query'], 'from "users"')
+            && in_array('keepsake@example.test', $query['bindings'], true));
+    DB::disableQueryLog();
+
+    expect($exitCode)->toBe(0)
+        ->and($payload['users'])->toBe(1)
+        ->and($userLookup)->not->toBeNull()
+        ->and($userLookup['query'])->toContain('"email" in (?)')
+        ->and($userLookup['query'])->not->toContain('"id" in (?)');
+});
