@@ -7,8 +7,12 @@ namespace LBHurtado\XChange\Services\Commercial;
 use LBHurtado\XCommerce\Data\CommercialCatalogData;
 use Throwable;
 
-final class CommercialPricingScheduleInspector
+final readonly class CommercialPricingScheduleInspector
 {
+    public function __construct(
+        private CommercialInvoicingAuthorityInspector $invoicingAuthority,
+    ) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -45,12 +49,16 @@ final class CommercialPricingScheduleInspector
             === 'explicit_quote_acceptance';
         $taxTreatmentResolved = ($schedule['tax_treatment'] ?? null) === 'resolved';
         $customerChargingAuthorized = ($schedule['customer_charging_authorized'] ?? null) === true;
+        $invoicingAuthority = $this->invoicingAuthority->inspect();
+        $receiptReportingVerified = config('x-change.commercial.receipt_reporting.status') === 'verified';
         $scheduleReady = $scheduleApproved
             && $catalogMatches
             && $principalExcluded
             && $explicitAuthorization;
         $customerChargingReady = $scheduleReady
             && $taxTreatmentResolved
+            && $invoicingAuthority['ready'] === true
+            && $receiptReportingVerified
             && $customerChargingAuthorized;
 
         return [
@@ -83,11 +91,19 @@ final class CommercialPricingScheduleInspector
                 'treatment' => $schedule['tax_treatment'] ?? null,
                 'resolved' => $taxTreatmentResolved,
             ],
+            'invoicing_authority' => $invoicingAuthority,
+            'receipt_reporting' => [
+                'status' => config('x-change.commercial.receipt_reporting.status'),
+                'verified' => $receiptReportingVerified,
+                'schema' => config('x-change.commercial.receipt_reporting.schema'),
+                'document_kind' => config('x-change.commercial.receipt_reporting.document_kind'),
+                'tax_invoice_issuance' => config('x-change.commercial.receipt_reporting.tax_invoice_issuance'),
+            ],
             'customer_charging_authorized' => $customerChargingAuthorized,
             'message' => match (true) {
                 ! $scheduleReady => 'The approved pricing schedule does not match the executable catalog or principal boundary.',
                 $customerChargingReady => 'The approved pricing schedule is ready for customer charging.',
-                default => 'Beta Pricing Schedule v1 is approved, but customer charging remains unauthorized until tax treatment is resolved.',
+                default => 'Beta Pricing Schedule v1 is approved, but customer charging remains unauthorized until tax and invoicing authority are resolved.',
             },
         ];
     }

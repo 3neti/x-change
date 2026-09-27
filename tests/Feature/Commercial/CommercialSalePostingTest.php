@@ -50,6 +50,7 @@ use LBHurtado\XChange\Services\Commercial\ActivateCommercialRecipientDesignation
 use LBHurtado\XChange\Services\Commercial\BootstrapCommercialOfferingFactory;
 use LBHurtado\XChange\Services\Commercial\CommercialAccountingAttestation;
 use LBHurtado\XChange\Services\Commercial\CommercialControlReadModel;
+use LBHurtado\XChange\Services\Commercial\CommercialSaleEvidenceReport;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XCommerce\Data\CommercialAllocationLineData;
@@ -146,6 +147,12 @@ it('posts and reverses an immutable commercial sale exactly once', function () {
         app(BootstrapCommercialOfferingFactory::class)->make('pay_code'),
     );
     $positionBalances = collect($controls['position_balances'])->keyBy('purpose');
+    $evidenceReport = app(CommercialSaleEvidenceReport::class)->build($first);
+    $reportExitCode = Artisan::call('x-change:commercial:sale-report', [
+        'reference' => $first->reference,
+        '--json' => true,
+    ]);
+    $commandReport = json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
 
     expect($first->status)->toBe('posted')
         ->and($replay->getKey())->toBe($first->getKey())
@@ -189,18 +196,49 @@ it('posts and reverses an immutable commercial sale exactly once', function () {
         ])
         ->and(ExecutionJournalEntry::query()
             ->where('correlation_id', 'commercial-sale:'.$snapshot->reference)
-            ->count())->toBe(6);
+            ->count())->toBe(6)
+        ->and($evidenceReport['amounts'])->toMatchArray([
+            'currency' => 'PHP',
+            'principal_minor' => 0,
+            'commercial_charge_minor' => 25_00,
+            'tax_minor' => 0,
+            'allocation_total_minor' => 25_00,
+            'principal_reported_separately' => true,
+        ])
+        ->and($evidenceReport['confirmation'])->toMatchArray([
+            'document_kind' => 'commercial_charge_confirmation',
+            'verified' => true,
+            'not_a_tax_invoice' => true,
+        ])
+        ->and($evidenceReport['invoice'])->toMatchArray([
+            'authority_ready' => false,
+            'status' => 'withheld_authority_unresolved',
+            'invoice_reference' => null,
+        ])
+        ->and($evidenceReport['controls'])->toMatchArray([
+            'snapshot_hash_matches' => true,
+            'allocations_reconcile' => true,
+            'posted_evidence_complete' => true,
+            'principal_separated' => true,
+            'report_verified' => true,
+        ])
+        ->and($reportExitCode)->toBe(0)
+        ->and(data_get($commandReport, 'sale.reference'))->toBe($first->reference)
+        ->and(data_get($commandReport, 'confirmation.not_a_tax_invoice'))->toBeTrue();
 
     $reversal = app(ReverseCommercialSale::class);
     $reversed = $reversal->execute($snapshot->reference, 'administrative-void:posting');
     $reversalOperationCount = TreasuryPositionOperation::query()->count();
     $replayedReversal = $reversal->execute($snapshot->reference, 'administrative-void:posting');
+    $reversedEvidenceReport = app(CommercialSaleEvidenceReport::class)->build($reversed);
     $reversedControls = app(CommercialControlReadModel::class)->build(
         app(BootstrapCommercialOfferingFactory::class)->make('pay_code'),
     );
 
     expect($reversed->status)->toBe('reversed')
         ->and($replayedReversal->getKey())->toBe($reversed->getKey())
+        ->and(data_get($reversedEvidenceReport, 'controls.report_verified'))->toBeTrue()
+        ->and(data_get($reversedEvidenceReport, 'sale.status'))->toBe('reversed')
         ->and(TreasuryPositionOperation::query()->count())->toBe($reversalOperationCount)
         ->and(commercialSalePositionBalance($positions['client_funds']))->toBe(25_00)
         ->and(commercialSalePositionBalance($positions['commercial_clearing']))->toBe(0)

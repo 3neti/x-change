@@ -31,6 +31,15 @@ it('reconciles the approved beta schedule while withholding customer charging', 
     ])->and($status['tax'])->toMatchArray([
         'treatment' => 'review_required',
         'resolved' => false,
+    ])->and($status['invoicing_authority'])->toMatchArray([
+        'status' => 'unconfigured',
+        'ready' => false,
+        'tin_configured' => false,
+        'registered_address_configured' => false,
+    ])->and($status['receipt_reporting'])->toMatchArray([
+        'status' => 'verified',
+        'verified' => true,
+        'document_kind' => 'commercial_charge_confirmation',
     ]);
 });
 
@@ -64,14 +73,45 @@ it('rejects a waterfall that classifies principal as revenue', function (): void
         ->and(data_get($status, 'principal.excluded_from_charges_and_revenue'))->toBeFalse();
 });
 
-it('requires resolved tax treatment and explicit authorization before charging', function (): void {
+it('requires resolved tax treatment invoicing authority and explicit authorization before charging', function (): void {
     config()->set('x-change.commercial.pricing_schedule.tax_treatment', 'resolved');
     config()->set('x-change.commercial.pricing_schedule.customer_charging_authorized', true);
 
     $status = app(CommercialPricingScheduleInspector::class)->inspect();
 
     expect($status['schedule_ready'])->toBeTrue()
-        ->and($status['customer_charging_ready'])->toBeTrue();
+        ->and($status['customer_charging_ready'])->toBeFalse()
+        ->and(data_get($status, 'invoicing_authority.ready'))->toBeFalse();
+});
+
+it('accepts a complete approved Philippine invoicing authority profile', function (): void {
+    config()->set('x-change.commercial.pricing_schedule.tax_treatment', 'resolved');
+    config()->set('x-change.commercial.pricing_schedule.customer_charging_authorized', true);
+    configureCommercialInvoicingAuthority();
+
+    $status = app(CommercialPricingScheduleInspector::class)->inspect();
+
+    expect($status['customer_charging_ready'])->toBeTrue()
+        ->and($status['invoicing_authority'])->toMatchArray([
+            'status' => 'approved',
+            'ready' => true,
+            'tax_registration' => 'vat',
+            'document_type' => 'vat_invoice',
+            'invoice_every_charge' => true,
+        ])
+        ->and(data_get($status, 'invoicing_authority.issuer_reference_hash'))->toHaveLength(64);
+});
+
+it('rejects an invoice document that conflicts with the registered tax status', function (): void {
+    config()->set('x-change.commercial.pricing_schedule.tax_treatment', 'resolved');
+    config()->set('x-change.commercial.pricing_schedule.customer_charging_authorized', true);
+    configureCommercialInvoicingAuthority();
+    config()->set('x-change.commercial.invoicing_authority.document_type', 'non_vat_invoice');
+
+    $status = app(CommercialPricingScheduleInspector::class)->inspect();
+
+    expect($status['customer_charging_ready'])->toBeFalse()
+        ->and(data_get($status, 'invoicing_authority.document_matches_registration'))->toBeFalse();
 });
 
 it('blocks a positive production charge while tax treatment is unresolved', function (): void {
@@ -80,7 +120,7 @@ it('blocks a positive production charge while tax treatment is unresolved', func
     expect(fn () => app(CommercialCustomerChargingGuard::class)->ensureAuthorized(1_500))
         ->toThrow(
             PayCodeIssuanceFailed::class,
-            'Customer charging is not authorized until the approved pricing schedule has resolved tax treatment.',
+            'Customer charging is not authorized until the approved pricing schedule has resolved tax and invoicing authority.',
         );
 });
 
@@ -95,3 +135,20 @@ it('allows zero charges and non-production characterization', function (): void 
 
     expect(true)->toBeTrue();
 });
+
+function configureCommercialInvoicingAuthority(): void
+{
+    config()->set('x-change.commercial.invoicing_authority', [
+        'status' => 'approved',
+        'jurisdiction' => 'PH',
+        'issuer_legal_name' => 'Example Institution Inc.',
+        'issuer_tin' => '000-000-000-000',
+        'issuer_registered_address' => 'Example registered address',
+        'tax_registration' => 'vat',
+        'document_type' => 'vat_invoice',
+        'authority_reference' => 'bir-authority:test-only',
+        'tax_profile_reference' => 'tax-profile:test-only',
+        'effective_at' => '2026-09-27T00:00:00+08:00',
+        'invoice_every_charge' => true,
+    ]);
+}

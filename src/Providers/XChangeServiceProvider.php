@@ -93,6 +93,7 @@ use LBHurtado\XChange\Console\Commands\Commercial\ProvisionCommercialBaselinesCo
 use LBHurtado\XChange\Console\Commands\Commercial\ReconcilePartnerCommissionPayoutBatchCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ReconcilePendingPartnerCommissionPayoutsCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\RecordProviderCostBatchCommand;
+use LBHurtado\XChange\Console\Commands\Commercial\ReportCommercialSaleCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\RequestPartnerCommissionPayoutBatchCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\SubmitPartnerCommissionPayoutBatchCommand;
 use LBHurtado\XChange\Console\Commands\CommissionFromManifestCommand;
@@ -1692,6 +1693,7 @@ class XChangeServiceProvider extends ServiceProvider
                 ReconcilePartnerCommissionPayoutBatchCommand::class,
                 ReconcilePendingPartnerCommissionPayoutsCommand::class,
                 RecordProviderCostBatchCommand::class,
+                ReportCommercialSaleCommand::class,
                 RequestPartnerCommissionPayoutBatchCommand::class,
                 SubmitPartnerCommissionPayoutBatchCommand::class,
                 BackfillCommercialAccountingJournalCommand::class,

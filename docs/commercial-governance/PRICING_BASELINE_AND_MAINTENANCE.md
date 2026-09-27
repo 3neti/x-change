@@ -38,6 +38,32 @@ recorded as `review_required`, and `customer_charging_authorized` remains
 and separately authorize charging before the beta charges a customer or
 recognizes revenue.
 
+The host must also configure one approved Philippine invoicing authority under
+`commercial.invoicing_authority`. The required facts are the invoicing legal
+name, TIN, registered address, VAT or Non-VAT registration, matching invoice
+document type, BIR authority reference, governed tax-profile reference, and
+effective time. Secrets and host identity belong in environment configuration;
+they are not package defaults. x-change exposes only readiness and a hash of the
+issuer name in its governance status.
+
+For this beta, the operational policy is to issue an invoice for every positive
+customer charge, including amounts below the statutory Non-VAT threshold. This
+avoids making the checkout path depend on amount or a later customer request.
+It does not decide whether the host is VAT or Non-VAT registered; that must be
+configured from the host's actual BIR registration.
+
+This boundary follows BIR Revenue Regulations No. 7-2024 and Revenue Memorandum
+Circular No. 77-2024: the invoice is the principal sales document; a VAT
+registrant invoices every sale, while a Non-VAT service invoice is mandatory at
+the applicable threshold or whenever the buyer requests one. Official sources:
+
+- <https://bir-cdn.bir.gov.ph/BIR/pdf/RR%20No.%207-%202024.pdf>
+- <https://bir-cdn.bir.gov.ph/BIR/pdf/RMC%20No.%2077-2024.pdf>
+
+The configured host profile—not x-change—determines the taxpayer identity and
+VAT registration. The package therefore cannot mark the authority ready merely
+because the software can calculate a tax allocation.
+
 On a production runtime tier, x-change enforces this boundary before voucher
 creation: any positive customer charge is rejected while
 `customer_charging_ready` is false. Zero-charge issuance and local/testing
@@ -172,7 +198,21 @@ php artisan x-change:doctor --commercial-governance --strict --json
 
 The report must show `commercial pricing schedule` as reconciled. It may still
 show `customer_charging_ready: false`; that status is the explicit launch
-blocker until tax treatment and charging authorization are complete.
+blocker until tax treatment, invoicing authority, and charging authorization
+are complete.
+
+Verify the immutable evidence for a posted Commercial Sale with:
+
+```bash
+php artisan x-change:commercial:sale-report <commercial-sale-reference> --json
+```
+
+This report proves that the charge snapshot is intact, allocations reconcile,
+and principal is not included in the commercial charge. Its
+`commercial_charge_confirmation` is operational evidence only and states
+`not_a_tax_invoice: true`. x-change does not fabricate an invoice number while
+the authority is unresolved; the report returns
+`withheld_authority_unresolved` instead.
 
 Then issue a controlled non-live acceptance Pay Code and confirm the Commercial
 Sale captured the intended offering version and snapshot hash.

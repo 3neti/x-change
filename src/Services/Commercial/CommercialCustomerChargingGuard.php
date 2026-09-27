@@ -26,7 +26,7 @@ final readonly class CommercialCustomerChargingGuard
         }
 
         throw new PayCodeIssuanceFailed(
-            'Customer charging is not authorized until the approved pricing schedule has resolved tax treatment.',
+            'Customer charging is not authorized until the approved pricing schedule has resolved tax and invoicing authority.',
         );
     }
 }

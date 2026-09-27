@@ -274,21 +274,26 @@ focused boundary suite is green.
 - [x] Reconcile the executable X-Commerce catalog with all pricing documents.
 - [ ] Approve one versioned schedule for the beta, including taxes, provider
   costs, refunds/reversals, discounts, and effective dates.
-- [x] Separate principal from every service charge in the approved catalog and
-  configured allocation waterfall. Complete receipt/report verification remains.
+- [x] Separate principal from every service charge in the approved catalog,
+  configured allocation waterfall, and Commercial Sale evidence report.
 - [x] Ensure the pricing schedule cannot classify principal, Client Funds,
   provider inventory, settlement balances, float, or pass-through money as revenue.
 - [x] Record explicit quote acceptance as the required customer authorization
   mode for every applicable charge.
-- [ ] Verify that principal remains separate in instructions, Treasury postings,
+- [x] Verify that principal remains separate in instructions, Treasury postings,
   receipts, reports, and customer disclosures.
 - [ ] Resolve Philippine tax treatment and then separately authorize customer
   charging. Until then `customer_charging_authorized` remains `false` and the
   schedule reports `customer_charging_ready: false`. Production issuance with
   a positive charge fails before voucher creation while this blocker remains.
-- [ ] Define who invoices and collects each fee and under whose contractual and
-  regulatory authority.
-- [ ] Test estimation, acceptance, posting, reversal, receipt, and reporting
+- [ ] Configure and approve the host invoicing authority: registered legal
+  name, TIN, registered address, VAT or Non-VAT status, matching invoice type,
+  BIR authority reference, tax-profile reference, and effective time. Package
+  defaults remain deliberately unconfigured and fail closed.
+- [x] Define the technical invoice boundary: every positive customer charge
+  requires an invoice, while the commercial charge confirmation is evidence
+  only and must say that it is not a tax invoice.
+- [x] Test estimation, acceptance, posting, reversal, receipt, and reporting
   against the approved schedule.
 
 The approved price component of **Beta Pricing Schedule v1** is the unchanged
@@ -306,10 +311,11 @@ The catalog approval is intentionally narrower than authority to charge.
   hash recorded above and checked at runtime.
 - [ ] Legal, Finance, Accounting, and Commercial approvals: management approval
   recorded; tax and role-specific approvals remain outstanding.
-- [ ] Pricing and accounting regression results: 44 focused pricing,
+- [x] Pricing and accounting regression results: 44 focused pricing,
   governance, acceptance, posting, reversal, and tax-allocation tests passed
-  with 394 assertions on September 27, 2026. Receipt and report verification
-  remains outstanding.
+  with 394 assertions on September 27, 2026. The expanded tax, invoicing,
+  posting, reversal, receipt, command, and report suite passed 30 tests with 313
+  assertions on the same date. The report is expressly not a tax invoice.
 
 ## Gate 5 — Pilot operating controls
 

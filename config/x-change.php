@@ -1521,6 +1521,29 @@ return [
             'customer_charging_authorized' => false,
             'approval_reference' => 'management-approval:2026-09-27:lester-hurtado',
         ],
+        'invoicing_authority' => [
+            'status' => env('XCHANGE_COMMERCIAL_INVOICING_STATUS', 'unconfigured'),
+            'jurisdiction' => 'PH',
+            'issuer_legal_name' => env('XCHANGE_COMMERCIAL_INVOICE_ISSUER_NAME'),
+            'issuer_tin' => env('XCHANGE_COMMERCIAL_INVOICE_ISSUER_TIN'),
+            'issuer_registered_address' => env('XCHANGE_COMMERCIAL_INVOICE_ISSUER_ADDRESS'),
+            'tax_registration' => env('XCHANGE_COMMERCIAL_TAX_REGISTRATION'),
+            'document_type' => env('XCHANGE_COMMERCIAL_INVOICE_DOCUMENT_TYPE'),
+            'authority_reference' => env('XCHANGE_COMMERCIAL_INVOICE_AUTHORITY_REFERENCE'),
+            'tax_profile_reference' => env('XCHANGE_COMMERCIAL_INVOICE_TAX_PROFILE_REFERENCE'),
+            'effective_at' => env('XCHANGE_COMMERCIAL_INVOICE_EFFECTIVE_AT'),
+            'invoice_every_charge' => (bool) env(
+                'XCHANGE_COMMERCIAL_INVOICE_EVERY_CHARGE',
+                true,
+            ),
+        ],
+        'receipt_reporting' => [
+            'schema' => 'x-change.commercial-sale-evidence-report.v1',
+            'status' => 'verified',
+            'principal_treatment' => 'reported_separately',
+            'document_kind' => 'commercial_charge_confirmation',
+            'tax_invoice_issuance' => 'withheld_until_authority_ready',
+        ],
         'operations' => [
             'live_provider_calls_enabled' => (bool) env(
                 'XCHANGE_COMMERCIAL_LIVE_PROVIDER_CALLS_ENABLED',
