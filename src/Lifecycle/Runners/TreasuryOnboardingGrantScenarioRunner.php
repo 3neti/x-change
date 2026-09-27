@@ -19,6 +19,7 @@ use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Data\Funding\IssueSystemAccountFundingPayCodeData;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleClaimSubmitter;
+use LBHurtado\XChange\Models\DeferredOnboardingFunding;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
 use LBHurtado\XChange\Models\VoucherClaim;
@@ -305,6 +306,14 @@ final readonly class TreasuryOnboardingGrantScenarioRunner implements ScenarioRu
             ->orderBy('id')
             ->pluck('event_type')
             ->all();
+        $deferredFundingStatus = DeferredOnboardingFunding::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->value('status');
+        $message = match (true) {
+            ! $claimed => 'The system Treasury reserved the onboarding grant; claim it through the canonical browser flow.',
+            $deferredFundingStatus === 'pending_agreement' => 'The onboarding grant was claimed and remains reserved pending acceptance of the current agreement.',
+            default => 'The system Treasury funded the newly provisioned Account without a provider payout.',
+        };
 
         return [
             'schema' => 'x-change.lifecycle.treasury-onboarding-grant.v1',
@@ -312,9 +321,7 @@ final readonly class TreasuryOnboardingGrantScenarioRunner implements ScenarioRu
             'label' => $context->label(),
             'mode' => $context->mode(),
             'success' => true,
-            'message' => $claimed
-                ? 'The system Treasury funded the newly provisioned Account without a provider payout.'
-                : 'The system Treasury reserved the onboarding grant; claim it through the canonical browser flow.',
+            'message' => $message,
             'grant' => [
                 'amount_minor' => $amountMinor,
                 'currency' => 'PHP',

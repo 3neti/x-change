@@ -8,6 +8,7 @@ use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
+use LBHurtado\XChange\Models\DeferredOnboardingFunding;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Tests\Fakes\User;
 use Symfony\Component\Console\Output\BufferedOutput;
@@ -156,6 +157,62 @@ it('supplies canonical mobile verification evidence when the onboarding grant re
         ->and(data_get($run, 'payload.controls.provider_calls'))->toBeFalse();
 
     fakePayoutProvider()->assertNoDisbursementAttempted();
+});
+
+it('reports a claimed onboarding grant as reserved while agreement acceptance is pending', function (): void {
+    $agreementPath = storage_path('framework/lifecycle-funded-onboarding-eula.md');
+    file_put_contents($agreementPath, <<<'MARKDOWN'
+---
+agreement_key: shared-host-beta-terms
+version: 1.0.0-beta
+title: Beta End User Agreement
+effective_at: 2026-09-27
+---
+# Beta terms
+
+Client Funds remain attributable to the Principal.
+MARKDOWN);
+
+    config()->set('x-change.legal.eula.enabled', true);
+    config()->set('x-change.legal.eula.path', $agreementPath);
+
+    try {
+        $system = enableNetbankTreasuryForTests();
+        fundTestSystemAccountFundingReserve(
+            $system,
+            1_802,
+            'treasury-onboarding-grant-pending-agreement',
+        );
+
+        $run = runTreasuryOnboardingGrant([
+            '--claim-mobile' => '09285243658',
+            '--claim-name' => 'Pending Agreement Recipient',
+            '--claim-email' => 'pending.agreement@example.test',
+            '--run-reference' => 'treasury-onboarding-grant-pending-agreement-20260927-001',
+            '--json' => true,
+        ]);
+        $recipient = User::query()
+            ->where('mobile', '639285243658')
+            ->sole();
+
+        expect($run['exit_code'])->toBe(0, $run['rendered'])
+            ->and(data_get($run, 'payload.message'))
+            ->toBe('The onboarding grant was claimed and remains reserved pending acceptance of the current agreement.')
+            ->and(data_get($run, 'payload.pay_code.claimed'))->toBeTrue()
+            ->and(data_get($run, 'payload.recipient.positions.client_funds_minor'))
+            ->toBe(0)
+            ->and(data_get($run, 'payload.accounting.system_after.pay_code_reserve_minor'))
+            ->toBe(1_500)
+            ->and(DeferredOnboardingFunding::query()->sole()->status)
+            ->toBe('pending_agreement')
+            ->and(treasuryOnboardingGrantPositionBalance(
+                $recipient,
+                TreasuryPositionPurpose::ClientFunds,
+            ))->toBe(0)
+            ->and(data_get($run, 'payload.controls.provider_calls'))->toBeFalse();
+    } finally {
+        @unlink($agreementPath);
+    }
 });
 
 it('funds an existing verified Account without forcing onboarding again', function (): void {
