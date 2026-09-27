@@ -20,8 +20,33 @@ price, that Pay Code or Commercial Sale keeps the accepted offering version,
 snapshot, and hash. Later price changes do not rewrite prior Pay Codes, sales,
 allocations, Treasury postings, or journal records.
 
-The current package baseline values are defined in `config/x-change.php` under
-`pricelist`.
+The executable catalog is `pay-code` version 3 from x-commerce configuration.
+x-change pins its approved identity and canonical snapshot hash under
+`commercial.pricing_schedule`. A price change without a new approved schedule
+therefore fails the pricing-schedule readiness check instead of silently
+changing the accepted beta schedule.
+
+## Beta Pricing Schedule v1
+
+Management approved **Beta Pricing Schedule v1** on September 27, 2026, with
+that date as its effective date. It adopts the executable `pay-code` catalog
+version 3 without price changes.
+
+This approval does **not** authorize customer charging yet. Tax treatment is
+recorded as `review_required`, and `customer_charging_authorized` remains
+`false`. Finance, Accounting, Legal, and Commercial must resolve that treatment
+and separately authorize charging before the beta charges a customer or
+recognizes revenue.
+
+On a production runtime tier, x-change enforces this boundary before voucher
+creation: any positive customer charge is rejected while
+`customer_charging_ready` is false. Zero-charge issuance and local/testing
+characterization remain available.
+
+Principal is never a catalog charge or revenue allocation. Client Funds,
+provider inventory, settlement balances, float, and pass-through money remain
+outside the pricing schedule. A customer must explicitly accept the quoted
+service charges before issuance.
 
 ## Current package baseline prices
 
@@ -30,8 +55,10 @@ All prices are in Philippine pesos.
 | Key | Label | Price |
 | --- | --- | ---: |
 | `cash.amount` | Transaction Fee | ₱15.00 |
+| `flow_type.collectible` | Collection Instruction Fee | ₱15.00 |
 | `voucher_type.payable` | Payable Voucher | ₱5.00 |
 | `voucher_type.settlement` | Settlement Voucher | ₱8.00 |
+| `onboarding.enabled` | Account Onboarding | ₱10.00 |
 | `inputs.fields.kyc` | KYC Verification | ₱18.00 |
 | `inputs.fields.otp` | OTP Verification | ₱2.00 |
 | `feedback.email` | Email Notification | ₱1.50 |
@@ -142,6 +169,10 @@ Before and after a pricing change, inspect:
 php artisan x-change:commercial:governance-status --json
 php artisan x-change:doctor --commercial-governance --strict --json
 ```
+
+The report must show `commercial pricing schedule` as reconciled. It may still
+show `customer_charging_ready: false`; that status is the explicit launch
+blocker until tax treatment and charging authorization are complete.
 
 Then issue a controlled non-live acceptance Pay Code and confirm the Commercial
 Sale captured the intended offering version and snapshot hash.

@@ -33,6 +33,7 @@ final readonly class CommercialGovernanceInspector
         private CommercialRecipientDesignationResolverContract $recipientDesignations,
         private CommercialRecognitionPolicyRegistry $recognitionPolicies,
         private CommercialTaxProfileRegistry $taxProfiles,
+        private CommercialPricingScheduleInspector $pricingSchedule,
     ) {}
 
     /**
@@ -131,6 +132,7 @@ final readonly class CommercialGovernanceInspector
             'recipient_designations' => $recipientDesignations,
             'recognition_policies' => $recognitionPolicies,
             'tax_profiles' => $taxProfiles,
+            'pricing_schedule' => $this->pricingSchedule->inspect(),
             'partners' => $this->partnerReadiness(),
             'operations' => $this->operationsReadiness(),
             'message' => $this->message($state),
@@ -654,6 +656,7 @@ final readonly class CommercialGovernanceInspector
                 'profiles' => [],
                 'message' => 'Commercial Tax Profile storage is not ready.',
             ],
+            'pricing_schedule' => $this->pricingSchedule->inspect(),
             'partners' => [
                 'storage_ready' => false,
                 'active_count' => 0,

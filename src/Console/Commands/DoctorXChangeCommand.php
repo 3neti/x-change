@@ -55,6 +55,7 @@ class DoctorXChangeCommand extends Command
                 $this->commercialRecipientDesignationsCheck($commercialGovernance),
                 $this->commercialRecognitionPoliciesCheck($commercialGovernance),
                 $this->commercialTaxProfilesCheck($commercialGovernance),
+                $this->commercialPricingScheduleCheck($commercialGovernance),
             ];
         } elseif ($this->option('operator-activity-runtime')) {
             $checks = [
@@ -76,6 +77,7 @@ class DoctorXChangeCommand extends Command
                 $this->commercialRecipientDesignationsCheck($commercialGovernance),
                 $this->commercialRecognitionPoliciesCheck($commercialGovernance),
                 $this->commercialTaxProfilesCheck($commercialGovernance),
+                $this->commercialPricingScheduleCheck($commercialGovernance),
                 $this->check('onboarding package', class_exists('LBHurtado\\Onboarding\\OnboardingServiceProvider'), '3neti/onboarding is installed'),
                 $this->check('onboarding config', config('onboarding') !== [], 'config(onboarding) is loaded'),
                 $this->check('onboarding sessions table', $this->hasTable('onboarding_sessions'), 'onboarding_sessions table exists'),
@@ -285,6 +287,22 @@ class DoctorXChangeCommand extends Command
         return $this->check(
             'commercial tax profiles',
             $status['operational'] === true,
+            (string) $status['message'],
+            $status,
+        );
+    }
+
+    /**
+     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
+     */
+    protected function commercialPricingScheduleCheck(
+        CommercialGovernanceInspector $governance,
+    ): array {
+        $status = $governance->inspect()['pricing_schedule'];
+
+        return $this->check(
+            'commercial pricing schedule',
+            $status['schedule_ready'] === true,
             (string) $status['message'],
             $status,
         );

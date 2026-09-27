@@ -1506,6 +1506,21 @@ return [
 
     'commercial' => [
         'enabled' => (bool) env('XCHANGE_COMMERCIAL_WATERFALL_ENABLED', true),
+        'pricing_schedule' => [
+            'reference' => 'beta-pricing-schedule-v1',
+            'version' => 1,
+            'status' => 'approved',
+            'effective_at' => '2026-09-27T00:00:00+08:00',
+            'currency' => 'PHP',
+            'catalog_reference' => 'pay-code',
+            'catalog_version' => 3,
+            'catalog_snapshot_hash' => '435ac8574b336f876d2bb41754d7f5854f27c11f969bda2b2845734cb03d125b',
+            'principal_treatment' => 'excluded',
+            'customer_authorization' => 'explicit_quote_acceptance',
+            'tax_treatment' => 'review_required',
+            'customer_charging_authorized' => false,
+            'approval_reference' => 'management-approval:2026-09-27:lester-hurtado',
+        ],
         'operations' => [
             'live_provider_calls_enabled' => (bool) env(
                 'XCHANGE_COMMERCIAL_LIVE_PROVIDER_CALLS_ENABLED',

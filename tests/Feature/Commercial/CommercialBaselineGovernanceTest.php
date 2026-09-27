@@ -170,6 +170,12 @@ it('reports active baseline issuance while locking price changes', function (): 
             'ready_count' => 0,
             'message' => 'No governed tax allocation is configured.',
         ])
+        ->and($status['pricing_schedule'])->toMatchArray([
+            'reference' => 'beta-pricing-schedule-v1',
+            'version' => 1,
+            'schedule_ready' => true,
+            'customer_charging_ready' => false,
+        ])
         ->and(data_get($status, 'recognition_policies.policies.0'))->toMatchArray([
             'reference' => 'recognition:pay-code-issuance:v1',
             'version' => 1,
@@ -197,6 +203,10 @@ it('reports active baseline issuance while locking price changes', function (): 
 
     $this->artisan('x-change:doctor', ['--json' => true])
         ->expectsOutputToContain('"name": "commercial tax profiles"')
+        ->assertSuccessful();
+
+    $this->artisan('x-change:doctor', ['--json' => true])
+        ->expectsOutputToContain('"name": "commercial pricing schedule"')
         ->assertSuccessful();
 });
 

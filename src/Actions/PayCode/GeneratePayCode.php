@@ -24,6 +24,7 @@ use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
 use LBHurtado\XChange\Services\Claim\ClaimEvidenceRequirements;
+use LBHurtado\XChange\Services\Commercial\CommercialCustomerChargingGuard;
 use LBHurtado\XChange\Services\Commercial\CommercialPricingAcceptanceGuard;
 use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityIssuanceGuard;
@@ -56,6 +57,7 @@ class GeneratePayCode
         protected ?TreasuryCompatibilityLedgerSynchronizer $compatibilityLedger = null,
         protected ?PreparePayCodeTreasuryIssuance $treasuryIssuance = null,
         protected ?CommercialPricingAcceptanceGuard $pricingAcceptance = null,
+        protected ?CommercialCustomerChargingGuard $customerCharging = null,
     ) {}
 
     /**
@@ -117,6 +119,10 @@ class GeneratePayCode
         $input = $this->withAuthoritativeCollectionWallet($input, $wallet);
         $estimate = $this->estimatePayCodeCost->handle($input);
         $this->assertAcceptedPricing($input, $estimate);
+        ($this->customerCharging ??= app(CommercialCustomerChargingGuard::class))
+            ->ensureAuthorized((int) collect($estimate->charges)->sum(
+                static fn (array $charge): int => (int) ($charge['price_minor'] ?? 0),
+            ));
         $funding = $this->fundingPolicy()->assertCanIssue(
             owner: $issuer,
             localWallet: $wallet,

@@ -232,7 +232,9 @@ it('prices plain collection voucher types from their specific governed catalog i
     $instructions = validVoucherInstructions(250, 'INSTAPAY', [
         'voucher_type' => $voucherType,
         'target_amount' => 250,
-        'metadata' => [],
+        'metadata' => [
+            'collection_wallet_id' => 'wallet:pricing-test',
+        ],
         'inputs' => ['fields' => []],
         'feedback' => [
             'email' => null,
@@ -259,7 +261,9 @@ it('continues to price optional features on a zero-priced payable voucher', func
     $instructions = validVoucherInstructions(250, 'INSTAPAY', [
         'voucher_type' => 'payable',
         'target_amount' => 250,
-        'metadata' => [],
+        'metadata' => [
+            'collection_wallet_id' => 'wallet:pricing-test',
+        ],
         'inputs' => ['fields' => []],
         'feedback' => [
             'email' => 'payer@example.test',
@@ -359,6 +363,9 @@ it('preserves canonical catalog references behind the legacy allocation index', 
     $instructions = validVoucherInstructions(100.00, 'INSTAPAY', [
         'voucher_type' => 'payable',
         'target_amount' => 100.00,
+        'metadata' => [
+            'collection_wallet_id' => 'wallet:pricing-test',
+        ],
         'cash' => [
             'validation' => [
                 'secret' => 'required-secret',
