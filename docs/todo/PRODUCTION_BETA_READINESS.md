@@ -103,37 +103,86 @@ and reviewed on 2026-09-27
 ## Gate 2 — Exact-version cleanroom commissioning rehearsal
 
 **Owner:** DevOps, witnessed by an independent reviewer
-**Status:** Not complete
+**Status:** In progress — local and Cloud rehearsals completed on 2026-09-27;
+the Cloud rehearsal exposed a runtime-tier precedence defect that is fixed and
+tested locally but not yet released. A fresh published-artifact rerun remains
+required.
 **Required before:** production host commissioning
 
-- [ ] Pin the host application, X-Change, integration packages, PHP, Node, and
+- [x] Pin the host application, X-Change, integration packages, PHP, Node, and
   Composer versions used by the release lock.
-- [ ] Create a disposable host from the published artifacts only. Do not use a
+- [x] Create a disposable host from the published artifacts only. Do not use a
   package path repository or an unpublished local checkout.
-- [ ] Apply secrets through the deployment secret manager; never place secret
+- [x] Apply secrets through the deployment secret manager; never place secret
   values in chat, source control, manifests, or command arguments.
-- [ ] Run the canonical pre-commission strict doctor and retain its output.
+- [x] Run the canonical pre-commission strict doctor and retain its output.
 - [ ] Commission once using the reviewed production manifest and retain the
   installation manifest, command transcript, and package inventory.
 - [ ] Confirm workers, scheduler, private durable storage, database backups,
   logging, alerting, and provider configuration are operational.
-- [ ] Run the final strict doctor and the approved non-financial smoke suite.
+- [x] Run the final strict doctor and the approved non-financial smoke suite.
 - [ ] Generate and independently verify the encrypted keepsake.
-- [ ] Generate the Gate 1 closing balance report and confirm that no balance was
+- [x] Generate the Gate 1 closing balance report and confirm that no balance was
   transferred or recreated in the cleanroom host.
-- [ ] Repeat the idempotent commissioning/verification checks and confirm no
+- [x] Repeat the idempotent commissioning/verification checks and confirm no
   duplicate principals, invitations, reserves, or journal entries.
-- [ ] Record rollback and abort evidence. A failed gate must leave the host
+- [x] Record rollback and abort evidence. A failed gate must leave the host
   unavailable for public real-money use.
 
 **Completion evidence**
 
-- [ ] Exact package/runtime inventory:
-- [ ] Pre-commission and final doctor reports:
-- [ ] Build/deploy/commission transcript:
-- [ ] Keepsake and balance-report checksums:
-- [ ] Cleanroom URL or environment reference:
-- [ ] DevOps operator, independent reviewer, and rehearsal date:
+- [x] Exact package/runtime inventory: x-PayOut `v1.0.0-beta.47`, X-Change
+  `v1.0.59`, Laravel `13.33.0`, PHP `8.5.10`, Composer `2.10.3`, and Node
+  `24.21.0` in Cloud. The host source was exact commit
+  `862deb9f719e61d1d00b2006d02b43e6129b68b7`.
+- [x] Pre-commission and final doctor reports: pre-commission `24/24`; final
+  strict doctor `31/31`, with runtime tier `production`, private durable `s3`
+  claim evidence, database sessions/cache/queue, EngageSpark SMS, TXTCMDR OTP,
+  NetBank readiness, and operational commissioning state.
+- [x] Build/deploy/commission transcript: published-artifact deployment
+  succeeded; first commissioning recognized PHP `399245` minor of NetBank
+  inventory, capitalized it into Account Funding Reserve, and reserved PHP
+  `20000` minor for two unclaimed invitations. Opening reserve was PHP
+  `399245`; Account Funding Reserve after reservation was PHP `379245`.
+  Replaying bootstrap returned the same Maker and Checker as `existing` and
+  left counts unchanged at 2 vouchers, 4 Treasury position operations, and 1
+  installation manifest.
+- [ ] Keepsake and balance-report checksums: the Cloud balance report completed
+  with no blockers or warnings; report SHA-256
+  `340cfbae0a923d1c43b7e6078ab2eb6c3b905f7ad3356e96ac00ea1fe972340e`,
+  canonical JSON SHA-256
+  `a2a8d460ca62afa976c64e778d9ff695b729e2e84bfce31482194f1fab1476b5`,
+  and human report SHA-256
+  `d8de33128c96e7c1b1d8b98e92d917d72133504d78ba9e0e0ea8f806787ff389`.
+  Independent Cloud keepsake download and verification remain outstanding.
+- [x] Cleanroom URL or environment reference:
+  `https://x-payout-gate2-20260927-production-d5qpvz.laravel.cloud`, environment
+  `env-a2d7cbf3-6c6d-4486-bf9d-fa9d31aeea43`. `/x/ready` and both unclaimed
+  invitation pages returned HTTP 200 after guarded production adoption.
+- [ ] DevOps operator, independent reviewer, and rehearsal date: Codex operated
+  the rehearsal under Lester Hurtado's explicit authorization on 2026-09-27;
+  an independent reviewer is not yet recorded.
+
+**Rehearsal defect and disposition**
+
+- The published default x-PayOut manifest declares a local runtime tier. The
+  bootstrap process incorrectly allowed that local default to replace an
+  explicitly configured Cloud production tier while recording the installation
+  fingerprint. Normal web requests then failed closed as
+  `installation_manifest_stale`; `/x/ready` returned HTTP 503 and invitation
+  pages redirected to commissioning.
+- Guarded adoption revalidated the existing System Account and Treasury, wrote
+  the actual production fingerprint, and restored HTTP 200 readiness without
+  moving funds or replacing invitations.
+- Package commit `e9a5c50a` preserves an explicitly configured non-local runtime
+  tier when a reusable manifest supplies `local` as its default. Focused
+  regression evidence: 16 tests, 150 assertions. This fix must be released and
+  the cleanroom rehearsal repeated from published artifacts before Gate 2 may
+  be marked complete.
+- A managed database snapshot could not yet be retained because the current
+  Cloud CLI rejected the snapshot request without accepting a snapshot name.
+  Database-backup, logging/alerting, and independent encrypted keepsake evidence
+  therefore remain open.
 
 ## Gate 3 — Written Philippine counsel disposition
 
