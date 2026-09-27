@@ -39,7 +39,7 @@ runtime environment explicitly select the active connections.
 | Application developers | Laravel host, product customization, package upgrades, automated tests |
 | Bank or EMI integration team | Provider endpoints, credentials, account identifiers, supported rails, webhooks, sandbox certification |
 | DevOps | Secret injection, database, cache, queues, scheduler, WebSockets, deployment, observability, backups |
-| Treasury or operations | System Account authorization, opening reconciliation, controlled live acceptance, exception review |
+| Treasury or operations | System Principal and System Operations Account authorization, opening reconciliation, controlled live acceptance, exception review |
 
 No team should send credentials through source control, issue trackers, chat,
 test fixtures, screenshots, or command output.
@@ -77,8 +77,8 @@ php artisan x-change:setup
 
 The interactive setup command chooses the development profile, safely adopts a
 conventional Laravel User model, prepares local configuration with consent,
-installs package resources, builds the frontend, provisions the System Account,
-and verifies the result.
+installs package resources, builds the frontend, provisions the System Principal
+and System Operations Account, and verifies the result.
 
 For repeatable local automation:
 
@@ -198,9 +198,11 @@ XCHANGE_TREASURY_LEGAL_ENTITY_REFERENCE=legal-entity:example
 XCHANGE_TREASURY_LEGAL_PROFILE_VERSION=2026-01
 ```
 
-Use a deployment-specific System Account email and stable legal-entity
-reference. The System Account is non-interactive and must not be an employee's
-ordinary login.
+Use a deployment-specific, non-personal technical email as the current host
+`User`-model identifier for the System Principal, together with a stable
+legal-entity reference. It is not a mailbox or notification destination. The
+System Principal is non-interactive and must not reuse an employee's ordinary
+login. See [Principals, Accounts, and Human Onboarding](./ONBOARDING.md).
 
 Production onboarding should retain:
 
@@ -240,7 +242,7 @@ Commissioning performs:
 
 1. strict pre-install diagnostics;
 2. idempotent package installation;
-3. System Account provisioning;
+3. System Principal and System Operations Account provisioning;
 4. live Treasury preflight and opening reconciliation;
 5. commissioning-manifest recording;
 6. strict operational diagnostics.
@@ -250,8 +252,8 @@ unsafe production settings, unresolved opening balances, or missing runtime
 infrastructure.
 
 Opening provider funds are not automatically declared to belong to the System
-Account. System capitalization is a separate controlled decision requiring an
-ownership confirmation and an auditable authorization reference.
+Operations Account. System capitalization is a separate controlled decision
+requiring an ownership confirmation and an auditable authorization reference.
 
 ## Runtime processes
 
@@ -304,7 +306,7 @@ These rules apply to every provider integration:
 Perform acceptance in increasing order of risk:
 
 1. Run strict diagnostics and confirm the commissioning page reports ready.
-2. Confirm the System Account and its Account exist exactly once.
+2. Confirm the System Principal and System Operations Account exist exactly once.
 3. Confirm database, cache, queues, scheduler, and optional broadcasting are
    healthy.
 4. Confirm the provider balance observation is current and agrees with internal

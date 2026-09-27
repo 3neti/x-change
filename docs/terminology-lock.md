@@ -28,6 +28,25 @@ Cash (execution authority)
 Flow (operation)
 ```
 
+## Principal and Account vocabulary
+
+The canonical installation and ownership model is defined in
+[Principals, Accounts, and Human Onboarding](../ONBOARDING.md).
+
+| Canonical term | Meaning |
+| --- | --- |
+| **System Principal** | Non-human runtime identity that operates x-change |
+| **System Operations Account** | System Capital, commissioning reserve, and operational clearing Account |
+| **Commercial Principal** | Legal seller entitled to recognized service fees |
+| **Commercial Revenue Account** | Account containing recognized and collected service fees |
+| **Maker** | Named human proposing a governed action |
+| **Checker** | Different named human independently approving it |
+
+Do not use **Service Principal** for the legal seller because that term commonly
+means a machine identity. Do not use System Wallet, Product Wallet, or Revenue
+Wallet in product or architecture language. Existing persistent identifiers
+are compatibility contracts and require a tested migration before renaming.
+
 ---
 
 ## 1. Pay Code

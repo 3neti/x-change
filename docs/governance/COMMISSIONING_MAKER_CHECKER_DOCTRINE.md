@@ -35,6 +35,16 @@ In short:
 > Commissioning can finish without onboarded Maker/Checker humans. Maintenance
 > cannot begin without them.
 
+The non-human identities and Accounts that exist before human onboarding are
+defined in [Principals, Accounts, and Human Onboarding](../../ONBOARDING.md):
+
+- the **System Principal** operates the **System Operations Account**; and
+- when customer charging is enabled, the **Commercial Principal** owns the
+  separate **Commercial Revenue Account**.
+
+Neither principal is a human Maker or Checker. Neither requires a fabricated
+personal email address or mobile number.
+
 ## Why this exists
 
 Commissioning has two competing needs:
@@ -60,7 +70,9 @@ claimed:
 - cloud deployment;
 - strict pre-commission readiness;
 - provider readiness checks;
-- System Principal provisioning;
+- System Principal and System Operations Account provisioning;
+- Commercial Principal and Commercial Revenue Account binding when customer
+  charging is enabled;
 - immutable package baseline activation;
 - Maker and Checker invitation Pay Code minting;
 - funded onboarding reservation, if configured;
@@ -140,6 +152,7 @@ same maker/checker control pair.
 The following rules must hold:
 
 - The System Principal cannot be Maker or Checker.
+- The Commercial Principal cannot stand in for a human Maker or Checker.
 - Maker and Checker must be different human accounts for the same control
   pair.
 - A Checker cannot approve their own Maker action.

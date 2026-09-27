@@ -18,6 +18,17 @@ making a user-facing Account balance pretend to be a bank balance.
 > provider certification, and human-authorized small-value acceptance before
 > production use.
 
+Before commissioning, read [Principals, Accounts, and Human Onboarding](./ONBOARDING.md).
+It defines these package-wide boundaries:
+
+- **System Principal** → **System Operations Account**;
+- **Commercial Principal** → **Commercial Revenue Account**; and
+- named human **Maker** and **Checker** roles for consequential changes.
+
+In one sentence: the System Principal operates x-change, the Commercial
+Principal owns earned service fees, and named humans govern consequential
+changes.
+
 ## The model in one minute
 
 A Pay Code is an externally visible bearer reference. It resolves to a Voucher,
@@ -117,8 +128,8 @@ x-change keeps three facts separate:
 1. **Provider Inventory** — value authoritatively observed at a bank or EMI
    settlement resource.
 2. **Treasury Positions** — internal attribution of that value to the System
-   Account, Client Funds, reserves, provider costs, revenue, commissions, and
-   other purposes.
+   Operations Account, Client Funds, reserves, provider costs, the Commercial
+   Revenue Account, commissions, and other purposes.
 3. **Pay Code obligations** — outstanding settlement instructions that reserve
    capacity without claiming that provider money has already moved.
 
@@ -209,8 +220,10 @@ php artisan x-change:setup
 
 `x-change:setup` is the guided local workflow. It configures the development
 profile, safely adopts a conventional Laravel User model, installs the package,
-builds the frontend, provisions the non-interactive System Account, and runs
-strict verification.
+builds the frontend, provisions the non-interactive System Principal and its
+System Operations Account, and runs strict verification. A deployment that
+charges customers must also bind its legal Commercial Principal and distinct
+Commercial Revenue Account before commercial readiness can pass.
 
 Adopted hosts use a root Composer hook to refresh the package-owned build
 inputs through `x-change:publish`; `x-change:doctor --assets --strict` verifies

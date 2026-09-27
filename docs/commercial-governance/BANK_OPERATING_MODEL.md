@@ -1,10 +1,19 @@
 # Bank Operating Model
 
-An institution does not need three interactive accounts on first deployment. It needs one non-interactive System Principal so Treasury and package operations have a stable owner. People are onboarded normally when the institution is ready to change commercial terms.
+An institution does not need three interactive human accounts on first
+deployment. It needs one non-interactive **System Principal** so Treasury and
+package operations have a stable actor. A deployment that charges customers
+also needs one **Commercial Principal** representing the legal seller. People
+are onboarded normally when the institution is ready to change commercial
+terms.
+
+The canonical ownership model is defined in
+[Principals, Accounts, and Human Onboarding](../../ONBOARDING.md).
 
 | Principal | Initial deployment | May issue | May change prices |
 | --- | --- | --- | --- |
-| System Principal | Required, non-interactive | Owns system operations | Never maker or checker |
+| System Principal | Required, non-interactive | Operates the System Operations Account; only restricted system issuance | Never maker or checker; never owns earned fees |
+| Commercial Principal | Required when charging, non-interactive | Owns the Commercial Revenue Account; may be legal issuer for approved commercial journeys | Never substitutes for a human maker or checker |
 | Account holder | Onboarded as needed | According to Client Funds and policy | No |
 | Commercial maker | Optional initially | Normal Account rights | Drafts and submits revisions |
 | Commercial checker | Optional initially | Normal Account rights | Independently approves and activates |
@@ -21,6 +30,12 @@ The default compromise is operationally useful and governable:
 - changes are impossible until distinct maker and checker authorities exist;
 - approval does not silently activate a version;
 - journal evidence identifies the actor, authority reference, snapshot hash, and lifecycle event.
+
+The System Operations Account and Commercial Revenue Account remain distinct
+even when one institution controls both. System Capital, commissioning
+reserves, Client Funds, Pay Code reserves, and provider inventory are not
+commercial revenue. Only a fee recognized under the approved pricing policy is
+attributed to the Commercial Principal.
 
 Institutions should bind authorization references to their own board resolution, delegated-authority register, change ticket, or comparable control evidence. The reference is an audit linkage, not a secret.
 
