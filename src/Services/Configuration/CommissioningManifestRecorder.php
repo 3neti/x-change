@@ -14,6 +14,7 @@ final readonly class CommissioningManifestRecorder
         private DeploymentConfigurationInspector $deployment,
         private CommissioningConfigurationFingerprint $fingerprint,
         private SystemPrincipalAccountReadinessInspector $systemPrincipalAccount,
+        private CommercialPrincipalAccountReadinessInspector $commercialPrincipalAccount,
     ) {}
 
     public function record(): XChangeInstallationManifest
@@ -21,6 +22,12 @@ final readonly class CommissioningManifestRecorder
         if (! $this->systemPrincipalAccount->inspect()['passed']) {
             throw new RuntimeException(
                 'Commissioning requires a persisted non-interactive system principal and Account.',
+            );
+        }
+
+        if (! $this->commercialPrincipalAccount->inspect()['passed']) {
+            throw new RuntimeException(
+                'Commissioning requires a persisted non-interactive commercial principal and Commercial Revenue Account.',
             );
         }
 

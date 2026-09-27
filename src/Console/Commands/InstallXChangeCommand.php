@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Database\Seeder;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
+use LBHurtado\XChange\Services\Commercial\CommercialBillingPolicy;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Configuration\CommissioningManifestRecorder;
 use LBHurtado\XChange\Services\Configuration\PreInstallReadinessInspector;
@@ -60,6 +61,7 @@ class InstallXChangeCommand extends Command
         CommissioningManifestRecorder $commissioningManifests,
         ProvisionCommercialBaselines $commercialBaselines,
         HostApplicationShellAdopter $hostApplicationShell,
+        CommercialBillingPolicy $commercialBilling,
     ): int {
         $this->components->info('Installing X-Change...');
 
@@ -568,6 +570,22 @@ class InstallXChangeCommand extends Command
                 );
 
                 return self::FAILURE;
+            }
+
+            if ($commercialBilling->isBillable()) {
+                $commercialExitCode = $this->call('x-change:commercial-principal:provision', [
+                    '--commit' => true,
+                    '--confirm-commercial-principal' => true,
+                    '--no-interaction' => true,
+                ]);
+
+                if ($commercialExitCode !== self::SUCCESS) {
+                    $this->components->error(
+                        'Commercial-principal provisioning failed; X-Change installation is incomplete.',
+                    );
+
+                    return self::FAILURE;
+                }
             }
         }
 

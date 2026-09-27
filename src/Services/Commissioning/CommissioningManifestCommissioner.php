@@ -14,11 +14,13 @@ use LBHurtado\Voucher\Enums\VoucherType;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
-use LBHurtado\XChange\Actions\Funding\RefreshFundingLiquidity;
 use LBHurtado\XChange\Actions\Funding\IssueSystemAccountFundingPayCode;
+use LBHurtado\XChange\Actions\Funding\RefreshFundingLiquidity;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Data\Funding\IssueSystemAccountFundingPayCodeData;
+use LBHurtado\XChange\Services\Commercial\CommercialBillingPolicy;
+use LBHurtado\XChange\Services\Commercial\CommercialPrincipalProvisioningService;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 use LBHurtado\XChange\Services\Treasury\SystemPrincipalProvisioningService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
@@ -28,6 +30,8 @@ final readonly class CommissioningManifestCommissioner
     public function __construct(
         private CommissioningManifestRepository $manifests,
         private SystemPrincipalProvisioningService $principals,
+        private CommercialBillingPolicy $commercialBilling,
+        private CommercialPrincipalProvisioningService $commercialPrincipals,
         private GeneratesVouchers $vouchers,
         private OnboardingVoucherInstructionPolicy $onboardingPolicy,
         private IssueSystemAccountFundingPayCode $fundedInvitations,
@@ -49,6 +53,11 @@ final readonly class CommissioningManifestCommissioner
             name: $this->nullableString(data_get($manifest, 'system_principal.name')),
             email: $this->nullableString(data_get($manifest, 'system_principal.email')),
         );
+
+        if ($this->commercialBilling->isBillable()) {
+            $this->commercialPrincipals->provision();
+        }
+
         $issuer = $this->issuer($principal->model, $principal->key);
 
         Auth::setUser($issuer);
@@ -145,8 +154,7 @@ final readonly class CommissioningManifestCommissioner
         string $namespace,
         array $funding,
         string $manifestReference,
-    ): array
-    {
+    ): array {
         $existing = Voucher::query()
             ->get()
             ->first(fn (Voucher $voucher): bool => data_get(
@@ -227,7 +235,6 @@ final readonly class CommissioningManifestCommissioner
 
         return $this->invitationPayload($role['role'], (string) $voucher->code, true);
     }
-
 
     /**
      * @param  list<array{role: string, label: string, profile: string, prefix: string}>  $roles
@@ -436,8 +443,7 @@ final readonly class CommissioningManifestCommissioner
         string $namespace,
         array $funding,
         string $manifestReference,
-    ): array
-    {
+    ): array {
         $idempotencyReference = implode(':', [
             'commissioning-invitation',
             sha1($manifestReference),

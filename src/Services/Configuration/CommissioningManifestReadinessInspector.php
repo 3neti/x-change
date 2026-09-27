@@ -21,6 +21,7 @@ final class CommissioningManifestReadinessInspector
                 'deployment_configuration_incomplete' => 'deployment configuration must be completed before installation can be recorded',
                 'installation_manifest_table_missing' => 'installation manifest storage has not been installed',
                 'system_principal_account_incomplete' => 'installation cannot be commissioned until the System Account is ready',
+                'commercial_principal_account_incomplete' => 'installation cannot be commissioned until the Commercial Principal and Commercial Revenue Account are ready',
                 'installation_manifest_missing' => 'no installation manifest has been recorded',
                 'installation_manifest_stale' => 'recorded installation does not match the active deployment configuration',
                 default => 'commissioning state could not be verified',

@@ -1506,6 +1506,30 @@ return [
 
     'commercial' => [
         'enabled' => (bool) env('XCHANGE_COMMERCIAL_WATERFALL_ENABLED', true),
+        'principal' => [
+            'reference' => env(
+                'XCHANGE_COMMERCIAL_PRINCIPAL_REFERENCE',
+                'commercial-primary',
+            ),
+            'legal_name' => env(
+                'XCHANGE_COMMERCIAL_PRINCIPAL_LEGAL_NAME',
+                env('APP_NAME', 'x-change').' Commercial Principal',
+            ),
+            'authorization_reference' => env(
+                'XCHANGE_COMMERCIAL_PRINCIPAL_AUTHORIZATION_REFERENCE',
+                'commissioning:commercial-principal:v1',
+            ),
+            'revenue_account_slug' => env(
+                'XCHANGE_COMMERCIAL_REVENUE_ACCOUNT_SLUG',
+                'commercial-revenue',
+            ),
+        ],
+        'billing' => [
+            'mode' => env('XCHANGE_COMMERCIAL_BILLING_MODE', 'informational'),
+            'credential_responsibility' => 'host_institution',
+            'service_charge_collection_enabled' => false,
+            'tax_invoice_issuance_enabled' => false,
+        ],
         'pricing_schedule' => [
             'reference' => 'beta-pricing-schedule-v1',
             'version' => 1,

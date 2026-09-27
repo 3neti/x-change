@@ -203,18 +203,27 @@ both non-human Accounts. That does not merge their ownership or balances.
 
 ## Runtime implementation and compatibility
 
-The established runtime already provisions a non-interactive System Principal
-and system Treasury Positions, including commercial classification Positions.
+The runtime provisions a non-interactive System Principal and, when billing is
+enabled, a package-owned non-login Commercial Principal with its own zero-balance
+Commercial Revenue Account. Strict doctor and commissioning state fail closed
+when either required principal Account is missing or conflicts with its
+configuration. Informational billing mode does not require a Commercial
+Principal Account.
+
+System Treasury Positions, including the existing commercial classification
+Positions, remain owned by the System Principal in this compatibility gate.
 Some persistent keys and commands predate this terminology and still contain
 `system_account`, `system_principal`, or `commercial_revenue`. Those identifiers
 are compatibility contracts and must not be renamed by documentation-only
 work.
 
-Until a host has a separately provisioned Commercial Principal record, its
-commercial revenue Position is only an accounting boundary inside the existing
-Treasury topology. Customer charging must remain fail-closed unless the legal
-seller, Commercial Revenue Account ownership, pricing, fee recognition, and
-invoice authority are explicitly resolved.
+Provisioning the Commercial Principal does not migrate historical balances or
+silently redirect commercial postings. The commercial revenue Position remains
+an accounting boundary inside the established Treasury topology until a later
+controlled routing migration is approved. Customer charging must remain fail-closed
+unless the legal seller, Commercial Revenue Account ownership,
+pricing, fee recognition, invoice authority, and routing disposition are
+explicitly resolved.
 
 New product copy, architecture documentation, and APIs should use the canonical
 terms in this guide. Compatibility identifiers may be replaced only through a

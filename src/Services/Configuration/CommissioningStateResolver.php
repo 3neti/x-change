@@ -20,6 +20,7 @@ final readonly class CommissioningStateResolver
         private PreInstallReadinessInspector $readiness,
         private CommissioningConfigurationFingerprint $fingerprint,
         private SystemPrincipalAccountReadinessInspector $systemPrincipalAccount,
+        private CommercialPrincipalAccountReadinessInspector $commercialPrincipalAccount,
     ) {}
 
     public function resolve(): CommissioningStateData
@@ -49,6 +50,14 @@ final readonly class CommissioningStateResolver
                     CommissioningState::InstallationIncomplete,
                     $readiness['profile'],
                     reason: 'system_principal_account_incomplete',
+                );
+            }
+
+            if (! $this->commercialPrincipalAccount->inspect()['passed']) {
+                return new CommissioningStateData(
+                    CommissioningState::InstallationIncomplete,
+                    $readiness['profile'],
+                    reason: 'commercial_principal_account_incomplete',
                 );
             }
 

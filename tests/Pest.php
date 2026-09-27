@@ -29,6 +29,8 @@ use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Data\WithdrawalDisbursementExecutionData;
+use LBHurtado\XChange\Services\Commercial\CommercialBillingPolicy;
+use LBHurtado\XChange\Services\Commercial\CommercialPrincipalProvisioningService;
 use LBHurtado\XChange\Services\Treasury\SystemPrincipalProvisioningService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
@@ -84,6 +86,10 @@ function provisionTestSystemPrincipalForCommissioning(): User
 
     app(SystemPrincipalProvisioningService::class)
         ->provision('test:commissioning-system-principal');
+
+    if (app(CommercialBillingPolicy::class)->isBillable()) {
+        app(CommercialPrincipalProvisioningService::class)->provision();
+    }
 
     return User::query()->where('email', 'system@example.test')->sole();
 }

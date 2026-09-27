@@ -7,12 +7,14 @@ namespace LBHurtado\XChange\Actions\PayCode;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
 use LBHurtado\XChange\Data\PricingEstimateData;
+use LBHurtado\XChange\Services\Commercial\CommercialBillingPolicy;
 use LBHurtado\XChange\Services\VoucherIssuancePayloadNormalizer;
 
 class EstimatePayCodeCost
 {
     public function __construct(
         protected PricingServiceContract $pricing,
+        protected ?CommercialBillingPolicy $billingPolicy = null,
     ) {}
 
     /**
@@ -34,6 +36,10 @@ class EstimatePayCodeCost
             ['payable', 'settlement'],
             true,
         ) || data_get($input, 'metadata.flow_type') === 'collectible';
+        $billing = $this->billingPolicy ??= app(CommercialBillingPolicy::class);
+        $customerChargeMinor = $billing->isBillable()
+            ? (int) round($issueCost * 100)
+            : 0;
 
         return new PricingEstimateData(
             currency: (string) ($estimate['currency'] ?? config('x-change.pricing.currency', 'PHP')),
@@ -42,10 +48,7 @@ class EstimatePayCodeCost
             total: $issueCost,
             charges: (array) ($estimate['charges'] ?? []),
             pay_code_value: $payCodeValue,
-            account_debit: round(
-                ($collectsFunds ? 0.0 : $payCodeValue) + $issueCost,
-                2,
-            ),
+            account_debit: $billing->accountDebit($payCodeValue, $issueCost, $collectsFunds),
             commercial_offering_reference: is_string($estimate['commercial_offering_reference'] ?? null)
                 ? $estimate['commercial_offering_reference']
                 : null,
@@ -64,6 +67,9 @@ class EstimatePayCodeCost
             catalog_version: is_numeric($estimate['catalog_version'] ?? null)
                 ? (int) $estimate['catalog_version']
                 : null,
+            billing_mode: $billing->mode()->value,
+            customer_charge_minor: $customerChargeMinor,
+            customer_charge: $customerChargeMinor / 100,
         );
     }
 }

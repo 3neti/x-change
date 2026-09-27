@@ -13,6 +13,7 @@ use LBHurtado\XChange\Data\Publication\PublicationDefinitionData;
 use LBHurtado\XChange\Enums\PublicationInvocation;
 use LBHurtado\XChange\Enums\PublicationOverwritePolicy;
 use LBHurtado\XChange\Enums\PublicationScope;
+use LBHurtado\XChange\Models\CommercialPrincipal;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository;
 use LBHurtado\XChange\Services\Configuration\DeploymentConnectionCatalog;
 use LBHurtado\XChange\Services\Configuration\DeploymentProfileCatalog;
@@ -38,7 +39,10 @@ it('runs a strict pre-install doctor without requiring post-install tables', fun
         ->and(collect($payload['checks'])->pluck('name'))
         ->not->toContain('onboarding sessions table');
     expect(collect($payload['checks'])->pluck('name'))
-        ->not->toContain('system principal account');
+        ->not->toContain(
+            'system principal account',
+            'commercial principal account',
+        );
 });
 
 it('runs a strict pre-commission doctor without requiring commissioned state', function (): void {
@@ -66,6 +70,7 @@ it('runs a strict pre-commission doctor without requiring commissioned state', f
         )
         ->and($names)->not->toContain(
             'system principal account',
+            'commercial principal account',
             'commissioning manifest',
             'commercial governance',
             'commercial component economics',
@@ -73,6 +78,25 @@ it('runs a strict pre-commission doctor without requiring commissioned state', f
             'commercial recognition policies',
             'commercial tax profiles',
         );
+});
+
+it('fails strict runtime readiness without the required commercial principal Account', function (): void {
+    config()->set('x-change.commercial.billing.mode', 'billable');
+    provisionTestSystemPrincipalForCommissioning();
+
+    CommercialPrincipal::query()->delete();
+
+    $exitCode = Artisan::call('x-change:doctor', [
+        '--strict' => true,
+        '--json' => true,
+    ]);
+    $check = collect(json_decode(Artisan::output(), true)['checks'])
+        ->firstWhere('name', 'commercial principal account');
+
+    expect($exitCode)->toBe(1)
+        ->and($check['passed'])->toBeFalse()
+        ->and($check['meta']['required'])->toBeTrue()
+        ->and($check['meta']['routing_state'])->toBe('pending_controlled_migration');
 });
 
 it('fails strict pre-commission readiness when provider runtime settings cannot resolve', function (): void {

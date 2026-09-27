@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use LBHurtado\XChange\Http\Middleware\EnsureXChangeIsCommissioned;
 use LBHurtado\XChange\Services\Commercial\CommercialGovernanceInspector;
+use LBHurtado\XChange\Services\Configuration\CommercialPrincipalAccountReadinessInspector;
 use LBHurtado\XChange\Services\Configuration\CommissioningManifestReadinessInspector;
 use LBHurtado\XChange\Services\Configuration\CommissioningRecoveryGuide;
 use LBHurtado\XChange\Services\Configuration\CommissioningStateResolver;
@@ -26,6 +27,7 @@ final readonly class CommissioningChecklistController
         private PreInstallReadinessInspector $readiness,
         private RuntimeOperationsChecklist $runtimeOperations,
         private SystemPrincipalAccountReadinessInspector $systemPrincipalAccount,
+        private CommercialPrincipalAccountReadinessInspector $commercialPrincipalAccount,
         private CommissioningRecoveryGuide $recoveryGuide,
         private CommissioningManifestReadinessInspector $manifest,
         private CommercialGovernanceInspector $commercialGovernance,
@@ -45,6 +47,7 @@ final readonly class CommissioningChecklistController
             'runtime' => $this->runtimeOperations->describe(),
             'installationChecks' => [
                 $systemPrincipalAccount,
+                $this->commercialPrincipalAccount->inspect(),
                 $this->manifest->inspect($commissioning),
             ],
             'systemPrincipalRecovery' => $this->recoveryGuide

@@ -90,6 +90,7 @@ use LBHurtado\XChange\Console\Commands\Commercial\ApprovePartnerCommissionPayout
 use LBHurtado\XChange\Console\Commands\Commercial\AuthorizeCommercialOperatorCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\CommercialGovernanceStatusCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ProvisionCommercialBaselinesCommand;
+use LBHurtado\XChange\Console\Commands\Commercial\ProvisionCommercialPrincipalCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ReconcilePartnerCommissionPayoutBatchCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ReconcilePendingPartnerCommissionPayoutsCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\RecordProviderCostBatchCommand;
@@ -1690,6 +1691,7 @@ class XChangeServiceProvider extends ServiceProvider
                 ApprovePartnerCommissionPayoutBatchCommand::class,
                 CommercialGovernanceStatusCommand::class,
                 ProvisionCommercialBaselinesCommand::class,
+                ProvisionCommercialPrincipalCommand::class,
                 ReconcilePartnerCommissionPayoutBatchCommand::class,
                 ReconcilePendingPartnerCommissionPayoutsCommand::class,
                 RecordProviderCostBatchCommand::class,

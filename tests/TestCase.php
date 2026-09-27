@@ -182,6 +182,7 @@ abstract class TestCase extends Orchestra
             'sms_feedback' => 0.0,
         ]);
         $app['config']->set('x-change.commercial.enabled', false);
+        $app['config']->set('x-change.commercial.billing.mode', 'billable');
         $app['config']->set(
             'x-change.funding.requests.bank_transfer.reserved_amounts.enabled',
             false,

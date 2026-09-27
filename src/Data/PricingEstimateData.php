@@ -26,5 +26,8 @@ class PricingEstimateData extends Data
         public ?string $commercial_quote_reference = null,
         public ?string $catalog_reference = null,
         public ?int $catalog_version = null,
+        public string $billing_mode = 'informational',
+        public int $customer_charge_minor = 0,
+        public float $customer_charge = 0.0,
     ) {}
 }

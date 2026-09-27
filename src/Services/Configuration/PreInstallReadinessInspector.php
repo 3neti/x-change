@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Configuration;
 
 use LBHurtado\XChange\Enums\DeploymentRuntimeTier;
+use LBHurtado\XChange\Services\Commercial\CommercialBillingPolicy;
+use LBHurtado\XChange\Services\Commercial\CommercialPrincipalProvisioningService;
 use Throwable;
 
 final readonly class PreInstallReadinessInspector
@@ -14,6 +16,8 @@ final readonly class PreInstallReadinessInspector
         private InstructionCapabilityReadinessRegistry $instructionCapabilities,
         private ClaimEvidenceStorageReadinessInspector $claimEvidenceStorage,
         private TimeAuthorityInspector $timeAuthority,
+        private CommercialBillingPolicy $commercialBilling,
+        private CommercialPrincipalProvisioningService $commercialPrincipals,
     ) {}
 
     /**
@@ -36,6 +40,7 @@ final readonly class PreInstallReadinessInspector
             $deployment,
             $this->timeAuthorityCheck(),
             $this->systemPrincipalIdentityCheck($liveProfile),
+            $this->commercialPrincipalConfigurationCheck(),
             $this->productionApplicationSecurityCheck(),
             $this->partnerApiOAuthCheck(),
             $this->productionOnboardingOtpCheck(),
@@ -288,6 +293,53 @@ final readonly class PreInstallReadinessInspector
                 'missing_variables' => $missing,
             ],
         );
+    }
+
+    /**
+     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
+     */
+    private function commercialPrincipalConfigurationCheck(): array
+    {
+        if (! $this->commercialBilling->isBillable()) {
+            return $this->check(
+                'commercial principal configuration',
+                true,
+                'commercial principal configuration is optional in informational billing mode',
+                [
+                    'required' => false,
+                    'missing_variables' => [],
+                ],
+            );
+        }
+
+        try {
+            $this->commercialPrincipals->assertConfiguration();
+
+            return $this->check(
+                'commercial principal configuration',
+                true,
+                'billable mode has a complete Commercial Principal configuration',
+                [
+                    'required' => true,
+                    'missing_variables' => [],
+                ],
+            );
+        } catch (Throwable $exception) {
+            return $this->check(
+                'commercial principal configuration',
+                false,
+                $exception->getMessage(),
+                [
+                    'required' => true,
+                    'missing_variables' => [
+                        'XCHANGE_COMMERCIAL_PRINCIPAL_REFERENCE',
+                        'XCHANGE_COMMERCIAL_PRINCIPAL_LEGAL_NAME',
+                        'XCHANGE_COMMERCIAL_PRINCIPAL_AUTHORIZATION_REFERENCE',
+                        'XCHANGE_COMMERCIAL_REVENUE_ACCOUNT_SLUG',
+                    ],
+                ],
+            );
+        }
     }
 
     /**

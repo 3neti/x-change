@@ -7,6 +7,7 @@ use LBHurtado\XChange\Enums\CommissioningState;
 use LBHurtado\XChange\Models\XChangeInstallationManifest;
 use LBHurtado\XChange\Services\Configuration\CommissioningConfigurationFingerprint;
 use LBHurtado\XChange\Services\Configuration\CommissioningStateResolver;
+use LBHurtado\XChange\Services\Treasury\SystemPrincipalProvisioningService;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('fails closed when deployment configuration is incomplete', function (): void {
@@ -98,4 +99,28 @@ it('fails closed when the configured principal exists without its system Account
 
     expect($state->state)->toBe(CommissioningState::InstallationIncomplete)
         ->and($state->reason)->toBe('system_principal_account_incomplete');
+});
+
+it('fails closed when billable commissioning has no commercial principal Account', function (): void {
+    config()->set('x-change.commercial.billing.mode', 'billable');
+    config()->set('x-change.payout.system_user_column', 'email');
+    config()->set('x-change.payout.system_user_id', 'system@example.test');
+
+    app(SystemPrincipalProvisioningService::class)
+        ->provision('test:system-only');
+
+    XChangeInstallationManifest::query()->create([
+        'key' => CommissioningStateResolver::ManifestKey,
+        'manifest_version' => CommissioningStateResolver::ManifestVersion,
+        'package_version' => 'test',
+        'profile' => 'development',
+        'active_connection_references' => [],
+        'configuration_fingerprint' => app(CommissioningConfigurationFingerprint::class)->current(),
+        'completed_at' => now(),
+    ]);
+
+    $state = app(CommissioningStateResolver::class)->resolve();
+
+    expect($state->state)->toBe(CommissioningState::InstallationIncomplete)
+        ->and($state->reason)->toBe('commercial_principal_account_incomplete');
 });

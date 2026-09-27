@@ -21,13 +21,16 @@ class DefaultWalletProvisioningService implements WalletProvisioningContract
         $name = (string) (data_get($input, 'wallet.name')
             ?? config('x-change.onboarding.default_wallet_name', 'Platform Wallet'));
 
-        $wallet = $issuer->wallet()->where('slug', $slug)->first();
+        $accounts = method_exists($issuer, 'wallets')
+            ? $issuer->wallets()
+            : $issuer->wallet();
+        $wallet = $accounts->where('slug', $slug)->first();
 
         if ($wallet) {
             return $wallet;
         }
 
-        $walletModel = $issuer->wallet()->make([
+        $walletModel = $accounts->make([
             'name' => $name,
             'slug' => $slug,
         ]);

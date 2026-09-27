@@ -11,6 +11,7 @@ final readonly class CommercialPricingScheduleInspector
 {
     public function __construct(
         private CommercialInvoicingAuthorityInspector $invoicingAuthority,
+        private CommercialBillingPolicy $billingPolicy,
     ) {}
 
     /**
@@ -51,6 +52,7 @@ final readonly class CommercialPricingScheduleInspector
         $customerChargingAuthorized = ($schedule['customer_charging_authorized'] ?? null) === true;
         $invoicingAuthority = $this->invoicingAuthority->inspect();
         $receiptReportingVerified = config('x-change.commercial.receipt_reporting.status') === 'verified';
+        $billingMode = $this->billingPolicy->mode();
         $scheduleReady = $scheduleApproved
             && $catalogMatches
             && $principalExcluded
@@ -59,6 +61,7 @@ final readonly class CommercialPricingScheduleInspector
             && $taxTreatmentResolved
             && $invoicingAuthority['ready'] === true
             && $receiptReportingVerified
+            && $billingMode->value === 'billable'
             && $customerChargingAuthorized;
 
         return [
@@ -98,6 +101,17 @@ final readonly class CommercialPricingScheduleInspector
                 'schema' => config('x-change.commercial.receipt_reporting.schema'),
                 'document_kind' => config('x-change.commercial.receipt_reporting.document_kind'),
                 'tax_invoice_issuance' => config('x-change.commercial.receipt_reporting.tax_invoice_issuance'),
+            ],
+            'billing' => [
+                'mode' => $billingMode->value,
+                'informational_only' => $billingMode->value === 'informational',
+                'credential_responsibility' => config(
+                    'x-change.commercial.billing.credential_responsibility',
+                ),
+                'service_charge_collection_enabled' => $billingMode->value === 'billable'
+                    && config('x-change.commercial.billing.service_charge_collection_enabled') === true,
+                'tax_invoice_issuance_enabled' => $billingMode->value === 'billable'
+                    && config('x-change.commercial.billing.tax_invoice_issuance_enabled') === true,
             ],
             'customer_charging_authorized' => $customerChargingAuthorized,
             'message' => match (true) {

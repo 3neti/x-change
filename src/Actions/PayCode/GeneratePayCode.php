@@ -24,6 +24,7 @@ use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
 use LBHurtado\XChange\Services\Claim\ClaimEvidenceRequirements;
+use LBHurtado\XChange\Services\Commercial\CommercialBillingPolicy;
 use LBHurtado\XChange\Services\Commercial\CommercialCustomerChargingGuard;
 use LBHurtado\XChange\Services\Commercial\CommercialPricingAcceptanceGuard;
 use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
@@ -58,6 +59,7 @@ class GeneratePayCode
         protected ?PreparePayCodeTreasuryIssuance $treasuryIssuance = null,
         protected ?CommercialPricingAcceptanceGuard $pricingAcceptance = null,
         protected ?CommercialCustomerChargingGuard $customerCharging = null,
+        protected ?CommercialBillingPolicy $billingPolicy = null,
     ) {}
 
     /**
@@ -120,9 +122,7 @@ class GeneratePayCode
         $estimate = $this->estimatePayCodeCost->handle($input);
         $this->assertAcceptedPricing($input, $estimate);
         ($this->customerCharging ??= app(CommercialCustomerChargingGuard::class))
-            ->ensureAuthorized((int) collect($estimate->charges)->sum(
-                static fn (array $charge): int => (int) ($charge['price_minor'] ?? 0),
-            ));
+            ->ensureAuthorized($estimate->customer_charge_minor);
         $funding = $this->fundingPolicy()->assertCanIssue(
             owner: $issuer,
             localWallet: $wallet,
@@ -333,6 +333,10 @@ class GeneratePayCode
         PricingEstimateData $estimate,
         FundingDecisionData $funding,
     ): array {
+        if (! ($this->billingPolicy ??= app(CommercialBillingPolicy::class))->isBillable()) {
+            return $this->informationalCommercialPlaceholder($estimate);
+        }
+
         if ((bool) config('x-change.commercial.enabled', true)
             && $issuer instanceof Model) {
             return $this->commercialSales()->post(
@@ -353,6 +357,25 @@ class GeneratePayCode
             estimate: $estimate,
             context: $this->buildAllocationContext($input, $estimate),
         );
+    }
+
+    /**
+     * @return array{total_minor:int,total:float,currency:string,allocations:array<int, mixed>,debit:array{id:null,amount:string},billing_mode:string,estimated_total_minor:int}
+     */
+    protected function informationalCommercialPlaceholder(PricingEstimateData $estimate): array
+    {
+        return [
+            'total_minor' => 0,
+            'total' => 0.0,
+            'currency' => $estimate->currency,
+            'allocations' => [],
+            'debit' => [
+                'id' => null,
+                'amount' => '0',
+            ],
+            'billing_mode' => 'informational',
+            'estimated_total_minor' => (int) round($estimate->total * 100),
+        ];
     }
 
     protected function commercialSales(): PayCodeCommercialSaleService

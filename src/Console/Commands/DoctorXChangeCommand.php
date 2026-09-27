@@ -10,6 +10,7 @@ use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\XChangeProviderTopologyResolverContract;
 use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityRuntimeProfileInspector;
 use LBHurtado\XChange\Services\Commercial\CommercialGovernanceInspector;
+use LBHurtado\XChange\Services\Configuration\CommercialPrincipalAccountReadinessInspector;
 use LBHurtado\XChange\Services\Configuration\CommissioningStateResolver;
 use LBHurtado\XChange\Services\Configuration\PreInstallReadinessInspector;
 use LBHurtado\XChange\Services\Configuration\SystemPrincipalAccountReadinessInspector;
@@ -71,6 +72,7 @@ class DoctorXChangeCommand extends Command
                 $this->check('x-change config', config('x-change') !== [], 'config(x-change) is loaded'),
                 ...app(PreInstallReadinessInspector::class)->inspect()['checks'],
                 app(SystemPrincipalAccountReadinessInspector::class)->inspect(),
+                app(CommercialPrincipalAccountReadinessInspector::class)->inspect(),
                 $this->commissioningCheck(app(CommissioningStateResolver::class)),
                 $this->commercialGovernanceCheck($commercialGovernance),
                 $this->commercialComponentEconomicsCheck($commercialGovernance),
