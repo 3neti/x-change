@@ -208,6 +208,11 @@ an on-demand database recovery point, and independent review remain open.
 - Database backup, alerting ownership, independent encrypted keepsake evidence,
   and the named independent reviewer therefore remain open. The two invitations
   must remain unclaimed until these controls are closed or formally dispositioned.
+- Laravel Cloud support escalation `T-B3318` was submitted on 2026-09-27 with
+  the exact application, environment, deployment, bucket, cluster, schema, CLI
+  version, error classes, reproduction commands, and fail-closed safety posture.
+  No credentials or customer data were included. Gate 2 remains blocked pending
+  a supported bucket/key repair and auditable database recovery-point procedure.
 
 ## Gate 3 — Written Philippine counsel disposition
 
