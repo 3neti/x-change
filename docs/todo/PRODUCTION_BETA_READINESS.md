@@ -26,8 +26,8 @@ credit, transfer, settlement, or recreation of an Account or Pay Code.
 ## Gate 1 — Read-only balance report
 
 **Owner:** X-Change package maintainer
-**Status:** Implemented and released; sandbox evidence captured; independent
-review and reported reconciliation blocker pending
+**Status:** Implemented and released; sandbox evidence captured and variance
+dispositioned; independent review pending
 **Required before:** cleanroom production rehearsal
 
 - [x] Define one stable, versioned balance-report schema.
@@ -89,10 +89,15 @@ review and reported reconciliation blocker pending
   `4d298ed8d4c67bda77bf8b6d378aa680f86ebfe92b0ed28525d3ca48276216b4`;
   semantic report SHA-256
   `06e41280196abf4b3add439b556493841a1cbf336cad27413ace2ff0a6cc6de6`.
-- [ ] Resolve or disposition the sandbox `provider_snapshot_stale` blocker. The
-  provider refresh observed PHP `399245` minor while recognized Treasury
-  Inventory is PHP `2577702` minor and correctly marked the snapshot
-  `review_required`; no financial posting occurred.
+- [x] Sandbox variance disposition (2026-09-27): the provider refresh observed
+  authoritative NetBank liquidity of PHP `399245` minor while this host records
+  PHP `2577702` minor of Treasury Inventory. Management confirmed the same
+  NetBank account is shared by multiple non-production X-Change hosts, so the
+  per-host Inventory cannot reconcile to the provider account. The report
+  correctly remained `review_required` and made no financial posting. This
+  disposition is valid only for sandbox evidence; the production-beta host must
+  use a dedicated provider account or another reviewed topology that permits
+  complete per-host reconciliation.
 - [ ] Reviewer and review date:
 
 ## Gate 2 — Exact-version cleanroom commissioning rehearsal
