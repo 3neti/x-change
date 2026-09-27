@@ -129,6 +129,9 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliation
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitVoucherDetailPageController;
 use LBHurtado\XChange\Http\Controllers\Web\DashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Leads\LeadCampaignEndpointController;
+use LBHurtado\XChange\Http\Controllers\Web\Legal\AcceptAgreementController;
+use LBHurtado\XChange\Http\Controllers\Web\Legal\AgreementPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Legal\DeclineAgreementController;
 use LBHurtado\XChange\Http\Controllers\Web\LinkPaynamicsWalletController;
 use LBHurtado\XChange\Http\Controllers\Web\Onboarding\InitialPinSetupController;
 use LBHurtado\XChange\Http\Controllers\Web\Onboarding\MobileVerificationChallengeController;
@@ -145,6 +148,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationAc
 use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationPageController;
 use LBHurtado\XChange\Http\Controllers\Web\StoredValueInstrumentPageController;
 use LBHurtado\XChange\Http\Middleware\GuardPairedCampaignClaim;
+use LBHurtado\XChange\Http\Middleware\RequireCurrentAgreementAcceptance;
 use LBHurtado\XChange\Http\Middleware\RequireVerifiedMobile;
 use LBHurtado\XChange\Http\Middleware\ShareCockpitHeaderReadModel;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
@@ -179,8 +183,23 @@ Route::middleware(['web', ShareXChangeBranding::class])->group(function (): void
         ->name('x-change.provisioning.claim.accept');
 });
 
+Route::prefix('x/legal')->middleware([...$middleware, ShareXChangeBranding::class])->group(function (): void {
+    Route::get('eula', AgreementPageController::class)
+        ->name('x-change.legal.eula.show');
+    Route::post('eula/accept', AcceptAgreementController::class)
+        ->middleware('throttle:6,1')
+        ->name('x-change.legal.eula.accept');
+    Route::post('eula/decline', DeclineAgreementController::class)
+        ->middleware('throttle:6,1')
+        ->name('x-change.legal.eula.decline');
+});
+
 // Authenticated operator routes
-Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->group(function (): void {
+Route::prefix('x')->middleware([
+    ...$middleware,
+    ShareXChangeBranding::class,
+    RequireCurrentAgreementAcceptance::class,
+])->group(function (): void {
     Route::get('onboarding/pin', [InitialPinSetupController::class, 'show'])
         ->name('x-change.onboarding.pin.show');
     Route::put('onboarding/pin', [InitialPinSetupController::class, 'store'])

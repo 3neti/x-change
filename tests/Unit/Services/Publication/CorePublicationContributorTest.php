@@ -40,6 +40,7 @@ it('classifies the complete package publication inventory by ownership boundary'
             'x-change.auth',
             'x-change.settings',
             'x-change.host-migrations',
+            'x-change.legal',
             'onboarding.migrations',
         )
         ->and(array_column($advanced, 'id'))
@@ -106,6 +107,20 @@ it('keeps configuration overrides out of automatic build publication', function 
         ->not->toContain('x-change-config', 'form-flow-config', 'otp-handler-config', 'x-ray-config')
         ->and($advancedTargets)
         ->toContain('x-change-config', 'form-flow-config', 'otp-handler-config', 'x-ray-config');
+});
+
+it('publishes the legal agreement once as a host-owned install resource', function (): void {
+    $definition = collect((new PublicationCatalog([new CorePublicationContributor]))
+        ->definitions(PublicationScope::Install))->firstWhere('id', 'x-change.legal');
+    $paths = ServiceProvider::pathsToPublish(
+        XChangeServiceProvider::class,
+        'x-change-legal',
+    );
+
+    expect($definition)->not->toBeNull()
+        ->and($definition->overwritePolicy)->toBe(PublicationOverwritePolicy::CreateIfMissing)
+        ->and($paths)->toHaveKey(dirname(__DIR__, 4).'/resources/legal/EULA.md')
+        ->and($paths[dirname(__DIR__, 4).'/resources/legal/EULA.md'])->toBe(base_path('EULA.md'));
 });
 
 it('leaves integration drivers with their owning packages rather than publishing host copies', function (): void {

@@ -174,6 +174,17 @@ $defaultDeploymentRuntimeTier = match ((string) env('APP_ENV', 'production')) {
 };
 
 return [
+    'legal' => [
+        'eula' => [
+            // The installer creates this host-owned file once and never overwrites it by default.
+            'enabled' => (bool) env('XCHANGE_EULA_ENABLED', is_file(base_path('EULA.md'))),
+            'path' => env('XCHANGE_EULA_PATH', base_path('EULA.md')),
+            'evidence_key' => env('XCHANGE_EULA_EVIDENCE_KEY', env('APP_KEY')),
+            'accepted_redirect' => env('XCHANGE_EULA_ACCEPTED_REDIRECT', '/x/cockpit'),
+            'declined_redirect' => env('XCHANGE_EULA_DECLINED_REDIRECT', '/'),
+        ],
+    ],
+
     'treasury_account_grants' => [
         'enabled' => true,
         'test_allocations_enabled' => false,

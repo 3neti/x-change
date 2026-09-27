@@ -101,6 +101,7 @@ final class CorePublicationContributor implements XChangePublicationContributor
         yield $this->install('x-change.settings', 'x-change-settings', 'Mobile-first settings scaffold.');
         yield $this->install('x-change.settings-tests', 'x-change-settings-tests', 'Mobile-first settings tests.');
         yield $this->install('x-change.host-migrations', 'x-change-host-migrations', 'Host user compatibility migration.');
+        yield $this->install('x-change.legal', 'x-change-legal', 'Host-owned beta end user agreement.');
         yield new PublicationDefinitionData(
             id: 'onboarding.migrations',
             owner: '3neti/onboarding',

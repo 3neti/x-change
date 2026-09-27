@@ -2407,6 +2407,10 @@ class XChangeServiceProvider extends ServiceProvider
         ], 'x-change-host-migrations');
 
         $this->publishes([
+            $this->packagePath('resources/legal/EULA.md') => base_path('EULA.md'),
+        ], 'x-change-legal');
+
+        $this->publishes([
             $this->packagePath('stubs/migrations/2026_06_17_000000_prepare_users_for_mobile_first_xchange.php.stub') => database_path('migrations/2026_06_17_000000_prepare_users_for_mobile_first_xchange.php'),
             $this->packagePath('stubs/database/factories/UserFactory.php.stub') => database_path('factories/UserFactory.php'),
             $this->packagePath('stubs/resources/js/components/AppLogoIcon.vue.stub') => resource_path('js/components/AppLogoIcon.vue'),
