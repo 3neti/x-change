@@ -220,6 +220,29 @@ an on-demand database recovery point, and independent review remain open.
 **Status:** Not complete
 **Required before:** any public real-money beta
 
+**Interim management evidence (not a completed legal disposition):** Management
+reports that the BSP Deputy Governor responsible for payments gave the project a
+green light to operate. Preserve the written communication, meeting record,
+scope, assumptions, counterparty, date, and any conditions in the controlled
+x-legal evidence set. This is material regulatory evidence, but this checklist
+does not infer from the report alone that every EMI, OPS, custody, agency,
+segregation, disclosure, complaint, or licensing question below was decided.
+
+**Technical boundary completed locally on 2026-09-27:** the versioned host EULA
+is an authenticated, fail-closed prerequisite rather than a mutable boolean.
+Funded onboarding now leaves the exact invitation amount in Pay Code Reserve
+until the invited Account accepts the current agreement. Acceptance evidence
+and release into that Account's Client Funds commit atomically and replay
+idempotently. Public claim and payment routes remain available; protected host
+operation does not. This control documents consent and constrains system use; it
+does not itself supply regulatory authority or waive the remaining legal gate.
+Focused regression evidence: 41 tests and 350 assertions covering agreement
+acceptance and rollback, funded onboarding reserve/release and replay, direct
+Account Funding, onboarding success/X-Ray presentation, and claim success. The
+adjacent lifecycle-scenario file still has three pre-existing failures because
+its `pay_code` Commercial Offering profile has no active governed version; the
+focused boundary suite is green.
+
 - [ ] Obtain a written disposition covering EMI characterization, OPS
   registration, custody or agency, client-fund treatment and segregation,
   insolvency treatment, required disclosures, complaints/refunds, and the

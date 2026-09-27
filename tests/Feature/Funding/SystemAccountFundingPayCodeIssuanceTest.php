@@ -9,15 +9,20 @@ use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\XChange\Actions\Claim\DispatchVoucherClaimOutcome;
 use LBHurtado\XChange\Actions\Funding\IssueSystemAccountFundingPayCode;
+use LBHurtado\XChange\Actions\Legal\AcceptCurrentAgreement;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
 use LBHurtado\XChange\Contracts\CockpitHeaderReadModelProviderContract;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Data\Funding\IssueSystemAccountFundingPayCodeData;
 use LBHurtado\XChange\Exceptions\VoucherClaimOutcomeConflict;
+use LBHurtado\XChange\Models\AgreementAcceptance;
+use LBHurtado\XChange\Models\DeferredOnboardingFunding;
 use LBHurtado\XChange\Models\ProviderBalanceSnapshot;
 use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
 use LBHurtado\XChange\Services\CheckNetbankSourceAccountReadiness;
+use LBHurtado\XChange\Services\Legal\CurrentAgreementService;
+use LBHurtado\XChange\Services\XRay\VoucherXRayProjectionBuilder;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
@@ -408,6 +413,149 @@ it('lets guest web claims use the onboarding driver before Account Funding settl
         ->and(ExecutionJournalEntry::query()
             ->where('event_type', 'account_funding.pay_code.applied')
             ->count())->toBe(1);
+});
+
+it('holds funded onboarding value in reserve until the current agreement is accepted', function (): void {
+    $agreementPath = storage_path('framework/funded-onboarding-eula.md');
+    file_put_contents($agreementPath, <<<'MARKDOWN'
+---
+agreement_key: shared-host-beta-terms
+version: 1.0.0-beta
+title: Beta End User Agreement
+effective_at: 2026-09-27
+---
+# Beta terms
+
+Client Funds remain attributable to the Principal.
+MARKDOWN);
+
+    config()->set('x-change.legal.eula.enabled', true);
+    config()->set('x-change.legal.eula.path', $agreementPath);
+    config()->set('x-change.onboarding.voucher.require_otp', false);
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    config()->set('x-change.provider_runtime.payout_provider_hint', null);
+
+    try {
+        $system = enableNetbankTreasuryForTests();
+        fundTestUserWallet($system, 0);
+        fundTestSystemAccountFundingReserve($system, 10_000, 'agreement-gated-onboarding');
+        $request = Request::create('/x/claim/MAKE-EULA', 'POST');
+        $session = app('session')->driver();
+        $session->start();
+        $request->setLaravelSession($session);
+        app()->instance(Request::class, $request);
+        auth()->logout();
+
+        $readiness = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
+        $readiness->shouldReceive('handle')->once()->with()->andReturn([
+            'enabled' => true,
+            'ready' => true,
+            'checked' => true,
+            'account_number_masked' => '********0019',
+            'balance_minor' => 507_693,
+            'available_balance_minor' => 507_693,
+            'currency' => 'PHP',
+            'as_of' => now()->subSecond()->toIso8601String(),
+            'fetched_at' => now()->toIso8601String(),
+            'message' => 'NetBank source account balance was refreshed.',
+        ]);
+        app()->instance(CheckNetbankSourceAccountReadiness::class, $readiness);
+
+        $issuance = app(IssueSystemAccountFundingPayCode::class)->handle(
+            new IssueSystemAccountFundingPayCodeData(
+                amountMinor: 10_000,
+                connectionReference: 'netbank-primary',
+                idempotencyReference: 'agreement-gated-onboarding-20260927-001',
+                expiresAt: now()->addDay(),
+                evidenceReference: 'system-reserve:agreement-gated-onboarding',
+                authorizationReference: 'system-policy:onboarding-grant-v1',
+                source: 'commissioning_invitation',
+                onboarding: true,
+                prefix: 'MAKE',
+                riderMessage: 'Maker onboarding invitation',
+                onboardingProfile: 'x-payout-maker',
+            ),
+        );
+        $voucher = $issuance->voucher;
+
+        $result = app(SubmitWebPayCodeClaim::class)->handle($voucher, [
+            'mobile' => '639173011987',
+            'recipient_country' => 'PH',
+            'inputs' => [
+                'full_name' => 'Lester Hurtado',
+                'name' => 'Lester Hurtado',
+                'email' => 'lester.eula@example.test',
+                'mobile' => '639173011987',
+            ],
+        ]);
+        $claimant = User::query()->where('email', 'lester.eula@example.test')->sole();
+        $deferred = DeferredOnboardingFunding::query()->sole();
+        $pendingXRay = app(VoucherXRayProjectionBuilder::class)->build($voucher->fresh());
+
+        expect($result->claimed)->toBeTrue()
+            ->and($voucher->refresh()->redeemed_at)->not->toBeNull()
+            ->and($deferred->status)->toBe('pending_agreement')
+            ->and($deferred->amount_minor)->toBe(10_000)
+            ->and(data_get($pendingXRay, 'presentation.success.funds.label'))
+            ->toBe('Reserved onboarding funds')
+            ->and(data_get($pendingXRay, 'presentation.success.funds.text'))
+            ->toContain('reserved until agreement acceptance')
+            ->and(systemFundingPositionBalance(
+                $system,
+                TreasuryPositionPurpose::PayCodeReserve,
+            ))->toBe(10_000)
+            ->and(systemFundingPositionBalance(
+                $claimant,
+                TreasuryPositionPurpose::ClientFunds,
+            ))->toBe(0)
+            ->and(ExecutionJournalEntry::query()->pluck('event_type')->all())
+            ->toBe(['account_funding.pay_code.issued']);
+
+        $sha256 = hash('sha256', (string) file_get_contents($agreementPath));
+        $acceptanceRequest = Request::create('/x/legal/eula/accept', 'POST', [
+            'accepted' => '1',
+            'agreement_sha256' => $sha256,
+        ]);
+        $acceptanceRequest->setLaravelSession($session);
+        $acceptAgreement = app(AcceptCurrentAgreement::class);
+        $document = app(CurrentAgreementService::class)->document();
+        $acceptAgreement->handle($claimant, $acceptanceRequest, $document);
+        $releasedXRay = app(VoucherXRayProjectionBuilder::class)->build($voucher->fresh());
+
+        expect(AgreementAcceptance::query()->count())->toBe(1)
+            ->and($deferred->refresh()->status)->toBe('released')
+            ->and($deferred->agreement_acceptance_id)->not->toBeNull()
+            ->and($deferred->voucher_claim_id)->not->toBeNull()
+            ->and($deferred->treasury_operation_reference)->not->toBeNull()
+            ->and(data_get($releasedXRay, 'presentation.success.funds.label'))
+            ->toBe('Client Funds')
+            ->and(data_get($releasedXRay, 'presentation.success.funds.text'))
+            ->toContain('available for instructions')
+            ->and(systemFundingPositionBalance(
+                $system,
+                TreasuryPositionPurpose::PayCodeReserve,
+            ))->toBe(0)
+            ->and(systemFundingPositionBalance(
+                $claimant,
+                TreasuryPositionPurpose::ClientFunds,
+            ))->toBe(10_000)
+            ->and(ExecutionJournalEntry::query()->orderBy('id')->pluck('event_type')->all())
+            ->toBe([
+                'account_funding.pay_code.issued',
+                'account_funding.pay_code.outcome_selected',
+                'account_funding.pay_code.applied',
+            ]);
+
+        $acceptAgreement->handle($claimant, $acceptanceRequest, $document);
+
+        expect(AgreementAcceptance::query()->count())->toBe(1)
+            ->and($voucher->claims()->where('settlement_mode', 'account_funding')->count())->toBe(1)
+            ->and(ExecutionJournalEntry::query()
+                ->where('event_type', 'account_funding.pay_code.applied')
+                ->count())->toBe(1);
+    } finally {
+        @unlink($agreementPath);
+    }
 });
 
 it('still rejects guest web claims for direct Account Funding Pay Codes', function (): void {

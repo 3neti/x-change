@@ -16,6 +16,7 @@ use LBHurtado\Voucher\Data\ExecutionResultData;
 use LBHurtado\Voucher\Services\DefaultExecutionDriver;
 use LBHurtado\XChange\Actions\Claim\DispatchVoucherClaimOutcome;
 use LBHurtado\XChange\Actions\Funding\RefreshFundingLiquidity;
+use LBHurtado\XChange\Actions\Legal\DeferOnboardingFundingUntilAgreement;
 use LBHurtado\XChange\Exceptions\OnboardingVoucherExecutionFailed;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Onboarding\OnboardingVoucherClaimantAuthenticator;
@@ -29,6 +30,7 @@ final readonly class OnboardingAccountProvisioningExecutionDriver implements Exe
         private PromoteContactToUser $promoteContact,
         private DefaultExecutionDriver $defaultDriver,
         private DispatchVoucherClaimOutcome $claimOutcomes,
+        private DeferOnboardingFundingUntilAgreement $deferFunding,
         private OnboardingVoucherClaimantAuthenticator $authenticator,
         private RefreshFundingLiquidity $liquidity,
         private Request $request,
@@ -170,6 +172,16 @@ final readonly class OnboardingAccountProvisioningExecutionDriver implements Exe
         );
 
         if ($defaultOutcome === 'account_funding') {
+            $deferred = $this->deferFunding->handle($context->voucher, $claimant);
+
+            if ($deferred !== null) {
+                return [
+                    'event' => 'onboarding.account_funding_awaiting_agreement',
+                    'mode' => 'agreement_pending',
+                    'treasury_operation_reference' => null,
+                ];
+            }
+
             $claim = $this->claimOutcomes->handle(
                 voucher: $context->voucher,
                 requestedOutcome: 'account_funding',

@@ -16,8 +16,10 @@ final readonly class PayCodeFundingEligibility
         private NamedVoucherSliceService $namedSlices,
     ) {}
 
-    public function evaluate(Voucher $voucher): PayCodeFundingEligibilityData
-    {
+    public function evaluate(
+        Voucher $voucher,
+        bool $allowPreviouslyRedeemed = false,
+    ): PayCodeFundingEligibilityData {
         if (! $voucher->owner instanceof Model) {
             return $this->blocked(
                 'issuer_unavailable',
@@ -25,7 +27,10 @@ final readonly class PayCodeFundingEligibility
             );
         }
 
-        if (! $voucher->canRedeem()) {
+        if (
+            ! $voucher->canRedeem()
+            && ! ($allowPreviouslyRedeemed && $voucher->redeemed_at !== null)
+        ) {
             return $this->blocked(
                 'not_claimable',
                 'This Pay Code is expired, redeemed, or otherwise unavailable.',

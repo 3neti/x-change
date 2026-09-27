@@ -33,6 +33,10 @@ final readonly class AccountFundingClaimOutcomeHandler implements VoucherClaimOu
             );
         }
 
-        return $this->transfer->handle($voucher, $claimant);
+        return $this->transfer->handle(
+            $voucher,
+            $claimant,
+            (bool) data_get($payload, '_internal.allow_deferred_agreement_release', false),
+        );
     }
 }

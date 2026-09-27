@@ -29,8 +29,10 @@ final readonly class TransferPayCodeIntoAccount
     public function handle(
         Voucher $voucher,
         Authenticatable&Model $claimant,
+        bool $allowPreviouslyRedeemed = false,
     ): VoucherClaim {
         return DB::transaction(function () use (
+            $allowPreviouslyRedeemed,
             $claimant,
             $voucher,
         ): VoucherClaim {
@@ -47,7 +49,7 @@ final readonly class TransferPayCodeIntoAccount
                 return $existing;
             }
 
-            $decision = $this->eligibility->evaluate($locked);
+            $decision = $this->eligibility->evaluate($locked, $allowPreviouslyRedeemed);
 
             if (
                 ! $decision->eligible

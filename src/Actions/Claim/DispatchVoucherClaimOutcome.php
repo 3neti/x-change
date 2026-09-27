@@ -33,7 +33,13 @@ final readonly class DispatchVoucherClaimOutcome
         ?string $requestedOutcome,
         array $payload,
         ?Authenticatable $claimant = null,
+        bool $allowDeferredAgreementRelease = false,
     ): mixed {
+        data_set(
+            $payload,
+            '_internal.allow_deferred_agreement_release',
+            $allowDeferredAgreementRelease,
+        );
         $result = DB::transaction(function () use (
             $voucher,
             $requestedOutcome,

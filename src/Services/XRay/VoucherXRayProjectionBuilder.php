@@ -11,6 +11,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Data\Claim\ClaimWorkflowDescriptorData;
 use LBHurtado\XChange\Data\Claim\ClaimWorkflowInterpretationData;
+use LBHurtado\XChange\Models\DeferredOnboardingFunding;
 use LBHurtado\XChange\Services\Claim\ClaimWorkflowReadModelProjector;
 use LBHurtado\XChange\Services\Claim\CoverageCompletionSuccessPresentation;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
@@ -324,6 +325,12 @@ class VoucherXRayProjectionBuilder
             ?? data_get($voucher, 'currency')
             ?? 'PHP');
         $formattedAmount = $this->formatAmount($amount, $currency);
+        $deferredFunding = $voucher instanceof Voucher
+            ? DeferredOnboardingFunding::query()
+                ->where('voucher_id', $voucher->getKey())
+                ->where('status', 'pending_agreement')
+                ->first()
+            : null;
 
         return array_filter([
             'schema' => 'x-change.onboarding-success-presentation.v1',
@@ -331,13 +338,19 @@ class VoucherXRayProjectionBuilder
             'title_template' => 'Welcome to {app_name}',
             'account_label' => $accountLabel,
             'account_message' => 'Your '.$accountLabel.' is ready.',
-            'body' => $this->onboardingSuccessBody($role),
+            'body' => $deferredFunding instanceof DeferredOnboardingFunding
+                ? 'Your account is ready. Accept the Beta End User Agreement to activate the reserved Client Funds.'
+                : $this->onboardingSuccessBody($role),
             'receipt_label' => 'Invitation accepted',
             'receipt_code' => (string) data_get($voucher, 'code', ''),
             'funds' => $formattedAmount === null ? null : [
-                'label' => 'Client Funds',
+                'label' => $deferredFunding instanceof DeferredOnboardingFunding
+                    ? 'Reserved onboarding funds'
+                    : 'Client Funds',
                 'amount' => $formattedAmount,
-                'text' => $formattedAmount.' available for instructions',
+                'text' => $deferredFunding instanceof DeferredOnboardingFunding
+                    ? $formattedAmount.' reserved until agreement acceptance'
+                    : $formattedAmount.' available for instructions',
             ],
             'primary_action_intent' => 'enter_workspace',
             'primary_action_role' => $role,

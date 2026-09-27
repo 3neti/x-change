@@ -2,9 +2,14 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use LBHurtado\XChange\Actions\Legal\AcceptCurrentAgreement;
 use LBHurtado\XChange\Http\Middleware\RequireCurrentAgreementAcceptance;
 use LBHurtado\XChange\Models\AgreementAcceptance;
+use LBHurtado\XChange\Models\DeferredOnboardingFunding;
+use LBHurtado\XChange\Services\Legal\CurrentAgreementService;
 
 beforeEach(function () {
     $this->agreementPath = storage_path('framework/testing-eula.md');
@@ -114,4 +119,33 @@ it('does not place the agreement gate on public claim and payment routes', funct
         ->not->toContain(RequireCurrentAgreementAcceptance::class)
         ->and(Route::getRoutes()->getByName('x-change.pay.show')?->gatherMiddleware())
         ->not->toContain(RequireCurrentAgreementAcceptance::class);
+});
+
+it('rolls back acceptance when a deferred onboarding release cannot complete', function () {
+    $user = actingAsTestUser();
+    DeferredOnboardingFunding::query()->create([
+        'reference' => (string) str()->ulid(),
+        'voucher_id' => 999_999,
+        'subject_type' => $user->getMorphClass(),
+        'subject_id' => (string) $user->getKey(),
+        'required_agreement_key' => 'shared-host-beta-terms',
+        'required_agreement_version' => '1.0.0-beta',
+        'required_agreement_sha256' => hash('sha256', (string) file_get_contents($this->agreementPath)),
+        'amount_minor' => 10_000,
+        'currency' => 'PHP',
+        'connection_reference' => 'netbank-primary',
+        'reservation_operation_reference' => 'missing-reservation',
+        'status' => 'pending_agreement',
+        'deferred_at' => now(),
+    ]);
+    $request = Request::create('/x/legal/eula/accept', 'POST');
+    $session = app('session')->driver();
+    $session->start();
+    $request->setLaravelSession($session);
+    $document = app(CurrentAgreementService::class)->document();
+
+    expect(fn () => app(AcceptCurrentAgreement::class)->handle($user, $request, $document))
+        ->toThrow(ModelNotFoundException::class)
+        ->and(AgreementAcceptance::query()->count())->toBe(0)
+        ->and(DeferredOnboardingFunding::query()->sole()->status)->toBe('pending_agreement');
 });
