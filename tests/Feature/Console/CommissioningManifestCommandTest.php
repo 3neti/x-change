@@ -8,12 +8,12 @@ use Illuminate\Support\Facades\Schema;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
-use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Console\Commands\BootstrapXChangeFromManifestCommand;
+use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Models\ProviderBalanceSnapshot;
-use LBHurtado\XChange\Services\Commissioning\CommissioningManifestRepository;
-use LBHurtado\XChange\Services\CheckNetbankSourceAccountReadiness;
 use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
+use LBHurtado\XChange\Services\CheckNetbankSourceAccountReadiness;
+use LBHurtado\XChange\Services\Commissioning\CommissioningManifestRepository;
 use LBHurtado\XChange\Services\Configuration\LocalEnvironmentFileWriter;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 
@@ -251,6 +251,43 @@ it('propagates prepared manifest values over stale process values', function ():
     }
 });
 
+it('does not downgrade an explicitly configured runtime tier to a local manifest default', function (): void {
+    config()->set('x-change.deployment.runtime_tier', 'production');
+
+    $command = app(BootstrapXChangeFromManifestCommand::class);
+    $method = new ReflectionMethod($command, 'environmentDefaults');
+    $defaults = $method->invoke($command, [
+        'deployment' => [
+            'profile' => 'netbank',
+            'runtime_tier' => 'local',
+        ],
+        'bootstrap' => [
+            'environment' => [
+                'defaults' => [
+                    'XCHANGE_RUNTIME_TIER' => 'local',
+                ],
+            ],
+        ],
+    ]);
+
+    expect($defaults['XCHANGE_RUNTIME_TIER'])->toBe('production');
+});
+
+it('retains a local runtime tier for local cleanroom commissioning', function (): void {
+    config()->set('x-change.deployment.runtime_tier', 'local');
+
+    $command = app(BootstrapXChangeFromManifestCommand::class);
+    $method = new ReflectionMethod($command, 'environmentDefaults');
+    $defaults = $method->invoke($command, [
+        'deployment' => [
+            'profile' => 'netbank',
+            'runtime_tier' => 'local',
+        ],
+    ]);
+
+    expect($defaults['XCHANGE_RUNTIME_TIER'])->toBe('local');
+});
+
 it('passes treasury opening capitalization options for funded onboarding bootstrap manifests', function (): void {
     $manifestPath = fundedCommissioningManifestPath([
         'invitation_amount: 100.00',
@@ -325,7 +362,6 @@ it('commissions maker and checker onboarding invitations from the package manife
     });
 });
 
-
 it('commissions funded maker and checker invitations from the system Account Funding Reserve idempotently', function (): void {
     $system = enableNetbankTreasuryForTests();
     fundTestSystemAccountFundingReserve(
@@ -399,7 +435,6 @@ it('commissions funded maker and checker invitations from the system Account Fun
             TreasuryPositionPurpose::PayCodeReserve,
         ))->toBe(20_000);
 
-
     Voucher::query()->get()->each(function (Voucher $voucher): void {
         expect((float) data_get($voucher->metadata, 'instructions.cash.amount'))->toBe(100.0)
             ->and(data_get(
@@ -420,7 +455,6 @@ it('commissions funded maker and checker invitations from the system Account Fun
             ))->toBe(TreasuryPositionPurpose::AccountFundingReserve->value);
     });
 });
-
 
 it('prints funded commissioning reserve feedback for operators', function (): void {
     $system = enableNetbankTreasuryForTests();

@@ -22,8 +22,7 @@ final class BootstrapXChangeFromManifestCommand extends Command
     public function handle(
         CommissioningManifestRepository $manifests,
         LocalEnvironmentFileWriter $environment,
-    ): int
-    {
+    ): int {
         $manifestReference = trim((string) $this->option('manifest'));
 
         if ($manifestReference === '') {
@@ -227,7 +226,7 @@ final class BootstrapXChangeFromManifestCommand extends Command
         }
 
         $profile = trim((string) data_get($manifest, 'deployment.profile'));
-        $runtimeTier = trim((string) data_get($manifest, 'deployment.runtime_tier'));
+        $runtimeTier = $this->runtimeTierDefault($manifest);
 
         if ($profile !== '') {
             $defaults['XCHANGE_DEPLOYMENT_PROFILE'] = $profile;
@@ -238,6 +237,21 @@ final class BootstrapXChangeFromManifestCommand extends Command
         }
 
         return $defaults;
+    }
+
+    /**
+     * @param  array<string, mixed>  $manifest
+     */
+    private function runtimeTierDefault(array $manifest): string
+    {
+        $manifestRuntimeTier = trim((string) data_get($manifest, 'deployment.runtime_tier'));
+        $configuredRuntimeTier = trim((string) config('x-change.deployment.runtime_tier'));
+
+        if ($manifestRuntimeTier === 'local' && $configuredRuntimeTier !== '' && $configuredRuntimeTier !== 'local') {
+            return $configuredRuntimeTier;
+        }
+
+        return $manifestRuntimeTier;
     }
 
     /**
