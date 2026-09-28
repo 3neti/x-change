@@ -30,6 +30,7 @@ import {
     watch,
 } from 'vue';
 import { show as showScenarioRunner } from '@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitLeadCampaignScenarioRunnerController';
+import { show as showCommercialPayCodeScenarioRunner } from '@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitCommercialPayCodeScenarioRunnerController';
 import showPolicyLifecycle from '@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitCampaignPolicyLifecyclePageController';
 import { destroy, show, store } from '@/routes/x-change/cockpit/campaigns';
 import authorizations from '@/routes/x-change/cockpit/campaigns/authorizations';
@@ -167,6 +168,7 @@ type CampaignsPageProps = CockpitHeaderPageProps & {
     pay_code_templates?: CampaignPayCodeTemplate[];
     endpoint_campaigns?: EndpointCampaign[];
     workflow_drafts?: CampaignWorkflowDraftCatalog;
+    commercial_pay_code_scenario_runner_enabled?: boolean;
     endpoint_campaign_form?: {
         action_url: string;
         default_timezone: string;
@@ -1409,6 +1411,15 @@ const updatedRelativeTime = (value: string | null): string =>
                             </h2>
                         </div>
                         <div class="flex flex-wrap items-center gap-2">
+                            <Link
+                                v-if="props.commercial_pay_code_scenario_runner_enabled"
+                                :href="showCommercialPayCodeScenarioRunner.url()"
+                                class="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 transition hover:border-violet-300 hover:text-violet-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-violet-700 dark:hover:text-violet-300"
+                                data-testid="commercial-pay-code-scenario-runner-link"
+                            >
+                                <HandCoins class="size-3.5" aria-hidden="true" />
+                                Test commercial issuance
+                            </Link>
                             <Link
                                 :href="showPolicyLifecycle()"
                                 class="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-indigo-700 dark:hover:text-indigo-300"

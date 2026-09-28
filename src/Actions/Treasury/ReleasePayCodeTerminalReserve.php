@@ -14,6 +14,7 @@ use LBHurtado\XChange\Data\Treasury\PayCodeTerminalReleaseData;
 use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
 use LBHurtado\XChange\Models\StoredValueHolderBinding;
+use LBHurtado\XChange\Services\Treasury\PayCodeFundingPrincipalResolver;
 use LBHurtado\XChange\Services\Treasury\PayCodeTerminalReleaseJournal;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 
@@ -23,6 +24,7 @@ final readonly class ReleasePayCodeTerminalReserve
         private TreasuryPayCodeAccountingService $accounting,
         private PayCodeTerminalReleaseJournal $journal,
         private TreasuryAllocationOperationContract $allocationOperations,
+        private PayCodeFundingPrincipalResolver $fundingPrincipals,
     ) {}
 
     public function handle(
@@ -129,13 +131,7 @@ final readonly class ReleasePayCodeTerminalReserve
             );
         }
 
-        $owner = $voucher->owner;
-
-        if (! $owner instanceof Model) {
-            throw new TreasuryConfigurationException(
-                "Pay Code [{$voucher->code}] has no Account owner for reserve release.",
-            );
-        }
+        $owner = $this->fundingPrincipals->forVoucher($voucher);
 
         $connectionReference = trim((string) data_get(
             $reservation,

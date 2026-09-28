@@ -214,6 +214,7 @@ final class LifecycleScenarioEngine
             'treasury_account_grant_simulation',
             'provisioning_governance_simulation',
             'campaign_batch',
+            'commercial_pay_code',
         ], true)) {
             return $this->runWithoutVoucherBootstrap(
                 scenarioKey: $scenarioKey,
@@ -397,7 +398,7 @@ final class LifecycleScenarioEngine
             $output->info("Running scenario: {$scenarioKey}");
         }
 
-        if ($mode === 'campaign_batch' && $options->maker === null) {
+        if (in_array($mode, ['campaign_batch', 'commercial_pay_code'], true) && $options->maker === null) {
             return $this->result(
                 exitCode: Command::FAILURE,
                 payload: [
@@ -409,7 +410,9 @@ final class LifecycleScenarioEngine
             );
         }
 
-        $issuerOption = $mode === 'campaign_batch' ? $options->maker : $options->issuer;
+        $issuerOption = in_array($mode, ['campaign_batch', 'commercial_pay_code'], true)
+            ? $options->maker
+            : $options->issuer;
         $issuerId = (int) ($issuerOption ?: data_get($scenario, 'issuer_id', 1));
         $issuer = $this->bootstrapper->resolveIssuerModel($issuerId);
         $baseClaimMobile = $this->bootstrapper->resolveScenarioMobile($scenario, $issuer);

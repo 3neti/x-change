@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Listeners;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use LBHurtado\Voucher\Models\Voucher;
@@ -14,6 +13,7 @@ use LBHurtado\XChange\Jobs\Redemption\DispatchVoucherRedemptionFeedbackJob;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Treasury\PayCodeDisbursementSettlementJournal;
+use LBHurtado\XChange\Services\Treasury\PayCodeFundingPrincipalResolver;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 use Throwable;
 
@@ -22,6 +22,7 @@ final readonly class HandleConfirmedDisbursement
     public function __construct(
         private TreasuryPayCodeAccountingService $accounting,
         private PayCodeDisbursementSettlementJournal $journal,
+        private PayCodeFundingPrincipalResolver $fundingPrincipals,
     ) {}
 
     public function handle(DisbursementConfirmed $event): void
@@ -56,12 +57,13 @@ final readonly class HandleConfirmedDisbursement
             return;
         }
 
-        $owner = $voucher->owner;
-
-        if (! $owner instanceof Model) {
-            Log::error('[XChange] Confirmed disbursement has no Pay Code owner.', [
+        try {
+            $owner = $this->fundingPrincipals->forVoucher($voucher);
+        } catch (\RuntimeException $exception) {
+            Log::error('[XChange] Confirmed disbursement funding principal is invalid.', [
                 'voucher_code' => $voucher->code,
                 'reconciliation_id' => $reconciliation->getKey(),
+                'exception' => $exception->getMessage(),
             ]);
 
             return;

@@ -16,6 +16,7 @@ use LBHurtado\XChange\Actions\Funding\IssueTreasuryBackedPayCode;
 use LBHurtado\XChange\Data\Treasury\TreasuryProviderConnectionData;
 use LBHurtado\XChange\Services\Campaigns\CampaignLifecycleJournal;
 use LBHurtado\XChange\Services\Campaigns\CampaignVoucherInstructionCompiler;
+use LBHurtado\XChange\Services\Treasury\PayCodeFundingPrincipalResolver;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use RuntimeException;
@@ -28,6 +29,7 @@ final readonly class IssueCampaignWorksheetPayCodes
         private TreasuryProviderConnectionCatalog $connections,
         private CampaignVoucherInstructionCompiler $instructionCompiler,
         private CampaignLifecycleJournal $journal,
+        private PayCodeFundingPrincipalResolver $fundingPrincipals,
     ) {}
 
     public function handle(string $authorizationReference, Model $owner, int $limit = 100): int
@@ -67,6 +69,10 @@ final readonly class IssueCampaignWorksheetPayCodes
                 $connection = $this->connection(
                     (string) $locked->row->currency,
                 );
+                $fundingPrincipal = $this->fundingPrincipals->forAuthorization(
+                    $authorization,
+                    $owner,
+                );
                 $compiledInstructions = $this->instructionCompiler->compile($authorization, $locked, $owner);
                 $voucher = $this->payCodes->handle(
                     $owner,
@@ -81,11 +87,16 @@ final readonly class IssueCampaignWorksheetPayCodes
                 );
                 $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
                 $this->reservePrincipal(
-                    owner: $owner,
+                    owner: $fundingPrincipal,
                     voucher: $voucher,
                     connectionReference: $connection->reference,
                     amountMinor: (int) $locked->row->amount_minor,
                     currency: $connection->currency,
+                    reservationContext: $this->fundingPrincipals->reservationContext(
+                        $authorization,
+                        $owner,
+                        $fundingPrincipal,
+                    ),
                 );
 
                 $locked->forceFill([
@@ -134,6 +145,7 @@ final readonly class IssueCampaignWorksheetPayCodes
         string $connectionReference,
         int $amountMinor,
         string $currency,
+        array $reservationContext = [],
     ): void {
         try {
             $this->accounting->reserve(
@@ -142,6 +154,7 @@ final readonly class IssueCampaignWorksheetPayCodes
                 connectionReference: $connectionReference,
                 providerPrincipalMinor: $amountMinor,
                 currency: $currency,
+                reservationContext: $reservationContext,
             );
         } catch (BalanceIsEmpty|InsufficientFunds $exception) {
             throw new RuntimeException(

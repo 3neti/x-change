@@ -44,6 +44,7 @@ final readonly class TreasuryPayCodeAccountingService
         string $connectionReference,
         int $providerPrincipalMinor,
         string $currency,
+        array $reservationContext = [],
     ): TreasuryPositionReservationData {
         $connection = $this->connection($connectionReference, $currency);
         $portfolio = $this->portfolios->provision(
@@ -87,6 +88,9 @@ final readonly class TreasuryPayCodeAccountingService
             'operation_reference' => $reservation->operationReference,
             'amount_minor' => $providerPrincipalMinor,
             'currency' => $connection->currency,
+            ...($reservationContext === []
+                ? []
+                : ['funding_principal' => $reservationContext]),
         ]);
         $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
 

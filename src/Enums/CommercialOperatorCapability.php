@@ -15,4 +15,6 @@ enum CommercialOperatorCapability: string
     case RequestCommissionPayouts = 'commercial.commissions.request';
     case ApproveCommissionPayouts = 'commercial.commissions.approve';
     case ExecuteCommissionPayouts = 'commercial.commissions.execute';
+    case PreparePayCodes = 'commercial.pay_codes.prepare';
+    case ApprovePayCodes = 'commercial.pay_codes.approve';
 }

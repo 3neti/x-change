@@ -47,6 +47,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialPartnerAppro
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialPartnerController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialPartnerDestinationApprovalController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialPartnerDestinationController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialPayCodeScenarioRunnerController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialProviderCostBatchController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDistributionWorkspacePageController;
@@ -393,6 +394,15 @@ Route::prefix('x')->middleware([
             ->name('x-change.cockpit.campaigns.index');
         Route::get('campaigns/policy-lifecycle', CockpitCampaignPolicyLifecyclePageController::class)
             ->name('x-change.cockpit.campaigns.policy-lifecycle.index');
+        Route::get(
+            'campaigns/commercial-pay-code-scenario-runner',
+            [CockpitCommercialPayCodeScenarioRunnerController::class, 'show'],
+        )->name('x-change.cockpit.campaigns.commercial-pay-code-scenario-runner.show');
+        Route::post(
+            'campaigns/commercial-pay-code-scenario-runner',
+            [CockpitCommercialPayCodeScenarioRunnerController::class, 'store'],
+        )->middleware('throttle:6,1')
+            ->name('x-change.cockpit.campaigns.commercial-pay-code-scenario-runner.store');
         Route::post('campaigns', [CockpitCampaignWorksheetController::class, 'store'])
             ->middleware('throttle:20,1')
             ->name('x-change.cockpit.campaigns.store');

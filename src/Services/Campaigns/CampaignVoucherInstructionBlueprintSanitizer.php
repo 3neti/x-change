@@ -112,6 +112,28 @@ final class CampaignVoucherInstructionBlueprintSanitizer
             $blueprint['claim'] = $claim;
         }
 
+        $commercialSponsorship = Arr::only(
+            is_array($input['commercial_sponsorship'] ?? null)
+                ? $input['commercial_sponsorship']
+                : [],
+            [
+                'schema',
+                'principal_reference',
+                'legal_name',
+                'maker_type',
+                'maker_id',
+                'checker_type',
+                'checker_id',
+                'run_reference',
+                'principal_minor',
+                'currency',
+                'instruction_hash',
+            ],
+        );
+        if ($commercialSponsorship !== []) {
+            $blueprint['commercial_sponsorship'] = $commercialSponsorship;
+        }
+
         return $blueprint;
     }
 }

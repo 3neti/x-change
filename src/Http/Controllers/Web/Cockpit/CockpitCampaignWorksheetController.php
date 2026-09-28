@@ -71,6 +71,10 @@ class CockpitCampaignWorksheetController extends Controller
             'pay_code_templates' => $this->payCodeTemplatesFor($owner),
             'endpoint_campaigns' => $this->endpointCampaignsFor($owner),
             'workflow_drafts' => $workflowDrafts->for($owner),
+            'commercial_pay_code_scenario_runner_enabled' => (bool) config(
+                'x-change.lifecycle.commercial_pay_code.browser_enabled',
+                ! app()->isProduction(),
+            ),
             'endpoint_campaign_form' => [
                 'action_url' => route('x-change.cockpit.campaigns.endpoints.store'),
                 'default_timezone' => config('app.timezone', 'UTC'),

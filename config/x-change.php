@@ -218,6 +218,7 @@ return [
                     'commercial.partners.manage',
                     'commercial.provider_costs.reconcile',
                     'commercial.commissions.request',
+                    'commercial.pay_codes.prepare',
                 ],
             ],
             'commercial_checker' => [
@@ -229,6 +230,7 @@ return [
                     'commercial.partners.approve',
                     'commercial.commissions.approve',
                     'commercial.commissions.execute',
+                    'commercial.pay_codes.approve',
                 ],
             ],
             'treasury_maker' => [

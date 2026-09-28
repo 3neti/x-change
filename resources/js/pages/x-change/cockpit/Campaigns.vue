@@ -25,6 +25,7 @@ type CampaignsPageProps = CockpitHeaderPageProps & {
     endpoint_campaigns?: Record<string, unknown>[];
     endpoint_campaign_form?: Record<string, unknown>;
     workflow_drafts?: CampaignWorkflowDraftCatalog;
+    commercial_pay_code_scenario_runner_enabled?: boolean;
 };
 
 const props = defineProps<CampaignsPageProps>();

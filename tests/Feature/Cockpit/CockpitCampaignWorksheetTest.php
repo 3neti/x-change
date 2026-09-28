@@ -168,6 +168,7 @@ it('exposes endpoint campaign profiles, active templates, and existing public en
         ->assertJsonPath('props.endpoint_campaigns.0.starts_limit', 25)
         ->assertJsonPath('props.endpoint_campaigns.0.template.name', 'Public application template')
         ->assertJsonPath('props.endpoint_campaigns.0.template.version_id', app(LeadCampaignTemplateVersionId::class)->forTemplate($template))
+        ->assertJsonPath('props.commercial_pay_code_scenario_runner_enabled', true)
         ->assertJsonPath('props.endpoint_campaign_form.action_url', route('x-change.cockpit.campaigns.endpoints.store'));
 });
 

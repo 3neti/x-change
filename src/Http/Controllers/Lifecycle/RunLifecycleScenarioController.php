@@ -33,6 +33,9 @@ final class RunLifecycleScenarioController
             'max_polls' => ['nullable', 'integer'],
             'no_claim' => ['nullable', 'boolean'],
             'accept_pending' => ['nullable', 'boolean'],
+            'run_reference' => ['nullable', 'string'],
+            'phase' => ['nullable', 'string'],
+            'confirm_checker_approval' => ['nullable', 'boolean'],
         ]);
 
         try {

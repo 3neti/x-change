@@ -134,6 +134,10 @@ final readonly class CampaignVoucherInstructionCompiler
                             ? 'provider_rejection'
                             : 'immediate',
                     ],
+                    'commercial_sponsorship' => data_get(
+                        $authorization->instruction_blueprint_ciphertext,
+                        'commercial_sponsorship',
+                    ),
                 ],
             ],
         ];

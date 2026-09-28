@@ -248,6 +248,7 @@ describe('Cockpit campaign worksheets', () => {
             props: {
                 worksheets: [],
                 endpoint_campaigns: [campaignNeedingAttention],
+                commercial_pay_code_scenario_runner_enabled: true,
             },
         });
 
@@ -259,6 +260,11 @@ describe('Cockpit campaign worksheets', () => {
                 .get('[data-testid="campaign-policy-lifecycle-link"]')
                 .attributes('href'),
         ).toBe('/x/cockpit/campaigns/policy-lifecycle');
+        expect(
+            wrapper
+                .get('[data-testid="commercial-pay-code-scenario-runner-link"]')
+                .attributes('href'),
+        ).toBe('/x/cockpit/campaigns/commercial-pay-code-scenario-runner');
 
         const attention = wrapper.get(
             '[data-testid="campaign-payment-evidence-attention"]',

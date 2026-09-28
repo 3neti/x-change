@@ -266,8 +266,8 @@ final readonly class XChangeProvisioningAuthorityProjector implements Provisioni
     {
         $groups = [
             [
-                [CommercialOperatorCapability::ManageOfferings->value, CommercialOperatorCapability::ManagePartners->value, CommercialOperatorCapability::RequestCommissionPayouts->value],
-                [CommercialOperatorCapability::ApproveOfferings->value, CommercialOperatorCapability::ApprovePartners->value, CommercialOperatorCapability::ApproveCommissionPayouts->value, CommercialOperatorCapability::ExecuteCommissionPayouts->value],
+                [CommercialOperatorCapability::ManageOfferings->value, CommercialOperatorCapability::ManagePartners->value, CommercialOperatorCapability::RequestCommissionPayouts->value, CommercialOperatorCapability::PreparePayCodes->value],
+                [CommercialOperatorCapability::ApproveOfferings->value, CommercialOperatorCapability::ApprovePartners->value, CommercialOperatorCapability::ApproveCommissionPayouts->value, CommercialOperatorCapability::ExecuteCommissionPayouts->value, CommercialOperatorCapability::ApprovePayCodes->value],
                 CommercialOperatorAuthorization::class,
             ],
             [

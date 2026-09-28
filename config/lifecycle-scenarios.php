@@ -92,6 +92,17 @@ return [
         ],
     ],
 
+    'commercial_pay_code' => [
+        'browser_enabled' => (bool) env(
+            'XCHANGE_LIFECYCLE_COMMERCIAL_PAY_CODE_BROWSER_ENABLED',
+            env('APP_ENV') !== 'production',
+        ),
+        'simulated_funding_enabled' => (bool) env(
+            'XCHANGE_LIFECYCLE_COMMERCIAL_PAY_CODE_SIMULATED_FUNDING_ENABLED',
+            env('APP_ENV') !== 'production',
+        ),
+    ],
+
     'treasury_account_grant_simulation' => [
         'enabled' => (bool) env(
             'XCHANGE_LIFECYCLE_TREASURY_ACCOUNT_GRANT_SIMULATION_ENABLED',
@@ -160,6 +171,15 @@ return [
     ],
 
     'scenarios' => [
+
+        'commercial_pay_code_issuance' => [
+            'label' => 'Commercial ₱50 Pay Code',
+            'description' => 'Credits simulated provider-backed value to the Commercial Principal, then exercises a Maker-prepared and independently Checker-approved ₱50 Pay Code funded by that Principal.',
+            'category' => 'commercial-governance',
+            'tags' => ['commercial-principal', 'maker-checker', 'pay-code', 'browser'],
+            'mode' => 'commercial_pay_code',
+            'api_executable' => true,
+        ],
 
         'commercial_operations_simulation' => [
             'label' => 'Commercial Operations Simulation',
