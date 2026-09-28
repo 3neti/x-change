@@ -17,6 +17,7 @@ use LBHurtado\PaymentGateway\Funding\NetbankStandingAddressProfile;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Services\Cockpit\FundingActivityCockpitReadModel;
 use LBHurtado\XChange\Services\Cockpit\FundingCockpitReadModelProvider;
+use LBHurtado\XChange\Services\Cockpit\FundingMethodSelectorCockpitReadModel;
 use LBHurtado\XChange\Services\Cockpit\FundingQrMerchantProfileReadModel;
 use LBHurtado\XChange\Services\Cockpit\FundingRequestCockpitReadModel;
 use LBHurtado\XChange\Services\Funding\Base64PngQrPhFundingSimulationQrRenderer;
@@ -31,6 +32,7 @@ class CockpitFundingPageController extends Controller
         private readonly CockpitReadOnlyPageProps $props,
         private readonly FundingCockpitReadModelProvider $funding,
         private readonly FundingRequestCockpitReadModel $fundingRequests,
+        private readonly FundingMethodSelectorCockpitReadModel $fundingMethods,
         private readonly FundingActivityCockpitReadModel $fundingActivity,
         private readonly FundingQrMerchantProfileReadModel $merchantProfiles,
         private readonly Base64PngQrPhFundingSimulationQrRenderer $simulationQr,
@@ -50,11 +52,19 @@ class CockpitFundingPageController extends Controller
         }
 
         $fundingRequests = $this->fundingRequests->forOperator($operator);
+        $standingFundingAddress = $this->standingFundingAddressAvailability(
+            $operator,
+        );
 
         return Inertia::render('x-change/cockpit/Funding', [
             ...$this->props->toArray(includeReadModel: false),
             'funding_read_model' => $this->funding->forOperator($operator)->toArray(),
             'funding_requests' => $fundingRequests,
+            'funding_method_selector' => $this->fundingMethods
+                ->forAccountFunding(
+                    $fundingRequests,
+                    $standingFundingAddress,
+                ),
             'funding_activity' => Inertia::defer(
                 fn (): array => $this->fundingActivity->forOperator(
                     $operator,
@@ -87,7 +97,7 @@ class CockpitFundingPageController extends Controller
                 'event' => '.FundingProjectionChanged',
                 'workflow_event' => '.FundingRequestChanged',
             ],
-            'standing_funding_address' => $this->standingFundingAddressAvailability($operator),
+            'standing_funding_address' => $standingFundingAddress,
             'funding_qr_merchant_profile' => $this->merchantProfiles->forOwner($operator),
             'funding_simulation' => [
                 'enabled' => (bool) config('x-change.cockpit.qrph_funding_simulation.enabled', false),

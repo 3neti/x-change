@@ -802,6 +802,61 @@ export type CockpitFundingRequestReadModel = {
     redactions: Record<string, boolean>;
 };
 
+export type CockpitFundingMethodKey = 'qr_ph' | 'bank_transfer' | 'pay_code';
+
+export type CockpitPrimaryFundingWorkspaceMode =
+    | 'self_top_up'
+    | 'bank_transfer'
+    | 'pay_code';
+
+export type CockpitFundingMethodSelectorReadModel = {
+    schema: 'x-change.cockpit.funding-method-selector.v1';
+    context: 'account_funding' | 'pay_code_issuance';
+    intent_reference: string | null;
+    amount: {
+        currency: string;
+        principal_minor: number;
+        fee_minor: number;
+        required_minor: number;
+        principal: string;
+        fee: string;
+        required: string;
+    } | null;
+    expires_at: string | null;
+    status:
+        | 'ready'
+        | 'awaiting_funds'
+        | 'detected'
+        | 'reconciled'
+        | 'expired'
+        | 'failed';
+    notice: string;
+    methods: Array<{
+        key: CockpitFundingMethodKey;
+        workspace_mode: CockpitPrimaryFundingWorkspaceMode;
+        label: string;
+        description: string;
+        available: boolean;
+        selectable: boolean;
+        unavailable_reason: string | null;
+    }>;
+    bank_transfer: {
+        reconciliation_reference: {
+            mode: 'required' | 'optional' | 'disabled';
+            value: string | null;
+            label: string;
+            instructions: string;
+        };
+        matching_strategies: Array<
+            | 'reserved_exact_amount'
+            | 'destination_account'
+            | 'currency'
+            | 'observation_window'
+            | 'manual_review'
+        >;
+    };
+};
+
 export type CockpitFundingActivityItem = {
     key: string;
     source:
@@ -875,6 +930,7 @@ export type CockpitPayCodeFundingPreview = {
 export type CockpitFundingPageProps = CockpitHeaderPageProps & {
     funding_read_model: CockpitFundingReadModel;
     funding_requests?: CockpitFundingRequestReadModel;
+    funding_method_selector?: CockpitFundingMethodSelectorReadModel;
     funding_activity?: CockpitFundingActivityReadModel;
     funding_instruction?: CockpitFundingInstruction | null;
     funding_notice?: string | null;

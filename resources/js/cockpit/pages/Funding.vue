@@ -4,11 +4,8 @@ import { useEcho } from '@laravel/echo-vue';
 import {
     CirclePlus,
     FileText,
-    Landmark,
-    QrCode,
     RefreshCw,
     Search,
-    TicketCheck,
 } from 'lucide-vue-next';
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
 import { store as storeVerificationCheck } from '@/routes/x-change/cockpit/funding/intents/verification-checks';
@@ -23,13 +20,17 @@ import { store as openStandingFundingAddressRoute } from '@/routes/x-change/cock
 import { store as checkStandingFundingHistoryRoute } from '@/routes/x-change/cockpit/funding/standing-addresses/netbank/history-checks';
 import { approve as approveStandingFundingReceiptRoute } from '@/routes/x-change/cockpit/funding/standing-addresses/netbank/receipts';
 import { store as storeReconciliationRequest } from '@/routes/x-change/cockpit/funding/suspense/reconciliation-requests';
+import CockpitBankTransferReconciliationReference from '../components/CockpitBankTransferReconciliationReference.vue';
 import CockpitFundingActivity from '../components/CockpitFundingActivity.vue';
 import CockpitFundingMethodPanel from '../components/CockpitFundingMethodPanel.vue';
+import CockpitFundingMethodSelector from '../components/CockpitFundingMethodSelector.vue';
 import CockpitFundingQrAddress from '../components/CockpitFundingQrAddress.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type {
     CockpitFundingActivityItem,
+    CockpitFundingMethodSelectorReadModel,
     CockpitFundingPageProps,
+    CockpitPrimaryFundingWorkspaceMode,
     CockpitQrPhFundingSimulationResult,
     CockpitStandingFundingAddress,
     CockpitStandingFundingReceipt,
@@ -112,6 +113,82 @@ const fundingActivity = computed(
             },
         },
 );
+const fundingMethodSelector = computed<CockpitFundingMethodSelectorReadModel>(
+    () =>
+        props.funding_method_selector ?? {
+            schema: 'x-change.cockpit.funding-method-selector.v1',
+            context: 'account_funding',
+            intent_reference: null,
+            amount: null,
+            expires_at: null,
+            status: 'ready',
+            notice:
+                'Funds appear in your Account only after confirmation from the bank or payment provider.',
+            methods: [
+                {
+                    key: 'qr_ph',
+                    workspace_mode: 'self_top_up',
+                    label: 'QR Ph',
+                    description:
+                        'Scan your reusable QR Ph code, then check NetBank for confirmed funds.',
+                    available:
+                        props.standing_funding_address?.available === true,
+                    selectable: true,
+                    unavailable_reason:
+                        props.standing_funding_address?.available === true
+                            ? null
+                            : 'QR Ph is not configured for this Account.',
+                },
+                {
+                    key: 'bank_transfer',
+                    workspace_mode: 'bank_transfer',
+                    label: 'Bank Transfer',
+                    description:
+                        'Reserve an exact amount and transfer it to the configured bank account.',
+                    available:
+                        fundingRequests.value.bank_transfer.enabled === true,
+                    selectable: true,
+                    unavailable_reason:
+                        fundingRequests.value.bank_transfer.enabled === true
+                            ? null
+                            : 'Bank transfer funding is not enabled.',
+                },
+                {
+                    key: 'pay_code',
+                    workspace_mode: 'pay_code',
+                    label: 'Pay Code',
+                    description:
+                        'Add funds with a one-time Pay Code without a provider payout.',
+                    available: true,
+                    selectable: true,
+                    unavailable_reason: null,
+                },
+            ],
+            bank_transfer: {
+                reconciliation_reference: {
+                    mode: 'disabled',
+                    value: null,
+                    label: 'Transfer reference',
+                    instructions:
+                        'No sender-entered reference is used as authoritative matching evidence.',
+                },
+                matching_strategies: fundingRequests.value.bank_transfer
+                    .reserved_exact_amounts_enabled
+                    ? [
+                          'reserved_exact_amount',
+                          'destination_account',
+                          'currency',
+                          'observation_window',
+                      ]
+                    : [
+                          'destination_account',
+                          'currency',
+                          'observation_window',
+                          'manual_review',
+                      ],
+            },
+        },
+);
 const activeReconciliationCase = ref<string | null>(null);
 const activeApproval = ref<string | null>(null);
 const activeVerificationCheck = ref<string | null>(null);
@@ -157,6 +234,21 @@ type FundingWorkspaceMode =
 const activeFundingMode = ref<FundingWorkspaceMode>(
     props.funding_workspace_mode ?? 'self_top_up',
 );
+const activePrimaryFundingMode = computed<
+    CockpitPrimaryFundingWorkspaceMode | null
+>({
+    get: () =>
+        ['self_top_up', 'bank_transfer', 'pay_code'].includes(
+            activeFundingMode.value,
+        )
+            ? (activeFundingMode.value as CockpitPrimaryFundingWorkspaceMode)
+            : null,
+    set: (mode) => {
+        if (mode !== null) {
+            activeFundingMode.value = mode;
+        }
+    },
+});
 const fundingQrMerchantProfile = computed(
     () =>
         props.funding_qr_merchant_profile ?? {
@@ -185,20 +277,6 @@ const fundingQrMerchantProfile = computed(
             controls_settlement: true as const,
         },
 );
-const primaryFundingWorkspaceModes = computed(() => [
-    {
-        key: 'self_top_up' as const,
-        label: 'QR Ph',
-    },
-    {
-        key: 'bank_transfer' as const,
-        label: 'Bank Transfer',
-    },
-    {
-        key: 'pay_code' as const,
-        label: 'Pay Code',
-    },
-]);
 const fundingActivityFilter = computed(() => {
     if (activeFundingMode.value === 'self_top_up') {
         return 'qr_ph' as const;
@@ -1385,63 +1463,10 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     </article>
                 </section>
 
-                <div
-                    class="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800"
-                    data-testid="cockpit-funding-mode-switcher"
-                >
-                    <div
-                        class="grid grid-cols-3 gap-2"
-                        role="tablist"
-                        aria-label="Funding workspace mode"
-                    >
-                        <button
-                            v-for="mode in primaryFundingWorkspaceModes"
-                            :id="`funding-mode-${mode.key}`"
-                            :key="mode.key"
-                            type="button"
-                            role="tab"
-                            class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-2 py-2 text-center text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
-                            :class="
-                                activeFundingMode === mode.key
-                                    ? 'bg-slate-950 text-white shadow-sm dark:bg-sky-300 dark:text-slate-950'
-                                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
-                            "
-                            :aria-selected="activeFundingMode === mode.key"
-                            :aria-controls="`funding-panel-${mode.key}`"
-                            :data-testid="`funding-mode-${mode.key}`"
-                            @click="activeFundingMode = mode.key"
-                        >
-                            <QrCode
-                                v-if="mode.key === 'self_top_up'"
-                                class="size-4 shrink-0"
-                                aria-hidden="true"
-                                data-testid="funding-mode-icon-self_top_up"
-                            />
-                            <Landmark
-                                v-else-if="mode.key === 'bank_transfer'"
-                                class="size-4 shrink-0"
-                                aria-hidden="true"
-                                data-testid="funding-mode-icon-bank_transfer"
-                            />
-                            <TicketCheck
-                                v-else
-                                class="size-4 shrink-0"
-                                aria-hidden="true"
-                                data-testid="funding-mode-icon-pay_code"
-                            />
-                            <span>{{ mode.label }}</span>
-                        </button>
-                    </div>
-
-                </div>
-
-                <p
-                    class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400"
-                    data-testid="funding-confirmation-notice"
-                >
-                    Funds appear in your Account only after confirmation from
-                    the bank or payment provider.
-                </p>
+                <CockpitFundingMethodSelector
+                    v-model="activePrimaryFundingMode"
+                    :selector="fundingMethodSelector"
+                />
             </section>
 
             <details
@@ -2140,6 +2165,23 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                         }}
                                     </dd>
                                 </dl>
+
+                                <CockpitBankTransferReconciliationReference
+                                    :reference="
+                                        fundingMethodSelector.bank_transfer
+                                            .reconciliation_reference
+                                    "
+                                    :copied="
+                                        copiedFundingRequest ===
+                                        'reconciliation-reference'
+                                    "
+                                    @copy="
+                                        copyFundingRequest(
+                                            'reconciliation-reference',
+                                            $event,
+                                        )
+                                    "
+                                />
 
                                 <div
                                     class="grid gap-2 text-xs text-slate-600 sm:grid-cols-2 dark:text-slate-300"
