@@ -26,6 +26,7 @@ The package configuration target is:
     'basis' => env('XCHANGE_ON_DEMAND_FUNDING_BASIS', 'full_amount'),
     'fixed_qr_ph' => [
         'enabled' => env('XCHANGE_ON_DEMAND_FIXED_QR_PH_ENABLED', false),
+        'netbank_mode' => env('XCHANGE_ON_DEMAND_NETBANK_QR_MODE', 'direct_qr'),
     ],
     ],
 ],
@@ -40,6 +41,13 @@ XCHANGE_ON_DEMAND_FUNDING_BASIS=full_amount
 
 The package default remains disabled for backward compatibility. When the
 feature is enabled, `full_amount` is the default basis.
+
+NetBank fixed QR has two explicit modes. `direct_qr` reuses the proven `/x/pay`
+instruction service: it derives a unique order-bound destination and embeds the
+leased amount in the QR without requesting token registration or an exact
+provider limit. `registered_vca` uses NetBank pre-transaction validation,
+registration, and the provider-side exact limit. Mode selection is explicit;
+failure never triggers an automatic fallback.
 
 Supported bases:
 

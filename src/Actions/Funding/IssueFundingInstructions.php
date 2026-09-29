@@ -17,7 +17,7 @@ use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Exceptions\FundingIntentTransitionDenied;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
-use LBHurtado\XChange\Services\Funding\StandingBankTransferFundingInstructionIssuer;
+use LBHurtado\XChange\Services\Funding\OnDemandFundingInstructionIssuer;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use LogicException;
 
@@ -26,7 +26,7 @@ class IssueFundingInstructions
     public function __construct(
         private readonly FundingProviderAdapterRegistry $providers,
         private readonly FundingDestinationResolverContract $destinations,
-        private readonly StandingBankTransferFundingInstructionIssuer $standingBankTransfers,
+        private readonly OnDemandFundingInstructionIssuer $onDemandInstructions,
     ) {}
 
     public function handle(FundingIntent $intent, string $actorType, string $actorId): FundingIntent
@@ -74,12 +74,10 @@ class IssueFundingInstructions
             destination: $this->destination($current),
         );
         $instructions = $current->purpose === FundingIntentPurpose::OnDemandIssuance
-            && $current->provider_code === 'netbank'
-            && ! (bool) config('x-change.issuance_funding.on_demand.fixed_qr_ph.enabled', false)
-                ? $this->standingBankTransfers->create($request)
-                : $this->providers
-                    ->for($current->provider_code)
-                    ->createFundingInstructions($request);
+            ? $this->onDemandInstructions->create($current, $request)
+            : $this->providers
+                ->for($current->provider_code)
+                ->createFundingInstructions($request);
 
         $this->assertInstructionsMatch($current, $instructions);
 

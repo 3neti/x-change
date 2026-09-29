@@ -1,7 +1,7 @@
 # Pay Code Payment Flow
 
 **Version:** 1.0  
-**Last Updated:** 2026-07-24
+**Last Updated:** 2026-09-29
 
 This document describes the public payment experience for collectible Pay
 Codes. It is deliberately separate from Account funding.
@@ -28,8 +28,8 @@ GET /x/pay/{code}
 POST /x/pay/{code}/attempts
   → create/replay one session-bound Payment Attempt
   → calculate the exact remaining collectible amount
-  → generate a fresh NetBank pre-transaction token
-  → register one expiring VCA and exact dynamic P2M QR Ph
+  → derive a unique attempt-bound NetBank destination
+  → generate an exact-amount dynamic P2M QR Ph
   → encrypt provider reference, destination, and QR instructions
 
 POST /x/pay/{code}/attempts/{attempt}/checks
@@ -54,7 +54,7 @@ Cockpit components. A missing host publication therefore fails
 ## Instruction Failure and Retry
 
 Provider instruction creation is not payment evidence. If NetBank rejects or
-cannot complete token, VCA, or QR creation:
+cannot complete QR creation:
 
 - the Payment Attempt stays `pending_instructions`;
 - a sanitized `provider_instruction_failed` event is appended;
@@ -110,18 +110,25 @@ payment can be discovered without a webhook because both manual and scheduled
 paths query VCA history. Direct webhook-to-Payment-Attempt wake-up may be added
 later without changing settlement authority.
 
-## NetBank Token Rule
+## NetBank Direct QR Rule
 
-NetBank support confirmed on 2026-07-24 that generating a new
-pre-transaction-validation token does not overwrite or invalidate an existing
-token; each generated token is intended for a new VCA registration.
+Payment Attempts currently use the shared NetBank direct-QR issuer. It derives
+an attempt-bound destination and embeds the exact amount in the provider QR,
+but it does not request a pre-transaction token, register the destination, or
+create a provider-side exact limit.
 
 Accordingly:
 
-- the long-lived Account Funding QR does not consume a new token;
-- each new Payment Attempt generates a fresh token for a fresh expiring VCA;
-- retrying the same Payment Attempt reopens its stored instructions and does
-  not register another VCA.
+- the long-lived Account Funding QR remains tokenless and reusable;
+- each new Payment Attempt receives a unique, fixed-amount QR destination;
+- retrying the same Payment Attempt reopens its stored instructions and makes
+  no second provider call; and
+- authoritative history verification still requires the exact destination,
+  amount, currency, status, and settlement evidence.
+
+Registered-VCA issuance remains available to controlled funding contexts when
+the NetBank credential is provisioned for pre-transaction validation. There is
+no automatic fallback between direct QR and registered VCA.
 
 ## Configuration
 

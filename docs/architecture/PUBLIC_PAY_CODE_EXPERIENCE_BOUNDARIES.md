@@ -32,11 +32,11 @@ execution lifecycle is enabled.
   Account Funding Receipt or credits the long-lived top-up Account.
 - The reusable Account Funding QR remains a standing, open-amount destination.
   It does not generate or consume NetBank VCA registration tokens.
-- A NetBank payment uses an expiring, exact-amount VCA. Each new payment
-  attempt generates a fresh pre-transaction validation token immediately
-  before registration.
+- A NetBank payment uses a unique, attempt-bound destination and an
+  exact-amount dynamic QR. The current direct-QR mode does not request a
+  pre-transaction token, register the destination, or create a provider limit.
 - Retrying the same payment attempt reopens its existing encrypted
-  instructions. It does not register another VCA.
+  instructions. It makes no second QR-generation call.
 - Payer and scheduled checks query the same authoritative provider-history
   verification action. Pending evidence cannot collect the Pay Code; exact
   settled evidence creates one Voucher Collection atomically.
@@ -45,8 +45,8 @@ execution lifecycle is enabled.
 
 - `3neti/x-change` owns public route selection, Pay Code capability checks,
   Payment Attempts, collection settlement, presentation, and documentation.
-- `3neti/emi-netbank` owns NetBank token, VCA, QR Ph, and transaction-history
-  operations behind provider-neutral contracts.
+- `3neti/emi-netbank` owns NetBank token, registered-VCA, QR Ph, and
+  transaction-history operations behind provider-neutral contracts.
 - `3neti/emi-core` owns provider-neutral instruction and observation data.
 - The host application owns runtime configuration and published assets only.
 

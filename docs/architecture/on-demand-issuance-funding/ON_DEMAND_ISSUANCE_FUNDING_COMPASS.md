@@ -11,10 +11,10 @@ between receipt and issuance.
 
 ## Current position
 
-Status: **Controlled bank-transfer baseline, fixed-amount QR presentation,
-collision-safe amount leasing, scheduled order expiry, and late-payment Client
-Funds disposition are accepted locally; live-provider acceptance remains
-gated.**
+Status: **Controlled bank-transfer baseline, fixed-amount direct QR service,
+registered-VCA alternative, collision-safe amount leasing, scheduled order
+expiry, and late-payment Client Funds disposition are accepted locally;
+direct-QR live acceptance remains the next gate.**
 
 Existing reusable foundations:
 
@@ -39,6 +39,9 @@ Implemented foundations:
 - Bank Transfer-first selector projection with exact, read-only amount;
 - fixed-amount QR Ph kept disabled by default and exposed only when an installed
   provider returns an order-specific embedded-amount QR;
+- one shared NetBank direct-QR service now owns the proven `/x/pay` and
+  on-demand fixed-QR instruction shape;
+- explicit `direct_qr` and `registered_vca` modes with no automatic fallback;
 - Pay Code funding kept unavailable until proven;
 - authoritative settlement into the hold;
 - unique after-commit issuance resumption through `GeneratePayCode`;
@@ -69,8 +72,9 @@ was used.
 
 Still gated:
 
-- live-provider acceptance; and
-- package publication or deployment.
+- a real low-value payment through the on-demand direct QR;
+- package publication or deployment; and
+- registered-VCA activation until NetBank enables pre-transaction validation.
 
 Gate 3 local evidence:
 
@@ -126,6 +130,10 @@ Gate 4 local evidence:
 17. The hold is not another Bavix wallet.
 18. Generic hold/allocation mechanics belong in `3neti/wallet`.
 19. On-demand commercial meaning and orchestration belong in x-change.
+20. Direct QR embeds the amount but does not claim provider-side registration
+    or limit enforcement.
+21. Registered VCA is an explicit operator-selected mode and never a hidden
+    fallback.
 
 ## Invariants
 
@@ -156,16 +164,16 @@ This is the shared-beta target, not the backward-compatible package default.
 
 ## Next controlled gate
 
-**Gate 5 — Controlled dependency publication and host adoption.**
+**Gate 6 — Local host adoption and low-value direct-QR acceptance.**
 
-1. publish the wallet hold primitive before x-change consumes a released
-   version;
-2. synchronize the x-change dependency lock and rerun the release matrix;
-3. publish x-change only with explicit authority;
-4. upgrade the sandbox from the released packages and repeat the browser
-   lifecycle; and
-5. keep live-provider acceptance, Cloud deployment, and real payment behind
-   separate authority.
+1. adopt the package source in the sandbox and rebuild its published assets;
+2. freeze one PHP 25.00 Pay Code instruction;
+3. issue one `direct_qr` order-specific QR without token, registration, or
+   exact-limit calls;
+4. accept one separately authorized real payment and verify exact provider
+   evidence;
+5. prove the order-bound hold and exactly-once Pay Code issuance; and
+6. keep package publication and Cloud deployment separately authorized.
 
 No publication, tag, push, Cloud deployment, provider call, or real transfer is
 authorized by this compass update.

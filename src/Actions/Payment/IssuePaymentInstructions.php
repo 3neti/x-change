@@ -19,7 +19,7 @@ use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\FundingQrMerchantProfileResolver;
-use LBHurtado\XChange\Services\Payment\ProvisionalNetbankPayerInstructionIssuer;
+use LBHurtado\XChange\Services\Funding\NetbankDirectQrFundingInstructionIssuer;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use LBHurtado\XChange\Support\Funding\FundingMerchantSnapshot;
 use LogicException;
@@ -31,7 +31,7 @@ class IssuePaymentInstructions
     public function __construct(
         private readonly FundingProviderAdapterRegistry $providers,
         private readonly FundingDestinationResolverContract $destinations,
-        private readonly ProvisionalNetbankPayerInstructionIssuer $provisionalNetbankIssuer,
+        private readonly NetbankDirectQrFundingInstructionIssuer $directNetbankQr,
         private readonly FundingQrMerchantProfileResolver $merchantProfiles,
     ) {}
 
@@ -85,12 +85,12 @@ class IssuePaymentInstructions
             $provider = $this->providers->for($current->provider_code);
 
             /*
-             * Provisional payer-only simplification: issue one dynamic QR call
-             * without alias registration or an exact VCA limit until NetBank
-             * confirms that this shape is honored in a real scan-to-pay flow.
+             * NetBank Payment Attempts use the shared direct-QR service. The
+             * QR embeds the exact amount, while settlement remains governed by
+             * authoritative provider-history verification.
              */
             $instructions = $provider instanceof NetbankFundingProviderAdapter
-                ? $this->provisionalNetbankIssuer->create($request)
+                ? $this->directNetbankQr->create($request)
                 : $provider->createFundingInstructions($request);
 
             $this->assertInstructionsMatch($current, $instructions);

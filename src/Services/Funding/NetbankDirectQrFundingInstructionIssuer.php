@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace LBHurtado\XChange\Services\Payment;
+namespace LBHurtado\XChange\Services\Funding;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
@@ -13,7 +13,7 @@ use LBHurtado\EmiCore\Data\Funding\FundingQrCodeData;
 use LBHurtado\PaymentGateway\Exceptions\NetbankFundingConfigurationException;
 use LBHurtado\PaymentGateway\Funding\NetbankFundingApiClient;
 
-final readonly class ProvisionalNetbankPayerInstructionIssuer
+final readonly class NetbankDirectQrFundingInstructionIssuer
 {
     public function __construct(
         private NetbankFundingApiClient $client,
@@ -60,6 +60,8 @@ final readonly class ProvisionalNetbankPayerInstructionIssuer
                 'currency' => $currency,
                 'one_time' => true,
                 'delivery' => 'scan-to-pay',
+                'amount_control' => 'qr-embedded',
+                'address_registration' => 'not-requested',
             ],
             qrCode: new FundingQrCodeData(
                 mimeType: 'image/png',
@@ -142,7 +144,7 @@ final readonly class ProvisionalNetbankPayerInstructionIssuer
     private function assertProvider(string $provider): void
     {
         if (strtolower(trim($provider)) !== 'netbank') {
-            throw new InvalidArgumentException('The NetBank payer issuer cannot handle this provider.');
+            throw new InvalidArgumentException('The NetBank direct QR issuer cannot handle this provider.');
         }
     }
 

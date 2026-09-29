@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
+use LBHurtado\PaymentGateway\Funding\NetbankFundingApiClient;
 use LBHurtado\XChange\Actions\Funding\CreateFundingIntent;
 use LBHurtado\XChange\Actions\Funding\IssueFundingInstructions;
 use LBHurtado\XChange\Data\Funding\CreateFundingIntentData;
@@ -121,8 +122,9 @@ it('issues on-demand NetBank bank-transfer instructions without provisioning a V
         ->and($this->fundingAdapter->instructionCalls)->toBe(0);
 });
 
-it('uses provider-issued fixed-amount QR Ph instructions only when explicitly enabled', function () {
+it('uses registered VCA fixed-amount QR Ph instructions only when explicitly selected', function () {
     config()->set('x-change.issuance_funding.on_demand.fixed_qr_ph.enabled', true);
+    config()->set('x-change.issuance_funding.on_demand.fixed_qr_ph.netbank_mode', 'registered_vca');
     $intent = app(CreateFundingIntent::class)->handle(issueFundingIntentData([
         'purpose' => FundingIntentPurpose::OnDemandIssuance,
     ]));
@@ -136,6 +138,64 @@ it('uses provider-issued fixed-amount QR Ph instructions only when explicitly en
         ->and(data_get($issued->instructions_ciphertext, 'qr_code.embedded_amount'))->toBeTrue()
         ->and(data_get($issued->instructions_ciphertext, 'qr_code.provider_generated'))->toBeTrue()
         ->and($this->fundingAdapter->instructionCalls)->toBe(1);
+});
+
+it('uses the shared direct NetBank QR issuer without token registration or an exact provider limit', function () {
+    config()->set('x-change.issuance_funding.on_demand.fixed_qr_ph.enabled', true);
+    config()->set('x-change.issuance_funding.on_demand.fixed_qr_ph.netbank_mode', 'direct_qr');
+    config()->set('payment-gateway.netbank.funding.reference_key', 'direct-qr-reference-key');
+    $qrPayload = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lDoLpwAAAABJRU5ErkJggg==';
+    $client = Mockery::mock(NetbankFundingApiClient::class);
+    $client->shouldNotReceive('generateAliasToken');
+    $client->shouldNotReceive('registerPreTransactionReference');
+    $client->shouldNotReceive('createExactLimit');
+    $client->shouldReceive('generateQrCode')
+        ->once()
+        ->withArgs(fn (string $vcaNumber, int $amountMinor, string $currency): bool => preg_match('/\A90627\d{16}\z/', $vcaNumber) === 1
+            && $amountMinor === 25_000
+            && $currency === 'PHP')
+        ->andReturn($qrPayload);
+    $this->app->instance(NetbankFundingApiClient::class, $client);
+
+    $intent = app(CreateFundingIntent::class)->handle(issueFundingIntentData([
+        'purpose' => FundingIntentPurpose::OnDemandIssuance,
+        'expiresAt' => new DateTimeImmutable('+30 minutes'),
+        'destination' => new FundingDestinationData(
+            provider: 'netbank',
+            mode: 'shared',
+            destinationType: 'bank_account',
+            accountReference: 'wallet:account-1001',
+            displayReference: 'NetBank corporate account',
+            fingerprint: hash('sha256', 'netbank-corporate-account'),
+            verificationStatus: 'platform_configured',
+            bankAccountNumber: '113-001-00001-9',
+            bankAccountName: '3neti R&D OPC',
+            routingAlias: '90627',
+        ),
+    ]));
+
+    $issued = app(IssueFundingInstructions::class)->handle($intent, 'operator', '42');
+
+    expect($issued->status)->toBe(FundingIntentStatus::AwaitingFunds)
+        ->and(data_get($issued->instructions_ciphertext, 'amount_minor'))->toBe(25_000)
+        ->and(data_get($issued->instructions_ciphertext, 'display_data.amount_control'))->toBe('qr-embedded')
+        ->and(data_get($issued->instructions_ciphertext, 'display_data.address_registration'))->toBe('not-requested')
+        ->and(data_get($issued->instructions_ciphertext, 'qr_code.embedded_amount'))->toBeTrue()
+        ->and($this->fundingAdapter->instructionCalls)->toBe(0);
+});
+
+it('fails closed for an unsupported NetBank QR mode', function () {
+    config()->set('x-change.issuance_funding.on_demand.fixed_qr_ph.enabled', true);
+    config()->set('x-change.issuance_funding.on_demand.fixed_qr_ph.netbank_mode', 'automatic_fallback');
+    $intent = app(CreateFundingIntent::class)->handle(issueFundingIntentData([
+        'purpose' => FundingIntentPurpose::OnDemandIssuance,
+    ]));
+
+    expect(fn () => app(IssueFundingInstructions::class)->handle($intent, 'operator', '42'))
+        ->toThrow(InvalidArgumentException::class, 'Unsupported NetBank on-demand QR mode');
+
+    expect($intent->fresh()->status)->toBe(FundingIntentStatus::PendingInstructions)
+        ->and($this->fundingAdapter->instructionCalls)->toBe(0);
 });
 
 it('fails closed when provider instructions do not match the intent', function () {

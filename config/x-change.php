@@ -1142,6 +1142,7 @@ return [
             'ttl_seconds' => max(300, (int) env('XCHANGE_ON_DEMAND_FUNDING_TTL_SECONDS', 1800)),
             'fixed_qr_ph' => [
                 'enabled' => (bool) env('XCHANGE_ON_DEMAND_FIXED_QR_PH_ENABLED', false),
+                'netbank_mode' => env('XCHANGE_ON_DEMAND_NETBANK_QR_MODE', 'direct_qr'),
             ],
             'amount_lease' => [
                 'maximum_adjustment_minor' => max(0, (int) env('XCHANGE_ON_DEMAND_AMOUNT_LEASE_MAXIMUM_ADJUSTMENT_MINOR', 99)),
