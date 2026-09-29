@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Configuration;
 
 use LBHurtado\XChange\Enums\DeploymentRuntimeTier;
+use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
 use LBHurtado\XChange\Services\Commercial\CommercialBillingPolicy;
 use LBHurtado\XChange\Services\Commercial\CommercialPrincipalProvisioningService;
 use Throwable;
@@ -38,6 +39,7 @@ final readonly class PreInstallReadinessInspector
         $liveProfile = $profile !== 'development';
         $checks = [
             $deployment,
+            $this->onDemandIssuanceFundingBasisCheck(),
             $this->timeAuthorityCheck(),
             $this->systemPrincipalIdentityCheck($liveProfile),
             $this->commercialPrincipalConfigurationCheck(),
@@ -73,6 +75,39 @@ final readonly class PreInstallReadinessInspector
             'missing_variables' => $missing,
             'checks' => $checks,
         ];
+    }
+
+    /**
+     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
+     */
+    private function onDemandIssuanceFundingBasisCheck(): array
+    {
+        $enabled = (bool) config('x-change.issuance_funding.on_demand.enabled', false);
+        $configuredBasis = trim((string) config(
+            'x-change.issuance_funding.on_demand.basis',
+            OnDemandIssuanceFundingBasis::FullAmount->value,
+        ));
+        $basis = OnDemandIssuanceFundingBasis::tryFrom($configuredBasis);
+        $allowedBases = array_map(
+            static fn (OnDemandIssuanceFundingBasis $basis): string => $basis->value,
+            OnDemandIssuanceFundingBasis::cases(),
+        );
+
+        return $this->check(
+            'on-demand issuance funding basis',
+            $basis !== null,
+            $basis !== null
+                ? "on-demand issuance funding basis [{$basis->value}] is valid"
+                : 'on-demand issuance funding basis is invalid',
+            [
+                'enabled' => $enabled,
+                'configured_basis' => $configuredBasis,
+                'allowed_bases' => $allowedBases,
+                'missing_variables' => $basis === null
+                    ? ['XCHANGE_ON_DEMAND_FUNDING_BASIS']
+                    : [],
+            ],
+        );
     }
 
     /**

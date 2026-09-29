@@ -157,6 +157,32 @@ it('requires an explicitly configured deployment profile', function () {
         ->toContain('XCHANGE_DEPLOYMENT_PROFILE');
 });
 
+it('fails strict readiness for an invalid on-demand issuance funding basis', function (): void {
+    config()->set('x-change.issuance_funding.on_demand.enabled', true);
+    config()->set('x-change.issuance_funding.on_demand.basis', 'difference');
+
+    $exitCode = Artisan::call('x-change:doctor', [
+        '--pre-install' => true,
+        '--strict' => true,
+        '--json' => true,
+    ]);
+    $payload = json_decode(Artisan::output(), true);
+    $check = collect($payload['checks'])
+        ->firstWhere('name', 'on-demand issuance funding basis');
+
+    expect($exitCode)->toBe(1)
+        ->and($payload['success'])->toBeFalse()
+        ->and($check['passed'])->toBeFalse()
+        ->and($check['meta']['configured_basis'])->toBe('difference')
+        ->and($check['meta']['allowed_bases'])->toBe([
+            'full_amount',
+            'shortfall',
+        ])
+        ->and($check['meta']['missing_variables'])->toBe([
+            'XCHANGE_ON_DEMAND_FUNDING_BASIS',
+        ]);
+});
+
 it('reports invalid live system principal identity variables', function () {
     enableNetbankDeploymentConnectionTemplate();
 
