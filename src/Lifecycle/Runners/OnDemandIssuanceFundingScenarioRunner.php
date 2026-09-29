@@ -24,6 +24,7 @@ use LBHurtado\XChange\Jobs\Funding\VerifyFundingWebhookReceiptJob;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Services\Funding\QrPhSimulatorFundingProviderAdapter;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
+use LBHurtado\XChange\Support\Funding\QrPhFundingSimulatorGuard;
 use Throwable;
 
 final class OnDemandIssuanceFundingScenarioRunner implements ScenarioRunnerContract
@@ -52,6 +53,7 @@ final class OnDemandIssuanceFundingScenarioRunner implements ScenarioRunnerContr
         private readonly VerifyFundingWebhookReceipt $verifyReceipt,
         private readonly SettleVerifiedFundingIntent $settleIntent,
         private readonly FinalizeFundingSuspenseMonitoring $finalizeMonitoring,
+        private readonly QrPhFundingSimulatorGuard $simulatorGuard,
     ) {}
 
     public function run(ScenarioRunContext $context): ScenarioRunResult
@@ -83,8 +85,11 @@ final class OnDemandIssuanceFundingScenarioRunner implements ScenarioRunnerContr
         $connection->beginTransaction();
 
         try {
-            $payload = $this->execute($context, $mobile);
-        } catch (Throwable) {
+            $payload = $this->simulatorGuard->withinRollbackLifecycle(
+                fn (): array => $this->execute($context, $mobile),
+            );
+        } catch (Throwable $exception) {
+            report($exception);
             $exitCode = Command::FAILURE;
             $payload = [
                 'success' => false,

@@ -86,6 +86,36 @@ it('runs the package-owned fixed QR Ph issuance-funding safety lifecycle and rol
         ->not->toContain('on-demand-lifecycle-mobile-key');
 });
 
+it('runs the rollback-only lifecycle in a production-like staging environment', function (): void {
+    Http::preventStrayRequests();
+    $this->app->detectEnvironment(fn (): string => 'staging');
+    $issuer = prepareOnDemandFundingLifecycleIssuer();
+    $command = new class extends Command
+    {
+        public function option($key = null): mixed
+        {
+            return $key === 'json';
+        }
+    };
+
+    $result = app(LifecycleScenarioEngine::class)->run(
+        command: $command,
+        scenarioKey: 'on_demand_issuance_fixed_qr_demo',
+        options: new LifecycleScenarioRunOptions(
+            issuer: (string) $issuer->getKey(),
+            json: true,
+        ),
+    );
+
+    expect($this->app->environment('staging'))->toBeTrue()
+        ->and($this->app->isProduction())->toBeFalse()
+        ->and($result->exitCode)->toBe(Command::SUCCESS)
+        ->and(data_get($result->payload, 'success'))->toBeTrue()
+        ->and(data_get($result->payload, 'rollback_completed'))->toBeTrue()
+        ->and(data_get($result->payload, 'simulation.provider_calls'))->toBe(0)
+        ->and(PayCodeIssuanceFundingOrder::query()->count())->toBe(0);
+});
+
 it('runs the fixed QR Ph issuance-funding lifecycle through the package command', function (): void {
     $issuer = prepareOnDemandFundingLifecycleIssuer();
 

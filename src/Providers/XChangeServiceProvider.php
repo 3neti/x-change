@@ -554,6 +554,7 @@ use LBHurtado\XChange\Support\Claim\ClaimApprovalPendingOtpStore;
 use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
 use LBHurtado\XChange\Support\Claim\DefaultClaimApprovalStatusResolver;
 use LBHurtado\XChange\Support\Cockpit\DefaultCockpitRedactor;
+use LBHurtado\XChange\Support\Funding\QrPhFundingSimulatorGuard;
 use LBHurtado\XChange\Support\Logging\CacheEventStore;
 use LBHurtado\XChange\Support\Logging\XJournalEventStore;
 use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
@@ -758,6 +759,7 @@ class XChangeServiceProvider extends ServiceProvider
                 );
             },
         );
+        $this->app->singleton(QrPhFundingSimulatorGuard::class);
         $this->app->singleton(QrPhSimulatorFundingProviderAdapter::class);
         $this->app->tag(
             QrPhSimulatorFundingProviderAdapter::class,
