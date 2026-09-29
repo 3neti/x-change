@@ -130,6 +130,10 @@ const props = withDefaults(
         instructionCapabilities?: CockpitInstructionCapabilityReadinessMap;
         settlementRailCapabilities?: CockpitSettlementRailCapabilities;
         activeOnDemandFundingOrder?: CockpitOnDemandIssuanceFundingProjection | null;
+        onDemandIssuancePolicy?: {
+            enabled: boolean;
+            basis: 'full_amount' | 'shortfall';
+        };
         templates: CockpitQuickGenerateTemplate[];
     }>(),
     {
@@ -2139,6 +2143,7 @@ const canSubmit = computed<boolean>(() => {
         settlementRailSelectionError.value === null &&
         payableAmountIsValid &&
         settlementTargetIsValid &&
+        onDemandFundingProjection.value === null &&
         (!isAccountFundingClaim.value || sliceMode.value === 'whole')
     );
 });
@@ -4473,6 +4478,25 @@ const liveAccountDebitAffordability = computed<
 const liveAccountDebitExceedsClientFunds = computed<boolean>(
     () => liveAccountDebitAffordability.value === 'insufficient-client-funds',
 );
+const requiresOnDemandFunding = computed<boolean>(() => {
+    if (!props.onDemandIssuancePolicy?.enabled) {
+        return false;
+    }
+
+    return (
+        props.onDemandIssuancePolicy.basis === 'full_amount' ||
+        liveAccountDebitAffordability.value === 'insufficient-client-funds'
+    );
+});
+const issueActionLabel = computed<string>(() => {
+    if (onboardingEnabled.value) {
+        return 'Issue Invitation';
+    }
+
+    return requiresOnDemandFunding.value
+        ? 'Fund & Issue Pay Code'
+        : 'Issue Pay Code';
+});
 
 function previewAmountInCalculator(value: number | null): void {
     amountCalculatorPreview.value = value;
@@ -4621,11 +4645,32 @@ function handleOnDemandIssued(
             links: {
                 redeem: voucher.claim_url,
                 redeem_path: voucher.claim_url,
+                claim_qr: voucher.claim_qr,
+                share_card: voucher.share_card_url,
+                cockpit_detail: voucher.detail_url,
             },
         },
     };
     lastStatus.value = 'issued';
     lastMessage.value = 'Payment verified and Pay Code issued.';
+    onDemandFundingProjection.value = projection;
+    onDemandFundingDialogOpen.value = false;
+    issuedPayCodeDialogOpen.value = true;
+}
+
+function handleOnDemandClosed(): void {
+    onDemandFundingDialogOpen.value = false;
+    lastStatus.value = 'awaiting_funds';
+    lastMessage.value = 'Funding is still active. Resume it when you are ready to check payment.';
+}
+
+function generateAnotherAfterOnDemandIssuance(): void {
+    issuedPayCodeDialogOpen.value = false;
+    onDemandFundingProjection.value = null;
+    lastResponse.value = null;
+    lastStatus.value = 'ready';
+    lastMessage.value = 'Ready to issue another Pay Code.';
+    void focusAmountEditor();
 }
 
 function handleOnDemandCancelled(): void {
@@ -6216,9 +6261,7 @@ function instructionRecord(
                                     class="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-l-xl bg-emerald-600 px-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 sm:px-4 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
                                     data-testid="cockpit-quick-generate-submit-button"
                                     :aria-label="
-                                        onboardingEnabled
-                                            ? 'Issue Invitation'
-                                            : 'Issue Pay Code'
+                                        issueActionLabel
                                     "
                                     :disabled="!canSubmit || processing"
                                 >
@@ -6240,15 +6283,13 @@ function instructionRecord(
                                             {{
                                                 onboardingEnabled
                                                     ? 'Invite'
-                                                    : 'Pay Code'
+                                                    : requiresOnDemandFunding
+                                                      ? 'Fund & Issue'
+                                                      : 'Pay Code'
                                             }}
                                         </span>
                                         <span class="hidden sm:inline">
-                                            {{
-                                                onboardingEnabled
-                                                    ? 'Issue Invitation'
-                                                    : 'Issue Pay Code'
-                                            }}
+                                            {{ issueActionLabel }}
                                         </span>
                                     </template>
                                 </button>
@@ -6949,7 +6990,19 @@ function instructionRecord(
             :projection="onDemandFundingProjection"
             @issued="handleOnDemandIssued"
             @cancelled="handleOnDemandCancelled"
+            @closed="handleOnDemandClosed"
         />
+
+        <button
+            v-if="onDemandFundingProjection && !onDemandFundingDialogOpen && onDemandFundingProjection.status !== 'issued'"
+            type="button"
+            class="fixed bottom-5 right-5 z-40 inline-flex min-h-12 items-center gap-2 rounded-full bg-emerald-600 px-5 font-bold text-white shadow-xl hover:bg-emerald-700"
+            data-testid="cockpit-quick-generate-resume-funding"
+            @click="onDemandFundingDialogOpen = true"
+        >
+            <LoaderCircle class="size-4" aria-hidden="true" />
+            Resume funding
+        </button>
 
         <CockpitIssuedPayCodeDialog
             :open="issuedPayCodeDialogOpen"
@@ -6978,7 +7031,9 @@ function instructionRecord(
             :detail-url="cockpitDetailUrl"
             :collection-attempt-url="collectionAttemptUrl"
             :payment-url="publicPaymentUrl"
+            :funding-receipt="onDemandFundingProjection?.order.receipt ?? null"
             @close="issuedPayCodeDialogOpen = false"
+            @generate-another="generateAnotherAfterOnDemandIssuance"
         />
 
         <section

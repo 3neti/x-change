@@ -31,6 +31,7 @@ use LBHurtado\XChange\Services\Cockpit\CompileCockpitQuickGenerateClaimPolicy;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Cockpit\QuickGenerateLastInstructionsStore;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingPolicy;
+use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingRequirement;
 use LBHurtado\XChange\Services\IdempotencyService;
 use Throwable;
 
@@ -53,6 +54,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         EstimatePayCodeCost $estimatePayCodeCost,
         BuildBalanceOverview $balanceOverview,
         OnDemandIssuanceFundingPolicy $onDemandFunding,
+        OnDemandIssuanceFundingRequirement $onDemandFundingRequirement,
         PrepareOnDemandPayCodeIssuance $prepareOnDemandIssuance,
         OnDemandIssuanceFundingOrderPresenter $onDemandFundingPresenter,
         CompileCockpitQuickGenerateClaimPolicy $claimPolicy,
@@ -118,14 +120,19 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 ]);
             }
 
-            $order = $prepareOnDemandIssuance->handle(
-                issuer: $operator,
-                instructions: $payload,
-                pricing: $estimatePayCodeCost->handle($payload),
-                idempotencyKey: $key,
-            );
+            $pricing = $estimatePayCodeCost->handle($payload);
+            $requirement = $onDemandFundingRequirement->for($operator, $pricing);
 
-            return response()->json($onDemandFundingPresenter->present($order), 202);
+            if ($requirement->externalAmountMinor > 0) {
+                $order = $prepareOnDemandIssuance->handle(
+                    issuer: $operator,
+                    instructions: $payload,
+                    pricing: $pricing,
+                    idempotencyKey: $key,
+                );
+
+                return response()->json($onDemandFundingPresenter->present($order), 202);
+            }
         }
 
         $result = $generatePayCode->handle($payload);

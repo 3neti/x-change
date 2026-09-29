@@ -1698,9 +1698,9 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('₱12.00');
         expect(wrapper.text()).toContain('Selfie Verification');
         expect(wrapper.text()).toContain('5.00');
-        expect(wrapper.text()).toContain('Instruction Subtotal');
-        expect(wrapper.text()).toContain('Pay Code Value');
-        expect(wrapper.text()).toContain('Total Estimated Cost');
+        expect(wrapper.text()).toContain('Service & Instruction Fees');
+        expect(wrapper.text()).toContain('Pay Code Principal');
+        expect(wrapper.text()).toContain('Total Required Now');
         expect(wrapper.text()).toContain('₱17.00');
         expect(wrapper.text()).toContain('₱1,250.00');
         expect(wrapper.text()).toContain('₱1,267.00');
@@ -1818,10 +1818,10 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(columns[0].text()).toContain('Charge 1');
         expect(columns[0].text()).toContain('Charge 4');
         expect(columns[0].text()).not.toContain('Charge 5');
-        expect(columns[0].text()).not.toContain('Instruction Subtotal');
+        expect(columns[0].text()).not.toContain('Service & Instruction Fees');
         expect(columns[1].text()).toContain('Charge 5');
         expect(columns[1].text()).toContain('Charge 8');
-        expect(columns[1].text()).not.toContain('Instruction Subtotal');
+        expect(columns[1].text()).not.toContain('Service & Instruction Fees');
         expect(
             wrapper
                 .get('[data-testid="cockpit-pay-code-cost-subtotal"]')
@@ -1918,14 +1918,14 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(columns[0].text()).toContain('Charge 1');
         expect(columns[0].text()).toContain('Charge 6');
         expect(columns[0].text()).toContain('₱1.00');
-        expect(columns[0].text()).not.toContain('Instruction Subtotal');
+        expect(columns[0].text()).not.toContain('Service & Instruction Fees');
         expect(columns[1].text()).toContain('Charge 7');
         expect(columns[1].text()).toContain('Charge 12');
         expect(columns[1].text()).not.toContain('₱');
-        expect(columns[1].text()).not.toContain('Instruction Subtotal');
+        expect(columns[1].text()).not.toContain('Service & Instruction Fees');
         expect(columns[2].text()).toContain('Charge 13');
         expect(columns[2].text()).toContain('Charge 18');
-        expect(columns[2].text()).not.toContain('Instruction Subtotal');
+        expect(columns[2].text()).not.toContain('Service & Instruction Fees');
         expect(
             wrapper
                 .get('[data-testid="cockpit-pay-code-cost-subtotal"]')

@@ -20,6 +20,7 @@ use LBHurtado\XChange\Services\Cockpit\PayCodeTemplateReadModel;
 use LBHurtado\XChange\Services\Cockpit\QuickGenerateLastInstructionsStore;
 use LBHurtado\XChange\Services\Cockpit\RiderLibraryReadModel;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegistry;
+use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingPolicy;
 use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
 
@@ -36,6 +37,7 @@ class CockpitQuickGeneratePageController extends Controller
         private readonly VoucherAccessContract $vouchers,
         private readonly CockpitPayCodeDetailAccess $payCodeAccess,
         private readonly OnDemandIssuanceFundingOrderPresenter $fundingOrderPresenter,
+        private readonly OnDemandIssuanceFundingPolicy $onDemandFundingPolicy,
     ) {}
 
     public function __invoke(Request $request, CampaignDisplaySessions $displays): Response
@@ -79,6 +81,10 @@ class CockpitQuickGeneratePageController extends Controller
             'collection_destination' => $this->collectionDestination($request),
             'pos_voucher' => $this->posVoucher($request),
             'active_on_demand_funding_order' => $this->activeOnDemandFundingOrder($request),
+            'on_demand_issuance_policy' => [
+                'enabled' => $this->onDemandFundingPolicy->enabled(),
+                'basis' => $this->onDemandFundingPolicy->basis()->value,
+            ],
         ]);
     }
 

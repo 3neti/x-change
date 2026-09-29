@@ -1081,7 +1081,7 @@ function stringValue(value: unknown): string | null {
                         class="@sm:text-xs mt-auto grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-0.5 border-t border-white/20 pt-2 text-[0.6875rem] leading-4"
                         data-testid="cockpit-pay-code-cost-summary"
                     >
-                        <dt class="text-slate-300">Instruction Subtotal</dt>
+                        <dt class="text-slate-300">Service &amp; Instruction Fees</dt>
                         <dd
                             class="whitespace-nowrap text-right font-semibold tabular-nums text-white"
                             :class="
@@ -1095,7 +1095,7 @@ function stringValue(value: unknown): string | null {
                             {{ formattedCostTotal }}
                         </dd>
 
-                        <dt class="text-slate-300">Pay Code Value</dt>
+                        <dt class="text-slate-300">Pay Code Principal</dt>
                         <dd
                             class="whitespace-nowrap text-right font-semibold tabular-nums text-white"
                             data-testid="cockpit-pay-code-cost-pay-code-value"
@@ -1112,7 +1112,7 @@ function stringValue(value: unknown): string | null {
                             aria-hidden="true"
                         />
                         <dt class="font-bold text-white">
-                            Total Estimated Cost
+                            Total Required Now
                         </dt>
                         <dd
                             class="@sm:text-base whitespace-nowrap text-right text-sm font-black tabular-nums text-emerald-300"

@@ -658,15 +658,18 @@ Route::prefix('x')->middleware([
         Route::get(
             'quick-generate/funding-orders/{order:reference}',
             [CockpitOnDemandIssuanceFundingOrderController::class, 'show'],
-        )->middleware('throttle:60,1')->name('x-change.cockpit.quick-generate.funding-orders.show');
+        )->middleware('throttle:60,1,quick-generate-funding-order-read:')
+            ->name('x-change.cockpit.quick-generate.funding-orders.show');
         Route::post(
             'quick-generate/funding-orders/{order:reference}/acknowledge',
             [CockpitOnDemandIssuanceFundingOrderController::class, 'acknowledge'],
-        )->middleware('throttle:6,1')->name('x-change.cockpit.quick-generate.funding-orders.acknowledge');
+        )->middleware('throttle:6,1,quick-generate-funding-order-check:')
+            ->name('x-change.cockpit.quick-generate.funding-orders.acknowledge');
         Route::delete(
             'quick-generate/funding-orders/{order:reference}',
             [CockpitOnDemandIssuanceFundingOrderController::class, 'cancel'],
-        )->middleware('throttle:6,1')->name('x-change.cockpit.quick-generate.funding-orders.cancel');
+        )->middleware('throttle:6,1,quick-generate-funding-order-cancel:')
+            ->name('x-change.cockpit.quick-generate.funding-orders.cancel');
         Route::post(
             'quick-generate/claim-previews',
             CockpitQuickGenerateClaimPreviewController::class,

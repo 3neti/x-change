@@ -203,9 +203,9 @@ describe('issued Pay Code dialog', () => {
         expect(wrapper.text()).toContain('₱12.00');
         expect(wrapper.text()).toContain('Selfie Verification');
         expect(wrapper.text()).toContain('5.00');
-        expect(wrapper.text()).toContain('Instruction Subtotal');
-        expect(wrapper.text()).toContain('Pay Code Value');
-        expect(wrapper.text()).toContain('Total Estimated Cost');
+        expect(wrapper.text()).toContain('Service & Instruction Fees');
+        expect(wrapper.text()).toContain('Pay Code Principal');
+        expect(wrapper.text()).toContain('Total Required Now');
         expect(wrapper.text()).toContain('₱17.00');
         expect(wrapper.text()).toContain('₱125.50');
         expect(wrapper.text()).toContain('₱142.50');

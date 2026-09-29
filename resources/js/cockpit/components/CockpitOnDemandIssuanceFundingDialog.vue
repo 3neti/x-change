@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CheckCircle2, LoaderCircle, ShieldCheck, X } from 'lucide-vue-next';
+import { Check, Circle, LoaderCircle, ShieldCheck, X } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import type {
     CockpitOnDemandIssuanceFundingProjection,
@@ -15,6 +15,7 @@ const props = defineProps<{
 const emit = defineEmits<{
     issued: [projection: CockpitOnDemandIssuanceFundingProjection];
     cancelled: [];
+    closed: [];
 }>();
 
 const current = ref<CockpitOnDemandIssuanceFundingProjection | null>(props.projection);
@@ -23,6 +24,9 @@ const checking = ref(false);
 const cancelling = ref(false);
 const error = ref<string | null>(null);
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
+let pollAttempt = 0;
+let emittedIssuedReference: string | null = null;
+const pollDelays = [2000, 3000, 5000, 8000, 13000];
 
 const terminal = computed(() =>
     ['issued', 'cancelled', 'expired'].includes(current.value?.status ?? ''),
@@ -44,11 +48,17 @@ const instructions = computed<Record<string, unknown>>(
     () => current.value?.funding_selector.bank_transfer.instructions ?? {},
 );
 const fixedQrPh = computed(() => current.value?.funding_selector.qr_ph ?? null);
+const canCloseForNow = computed(() =>
+    ['payer_acknowledged', 'verifying', 'funded', 'issuing'].includes(
+        current.value?.status ?? '',
+    ),
+);
 
 watch(
     () => props.projection,
     (projection) => {
         current.value = projection;
+        pollAttempt = 0;
         selectedMode.value = projection?.funding_selector.default_mode ?? 'bank_transfer';
         schedulePoll();
     },
@@ -84,7 +94,8 @@ function schedulePoll(): void {
         return;
     }
 
-    pollTimer = setTimeout(() => void refresh(), 2000);
+    const delay = pollDelays[Math.min(pollAttempt, pollDelays.length - 1)];
+    pollTimer = setTimeout(() => void refresh(), delay);
 }
 
 async function refresh(): Promise<void> {
@@ -101,15 +112,34 @@ async function refresh(): Promise<void> {
         });
 
         if (response.ok) {
-            current.value = (await response.json()) as CockpitOnDemandIssuanceFundingProjection;
+            const next = (await response.json()) as CockpitOnDemandIssuanceFundingProjection;
+            const changed = next.status !== current.value.status;
+            current.value = next;
+            pollAttempt = changed ? 0 : pollAttempt + 1;
+            error.value = null;
 
-            if (current.value.status === 'issued') {
+            if (
+                current.value.status === 'issued' &&
+                emittedIssuedReference !== current.value.order.reference
+            ) {
+                emittedIssuedReference = current.value.order.reference;
                 emit('issued', current.value);
             }
+        } else {
+            pollAttempt += 1;
+            error.value = 'Verification temporarily unavailable. You do not need to pay again.';
         }
+    } catch {
+        pollAttempt += 1;
+        error.value = 'Verification temporarily unavailable. You do not need to pay again.';
     } finally {
         schedulePoll();
     }
+}
+
+function closeForNow(): void {
+    clearPoll();
+    emit('closed');
 }
 
 async function acknowledge(): Promise<void> {
@@ -212,8 +242,51 @@ function text(value: unknown): string | null {
                                 : 'The instruction is frozen. This window stays open until payment is verified, the Pay Code is issued, or you cancel safely.' }}
                         </p>
                     </div>
-                    <ShieldCheck class="size-8 shrink-0 text-emerald-600" aria-hidden="true" />
+                    <div class="flex items-center gap-2">
+                        <ShieldCheck class="size-8 shrink-0 text-emerald-600" aria-hidden="true" />
+                        <button
+                            v-if="canCloseForNow"
+                            type="button"
+                            class="inline-flex size-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-800 dark:hover:bg-slate-900"
+                            aria-label="Close for now"
+                            @click="closeForNow"
+                        >
+                            <X class="size-5" aria-hidden="true" />
+                        </button>
+                    </div>
                 </header>
+
+                <ol class="mt-5 grid grid-cols-5 gap-1" aria-label="Funding progress">
+                    <li
+                        v-for="step in current.lifecycle.steps"
+                        :key="step.key"
+                        class="min-w-0 text-center"
+                        :aria-current="step.state === 'current' ? 'step' : undefined"
+                    >
+                        <div class="flex items-center gap-1">
+                            <span class="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+                            <Check v-if="step.state === 'complete'" class="size-4 text-emerald-600" aria-hidden="true" />
+                            <LoaderCircle v-else-if="step.state === 'current'" class="size-4 animate-spin text-emerald-600" aria-hidden="true" />
+                            <Circle v-else class="size-3 text-slate-300 dark:text-slate-700" aria-hidden="true" />
+                            <span class="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+                        </div>
+                        <span class="mt-1 block truncate text-[0.62rem] font-semibold text-slate-500">{{ step.label }}</span>
+                    </li>
+                </ol>
+
+                <div class="mt-4 grid gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
+                    <div class="flex justify-between gap-4">
+                        <span class="text-slate-500">Order reference</span>
+                        <span class="font-mono font-semibold text-slate-900 dark:text-white">{{ current.order.reference }}</span>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <span class="text-slate-500">Expires</span>
+                        <span class="font-semibold text-slate-900 dark:text-white">{{ current.order.expires_at ? new Date(current.order.expires_at).toLocaleString() : 'No expiry' }}</span>
+                    </div>
+                    <p class="border-t border-slate-200 pt-2 text-slate-600 dark:border-slate-800 dark:text-slate-300" role="status">
+                        {{ current.lifecycle.message }}
+                    </p>
+                </div>
 
                 <CockpitFundingMethodSelector
                     v-if="!needsAttention"
@@ -277,17 +350,7 @@ function text(value: unknown): string | null {
                     {{ error }}
                 </p>
 
-                <div v-if="current.status === 'issued'" class="mt-5 flex items-center gap-3 rounded-2xl bg-emerald-50 p-4 text-emerald-900">
-                    <CheckCircle2 class="size-6" aria-hidden="true" />
-                    <div>
-                        <p class="font-bold">Pay Code issued</p>
-                        <a :href="current.order.voucher?.claim_url" class="text-sm underline">
-                            {{ current.order.voucher?.code }}
-                        </a>
-                    </div>
-                </div>
-
-                <footer v-else class="mt-6 grid gap-3 sm:grid-cols-[1fr_auto]">
+                <footer v-if="current.status !== 'issued'" class="mt-6 grid gap-3 sm:grid-cols-[1fr_auto]">
                     <button
                         v-if="!needsAttention"
                         type="button"
@@ -297,9 +360,19 @@ function text(value: unknown): string | null {
                         @click="acknowledge"
                     >
                         <LoaderCircle v-if="checking" class="size-4 animate-spin" aria-hidden="true" />
-                        {{ selectedMode === 'self_top_up'
-                            ? 'I’ve paid by QR Ph — Check payment'
-                            : 'I’ve made the transfer — Check payment' }}
+                        {{ current.status === 'awaiting_payment'
+                            ? (selectedMode === 'self_top_up'
+                                ? 'I’ve paid by QR Ph — Check payment'
+                                : 'I’ve made the transfer — Check payment')
+                            : 'Check again' }}
+                    </button>
+                    <button
+                        v-if="canCloseForNow"
+                        type="button"
+                        class="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-300 px-4 font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200"
+                        @click="closeForNow"
+                    >
+                        Close for now
                     </button>
                     <button
                         v-if="current.order.can_cancel"

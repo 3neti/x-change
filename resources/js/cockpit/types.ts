@@ -884,6 +884,24 @@ export type CockpitOnDemandIssuanceFundingProjection = {
     schema: 'x-change.cockpit.on-demand-issuance-funding.v1';
     status: string;
     funding_required: boolean;
+    lifecycle: {
+        current:
+            | 'awaiting_payment'
+            | 'checking_payment'
+            | 'payment_verified'
+            | 'issuing_pay_code'
+            | 'pay_code_ready'
+            | 'cancelled'
+            | 'expired'
+            | 'attention';
+        verification_unavailable: boolean;
+        message: string;
+        steps: Array<{
+            key: string;
+            label: string;
+            state: 'complete' | 'current' | 'pending';
+        }>;
+    };
     actions: {
         show: string;
         acknowledge: string;
@@ -901,7 +919,22 @@ export type CockpitOnDemandIssuanceFundingProjection = {
         status: string;
         expires_at: string | null;
         can_cancel: boolean;
-        voucher: { code: string; claim_url: string } | null;
+        voucher: {
+            code: string;
+            claim_url: string;
+            claim_qr: string;
+            share_card_url: string;
+            detail_url: string | null;
+        } | null;
+        receipt: {
+            order_reference: string;
+            expected_payment_minor: number;
+            currency: string;
+            provider_transaction_id: string | null;
+            verified_at: string | null;
+            settled_at: string | null;
+            issued_at: string | null;
+        };
     };
     funding_selector: CockpitFundingMethodSelectorReadModel;
 };
@@ -1760,6 +1793,10 @@ export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
     settlement_rail_capabilities?: CockpitSettlementRailCapabilities;
     pos_voucher?: CockpitVoucherReadModel | null;
     active_on_demand_funding_order?: CockpitOnDemandIssuanceFundingProjection | null;
+    on_demand_issuance_policy?: {
+        enabled: boolean;
+        basis: 'full_amount' | 'shortfall';
+    };
 };
 
 export type CockpitFundingRealtime = {

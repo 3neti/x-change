@@ -1193,6 +1193,7 @@ function stringValue(value: unknown): string | null {
                     :active-on-demand-funding-order="
                         props.active_on_demand_funding_order
                     "
+                    :on-demand-issuance-policy="props.on_demand_issuance_policy"
                     :templates="templates"
                 />
                 <CockpitQuickGeneratePosPanel

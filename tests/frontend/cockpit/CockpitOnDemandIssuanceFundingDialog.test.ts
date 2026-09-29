@@ -8,6 +8,18 @@ const projection: CockpitOnDemandIssuanceFundingProjection = {
     schema: 'x-change.cockpit.on-demand-issuance-funding.v1',
     status: 'awaiting_payment',
     funding_required: true,
+    lifecycle: {
+        current: 'awaiting_payment',
+        verification_unavailable: false,
+        message: 'Transfer the exact amount, then ask x-change to check the payment.',
+        steps: [
+            { key: 'awaiting_payment', label: 'Awaiting payment', state: 'current' },
+            { key: 'checking_payment', label: 'Checking payment', state: 'pending' },
+            { key: 'payment_verified', label: 'Payment verified', state: 'pending' },
+            { key: 'issuing_pay_code', label: 'Issuing Pay Code', state: 'pending' },
+            { key: 'pay_code_ready', label: 'Pay Code ready', state: 'pending' },
+        ],
+    },
     actions: {
         show: '/x/cockpit/quick-generate/funding-orders/ORDER-1',
         acknowledge:
@@ -27,6 +39,15 @@ const projection: CockpitOnDemandIssuanceFundingProjection = {
         expires_at: '2026-09-29T09:00:00+08:00',
         can_cancel: true,
         voucher: null,
+        receipt: {
+            order_reference: 'ORDER-1',
+            expected_payment_minor: 5_000,
+            currency: 'PHP',
+            provider_transaction_id: null,
+            verified_at: null,
+            settled_at: null,
+            issued_at: null,
+        },
     },
     funding_selector: {
         schema: 'x-change.cockpit.funding-method-selector.v1',
@@ -130,6 +151,7 @@ describe('CockpitOnDemandIssuanceFundingDialog', () => {
         attentionProjection.status = 'issuance_attention';
         attentionProjection.order.status = 'issuance_attention';
         attentionProjection.order.can_cancel = true;
+        attentionProjection.lifecycle.current = 'attention';
         const wrapper = mount(CockpitOnDemandIssuanceFundingDialog, {
             props: { open: true, projection: attentionProjection },
             attachTo: document.body,
@@ -139,6 +161,47 @@ describe('CockpitOnDemandIssuanceFundingDialog', () => {
         expect(document.body.textContent).toContain('No payment should be made');
         expect(document.body.textContent).not.toContain('I’ve made the transfer');
         expect(document.body.textContent).toContain('Cancel safely');
+
+        wrapper.unmount();
+    });
+
+    it('allows verification to be dismissed and resumed without cancelling the order', async () => {
+        const checkingProjection = structuredClone(projection);
+        checkingProjection.status = 'payer_acknowledged';
+        checkingProjection.order.status = 'payer_acknowledged';
+        checkingProjection.lifecycle.current = 'checking_payment';
+        checkingProjection.lifecycle.message = 'Payment is not visible yet. You do not need to pay again.';
+        const wrapper = mount(CockpitOnDemandIssuanceFundingDialog, {
+            props: { open: true, projection: checkingProjection },
+            attachTo: document.body,
+        });
+
+        expect(document.body.textContent).toContain('Payment is not visible yet');
+        expect(document.body.textContent).toContain('Check again');
+        document
+            .querySelector<HTMLButtonElement>('[aria-label="Close for now"]')
+            ?.click();
+        await nextTick();
+        expect(wrapper.emitted('closed')).toHaveLength(1);
+        expect(wrapper.emitted('cancelled')).toBeUndefined();
+
+        wrapper.unmount();
+    });
+
+    it('states provider outages without implying nonpayment', () => {
+        const unavailableProjection = structuredClone(projection);
+        unavailableProjection.status = 'payer_acknowledged';
+        unavailableProjection.order.status = 'payer_acknowledged';
+        unavailableProjection.lifecycle.current = 'checking_payment';
+        unavailableProjection.lifecycle.verification_unavailable = true;
+        unavailableProjection.lifecycle.message = 'Verification is temporarily unavailable. You do not need to pay again.';
+        const wrapper = mount(CockpitOnDemandIssuanceFundingDialog, {
+            props: { open: true, projection: unavailableProjection },
+            attachTo: document.body,
+        });
+
+        expect(document.body.textContent).toContain('Verification is temporarily unavailable');
+        expect(document.body.textContent).toContain('You do not need to pay again');
 
         wrapper.unmount();
     });

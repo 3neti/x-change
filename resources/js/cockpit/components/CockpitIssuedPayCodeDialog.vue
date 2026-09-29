@@ -40,6 +40,15 @@ const props = withDefaults(
         paymentUrl?: string | null;
         costEstimate?: PayCodeCostEstimate | null;
         quantity?: string | number;
+        fundingReceipt?: {
+            order_reference: string;
+            expected_payment_minor: number;
+            currency: string;
+            provider_transaction_id: string | null;
+            verified_at: string | null;
+            settled_at: string | null;
+            issued_at: string | null;
+        } | null;
     }>(),
     {
         code: null,
@@ -59,11 +68,13 @@ const props = withDefaults(
         paymentUrl: null,
         costEstimate: null,
         quantity: 1,
+        fundingReceipt: null,
     },
 );
 
 const emit = defineEmits<{
     close: [];
+    generateAnother: [];
 }>();
 
 const dialog = ref<HTMLElement | null>(null);
@@ -504,6 +515,44 @@ function handleEscape(): void {
                             <ExternalLink class="size-4" aria-hidden="true" />
                             View Pay Code Details
                         </a>
+
+                        <details
+                            v-if="fundingReceipt"
+                            class="rounded-xl border border-slate-200 bg-white p-3 text-xs dark:border-slate-700 dark:bg-slate-950"
+                            data-testid="cockpit-issued-pay-code-funding-receipt"
+                        >
+                            <summary class="cursor-pointer font-semibold text-slate-700 dark:text-slate-200">
+                                Funding receipt
+                            </summary>
+                            <dl class="mt-3 grid gap-2 text-slate-600 dark:text-slate-300">
+                                <div class="flex justify-between gap-3">
+                                    <dt>Order</dt>
+                                    <dd class="font-mono text-right">{{ fundingReceipt.order_reference }}</dd>
+                                </div>
+                                <div v-if="fundingReceipt.provider_transaction_id" class="flex justify-between gap-3">
+                                    <dt>Provider transaction</dt>
+                                    <dd class="font-mono text-right">{{ fundingReceipt.provider_transaction_id }}</dd>
+                                </div>
+                                <div v-if="fundingReceipt.verified_at" class="flex justify-between gap-3">
+                                    <dt>Verified</dt>
+                                    <dd class="text-right">{{ new Date(fundingReceipt.verified_at).toLocaleString() }}</dd>
+                                </div>
+                                <div v-if="fundingReceipt.issued_at" class="flex justify-between gap-3">
+                                    <dt>Issued</dt>
+                                    <dd class="text-right">{{ new Date(fundingReceipt.issued_at).toLocaleString() }}</dd>
+                                </div>
+                            </dl>
+                        </details>
+
+                        <button
+                            v-if="fundingReceipt"
+                            type="button"
+                            class="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-emerald-600 px-4 text-sm font-bold text-white hover:bg-emerald-700"
+                            data-testid="cockpit-issued-pay-code-generate-another"
+                            @click="emit('generateAnother')"
+                        >
+                            Generate another
+                        </button>
                     </aside>
                 </div>
             </section>

@@ -17,22 +17,19 @@ use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\Funding\CreateFundingIntentData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Enums\FundingIntentPurpose;
-use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Exceptions\FundingIntentConflict;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
-use LBHurtado\XChange\Services\BuildBalanceOverview;
-use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingPolicy;
+use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingRequirement;
 use RuntimeException;
 use Throwable;
 
 final readonly class PrepareOnDemandPayCodeIssuance
 {
     public function __construct(
-        private OnDemandIssuanceFundingPolicy $policy,
         private WalletAccessContract $wallets,
-        private BuildBalanceOverview $balances,
+        private OnDemandIssuanceFundingRequirement $requirements,
         private FundingDestinationResolverContract $destinations,
         private CreateFundingIntent $createFundingIntent,
         private IssueFundingInstructions $issueFundingInstructions,
@@ -51,13 +48,8 @@ final readonly class PrepareOnDemandPayCodeIssuance
         PricingEstimateData $pricing,
         string $idempotencyKey,
     ): PayCodeIssuanceFundingOrder {
-        $requiredAmountMinor = (int) round(
-            ($pricing->account_debit ?? ($pricing->pay_code_value ?? 0) + $pricing->total) * 100,
-        );
-
-        if ($requiredAmountMinor <= 0) {
-            throw new RuntimeException('On-demand issuance requires a positive authoritative amount.');
-        }
+        $requirement = $this->requirements->for($issuer, $pricing);
+        $requiredAmountMinor = $requirement->requiredAmountMinor;
 
         $provider = mb_strtolower((string) config(
             'x-change.funding.requests.bank_transfer.provider',
@@ -70,12 +62,9 @@ final readonly class PrepareOnDemandPayCodeIssuance
         $currency = mb_strtoupper($pricing->currency);
         $wallet = $this->wallets->resolveForUser($issuer);
         $accountReference = $this->accountReference($wallet);
-        $basis = $this->policy->basis();
-        $availableClientFundsMinor = $basis === OnDemandIssuanceFundingBasis::Shortfall
-            ? $this->availableClientFundsMinor($issuer)
-            : 0;
-        $reservedClientFundsMinor = min($requiredAmountMinor, max(0, $availableClientFundsMinor));
-        $onDemandAmountMinor = $requiredAmountMinor - $reservedClientFundsMinor;
+        $basis = $requirement->basis;
+        $reservedClientFundsMinor = $requirement->reservedClientFundsMinor;
+        $onDemandAmountMinor = $requirement->externalAmountMinor;
         $instructionsFingerprint = $this->fingerprint($instructions);
         $pricingSnapshot = $pricing->toArray();
         $pricingFingerprint = $this->fingerprint($pricingSnapshot);
@@ -231,17 +220,6 @@ final readonly class PrepareOnDemandPayCodeIssuance
         }
 
         return $order->refresh()->load(['fundingIntent', 'events']);
-    }
-
-    private function availableClientFundsMinor(Model $issuer): int
-    {
-        $overview = $this->balances->handle($issuer, syncIfStale: false);
-
-        return (int) data_get(
-            collect((array) data_get($overview, 'balances', []))->firstWhere('key', 'local_ledger'),
-            'balance_minor',
-            0,
-        );
     }
 
     private function placeClientFundsHold(

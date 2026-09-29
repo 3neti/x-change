@@ -27,7 +27,9 @@ use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrderEvent;
 use LBHurtado\XChange\Services\Cockpit\FundingMethodSelectorCockpitReadModel;
+use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingPolicy;
+use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingRequirement;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('is disabled by default and validates the configured application-wide basis', function (): void {
@@ -41,6 +43,31 @@ it('is disabled by default and validates the configured application-wide basis',
 
     expect($policy->enabled())->toBeTrue()
         ->and($policy->basis())->toBe(OnDemandIssuanceFundingBasis::Shortfall);
+});
+
+it('calculates full amount and shortfall funding from the authoritative balance', function (): void {
+    $user = actingAsTestUser(3_000);
+    $pricing = new PricingEstimateData(
+        currency: 'PHP',
+        pay_code_value: 50,
+        account_debit: 50,
+    );
+
+    config()->set('x-change.issuance_funding.on_demand.basis', 'full_amount');
+    $fullAmount = app(OnDemandIssuanceFundingRequirement::class)->for($user, $pricing);
+
+    expect($fullAmount->basis)->toBe(OnDemandIssuanceFundingBasis::FullAmount)
+        ->and($fullAmount->requiredAmountMinor)->toBe(5_000)
+        ->and($fullAmount->reservedClientFundsMinor)->toBe(0)
+        ->and($fullAmount->externalAmountMinor)->toBe(5_000);
+
+    config()->set('x-change.issuance_funding.on_demand.basis', 'shortfall');
+    $shortfall = app(OnDemandIssuanceFundingRequirement::class)->for($user, $pricing);
+
+    expect($shortfall->basis)->toBe(OnDemandIssuanceFundingBasis::Shortfall)
+        ->and($shortfall->requiredAmountMinor)->toBe(5_000)
+        ->and($shortfall->reservedClientFundsMinor)->toBe(3_000)
+        ->and($shortfall->externalAmountMinor)->toBe(2_000);
 });
 
 it('keeps bank transfer primary and fails fixed QR and Pay Code methods closed', function (): void {
@@ -120,6 +147,58 @@ it('persists append-only order state and exposes only owner-scoped routes', func
         ->and(Route::has('x-change.cockpit.quick-generate.funding-orders.show'))->toBeTrue()
         ->and(Route::has('x-change.cockpit.quick-generate.funding-orders.acknowledge'))->toBeTrue()
         ->and(Route::has('x-change.cockpit.quick-generate.funding-orders.cancel'))->toBeTrue();
+});
+
+it('isolates polling, acknowledgement, and cancellation throttle buckets', function (): void {
+    $showMiddleware = Route::getRoutes()
+        ->getByName('x-change.cockpit.quick-generate.funding-orders.show')
+        ?->gatherMiddleware();
+    $acknowledgeMiddleware = Route::getRoutes()
+        ->getByName('x-change.cockpit.quick-generate.funding-orders.acknowledge')
+        ?->gatherMiddleware();
+    $cancelMiddleware = Route::getRoutes()
+        ->getByName('x-change.cockpit.quick-generate.funding-orders.cancel')
+        ?->gatherMiddleware();
+
+    expect($showMiddleware)->toContain('throttle:60,1,quick-generate-funding-order-read:')
+        ->and($acknowledgeMiddleware)->toContain('throttle:6,1,quick-generate-funding-order-check:')
+        ->and($cancelMiddleware)->toContain('throttle:6,1,quick-generate-funding-order-cancel:');
+});
+
+it('keeps write capacity available after repeated funding-order polling', function (): void {
+    Queue::fake();
+    $user = actingAsTestUser(0);
+    $order = issuanceFundingOrder($user, 'polling-throttle-isolation');
+    $intent = FundingIntent::query()->create([
+        'account_reference' => $order->account_reference,
+        'provider_code' => 'netbank',
+        'purpose' => FundingIntentPurpose::OnDemandIssuance,
+        'expected_amount_minor' => 5_000,
+        'currency' => 'PHP',
+        'status' => FundingIntentStatus::AwaitingFunds,
+        'version' => 1,
+        'idempotency_key_hash' => hash('sha256', 'polling-intent-key'),
+        'idempotency_fingerprint' => hash('sha256', 'polling-intent-fingerprint'),
+        'created_by_type' => $user::class,
+        'created_by_id' => (string) $user->getAuthIdentifier(),
+        'expires_at' => now()->addMinutes(30),
+    ]);
+    $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();
+
+    foreach (range(1, 7) as $poll) {
+        $this->getJson(route(
+            'x-change.cockpit.quick-generate.funding-orders.show',
+            $order,
+        ))->assertSuccessful();
+    }
+
+    $this->postJson(route(
+        'x-change.cockpit.quick-generate.funding-orders.acknowledge',
+        $order,
+    ))->assertAccepted()
+        ->assertHeader('X-RateLimit-Limit', '6');
+
+    expect($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::PayerAcknowledged);
 });
 
 it('moves failed instruction preparation to operator attention and permits cancellation', function (): void {
@@ -345,6 +424,14 @@ it('settles exact provider funds into a hold and resumes issuance exactly once',
             'issuance_started',
             'pay_code_issued',
         ]);
+
+    $projection = app(OnDemandIssuanceFundingOrderPresenter::class)->present($order->refresh());
+    expect(data_get($projection, 'lifecycle.current'))->toBe('pay_code_ready')
+        ->and(data_get($projection, 'order.voucher.code'))->toBe('ODIF-4242')
+        ->and(data_get($projection, 'order.voucher.claim_qr'))->toStartWith('data:image/png;base64,')
+        ->and(data_get($projection, 'order.voucher.share_card_url'))->toBeString()
+        ->and(data_get($projection, 'order.receipt.order_reference'))->toBe($order->reference)
+        ->and(data_get($projection, 'order.receipt.issued_at'))->not->toBeNull();
 });
 
 function issuanceFundingOrder(User $user, ?string $identity = null): PayCodeIssuanceFundingOrder
