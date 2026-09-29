@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Cockpit;
 
 use Illuminate\Support\Number;
+use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
+use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Models\FundingIntent;
+use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 
 class FundingInstructionPresenter
 {
@@ -19,6 +22,7 @@ class FundingInstructionPresenter
             ? $instructions['display_data']
             : [];
         $simulationOnly = $intent->provider_code === 'qrph_simulator';
+        $bankTransferDestination = $this->bankTransferDestination($intent);
 
         return [
             'reference' => $intent->reference,
@@ -27,10 +31,12 @@ class FundingInstructionPresenter
             'currency' => $intent->currency,
             'status' => $intent->status->value,
             'expires_at' => $intent->expires_at?->toIso8601String(),
-            'funding_address' => $this->optionalString($instructions['funding_address'] ?? null),
+            'funding_address' => $bankTransferDestination?->bankAccountNumber
+                ?? $this->optionalString($instructions['funding_address'] ?? null),
             'action_url' => $this->safeActionUrl($instructions['action_url'] ?? null),
             'institution' => $this->optionalString($display['institution'] ?? null),
-            'account_name' => $this->optionalString($display['account_name'] ?? null),
+            'account_name' => $bankTransferDestination?->bankAccountName
+                ?? $this->optionalString($display['account_name'] ?? null),
             'delivery' => $this->optionalString($display['delivery'] ?? null),
             'qr_code' => $this->qrCode($instructions['qr_code'] ?? null),
             'qr_mode' => $this->optionalString(data_get($instructions, 'qr_code.qr_mode')),
@@ -41,6 +47,21 @@ class FundingInstructionPresenter
             'simulation_only' => $simulationOnly,
             'sensitive' => ! $simulationOnly,
         ];
+    }
+
+    private function bankTransferDestination(FundingIntent $intent): ?FundingDestinationData
+    {
+        $snapshot = $intent->destination_snapshot_ciphertext;
+
+        if ($intent->purpose !== FundingIntentPurpose::OnDemandIssuance || ! is_array($snapshot)) {
+            return null;
+        }
+
+        $destination = FundingDestinationSnapshot::toData($snapshot);
+
+        return $destination->destinationType === 'bank_account'
+            ? $destination
+            : null;
     }
 
     private function qrCode(mixed $value): ?string

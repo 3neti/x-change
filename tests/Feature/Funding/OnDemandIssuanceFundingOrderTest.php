@@ -32,6 +32,7 @@ use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrderEvent;
+use LBHurtado\XChange\Services\Cockpit\FundingInstructionPresenter;
 use LBHurtado\XChange\Services\Cockpit\FundingMethodSelectorCockpitReadModel;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
@@ -129,6 +130,64 @@ it('projects an exact fixed-amount QR Ph without changing the default payment me
         ->and(data_get($selector, 'qr_ph.amount_minor'))->toBe(5_317)
         ->and(data_get($selector, 'qr_ph.image'))->toBe('data:image/png;base64,ZmFrZQ==')
         ->and(data_get($selector, 'qr_ph.provider_generated'))->toBeTrue();
+});
+
+it('presents the corporate destination for on-demand bank transfer without replacing the QR address', function (): void {
+    $intent = fundingIntentAwaitingOnDemandBankTransfer();
+    $qrAddress = '915008422914050308952';
+    $qrPayload = base64_encode("\x89PNG\r\n\x1a\nfixture");
+
+    $intent->forceFill([
+        'instructions_ciphertext' => [
+            'provider' => 'netbank',
+            'amount_minor' => 6_650,
+            'currency' => 'PHP',
+            'funding_address' => $qrAddress,
+            'display_data' => [
+                'institution' => 'NetBank',
+                'account_name' => 'QR Merchant',
+                'destination_account' => $qrAddress,
+                'delivery' => 'scan-to-pay',
+            ],
+            'qr_code' => [
+                'mime_type' => 'image/png',
+                'base64_payload' => $qrPayload,
+                'qr_mode' => 'dynamic',
+                'transaction_type' => 'p2m',
+                'embedded_amount' => true,
+                'provider_generated' => true,
+            ],
+        ],
+    ])->saveQuietly();
+
+    $projection = app(FundingInstructionPresenter::class)->forIntent($intent->refresh());
+
+    expect($projection['funding_address'])->toBe('113-001-00001-9')
+        ->and($projection['account_name'])->toBe('Test Treasury')
+        ->and($projection['qr_code'])->toBe('data:image/png;base64,'.$qrPayload)
+        ->and($intent->refresh()->funding_address_ciphertext)->toBe($qrAddress);
+});
+
+it('preserves provider funding addresses outside on-demand issuance', function (): void {
+    $intent = fundingIntentAwaitingOnDemandBankTransfer();
+    $intent->forceFill([
+        'purpose' => FundingIntentPurpose::AccountFunding,
+        'instructions_ciphertext' => [
+            'provider' => 'netbank',
+            'amount_minor' => 6_650,
+            'currency' => 'PHP',
+            'funding_address' => '915008422914050308952',
+            'display_data' => [
+                'institution' => 'NetBank',
+                'account_name' => 'QR Merchant',
+            ],
+        ],
+    ])->saveQuietly();
+
+    $projection = app(FundingInstructionPresenter::class)->forIntent($intent->refresh());
+
+    expect($projection['funding_address'])->toBe('915008422914050308952')
+        ->and($projection['account_name'])->toBe('QR Merchant');
 });
 
 it('persists append-only order state and exposes only owner-scoped routes', function (): void {
