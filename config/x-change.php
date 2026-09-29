@@ -1135,6 +1135,28 @@ return [
         ],
     ],
 
+    'issuance_funding' => [
+        'on_demand' => [
+            'enabled' => (bool) env('XCHANGE_ON_DEMAND_ISSUANCE_ENABLED', false),
+            'basis' => env('XCHANGE_ON_DEMAND_FUNDING_BASIS', 'full_amount'),
+            'ttl_seconds' => max(300, (int) env('XCHANGE_ON_DEMAND_FUNDING_TTL_SECONDS', 1800)),
+            'fixed_qr_ph' => [
+                'enabled' => (bool) env('XCHANGE_ON_DEMAND_FIXED_QR_PH_ENABLED', false),
+            ],
+            'amount_lease' => [
+                'maximum_adjustment_minor' => max(0, (int) env('XCHANGE_ON_DEMAND_AMOUNT_LEASE_MAXIMUM_ADJUSTMENT_MINOR', 99)),
+                'reuse_delay_seconds' => max(60, (int) env('XCHANGE_ON_DEMAND_AMOUNT_LEASE_REUSE_DELAY_SECONDS', 3600)),
+                'lock_seconds' => 15,
+                'lock_wait_seconds' => 5,
+            ],
+            'expiry' => [
+                'scheduled_enabled' => (bool) env('XCHANGE_ON_DEMAND_EXPIRY_SCHEDULED_ENABLED', true),
+                'scheduled_batch_size' => max(1, (int) env('XCHANGE_ON_DEMAND_EXPIRY_SCHEDULED_BATCH_SIZE', 100)),
+            ],
+            'late_payment_disposition' => 'client_funds',
+        ],
+    ],
+
     'funding' => [
         'provider_balance_max_age_seconds' => (int) env('XCHANGE_PROVIDER_BALANCE_MAX_AGE_SECONDS', 300),
         'api_middleware' => ['auth'],

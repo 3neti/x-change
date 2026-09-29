@@ -201,6 +201,33 @@ php artisan xchange:lifecycle:run qrph_funding_unknown_mobile_onboarding_demo --
 
 ---
 
+## `on_demand_issuance_fixed_qr_demo`
+
+### Classification
+
+| Field | Value |
+|---|---|
+| Category | demo |
+| Demo Suitability | excellent |
+| Risk | low |
+| Persistence | rollback only |
+
+### Purpose
+
+Demonstrates an order-specific fixed-amount QR Ph alongside collision-safe
+amount leasing. The runner expires the first unpaid order, accepts signed late
+payment evidence, and proves the money is disposed to Client Funds without
+reviving or issuing the terminal order.
+
+```bash
+php artisan xchange:lifecycle:run on_demand_issuance_fixed_qr_demo --issuer=1 --json
+```
+
+The QR is a local simulator artifact with no monetary value. The scenario makes
+no provider calls and rolls all records and balance changes back.
+
+---
+
 ## `basic_cash`
 
 ### Classification

@@ -493,6 +493,17 @@ return [
             'api_executable' => false,
         ],
 
+        'on_demand_issuance_fixed_qr_demo' => [
+            'label' => 'On-Demand Issuance Fixed QR Ph',
+            'description' => 'Proves fixed-amount QR presentation, collision-safe leases, expiry, and late-payment disposition with complete rollback.',
+            'category' => 'demo',
+            'tags' => ['demo', 'on-demand-issuance', 'funding', 'qrph', 'rollback-only'],
+            'mode' => 'on_demand_issuance_funding',
+            'mobile' => env('XCHANGE_LIFECYCLE_QRPH_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+            'amount_minor' => 2_500,
+            'api_executable' => false,
+        ],
+
         /*
         |--------------------------------------------------------------------------
         | Live provider verification scenarios

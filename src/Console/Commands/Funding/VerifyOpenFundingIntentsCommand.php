@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 use LBHurtado\XChange\Actions\Funding\TransitionFundingIntent;
 use LBHurtado\XChange\Data\Funding\FundingIntentTransitionData;
+use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\FundingVerificationTrigger;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingIntentJob;
@@ -119,7 +120,16 @@ class VerifyOpenFundingIntentsCommand extends Command
             return false;
         }
 
-        $graceBoundary = $intent->expires_at?->addSeconds($graceSeconds);
+        $effectiveGraceSeconds = $intent->purpose === FundingIntentPurpose::OnDemandIssuance
+            ? max(
+                $graceSeconds,
+                (int) config(
+                    'x-change.issuance_funding.on_demand.amount_lease.reuse_delay_seconds',
+                    3600,
+                ),
+            )
+            : $graceSeconds;
+        $graceBoundary = $intent->expires_at?->addSeconds($effectiveGraceSeconds);
 
         if ($graceBoundary === null || $graceBoundary->isFuture()) {
             return false;

@@ -321,6 +321,30 @@ Capabilities exercised:
 
 ---
 
+### `on_demand_issuance_fixed_qr_demo`
+
+| Field | Value |
+|---|---|
+| Category | demo |
+| Mode | on_demand_issuance_funding |
+| Risk | low |
+| Generic lifecycle API | blocked |
+
+Runs the package-owned on-demand issuance funding safety scenario without a
+provider call or monetary value.
+
+Capabilities exercised:
+
+- immutable instruction and accepted-price snapshot
+- exact embedded-amount QR artifact
+- collision-safe concurrent amount leases
+- unpaid-order expiry and lease cooling
+- signed late-payment verification
+- Client Funds disposition without Pay Code revival
+- complete rollback verification
+
+---
+
 ## Sequential Claim Scenarios
 
 ### `divisible_open_three_slices`

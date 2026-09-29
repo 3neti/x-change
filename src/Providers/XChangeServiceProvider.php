@@ -120,6 +120,7 @@ use LBHurtado\XChange\Console\Commands\Funding\ApproveFundingRequestCommand;
 use LBHurtado\XChange\Console\Commands\Funding\ApproveStandingFundingAddressBindingMigrationCommand;
 use LBHurtado\XChange\Console\Commands\Funding\AttestAccountFundingPayCodeJournalIntegrityCommand;
 use LBHurtado\XChange\Console\Commands\Funding\BackfillAccountFundingPayCodeJournalCommand;
+use LBHurtado\XChange\Console\Commands\Funding\ExpireOnDemandIssuanceFundingOrdersCommand;
 use LBHurtado\XChange\Console\Commands\Funding\IssueSystemAccountFundingPayCodeCommand;
 use LBHurtado\XChange\Console\Commands\Funding\MigrateStandingFundingAddressBindingCommand;
 use LBHurtado\XChange\Console\Commands\Funding\RepairStandingFundingAddressBindingEffectiveAtCommand;
@@ -1654,6 +1655,7 @@ class XChangeServiceProvider extends ServiceProvider
                 ActivateStandingFundingAddressBindingMigrationCommand::class,
                 RepairStandingFundingAddressBindingEffectiveAtCommand::class,
                 BackfillAccountFundingPayCodeJournalCommand::class,
+                ExpireOnDemandIssuanceFundingOrdersCommand::class,
                 IssueSystemAccountFundingPayCodeCommand::class,
                 MigrateStandingFundingAddressBindingCommand::class,
                 VerifyFundingRequestBackingCommand::class,
@@ -1867,6 +1869,22 @@ class XChangeServiceProvider extends ServiceProvider
 
     protected function bootFundingVerificationSchedule(): void
     {
+        if ((bool) config('x-change.issuance_funding.on_demand.expiry.scheduled_enabled', true)) {
+            $batchSize = max(
+                1,
+                (int) config('x-change.issuance_funding.on_demand.expiry.scheduled_batch_size', 100),
+            );
+
+            $this->callAfterResolving(Schedule::class, function (Schedule $schedule) use ($batchSize): void {
+                $schedule
+                    ->command("xchange:funding:expire-issuance-orders --limit={$batchSize}")
+                    ->name('xchange:funding:expire-issuance-orders')
+                    ->everyMinute()
+                    ->onOneServer()
+                    ->withoutOverlapping(5);
+            });
+        }
+
         if ((bool) config('x-change.provisioning.expiry.scheduled_enabled', true)) {
             $batchSize = max(
                 1,

@@ -41,6 +41,7 @@ import type {
     CockpitQuickGenerateFeedbackDefaults,
     CockpitQuickGenerateLastInstructions,
     CockpitQuickGenerateMutationContract,
+    CockpitOnDemandIssuanceFundingProjection,
     CockpitQuickGeneratePostIssuanceNavigation,
     CockpitQuickGeneratePostIssuanceNavigationItem,
     CockpitQuickGenerateRuntimeActivity,
@@ -94,6 +95,7 @@ import type {
 import CockpitFeedbackDestinationInput from './CockpitFeedbackDestinationInput.vue';
 import CockpitFieldHelp from './CockpitFieldHelp.vue';
 import CockpitIssuedPayCodeDialog from './CockpitIssuedPayCodeDialog.vue';
+import CockpitOnDemandIssuanceFundingDialog from './CockpitOnDemandIssuanceFundingDialog.vue';
 import CockpitManualCopyButton from './CockpitManualCopyButton.vue';
 import CockpitPayCodeCanvas from './CockpitPayCodeCanvas.vue';
 import CockpitPhoneInput from './CockpitPhoneInput.vue';
@@ -127,6 +129,7 @@ const props = withDefaults(
         riderLibrary?: CockpitRiderLibraryEntry[];
         instructionCapabilities?: CockpitInstructionCapabilityReadinessMap;
         settlementRailCapabilities?: CockpitSettlementRailCapabilities;
+        activeOnDemandFundingOrder?: CockpitOnDemandIssuanceFundingProjection | null;
         templates: CockpitQuickGenerateTemplate[];
     }>(),
     {
@@ -797,6 +800,8 @@ const previewResult = ref<CockpitClaimExperiencePreviewManifest | null>(null);
 const previewDraftSnapshot = ref<string | null>(null);
 const previewSimulationState = ref('current');
 const issuedPayCodeDialogOpen = ref(false);
+const onDemandFundingDialogOpen = ref(false);
+const onDemandFundingProjection = ref<CockpitOnDemandIssuanceFundingProjection | null>(null);
 const instructionBuilderElement = ref<HTMLDetailsElement | null>(null);
 const canvasSectionElement = ref<HTMLElement | null>(null);
 const canvasView = ref<'stamp' | 'design' | 'claim' | 'cost'>('stamp');
@@ -835,6 +840,14 @@ const collectionDestinationError = computed<string | null>(() => {
 
 onBeforeMount((): void => {
     initializeStartingPoint();
+
+    if (props.activeOnDemandFundingOrder) {
+        onDemandFundingProjection.value = props.activeOnDemandFundingOrder;
+        onDemandFundingDialogOpen.value = true;
+        lastStatus.value = 'awaiting_funds';
+        lastMessage.value =
+            'Your frozen instruction is still waiting for its exact payment.';
+    }
 });
 
 onMounted((): void => {
@@ -4544,6 +4557,21 @@ async function submit(): Promise<void> {
             return;
         }
 
+        if (
+            body.schema === 'x-change.cockpit.on-demand-issuance-funding.v1'
+        ) {
+            onDemandFundingProjection.value =
+                body as CockpitOnDemandIssuanceFundingProjection;
+            onDemandFundingDialogOpen.value = true;
+            lastStatus.value = 'awaiting_funds';
+            lastMessage.value =
+                'The instruction is frozen. Complete the exact payment to issue the Pay Code.';
+            submissionErrors.value = [];
+            emit('submitSuccess', body);
+
+            return;
+        }
+
         lastStatus.value = body.status === 'replayed' ? 'replayed' : 'issued';
         lastMessage.value =
             body.status === 'replayed'
@@ -4575,6 +4603,36 @@ async function submit(): Promise<void> {
     } finally {
         processing.value = false;
     }
+}
+
+function handleOnDemandIssued(
+    projection: CockpitOnDemandIssuanceFundingProjection,
+): void {
+    const voucher = projection.order.voucher;
+
+    if (voucher === null) {
+        return;
+    }
+
+    lastResponse.value = {
+        status: 'issued',
+        result: {
+            code: voucher.code,
+            links: {
+                redeem: voucher.claim_url,
+                redeem_path: voucher.claim_url,
+            },
+        },
+    };
+    lastStatus.value = 'issued';
+    lastMessage.value = 'Payment verified and Pay Code issued.';
+}
+
+function handleOnDemandCancelled(): void {
+    onDemandFundingDialogOpen.value = false;
+    onDemandFundingProjection.value = null;
+    lastStatus.value = 'ready';
+    lastMessage.value = 'Funding cancelled safely. No Pay Code was issued.';
 }
 
 async function generateClaimPreview(refreshPreview = false): Promise<void> {
@@ -6885,6 +6943,13 @@ function instructionRecord(
                 </CockpitPayCodeCanvas>
             </div>
         </div>
+
+        <CockpitOnDemandIssuanceFundingDialog
+            :open="onDemandFundingDialogOpen"
+            :projection="onDemandFundingProjection"
+            @issued="handleOnDemandIssued"
+            @cancelled="handleOnDemandCancelled"
+        />
 
         <CockpitIssuedPayCodeDialog
             :open="issuedPayCodeDialogOpen"

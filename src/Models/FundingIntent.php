@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
+use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 
 class FundingIntent extends Model
@@ -18,6 +19,7 @@ class FundingIntent extends Model
         'reference',
         'account_reference',
         'provider_code',
+        'purpose',
         'expected_amount_minor',
         'currency',
         'status',
@@ -75,6 +77,7 @@ class FundingIntent extends Model
     {
         return [
             'expected_amount_minor' => 'integer',
+            'purpose' => FundingIntentPurpose::class,
             'status' => FundingIntentStatus::class,
             'version' => 'integer',
             'funding_address_ciphertext' => 'encrypted',

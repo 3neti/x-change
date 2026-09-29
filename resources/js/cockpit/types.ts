@@ -813,6 +813,7 @@ export type CockpitFundingMethodSelectorReadModel = {
     schema: 'x-change.cockpit.funding-method-selector.v1';
     context: 'account_funding' | 'pay_code_issuance';
     intent_reference: string | null;
+    order_reference?: string;
     amount: {
         currency: string;
         principal_minor: number;
@@ -829,7 +830,18 @@ export type CockpitFundingMethodSelectorReadModel = {
         | 'detected'
         | 'reconciled'
         | 'expired'
-        | 'failed';
+        | 'failed'
+        | 'awaiting_payment'
+        | 'payer_acknowledged'
+        | 'verifying'
+        | 'funded'
+        | 'issuing'
+        | 'issued'
+        | 'underfunded'
+        | 'payment_ambiguous'
+        | 'cancelled'
+        | 'issuance_attention';
+    default_mode?: CockpitPrimaryFundingWorkspaceMode;
     notice: string;
     methods: Array<{
         key: CockpitFundingMethodKey;
@@ -841,6 +853,7 @@ export type CockpitFundingMethodSelectorReadModel = {
         unavailable_reason: string | null;
     }>;
     bank_transfer: {
+        instructions?: Record<string, unknown>;
         reconciliation_reference: {
             mode: 'required' | 'optional' | 'disabled';
             value: string | null;
@@ -855,6 +868,42 @@ export type CockpitFundingMethodSelectorReadModel = {
             | 'manual_review'
         >;
     };
+    qr_ph?: {
+        fixed_amount: boolean;
+        amount_minor: number | null;
+        currency: string | null;
+        image: string | null;
+        qr_mode: string | null;
+        transaction_type: string | null;
+        provider_generated: boolean;
+        notice: string | null;
+    };
+};
+
+export type CockpitOnDemandIssuanceFundingProjection = {
+    schema: 'x-change.cockpit.on-demand-issuance-funding.v1';
+    status: string;
+    funding_required: boolean;
+    actions: {
+        show: string;
+        acknowledge: string;
+        cancel: string;
+    };
+    order: {
+        reference: string;
+        funding_basis: 'full_amount' | 'shortfall';
+        required_amount_minor: number;
+        reserved_client_funds_minor: number;
+        on_demand_amount_minor: number;
+        reconciliation_adjustment_minor: number;
+        expected_payment_minor: number;
+        currency: string;
+        status: string;
+        expires_at: string | null;
+        can_cancel: boolean;
+        voucher: { code: string; claim_url: string } | null;
+    };
+    funding_selector: CockpitFundingMethodSelectorReadModel;
 };
 
 export type CockpitFundingActivityItem = {
@@ -1041,27 +1090,31 @@ export type CockpitQrPhFundingSimulationStep = {
 };
 
 export type CockpitQrPhFundingSimulationResult = {
-    schema: 'x-change.lifecycle.qrph-funding-simulation.v1';
+    schema:
+        | 'x-change.lifecycle.qrph-funding-simulation.v1'
+        | 'x-change.lifecycle.on-demand-fixed-qr-ph.v1';
     scenario: string;
     label: string;
-    mode: 'qrph_funding_simulation';
+    mode: 'qrph_funding_simulation' | 'on_demand_issuance_funding';
     success: boolean;
     message: string;
     rollback_completed: boolean;
     simulation: {
         rollback_only: true;
         provider_calls: 0;
-        simulated_provider_ledger: true;
-        signed_webhook: true;
-        authoritative_verification: true;
+        simulated_provider_ledger?: true;
+        signed_webhook?: true;
+        authoritative_verification?: true;
+        monetary_value?: false;
         persisted: false;
     };
-    balance: {
+    balance?: {
         before_minor: number;
         after_minor: number;
         credited_minor: number;
         after_replay_minor: number;
     };
+    artifacts?: Record<string, unknown>;
     steps: CockpitQrPhFundingSimulationStep[];
 };
 
@@ -1706,6 +1759,7 @@ export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
     instruction_capabilities?: CockpitInstructionCapabilityReadinessMap;
     settlement_rail_capabilities?: CockpitSettlementRailCapabilities;
     pos_voucher?: CockpitVoucherReadModel | null;
+    active_on_demand_funding_order?: CockpitOnDemandIssuanceFundingProjection | null;
 };
 
 export type CockpitFundingRealtime = {

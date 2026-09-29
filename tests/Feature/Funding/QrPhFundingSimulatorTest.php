@@ -13,6 +13,7 @@ use LBHurtado\XChange\Actions\Funding\IssueFundingInstructions;
 use LBHurtado\XChange\Actions\Funding\SimulateQrPhPayment;
 use LBHurtado\XChange\Data\Funding\CreateFundingIntentData;
 use LBHurtado\XChange\Models\SimulatedFundingTransaction;
+use LBHurtado\XChange\Services\Funding\Base64PngQrPhFundingSimulationQrRenderer;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\QrPhSimulatorFundingProviderAdapter;
 use LBHurtado\XChange\Support\Funding\QrPhFundingSimulatorGuard;
@@ -62,7 +63,13 @@ it('creates deterministic local-only QR Ph instructions', function () {
         ->and($instructions->displayData)->toMatchArray([
             'institution' => 'QR Ph Simulator',
             'delivery' => 'local-simulation-only',
-        ]);
+        ])
+        ->and($instructions->qrCode?->mimeType)->toBe('image/png')
+        ->and($instructions->qrCode?->qrMode)->toBe('dynamic')
+        ->and($instructions->qrCode?->transactionType)->toBe('p2m')
+        ->and($instructions->qrCode?->embeddedAmount)->toBeTrue()
+        ->and($instructions->qrCode?->providerGenerated)->toBeFalse()
+        ->and(base64_decode((string) $instructions->qrCode?->base64Payload, true))->toStartWith("\x89PNG");
 });
 
 it('records a signed simulated payment and independently verifies its provider ledger evidence', function () {
@@ -144,6 +151,7 @@ it('refuses the simulator in production even when its feature flag is enabled', 
     $application->shouldReceive('isProduction')->once()->andReturnTrue();
     $adapter = new QrPhSimulatorFundingProviderAdapter(
         new QrPhFundingSimulatorGuard($application),
+        app(Base64PngQrPhFundingSimulationQrRenderer::class),
     );
 
     expect(fn () => $adapter

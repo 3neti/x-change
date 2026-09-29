@@ -40,6 +40,7 @@ class CreateFundingIntent
         $fingerprint = hash('sha256', json_encode([
             'account_reference' => $accountReference,
             'provider' => $provider,
+            'purpose' => $data->purpose->value,
             'amount_minor' => $data->expectedAmountMinor,
             'currency' => $currency,
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
@@ -58,6 +59,7 @@ class CreateFundingIntent
                 $intent = FundingIntent::query()->create([
                     'account_reference' => $accountReference,
                     'provider_code' => $provider,
+                    'purpose' => $data->purpose,
                     'expected_amount_minor' => $data->expectedAmountMinor,
                     'currency' => $currency,
                     'status' => FundingIntentStatus::PendingInstructions,

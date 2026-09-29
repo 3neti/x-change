@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Cockpit\RememberRiderLibraryUsage;
+use LBHurtado\XChange\Actions\Funding\PrepareOnDemandPayCodeIssuance;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
@@ -27,7 +28,9 @@ use LBHurtado\XChange\Services\BuildBalanceOverview;
 use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityHandoffPipeline;
 use LBHurtado\XChange\Services\Cockpit\CockpitPosSaleReferenceService;
 use LBHurtado\XChange\Services\Cockpit\CompileCockpitQuickGenerateClaimPolicy;
+use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Cockpit\QuickGenerateLastInstructionsStore;
+use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingPolicy;
 use LBHurtado\XChange\Services\IdempotencyService;
 use Throwable;
 
@@ -49,6 +52,9 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         CockpitIssuanceDraftCompilerContract $draftCompiler,
         EstimatePayCodeCost $estimatePayCodeCost,
         BuildBalanceOverview $balanceOverview,
+        OnDemandIssuanceFundingPolicy $onDemandFunding,
+        PrepareOnDemandPayCodeIssuance $prepareOnDemandIssuance,
+        OnDemandIssuanceFundingOrderPresenter $onDemandFundingPresenter,
         CompileCockpitQuickGenerateClaimPolicy $claimPolicy,
         QuickGenerateLastInstructionsStore $lastInstructions,
         RememberRiderLibraryUsage $rememberRiderLibraryUsage,
@@ -102,6 +108,26 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
 
         $pricingPreflight = $this->pricingPreflight($payload, $estimatePayCodeCost);
         $fundingPreflight = $this->fundingPreflight($request, $balanceOverview);
+
+        if ($onDemandFunding->enabled()) {
+            $operator = $request->user();
+
+            if (! $operator instanceof Model || ! is_string($key) || trim($key) === '') {
+                throw ValidationException::withMessages([
+                    'submission' => ['On-demand issuance requires an authenticated operator and idempotency key.'],
+                ]);
+            }
+
+            $order = $prepareOnDemandIssuance->handle(
+                issuer: $operator,
+                instructions: $payload,
+                pricing: $estimatePayCodeCost->handle($payload),
+                idempotencyKey: $key,
+            );
+
+            return response()->json($onDemandFundingPresenter->present($order), 202);
+        }
+
         $result = $generatePayCode->handle($payload);
         $response = $this->responsePayload($request, $result, $key, false, $pricingPreflight, $fundingPreflight, $payload);
         $this->processOperatorIssuanceActivity($request, $response, $key, $operatorIssuanceActivityHandoffPipeline);

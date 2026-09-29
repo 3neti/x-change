@@ -13,8 +13,10 @@ use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Contracts\TreasuryPositionLedgerResolverContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Data\Funding\FundingIntentTransitionData;
+use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
+use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Services\Treasury\TreasuryInventoryRegistrationService;
@@ -29,6 +31,8 @@ class SettleVerifiedFundingIntent
         private readonly FundingAccountCreditContract $accounts,
         private readonly TransitionFundingIntent $transition,
         private readonly ApplyFundingRecoveryToAccount $applyRecovery,
+        private readonly PlaceSettledOnDemandIssuanceHold $onDemandIssuanceHold,
+        private readonly RecordLateOnDemandIssuancePayment $lateOnDemandPayment,
     ) {}
 
     public function handle(FundingIntent $intent): FundingSettlement
@@ -130,11 +134,20 @@ class SettleVerifiedFundingIntent
                     $allocation->destinationPositionReference,
                 )
                 : $this->accounts->resolve($locked->account_reference);
-            $recoveryAppliedAmountMinor = $this->applyRecovery->handle(
-                accountReference: $locked->account_reference,
-                account: $account,
-                settlement: $settlement,
-            );
+            $recoveryAppliedAmountMinor = $locked->purpose === FundingIntentPurpose::OnDemandIssuance
+                ? 0
+                : $this->applyRecovery->handle(
+                    accountReference: $locked->account_reference,
+                    account: $account,
+                    settlement: $settlement,
+                );
+
+            $fundingOrder = null;
+
+            if ($locked->purpose === FundingIntentPurpose::OnDemandIssuance) {
+                $fundingOrder = $this->lateOnDemandPayment->handle($locked, $observation)
+                    ?? $this->onDemandIssuanceHold->handle($locked, $observation->net_amount_minor);
+            }
 
             $this->transition->handle($locked, new FundingIntentTransitionData(
                 status: FundingIntentStatus::Settled,
@@ -152,6 +165,12 @@ class SettleVerifiedFundingIntent
                     'wallet_transaction_uuid' => $allocation->destinationTransactionUuid,
                 ],
             ));
+
+            if ($fundingOrder !== null && $fundingOrder->status->value === 'funded') {
+                DB::afterCommit(static function () use ($fundingOrder): void {
+                    ResumeOnDemandPayCodeIssuanceJob::dispatch($fundingOrder->getKey());
+                });
+            }
 
             return $settlement;
         }, attempts: 5);

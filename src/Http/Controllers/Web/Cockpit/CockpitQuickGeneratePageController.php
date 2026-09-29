@@ -11,8 +11,11 @@ use Inertia\Response;
 use LBHurtado\XChange\Contracts\SettlementRailCapabilityRegistryContract;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
+use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Models\CampaignDisplaySession;
+use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeDetailAccess;
+use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Cockpit\PayCodeTemplateReadModel;
 use LBHurtado\XChange\Services\Cockpit\QuickGenerateLastInstructionsStore;
 use LBHurtado\XChange\Services\Cockpit\RiderLibraryReadModel;
@@ -32,6 +35,7 @@ class CockpitQuickGeneratePageController extends Controller
         private readonly WalletAccessContract $wallets,
         private readonly VoucherAccessContract $vouchers,
         private readonly CockpitPayCodeDetailAccess $payCodeAccess,
+        private readonly OnDemandIssuanceFundingOrderPresenter $fundingOrderPresenter,
     ) {}
 
     public function __invoke(Request $request, CampaignDisplaySessions $displays): Response
@@ -74,7 +78,35 @@ class CockpitQuickGeneratePageController extends Controller
             'settlement_rail_capabilities' => $this->settlementRails->sanitized(),
             'collection_destination' => $this->collectionDestination($request),
             'pos_voucher' => $this->posVoucher($request),
+            'active_on_demand_funding_order' => $this->activeOnDemandFundingOrder($request),
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function activeOnDemandFundingOrder(Request $request): ?array
+    {
+        $user = $request->user();
+
+        if ($user === null) {
+            return null;
+        }
+
+        $order = PayCodeIssuanceFundingOrder::query()
+            ->where('issuer_type', $user::class)
+            ->where('issuer_id', (string) $user->getKey())
+            ->whereNotIn('status', [
+                PayCodeIssuanceFundingOrderStatus::Issued->value,
+                PayCodeIssuanceFundingOrderStatus::Cancelled->value,
+                PayCodeIssuanceFundingOrderStatus::Expired->value,
+            ])
+            ->latest('id')
+            ->first();
+
+        return $order instanceof PayCodeIssuanceFundingOrder
+            ? $this->fundingOrderPresenter->present($order)
+            : null;
     }
 
     private function startupMode(): string

@@ -71,6 +71,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitInstanceKeepsakeDownlo
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitInstanceKeepsakeDownloadShowController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitLeadCampaignScenarioRunnerController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitNetbankStandingFundingAddressController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitOnDemandIssuanceFundingOrderController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerApiClientConnectionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerApiClientController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPartnerApiClientStatusController;
@@ -654,6 +655,18 @@ Route::prefix('x')->middleware([
             ->middleware('throttle:3,1')
             ->name('x-change.cockpit.instance-keepsakes.download');
         Route::post('quick-generate', CockpitQuickGenerateMutationRouteShellController::class)->name('x-change.cockpit.quick-generate.store');
+        Route::get(
+            'quick-generate/funding-orders/{order:reference}',
+            [CockpitOnDemandIssuanceFundingOrderController::class, 'show'],
+        )->middleware('throttle:60,1')->name('x-change.cockpit.quick-generate.funding-orders.show');
+        Route::post(
+            'quick-generate/funding-orders/{order:reference}/acknowledge',
+            [CockpitOnDemandIssuanceFundingOrderController::class, 'acknowledge'],
+        )->middleware('throttle:6,1')->name('x-change.cockpit.quick-generate.funding-orders.acknowledge');
+        Route::delete(
+            'quick-generate/funding-orders/{order:reference}',
+            [CockpitOnDemandIssuanceFundingOrderController::class, 'cancel'],
+        )->middleware('throttle:6,1')->name('x-change.cockpit.quick-generate.funding-orders.cancel');
         Route::post(
             'quick-generate/claim-previews',
             CockpitQuickGenerateClaimPreviewController::class,

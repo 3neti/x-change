@@ -23,6 +23,7 @@ class FundingIntentResource extends JsonResource
                     'reference' => $intent->reference,
                     'account_reference' => $intent->account_reference,
                     'provider' => $intent->provider_code,
+                    'purpose' => $intent->purpose->value,
                     'expected_amount_minor' => $intent->expected_amount_minor,
                     'currency' => $intent->currency,
                     'status' => $intent->status->value,

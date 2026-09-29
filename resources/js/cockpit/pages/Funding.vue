@@ -234,6 +234,9 @@ type FundingWorkspaceMode =
 const activeFundingMode = ref<FundingWorkspaceMode>(
     props.funding_workspace_mode ?? 'self_top_up',
 );
+const openFundingLifecycleLab = (): void => {
+    activeFundingMode.value = 'simulation';
+};
 const activePrimaryFundingMode = computed<
     CockpitPrimaryFundingWorkspaceMode | null
 >({
@@ -1020,7 +1023,9 @@ function reconciliationActionLabel(action: string): string {
     );
 }
 
-async function runQrPhFundingSimulation(): Promise<void> {
+async function runQrPhFundingSimulation(
+    scenario = 'qrph_funding_existing_mobile_demo',
+): Promise<void> {
     if (
         simulationRunning.value ||
         props.funding_simulation?.enabled !== true ||
@@ -1039,9 +1044,11 @@ async function runQrPhFundingSimulation(): Promise<void> {
             credentials: 'same-origin',
             headers: {
                 Accept: 'application/json',
+                'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
                 ...csrfHeader(),
             },
+            body: JSON.stringify({ scenario }),
         });
         const body = await safeJson(response);
 
@@ -1055,7 +1062,10 @@ async function runQrPhFundingSimulation(): Promise<void> {
         }
 
         if (
-            body.schema !== 'x-change.lifecycle.qrph-funding-simulation.v1' ||
+            ![
+                'x-change.lifecycle.qrph-funding-simulation.v1',
+                'x-change.lifecycle.on-demand-fixed-qr-ph.v1',
+            ].includes(String(body.schema)) ||
             !Array.isArray(body.steps)
         ) {
             simulationError.value =
@@ -1467,6 +1477,26 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     v-model="activePrimaryFundingMode"
                     :selector="fundingMethodSelector"
                 />
+
+                <div
+                    v-if="funding_simulation"
+                    class="mt-3 flex justify-end"
+                >
+                    <button
+                        type="button"
+                        :aria-pressed="activeFundingMode === 'simulation'"
+                        :class="[
+                            'rounded-lg border px-3 py-2 text-xs font-semibold transition',
+                            activeFundingMode === 'simulation'
+                                ? 'border-violet-600 bg-violet-600 text-white'
+                                : 'border-violet-200 bg-white text-violet-700 hover:bg-violet-50 dark:border-violet-900 dark:bg-slate-950 dark:text-violet-200 dark:hover:bg-violet-950/40',
+                        ]"
+                        data-testid="open-funding-lifecycle-lab"
+                        @click="openFundingLifecycleLab"
+                    >
+                        Open rollback-only Lifecycle Lab
+                    </button>
+                </div>
             </section>
 
             <details
@@ -2876,7 +2906,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             is rolled back.
                         </p>
                     </div>
-                    <div class="md:text-right">
+                    <div class="grid gap-2 md:text-right">
                         <button
                             type="button"
                             :disabled="
@@ -2886,7 +2916,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             "
                             class="h-10 rounded-lg bg-violet-600 px-4 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
                             data-testid="run-qrph-funding-simulation"
-                            @click="runQrPhFundingSimulation"
+                            @click="runQrPhFundingSimulation()"
                         >
                             {{
                                 simulationRunning
@@ -2897,6 +2927,19 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                         ? 'Verified mobile required'
                                         : 'Simulate scan and payment'
                             }}
+                        </button>
+                        <button
+                            type="button"
+                            :disabled="
+                                simulationRunning ||
+                                funding_simulation.enabled !== true ||
+                                funding_simulation.mobile_ready !== true
+                            "
+                            class="h-10 rounded-lg border border-violet-300 bg-white px-4 text-sm font-semibold text-violet-700 transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-violet-800 dark:bg-slate-950 dark:text-violet-200"
+                            data-testid="run-on-demand-fixed-qr-simulation"
+                            @click="runQrPhFundingSimulation('on_demand_issuance_fixed_qr_demo')"
+                        >
+                            Test on-demand fixed QR
                         </button>
                         <p class="mt-2 text-xs text-slate-500">
                             0 provider calls · 0 retained changes

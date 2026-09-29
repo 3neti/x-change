@@ -12,10 +12,12 @@ use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionRequestData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
 use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
+use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Exceptions\FundingIntentTransitionDenied;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
+use LBHurtado\XChange\Services\Funding\StandingBankTransferFundingInstructionIssuer;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use LogicException;
 
@@ -24,6 +26,7 @@ class IssueFundingInstructions
     public function __construct(
         private readonly FundingProviderAdapterRegistry $providers,
         private readonly FundingDestinationResolverContract $destinations,
+        private readonly StandingBankTransferFundingInstructionIssuer $standingBankTransfers,
     ) {}
 
     public function handle(FundingIntent $intent, string $actorType, string $actorId): FundingIntent
@@ -56,22 +59,27 @@ class IssueFundingInstructions
             throw FundingIntentTransitionDenied::from($current->status, FundingIntentStatus::AwaitingFunds);
         }
 
-        $instructions = $this->providers
-            ->for($current->provider_code)
-            ->createFundingInstructions(new FundingInstructionRequestData(
-                provider: $current->provider_code,
-                fundingReference: $current->reference,
-                amountMinor: $current->expected_amount_minor,
-                currency: $current->currency,
-                accountReference: $current->account_reference,
-                expiresAt: $current->expires_at === null
-                    ? null
-                    : DateTimeImmutable::createFromInterface($current->expires_at),
-                metadata: [
-                    'funding_intent_reference' => $current->reference,
-                ],
-                destination: $this->destination($current),
-            ));
+        $request = new FundingInstructionRequestData(
+            provider: $current->provider_code,
+            fundingReference: $current->reference,
+            amountMinor: $current->expected_amount_minor,
+            currency: $current->currency,
+            accountReference: $current->account_reference,
+            expiresAt: $current->expires_at === null
+                ? null
+                : DateTimeImmutable::createFromInterface($current->expires_at),
+            metadata: [
+                'funding_intent_reference' => $current->reference,
+            ],
+            destination: $this->destination($current),
+        );
+        $instructions = $current->purpose === FundingIntentPurpose::OnDemandIssuance
+            && $current->provider_code === 'netbank'
+            && ! (bool) config('x-change.issuance_funding.on_demand.fixed_qr_ph.enabled', false)
+                ? $this->standingBankTransfers->create($request)
+                : $this->providers
+                    ->for($current->provider_code)
+                    ->createFundingInstructions($request);
 
         $this->assertInstructionsMatch($current, $instructions);
 

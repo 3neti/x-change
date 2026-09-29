@@ -12,12 +12,13 @@ use Endroid\QrCode\Writer\PngWriter;
 
 final class Base64PngQrPhFundingSimulationQrRenderer
 {
-    public function render(int $amountMinor, string $currency): string
+    public function render(int $amountMinor, string $currency, ?string $reference = null): string
     {
         $payload = json_encode([
             'type' => 'x-change.qrph-funding-simulation',
             'amount_minor' => $amountMinor,
             'currency' => $currency,
+            'reference' => $reference,
             'rollback_only' => true,
             'monetary_value' => false,
         ], JSON_THROW_ON_ERROR);
@@ -34,5 +35,13 @@ final class Base64PngQrPhFundingSimulationQrRenderer
         );
 
         return $builder->build()->getDataUri();
+    }
+
+    public function renderBase64(int $amountMinor, string $currency, ?string $reference = null): string
+    {
+        $dataUri = $this->render($amountMinor, $currency, $reference);
+        $separator = strpos($dataUri, ',');
+
+        return $separator === false ? $dataUri : substr($dataUri, $separator + 1);
     }
 }

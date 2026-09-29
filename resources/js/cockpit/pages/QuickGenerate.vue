@@ -1190,6 +1190,9 @@ function stringValue(value: unknown): string | null {
                     :settlement-rail-capabilities="
                         props.settlement_rail_capabilities
                     "
+                    :active-on-demand-funding-order="
+                        props.active_on_demand_funding_order
+                    "
                     :templates="templates"
                 />
                 <CockpitQuickGeneratePosPanel

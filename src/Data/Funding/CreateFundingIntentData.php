@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Data\Funding;
 
 use DateTimeImmutable;
 use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
+use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use Spatie\LaravelData\Data;
 
 class CreateFundingIntentData extends Data
@@ -24,5 +25,6 @@ class CreateFundingIntentData extends Data
         public ?DateTimeImmutable $expiresAt = null,
         public array $metadata = [],
         public ?FundingDestinationData $destination = null,
+        public FundingIntentPurpose $purpose = FundingIntentPurpose::AccountFunding,
     ) {}
 }

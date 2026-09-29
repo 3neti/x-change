@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingSettlement;
+use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Models\SimulatedFundingTransaction;
 
 it('publishes a verified and rate-limited Cockpit QR Ph simulation route', function () {
@@ -97,4 +98,28 @@ it('requires an already verified mobile for the Cockpit QR Ph simulation', funct
         'x-change.cockpit.funding.scenarios.qrph.store',
     ))->assertForbidden()
         ->assertJsonPath('message', 'Verify your mobile number before continuing.');
+});
+
+it('runs the package-owned on-demand fixed QR lifecycle from the Cockpit', function () {
+    Http::preventStrayRequests();
+    config()->set('x-change.cockpit.qrph_funding_simulation.enabled', true);
+    config()->set('x-change.lifecycle.qrph_funding_simulation.enabled', true);
+    $owner = actingAsTestUser();
+    $owner->forceFill([
+        'email_verified_at' => now(),
+        'mobile' => '639173011987',
+        'mobile_verified_at' => now(),
+    ])->save();
+    config()->set('x-change.lifecycle.defaults.user_model', $owner::class);
+
+    $this->postJson(route('x-change.cockpit.funding.scenarios.qrph.store'), [
+        'scenario' => 'on_demand_issuance_fixed_qr_demo',
+    ])->assertOk()
+        ->assertJsonPath('schema', 'x-change.lifecycle.on-demand-fixed-qr-ph.v1')
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('rollback_completed', true)
+        ->assertJsonPath('artifacts.qr_present', true)
+        ->assertJsonCount(5, 'steps');
+
+    expect(PayCodeIssuanceFundingOrder::query()->count())->toBe(0);
 });

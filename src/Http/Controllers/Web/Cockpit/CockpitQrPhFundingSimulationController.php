@@ -26,7 +26,10 @@ final class CockpitQrPhFundingSimulationController extends Controller
             throw new AuthenticationException;
         }
 
-        $result = $run->handle($operator);
+        $result = $run->handle(
+            $operator,
+            (string) $request->validated('scenario', RunQrPhFundingSimulation::SCENARIO_KEY),
+        );
 
         return response()->json(
             $result->payload,

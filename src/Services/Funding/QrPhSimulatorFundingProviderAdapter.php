@@ -10,6 +10,7 @@ use JsonException;
 use LBHurtado\EmiCore\Contracts\FundingProviderAdapter;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionRequestData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
+use LBHurtado\EmiCore\Data\Funding\FundingQrCodeData;
 use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
 use LBHurtado\EmiCore\Data\Funding\ProviderEventHintData;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
@@ -28,6 +29,7 @@ class QrPhSimulatorFundingProviderAdapter implements FundingProviderAdapter
 
     public function __construct(
         private readonly QrPhFundingSimulatorGuard $guard,
+        private readonly Base64PngQrPhFundingSimulationQrRenderer $qrRenderer,
     ) {}
 
     public function providerCode(): string
@@ -63,6 +65,18 @@ class QrPhSimulatorFundingProviderAdapter implements FundingProviderAdapter
                 'one_time' => true,
                 'delivery' => 'local-simulation-only',
             ],
+            qrCode: new FundingQrCodeData(
+                mimeType: 'image/png',
+                base64Payload: $this->qrRenderer->renderBase64(
+                    $request->amountMinor,
+                    'PHP',
+                    $reference,
+                ),
+                qrMode: 'dynamic',
+                transactionType: 'p2m',
+                embeddedAmount: true,
+                providerGenerated: false,
+            ),
         );
     }
 

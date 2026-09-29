@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Artisan;
 use LBHurtado\XChange\Actions\Funding\CreateFundingIntent;
 use LBHurtado\XChange\Data\Funding\CreateFundingIntentData;
+use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Exceptions\FundingIntentConflict;
 use LBHurtado\XChange\Models\FundingIntent;
@@ -40,10 +41,20 @@ it('creates an idempotent Funding Intent and an append-only creation event', fun
         ->and(FundingIntentEvent::query()->count())->toBe(1)
         ->and($first->reference)->toHaveLength(26)
         ->and($first->status)->toBe(FundingIntentStatus::PendingInstructions)
+        ->and($first->purpose)->toBe(FundingIntentPurpose::AccountFunding)
         ->and($first->expected_amount_minor)->toBe(25_000)
         ->and($first->currency)->toBe('PHP')
         ->and($first->version)->toBe(1)
         ->and($first->events->first()->event_type)->toBe('created');
+});
+
+it('persists on-demand issuance as an authoritative Funding Intent purpose', function () {
+    $intent = app(CreateFundingIntent::class)->handle(fundingIntentData([
+        'purpose' => FundingIntentPurpose::OnDemandIssuance,
+    ]));
+
+    expect($intent->purpose)->toBe(FundingIntentPurpose::OnDemandIssuance)
+        ->and($intent->idempotency_fingerprint)->not->toBeEmpty();
 });
 
 it('rejects an idempotency key reused for a different funding request', function () {

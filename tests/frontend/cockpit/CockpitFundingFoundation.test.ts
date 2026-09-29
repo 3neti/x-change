@@ -2391,4 +2391,53 @@ describe('Cockpit Funding foundation', () => {
             'Rollback confirmed · one simulated credit',
         );
     });
+
+    it('invokes the package-owned on-demand fixed QR lifecycle from the browser lab', async () => {
+        const fetch = vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                ...fundingSimulationResult,
+                schema: 'x-change.lifecycle.on-demand-fixed-qr-ph.v1',
+                scenario: 'on_demand_issuance_fixed_qr_demo',
+                mode: 'on_demand_issuance_funding',
+            }),
+        });
+        vi.stubGlobal('fetch', fetch);
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+                funding_simulation: fundingSimulation,
+            },
+        });
+
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-qrph-funding-simulation"]')
+                .isVisible(),
+        ).toBe(false);
+        await wrapper
+            .get('[data-testid="open-funding-lifecycle-lab"]')
+            .trigger('click');
+        await nextTick();
+        expect(
+            wrapper
+                .get('[data-testid="open-funding-lifecycle-lab"]')
+                .attributes('aria-pressed'),
+        ).toBe('true');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-qrph-funding-simulation"]')
+                .attributes('style'),
+        ).not.toContain('display: none');
+
+        await wrapper
+            .get('[data-testid="run-on-demand-fixed-qr-simulation"]')
+            .trigger('click');
+        await nextTick();
+
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(JSON.parse(String(fetch.mock.calls[0]?.[1]?.body))).toEqual({
+            scenario: 'on_demand_issuance_fixed_qr_demo',
+        });
+    });
 });
