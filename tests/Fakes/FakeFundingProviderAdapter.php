@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Tests\Fakes;
 
+use Closure;
 use LBHurtado\EmiCore\Contracts\FundingProviderAdapter;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionRequestData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
@@ -30,6 +31,12 @@ class FakeFundingProviderAdapter implements FundingProviderAdapter
     public ?ProviderFundingObservationData $fundingObservation = null;
 
     public ?FundingVerificationData $lastVerification = null;
+
+    /** @var list<FundingVerificationData> */
+    public array $fundingVerifications = [];
+
+    /** @var (Closure(FundingVerificationData): ProviderFundingObservationData)|null */
+    public ?Closure $fundingVerificationResolver = null;
 
     /** @var list<ObservedPaymentTransactionData> */
     public array $incomingPayments = [];
@@ -95,6 +102,11 @@ class FakeFundingProviderAdapter implements FundingProviderAdapter
     public function verifyFunding(FundingVerificationData $verification): ProviderFundingObservationData
     {
         $this->lastVerification = $verification;
+        $this->fundingVerifications[] = $verification;
+
+        if ($this->fundingVerificationResolver instanceof Closure) {
+            return ($this->fundingVerificationResolver)($verification);
+        }
 
         return $this->fundingObservation ?? new ProviderFundingObservationData(
             provider: $verification->provider,

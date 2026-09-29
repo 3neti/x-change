@@ -6,20 +6,26 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
+use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
+use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
+use LBHurtado\EmiCore\Exceptions\ProviderFundingNotObserved;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Funding\ExpireOnDemandIssuanceFundingOrder;
 use LBHurtado\XChange\Actions\Funding\ReserveOnDemandIssuanceAmountLease;
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Actions\Funding\TransitionPayCodeIssuanceFundingOrder;
+use LBHurtado\XChange\Actions\Funding\VerifyFundingIntent;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Data\DebitData;
+use LBHurtado\XChange\Data\Funding\FundingIntentVerificationData;
 use LBHurtado\XChange\Data\IssuerData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
+use LBHurtado\XChange\Enums\FundingVerificationTrigger;
 use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
@@ -28,8 +34,11 @@ use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrderEvent;
 use LBHurtado\XChange\Services\Cockpit\FundingMethodSelectorCockpitReadModel;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
+use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingPolicy;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingRequirement;
+use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
+use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('is disabled by default and validates the configured application-wide basis', function (): void {
@@ -357,6 +366,90 @@ it('restores the signed-in owner active funding order on quick generate reload',
         ->assertJsonPath('props.active_on_demand_funding_order.order.status', 'awaiting_payment');
 });
 
+it('falls back to the owning NetBank account for an on-demand bank transfer', function (): void {
+    $this->travelTo(new DateTimeImmutable('2026-09-29T14:00:00+00:00'));
+    $adapter = new FakeFundingProviderAdapter;
+    $adapter->fundingVerificationResolver = static function ($verification): ProviderFundingObservationData {
+        if ($verification->fundingAddress === '915008422914050308952') {
+            throw new ProviderFundingNotObserved('No incoming QR transaction was observed.');
+        }
+
+        expect($verification->fundingAddress)->toBe('113001000019');
+
+        return new ProviderFundingObservationData(
+            provider: 'netbank',
+            providerTransactionId: '433061247',
+            grossAmountMinor: 6_650,
+            feeAmountMinor: 0,
+            netAmountMinor: 6_650,
+            currency: 'PHP',
+            providerStatus: 'settled',
+            verificationSource: 'netbank-vca-transaction-history',
+            payloadHash: hash('sha256', '433061247'),
+            fundingAddress: 'sha256:'.hash('sha256', '113001000019'),
+            providerAccountReference: 'sha256:'.hash('sha256', '113001000019'),
+            occurredAt: new DateTimeImmutable('2026-09-29T13:56:36+00:00'),
+            settledAt: new DateTimeImmutable('2026-09-29T13:56:36+00:00'),
+            metadata: ['destination_verified' => true],
+        );
+    };
+    $this->app->instance(FakeFundingProviderAdapter::class, $adapter);
+    $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
+    $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
+    $intent = fundingIntentAwaitingOnDemandBankTransfer();
+
+    $verified = app(VerifyFundingIntent::class)->handle(
+        $intent,
+        new FundingIntentVerificationData(
+            trigger: FundingVerificationTrigger::Operator,
+            actorId: 'operator-1',
+        ),
+    );
+
+    expect($verified->status)->toBe(FundingIntentStatus::Verified)
+        ->and($verified->provider_transaction_id)->toBe('433061247')
+        ->and($adapter->fundingVerifications)->toHaveCount(2)
+        ->and($adapter->fundingVerifications[0]->fundingAddress)
+        ->toBe('915008422914050308952')
+        ->and($adapter->fundingVerifications[1]->fundingAddress)
+        ->toBe('113001000019')
+        ->and($adapter->fundingVerifications[1]->observedAfter?->format(DATE_ATOM))
+        ->toBe('2026-09-29T13:53:00+00:00')
+        ->and($adapter->fundingVerifications[1]->observedBefore?->format(DATE_ATOM))
+        ->toBe('2026-09-29T14:02:00+00:00')
+        ->and(ProviderFundingObservation::query()->sole()->verification_source)
+        ->toBe('netbank-corporate-account-transaction-history')
+        ->and(data_get(ProviderFundingObservation::query()->sole()->metadata, 'verification_path'))
+        ->toBe('corporate_account');
+
+    $this->travelBack();
+});
+
+it('does not use corporate account fallback outside on-demand issuance', function (): void {
+    $adapter = new FakeFundingProviderAdapter;
+    $adapter->fundingVerificationResolver = static function (): never {
+        throw new ProviderFundingNotObserved('No incoming QR transaction was observed.');
+    };
+    $this->app->instance(FakeFundingProviderAdapter::class, $adapter);
+    $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
+    $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
+    $intent = fundingIntentAwaitingOnDemandBankTransfer();
+    $intent->forceFill(['purpose' => FundingIntentPurpose::AccountFunding])->saveQuietly();
+
+    $pending = app(VerifyFundingIntent::class)->handle(
+        $intent,
+        new FundingIntentVerificationData(
+            trigger: FundingVerificationTrigger::Operator,
+            actorId: 'operator-1',
+        ),
+    );
+
+    expect($pending->status)->toBe(FundingIntentStatus::AwaitingFunds)
+        ->and($adapter->fundingVerifications)->toHaveCount(1)
+        ->and($adapter->fundingVerifications[0]->fundingAddress)
+        ->toBe('915008422914050308952');
+});
+
 it('settles exact provider funds into a hold and resumes issuance exactly once', function (): void {
     Queue::fake();
     enableNetbankTreasuryForTests();
@@ -471,6 +564,57 @@ function issuanceFundingOrder(User $user, ?string $identity = null): PayCodeIssu
     ]);
 
     return $order;
+}
+
+function fundingIntentAwaitingOnDemandBankTransfer(): FundingIntent
+{
+    $identity = (string) Str::uuid();
+    $destination = new FundingDestinationData(
+        provider: 'netbank',
+        mode: 'shared',
+        destinationType: 'bank_account',
+        accountReference: 'wallet:test',
+        displayReference: '•••• 0019 · VCA 91500',
+        fingerprint: hash('sha256', 'netbank|113001000019|91500'),
+        verificationStatus: 'platform_configured',
+        bankAccountNumber: '113-001-00001-9',
+        bankAccountName: 'Test Treasury',
+        routingAlias: '91500',
+    );
+
+    $intent = FundingIntent::query()->create([
+        'account_reference' => 'wallet:test',
+        'provider_code' => 'netbank',
+        'purpose' => FundingIntentPurpose::OnDemandIssuance,
+        'expected_amount_minor' => 6_650,
+        'currency' => 'PHP',
+        'status' => FundingIntentStatus::AwaitingFunds,
+        'version' => 1,
+        'idempotency_key_hash' => hash('sha256', 'key-'.$identity),
+        'idempotency_fingerprint' => hash('sha256', 'fingerprint-'.$identity),
+        'created_by_type' => 'test',
+        'created_by_id' => 'operator-1',
+        'provider_reference' => '915008422914050308952',
+        'provider_request_id' => '915008422914050308952',
+        'funding_address_ciphertext' => '915008422914050308952',
+        'funding_address_hash' => hash('sha256', '915008422914050308952'),
+        'instructions_created_at' => now()->subMinutes(5),
+        'expires_at' => now()->addMinutes(25),
+        'destination_snapshot_ciphertext' => FundingDestinationSnapshot::fromData($destination),
+        'destination_fingerprint' => $destination->fingerprint,
+        'metadata' => ['source' => 'on_demand_issuance_test'],
+    ]);
+    $intent->events()->create([
+        'sequence' => 1,
+        'event_type' => 'provider_instructions_created',
+        'from_status' => FundingIntentStatus::PendingInstructions,
+        'to_status' => FundingIntentStatus::AwaitingFunds,
+        'actor_type' => 'test',
+        'actor_id' => 'operator-1',
+        'occurred_at' => now()->subMinutes(5),
+    ]);
+
+    return $intent;
 }
 
 function onDemandFundingObservation(int $amountMinor): ProviderFundingObservation

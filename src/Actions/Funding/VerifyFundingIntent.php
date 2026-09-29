@@ -9,12 +9,14 @@ use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
 use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
 use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
+use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\EmiCore\Exceptions\ProviderFundingNotObserved;
 use LBHurtado\EmiCore\Exceptions\ProviderFundingVerificationIndeterminate;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\EmiCore\Models\WebhookReceipt;
 use LBHurtado\XChange\Data\Funding\FundingIntentTransitionData;
 use LBHurtado\XChange\Data\Funding\FundingIntentVerificationData;
+use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\FundingVerificationTrigger;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
@@ -104,9 +106,7 @@ class VerifyFundingIntent
         }
 
         try {
-            $observationData = $this->providers
-                ->for($intent->provider_code)
-                ->verifyFunding($this->providerVerification($intent, $receipt));
+            $observationData = $this->verifyProviderFunding($intent, $receipt);
         } catch (ProviderFundingNotObserved) {
             return $this->transition->handle($intent, $this->transitionData(
                 status: FundingIntentStatus::AwaitingFunds,
@@ -175,9 +175,7 @@ class VerifyFundingIntent
         ?WebhookReceipt $receipt,
     ): FundingIntent {
         try {
-            $observationData = $this->providers
-                ->for($intent->provider_code)
-                ->verifyFunding($this->providerVerification($intent, $receipt));
+            $observationData = $this->verifyProviderFunding($intent, $receipt);
         } catch (ProviderFundingNotObserved) {
             return $intent;
         } catch (ProviderFundingVerificationIndeterminate) {
@@ -350,6 +348,11 @@ class VerifyFundingIntent
         FundingIntent $intent,
         ?WebhookReceipt $receipt,
     ): FundingVerificationData {
+        $clockSkewSeconds = max(0, (int) config(
+            'x-change.funding.requests.bank_transfer.clock_skew_seconds',
+            120,
+        ));
+
         return new FundingVerificationData(
             provider: $intent->provider_code,
             fundingIntentReference: $intent->reference,
@@ -359,6 +362,76 @@ class VerifyFundingIntent
             fundingAddress: $intent->funding_address_ciphertext,
             webhookReceiptId: $receipt?->getKey(),
             destination: $this->destination($intent),
+            observedAfter: $intent->instructions_created_at
+                ?->subSeconds($clockSkewSeconds)
+                ->toDateTimeImmutable(),
+            observedBefore: now()
+                ->addSeconds($clockSkewSeconds)
+                ->toDateTimeImmutable(),
+        );
+    }
+
+    private function verifyProviderFunding(
+        FundingIntent $intent,
+        ?WebhookReceipt $receipt,
+    ): ProviderFundingObservationData {
+        $provider = $this->providers->for($intent->provider_code);
+        $verification = $this->providerVerification($intent, $receipt);
+
+        try {
+            return $provider->verifyFunding($verification);
+        } catch (ProviderFundingNotObserved $exception) {
+            $corporateAccountVerification = $this->corporateAccountVerification(
+                $intent,
+                $verification,
+            );
+
+            if ($corporateAccountVerification === null) {
+                throw $exception;
+            }
+
+            $observation = $provider->verifyFunding($corporateAccountVerification);
+            $observation->verificationSource = 'netbank-corporate-account-transaction-history';
+            $observation->metadata = [
+                ...$observation->metadata,
+                'verification_path' => 'corporate_account',
+            ];
+
+            return $observation;
+        }
+    }
+
+    private function corporateAccountVerification(
+        FundingIntent $intent,
+        FundingVerificationData $verification,
+    ): ?FundingVerificationData {
+        if ($intent->purpose !== FundingIntentPurpose::OnDemandIssuance
+            || $intent->provider_code !== 'netbank'
+            || $verification->destination === null) {
+            return null;
+        }
+
+        $accountNumber = preg_replace(
+            '/\D+/',
+            '',
+            (string) $verification->destination->bankAccountNumber,
+        ) ?? '';
+
+        if (strlen($accountNumber) < 12) {
+            return null;
+        }
+
+        return new FundingVerificationData(
+            provider: $verification->provider,
+            fundingIntentReference: $verification->fundingIntentReference,
+            expectedAmountMinor: $verification->expectedAmountMinor,
+            currency: $verification->currency,
+            providerRequestId: $verification->providerRequestId,
+            fundingAddress: $accountNumber,
+            webhookReceiptId: $verification->webhookReceiptId,
+            destination: $verification->destination,
+            observedAfter: $verification->observedAfter,
+            observedBefore: $verification->observedBefore,
         );
     }
 
