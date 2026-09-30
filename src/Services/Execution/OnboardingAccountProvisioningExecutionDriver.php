@@ -14,6 +14,7 @@ use LBHurtado\Voucher\Contracts\ExecutionDriverContract;
 use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Data\ExecutionResultData;
 use LBHurtado\Voucher\Services\DefaultExecutionDriver;
+use LBHurtado\XChange\Actions\Affiliation\ActivateVoucherSponsorship;
 use LBHurtado\XChange\Actions\Claim\DispatchVoucherClaimOutcome;
 use LBHurtado\XChange\Actions\Funding\RefreshFundingLiquidity;
 use LBHurtado\XChange\Actions\Legal\DeferOnboardingFundingUntilAgreement;
@@ -22,6 +23,7 @@ use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Onboarding\OnboardingVoucherClaimantAuthenticator;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
+use LBHurtado\XProvisioning\Models\ProvisioningOffer;
 use Throwable;
 
 final readonly class OnboardingAccountProvisioningExecutionDriver implements ExecutionDriverContract
@@ -33,6 +35,7 @@ final readonly class OnboardingAccountProvisioningExecutionDriver implements Exe
         private DeferOnboardingFundingUntilAgreement $deferFunding,
         private OnboardingVoucherClaimantAuthenticator $authenticator,
         private RefreshFundingLiquidity $liquidity,
+        private ActivateVoucherSponsorship $activateSponsorship,
         private Request $request,
     ) {}
 
@@ -108,6 +111,17 @@ final readonly class OnboardingAccountProvisioningExecutionDriver implements Exe
             throw new OnboardingVoucherExecutionFailed('account_provisioning_rejected');
         }
 
+        $affiliation = $this->activateSponsorship->handle(
+            $context->voucher,
+            $promotion->user,
+            [
+                'name' => (string) data_get($inputs, 'full_name', data_get($inputs, 'name')),
+                'email' => (string) data_get($inputs, 'email'),
+                'mobile' => (string) data_get($inputs, 'mobile', $context->contact->mobile),
+                'otp' => $verificationProof !== null,
+            ],
+        );
+
         $settlement = $this->settle($context, $promotion->user);
 
         $handoffScheduled = $this->request->hasSession();
@@ -137,6 +151,9 @@ final readonly class OnboardingAccountProvisioningExecutionDriver implements Exe
             events: [
                 'onboarding.account_resolved',
                 'onboarding.account_positions_provisioned',
+                ...($affiliation instanceof ProvisioningOffer
+                    ? ['onboarding.affiliation_sponsorship_established']
+                    : []),
                 $settlement['event'],
                 $handoffScheduled
                     ? 'onboarding.claimant_authentication_scheduled'
@@ -155,6 +172,7 @@ final readonly class OnboardingAccountProvisioningExecutionDriver implements Exe
                     : null,
                 'settlement_mode' => $settlement['mode'],
                 'treasury_operation_reference' => $settlement['treasury_operation_reference'],
+                'affiliation_authority_reference' => $affiliation?->activation_reference,
             ],
         );
     }

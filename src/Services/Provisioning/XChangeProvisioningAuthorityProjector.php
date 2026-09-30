@@ -10,8 +10,15 @@ use DomainException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
+use LBHurtado\XAffiliation\Actions\CheckSponsorshipEligibility;
+use LBHurtado\XAffiliation\Actions\EstablishSponsorship;
+use LBHurtado\XAffiliation\Contracts\AffiliationIdentityKeyFactoryContract;
+use LBHurtado\XAffiliation\Data\SponsorshipAuthorityData;
+use LBHurtado\XAffiliation\Models\AffiliationNetwork;
+use LBHurtado\XAffiliation\Models\AffiliationSponsorship;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Contracts\WalletProvisioningContract;
+use LBHurtado\XChange\Data\Affiliation\SponsorshipInvitationSnapshotData;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
 use LBHurtado\XChange\Enums\PartnerApiOperatorCapability;
 use LBHurtado\XChange\Enums\ProvisioningOperatorCapability;
@@ -44,6 +51,9 @@ final readonly class XChangeProvisioningAuthorityProjector implements Provisioni
         private TransitionCommercialRecipientDesignationEconomics $transitionRecipientEconomics,
         private WalletProvisioningContract $accounts,
         private TreasuryPrincipalReferenceResolverContract $principalReferences,
+        private AffiliationIdentityKeyFactoryContract $affiliationIdentityKeys,
+        private CheckSponsorshipEligibility $sponsorshipEligibility,
+        private EstablishSponsorship $establishSponsorship,
     ) {}
 
     public function activate(
@@ -54,6 +64,11 @@ final readonly class XChangeProvisioningAuthorityProjector implements Provisioni
         return DB::transaction(function () use ($revision, $acceptance, $checker): string {
             $revision->loadMissing('request');
             $candidate = $this->candidate($acceptance);
+
+            if ($revision->request->profile === ProvisioningProfile::AccountInvitation
+                && data_get($revision->snapshot, 'activation_gate') === SponsorshipInvitationSnapshotData::ActivationGate) {
+                return $this->activateSponsorshipInvitation($revision, $candidate);
+            }
 
             if (! $checker instanceof Model) {
                 throw new DomainException('Provisioning activation requires its recorded activation checker.');
@@ -118,6 +133,84 @@ final readonly class XChangeProvisioningAuthorityProjector implements Provisioni
 
             return $reference;
         }, attempts: 3);
+    }
+
+    private function activateSponsorshipInvitation(
+        ProvisioningRevision $revision,
+        Model $candidate,
+    ): string {
+        $snapshot = SponsorshipInvitationSnapshotData::fromArray((array) $revision->snapshot);
+        $network = AffiliationNetwork::query()
+            ->where('reference', $snapshot->networkReference)
+            ->firstOrFail();
+        $mobile = $candidate->getAttribute('mobile');
+
+        if (! is_string($mobile) || trim($mobile) === '') {
+            $mobile = $candidate->getRawOriginal('mobile');
+        }
+
+        if (! is_string($mobile) || trim($mobile) === '') {
+            throw new DomainException('The accepted Account has no verified mobile identity.');
+        }
+
+        try {
+            $canonicalMobile = phone($mobile, 'PH')->formatE164();
+        } catch (\Throwable $exception) {
+            throw new DomainException('The accepted Account mobile identity is invalid.', previous: $exception);
+        }
+
+        $mobileKey = $this->affiliationIdentityKeys->forMobile(
+            $network->reference,
+            $canonicalMobile,
+        );
+
+        if (! hash_equals($snapshot->recipientMobileKey, $mobileKey)) {
+            throw new DomainException('The verified claimant does not match the targeted invitation.');
+        }
+
+        $memberReference = $this->principalReferences->resolve($candidate);
+        $authorityReference = 'x-provisioning:'
+            .$revision->request->reference
+            .':'
+            .$revision->snapshot_hash;
+        $eligibility = $this->sponsorshipEligibility->handle(
+            network: $network,
+            sponsorSubjectType: $snapshot->sponsorSubjectType,
+            sponsorSubjectReference: $snapshot->sponsorSubjectReference,
+            candidateMobileKey: $mobileKey,
+            candidateSubjectType: 'account',
+            candidateSubjectReference: $memberReference,
+            relationshipType: $snapshot->relationshipType,
+        );
+
+        if (! $eligibility->isEligible()) {
+            $existing = AffiliationSponsorship::query()
+                ->where('network_id', $network->getKey())
+                ->where('authority_type', 'x-provisioning.account-invitation')
+                ->where('authority_reference', $authorityReference)
+                ->first();
+
+            if ($existing instanceof AffiliationSponsorship) {
+                return $authorityReference;
+            }
+
+            throw new DomainException('This onboarding invitation is no longer eligible for use.');
+        }
+
+        $this->establishSponsorship->handle(new SponsorshipAuthorityData(
+            networkReference: $network->reference,
+            sponsorSubjectType: $snapshot->sponsorSubjectType,
+            sponsorSubjectReference: $snapshot->sponsorSubjectReference,
+            memberSubjectType: 'account',
+            memberSubjectReference: $memberReference,
+            memberMobileKey: $mobileKey,
+            authorityType: 'x-provisioning.account-invitation',
+            authorityReference: $authorityReference,
+            effectiveAt: CarbonImmutable::now(),
+            relationshipType: $snapshot->relationshipType,
+        ));
+
+        return $authorityReference;
     }
 
     private function resolveRecipientDesignation(

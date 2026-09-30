@@ -19,6 +19,8 @@ making a user-facing Account balance pretend to be a bank balance.
 > production use.
 
 Before commissioning, read [Principals, Accounts, and Human Onboarding](./ONBOARDING.md).
+Sponsorship-bearing onboarding is documented in
+[Affiliation Networking](./docs/architecture/AFFILIATION_NETWORKING.md).
 It defines these package-wide boundaries:
 
 - **System Principal** → **System Operations Account**;

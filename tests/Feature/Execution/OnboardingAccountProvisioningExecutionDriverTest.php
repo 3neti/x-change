@@ -13,7 +13,10 @@ use LBHurtado\Voucher\Data\ExecutionResultData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\Services\DefaultExecutionDriver;
 use LBHurtado\Voucher\Services\ExecutionDriverRegistry;
+use LBHurtado\XChange\Actions\Affiliation\ActivateVoucherSponsorship;
 use LBHurtado\XChange\Actions\Claim\DispatchVoucherClaimOutcome;
+use LBHurtado\XChange\Actions\Funding\RefreshFundingLiquidity;
+use LBHurtado\XChange\Actions\Legal\DeferOnboardingFundingUntilAgreement;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\WalletProvisioningContract;
 use LBHurtado\XChange\Data\Treasury\TreasuryAccountPortfolioData;
@@ -95,7 +98,10 @@ it('fails before account mutation when required mobile verification evidence is 
         new PromoteContactToUser($provisioner),
         $defaultDriver,
         app(DispatchVoucherClaimOutcome::class),
+        app(DeferOnboardingFundingUntilAgreement::class),
         app(OnboardingVoucherClaimantAuthenticator::class),
+        app(RefreshFundingLiquidity::class),
+        app(ActivateVoucherSponsorship::class),
         Request::create('/x/claim/ONBD-1234'),
     );
 
@@ -150,7 +156,10 @@ it('provisions the account from structured proof and strips provider evidence be
         new PromoteContactToUser($provisioner),
         $defaultDriver,
         app(DispatchVoucherClaimOutcome::class),
+        app(DeferOnboardingFundingUntilAgreement::class),
         app(OnboardingVoucherClaimantAuthenticator::class),
+        app(RefreshFundingLiquidity::class),
+        app(ActivateVoucherSponsorship::class),
         Request::create('/x/claim/ONBD-1234'),
     );
 
@@ -184,7 +193,10 @@ it('rejects legacy raw OTP and timestamp markers without structured provider pro
         new PromoteContactToUser($provisioner),
         $defaultDriver,
         app(DispatchVoucherClaimOutcome::class),
+        app(DeferOnboardingFundingUntilAgreement::class),
         app(OnboardingVoucherClaimantAuthenticator::class),
+        app(RefreshFundingLiquidity::class),
+        app(ActivateVoucherSponsorship::class),
         Request::create('/x/claim/ONBD-1234'),
     );
 
@@ -220,7 +232,10 @@ it('does not require OTP evidence when the persisted onboarding policy disabled 
         new PromoteContactToUser($provisioner),
         $defaultDriver,
         app(DispatchVoucherClaimOutcome::class),
+        app(DeferOnboardingFundingUntilAgreement::class),
         app(OnboardingVoucherClaimantAuthenticator::class),
+        app(RefreshFundingLiquidity::class),
+        app(ActivateVoucherSponsorship::class),
         Request::create('/x/claim/ONBD-1234'),
     );
 
@@ -256,7 +271,10 @@ it('rolls back a newly provisioned Account when Voucher redemption fails', funct
         )),
         $defaultDriver,
         app(DispatchVoucherClaimOutcome::class),
+        app(DeferOnboardingFundingUntilAgreement::class),
         app(OnboardingVoucherClaimantAuthenticator::class),
+        app(RefreshFundingLiquidity::class),
+        app(ActivateVoucherSponsorship::class),
         Request::create('/x/claim/ONBD-1234'),
     );
 
