@@ -33,6 +33,7 @@ final class ScenarioRunnerRegistry
             'commercial_operations_simulation',
             'treasury_account_grant_simulation',
             'provisioning_governance_simulation',
+            'affiliation_networking_simulation',
             'campaign_batch',
             'commercial_pay_code',
         ], true);
@@ -62,6 +63,7 @@ final class ScenarioRunnerRegistry
             'commercial_operations_simulation' => app(CommercialOperationsSimulationScenarioRunner::class),
             'treasury_account_grant_simulation' => app(TreasuryAccountGrantSimulationScenarioRunner::class),
             'provisioning_governance_simulation' => app(ProvisioningGovernanceSimulationScenarioRunner::class),
+            'affiliation_networking_simulation' => app(AffiliationNetworkingSimulationScenarioRunner::class),
             'campaign_batch' => app(CampaignBatchScenarioRunner::class),
             'commercial_pay_code' => app(CommercialPayCodeScenarioRunner::class),
             default => throw new RuntimeException("No lifecycle scenario runner registered for mode [{$mode}]."),

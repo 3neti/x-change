@@ -136,6 +136,33 @@ return [
         ],
     ],
 
+    'affiliation_networking_simulation' => [
+        'enabled' => (bool) env(
+            'XCHANGE_LIFECYCLE_AFFILIATION_NETWORKING_SIMULATION_ENABLED',
+            env('APP_ENV') !== 'production',
+        ),
+        'allowed_environments' => ['local', 'testing'],
+        'required_tables' => [
+            'users',
+            'channels',
+            'vouchers',
+            'x_change_affiliation_invitation_authorities',
+            'x_affiliation_networks',
+            'x_affiliation_memberships',
+            'x_affiliation_sponsorships',
+            'x_affiliation_paths',
+            'x_affiliation_events',
+            'x_provisioning_requests',
+            'x_provisioning_revisions',
+            'x_provisioning_offers',
+            'x_provisioning_acceptances',
+            'x_provisioning_events',
+            'execution_journal_entries',
+            'execution_journal_heads',
+            'execution_journal_reference_counters',
+        ],
+    ],
+
     'treasury_live_basic_cash' => [
         'enabled' => (bool) env(
             'XCHANGE_LIFECYCLE_TREASURY_LIVE_BASIC_CASH_ENABLED',
@@ -214,6 +241,15 @@ return [
                 'profile' => 'treasury_maker',
                 'mobile' => '639170000001',
             ],
+        ],
+
+        'affiliation_networking_simulation' => [
+            'label' => 'Affiliation Networking Simulation',
+            'description' => 'Exercises targeted sponsorship authority, independent Maker-Checker approval, two-generation lineage, replay safety, cycle rejection, and complete rollback.',
+            'category' => 'affiliation-governance',
+            'tags' => ['affiliation', 'sponsorship', 'maker-checker', 'onboarding', 'rollback'],
+            'mode' => 'affiliation_networking_simulation',
+            'api_executable' => false,
         ],
 
         /*

@@ -9,6 +9,7 @@ use Carbon\CarbonImmutable;
 use DomainException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\XAffiliation\Actions\CheckSponsorshipEligibility;
 use LBHurtado\XAffiliation\Actions\EstablishSponsorship;
@@ -143,7 +144,9 @@ final readonly class XChangeProvisioningAuthorityProjector implements Provisioni
         $network = AffiliationNetwork::query()
             ->where('reference', $snapshot->networkReference)
             ->firstOrFail();
-        $mobile = $candidate->getAttribute('mobile');
+        $mobile = $candidate instanceof HasMobileChannel
+            ? $candidate->getMobileChannel()
+            : $candidate->getAttribute('mobile');
 
         if (! is_string($mobile) || trim($mobile) === '') {
             $mobile = $candidate->getRawOriginal('mobile');

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use LBHurtado\XChange\Lifecycle\Runners\AccountManagementScenarioRunner;
+use LBHurtado\XChange\Lifecycle\Runners\AffiliationNetworkingSimulationScenarioRunner;
 use LBHurtado\XChange\Lifecycle\Runners\CommercialOperationsSimulationScenarioRunner;
 use LBHurtado\XChange\Lifecycle\Runners\DefaultClaimScenarioRunner;
 use LBHurtado\XChange\Lifecycle\Runners\ExecutionEngineContractScenarioRunner;
@@ -113,6 +114,16 @@ it('resolves provisioning governance simulation mode', function () {
     expect($resolution->mode)->toBe('provisioning_governance_simulation')
         ->and($resolution->runner)
         ->toBeInstanceOf(ProvisioningGovernanceSimulationScenarioRunner::class);
+});
+
+it('resolves affiliation networking simulation mode', function () {
+    $resolution = app(ScenarioRunnerResolver::class)->resolve([
+        'mode' => 'affiliation_networking_simulation',
+    ]);
+
+    expect($resolution->mode)->toBe('affiliation_networking_simulation')
+        ->and($resolution->runner)
+        ->toBeInstanceOf(AffiliationNetworkingSimulationScenarioRunner::class);
 });
 
 it('resolves payment voucher collection mode', function () {

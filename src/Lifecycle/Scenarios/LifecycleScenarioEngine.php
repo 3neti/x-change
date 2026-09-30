@@ -214,6 +214,7 @@ final class LifecycleScenarioEngine
             'commercial_operations_simulation',
             'treasury_account_grant_simulation',
             'provisioning_governance_simulation',
+            'affiliation_networking_simulation',
             'campaign_batch',
             'commercial_pay_code',
         ], true)) {
