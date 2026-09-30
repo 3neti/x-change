@@ -119,6 +119,18 @@ Next, only after explicit authorization:
 2. Make the policy commissionable.
 3. Add Turnstile as a later security adapter.
 
+## Deferred TODO
+
+- [ ] Design a curated **Public Offerings** catalog as a distinct,
+  commissioned public product menu.
+- [ ] Keep the current public composer blank-only until that catalog passes
+  authorization, audit, versioning, abuse-control, and browser-acceptance
+  gates.
+- [ ] Prove that public visitors can only select published offering snapshots
+  and can never inspect, edit, save, or reuse private Cockpit templates.
+- [ ] Define audited publish, pause, withdraw, and replacement semantics that
+  preserve already paid and issued orders.
+
 ## Stop conditions
 
 Stop rather than improvise if:

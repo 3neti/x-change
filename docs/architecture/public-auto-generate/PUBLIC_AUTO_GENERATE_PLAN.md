@@ -328,6 +328,34 @@ Automated and browser evidence must prove:
 - guest Client Funds; and
 - arbitrary principal selection.
 
+## Deferred TODO — Curated Public Offerings catalog
+
+Status: **deferred and not implemented**. The current public composer must
+continue to start blank and must not expose private Cockpit templates.
+
+After the blank public-issuance workflow is proven, consider a separately
+commissioned catalog at `/x/auto-generate` that presents a small menu of
+operator-approved products. Examples may include a simple cash Pay Code, a
+Pay Code with fixed evidence requirements, or an approved collection or
+insurance journey.
+
+The catalog must observe these boundaries:
+
+- offerings are created, reviewed, published, paused, and withdrawn only by
+  authorized operators;
+- public visitors cannot create, edit, save, or persist offerings;
+- private Cockpit templates and their registry are never exposed;
+- authoritative principal, pricing, instruction requirements, limits, expiry,
+  and funding policy are fixed server-side in a versioned offering snapshot;
+- selecting an offering prepares one one-time instruction through the existing
+  public issuance and payment engine; and
+- withdrawing an offering prevents new orders without changing already paid or
+  issued orders.
+
+This is a public product menu, not public template management. Implementation
+requires its own authorization, audit, versioning, abuse-control, lifecycle,
+and browser-acceptance gates.
+
 ## Release boundary
 
 No push, tag, package publication, host adoption, Cloud deployment, provider
