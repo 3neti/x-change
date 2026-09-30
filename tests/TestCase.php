@@ -24,6 +24,7 @@ use LBHurtado\Onboarding\OnboardingServiceProvider;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\VoucherServiceProvider;
 use LBHurtado\Wallet\WalletServiceProvider as LBHurtadoWalletServiceProvider;
+use LBHurtado\XAffiliation\XAffiliationServiceProvider;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Providers\XChangeServiceProvider;
 use LBHurtado\XChange\Tests\Fakes\FakeAuditLogger;
@@ -97,6 +98,7 @@ abstract class TestCase extends Orchestra
             $this->optionalProvider('ThreeNeti\\SettlementEnvelopePhilhealth\\SettlementEnvelopePhilhealthServiceProvider'),
             XCommerceServiceProvider::class,
             XProvisioningServiceProvider::class,
+            XAffiliationServiceProvider::class,
             XChangeServiceProvider::class,
             PurifierServiceProvider::class,
             XRiderServiceProvider::class,
@@ -144,6 +146,9 @@ abstract class TestCase extends Orchestra
         $app['config']->set('passport.public_key', 'test-oauth-public-key');
         $app['config']->set('x-change.deployment.profile_explicitly_configured', true);
         $app['config']->set('x-change.commissioning.enabled', false);
+        $app['config']->set('x-change.affiliation.enabled', false);
+        $app['config']->set('x-change.instance.id', 'x-change-test-instance');
+        $app['config']->set('x-affiliation.identity_pepper', 'x-change-test-affiliation-pepper');
 
         // The package testbench explicitly provisions safe, non-production
         // capability doubles. Individual readiness tests override these values
@@ -248,6 +253,7 @@ abstract class TestCase extends Orchestra
         // Onboarding package migrations.
         $this->loadOnboardingPackageMigrations();
         $this->loadProvisioningPackageMigrations();
+        $this->loadAffiliationPackageMigrations();
 
         // Merchant QR profile migrations.
         $this->loadMerchantPackageMigrations();
@@ -303,6 +309,15 @@ abstract class TestCase extends Orchestra
     protected function loadProvisioningPackageMigrations(): void
     {
         $path = $this->packageRoot(XProvisioningServiceProvider::class).'/database/migrations';
+
+        if (is_dir($path) && (glob($path.'/*.php') ?: []) !== []) {
+            $this->loadMigrationsFrom($path);
+        }
+    }
+
+    protected function loadAffiliationPackageMigrations(): void
+    {
+        $path = $this->packageRoot(XAffiliationServiceProvider::class).'/database/migrations';
 
         if (is_dir($path) && (glob($path.'/*.php') ?: []) !== []) {
             $this->loadMigrationsFrom($path);

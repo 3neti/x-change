@@ -2776,6 +2776,10 @@ return [
         'id' => env('XCHANGE_INSTANCE_ID'),
     ],
 
+    'affiliation' => [
+        'enabled' => (bool) env('XCHANGE_AFFILIATION_ENABLED', false),
+    ],
+
     'disbursement' => [
         'reconciliation' => [
             'scheduled_enabled' => (bool) env(

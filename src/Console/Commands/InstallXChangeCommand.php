@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Database\Seeder;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
+use LBHurtado\XChange\Services\Affiliation\AffiliationInstallationNetwork;
 use LBHurtado\XChange\Services\Commercial\CommercialBillingPolicy;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Configuration\CommissioningManifestRecorder;
@@ -61,6 +62,7 @@ class InstallXChangeCommand extends Command
         CommissioningManifestRecorder $commissioningManifests,
         ProvisionCommercialBaselines $commercialBaselines,
         HostApplicationShellAdopter $hostApplicationShell,
+        AffiliationInstallationNetwork $affiliationNetwork,
         CommercialBillingPolicy $commercialBilling,
     ): int {
         $this->components->info('Installing X-Change...');
@@ -522,6 +524,22 @@ class InstallXChangeCommand extends Command
                 return self::FAILURE;
             }
 
+        }
+
+        try {
+            $network = $affiliationNetwork->ensure();
+
+            if ($network !== null) {
+                $this->components->info(
+                    'Affiliation application-instance network ready ['.$network->reference.'].',
+                );
+            }
+        } catch (Throwable $exception) {
+            $this->components->error(
+                'Affiliation network commissioning failed: '.$exception->getMessage(),
+            );
+
+            return self::FAILURE;
         }
 
         if ($this->callSilently('x-change:provisioning:commission') !== self::SUCCESS) {

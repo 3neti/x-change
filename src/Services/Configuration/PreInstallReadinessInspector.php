@@ -17,6 +17,7 @@ final readonly class PreInstallReadinessInspector
         private InstructionCapabilityReadinessRegistry $instructionCapabilities,
         private ClaimEvidenceStorageReadinessInspector $claimEvidenceStorage,
         private TimeAuthorityInspector $timeAuthority,
+        private AffiliationReadinessInspector $affiliation,
         private CommercialBillingPolicy $commercialBilling,
         private CommercialPrincipalProvisioningService $commercialPrincipals,
     ) {}
@@ -42,6 +43,7 @@ final readonly class PreInstallReadinessInspector
             $this->onDemandIssuanceFundingBasisCheck(),
             $this->timeAuthorityCheck(),
             $this->systemPrincipalIdentityCheck($liveProfile),
+            $this->affiliation->inspect(requireNetwork: false),
             $this->commercialPrincipalConfigurationCheck(),
             $this->productionApplicationSecurityCheck(),
             $this->partnerApiOAuthCheck(),

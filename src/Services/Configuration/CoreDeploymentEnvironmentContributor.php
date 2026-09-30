@@ -93,6 +93,27 @@ final class CoreDeploymentEnvironmentContributor implements DeploymentEnvironmen
                 requiredForProfiles: ['netbank', 'paynamics', 'hybrid', 'custom'],
             ),
             new EnvironmentVariableData(
+                key: 'XCHANGE_INSTANCE_ID',
+                description: 'Stable application-installation identity; never derive it from a domain or replica.',
+                category: 'Identity',
+                configPath: 'x-change.instance.id',
+                safeExample: '01HZYXCHANGEINSTALLATION',
+            ),
+            new EnvironmentVariableData(
+                key: 'XCHANGE_AFFILIATION_ENABLED',
+                description: 'Enable application-scoped membership and sponsorship networking.',
+                category: 'Identity',
+                configPath: 'x-change.affiliation.enabled',
+                safeExample: 'false',
+            ),
+            new EnvironmentVariableData(
+                key: 'X_AFFILIATION_IDENTITY_PEPPER',
+                description: 'Stable secret used to derive privacy-safe mobile identity keys.',
+                category: 'Identity',
+                configPath: 'x-affiliation.identity_pepper',
+                secret: true,
+            ),
+            new EnvironmentVariableData(
                 key: 'XCHANGE_TREASURY_LEGAL_ENTITY_REFERENCE',
                 description: 'Stable legal-entity reference used by Treasury positions.',
                 category: 'Treasury',

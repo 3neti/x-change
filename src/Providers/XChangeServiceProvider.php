@@ -60,6 +60,7 @@ use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
+use LBHurtado\XAffiliation\Contracts\AffiliationEventSinkContract;
 use LBHurtado\XCampaign\Contracts\EndpointCampaignRepository;
 use LBHurtado\XCampaign\Repositories\EloquentEndpointCampaignRepository;
 use LBHurtado\XChange\Actions\Auth\AuthenticateMobileFirstUser;
@@ -73,6 +74,7 @@ use LBHurtado\XChange\Actions\Settlement\ProjectCompletionClaimEvidence;
 use LBHurtado\XChange\Console\Commands\AdoptCommissioningManifestCommand;
 use LBHurtado\XChange\Console\Commands\AdoptHostCommand;
 use LBHurtado\XChange\Console\Commands\AdoptXChangeCommand;
+use LBHurtado\XChange\Console\Commands\Affiliation\EnrollAffiliationRootCommand;
 use LBHurtado\XChange\Console\Commands\BootstrapXChangeFromManifestCommand;
 use LBHurtado\XChange\Console\Commands\Campaigns\ProcessCampaignBatchFulfillmentOutboxCommand;
 use LBHurtado\XChange\Console\Commands\Campaigns\ShowCampaignPayoutRecoveryDeliveriesCommand;
@@ -355,6 +357,7 @@ use LBHurtado\XChange\Listeners\QueueDemonstrationPolicySummary;
 use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
 use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Models\LeadCampaign;
+use LBHurtado\XChange\Services\Affiliation\XJournalAffiliationEventSink;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\Base64PngClaimUrlQrRenderer;
 use LBHurtado\XChange\Services\CacheClaimApprovalWorkflowStore;
@@ -614,6 +617,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(
             ProvisioningRevokerContract::class,
             XChangeProvisioningAuthorityProjector::class,
+        );
+        $this->app->singleton(
+            AffiliationEventSinkContract::class,
+            XJournalAffiliationEventSink::class,
         );
         $this->app->scoped(PartnerApiRequestContext::class);
         $this->app->scoped(PartnerApiOperatorAuthority::class);
@@ -1719,6 +1726,7 @@ class XChangeServiceProvider extends ServiceProvider
                 AuditProviderAttributionCommand::class,
                 SimulateTreasuryProviderDepositCommand::class,
                 InstallXChangeCommand::class,
+                EnrollAffiliationRootCommand::class,
                 PublishXChangeCommand::class,
                 AdoptHostCommand::class,
                 AdoptXChangeCommand::class,
