@@ -235,6 +235,7 @@ use LBHurtado\XChange\Contracts\CommercialLegalTraceResolverContract;
 use LBHurtado\XChange\Contracts\CommercialOfferingResolverContract;
 use LBHurtado\XChange\Contracts\CommercialOperatorAuthorityContract;
 use LBHurtado\XChange\Contracts\CommercialPartnerResolverContract;
+use LBHurtado\XChange\Contracts\CommercialPrincipalResolverContract;
 use LBHurtado\XChange\Contracts\CommercialRecipientDesignationResolverContract;
 use LBHurtado\XChange\Contracts\CommercialSettlementAccountResolverContract;
 use LBHurtado\XChange\Contracts\Deployment\CloudMutationGatewayContract;
@@ -403,6 +404,7 @@ use LBHurtado\XChange\Services\Cockpit\SystemPrincipalCockpitTreasuryAccess;
 use LBHurtado\XChange\Services\Cockpit\VoucherLifecycleCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\WalletCockpitHeaderReadModelProvider;
 use LBHurtado\XChange\Services\Commercial\ConfigCommercialPartnerResolver;
+use LBHurtado\XChange\Services\Commercial\ConfiguredCommercialPrincipalResolver;
 use LBHurtado\XChange\Services\Commercial\DatabaseCommercialComponentEconomicsResolver;
 use LBHurtado\XChange\Services\Commercial\DatabaseCommercialOfferingResolver;
 use LBHurtado\XChange\Services\Commercial\DatabaseCommercialOperatorAuthority;
@@ -670,6 +672,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(
             CommercialPartnerResolverContract::class,
             ConfigCommercialPartnerResolver::class,
+        );
+        $this->app->singleton(
+            CommercialPrincipalResolverContract::class,
+            ConfiguredCommercialPrincipalResolver::class,
         );
         $this->app->scoped(
             SystemUserResolverContract::class,
@@ -2211,7 +2217,7 @@ class XChangeServiceProvider extends ServiceProvider
         }
 
         if (! $this->app->bound(ProviderFundingPolicyContract::class)) {
-            $this->app->singleton(ProviderFundingPolicyContract::class, function ($app) {
+            $this->app->scoped(ProviderFundingPolicyContract::class, function ($app) {
                 return $app->make(config('x-change.services.provider_funding_policy', ProviderAwareFundingPolicy::class));
             });
         }

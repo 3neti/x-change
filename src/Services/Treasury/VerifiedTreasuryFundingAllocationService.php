@@ -147,6 +147,82 @@ final readonly class VerifiedTreasuryFundingAllocationService implements Verifie
         $this->simulator->assertAvailable();
         $scope = hash('sha256', $evidenceReference);
         $account = $this->accounts->resolve($accountReference);
+
+        if (data_get($metadata, 'funding_intent_purpose') === 'on_demand_issuance') {
+            $owner = data_get($account, 'holder');
+
+            if (! $owner instanceof Model) {
+                throw FundingSettlementDenied::because(
+                    'the simulated on-demand Account owner could not be resolved',
+                );
+            }
+
+            $portfolio = $this->accountPortfolios->provision($owner, [
+                $connectionReference = (string) config(
+                    'x-change.funding.requests.bank_transfer.connection_reference',
+                    'netbank-primary',
+                ),
+            ]);
+            $system = $this->systemPositions->provision([$connectionReference]);
+            $source = $this->position(
+                $system->positions,
+                TreasuryPositionPurpose::TreasuryClearing,
+            );
+            $destination = $this->position(
+                $portfolio->positions,
+                TreasuryPositionPurpose::ClientFunds,
+            );
+            $recognition = $this->operations->recognize(
+                new TreasuryPositionRecognitionData(
+                    operationReference: 'simulation-recognition:'.$scope,
+                    destinationPositionReference: $source->positionReference,
+                    amountMinor: $amountMinor,
+                    currency: $currency,
+                    idempotencyKey: 'simulation-recognition-key:'.$scope,
+                    externalReference: $evidenceReference,
+                    metadata: [
+                        ...$metadata,
+                        'simulation_only' => true,
+                    ],
+                ),
+            );
+            $allocation = $this->operations->allocate(
+                new TreasuryPositionAllocationData(
+                    operationReference: 'simulation-allocation:'.$scope,
+                    sourcePositionReference: $source->positionReference,
+                    destinationPositionReference: $destination->positionReference,
+                    amountMinor: $amountMinor,
+                    currency: $currency,
+                    idempotencyKey: 'simulation-allocation-key:'.$scope,
+                    externalReference: $recognition->operationReference,
+                    metadata: [
+                        ...$metadata,
+                        'simulation_only' => true,
+                    ],
+                ),
+            );
+
+            if ($allocation->destinationTransactionId === null
+                || $allocation->destinationTransactionUuid === null) {
+                throw FundingSettlementDenied::because(
+                    'the simulated on-demand Treasury allocation did not return committed ledger references',
+                );
+            }
+
+            return new VerifiedTreasuryFundingAllocationData(
+                sourcePositionReference: $source->positionReference,
+                destinationPositionReference: $destination->positionReference,
+                recognitionOperationReference: $recognition->operationReference,
+                allocationOperationReference: $allocation->operationReference,
+                amountMinor: $allocation->amountMinor,
+                currency: $allocation->currency,
+                destinationTransactionId: $allocation->destinationTransactionId,
+                destinationTransactionUuid: $allocation->destinationTransactionUuid,
+                transferId: $allocation->transferId,
+                transferUuid: $allocation->transferUuid,
+            );
+        }
+
         $transaction = $this->accounts->credit($account, $amountMinor, [
             ...$metadata,
             'simulation_only' => true,

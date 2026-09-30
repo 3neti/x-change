@@ -19,6 +19,7 @@ use LBHurtado\XChange\Data\Funding\FundingIntentVerificationData;
 use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\FundingVerificationTrigger;
+use LBHurtado\XChange\Exceptions\FundingEvidenceAlreadyClaimed;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
@@ -36,6 +37,8 @@ class VerifyFundingIntent
         private readonly MatchFundingPayerIdentity $matchPayerIdentity,
         private readonly OpenFundingSuspenseCase $openSuspenseCase,
         private readonly ReverseSettledFundingIntent $reverseSettlement,
+        private readonly ClaimFundingEvidence $claimEvidence,
+        private readonly ClassifyOnDemandIssuanceFundingMismatch $classifyOnDemandMismatch,
     ) {}
 
     public function handle(
@@ -138,9 +141,45 @@ class VerifyFundingIntent
         $observation = $this->recordObservation->handle(
             $this->matchPayerIdentity->handle($intent, $observationData),
         );
+
+        if ($intent->purpose === FundingIntentPurpose::OnDemandIssuance
+            && $observation->provider_status === 'settled') {
+            try {
+                $this->claimEvidence->handle($intent, $observation);
+            } catch (FundingEvidenceAlreadyClaimed) {
+                $classification = $this->classifyOnDemandMismatch->handle(
+                    intent: $intent,
+                    observation: $observation,
+                    duplicateEvidence: true,
+                );
+
+                return $this->moveToSuspense(
+                    intent: $intent,
+                    verification: $verification,
+                    reasonCode: $classification->reasonCode,
+                    receipt: $receipt,
+                    observation: $observation,
+                    details: $classification->details,
+                );
+            }
+        }
+
         $targetStatus = $this->targetStatus($intent, $observation);
 
         if ($targetStatus === FundingIntentStatus::Suspense) {
+            if ($intent->purpose === FundingIntentPurpose::OnDemandIssuance) {
+                $classification = $this->classifyOnDemandMismatch->handle($intent, $observation);
+
+                return $this->moveToSuspense(
+                    intent: $intent,
+                    verification: $verification,
+                    reasonCode: $classification->reasonCode,
+                    receipt: $receipt,
+                    observation: $observation,
+                    details: $classification->details,
+                );
+            }
+
             return $this->moveToSuspense(
                 intent: $intent,
                 verification: $verification,

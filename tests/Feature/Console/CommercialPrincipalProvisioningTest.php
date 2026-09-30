@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Bavix\Wallet\Interfaces\Customer;
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Auth\Authenticatable;
 use LBHurtado\XChange\Models\CommercialPrincipal;
 use LBHurtado\XChange\Services\Commercial\CommercialPrincipalProvisioningService;
 use LBHurtado\XChange\Services\Configuration\CommercialPrincipalAccountReadinessInspector;
@@ -63,8 +65,13 @@ it('provisions a non-login commercial principal and revenue Account idempotently
         ->and($principal->legal_name)->toBe('3neti R&D OPC')
         ->and($principal->active)->toBeTrue()
         ->and(data_get($principal->metadata, 'interactive_login'))->toBeFalse()
+        ->and($principal)->toBeInstanceOf(Authenticatable::class)
+        ->and($principal)->toBeInstanceOf(Customer::class)
+        ->and((string) $principal->getAuthIdentifier())->toBe((string) $principal->getKey())
+        ->and($principal->getAuthPassword())->toBeNull()
         ->and($principal->getAttribute('email'))->toBeNull()
-        ->and($principal->getAttribute('mobile'))->toBeNull();
+        ->and($principal->getAttribute('mobile'))->toBeNull()
+        ->and(config('auth.providers.users.model'))->not->toBe(CommercialPrincipal::class);
 
     $check = app(CommercialPrincipalAccountReadinessInspector::class)->inspect();
 

@@ -17,6 +17,7 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryHoldConsumptionData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\XChange\Actions\Funding\TransitionPayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
@@ -47,17 +48,24 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
     public function handle(
         TreasuryHoldOperationContract $holds,
         TreasuryAccountPortfolioProvisioningContract $portfolios,
+        AccountBalanceReadModelContract $accountBalances,
         TransitionPayCodeIssuanceFundingOrder $transition,
         GeneratePayCode $generatePayCode,
     ): void {
         try {
-            DB::transaction(function () use ($holds, $portfolios, $transition, $generatePayCode): void {
+            DB::transaction(function () use ($holds, $portfolios, $accountBalances, $transition, $generatePayCode): void {
                 $order = PayCodeIssuanceFundingOrder::query()
                     ->lockForUpdate()
                     ->findOrFail($this->fundingOrderId);
 
                 if ($order->status === PayCodeIssuanceFundingOrderStatus::Issued) {
                     return;
+                }
+
+                if (data_get($order->metadata, 'provider_reversal') !== null) {
+                    throw new RuntimeException(
+                        'The issuance funding order is blocked by a provider reversal.',
+                    );
                 }
 
                 if (! in_array($order->status, [
@@ -99,8 +107,40 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
                     idempotencyKey: 'issuance-hold-consume-key:'.$order->reference,
                     externalReference: 'issuance-funding-order:'.$order->reference,
                 ));
+
                 $instructions = $order->instructions_ciphertext;
+
+                if (method_exists($accountBalances, 'forget')) {
+                    collect([
+                        $order->provider,
+                        data_get($instructions, 'provider'),
+                    ])->filter()
+                        ->unique()
+                        ->each(fn (string $provider) => $accountBalances->forget(
+                            $issuer,
+                            $order->currency,
+                            $provider,
+                        ));
+                }
+
+                $issuanceProvider = (string) data_get($instructions, 'provider', $order->provider);
+                $availableMinor = $accountBalances->providerBalanceMinor(
+                    $issuer,
+                    $issuanceProvider,
+                    $order->currency,
+                );
+
+                if ($availableMinor === null || $availableMinor < $order->required_amount_minor) {
+                    throw new RuntimeException(sprintf(
+                        'The consumed issuance hold did not restore authoritative Client Funds [provider=%s; available=%s; required=%d].',
+                        $issuanceProvider,
+                        $availableMinor === null ? 'unavailable' : (string) $availableMinor,
+                        $order->required_amount_minor,
+                    ));
+                }
+
                 data_set($instructions, 'metadata.issuer_id', (string) $issuer->getKey());
+                data_set($instructions, '_meta.issuer_type', $issuer::class);
                 data_set($instructions, '_meta.on_demand_funding_order', $order->reference);
                 $result = $generatePayCode->handle($instructions);
 

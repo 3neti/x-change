@@ -103,6 +103,13 @@ return [
         ),
     ],
 
+    'public_auto_generate' => [
+        'browser_enabled' => (bool) env(
+            'XCHANGE_LIFECYCLE_PUBLIC_AUTO_GENERATE_BROWSER_ENABLED',
+            env('APP_ENV') !== 'production',
+        ),
+    ],
+
     'treasury_account_grant_simulation' => [
         'enabled' => (bool) env(
             'XCHANGE_LIFECYCLE_TREASURY_ACCOUNT_GRANT_SIMULATION_ENABLED',
@@ -535,6 +542,17 @@ return [
             'category' => 'demo',
             'tags' => ['demo', 'on-demand-issuance', 'funding', 'qrph', 'rollback-only'],
             'mode' => 'on_demand_issuance_funding',
+            'mobile' => env('XCHANGE_LIFECYCLE_QRPH_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+            'amount_minor' => 2_500,
+            'api_executable' => false,
+        ],
+
+        'public_auto_generate_demo' => [
+            'label' => 'Public Auto-Generate',
+            'description' => 'Proves public composition, complete pricing, browser isolation, exact simulated funding, and exactly-once Commercial Principal issuance with complete rollback.',
+            'category' => 'demo',
+            'tags' => ['demo', 'public-auto-generate', 'commercial-principal', 'funding', 'rollback-only'],
+            'mode' => 'public_auto_generate',
             'mobile' => env('XCHANGE_LIFECYCLE_QRPH_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
             'amount_minor' => 2_500,
             'api_executable' => false,

@@ -205,6 +205,7 @@ final class LifecycleScenarioEngine
             'qrph_funding_simulation',
             'qrph_unknown_mobile_onboarding',
             'on_demand_issuance_funding',
+            'public_auto_generate',
             'treasury_basic_cash',
             'treasury_live_basic_cash',
             'treasury_onboarding_grant',

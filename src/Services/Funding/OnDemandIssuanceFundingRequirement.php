@@ -20,6 +20,14 @@ final readonly class OnDemandIssuanceFundingRequirement
 
     public function for(Model $issuer, PricingEstimateData $pricing): OnDemandIssuanceFundingRequirementData
     {
+        return $this->forBasis($issuer, $pricing, $this->policy->basis());
+    }
+
+    public function forBasis(
+        Model $issuer,
+        PricingEstimateData $pricing,
+        OnDemandIssuanceFundingBasis $basis,
+    ): OnDemandIssuanceFundingRequirementData {
         $requiredAmountMinor = (int) round(
             ($pricing->account_debit ?? ($pricing->pay_code_value ?? 0) + $pricing->total) * 100,
         );
@@ -28,7 +36,6 @@ final readonly class OnDemandIssuanceFundingRequirement
             throw new RuntimeException('On-demand issuance requires a positive authoritative amount.');
         }
 
-        $basis = $this->policy->basis();
         $availableClientFundsMinor = $basis === OnDemandIssuanceFundingBasis::Shortfall
             ? $this->availableClientFundsMinor($issuer)
             : 0;

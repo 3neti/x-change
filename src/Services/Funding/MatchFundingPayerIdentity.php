@@ -28,11 +28,21 @@ class MatchFundingPayerIdentity
         $owner = $this->owner($intent);
         $ownerMobile = $owner === null ? null : $this->ownerMobile($owner);
         $ownerVerified = $owner !== null && $this->ownerMobileIsVerified($owner);
+        $matchRequired = data_get(
+            $intent->metadata,
+            'payer_identity_match_required',
+            true,
+        ) !== false;
         $matched = $identity->providerVerified
-            && $ownerVerified
             && $payerMobile !== null
-            && $ownerMobile !== null
-            && hash_equals($ownerMobile, $payerMobile);
+            && (
+                ! $matchRequired
+                || (
+                    $ownerVerified
+                    && $ownerMobile !== null
+                    && hash_equals($ownerMobile, $payerMobile)
+                )
+            );
 
         return new ProviderFundingObservationData(
             provider: $observation->provider,
@@ -53,7 +63,7 @@ class MatchFundingPayerIdentity
             webhookReceiptId: $observation->webhookReceiptId,
             metadata: [
                 ...$observation->metadata,
-                'payer_identity_required' => true,
+                'payer_identity_required' => $matchRequired,
                 'payer_identity_matched' => $matched,
                 'payer_mobile_hash' => $payerMobile === null ? null : $this->mobileHash($payerMobile),
                 'payer_mobile_masked' => $payerMobile === null ? null : $this->maskedMobile($payerMobile),

@@ -22,6 +22,7 @@ use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
+use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
 use LBHurtado\XChange\Services\Claim\ClaimEvidenceRequirements;
 use LBHurtado\XChange\Services\Commercial\CommercialBillingPolicy;
@@ -71,12 +72,13 @@ class GeneratePayCode
         app(InstructionCapabilityIssuanceGuard::class)->ensureAvailable($input);
         $input = app(ClaimEvidenceRequirements::class)->snapshot($input);
 
-        $issuer = $this->users->resolve($input);
+        $issuer = $this->resolveOnDemandIssuer($input)
+            ?? $this->users->resolve($input);
 
         if (! $issuer) {
             $issuerId = data_get($input, 'metadata.issuer_id');
 
-            if ($issuerId) {
+            if (! $issuer && $issuerId) {
                 $issuerModel = config(
                     'x-change.onboarding.issuer_model',
                     config('auth.providers.users.model')
@@ -185,6 +187,32 @@ class GeneratePayCode
                 allocations: $allocation['allocations'] ?? [],
             );
         });
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    private function resolveOnDemandIssuer(array $input): ?Model
+    {
+        $reference = data_get($input, '_meta.on_demand_funding_order');
+
+        if (! is_string($reference) || trim($reference) === '') {
+            return null;
+        }
+
+        $order = PayCodeIssuanceFundingOrder::query()
+            ->where('reference', trim($reference))
+            ->first();
+
+        if (! $order instanceof PayCodeIssuanceFundingOrder
+            || ! class_exists($order->issuer_type)
+            || ! is_a($order->issuer_type, Model::class, true)) {
+            return null;
+        }
+
+        $issuer = $order->issuer_type::query()->find($order->issuer_id);
+
+        return $issuer instanceof Model ? $issuer : null;
     }
 
     /**

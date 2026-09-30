@@ -12,11 +12,13 @@ use LBHurtado\XChange\Contracts\FundingAccountRecoveryContract;
 use LBHurtado\XChange\Contracts\TreasuryPositionLedgerResolverContract;
 use LBHurtado\XChange\Data\Funding\FundingIntentTransitionData;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
+use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Models\FundingAccountHold;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingRecovery;
 use LBHurtado\XChange\Models\FundingSettlement;
+use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 
 class ReverseSettledFundingIntent
 {
@@ -25,6 +27,7 @@ class ReverseSettledFundingIntent
         private readonly FundingAccountRecoveryContract $accounts,
         private readonly TreasuryPositionLedgerResolverContract $positionLedgers,
         private readonly TransitionFundingIntent $transition,
+        private readonly TransitionPayCodeIssuanceFundingOrder $transitionFundingOrder,
     ) {}
 
     public function handle(
@@ -55,6 +58,7 @@ class ReverseSettledFundingIntent
                 ->firstOrFail();
 
             $this->assertReversalMatches($locked, $settlement, $observation);
+            $this->recordOnDemandIssuanceReversal($locked, $observation);
 
             $operationReference = 'funding-reversal:'.hash(
                 'sha256',
@@ -144,6 +148,64 @@ class ReverseSettledFundingIntent
 
             return $recovery;
         }, attempts: 5);
+    }
+
+    private function recordOnDemandIssuanceReversal(
+        FundingIntent $intent,
+        ProviderFundingObservation $observation,
+    ): void {
+        $order = PayCodeIssuanceFundingOrder::query()
+            ->where('funding_intent_id', $intent->getKey())
+            ->lockForUpdate()
+            ->first();
+
+        if (! $order instanceof PayCodeIssuanceFundingOrder) {
+            return;
+        }
+
+        $metadata = [
+            ...(is_array($order->metadata) ? $order->metadata : []),
+            'provider_reversal' => [
+                'observation_id' => (int) $observation->getKey(),
+                'status' => $observation->provider_status,
+                'recorded_at' => now()->toIso8601String(),
+            ],
+        ];
+
+        if (in_array($order->status, [
+            PayCodeIssuanceFundingOrderStatus::Funded,
+            PayCodeIssuanceFundingOrderStatus::Issuing,
+        ], true)) {
+            $this->transitionFundingOrder->handle(
+                order: $order,
+                status: PayCodeIssuanceFundingOrderStatus::IssuanceAttention,
+                eventType: 'provider_reversal_blocked_issuance',
+                actorType: self::class,
+                actorId: $intent->provider_code,
+                attributes: [
+                    'attention_at' => now(),
+                    'metadata' => $metadata,
+                ],
+                metadata: ['provider_observation_id' => (int) $observation->getKey()],
+            );
+
+            return;
+        }
+
+        $order->forceFill([
+            'metadata' => $metadata,
+            'version' => $order->version + 1,
+        ])->saveQuietly();
+        $order->events()->create([
+            'sequence' => $order->version,
+            'event_type' => 'provider_reversal_recorded',
+            'from_status' => $order->status,
+            'to_status' => $order->status,
+            'actor_type' => self::class,
+            'actor_id' => $intent->provider_code,
+            'metadata' => ['provider_observation_id' => (int) $observation->getKey()],
+            'occurred_at' => now(),
+        ]);
     }
 
     private function assertReversalMatches(

@@ -15,6 +15,7 @@ use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Data\Funding\FundingIntentTransitionData;
 use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
+use LBHurtado\XChange\Exceptions\FundingEvidenceAlreadyClaimed;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
 use LBHurtado\XChange\Models\FundingIntent;
@@ -33,6 +34,7 @@ class SettleVerifiedFundingIntent
         private readonly ApplyFundingRecoveryToAccount $applyRecovery,
         private readonly PlaceSettledOnDemandIssuanceHold $onDemandIssuanceHold,
         private readonly RecordLateOnDemandIssuancePayment $lateOnDemandPayment,
+        private readonly ClaimFundingEvidence $claimEvidence,
     ) {}
 
     public function handle(FundingIntent $intent): FundingSettlement
@@ -52,6 +54,15 @@ class SettleVerifiedFundingIntent
             }
 
             $observation = $this->verifiedObservation($locked);
+
+            try {
+                $this->claimEvidence->handle($locked, $observation);
+            } catch (FundingEvidenceAlreadyClaimed) {
+                throw FundingSettlementDenied::because(
+                    'the provider transaction is already claimed by another Funding Intent',
+                );
+            }
+
             $treasury = $this->treasuryConfiguration($locked->provider_code);
             $evidenceScope = hash('sha256', implode('|', [
                 $locked->provider_code,
@@ -101,6 +112,7 @@ class SettleVerifiedFundingIntent
                     'source' => 'verified_provider_funding',
                     'provider' => $locked->provider_code,
                     'provider_transaction_id' => $observation->provider_transaction_id,
+                    'funding_intent_purpose' => $locked->purpose->value,
                 ],
             );
 

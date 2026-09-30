@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Http\Controllers\Web\Cockpit;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -18,6 +19,7 @@ use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingIntentJob;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
+use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceOrderAccess;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -30,7 +32,7 @@ final class CockpitOnDemandIssuanceFundingOrderController extends Controller
     ): JsonResponse {
         $this->authorizeOwner($request, $order);
 
-        return response()->json($presenter->present($order));
+        return response()->json($this->present($request, $order, $presenter));
     }
 
     public function acknowledge(
@@ -54,7 +56,7 @@ final class CockpitOnDemandIssuanceFundingOrderController extends Controller
                 status: PayCodeIssuanceFundingOrderStatus::PayerAcknowledged,
                 eventType: 'payer_acknowledged',
                 actorType: $request->user()::class,
-                actorId: (string) $request->user()->getAuthIdentifier(),
+                actorId: $this->actorIdentifier($request->user()),
                 attributes: ['payer_acknowledged_at' => now()],
             );
         }
@@ -63,10 +65,10 @@ final class CockpitOnDemandIssuanceFundingOrderController extends Controller
             fundingIntentId: $intent->getKey(),
             providerCode: $intent->provider_code,
             trigger: FundingVerificationTrigger::Operator,
-            actorId: (string) $request->user()->getAuthIdentifier(),
+            actorId: $this->actorIdentifier($request->user()),
         )->afterCommit();
 
-        return response()->json($presenter->present($order), 202);
+        return response()->json($this->present($request, $order, $presenter), 202);
     }
 
     public function verifyAutomatically(
@@ -80,7 +82,7 @@ final class CockpitOnDemandIssuanceFundingOrderController extends Controller
         if ($order->expires_at->isPast()) {
             $order = $expire->handle($order);
 
-            return response()->json($presenter->present($order));
+            return response()->json($this->present($request, $order, $presenter));
         }
 
         $intent = $order->fundingIntent;
@@ -99,7 +101,7 @@ final class CockpitOnDemandIssuanceFundingOrderController extends Controller
                 FundingIntentStatus::Verifying,
                 FundingIntentStatus::Verified,
             ], true)) {
-            return response()->json($presenter->present($order));
+            return response()->json($this->present($request, $order, $presenter));
         }
 
         $intervalSeconds = max(
@@ -120,7 +122,7 @@ final class CockpitOnDemandIssuanceFundingOrderController extends Controller
             )->afterCommit();
         }
 
-        return response()->json($presenter->present($order), 202);
+        return response()->json($this->present($request, $order, $presenter), 202);
     }
 
     public function cancel(
@@ -135,11 +137,15 @@ final class CockpitOnDemandIssuanceFundingOrderController extends Controller
         if (! in_array($order->status, [
             PayCodeIssuanceFundingOrderStatus::AwaitingPayment,
             PayCodeIssuanceFundingOrderStatus::PayerAcknowledged,
-            PayCodeIssuanceFundingOrderStatus::Underfunded,
-            PayCodeIssuanceFundingOrderStatus::PaymentAmbiguous,
             PayCodeIssuanceFundingOrderStatus::IssuanceAttention,
         ], true)) {
             throw new ConflictHttpException('This funding order can no longer be cancelled.');
+        }
+
+        if (data_get($order->metadata, 'provider_reversal') !== null) {
+            throw new ConflictHttpException(
+                'A provider reversal requires governed recovery and cannot be cancelled.',
+            );
         }
 
         if ($order->treasury_hold_reference !== null) {
@@ -158,21 +164,42 @@ final class CockpitOnDemandIssuanceFundingOrderController extends Controller
             status: PayCodeIssuanceFundingOrderStatus::Cancelled,
             eventType: 'cancelled',
             actorType: $request->user()::class,
-            actorId: (string) $request->user()->getAuthIdentifier(),
+            actorId: $this->actorIdentifier($request->user()),
             attributes: ['cancelled_at' => now()],
         );
 
-        return response()->json($presenter->present($order));
+        return response()->json($this->present($request, $order, $presenter));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function present(
+        Request $request,
+        PayCodeIssuanceFundingOrder $order,
+        OnDemandIssuanceFundingOrderPresenter $presenter,
+    ): array {
+        $public = $request->attributes->get('x_change_public_auto_generate') === true;
+        $token = $public
+            ? trim((string) $request->header(PublicIssuanceOrderAccess::TokenHeader))
+            : null;
+
+        return $presenter->present($order, $token !== '' ? $token : null, $public);
     }
 
     private function authorizeOwner(Request $request, PayCodeIssuanceFundingOrder $order): void
     {
         $user = $request->user();
 
-        if ($user === null
+        if (! $user instanceof Model
             || $order->issuer_type !== $user::class
-            || $order->issuer_id !== (string) $user->getAuthIdentifier()) {
+            || $order->issuer_id !== $this->actorIdentifier($user)) {
             throw new NotFoundHttpException;
         }
+    }
+
+    private function actorIdentifier(Model $actor): string
+    {
+        return (string) $actor->getKey();
     }
 }

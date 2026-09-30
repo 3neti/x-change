@@ -65,6 +65,30 @@ it('fails closed for a mismatched or unverified owner mobile', function (?string
     'unverified mobile' => null,
 ]);
 
+it('accepts a provider-verified external payer only when the intent explicitly permits it', function () {
+    config()->set('x-change.funding.providers.qrph_simulator.enabled', true);
+    config()->set('x-change.funding.payer_identity_hash_key', 'payer-identity-key');
+    $owner = actingAsTestUser();
+    $intent = app(CreateFundingIntent::class)->handle(new CreateFundingIntentData(
+        accountReference: 'wallet:public-commercial-principal',
+        provider: 'qrph_simulator',
+        expectedAmountMinor: 2_500,
+        currency: 'PHP',
+        idempotencyKey: 'external-payer-match',
+        actorType: $owner::class,
+        actorId: (string) $owner->getKey(),
+        metadata: ['payer_identity_match_required' => false],
+    ));
+    $observation = app(MatchFundingPayerIdentity::class)->handle(
+        $intent,
+        payerObservation('0917 123 4567'),
+    );
+
+    expect($observation->metadata['payer_identity_required'])->toBeFalse()
+        ->and($observation->metadata['payer_identity_matched'])->toBeTrue()
+        ->and($observation->metadata['payer_identity_provider_verified'])->toBeTrue();
+});
+
 function payerObservation(string $mobile): ProviderFundingObservationData
 {
     return new ProviderFundingObservationData(

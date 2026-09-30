@@ -1165,6 +1165,10 @@ return [
         ],
     ],
 
+    'public_auto_generate' => [
+        'enabled' => (bool) env('XCHANGE_PUBLIC_AUTO_GENERATE_ENABLED', true),
+    ],
+
     'funding' => [
         'provider_balance_max_age_seconds' => (int) env('XCHANGE_PROVIDER_BALANCE_MAX_AGE_SECONDS', 300),
         'api_middleware' => ['auth'],

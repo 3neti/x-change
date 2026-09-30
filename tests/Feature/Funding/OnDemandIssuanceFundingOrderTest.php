@@ -12,8 +12,11 @@ use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\EmiCore\Exceptions\ProviderFundingNotObserved;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Actions\Funding\ClaimFundingEvidence;
+use LBHurtado\XChange\Actions\Funding\ClassifyOnDemandIssuanceFundingMismatch;
 use LBHurtado\XChange\Actions\Funding\ExpireOnDemandIssuanceFundingOrder;
 use LBHurtado\XChange\Actions\Funding\ReserveOnDemandIssuanceAmountLease;
+use LBHurtado\XChange\Actions\Funding\ReverseSettledFundingIntent;
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Actions\Funding\TransitionPayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Actions\Funding\VerifyFundingIntent;
@@ -29,8 +32,10 @@ use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\FundingVerificationTrigger;
 use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
+use LBHurtado\XChange\Exceptions\FundingEvidenceAlreadyClaimed;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingIntentJob;
+use LBHurtado\XChange\Models\FundingEvidenceClaim;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrderEvent;
@@ -503,6 +508,177 @@ it('credits a late verified payment to Client Funds without reviving issuance', 
     Queue::assertNotPushed(ResumeOnDemandPayCodeIssuanceJob::class);
 });
 
+it('classifies an authoritative underpayment without issuing or offering cancellation', function (): void {
+    $user = actingAsTestUser(0);
+    $order = issuanceFundingOrder($user, 'underpayment-classification');
+    $observation = onDemandFundingObservation(4_999);
+    $intent = onDemandFundingIntent(
+        $user->wallet()->where('slug', 'platform')->sole()->uuid,
+        $observation,
+        5_000,
+    );
+    $intent->forceFill(['status' => FundingIntentStatus::Verifying])->saveQuietly();
+    $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();
+
+    $classification = app(ClassifyOnDemandIssuanceFundingMismatch::class)->handle(
+        $intent,
+        $observation,
+    );
+    $projection = app(OnDemandIssuanceFundingOrderPresenter::class)->present($order->refresh());
+
+    expect($classification->reasonCode)->toBe('on_demand_issuance_underpayment')
+        ->and($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::Underfunded)
+        ->and($order->voucher_id)->toBeNull()
+        ->and(data_get($projection, 'order.can_cancel'))->toBeFalse()
+        ->and(data_get($projection, 'monitor.eligible'))->toBeFalse()
+        ->and(data_get($projection, 'lifecycle.message'))
+        ->toContain('below the exact amount');
+});
+
+it('classifies an authoritative excess payment for review without issuing', function (): void {
+    $user = actingAsTestUser(0);
+    $order = issuanceFundingOrder($user, 'excess-payment-classification');
+    $observation = onDemandFundingObservation(5_001);
+    $intent = onDemandFundingIntent(
+        $user->wallet()->where('slug', 'platform')->sole()->uuid,
+        $observation,
+        5_000,
+    );
+    $intent->forceFill(['status' => FundingIntentStatus::Verifying])->saveQuietly();
+    $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();
+
+    $classification = app(ClassifyOnDemandIssuanceFundingMismatch::class)->handle(
+        $intent,
+        $observation,
+    );
+
+    expect($classification->reasonCode)->toBe('on_demand_issuance_excess_payment')
+        ->and($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::PaymentAmbiguous)
+        ->and($order->voucher_id)->toBeNull()
+        ->and($order->events()->where('event_type', 'payment_excess_requires_review')->exists())
+        ->toBeTrue();
+});
+
+it('claims provider evidence once and permits an idempotent same-intent replay', function (): void {
+    $user = actingAsTestUser(0);
+    $observation = onDemandFundingObservation(5_000);
+    $firstIntent = onDemandFundingIntent(
+        $user->wallet()->where('slug', 'platform')->sole()->uuid,
+        $observation,
+        5_000,
+    );
+    $secondIntent = onDemandFundingIntent(
+        $user->wallet()->where('slug', 'platform')->sole()->uuid,
+        $observation,
+        5_000,
+    );
+    $claims = app(ClaimFundingEvidence::class);
+
+    $first = $claims->handle($firstIntent, $observation);
+    $replayed = $claims->handle($firstIntent, $observation);
+
+    expect($replayed->is($first))->toBeTrue()
+        ->and(FundingEvidenceClaim::query()->count())->toBe(1)
+        ->and(fn () => $claims->handle($secondIntent, $observation))
+        ->toThrow(FundingEvidenceAlreadyClaimed::class);
+});
+
+it('refuses queued issuance after a provider reversal marker is recorded', function (): void {
+    $user = actingAsTestUser(0);
+    $order = issuanceFundingOrder($user, 'provider-reversal-race');
+    $order->forceFill([
+        'status' => PayCodeIssuanceFundingOrderStatus::IssuanceAttention,
+        'treasury_hold_reference' => 'issuance-hold:reversed',
+        'metadata' => [
+            'provider_reversal' => [
+                'observation_id' => 999,
+                'status' => 'reversed',
+            ],
+        ],
+    ])->saveQuietly();
+
+    $job = new ResumeOnDemandPayCodeIssuanceJob($order->getKey());
+
+    expect(fn () => app()->call([$job, 'handle']))
+        ->toThrow(RuntimeException::class, 'blocked by a provider reversal')
+        ->and($order->refresh()->status)
+        ->toBe(PayCodeIssuanceFundingOrderStatus::IssuanceAttention)
+        ->and($order->voucher_id)->toBeNull();
+});
+
+it('records an authoritative provider reversal before issuance and blocks the queued job', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    $user = actingAsTestUser(0);
+    $observation = onDemandFundingObservation(5_000);
+    $intent = onDemandFundingIntent(
+        $user->wallet()->where('slug', 'platform')->sole()->uuid,
+        $observation,
+        5_000,
+    );
+    $order = app(ReserveOnDemandIssuanceAmountLease::class)->handle(
+        issuanceFundingOrder($user, 'authoritative-provider-reversal'),
+    );
+    $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();
+    app(SettleVerifiedFundingIntent::class)->handle($intent);
+    $reversal = onDemandFundingReversalObservation($observation);
+
+    app(ReverseSettledFundingIntent::class)->handle($intent->refresh(), $reversal);
+    $projection = app(OnDemandIssuanceFundingOrderPresenter::class)->present($order->refresh());
+
+    expect($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::IssuanceAttention)
+        ->and(data_get($order->metadata, 'provider_reversal.observation_id'))
+        ->toBe($reversal->getKey())
+        ->and($order->events()->where(
+            'event_type',
+            'provider_reversal_blocked_issuance',
+        )->exists())->toBeTrue()
+        ->and(data_get($projection, 'order.can_cancel'))->toBeFalse()
+        ->and($order->voucher_id)->toBeNull()
+        ->and(fn () => app()->call([
+            new ResumeOnDemandPayCodeIssuanceJob($order->getKey()),
+            'handle',
+        ]))->toThrow(RuntimeException::class, 'blocked by a provider reversal');
+});
+
+it('preserves an issued Pay Code while recording a later provider reversal', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    $user = actingAsTestUser(0);
+    $observation = onDemandFundingObservation(5_000);
+    $intent = onDemandFundingIntent(
+        $user->wallet()->where('slug', 'platform')->sole()->uuid,
+        $observation,
+        5_000,
+    );
+    $order = app(ReserveOnDemandIssuanceAmountLease::class)->handle(
+        issuanceFundingOrder($user, 'post-issuance-provider-reversal'),
+    );
+    $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();
+    app(SettleVerifiedFundingIntent::class)->handle($intent);
+    $voucher = Voucher::query()->create([
+        'code' => 'ODIF-REV1',
+        'metadata' => ['source' => 'provider_reversal_test'],
+    ]);
+    $order->forceFill([
+        'status' => PayCodeIssuanceFundingOrderStatus::Issued,
+        'voucher_id' => $voucher->getKey(),
+        'issued_at' => now(),
+    ])->saveQuietly();
+    $reversal = onDemandFundingReversalObservation($observation);
+
+    app(ReverseSettledFundingIntent::class)->handle($intent->refresh(), $reversal);
+
+    expect($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::Issued)
+        ->and($order->voucher_id)->toBe($voucher->getKey())
+        ->and(data_get($order->metadata, 'provider_reversal.observation_id'))
+        ->toBe($reversal->getKey())
+        ->and($order->events()->where(
+            'event_type',
+            'provider_reversal_recorded',
+        )->exists())->toBeTrue();
+});
+
 it('restores the signed-in owner active funding order on quick generate reload', function (): void {
     $owner = actingAsTestUser(0);
     $order = issuanceFundingOrder($owner);
@@ -575,6 +751,131 @@ it('falls back to the owning NetBank account for an on-demand bank transfer', fu
         ->toBe('corporate_account');
 
     $this->travelBack();
+});
+
+it('routes authoritative amount mismatches to explicit review states', function (
+    int $observedAmountMinor,
+    PayCodeIssuanceFundingOrderStatus $expectedOrderStatus,
+    string $expectedReason,
+    string $expectedOrderEvent,
+): void {
+    $user = actingAsTestUser(0);
+    $order = issuanceFundingOrder($user, 'verified-mismatch-'.$observedAmountMinor);
+    $order->forceFill([
+        'required_amount_minor' => 6_650,
+        'on_demand_amount_minor' => 6_650,
+        'expected_payment_minor' => 6_650,
+    ])->saveQuietly();
+    $intent = fundingIntentAwaitingOnDemandBankTransfer();
+    $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();
+    $adapter = new FakeFundingProviderAdapter;
+    $adapter->fundingVerificationResolver = static fn (): ProviderFundingObservationData => new ProviderFundingObservationData(
+        provider: 'netbank',
+        providerTransactionId: 'MISMATCH-'.$observedAmountMinor,
+        grossAmountMinor: $observedAmountMinor,
+        feeAmountMinor: 0,
+        netAmountMinor: $observedAmountMinor,
+        currency: 'PHP',
+        providerStatus: 'settled',
+        verificationSource: 'mismatch-test',
+        payloadHash: hash('sha256', 'mismatch-'.$observedAmountMinor),
+        fundingAddress: 'sha256:'.hash('sha256', '113001000019'),
+        providerAccountReference: 'sha256:'.hash('sha256', '113001000019'),
+        occurredAt: now()->subMinute()->toDateTimeImmutable(),
+        settledAt: now()->toDateTimeImmutable(),
+        metadata: ['destination_verified' => true],
+    );
+    $this->app->instance(FakeFundingProviderAdapter::class, $adapter);
+    $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
+    $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
+
+    $result = app(VerifyFundingIntent::class)->handle(
+        $intent,
+        new FundingIntentVerificationData(
+            trigger: FundingVerificationTrigger::Operator,
+            actorId: 'operator-1',
+        ),
+    );
+
+    expect($result->status)->toBe(FundingIntentStatus::Suspense)
+        ->and($result->events()->where('event_type', $expectedReason)->exists())->toBeTrue()
+        ->and($order->refresh()->status)->toBe($expectedOrderStatus)
+        ->and($order->events()->where('event_type', $expectedOrderEvent)->exists())->toBeTrue()
+        ->and($order->voucher_id)->toBeNull()
+        ->and(FundingEvidenceClaim::query()->count())->toBe(1);
+})->with([
+    'underpayment' => [
+        6_000,
+        PayCodeIssuanceFundingOrderStatus::Underfunded,
+        'on_demand_issuance_underpayment',
+        'payment_underfunded',
+    ],
+    'excess payment' => [
+        7_000,
+        PayCodeIssuanceFundingOrderStatus::PaymentAmbiguous,
+        'on_demand_issuance_excess_payment',
+        'payment_excess_requires_review',
+    ],
+]);
+
+it('rejects one provider transaction from funding two issuance orders', function (): void {
+    $user = actingAsTestUser(0);
+    $firstOrder = issuanceFundingOrder($user, 'exclusive-provider-evidence-first');
+    $secondOrder = issuanceFundingOrder($user, 'exclusive-provider-evidence-second');
+
+    foreach ([$firstOrder, $secondOrder] as $order) {
+        $order->forceFill([
+            'required_amount_minor' => 6_650,
+            'on_demand_amount_minor' => 6_650,
+            'expected_payment_minor' => 6_650,
+        ])->saveQuietly();
+    }
+
+    $firstIntent = fundingIntentAwaitingOnDemandBankTransfer();
+    $secondIntent = fundingIntentAwaitingOnDemandBankTransfer();
+    $firstOrder->forceFill(['funding_intent_id' => $firstIntent->getKey()])->saveQuietly();
+    $secondOrder->forceFill(['funding_intent_id' => $secondIntent->getKey()])->saveQuietly();
+    $adapter = new FakeFundingProviderAdapter;
+    $adapter->fundingVerificationResolver = static fn (): ProviderFundingObservationData => new ProviderFundingObservationData(
+        provider: 'netbank',
+        providerTransactionId: 'EXCLUSIVE-TX-1',
+        grossAmountMinor: 6_650,
+        feeAmountMinor: 0,
+        netAmountMinor: 6_650,
+        currency: 'PHP',
+        providerStatus: 'settled',
+        verificationSource: 'exclusive-evidence-test',
+        payloadHash: hash('sha256', 'exclusive-evidence-payload'),
+        fundingAddress: 'sha256:'.hash('sha256', '113001000019'),
+        providerAccountReference: 'sha256:'.hash('sha256', '113001000019'),
+        occurredAt: now()->subMinute()->toDateTimeImmutable(),
+        settledAt: now()->toDateTimeImmutable(),
+        metadata: ['destination_verified' => true],
+    );
+    $this->app->instance(FakeFundingProviderAdapter::class, $adapter);
+    $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
+    $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
+    $verification = new FundingIntentVerificationData(
+        trigger: FundingVerificationTrigger::Operator,
+        actorId: 'operator-1',
+    );
+
+    $first = app(VerifyFundingIntent::class)->handle($firstIntent, $verification);
+    $second = app(VerifyFundingIntent::class)->handle($secondIntent, $verification);
+
+    expect($first->status)->toBe(FundingIntentStatus::Verified)
+        ->and($second->status)->toBe(FundingIntentStatus::Suspense)
+        ->and($second->events()->where(
+            'event_type',
+            'on_demand_issuance_duplicate_evidence',
+        )->exists())->toBeTrue()
+        ->and($secondOrder->refresh()->status)
+        ->toBe(PayCodeIssuanceFundingOrderStatus::PaymentAmbiguous)
+        ->and($secondOrder->events()->where(
+            'event_type',
+            'duplicate_provider_evidence_rejected',
+        )->exists())->toBeTrue()
+        ->and(FundingEvidenceClaim::query()->count())->toBe(1);
 });
 
 it('does not use corporate account fallback outside on-demand issuance', function (): void {
@@ -792,6 +1093,29 @@ function onDemandFundingObservation(int $amountMinor): ProviderFundingObservatio
         'settled_at' => now(),
         'verification_source' => 'transaction_history',
         'payload_hash' => hash('sha256', 'payload-'.$transactionId),
+        'metadata' => ['destination_verified' => true],
+    ]);
+}
+
+function onDemandFundingReversalObservation(
+    ProviderFundingObservation $observation,
+): ProviderFundingObservation {
+    return ProviderFundingObservation::query()->create([
+        'observation_key' => hash('sha256', 'reversal-'.$observation->observation_key),
+        'provider_code' => $observation->provider_code,
+        'provider_transaction_id' => $observation->provider_transaction_id,
+        'provider_operation_id' => 'REV-'.$observation->provider_operation_id,
+        'request_id' => $observation->request_id,
+        'funding_address' => $observation->funding_address,
+        'provider_account_reference' => $observation->provider_account_reference,
+        'gross_amount_minor' => $observation->gross_amount_minor,
+        'fee_amount_minor' => $observation->fee_amount_minor,
+        'net_amount_minor' => $observation->net_amount_minor,
+        'currency' => $observation->currency,
+        'provider_status' => 'reversed',
+        'occurred_at' => now(),
+        'verification_source' => 'provider_reversal_test',
+        'payload_hash' => hash('sha256', 'reversal-payload-'.$observation->getKey()),
         'metadata' => ['destination_verified' => true],
     ]);
 }

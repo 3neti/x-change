@@ -17,6 +17,7 @@ use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\Funding\CreateFundingIntentData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Enums\FundingIntentPurpose;
+use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Exceptions\FundingIntentConflict;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
@@ -47,8 +48,12 @@ final readonly class PrepareOnDemandPayCodeIssuance
         array $instructions,
         PricingEstimateData $pricing,
         string $idempotencyKey,
+        ?OnDemandIssuanceFundingBasis $fundingBasis = null,
+        bool $requirePayerIdentityMatch = true,
     ): PayCodeIssuanceFundingOrder {
-        $requirement = $this->requirements->for($issuer, $pricing);
+        $requirement = $fundingBasis === null
+            ? $this->requirements->for($issuer, $pricing)
+            : $this->requirements->forBasis($issuer, $pricing, $fundingBasis);
         $requiredAmountMinor = $requirement->requiredAmountMinor;
 
         $provider = mb_strtolower((string) config(
@@ -140,7 +145,7 @@ final readonly class PrepareOnDemandPayCodeIssuance
                     : null,
                 'expires_at' => $expiresAt,
                 'metadata' => [
-                    'source' => 'cockpit.quick-generate',
+                    'source' => data_get($instructions, '_meta.source', 'cockpit.quick-generate'),
                     'bank_transfer_primary' => true,
                 ],
             ]);
@@ -196,6 +201,7 @@ final readonly class PrepareOnDemandPayCodeIssuance
                 metadata: [
                     'funding_order_reference' => $order->reference,
                     'connection_reference' => $connectionReference,
+                    'payer_identity_match_required' => $requirePayerIdentityMatch,
                 ],
                 destination: $this->destinations->resolve($issuer, $provider, $accountReference),
                 purpose: FundingIntentPurpose::OnDemandIssuance,

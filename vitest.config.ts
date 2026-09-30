@@ -111,6 +111,11 @@ export default defineConfig({
           import.meta.dirname,
           "tests/frontend/stubs/commercial-pay-code-scenario-runner-route.ts",
         ),
+      "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPublicAutoGenerateScenarioRunnerController":
+        path.resolve(
+          import.meta.dirname,
+          "tests/frontend/stubs/public-auto-generate-scenario-runner-route.ts",
+        ),
       "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitAuiDemonstrationPolicyOutcomeController":
         path.resolve(
           import.meta.dirname,

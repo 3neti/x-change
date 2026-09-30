@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services;
 
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Model;
 use LBHurtado\EmiCore\Models\Wallet as EmiWallet;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\ProviderAccountLinkRepositoryContract;
@@ -55,9 +56,19 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
             return $decision;
         }
 
-        $positionBalanceMinor = ($this->accountBalances
-            ?? app(AccountBalanceReadModelContract::class))
-            ->providerBalanceMinor($owner, $provider, $currency);
+        $accountBalances = $this->accountBalances
+            ?? app(AccountBalanceReadModelContract::class);
+
+        if ($owner instanceof Model
+            && method_exists($accountBalances, 'forget')) {
+            $accountBalances->forget($owner, $currency, $provider);
+        }
+
+        $positionBalanceMinor = $accountBalances->providerBalanceMinor(
+            $owner,
+            $provider,
+            $currency,
+        );
         $availableMinor = $positionBalanceMinor
             ?? $this->normalizeBalanceForComparison($this->wallets->getBalance($localWallet));
 

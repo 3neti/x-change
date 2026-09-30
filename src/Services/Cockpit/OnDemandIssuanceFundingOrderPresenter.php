@@ -25,8 +25,11 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
     /**
      * @return array<string, mixed>
      */
-    public function present(PayCodeIssuanceFundingOrder $order): array
-    {
+    public function present(
+        PayCodeIssuanceFundingOrder $order,
+        ?string $guestAccessToken = null,
+        bool $public = false,
+    ): array {
         $order->loadMissing(['fundingIntent.settlement', 'fundingIntent.events', 'voucher', 'events']);
         $instructions = $order->fundingIntent === null
             ? []
@@ -37,7 +40,13 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
             'status' => $order->status->value,
             'funding_required' => $order->on_demand_amount_minor > 0,
             'lifecycle' => $this->lifecycle($order),
-            'actions' => [
+            'guest_access_token' => $public ? $guestAccessToken : null,
+            'actions' => $public ? [
+                'show' => route('x-change.public-auto-generate.funding-orders.show', ['order' => $order->reference], false),
+                'acknowledge' => route('x-change.public-auto-generate.funding-orders.acknowledge', ['order' => $order->reference], false),
+                'verify' => route('x-change.public-auto-generate.funding-orders.verification', ['order' => $order->reference], false),
+                'cancel' => route('x-change.public-auto-generate.funding-orders.cancel', ['order' => $order->reference], false),
+            ] : [
                 'show' => route(
                     'x-change.cockpit.quick-generate.funding-orders.show',
                     ['order' => $order->reference],
@@ -73,10 +82,10 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
                 'can_cancel' => in_array($order->status->value, [
                     'awaiting_payment',
                     'payer_acknowledged',
-                    'underfunded',
-                    'payment_ambiguous',
-                    'issuance_attention',
-                ], true),
+                ], true) || (
+                    $order->status === PayCodeIssuanceFundingOrderStatus::IssuanceAttention
+                    && data_get($order->metadata, 'provider_reversal') === null
+                ),
                 'late_payment_disposition' => $order->late_payment_disposition,
                 'late_payment_detected_at' => $order->late_payment_detected_at?->toIso8601String(),
                 'voucher' => ! $order->voucher instanceof Voucher
@@ -133,7 +142,9 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
     private function lifecycle(PayCodeIssuanceFundingOrder $order): array
     {
         $current = match ($order->status->value) {
-            'payer_acknowledged', 'verifying', 'underfunded', 'payment_ambiguous' => 'checking_payment',
+            'payer_acknowledged', 'verifying' => 'checking_payment',
+            'underfunded' => 'underfunded',
+            'payment_ambiguous' => 'payment_ambiguous',
             'funded' => 'payment_verified',
             'issuing' => 'issuing_pay_code',
             'issued' => 'pay_code_ready',
@@ -155,6 +166,8 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
                 ? 'Verification is temporarily unavailable. You do not need to pay again.'
                 : match ($current) {
                     'checking_payment' => 'Payment is not visible yet. You do not need to pay again.',
+                    'underfunded' => 'A payment was found, but it is below the exact amount. Do not pay again; this order needs review.',
+                    'payment_ambiguous' => 'A payment was found, but it cannot be applied automatically. Do not pay again; this order needs review.',
                     'payment_verified' => 'Payment verified. Your frozen instruction is ready for issuance.',
                     'issuing_pay_code' => 'Payment verified. Your Pay Code is being issued.',
                     'pay_code_ready' => 'Payment verified and Pay Code issued.',
@@ -208,8 +221,6 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
                 PayCodeIssuanceFundingOrderStatus::AwaitingPayment,
                 PayCodeIssuanceFundingOrderStatus::PayerAcknowledged,
                 PayCodeIssuanceFundingOrderStatus::Verifying,
-                PayCodeIssuanceFundingOrderStatus::Underfunded,
-                PayCodeIssuanceFundingOrderStatus::PaymentAmbiguous,
             ], true)
             && in_array($intent->status, [
                 FundingIntentStatus::AwaitingFunds,

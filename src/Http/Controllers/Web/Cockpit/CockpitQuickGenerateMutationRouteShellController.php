@@ -23,6 +23,7 @@ use LBHurtado\XChange\Data\Cockpit\CockpitIssuanceDraftValidationResultData;
 use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityItemData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Data\PricingEstimateData;
+use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
 use LBHurtado\XChange\Http\Requests\GeneratePayCodeRequest;
 use LBHurtado\XChange\Services\BuildBalanceOverview;
 use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityHandoffPipeline;
@@ -33,6 +34,7 @@ use LBHurtado\XChange\Services\Cockpit\QuickGenerateLastInstructionsStore;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingPolicy;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingRequirement;
 use LBHurtado\XChange\Services\IdempotencyService;
+use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceOrderAccess;
 use Throwable;
 
 class CockpitQuickGenerateMutationRouteShellController extends Controller
@@ -60,13 +62,26 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         CompileCockpitQuickGenerateClaimPolicy $claimPolicy,
         QuickGenerateLastInstructionsStore $lastInstructions,
         RememberRiderLibraryUsage $rememberRiderLibraryUsage,
+        PublicIssuanceOrderAccess $publicOrderAccess,
     ): JsonResponse {
+        $publicAutoGenerate = $request->attributes->get('x_change_public_auto_generate') === true;
+
+        if ($publicAutoGenerate && ($activeOrder = $publicOrderAccess->active($request)) !== null) {
+            return response()->json(
+                $onDemandFundingPresenter->present(
+                    $activeOrder['order'],
+                    $activeOrder['token'],
+                    true,
+                ),
+                202,
+            );
+        }
         $payload = $this->posSaleReferences->sanitizeBrowserPayload($request->validated());
         $payload = $this->normalizePayloadForIssuance($payload);
         $validatedPayload = $payload;
         $key = $idempotency->extractKey($request);
         $correlationId = $request->header((string) config('x-change.api.correlation.header', 'X-Correlation-ID'));
-        $issuerId = $request->user()?->getAuthIdentifier();
+        $issuerId = $this->actorIdentifier($request->user());
 
         $draft = $quickGenerateDraftFactory->fromPayload(
             $payload,
@@ -80,7 +95,9 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         $payload['_meta'] = [
             'idempotency_key' => $key,
             'correlation_id' => is_string($correlationId) ? $correlationId : null,
-            'source' => 'cockpit.quick-generate',
+            'source' => $publicAutoGenerate
+                ? 'public.auto-generate'
+                : 'cockpit.quick-generate',
         ];
 
         if ($issuerId !== null) {
@@ -111,7 +128,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         $pricingPreflight = $this->pricingPreflight($payload, $estimatePayCodeCost);
         $fundingPreflight = $this->fundingPreflight($request, $balanceOverview);
 
-        if ($onDemandFunding->enabled()) {
+        if ($onDemandFunding->enabled() || $publicAutoGenerate) {
             $operator = $request->user();
 
             if (! $operator instanceof Model || ! is_string($key) || trim($key) === '') {
@@ -121,7 +138,13 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
             }
 
             $pricing = $estimatePayCodeCost->handle($payload);
-            $requirement = $onDemandFundingRequirement->for($operator, $pricing);
+            $requirement = $publicAutoGenerate
+                ? $onDemandFundingRequirement->forBasis(
+                    $operator,
+                    $pricing,
+                    OnDemandIssuanceFundingBasis::FullAmount,
+                )
+                : $onDemandFundingRequirement->for($operator, $pricing);
 
             if ($requirement->externalAmountMinor > 0) {
                 $order = $prepareOnDemandIssuance->handle(
@@ -129,7 +152,20 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                     instructions: $payload,
                     pricing: $pricing,
                     idempotencyKey: $key,
+                    fundingBasis: $publicAutoGenerate
+                        ? OnDemandIssuanceFundingBasis::FullAmount
+                        : null,
+                    requirePayerIdentityMatch: ! $publicAutoGenerate,
                 );
+
+                if ($publicAutoGenerate) {
+                    $token = $publicOrderAccess->bind($order, $request);
+
+                    return response()->json(
+                        $onDemandFundingPresenter->present($order, $token, true),
+                        202,
+                    );
+                }
 
                 return response()->json($onDemandFundingPresenter->present($order), 202);
             }
@@ -727,7 +763,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
 
         $correlationHeader = (string) config('x-change.api.correlation.header', 'X-Correlation-ID');
         $correlationId = $request->header($correlationHeader);
-        $operatorId = $request->user()?->getAuthIdentifier();
+        $operatorId = $this->actorIdentifier($request->user());
         $detailHref = data_get($response, 'result.links.cockpit_detail');
 
         try {
@@ -779,6 +815,17 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         }
 
         return $metadata;
+    }
+
+    private function actorIdentifier(mixed $actor): ?string
+    {
+        if (! $actor instanceof Model) {
+            return null;
+        }
+
+        $identifier = $actor->getKey();
+
+        return $identifier === null ? null : (string) $identifier;
     }
 
     /**

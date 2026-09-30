@@ -1,6 +1,6 @@
 # On-Demand Issuance Funding Compass
 
-Last updated: 2026-09-29
+Last updated: 2026-09-30
 
 ## North Star
 
@@ -11,10 +11,10 @@ between receipt and issuance.
 
 ## Current position
 
-Status: **Controlled bank-transfer baseline, fixed-amount direct QR service,
-registered-VCA alternative, collision-safe amount leasing, scheduled order
-expiry, and late-payment Client Funds disposition are accepted locally;
-direct-QR live acceptance remains the next gate.**
+Status: **The bank-transfer and fixed-amount direct-QR lifecycle is shipped
+through x-change v1.0.74 and has passed a real low-value GCash acceptance run.
+Gate 10 recovery hardening is complete locally; publication and host adoption
+are the next controlled gate.**
 
 Existing reusable foundations:
 
@@ -59,7 +59,13 @@ Implemented foundations:
   immediately reassigned;
 - scheduled order expiry and hold release; and
 - verified late payments credited to Client Funds without reviving or issuing
-  the terminal order.
+  the terminal order;
+- explicit underpayment, excess-payment, and ambiguous-evidence states that
+  cannot issue or masquerade as an unseen payment;
+- durable provider-scoped evidence claims that prevent one transaction from
+  funding two orders while preserving same-intent idempotency; and
+- a durable provider-reversal marker that blocks queued issuance independently
+  of queue timing.
 
 Focused proof passes for settlement, hold placement, exactly-once resumption,
 owner restoration, standing-account instruction presentation, selector
@@ -72,9 +78,37 @@ was used.
 
 Still gated:
 
-- a real low-value payment through the on-demand direct QR;
-- package publication or deployment; and
+- publication and sandbox/testing adoption of the completed Gate 10 slice;
+- operator workflow for resolving underpayment, excess, and ambiguous evidence;
+- Pay Code funding; and
 - registered-VCA activation until NetBank enables pre-transaction validation.
+
+## Shipped release evidence
+
+| Release | Accepted evidence |
+| --- | --- |
+| `v1.0.69` | Strict-doctor funding-basis validation. |
+| `v1.0.70` | Persistent funding workspace and issued-stamp handoff. |
+| `v1.0.71` | Corporate-account bank-transfer verification. |
+| `v1.0.72` | Correct corporate account presentation. |
+| `v1.0.73` | Automatic modal payment polling and retry UX. |
+| `v1.0.74` | Correct issued Pay Code amount and stamp presentation. |
+
+The sequence culminated in an authorized PHP 25.03 GCash direct-QR payment.
+The provider payment was detected and exactly one Pay Code was issued through
+the normal authority. This retires the former “live direct-QR acceptance”
+blocker.
+
+## Gate 10 local evidence
+
+- settled short payments become `underfunded` and stop automatic polling;
+- settled excess payments become `payment_ambiguous` and cannot issue;
+- one provider transaction can be claimed by only one Funding Intent;
+- a same-intent evidence replay is idempotent;
+- duplicate cross-intent evidence is rejected into suspense;
+- an authoritative provider reversal moves a pre-issue order to
+  `issuance_attention` and the queued job refuses to issue; and
+- focused on-demand, settlement, webhook, and reversal suites pass.
 
 Gate 3 local evidence:
 
@@ -134,6 +168,10 @@ Gate 4 local evidence:
     or limit enforcement.
 21. Registered VCA is an explicit operator-selected mode and never a hidden
     fallback.
+22. One provider transaction can fund only one Funding Intent.
+23. Underpayment, excess payment, and duplicate evidence require review and do
+    not expose safe cancellation or continued automatic polling.
+24. A provider reversal marker has priority over a queued issuance job.
 
 ## Invariants
 
@@ -164,24 +202,24 @@ This is the shared-beta target, not the backward-compatible package default.
 
 ## Next controlled gate
 
-**Gate 6 — Local host adoption and low-value direct-QR acceptance.**
+**Gate 13 — Controlled Gate 10 publication and host adoption.**
 
-1. adopt the package source in the sandbox and rebuild its published assets;
-2. freeze one PHP 25.00 Pay Code instruction;
-3. issue one `direct_qr` order-specific QR without token, registration, or
-   exact-limit calls;
-4. accept one separately authorized real payment and verify exact provider
-   evidence;
-5. prove the order-bound hold and exactly-once Pay Code issuance; and
-6. keep package publication and Cloud deployment separately authorized.
+1. review the Gate 10 schema and money-safety diff;
+2. publish x-change only with explicit authorization;
+3. upgrade the sandbox and run migrations;
+4. rerun exact, underpayment, excess, duplicate-evidence, late-payment, and
+   provider-reversal tests;
+5. deploy testing only under separate authorization; and
+6. keep Pay Code funding and registered-VCA activation disabled.
 
 No publication, tag, push, Cloud deployment, provider call, or real transfer is
 authorized by this compass update.
 
 ## Following gate
 
-After Gate 4, consider a separately authorized publication gate. Live provider
-testing remains a later, independently authorized operation.
+After Gate 13, implement an operator-facing resolution workflow for recovered
+underpayment, excess, and ambiguous evidence. Pay Code funding remains a later,
+independently reviewed gate.
 
 ## Stop conditions
 

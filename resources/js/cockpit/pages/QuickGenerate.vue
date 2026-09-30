@@ -1,1214 +1,1229 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import { Landmark } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
-import { index as fundingIndex } from '@/routes/x-change/cockpit/funding';
-import CockpitGenerateActionPanel from '../components/CockpitGenerateActionPanel.vue';
-import CockpitIssuanceBoundaryPanel from '../components/CockpitIssuanceBoundaryPanel.vue';
-import CockpitPricingFundingSummary from '../components/CockpitPricingFundingSummary.vue';
-import CockpitQuickGenerateAuthorizationGatePanel from '../components/CockpitQuickGenerateAuthorizationGatePanel.vue';
-import CockpitQuickGenerateDiagnosticsSummary from '../components/CockpitQuickGenerateDiagnosticsSummary.vue';
-import CockpitQuickGenerateDraftContractPanel from '../components/CockpitQuickGenerateDraftContractPanel.vue';
-import CockpitQuickGenerateFundingGatePanel from '../components/CockpitQuickGenerateFundingGatePanel.vue';
-import CockpitQuickGenerateIdempotencyGatePanel from '../components/CockpitQuickGenerateIdempotencyGatePanel.vue';
-import CockpitQuickGenerateMutationAuthorizationDecisionPanel from '../components/CockpitQuickGenerateMutationAuthorizationDecisionPanel.vue';
-import CockpitQuickGenerateMutationHandoffPlanPanel from '../components/CockpitQuickGenerateMutationHandoffPlanPanel.vue';
-import CockpitQuickGenerateMutationPreconditionsReviewPanel from '../components/CockpitQuickGenerateMutationPreconditionsReviewPanel.vue';
-import CockpitQuickGeneratePosPanel from '../components/CockpitQuickGeneratePosPanel.vue';
-import CockpitQuickGenerateQrPanel from '../components/CockpitQuickGenerateQrPanel.vue';
-import type { CockpitQuickGenerateSurface } from '../components/CockpitQuickGenerateSurfaceSwitch.vue';
-import CockpitQuickGeneratePricingGatePanel from '../components/CockpitQuickGeneratePricingGatePanel.vue';
-import CockpitQuickGenerateSubmitPanel from '../components/CockpitQuickGenerateSubmitPanel.vue';
-import CockpitQuickGenerateValidationRedactionGatePanel from '../components/CockpitQuickGenerateValidationRedactionGatePanel.vue';
-import CockpitLayout from '../layouts/CockpitLayout.vue';
+import { Link } from "@inertiajs/vue3";
+import { Landmark } from "lucide-vue-next";
+import { computed, ref } from "vue";
+import { index as fundingIndex } from "@/routes/x-change/cockpit/funding";
+import CockpitGenerateActionPanel from "../components/CockpitGenerateActionPanel.vue";
+import CockpitIssuanceBoundaryPanel from "../components/CockpitIssuanceBoundaryPanel.vue";
+import CockpitPricingFundingSummary from "../components/CockpitPricingFundingSummary.vue";
+import CockpitQuickGenerateAuthorizationGatePanel from "../components/CockpitQuickGenerateAuthorizationGatePanel.vue";
+import CockpitQuickGenerateDiagnosticsSummary from "../components/CockpitQuickGenerateDiagnosticsSummary.vue";
+import CockpitQuickGenerateDraftContractPanel from "../components/CockpitQuickGenerateDraftContractPanel.vue";
+import CockpitQuickGenerateFundingGatePanel from "../components/CockpitQuickGenerateFundingGatePanel.vue";
+import CockpitQuickGenerateIdempotencyGatePanel from "../components/CockpitQuickGenerateIdempotencyGatePanel.vue";
+import CockpitQuickGenerateMutationAuthorizationDecisionPanel from "../components/CockpitQuickGenerateMutationAuthorizationDecisionPanel.vue";
+import CockpitQuickGenerateMutationHandoffPlanPanel from "../components/CockpitQuickGenerateMutationHandoffPlanPanel.vue";
+import CockpitQuickGenerateMutationPreconditionsReviewPanel from "../components/CockpitQuickGenerateMutationPreconditionsReviewPanel.vue";
+import CockpitQuickGeneratePosPanel from "../components/CockpitQuickGeneratePosPanel.vue";
+import CockpitQuickGenerateQrPanel from "../components/CockpitQuickGenerateQrPanel.vue";
+import type { CockpitQuickGenerateSurface } from "../components/CockpitQuickGenerateSurfaceSwitch.vue";
+import CockpitQuickGeneratePricingGatePanel from "../components/CockpitQuickGeneratePricingGatePanel.vue";
+import CockpitQuickGenerateSubmitPanel from "../components/CockpitQuickGenerateSubmitPanel.vue";
+import CockpitQuickGenerateValidationRedactionGatePanel from "../components/CockpitQuickGenerateValidationRedactionGatePanel.vue";
+import CockpitLayout from "../layouts/CockpitLayout.vue";
+import PublicIssuanceLayout from "../layouts/PublicIssuanceLayout.vue";
 import {
-    cockpitPricingFundingSummary,
-    cockpitQuickGenerateTemplates,
-} from '../quickGenerateDefaults';
+  cockpitPricingFundingSummary,
+  cockpitQuickGenerateTemplates,
+} from "../quickGenerateDefaults";
 import type {
-    CockpitPricingFundingSummary as CockpitPricingFundingSummaryType,
-    CockpitQuickGenerateCampaignContext,
-    CockpitQuickGenerateClaimPreviewContract,
-    CockpitQuickGenerateAuthorization,
-    CockpitQuickGenerateAuthorizationGate,
-    CockpitQuickGenerateDraftContract,
-    CockpitQuickGenerateFundingGate,
-    CockpitQuickGenerateFundingGateCheck,
-    CockpitQuickGenerateIdempotencyGate,
-    CockpitQuickGenerateIdempotencyGateCheck,
-    CockpitQuickGenerateMutationAuthorizationDecision,
-    CockpitQuickGenerateMutationContract,
-    CockpitQuickGenerateMutationHandoffPlan,
-    CockpitQuickGenerateMutationHandoffPlanStep,
-    CockpitQuickGenerateMutationPreconditionsReview,
-    CockpitQuickGenerateMutationPreconditionsReviewItem,
-    CockpitQuickGeneratePricingGate,
-    CockpitQuickGeneratePricingGateCheck,
-    CockpitQuickGenerateValidationRedactionGate,
-    CockpitQuickGenerateValidationRedactionGateCheck,
-    CockpitQuickGeneratePageProps,
-    CockpitQuickGenerateReadModelPricingSummary,
-    CockpitQuickGenerateReadModelTemplate,
-    CockpitQuickGenerateTemplate,
-} from '../types';
+  CockpitPricingFundingSummary as CockpitPricingFundingSummaryType,
+  CockpitQuickGenerateCampaignContext,
+  CockpitQuickGenerateClaimPreviewContract,
+  CockpitQuickGenerateAuthorization,
+  CockpitQuickGenerateAuthorizationGate,
+  CockpitQuickGenerateDraftContract,
+  CockpitQuickGenerateFundingGate,
+  CockpitQuickGenerateFundingGateCheck,
+  CockpitQuickGenerateIdempotencyGate,
+  CockpitQuickGenerateIdempotencyGateCheck,
+  CockpitQuickGenerateMutationAuthorizationDecision,
+  CockpitQuickGenerateMutationContract,
+  CockpitQuickGenerateMutationHandoffPlan,
+  CockpitQuickGenerateMutationHandoffPlanStep,
+  CockpitQuickGenerateMutationPreconditionsReview,
+  CockpitQuickGenerateMutationPreconditionsReviewItem,
+  CockpitQuickGeneratePricingGate,
+  CockpitQuickGeneratePricingGateCheck,
+  CockpitQuickGenerateValidationRedactionGate,
+  CockpitQuickGenerateValidationRedactionGateCheck,
+  CockpitQuickGeneratePageProps,
+  CockpitQuickGenerateReadModelPricingSummary,
+  CockpitQuickGenerateReadModelTemplate,
+  CockpitQuickGenerateTemplate,
+} from "../types";
 
 const props = defineProps<CockpitQuickGeneratePageProps>();
+const publicAutoGenerate = computed(
+  () => props.surface_profile?.kind === "public_auto_generate",
+);
+const pageLayout = computed(() =>
+  publicAutoGenerate.value ? PublicIssuanceLayout : CockpitLayout,
+);
+const pageLayoutProps = computed(() =>
+  publicAutoGenerate.value
+    ? {}
+    : {
+        activeNavigation: "quick-generate",
+        mobilePresentation: "edge",
+        cockpitHeaderReadModel: props.cockpit_header_read_model,
+        cockpitEntryNotice: props.cockpit_entry_notice,
+      },
+);
 const issuanceSurface = ref<CockpitQuickGenerateSurface>(
-    props.display_session ? 'qr' : 'composer',
+  props.display_session ? "qr" : "composer",
 );
 const displaySession = ref(props.display_session ?? null);
 
 const clientFundsMinor = computed<number | null>(() => {
-    const amount = props.cockpit_header_read_model?.balances?.find(
-        (balance) => balance.key === 'internal',
-    )?.amount_minor;
+  const amount = props.cockpit_header_read_model?.balances?.find(
+    (balance) => balance.key === "internal",
+  )?.amount_minor;
 
-    return typeof amount === 'number' && Number.isFinite(amount)
-        ? Math.round(amount)
-        : null;
+  return typeof amount === "number" && Number.isFinite(amount)
+    ? Math.round(amount)
+    : null;
 });
 
 const readModelAvailable = computed<boolean>(() => {
-    return (
-        props.quick_generate_read_model?.status === 'available' &&
-        props.quick_generate_read_model?.authorized === true
-    );
+  return (
+    props.quick_generate_read_model?.status === "available" &&
+    props.quick_generate_read_model?.authorized === true
+  );
 });
 
 const templates = computed<CockpitQuickGenerateTemplate[]>(() => {
-    if (
-        !readModelAvailable.value ||
-        !Array.isArray(props.quick_generate_read_model?.templates)
-    ) {
-        return cockpitQuickGenerateTemplates;
-    }
+  if (
+    !readModelAvailable.value ||
+    !Array.isArray(props.quick_generate_read_model?.templates)
+  ) {
+    return cockpitQuickGenerateTemplates;
+  }
 
-    const mapped = props.quick_generate_read_model.templates
-        .map((template): CockpitQuickGenerateTemplate | null =>
-            sanitizeTemplate(template),
-        )
-        .filter(
-            (template): template is CockpitQuickGenerateTemplate =>
-                template !== null,
-        );
+  const mapped = props.quick_generate_read_model.templates
+    .map((template): CockpitQuickGenerateTemplate | null =>
+      sanitizeTemplate(template),
+    )
+    .filter(
+      (template): template is CockpitQuickGenerateTemplate => template !== null,
+    );
 
-    return mapped.length > 0 ? mapped : cockpitQuickGenerateTemplates;
+  return mapped.length > 0 ? mapped : cockpitQuickGenerateTemplates;
 });
 
 const pricingSummaries = computed<CockpitPricingFundingSummaryType[]>(() => {
-    if (
-        !readModelAvailable.value ||
-        !Array.isArray(props.quick_generate_read_model?.pricing_summaries)
-    ) {
-        return cockpitPricingFundingSummary;
-    }
+  if (
+    !readModelAvailable.value ||
+    !Array.isArray(props.quick_generate_read_model?.pricing_summaries)
+  ) {
+    return cockpitPricingFundingSummary;
+  }
 
-    const mapped = props.quick_generate_read_model.pricing_summaries
-        .map((summary): CockpitPricingFundingSummaryType | null =>
-            sanitizePricingSummary(summary),
-        )
-        .filter(
-            (summary): summary is CockpitPricingFundingSummaryType =>
-                summary !== null,
-        );
+  const mapped = props.quick_generate_read_model.pricing_summaries
+    .map((summary): CockpitPricingFundingSummaryType | null =>
+      sanitizePricingSummary(summary),
+    )
+    .filter(
+      (summary): summary is CockpitPricingFundingSummaryType =>
+        summary !== null,
+    );
 
-    return mapped.length > 0 ? mapped : cockpitPricingFundingSummary;
+  return mapped.length > 0 ? mapped : cockpitPricingFundingSummary;
 });
 
 const campaignContext = computed<
-    CockpitQuickGenerateCampaignContext | undefined
+  CockpitQuickGenerateCampaignContext | undefined
 >(() => {
-    const context = props.quick_generate_read_model?.campaign_context;
+  const context = props.quick_generate_read_model?.campaign_context;
 
-    if (
-        !readModelAvailable.value ||
-        typeof context !== 'object' ||
-        context === null
-    ) {
-        return undefined;
-    }
+  if (
+    !readModelAvailable.value ||
+    typeof context !== "object" ||
+    context === null
+  ) {
+    return undefined;
+  }
 
-    return context;
+  return context;
 });
 
 const draftContract = computed<CockpitQuickGenerateDraftContract>(() => {
-    const draft = props.quick_generate_read_model?.draft_contract;
+  const draft = props.quick_generate_read_model?.draft_contract;
 
-    if (
-        !readModelAvailable.value ||
-        typeof draft !== 'object' ||
-        draft === null
-    ) {
-        return defaultDraftContract();
-    }
+  if (
+    !readModelAvailable.value ||
+    typeof draft !== "object" ||
+    draft === null
+  ) {
+    return defaultDraftContract();
+  }
 
-    return {
-        schema:
-            stringValue(draft.schema) ??
-            'x-change.cockpit.quick-generate-draft.v1',
-        status: stringValue(draft.status) ?? 'draft_only',
-        template_key: stringValue(draft.template_key),
-        amount: stringValue(draft.amount),
-        currency: stringValue(draft.currency),
-        recipient_reference: stringValue(draft.recipient_reference),
-        purpose: stringValue(draft.purpose),
-        idempotency_key: stringValue(draft.idempotency_key),
-        redactions: {
-            payloads:
-                stringValue(draft.redactions?.payloads) ?? 'draft-shape-only',
-        },
-    };
+  return {
+    schema:
+      stringValue(draft.schema) ?? "x-change.cockpit.quick-generate-draft.v1",
+    status: stringValue(draft.status) ?? "draft_only",
+    template_key: stringValue(draft.template_key),
+    amount: stringValue(draft.amount),
+    currency: stringValue(draft.currency),
+    recipient_reference: stringValue(draft.recipient_reference),
+    purpose: stringValue(draft.purpose),
+    idempotency_key: stringValue(draft.idempotency_key),
+    redactions: {
+      payloads: stringValue(draft.redactions?.payloads) ?? "draft-shape-only",
+    },
+  };
 });
 
 const pricingGate = computed<CockpitQuickGeneratePricingGate>(() => {
-    const pricingGateReadModel = props.quick_generate_read_model?.pricing_gate;
+  const pricingGateReadModel = props.quick_generate_read_model?.pricing_gate;
 
-    if (
-        !readModelAvailable.value ||
-        typeof pricingGateReadModel !== 'object' ||
-        pricingGateReadModel === null
-    ) {
-        return defaultPricingGate();
-    }
+  if (
+    !readModelAvailable.value ||
+    typeof pricingGateReadModel !== "object" ||
+    pricingGateReadModel === null
+  ) {
+    return defaultPricingGate();
+  }
 
-    const checks = Array.isArray(pricingGateReadModel.checks)
-        ? pricingGateReadModel.checks
-              .map((check): CockpitQuickGeneratePricingGateCheck | null =>
-                  sanitizePricingGateCheck(check),
-              )
-              .filter(
-                  (check): check is CockpitQuickGeneratePricingGateCheck =>
-                      check !== null,
-              )
-        : [];
+  const checks = Array.isArray(pricingGateReadModel.checks)
+    ? pricingGateReadModel.checks
+        .map((check): CockpitQuickGeneratePricingGateCheck | null =>
+          sanitizePricingGateCheck(check),
+        )
+        .filter(
+          (check): check is CockpitQuickGeneratePricingGateCheck =>
+            check !== null,
+        )
+    : [];
 
-    return {
-        status: stringValue(pricingGateReadModel.status) ?? 'blocked',
-        checks: checks.length > 0 ? checks : defaultPricingGate().checks,
-        redactions: {
-            payloads:
-                stringValue(pricingGateReadModel.redactions?.payloads) ??
-                'pricing-gates-only',
-        },
-    };
+  return {
+    status: stringValue(pricingGateReadModel.status) ?? "blocked",
+    checks: checks.length > 0 ? checks : defaultPricingGate().checks,
+    redactions: {
+      payloads:
+        stringValue(pricingGateReadModel.redactions?.payloads) ??
+        "pricing-gates-only",
+    },
+  };
 });
 
 const fundingGate = computed<CockpitQuickGenerateFundingGate>(() => {
-    const fundingGateReadModel = props.quick_generate_read_model?.funding_gate;
+  const fundingGateReadModel = props.quick_generate_read_model?.funding_gate;
 
-    if (
-        !readModelAvailable.value ||
-        typeof fundingGateReadModel !== 'object' ||
-        fundingGateReadModel === null
-    ) {
-        return defaultFundingGate();
-    }
+  if (
+    !readModelAvailable.value ||
+    typeof fundingGateReadModel !== "object" ||
+    fundingGateReadModel === null
+  ) {
+    return defaultFundingGate();
+  }
 
-    const checks = Array.isArray(fundingGateReadModel.checks)
-        ? fundingGateReadModel.checks
-              .map((check): CockpitQuickGenerateFundingGateCheck | null =>
-                  sanitizeFundingGateCheck(check),
-              )
-              .filter(
-                  (check): check is CockpitQuickGenerateFundingGateCheck =>
-                      check !== null,
-              )
-        : [];
+  const checks = Array.isArray(fundingGateReadModel.checks)
+    ? fundingGateReadModel.checks
+        .map((check): CockpitQuickGenerateFundingGateCheck | null =>
+          sanitizeFundingGateCheck(check),
+        )
+        .filter(
+          (check): check is CockpitQuickGenerateFundingGateCheck =>
+            check !== null,
+        )
+    : [];
 
-    return {
-        status: stringValue(fundingGateReadModel.status) ?? 'blocked',
-        checks: checks.length > 0 ? checks : defaultFundingGate().checks,
-        redactions: {
-            payloads:
-                stringValue(fundingGateReadModel.redactions?.payloads) ??
-                'funding-gates-only',
-        },
-    };
+  return {
+    status: stringValue(fundingGateReadModel.status) ?? "blocked",
+    checks: checks.length > 0 ? checks : defaultFundingGate().checks,
+    redactions: {
+      payloads:
+        stringValue(fundingGateReadModel.redactions?.payloads) ??
+        "funding-gates-only",
+    },
+  };
 });
 
 const idempotencyGate = computed<CockpitQuickGenerateIdempotencyGate>(() => {
-    const idempotencyGateReadModel =
-        props.quick_generate_read_model?.idempotency_gate;
+  const idempotencyGateReadModel =
+    props.quick_generate_read_model?.idempotency_gate;
 
-    if (
-        !readModelAvailable.value ||
-        typeof idempotencyGateReadModel !== 'object' ||
-        idempotencyGateReadModel === null
-    ) {
-        return defaultIdempotencyGate();
-    }
+  if (
+    !readModelAvailable.value ||
+    typeof idempotencyGateReadModel !== "object" ||
+    idempotencyGateReadModel === null
+  ) {
+    return defaultIdempotencyGate();
+  }
 
-    const checks = Array.isArray(idempotencyGateReadModel.checks)
-        ? idempotencyGateReadModel.checks
-              .map((check): CockpitQuickGenerateIdempotencyGateCheck | null =>
-                  sanitizeIdempotencyGateCheck(check),
-              )
-              .filter(
-                  (check): check is CockpitQuickGenerateIdempotencyGateCheck =>
-                      check !== null,
-              )
-        : [];
+  const checks = Array.isArray(idempotencyGateReadModel.checks)
+    ? idempotencyGateReadModel.checks
+        .map((check): CockpitQuickGenerateIdempotencyGateCheck | null =>
+          sanitizeIdempotencyGateCheck(check),
+        )
+        .filter(
+          (check): check is CockpitQuickGenerateIdempotencyGateCheck =>
+            check !== null,
+        )
+    : [];
 
-    return {
-        status: stringValue(idempotencyGateReadModel.status) ?? 'blocked',
-        checks: checks.length > 0 ? checks : defaultIdempotencyGate().checks,
-        redactions: {
-            payloads:
-                stringValue(idempotencyGateReadModel.redactions?.payloads) ??
-                'idempotency-gates-only',
-        },
-    };
+  return {
+    status: stringValue(idempotencyGateReadModel.status) ?? "blocked",
+    checks: checks.length > 0 ? checks : defaultIdempotencyGate().checks,
+    redactions: {
+      payloads:
+        stringValue(idempotencyGateReadModel.redactions?.payloads) ??
+        "idempotency-gates-only",
+    },
+  };
 });
 
 const validationRedactionGate =
-    computed<CockpitQuickGenerateValidationRedactionGate>(() => {
-        const validationRedactionGateReadModel =
-            props.quick_generate_read_model?.validation_redaction_gate;
+  computed<CockpitQuickGenerateValidationRedactionGate>(() => {
+    const validationRedactionGateReadModel =
+      props.quick_generate_read_model?.validation_redaction_gate;
 
-        if (
-            !readModelAvailable.value ||
-            typeof validationRedactionGateReadModel !== 'object' ||
-            validationRedactionGateReadModel === null
-        ) {
-            return defaultValidationRedactionGate();
-        }
+    if (
+      !readModelAvailable.value ||
+      typeof validationRedactionGateReadModel !== "object" ||
+      validationRedactionGateReadModel === null
+    ) {
+      return defaultValidationRedactionGate();
+    }
 
-        const checks = Array.isArray(validationRedactionGateReadModel.checks)
-            ? validationRedactionGateReadModel.checks
-                  .map(
-                      (
-                          check,
-                      ): CockpitQuickGenerateValidationRedactionGateCheck | null =>
-                          sanitizeValidationRedactionGateCheck(check),
-                  )
-                  .filter(
-                      (
-                          check,
-                      ): check is CockpitQuickGenerateValidationRedactionGateCheck =>
-                          check !== null,
-                  )
-            : [];
+    const checks = Array.isArray(validationRedactionGateReadModel.checks)
+      ? validationRedactionGateReadModel.checks
+          .map(
+            (check): CockpitQuickGenerateValidationRedactionGateCheck | null =>
+              sanitizeValidationRedactionGateCheck(check),
+          )
+          .filter(
+            (
+              check,
+            ): check is CockpitQuickGenerateValidationRedactionGateCheck =>
+              check !== null,
+          )
+      : [];
 
-        return {
-            status:
-                stringValue(validationRedactionGateReadModel.status) ??
-                'blocked',
-            checks:
-                checks.length > 0
-                    ? checks
-                    : defaultValidationRedactionGate().checks,
-            redactions: {
-                payloads:
-                    stringValue(
-                        validationRedactionGateReadModel.redactions?.payloads,
-                    ) ?? 'validation-redaction-gates-only',
-            },
-        };
-    });
+    return {
+      status: stringValue(validationRedactionGateReadModel.status) ?? "blocked",
+      checks:
+        checks.length > 0 ? checks : defaultValidationRedactionGate().checks,
+      redactions: {
+        payloads:
+          stringValue(validationRedactionGateReadModel.redactions?.payloads) ??
+          "validation-redaction-gates-only",
+      },
+    };
+  });
 
 const mutationHandoffPlan = computed<CockpitQuickGenerateMutationHandoffPlan>(
-    () => {
-        const mutationHandoffPlanReadModel =
-            props.quick_generate_read_model?.mutation_handoff_plan;
+  () => {
+    const mutationHandoffPlanReadModel =
+      props.quick_generate_read_model?.mutation_handoff_plan;
 
-        if (
-            !readModelAvailable.value ||
-            typeof mutationHandoffPlanReadModel !== 'object' ||
-            mutationHandoffPlanReadModel === null
-        ) {
-            return defaultMutationHandoffPlan();
-        }
+    if (
+      !readModelAvailable.value ||
+      typeof mutationHandoffPlanReadModel !== "object" ||
+      mutationHandoffPlanReadModel === null
+    ) {
+      return defaultMutationHandoffPlan();
+    }
 
-        const steps = Array.isArray(mutationHandoffPlanReadModel.steps)
-            ? mutationHandoffPlanReadModel.steps
-                  .map(
-                      (
-                          step,
-                      ): CockpitQuickGenerateMutationHandoffPlanStep | null =>
-                          sanitizeMutationHandoffPlanStep(step),
-                  )
-                  .filter(
-                      (
-                          step,
-                      ): step is CockpitQuickGenerateMutationHandoffPlanStep =>
-                          step !== null,
-                  )
-            : [];
+    const steps = Array.isArray(mutationHandoffPlanReadModel.steps)
+      ? mutationHandoffPlanReadModel.steps
+          .map((step): CockpitQuickGenerateMutationHandoffPlanStep | null =>
+            sanitizeMutationHandoffPlanStep(step),
+          )
+          .filter(
+            (step): step is CockpitQuickGenerateMutationHandoffPlanStep =>
+              step !== null,
+          )
+      : [];
 
-        return {
-            status:
-                stringValue(mutationHandoffPlanReadModel.status) ?? 'blocked',
-            steps:
-                steps.length > 0 ? steps : defaultMutationHandoffPlan().steps,
-            redactions: {
-                payloads:
-                    stringValue(
-                        mutationHandoffPlanReadModel.redactions?.payloads,
-                    ) ?? 'mutation-handoff-plan-only',
-            },
-        };
-    },
+    return {
+      status: stringValue(mutationHandoffPlanReadModel.status) ?? "blocked",
+      steps: steps.length > 0 ? steps : defaultMutationHandoffPlan().steps,
+      redactions: {
+        payloads:
+          stringValue(mutationHandoffPlanReadModel.redactions?.payloads) ??
+          "mutation-handoff-plan-only",
+      },
+    };
+  },
 );
 
 const mutationPreconditionsReview =
-    computed<CockpitQuickGenerateMutationPreconditionsReview>(() => {
-        const mutationPreconditionsReviewReadModel =
-            props.quick_generate_read_model?.mutation_preconditions_review;
-
-        if (
-            !readModelAvailable.value ||
-            typeof mutationPreconditionsReviewReadModel !== 'object' ||
-            mutationPreconditionsReviewReadModel === null
-        ) {
-            return defaultMutationPreconditionsReview();
-        }
-
-        const items = Array.isArray(mutationPreconditionsReviewReadModel.items)
-            ? mutationPreconditionsReviewReadModel.items
-                  .map(
-                      (
-                          item,
-                      ): CockpitQuickGenerateMutationPreconditionsReviewItem | null =>
-                          sanitizeMutationPreconditionsReviewItem(item),
-                  )
-                  .filter(
-                      (
-                          item,
-                      ): item is CockpitQuickGenerateMutationPreconditionsReviewItem =>
-                          item !== null,
-                  )
-            : [];
-
-        return {
-            status:
-                stringValue(mutationPreconditionsReviewReadModel.status) ??
-                'blocked',
-            recommendation:
-                stringValue(
-                    mutationPreconditionsReviewReadModel.recommendation,
-                ) ?? 'use-existing-issuance-handoff',
-            items:
-                items.length > 0
-                    ? items
-                    : defaultMutationPreconditionsReview().items,
-            redactions: {
-                payloads:
-                    stringValue(
-                        mutationPreconditionsReviewReadModel.redactions
-                            ?.payloads,
-                    ) ?? 'mutation-preconditions-review-only',
-            },
-        };
-    });
-
-const mutationAuthorizationDecision =
-    computed<CockpitQuickGenerateMutationAuthorizationDecision>(() => {
-        const mutationAuthorizationDecisionReadModel =
-            props.quick_generate_read_model?.mutation_authorization_decision;
-
-        if (
-            !readModelAvailable.value ||
-            typeof mutationAuthorizationDecisionReadModel !== 'object' ||
-            mutationAuthorizationDecisionReadModel === null
-        ) {
-            return defaultMutationAuthorizationDecision();
-        }
-
-        return {
-            status:
-                stringValue(mutationAuthorizationDecisionReadModel.status) ??
-                'blocked',
-            decision:
-                stringValue(mutationAuthorizationDecisionReadModel.decision) ??
-                'authorized_existing_handoff',
-            required_approval:
-                stringValue(
-                    mutationAuthorizationDecisionReadModel.required_approval,
-                ) ?? 'human-approval-required-before-route-scaffold',
-            rationale:
-                stringValue(mutationAuthorizationDecisionReadModel.rationale) ??
-                'Cockpit may submit Quick Generate through the existing GeneratePayCode action without inventing a parallel issuance runtime.',
-            next_step:
-                stringValue(mutationAuthorizationDecisionReadModel.next_step) ??
-                'request-explicit-approval-or-continue-read-only-hardening',
-            redactions: {
-                payloads:
-                    stringValue(
-                        mutationAuthorizationDecisionReadModel.redactions
-                            ?.payloads,
-                    ) ?? 'mutation-authorization-decision-only',
-            },
-        };
-    });
-
-const authorization = computed<CockpitQuickGenerateAuthorization>(() => {
-    const authorizationReadModel =
-        props.quick_generate_read_model?.authorization;
+  computed<CockpitQuickGenerateMutationPreconditionsReview>(() => {
+    const mutationPreconditionsReviewReadModel =
+      props.quick_generate_read_model?.mutation_preconditions_review;
 
     if (
-        !readModelAvailable.value ||
-        typeof authorizationReadModel !== 'object' ||
-        authorizationReadModel === null
+      !readModelAvailable.value ||
+      typeof mutationPreconditionsReviewReadModel !== "object" ||
+      mutationPreconditionsReviewReadModel === null
     ) {
-        return defaultAuthorization();
+      return defaultMutationPreconditionsReview();
     }
 
-    const gates = Array.isArray(authorizationReadModel.gates)
-        ? authorizationReadModel.gates
-              .map((gate): CockpitQuickGenerateAuthorizationGate | null =>
-                  sanitizeAuthorizationGate(gate),
-              )
-              .filter(
-                  (gate): gate is CockpitQuickGenerateAuthorizationGate =>
-                      gate !== null,
-              )
-        : [];
+    const items = Array.isArray(mutationPreconditionsReviewReadModel.items)
+      ? mutationPreconditionsReviewReadModel.items
+          .map(
+            (
+              item,
+            ): CockpitQuickGenerateMutationPreconditionsReviewItem | null =>
+              sanitizeMutationPreconditionsReviewItem(item),
+          )
+          .filter(
+            (
+              item,
+            ): item is CockpitQuickGenerateMutationPreconditionsReviewItem =>
+              item !== null,
+          )
+      : [];
 
     return {
-        status: stringValue(authorizationReadModel.status) ?? 'blocked',
-        gates: gates.length > 0 ? gates : defaultAuthorization().gates,
-        redactions: {
-            payloads:
-                stringValue(authorizationReadModel.redactions?.payloads) ??
-                'authorization-gates-only',
-        },
+      status:
+        stringValue(mutationPreconditionsReviewReadModel.status) ?? "blocked",
+      recommendation:
+        stringValue(mutationPreconditionsReviewReadModel.recommendation) ??
+        "use-existing-issuance-handoff",
+      items:
+        items.length > 0 ? items : defaultMutationPreconditionsReview().items,
+      redactions: {
+        payloads:
+          stringValue(
+            mutationPreconditionsReviewReadModel.redactions?.payloads,
+          ) ?? "mutation-preconditions-review-only",
+      },
     };
+  });
+
+const mutationAuthorizationDecision =
+  computed<CockpitQuickGenerateMutationAuthorizationDecision>(() => {
+    const mutationAuthorizationDecisionReadModel =
+      props.quick_generate_read_model?.mutation_authorization_decision;
+
+    if (
+      !readModelAvailable.value ||
+      typeof mutationAuthorizationDecisionReadModel !== "object" ||
+      mutationAuthorizationDecisionReadModel === null
+    ) {
+      return defaultMutationAuthorizationDecision();
+    }
+
+    return {
+      status:
+        stringValue(mutationAuthorizationDecisionReadModel.status) ?? "blocked",
+      decision:
+        stringValue(mutationAuthorizationDecisionReadModel.decision) ??
+        "authorized_existing_handoff",
+      required_approval:
+        stringValue(mutationAuthorizationDecisionReadModel.required_approval) ??
+        "human-approval-required-before-route-scaffold",
+      rationale:
+        stringValue(mutationAuthorizationDecisionReadModel.rationale) ??
+        "Cockpit may submit Quick Generate through the existing GeneratePayCode action without inventing a parallel issuance runtime.",
+      next_step:
+        stringValue(mutationAuthorizationDecisionReadModel.next_step) ??
+        "request-explicit-approval-or-continue-read-only-hardening",
+      redactions: {
+        payloads:
+          stringValue(
+            mutationAuthorizationDecisionReadModel.redactions?.payloads,
+          ) ?? "mutation-authorization-decision-only",
+      },
+    };
+  });
+
+const authorization = computed<CockpitQuickGenerateAuthorization>(() => {
+  const authorizationReadModel = props.quick_generate_read_model?.authorization;
+
+  if (
+    !readModelAvailable.value ||
+    typeof authorizationReadModel !== "object" ||
+    authorizationReadModel === null
+  ) {
+    return defaultAuthorization();
+  }
+
+  const gates = Array.isArray(authorizationReadModel.gates)
+    ? authorizationReadModel.gates
+        .map((gate): CockpitQuickGenerateAuthorizationGate | null =>
+          sanitizeAuthorizationGate(gate),
+        )
+        .filter(
+          (gate): gate is CockpitQuickGenerateAuthorizationGate =>
+            gate !== null,
+        )
+    : [];
+
+  return {
+    status: stringValue(authorizationReadModel.status) ?? "blocked",
+    gates: gates.length > 0 ? gates : defaultAuthorization().gates,
+    redactions: {
+      payloads:
+        stringValue(authorizationReadModel.redactions?.payloads) ??
+        "authorization-gates-only",
+    },
+  };
 });
 
 const mutationContract = computed<CockpitQuickGenerateMutationContract>(() => {
-    const contract = props.quick_generate_read_model?.mutation_contract;
+  const contract = props.quick_generate_read_model?.mutation_contract;
 
-    if (
-        !readModelAvailable.value ||
-        typeof contract !== 'object' ||
-        contract === null
-    ) {
-        return defaultMutationContract();
-    }
+  if (
+    !readModelAvailable.value ||
+    typeof contract !== "object" ||
+    contract === null
+  ) {
+    return defaultMutationContract();
+  }
 
-    return {
-        schema:
-            stringValue(contract.schema) ??
-            'x-change.cockpit.quick-generate-mutation.v1',
-        status: stringValue(contract.status) ?? 'not_wired',
-        authorization: stringValue(contract.authorization) ?? 'not-loaded',
-        route: stringValue(contract.route) ?? 'not-loaded',
-        route_url: stringValue(contract.route_url),
-        request_adapter: stringValue(contract.request_adapter) ?? 'not-loaded',
-        issuance_owner: stringValue(contract.issuance_owner) ?? 'not-loaded',
-        idempotency: stringValue(contract.idempotency) ?? 'not-loaded',
-        response_contract:
-            stringValue(contract.response_contract) ?? 'not-loaded',
-        runtime_enabled: contract.runtime_enabled === true,
-        allowed_methods: Array.isArray(contract.allowed_methods)
-            ? contract.allowed_methods.map((method) => String(method))
-            : ['GET'],
-        redactions: {
-            payloads:
-                stringValue(contract.redactions?.payloads) ??
-                'mutation-contract-only',
-        },
-    };
+  return {
+    schema:
+      stringValue(contract.schema) ??
+      "x-change.cockpit.quick-generate-mutation.v1",
+    status: stringValue(contract.status) ?? "not_wired",
+    authorization: stringValue(contract.authorization) ?? "not-loaded",
+    route: stringValue(contract.route) ?? "not-loaded",
+    route_url: stringValue(contract.route_url),
+    request_adapter: stringValue(contract.request_adapter) ?? "not-loaded",
+    issuance_owner: stringValue(contract.issuance_owner) ?? "not-loaded",
+    idempotency: stringValue(contract.idempotency) ?? "not-loaded",
+    response_contract: stringValue(contract.response_contract) ?? "not-loaded",
+    runtime_enabled: contract.runtime_enabled === true,
+    allowed_methods: Array.isArray(contract.allowed_methods)
+      ? contract.allowed_methods.map((method) => String(method))
+      : ["GET"],
+    redactions: {
+      payloads:
+        stringValue(contract.redactions?.payloads) ?? "mutation-contract-only",
+    },
+  };
 });
 
 const claimPreviewContract = computed<CockpitQuickGenerateClaimPreviewContract>(
-    () => {
-        const contract =
-            props.quick_generate_read_model?.claim_preview_contract;
+  () => {
+    const contract = props.quick_generate_read_model?.claim_preview_contract;
 
-        if (
-            !readModelAvailable.value ||
-            typeof contract !== 'object' ||
-            contract === null
-        ) {
-            return {
-                schema: 'x-change.cockpit.quick-generate-claim-preview.v1',
-                status: 'unavailable',
-                route_url: null,
-                preview_cache: true,
-                money_movement: false,
-            };
-        }
+    if (
+      !readModelAvailable.value ||
+      typeof contract !== "object" ||
+      contract === null
+    ) {
+      return {
+        schema: "x-change.cockpit.quick-generate-claim-preview.v1",
+        status: "unavailable",
+        route_url: null,
+        preview_cache: true,
+        money_movement: false,
+      };
+    }
 
-        return contract;
-    },
+    return contract;
+  },
 );
 
 function defaultDraftContract(): CockpitQuickGenerateDraftContract {
-    return {
-        schema: 'x-change.cockpit.quick-generate-draft.v1',
-        status: 'draft_only',
-        template_key: 'money-changer',
-        amount: null,
-        currency: 'PHP',
-        recipient_reference: null,
-        purpose: null,
-        idempotency_key: null,
-        redactions: {
-            payloads: 'draft-shape-only',
-        },
-    };
+  return {
+    schema: "x-change.cockpit.quick-generate-draft.v1",
+    status: "draft_only",
+    template_key: "money-changer",
+    amount: null,
+    currency: "PHP",
+    recipient_reference: null,
+    purpose: null,
+    idempotency_key: null,
+    redactions: {
+      payloads: "draft-shape-only",
+    },
+  };
 }
 
 function defaultPricingGate(): CockpitQuickGeneratePricingGate {
-    return {
-        status: 'runtime-informational',
-        checks: [
-            {
-                key: 'template-selected',
-                label: 'Template Selected',
-                status: 'passed',
-                reason: 'The Money Changer template is selected by default for the current Quick Generate runtime.',
-            },
-            {
-                key: 'amount-input-present',
-                label: 'Amount Input Present',
-                status: 'passed',
-                reason: 'The Quick Generate form accepts an operator amount and submits it to the existing issuance handoff.',
-            },
-            {
-                key: 'pricing-service-wired',
-                label: 'Pricing Service Wired',
-                status: 'passed',
-                reason: 'Quick Generate returns operator-safe pricing preflight metadata after a successful existing issuance handoff.',
-            },
-            {
-                key: 'funding-source-selected',
-                label: 'Funding Source Selected',
-                status: 'runtime-diagnostic',
-                reason: 'Funding authority is reported through the operator-safe funding preflight; Cockpit does not expose wallet internals.',
-            },
-            {
-                key: 'funds-reservation',
-                label: 'Funds Reservation',
-                status: 'blocked',
-                reason: 'Cockpit does not reserve, debit, or hold funds directly; those effects remain behind the existing issuance services.',
-            },
-            {
-                key: 'provider-fee-quote',
-                label: 'Provider Fee Quote',
-                status: 'blocked',
-                reason: 'Cockpit does not call provider quote APIs directly.',
-            },
-        ],
-        redactions: {
-            payloads: 'pricing-gates-only',
-        },
-    };
+  return {
+    status: "runtime-informational",
+    checks: [
+      {
+        key: "template-selected",
+        label: "Template Selected",
+        status: "passed",
+        reason:
+          "The Money Changer template is selected by default for the current Quick Generate runtime.",
+      },
+      {
+        key: "amount-input-present",
+        label: "Amount Input Present",
+        status: "passed",
+        reason:
+          "The Quick Generate form accepts an operator amount and submits it to the existing issuance handoff.",
+      },
+      {
+        key: "pricing-service-wired",
+        label: "Pricing Service Wired",
+        status: "passed",
+        reason:
+          "Quick Generate returns operator-safe pricing preflight metadata after a successful existing issuance handoff.",
+      },
+      {
+        key: "funding-source-selected",
+        label: "Funding Source Selected",
+        status: "runtime-diagnostic",
+        reason:
+          "Funding authority is reported through the operator-safe funding preflight; Cockpit does not expose wallet internals.",
+      },
+      {
+        key: "funds-reservation",
+        label: "Funds Reservation",
+        status: "blocked",
+        reason:
+          "Cockpit does not reserve, debit, or hold funds directly; those effects remain behind the existing issuance services.",
+      },
+      {
+        key: "provider-fee-quote",
+        label: "Provider Fee Quote",
+        status: "blocked",
+        reason: "Cockpit does not call provider quote APIs directly.",
+      },
+    ],
+    redactions: {
+      payloads: "pricing-gates-only",
+    },
+  };
 }
 
 function defaultFundingGate(): CockpitQuickGenerateFundingGate {
-    return {
-        status: 'runtime-informational',
-        checks: [
-            {
-                key: 'funding-policy-known',
-                label: 'Funding Policy Known',
-                status: 'passed',
-                reason: 'Funding preflight is represented as an operator-safe result after Quick Generate submits.',
-            },
-            {
-                key: 'issuer-wallet-identified',
-                label: 'Issuer Account Identified',
-                status: 'runtime-diagnostic',
-                reason: 'Issuer funding details are evaluated by the existing issuance path and redacted from the Cockpit read model.',
-            },
-            {
-                key: 'wallet-balance-available',
-                label: 'Client Funds Available',
-                status: 'runtime-diagnostic',
-                reason: 'The operator sees only the safe funding preflight summary returned by the issuance runtime.',
-            },
-            {
-                key: 'sufficient-funds',
-                label: 'Sufficient Funds',
-                status: 'runtime-diagnostic',
-                reason: 'Sufficiency is reported as an operator-safe preflight after submit; raw wallet data remains hidden.',
-            },
-            {
-                key: 'funds-reservation-ready',
-                label: 'Funds Reservation Ready',
-                status: 'blocked',
-                reason: 'Cockpit does not reserve, hold, debit, or transfer funds directly.',
-            },
-            {
-                key: 'provider-funding-ready',
-                label: 'Provider Funding Ready',
-                status: 'blocked',
-                reason: 'Cockpit does not call provider funding or account-readiness services directly.',
-            },
-        ],
-        redactions: {
-            payloads: 'funding-gates-only',
-        },
-    };
+  return {
+    status: "runtime-informational",
+    checks: [
+      {
+        key: "funding-policy-known",
+        label: "Funding Policy Known",
+        status: "passed",
+        reason:
+          "Funding preflight is represented as an operator-safe result after Quick Generate submits.",
+      },
+      {
+        key: "issuer-wallet-identified",
+        label: "Issuer Account Identified",
+        status: "runtime-diagnostic",
+        reason:
+          "Issuer funding details are evaluated by the existing issuance path and redacted from the Cockpit read model.",
+      },
+      {
+        key: "wallet-balance-available",
+        label: "Client Funds Available",
+        status: "runtime-diagnostic",
+        reason:
+          "The operator sees only the safe funding preflight summary returned by the issuance runtime.",
+      },
+      {
+        key: "sufficient-funds",
+        label: "Sufficient Funds",
+        status: "runtime-diagnostic",
+        reason:
+          "Sufficiency is reported as an operator-safe preflight after submit; raw wallet data remains hidden.",
+      },
+      {
+        key: "funds-reservation-ready",
+        label: "Funds Reservation Ready",
+        status: "blocked",
+        reason:
+          "Cockpit does not reserve, hold, debit, or transfer funds directly.",
+      },
+      {
+        key: "provider-funding-ready",
+        label: "Provider Funding Ready",
+        status: "blocked",
+        reason:
+          "Cockpit does not call provider funding or account-readiness services directly.",
+      },
+    ],
+    redactions: {
+      payloads: "funding-gates-only",
+    },
+  };
 }
 
 function defaultIdempotencyGate(): CockpitQuickGenerateIdempotencyGate {
-    return {
-        status: 'backend-ready',
-        checks: [
-            {
-                key: 'idempotency-policy-known',
-                label: 'Idempotency Policy Known',
-                status: 'passed',
-                reason: 'Cockpit uses the existing x-change idempotency policy for Quick Generate mutation requests.',
-            },
-            {
-                key: 'idempotency-key-source-defined',
-                label: 'Idempotency Key Source Defined',
-                status: 'passed',
-                reason: 'Cockpit accepts the configured Idempotency-Key header on the Quick Generate mutation route.',
-            },
-            {
-                key: 'payload-fingerprint-defined',
-                label: 'Payload Fingerprint Defined',
-                status: 'passed',
-                reason: 'Cockpit delegates payload fingerprinting to the existing IdempotencyService.',
-            },
-            {
-                key: 'replay-lookup-ready',
-                label: 'Replay Lookup Ready',
-                status: 'passed',
-                reason: 'Cockpit replays stored redacted operator responses for matching keys and payloads.',
-            },
-            {
-                key: 'conflict-response-ready',
-                label: 'Conflict Response Ready',
-                status: 'passed',
-                reason: 'Cockpit returns the existing idempotency conflict response before a second issuance action call.',
-            },
-            {
-                key: 'ttl-policy-ready',
-                label: 'TTL Policy Ready',
-                status: 'passed',
-                reason: 'Cockpit uses the existing IdempotencyService TTL configuration.',
-            },
-        ],
-        redactions: {
-            payloads: 'idempotency-gates-only',
-        },
-    };
+  return {
+    status: "backend-ready",
+    checks: [
+      {
+        key: "idempotency-policy-known",
+        label: "Idempotency Policy Known",
+        status: "passed",
+        reason:
+          "Cockpit uses the existing x-change idempotency policy for Quick Generate mutation requests.",
+      },
+      {
+        key: "idempotency-key-source-defined",
+        label: "Idempotency Key Source Defined",
+        status: "passed",
+        reason:
+          "Cockpit accepts the configured Idempotency-Key header on the Quick Generate mutation route.",
+      },
+      {
+        key: "payload-fingerprint-defined",
+        label: "Payload Fingerprint Defined",
+        status: "passed",
+        reason:
+          "Cockpit delegates payload fingerprinting to the existing IdempotencyService.",
+      },
+      {
+        key: "replay-lookup-ready",
+        label: "Replay Lookup Ready",
+        status: "passed",
+        reason:
+          "Cockpit replays stored redacted operator responses for matching keys and payloads.",
+      },
+      {
+        key: "conflict-response-ready",
+        label: "Conflict Response Ready",
+        status: "passed",
+        reason:
+          "Cockpit returns the existing idempotency conflict response before a second issuance action call.",
+      },
+      {
+        key: "ttl-policy-ready",
+        label: "TTL Policy Ready",
+        status: "passed",
+        reason:
+          "Cockpit uses the existing IdempotencyService TTL configuration.",
+      },
+    ],
+    redactions: {
+      payloads: "idempotency-gates-only",
+    },
+  };
 }
 
 function defaultValidationRedactionGate(): CockpitQuickGenerateValidationRedactionGate {
-    return {
-        status: 'backend-ready',
-        checks: [
-            {
-                key: 'request-schema-known',
-                label: 'Request Schema Known',
-                status: 'passed',
-                reason: 'The Quick Generate mutation request shape is known and handled by the existing handoff route.',
-            },
-            {
-                key: 'required-fields-defined',
-                label: 'Required Fields Defined',
-                status: 'passed',
-                reason: 'The Quick Generate form submits the required issuance fields to the existing GeneratePayCode request path.',
-            },
-            {
-                key: 'validation-rules-wired',
-                label: 'Validation Rules Wired',
-                status: 'passed',
-                reason: 'The Cockpit handoff route uses GeneratePayCodeRequest-compatible validation.',
-            },
-            {
-                key: 'sensitive-fields-redacted',
-                label: 'Sensitive Fields Redacted',
-                status: 'passed',
-                reason: 'Operator responses exclude raw payloads, provider payloads, wallet details, and idempotency internals.',
-            },
-            {
-                key: 'sanitized-preview-ready',
-                label: 'Sanitized Preview Ready',
-                status: 'passed',
-                reason: 'The result panel renders sanitized generated facts and preflight summaries only.',
-            },
-            {
-                key: 'validation-error-contract-ready',
-                label: 'Validation Error Contract Ready',
-                status: 'passed',
-                reason: 'Validation errors remain on the Quick Generate form through the Inertia handoff route.',
-            },
-        ],
-        redactions: {
-            payloads: 'validation-redaction-gates-only',
-        },
-    };
+  return {
+    status: "backend-ready",
+    checks: [
+      {
+        key: "request-schema-known",
+        label: "Request Schema Known",
+        status: "passed",
+        reason:
+          "The Quick Generate mutation request shape is known and handled by the existing handoff route.",
+      },
+      {
+        key: "required-fields-defined",
+        label: "Required Fields Defined",
+        status: "passed",
+        reason:
+          "The Quick Generate form submits the required issuance fields to the existing GeneratePayCode request path.",
+      },
+      {
+        key: "validation-rules-wired",
+        label: "Validation Rules Wired",
+        status: "passed",
+        reason:
+          "The Cockpit handoff route uses GeneratePayCodeRequest-compatible validation.",
+      },
+      {
+        key: "sensitive-fields-redacted",
+        label: "Sensitive Fields Redacted",
+        status: "passed",
+        reason:
+          "Operator responses exclude raw payloads, provider payloads, wallet details, and idempotency internals.",
+      },
+      {
+        key: "sanitized-preview-ready",
+        label: "Sanitized Preview Ready",
+        status: "passed",
+        reason:
+          "The result panel renders sanitized generated facts and preflight summaries only.",
+      },
+      {
+        key: "validation-error-contract-ready",
+        label: "Validation Error Contract Ready",
+        status: "passed",
+        reason:
+          "Validation errors remain on the Quick Generate form through the Inertia handoff route.",
+      },
+    ],
+    redactions: {
+      payloads: "validation-redaction-gates-only",
+    },
+  };
 }
 
 function defaultMutationHandoffPlan(): CockpitQuickGenerateMutationHandoffPlan {
-    return {
-        status: 'backend-handoff-wired',
-        steps: [
-            {
-                key: 'existing-issuance-owner-identified',
-                label: 'Existing Issuance Owner Identified',
-                status: 'passed',
-                reason: 'Quick Generate must hand off to the existing x-change issuance owner instead of inventing Cockpit generation behavior.',
-            },
-            {
-                key: 'generate-pay-code-action-handoff',
-                label: 'GeneratePayCode Action Handoff',
-                status: 'passed',
-                reason: 'Cockpit POST route calls the existing GeneratePayCode action through the approved handoff.',
-            },
-            {
-                key: 'generate-pay-code-controller-handoff',
-                label: 'GeneratePayCodeController Handoff',
-                status: 'confirmed',
-                reason: 'The public API route remains owned by GeneratePayCodeController while Cockpit shares the action directly.',
-            },
-            {
-                key: 'preconditions-green',
-                label: 'Preconditions Green',
-                status: 'blocked',
-                reason: 'Provider, journal, action, and feedback side effects remain separately gated.',
-            },
-            {
-                key: 'side-effect-boundary-confirmed',
-                label: 'Side Effect Boundary Confirmed',
-                status: 'passed',
-                reason: 'Quick Generate uses the existing GeneratePayCode issuance handoff; wallet movement, provider calls, journal writes, action runs, and feedback delivery remain separately gated.',
-            },
-            {
-                key: 'operator-response-contract-ready',
-                label: 'Operator Response Contract Ready',
-                status: 'passed',
-                reason: 'Cockpit returns only operator-safe generated facts from the existing issuance action.',
-            },
-        ],
-        redactions: {
-            payloads: 'mutation-handoff-plan-only',
-        },
-    };
+  return {
+    status: "backend-handoff-wired",
+    steps: [
+      {
+        key: "existing-issuance-owner-identified",
+        label: "Existing Issuance Owner Identified",
+        status: "passed",
+        reason:
+          "Quick Generate must hand off to the existing x-change issuance owner instead of inventing Cockpit generation behavior.",
+      },
+      {
+        key: "generate-pay-code-action-handoff",
+        label: "GeneratePayCode Action Handoff",
+        status: "passed",
+        reason:
+          "Cockpit POST route calls the existing GeneratePayCode action through the approved handoff.",
+      },
+      {
+        key: "generate-pay-code-controller-handoff",
+        label: "GeneratePayCodeController Handoff",
+        status: "confirmed",
+        reason:
+          "The public API route remains owned by GeneratePayCodeController while Cockpit shares the action directly.",
+      },
+      {
+        key: "preconditions-green",
+        label: "Preconditions Green",
+        status: "blocked",
+        reason:
+          "Provider, journal, action, and feedback side effects remain separately gated.",
+      },
+      {
+        key: "side-effect-boundary-confirmed",
+        label: "Side Effect Boundary Confirmed",
+        status: "passed",
+        reason:
+          "Quick Generate uses the existing GeneratePayCode issuance handoff; wallet movement, provider calls, journal writes, action runs, and feedback delivery remain separately gated.",
+      },
+      {
+        key: "operator-response-contract-ready",
+        label: "Operator Response Contract Ready",
+        status: "passed",
+        reason:
+          "Cockpit returns only operator-safe generated facts from the existing issuance action.",
+      },
+    ],
+    redactions: {
+      payloads: "mutation-handoff-plan-only",
+    },
+  };
 }
 
 function defaultMutationPreconditionsReview(): CockpitQuickGenerateMutationPreconditionsReview {
-    return {
-        status: 'existing-handoff-ready',
-        recommendation: 'use-existing-issuance-handoff',
-        items: [
-            {
-                key: 'authorization-ready',
-                label: 'Authorization Ready',
-                status: 'passed',
-                reason: 'The authenticated Cockpit route may submit through the approved GeneratePayCode handoff.',
-            },
-            {
-                key: 'pricing-ready',
-                label: 'Pricing Ready',
-                status: 'runtime-informational',
-                reason: 'Pricing preflight is available in the operator-safe result panel after submit.',
-            },
-            {
-                key: 'funding-ready',
-                label: 'Funding Ready',
-                status: 'runtime-informational',
-                reason: 'Funding preflight is available in the operator-safe result panel after submit; raw wallet details remain redacted.',
-            },
-            {
-                key: 'idempotency-ready',
-                label: 'Idempotency Ready',
-                status: 'passed',
-                reason: 'The existing IdempotencyService handles key extraction, payload fingerprinting, replay lookup, conflict response, and TTL policy.',
-            },
-            {
-                key: 'validation-redaction-ready',
-                label: 'Validation and Redaction Ready',
-                status: 'passed',
-                reason: 'GeneratePayCodeRequest-compatible validation and operator-safe response redaction are wired.',
-            },
-            {
-                key: 'handoff-ready',
-                label: 'Handoff Ready',
-                status: 'passed',
-                reason: 'GeneratePayCode action handoff and GeneratePayCodeController handoff are wired.',
-            },
-            {
-                key: 'operator-response-ready',
-                label: 'Operator Response Ready',
-                status: 'passed',
-                reason: 'Cockpit returns a redacted operator result with generated Pay Code, preflights, and activity runtime diagnostics.',
-            },
-        ],
-        redactions: {
-            payloads: 'mutation-preconditions-review-only',
-        },
-    };
+  return {
+    status: "existing-handoff-ready",
+    recommendation: "use-existing-issuance-handoff",
+    items: [
+      {
+        key: "authorization-ready",
+        label: "Authorization Ready",
+        status: "passed",
+        reason:
+          "The authenticated Cockpit route may submit through the approved GeneratePayCode handoff.",
+      },
+      {
+        key: "pricing-ready",
+        label: "Pricing Ready",
+        status: "runtime-informational",
+        reason:
+          "Pricing preflight is available in the operator-safe result panel after submit.",
+      },
+      {
+        key: "funding-ready",
+        label: "Funding Ready",
+        status: "runtime-informational",
+        reason:
+          "Funding preflight is available in the operator-safe result panel after submit; raw wallet details remain redacted.",
+      },
+      {
+        key: "idempotency-ready",
+        label: "Idempotency Ready",
+        status: "passed",
+        reason:
+          "The existing IdempotencyService handles key extraction, payload fingerprinting, replay lookup, conflict response, and TTL policy.",
+      },
+      {
+        key: "validation-redaction-ready",
+        label: "Validation and Redaction Ready",
+        status: "passed",
+        reason:
+          "GeneratePayCodeRequest-compatible validation and operator-safe response redaction are wired.",
+      },
+      {
+        key: "handoff-ready",
+        label: "Handoff Ready",
+        status: "passed",
+        reason:
+          "GeneratePayCode action handoff and GeneratePayCodeController handoff are wired.",
+      },
+      {
+        key: "operator-response-ready",
+        label: "Operator Response Ready",
+        status: "passed",
+        reason:
+          "Cockpit returns a redacted operator result with generated Pay Code, preflights, and activity runtime diagnostics.",
+      },
+    ],
+    redactions: {
+      payloads: "mutation-preconditions-review-only",
+    },
+  };
 }
 
 function defaultMutationAuthorizationDecision(): CockpitQuickGenerateMutationAuthorizationDecision {
-    return {
-        status: 'approved-handoff',
-        decision: 'authorized_existing_handoff',
-        required_approval: 'completed-for-existing-generate-pay-code-handoff',
-        rationale:
-            'Cockpit may submit Quick Generate through the existing GeneratePayCode action without inventing a parallel issuance runtime.',
-        next_step:
-            'keep-provider-journal-action-feedback-mutations-separately-gated',
-        redactions: {
-            payloads: 'mutation-authorization-decision-only',
-        },
-    };
+  return {
+    status: "approved-handoff",
+    decision: "authorized_existing_handoff",
+    required_approval: "completed-for-existing-generate-pay-code-handoff",
+    rationale:
+      "Cockpit may submit Quick Generate through the existing GeneratePayCode action without inventing a parallel issuance runtime.",
+    next_step:
+      "keep-provider-journal-action-feedback-mutations-separately-gated",
+    redactions: {
+      payloads: "mutation-authorization-decision-only",
+    },
+  };
 }
 
 function defaultAuthorization(): CockpitQuickGenerateAuthorization {
-    return {
-        status: 'runtime-ready',
-        gates: [
-            {
-                key: 'operator-authenticated',
-                label: 'Operator Authenticated',
-                status: 'passed',
-                reason: 'Authenticated Cockpit GET route resolved.',
-            },
-            {
-                key: 'can-view-cockpit',
-                label: 'Can View Cockpit',
-                status: 'passed',
-                reason: 'Read-only Cockpit access is available.',
-            },
-            {
-                key: 'can-generate-pay-code',
-                label: 'Can Generate Pay Code',
-                status: 'passed',
-                reason: 'The approved Cockpit Quick Generate mutation route submits through the existing GeneratePayCode action.',
-            },
-            {
-                key: 'can-call-providers',
-                label: 'Can Call Providers',
-                status: 'blocked',
-                reason: 'Provider calls are outside the Slice 19 boundary.',
-            },
-            {
-                key: 'can-move-money',
-                label: 'Can Move Money',
-                status: 'blocked',
-                reason: 'Money movement remains disabled in Cockpit.',
-            },
-        ],
-        redactions: {
-            payloads: 'authorization-gates-only',
-        },
-    };
+  return {
+    status: "runtime-ready",
+    gates: [
+      {
+        key: "operator-authenticated",
+        label: "Operator Authenticated",
+        status: "passed",
+        reason: "Authenticated Cockpit GET route resolved.",
+      },
+      {
+        key: "can-view-cockpit",
+        label: "Can View Cockpit",
+        status: "passed",
+        reason: "Read-only Cockpit access is available.",
+      },
+      {
+        key: "can-generate-pay-code",
+        label: "Can Generate Pay Code",
+        status: "passed",
+        reason:
+          "The approved Cockpit Quick Generate mutation route submits through the existing GeneratePayCode action.",
+      },
+      {
+        key: "can-call-providers",
+        label: "Can Call Providers",
+        status: "blocked",
+        reason: "Provider calls are outside the Slice 19 boundary.",
+      },
+      {
+        key: "can-move-money",
+        label: "Can Move Money",
+        status: "blocked",
+        reason: "Money movement remains disabled in Cockpit.",
+      },
+    ],
+    redactions: {
+      payloads: "authorization-gates-only",
+    },
+  };
 }
 
 function defaultMutationContract(): CockpitQuickGenerateMutationContract {
-    return {
-        schema: 'x-change.cockpit.quick-generate-mutation.v1',
-        status: 'not_wired',
-        authorization: 'not-loaded',
-        route: 'not-loaded',
-        route_url: null,
-        request_adapter: 'not-loaded',
-        issuance_owner: 'not-loaded',
-        idempotency: 'not-loaded',
-        response_contract: 'not-loaded',
-        runtime_enabled: false,
-        allowed_methods: ['GET'],
-        redactions: {
-            payloads: 'not-loaded',
-        },
-    };
+  return {
+    schema: "x-change.cockpit.quick-generate-mutation.v1",
+    status: "not_wired",
+    authorization: "not-loaded",
+    route: "not-loaded",
+    route_url: null,
+    request_adapter: "not-loaded",
+    issuance_owner: "not-loaded",
+    idempotency: "not-loaded",
+    response_contract: "not-loaded",
+    runtime_enabled: false,
+    allowed_methods: ["GET"],
+    redactions: {
+      payloads: "not-loaded",
+    },
+  };
 }
 
 function sanitizeFundingGateCheck(
-    check: CockpitQuickGenerateFundingGateCheck,
+  check: CockpitQuickGenerateFundingGateCheck,
 ): CockpitQuickGenerateFundingGateCheck | null {
-    const key = stringValue(check.key);
-    const label = stringValue(check.label);
+  const key = stringValue(check.key);
+  const label = stringValue(check.label);
 
-    if (!key || !label) {
-        return null;
-    }
+  if (!key || !label) {
+    return null;
+  }
 
-    return {
-        key,
-        label,
-        status: stringValue(check.status) ?? 'unknown',
-        reason:
-            stringValue(check.reason) ?? 'No funding diagnostic is available.',
-    };
+  return {
+    key,
+    label,
+    status: stringValue(check.status) ?? "unknown",
+    reason: stringValue(check.reason) ?? "No funding diagnostic is available.",
+  };
 }
 
 function sanitizeIdempotencyGateCheck(
-    check: CockpitQuickGenerateIdempotencyGateCheck,
+  check: CockpitQuickGenerateIdempotencyGateCheck,
 ): CockpitQuickGenerateIdempotencyGateCheck | null {
-    const key = stringValue(check.key);
-    const label = stringValue(check.label);
+  const key = stringValue(check.key);
+  const label = stringValue(check.label);
 
-    if (!key || !label) {
-        return null;
-    }
+  if (!key || !label) {
+    return null;
+  }
 
-    return {
-        key,
-        label,
-        status: stringValue(check.status) ?? 'unknown',
-        reason:
-            stringValue(check.reason) ??
-            'No idempotency diagnostic is available.',
-    };
+  return {
+    key,
+    label,
+    status: stringValue(check.status) ?? "unknown",
+    reason:
+      stringValue(check.reason) ?? "No idempotency diagnostic is available.",
+  };
 }
 
 function sanitizeValidationRedactionGateCheck(
-    check: CockpitQuickGenerateValidationRedactionGateCheck,
+  check: CockpitQuickGenerateValidationRedactionGateCheck,
 ): CockpitQuickGenerateValidationRedactionGateCheck | null {
-    const key = stringValue(check.key);
-    const label = stringValue(check.label);
+  const key = stringValue(check.key);
+  const label = stringValue(check.label);
 
-    if (!key || !label) {
-        return null;
-    }
+  if (!key || !label) {
+    return null;
+  }
 
-    return {
-        key,
-        label,
-        status: stringValue(check.status) ?? 'unknown',
-        reason:
-            stringValue(check.reason) ??
-            'No validation or redaction diagnostic is available.',
-    };
+  return {
+    key,
+    label,
+    status: stringValue(check.status) ?? "unknown",
+    reason:
+      stringValue(check.reason) ??
+      "No validation or redaction diagnostic is available.",
+  };
 }
 
 function sanitizeMutationHandoffPlanStep(
-    step: CockpitQuickGenerateMutationHandoffPlanStep,
+  step: CockpitQuickGenerateMutationHandoffPlanStep,
 ): CockpitQuickGenerateMutationHandoffPlanStep | null {
-    const key = stringValue(step.key);
-    const label = stringValue(step.label);
+  const key = stringValue(step.key);
+  const label = stringValue(step.label);
 
-    if (!key || !label) {
-        return null;
-    }
+  if (!key || !label) {
+    return null;
+  }
 
-    return {
-        key,
-        label,
-        status: stringValue(step.status) ?? 'unknown',
-        reason:
-            stringValue(step.reason) ??
-            'No mutation handoff diagnostic is available.',
-    };
+  return {
+    key,
+    label,
+    status: stringValue(step.status) ?? "unknown",
+    reason:
+      stringValue(step.reason) ??
+      "No mutation handoff diagnostic is available.",
+  };
 }
 
 function sanitizeMutationPreconditionsReviewItem(
-    item: CockpitQuickGenerateMutationPreconditionsReviewItem,
+  item: CockpitQuickGenerateMutationPreconditionsReviewItem,
 ): CockpitQuickGenerateMutationPreconditionsReviewItem | null {
-    const key = stringValue(item.key);
-    const label = stringValue(item.label);
+  const key = stringValue(item.key);
+  const label = stringValue(item.label);
 
-    if (!key || !label) {
-        return null;
-    }
+  if (!key || !label) {
+    return null;
+  }
 
-    return {
-        key,
-        label,
-        status: stringValue(item.status) ?? 'unknown',
-        reason:
-            stringValue(item.reason) ??
-            'No mutation precondition diagnostic is available.',
-    };
+  return {
+    key,
+    label,
+    status: stringValue(item.status) ?? "unknown",
+    reason:
+      stringValue(item.reason) ??
+      "No mutation precondition diagnostic is available.",
+  };
 }
 
 function sanitizePricingGateCheck(
-    check: CockpitQuickGeneratePricingGateCheck,
+  check: CockpitQuickGeneratePricingGateCheck,
 ): CockpitQuickGeneratePricingGateCheck | null {
-    const key = stringValue(check.key);
-    const label = stringValue(check.label);
+  const key = stringValue(check.key);
+  const label = stringValue(check.label);
 
-    if (!key || !label) {
-        return null;
-    }
+  if (!key || !label) {
+    return null;
+  }
 
-    return {
-        key,
-        label,
-        status: stringValue(check.status) ?? 'unknown',
-        reason:
-            stringValue(check.reason) ?? 'No pricing diagnostic is available.',
-    };
+  return {
+    key,
+    label,
+    status: stringValue(check.status) ?? "unknown",
+    reason: stringValue(check.reason) ?? "No pricing diagnostic is available.",
+  };
 }
 
 function sanitizeAuthorizationGate(
-    gate: CockpitQuickGenerateAuthorizationGate,
+  gate: CockpitQuickGenerateAuthorizationGate,
 ): CockpitQuickGenerateAuthorizationGate | null {
-    const key = stringValue(gate.key);
-    const label = stringValue(gate.label);
+  const key = stringValue(gate.key);
+  const label = stringValue(gate.label);
 
-    if (!key || !label) {
-        return null;
-    }
+  if (!key || !label) {
+    return null;
+  }
 
-    return {
-        key,
-        label,
-        status: stringValue(gate.status) ?? 'unknown',
-        reason:
-            stringValue(gate.reason) ??
-            'No authorization diagnostic is available.',
-    };
+  return {
+    key,
+    label,
+    status: stringValue(gate.status) ?? "unknown",
+    reason:
+      stringValue(gate.reason) ?? "No authorization diagnostic is available.",
+  };
 }
 
 function sanitizeTemplate(
-    template: CockpitQuickGenerateReadModelTemplate,
+  template: CockpitQuickGenerateReadModelTemplate,
 ): CockpitQuickGenerateTemplate | null {
-    const key = stringValue(template.key);
-    const name = stringValue(template.name);
+  const key = stringValue(template.key);
+  const name = stringValue(template.name);
 
-    if (!key || !name) {
-        return null;
-    }
+  if (!key || !name) {
+    return null;
+  }
 
-    return {
-        key,
-        name,
-        description:
-            stringValue(template.description) ??
-            'Template description unavailable.',
-        profile: stringValue(template.profile) ?? 'catalog',
-        estimatedTime:
-            stringValue(template.estimated_time) ?? 'Pending runtime inputs',
-        disabled: template.disabled === true,
-    };
+  return {
+    key,
+    name,
+    description:
+      stringValue(template.description) ?? "Template description unavailable.",
+    profile: stringValue(template.profile) ?? "catalog",
+    estimatedTime:
+      stringValue(template.estimated_time) ?? "Pending runtime inputs",
+    disabled: template.disabled === true,
+  };
 }
 
 function sanitizePricingSummary(
-    summary: CockpitQuickGenerateReadModelPricingSummary,
+  summary: CockpitQuickGenerateReadModelPricingSummary,
 ): CockpitPricingFundingSummaryType | null {
-    const key = stringValue(summary.key);
-    const label = stringValue(summary.label);
+  const key = stringValue(summary.key);
+  const label = stringValue(summary.label);
 
-    if (!key || !label) {
-        return null;
-    }
+  if (!key || !label) {
+    return null;
+  }
 
-    return {
-        key,
-        label,
-        value: stringValue(summary.value) ?? 'Shown after submit',
-        helper:
-            stringValue(summary.helper) ??
-            'Operator-safe runtime output is shown after the existing issuance handoff completes.',
-    };
+  return {
+    key,
+    label,
+    value: stringValue(summary.value) ?? "Shown after submit",
+    helper:
+      stringValue(summary.helper) ??
+      "Operator-safe runtime output is shown after the existing issuance handoff completes.",
+  };
 }
 
 function stringValue(value: unknown): string | null {
-    if (
-        typeof value !== 'string' &&
-        typeof value !== 'number' &&
-        typeof value !== 'boolean'
-    ) {
-        return null;
-    }
+  if (
+    typeof value !== "string" &&
+    typeof value !== "number" &&
+    typeof value !== "boolean"
+  ) {
+    return null;
+  }
 
-    const normalized = String(value).trim();
+  const normalized = String(value).trim();
 
-    return normalized === '' ? null : normalized;
+  return normalized === "" ? null : normalized;
 }
 </script>
 
 <template>
-    <CockpitLayout
-        active-navigation="quick-generate"
-        mobile-presentation="edge"
-        :cockpit-header-read-model="props.cockpit_header_read_model"
-        :cockpit-entry-notice="props.cockpit_entry_notice"
+  <component :is="pageLayout" v-bind="pageLayoutProps">
+    <section
+      class="space-y-4 px-4 md:px-0"
+      data-testid="cockpit-quick-generate-shell"
     >
-        <section
-            class="space-y-4 px-4 md:px-0"
-            data-testid="cockpit-quick-generate-shell"
+      <header
+        class="hidden items-start justify-between gap-4 px-1 md:flex"
+        data-testid="cockpit-quick-generate-header"
+      >
+        <div class="min-w-0">
+          <h2
+            class="text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-50"
+          >
+            {{
+              issuanceSurface === "pos"
+                ? "Point of Sale"
+                : issuanceSurface === "qr"
+                  ? "QR Code"
+                  : "Pay Code Issuance"
+            }}
+          </h2>
+          <p class="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">
+            {{
+              issuanceSurface === "pos"
+                ? "Create a payment QR and watch the sale complete."
+                : issuanceSurface === "qr"
+                  ? "Pair a campaign with this seller display."
+                  : "Create a Pay Code for someone to claim."
+            }}
+          </p>
+        </div>
+        <Link
+          v-if="!publicAutoGenerate"
+          :href="fundingIndex()"
+          prefetch
+          class="inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-emerald-400 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300"
+          data-testid="cockpit-quick-generate-funding-link"
         >
-            <header
-                class="hidden items-start justify-between gap-4 px-1 md:flex"
-                data-testid="cockpit-quick-generate-header"
-            >
-                <div class="min-w-0">
-                    <h2
-                        class="text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-50"
-                    >
-                        {{
-                            issuanceSurface === 'pos'
-                                ? 'Point of Sale'
-                                : issuanceSurface === 'qr'
-                                  ? 'QR Code'
-                                  : 'Pay Code Issuance'
-                        }}
-                    </h2>
-                    <p
-                        class="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300"
-                    >
-                        {{
-                            issuanceSurface === 'pos'
-                                ? 'Create a payment QR and watch the sale complete.'
-                                : issuanceSurface === 'qr'
-                                  ? 'Pair a campaign with this seller display.'
-                                  : 'Create a Pay Code for someone to claim.'
-                        }}
-                    </p>
-                </div>
-                <Link
-                    :href="fundingIndex()"
-                    prefetch
-                    class="inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-emerald-400 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300"
-                    data-testid="cockpit-quick-generate-funding-link"
-                >
-                    <Landmark class="size-3.5" aria-hidden="true" />
-                    Funding
-                </Link>
-            </header>
+          <Landmark class="size-3.5" aria-hidden="true" />
+          Funding
+        </Link>
+      </header>
 
-            <div
-                class="space-y-3"
-                data-testid="cockpit-quick-generate-primary-workflow-stack"
-            >
-                <CockpitQuickGenerateSubmitPanel
-                    v-if="issuanceSurface === 'composer'"
-                    v-model:issuance-surface="issuanceSurface"
-                    :client-funds-minor="clientFundsMinor"
-                    :collection-destination="props.collection_destination"
-                    :mutation-contract="mutationContract"
-                    :claim-preview-contract="claimPreviewContract"
-                    :draft-contract="draftContract"
-                    :campaign-context="campaignContext"
-                    :feedback-defaults="props.feedback_defaults"
-                    :onboarding-otp-required="
-                        props.onboarding_policy?.otp_required ?? true
-                    "
-                    :onboarding-preset="
-                        props.invitation_preset?.enabled ?? false
-                    "
-                    :startup-mode="props.startup_mode ?? 'blank'"
-                    :last-instructions="props.last_instructions"
-                    :saved-templates="props.saved_templates ?? []"
-                    :rider-library="props.rider_library ?? []"
-                    :instruction-capabilities="
-                        props.instruction_capabilities ?? {}
-                    "
-                    :settlement-rail-capabilities="
-                        props.settlement_rail_capabilities
-                    "
-                    :active-on-demand-funding-order="
-                        props.active_on_demand_funding_order
-                    "
-                    :on-demand-issuance-policy="props.on_demand_issuance_policy"
-                    :templates="templates"
-                />
-                <CockpitQuickGeneratePosPanel
-                    v-else-if="issuanceSurface === 'pos'"
-                    v-model:issuance-surface="issuanceSurface"
-                    :mutation-contract="mutationContract"
-                    :pos-voucher="props.pos_voucher"
-                />
-                <CockpitQuickGenerateQrPanel
-                    v-else
-                    v-model:issuance-surface="issuanceSurface"
-                    v-model:session="displaySession"
-                    :campaigns="props.display_campaigns"
-                />
-            </div>
-        </section>
-    </CockpitLayout>
+      <div
+        class="space-y-3"
+        data-testid="cockpit-quick-generate-primary-workflow-stack"
+      >
+        <CockpitQuickGenerateSubmitPanel
+          v-if="issuanceSurface === 'composer'"
+          v-model:issuance-surface="issuanceSurface"
+          :client-funds-minor="clientFundsMinor"
+          :collection-destination="props.collection_destination"
+          :mutation-contract="mutationContract"
+          :claim-preview-contract="claimPreviewContract"
+          :draft-contract="draftContract"
+          :campaign-context="campaignContext"
+          :feedback-defaults="props.feedback_defaults"
+          :onboarding-otp-required="
+            props.onboarding_policy?.otp_required ?? true
+          "
+          :onboarding-preset="props.invitation_preset?.enabled ?? false"
+          :startup-mode="props.startup_mode ?? 'blank'"
+          :last-instructions="props.last_instructions"
+          :saved-templates="props.saved_templates ?? []"
+          :rider-library="props.rider_library ?? []"
+          :instruction-capabilities="props.instruction_capabilities ?? {}"
+          :settlement-rail-capabilities="props.settlement_rail_capabilities"
+          :active-on-demand-funding-order="props.active_on_demand_funding_order"
+          :on-demand-issuance-policy="props.on_demand_issuance_policy"
+          :public-mode="publicAutoGenerate"
+          :show-engineering-preview="
+            props.surface_profile?.show_engineering_preview ?? true
+          "
+          :show-workspace-switcher="
+            props.surface_profile?.show_workspace_switcher ?? true
+          "
+          :allow-template-management="
+            props.surface_profile?.allow_template_management ?? true
+          "
+          :templates="templates"
+        />
+        <CockpitQuickGeneratePosPanel
+          v-else-if="issuanceSurface === 'pos'"
+          v-model:issuance-surface="issuanceSurface"
+          :mutation-contract="mutationContract"
+          :pos-voucher="props.pos_voucher"
+        />
+        <CockpitQuickGenerateQrPanel
+          v-else
+          v-model:issuance-surface="issuanceSurface"
+          v-model:session="displaySession"
+          :campaigns="props.display_campaigns"
+        />
+      </div>
+    </section>
+  </component>
 </template>

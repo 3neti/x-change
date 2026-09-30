@@ -103,6 +103,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningRequestCon
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningRevocationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningSupersessionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningWithdrawalController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPublicAutoGenerateScenarioRunnerController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQrPhFundingSimulationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewExportController;
@@ -148,12 +149,15 @@ use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentQrCodeDownloadControll
 use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentVerificationCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationAcceptanceController;
 use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationPageController;
+use LBHurtado\XChange\Http\Controllers\Web\PublicAutoGeneratePageController;
 use LBHurtado\XChange\Http\Controllers\Web\StoredValueInstrumentPageController;
+use LBHurtado\XChange\Http\Middleware\AuthorizePublicIssuanceOrderAccess;
 use LBHurtado\XChange\Http\Middleware\GuardPairedCampaignClaim;
 use LBHurtado\XChange\Http\Middleware\RequireCurrentAgreementAcceptance;
 use LBHurtado\XChange\Http\Middleware\RequireVerifiedMobile;
 use LBHurtado\XChange\Http\Middleware\ShareCockpitHeaderReadModel;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
+use LBHurtado\XChange\Http\Middleware\UseCommercialPrincipalForPublicIssuance;
 
 $middleware = config('x-change.routes.web_middleware', ['web', 'auth']);
 
@@ -183,6 +187,36 @@ Route::middleware(['web', ShareXChangeBranding::class])->group(function (): void
         ->middleware(['auth', 'throttle:6,1'])
         ->where('token', '[A-Za-z0-9]{64}')
         ->name('x-change.provisioning.claim.accept');
+});
+
+Route::prefix('x/auto-generate')->middleware([
+    'web',
+    ShareXChangeBranding::class,
+    UseCommercialPrincipalForPublicIssuance::class,
+])->group(function (): void {
+    Route::get('/', PublicAutoGeneratePageController::class)
+        ->middleware('throttle:60,1,public-auto-generate-page:')
+        ->name('x-change.public-auto-generate.show');
+    Route::post('/', CockpitQuickGenerateMutationRouteShellController::class)
+        ->middleware('throttle:6,1,public-auto-generate-issue:')
+        ->name('x-change.public-auto-generate.store');
+
+    Route::prefix('funding-orders/{order:reference}')
+        ->middleware(AuthorizePublicIssuanceOrderAccess::class)
+        ->group(function (): void {
+            Route::get('/', [CockpitOnDemandIssuanceFundingOrderController::class, 'show'])
+                ->middleware('throttle:60,1,public-auto-generate-read:')
+                ->name('x-change.public-auto-generate.funding-orders.show');
+            Route::post('acknowledge', [CockpitOnDemandIssuanceFundingOrderController::class, 'acknowledge'])
+                ->middleware('throttle:6,1,public-auto-generate-check:')
+                ->name('x-change.public-auto-generate.funding-orders.acknowledge');
+            Route::post('verification', [CockpitOnDemandIssuanceFundingOrderController::class, 'verifyAutomatically'])
+                ->middleware('throttle:15,1,public-auto-generate-monitor:')
+                ->name('x-change.public-auto-generate.funding-orders.verification');
+            Route::delete('/', [CockpitOnDemandIssuanceFundingOrderController::class, 'cancel'])
+                ->middleware('throttle:6,1,public-auto-generate-cancel:')
+                ->name('x-change.public-auto-generate.funding-orders.cancel');
+        });
 });
 
 Route::prefix('x/legal')->middleware([...$middleware, ShareXChangeBranding::class])->group(function (): void {
@@ -404,6 +438,15 @@ Route::prefix('x')->middleware([
             [CockpitCommercialPayCodeScenarioRunnerController::class, 'store'],
         )->middleware('throttle:6,1')
             ->name('x-change.cockpit.campaigns.commercial-pay-code-scenario-runner.store');
+        Route::get(
+            'campaigns/public-auto-generate-scenario-runner',
+            [CockpitPublicAutoGenerateScenarioRunnerController::class, 'show'],
+        )->name('x-change.cockpit.campaigns.public-auto-generate-scenario-runner.show');
+        Route::post(
+            'campaigns/public-auto-generate-scenario-runner',
+            [CockpitPublicAutoGenerateScenarioRunnerController::class, 'store'],
+        )->middleware('throttle:6,1')
+            ->name('x-change.cockpit.campaigns.public-auto-generate-scenario-runner.store');
         Route::post('campaigns', [CockpitCampaignWorksheetController::class, 'store'])
             ->middleware('throttle:20,1')
             ->name('x-change.cockpit.campaigns.store');

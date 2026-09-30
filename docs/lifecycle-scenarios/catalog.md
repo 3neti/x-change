@@ -101,6 +101,7 @@ Every lifecycle scenario may define the following metadata:
 | commercial_operations_simulation | Rollback-only Commercial Offering, Partner, waterfall, provider-cost, commission, Treasury, and journal simulation |
 | treasury_live_basic_cash | Replay-safe provider balance synchronization, ₱150 open-slice issuance, three live claims, and per-slice Treasury accounting |
 | treasury_onboarding_grant | Persistent system-sponsored onboarding grant from Account Funding Reserve, with optional browser claim handoff |
+| public_auto_generate | Rollback-only public issuance through the commissioned Commercial Principal, exact simulated funding, and stamp/share projection |
 
 ---
 

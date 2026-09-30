@@ -1,6 +1,6 @@
 # On-Demand Issuance Funding Plan
 
-Last updated: 2026-09-29
+Last updated: 2026-09-30
 
 ## Objective
 
@@ -136,6 +136,13 @@ Matching requires the provider connection, destination, currency, exact
 leased amount, observation window, settled status, destination verification,
 and an unused provider transaction identifier. Sender identity may strengthen
 evidence but is not authoritative unless the provider contract proves it.
+
+The provider transaction identifier is claimed through a durable database
+boundary before settlement. x-change stores a provider-scoped SHA-256 claim,
+not another clear-text copy of the transaction identifier. One provider
+transaction may belong to one Funding Intent only; a retry for the same intent
+is idempotent, while an attempt to reuse it for another order enters explicit
+review and cannot issue.
 
 An amount other than the leased amount cannot automatically issue the Pay
 Code. It enters the explicit underpayment, excess, or attention path.
@@ -332,6 +339,7 @@ positions, or creates a voucher.
 | Prepared / awaiting payment | Immediate cancellation |
 | Payer acknowledged, payment not found | Cancel with late-payment warning |
 | Verification in progress | Temporarily unavailable |
+| Underfunded / excess / duplicate evidence | Review required; cancellation is not presented as safe |
 | Funded / issuing | Unavailable while issuance finalizes |
 | Issuance attention | Governed release or recovery |
 | Issued | Normal Pay Code lifecycle controls |
@@ -401,11 +409,21 @@ the voucher identifier exactly once.
 Cover partial, excess, late, duplicate, reversed, expired, cancelled, and
 ambiguous payments without silent repricing or issuance.
 
-Status: partially implemented locally. Expired and cancelled orders remain
-eligible for authoritative verification during the amount cooling period. An
-exact late payment is credited to Client Funds, permanently recorded on the
-terminal order, and cannot restart issuance. Partial, excess, and ambiguous
-provider acceptance remain in the later live-provider characterization gate.
+Status: complete locally. Expired and cancelled orders remain eligible for
+authoritative verification during the amount cooling period. An exact late
+payment is credited to Client Funds, permanently recorded on the terminal
+order, and cannot restart issuance. Settled short payments become
+`underfunded`; settled excess payments and other mismatches become
+`payment_ambiguous`. These states stop automatic polling and issuance, retain
+the evidence for operator review, and never silently reprice the order.
+
+Provider evidence is claimed once through a database unique constraint before
+settlement. Same-intent retries are idempotent; cross-intent reuse is rejected
+into suspense. A provider reversal writes a durable marker to the related
+order. If issuance has not completed, the order moves to
+`issuance_attention`, and the queued issuance job independently refuses to run.
+If a Pay Code was already issued, its immutable lifecycle is not rewritten;
+the reversal and recovery remain explicit evidence for governed handling.
 
 ### Gate 11 — Pay Code funding
 
@@ -453,3 +471,21 @@ Minimum automated coverage must prove:
 
 No push, tag, release, host adoption, deployment, or live-money test is
 authorized by this plan.
+
+## Shipped evidence: v1.0.69–v1.0.74
+
+| Release | Evidence |
+| --- | --- |
+| `v1.0.69` (`9f3275ec`) | Strict doctor rejects an invalid on-demand funding basis before runtime. |
+| `v1.0.70` (`b5a2fb84`) | Quick Generate gained the persistent funding workspace and issued-stamp handoff. |
+| `v1.0.71` (`7978d220`) | Bank-transfer verification uses the configured corporate NetBank account rather than the QR-purpose address. |
+| `v1.0.72` (`f657d6af`) | The funding workspace presents the configured corporate account number and account name correctly. |
+| `v1.0.73` (`1edd65fa`) | Automatic, restrained payment polling became part of the modal lifecycle. |
+| `v1.0.74` (`2a12755c`) | Successful issuance presents the correct Pay Code amount and normal stamp/share result. |
+
+The release sequence was exercised with an authorized PHP 25.03 GCash
+direct-QR payment. Provider evidence was detected, the order advanced through
+the hold and issuance lifecycle, and the issued Pay Code result replaced the
+funding controls. The Gate 10 recovery hardening documented above is newer
+local package work and still requires a separately authorized publication and
+host-adoption gate.
