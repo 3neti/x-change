@@ -74,6 +74,27 @@ it('uses distinct PostgreSQL-safe constraint names for standing funding binding 
     }
 });
 
+it('uses distinct PostgreSQL-safe constraint names for affiliation invitation authorities', function () {
+    $migration = file_get_contents(
+        dirname(__DIR__, 3).'/database/migrations/2026_09_30_000100_create_x_change_affiliation_invitation_authorities_table.php',
+    );
+
+    $constraintNames = [
+        'xchg_aff_inv_voucher_unique',
+        'xchg_aff_inv_offer_unique',
+        'xchg_aff_inv_voucher_foreign',
+        'xchg_aff_inv_offer_foreign',
+    ];
+
+    expect($migration)->not->toBeFalse()
+        ->and(max(array_map(strlen(...), $constraintNames)))->toBeLessThanOrEqual(63)
+        ->and(array_unique($constraintNames))->toHaveCount(count($constraintNames));
+
+    foreach ($constraintNames as $constraintName) {
+        expect($migration)->toContain("'{$constraintName}'");
+    }
+});
+
 it('compiles every create migration without PostgreSQL identifier collisions', function () {
     $connection = new class(null, 'x_change_migration_audit') extends PostgresConnection
     {

@@ -12,14 +12,22 @@ return new class extends Migration
     {
         Schema::create('x_change_affiliation_invitation_authorities', function (Blueprint $table): void {
             $table->id();
-            $table->unsignedBigInteger('voucher_id')->unique();
-            $table->unsignedBigInteger('provisioning_offer_id')->unique();
+            $table->unsignedBigInteger('voucher_id');
+            $table->unsignedBigInteger('provisioning_offer_id');
             $table->text('encrypted_claim_token');
             $table->string('snapshot_hash', 64);
             $table->timestamps();
 
-            $table->foreign('voucher_id')->references('id')->on('vouchers')->cascadeOnDelete();
-            $table->foreign('provisioning_offer_id')->references('id')->on('x_provisioning_offers')->restrictOnDelete();
+            $table->unique('voucher_id', 'xchg_aff_inv_voucher_unique');
+            $table->unique('provisioning_offer_id', 'xchg_aff_inv_offer_unique');
+            $table->foreign('voucher_id', 'xchg_aff_inv_voucher_foreign')
+                ->references('id')
+                ->on('vouchers')
+                ->cascadeOnDelete();
+            $table->foreign('provisioning_offer_id', 'xchg_aff_inv_offer_foreign')
+                ->references('id')
+                ->on('x_provisioning_offers')
+                ->restrictOnDelete();
         });
     }
 
