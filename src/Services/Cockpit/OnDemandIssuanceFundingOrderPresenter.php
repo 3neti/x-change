@@ -81,7 +81,7 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
                 'late_payment_detected_at' => $order->late_payment_detected_at?->toIso8601String(),
                 'voucher' => ! $order->voucher instanceof Voucher
                     ? null
-                    : $this->voucher($order->voucher),
+                    : $this->voucher($order->voucher, $order),
                 'receipt' => $this->receipt($order),
             ],
             'monitor' => $this->monitor($order),
@@ -99,12 +99,16 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
     /**
      * @return array<string, mixed>
      */
-    private function voucher(Voucher $voucher): array
+    private function voucher(Voucher $voucher, PayCodeIssuanceFundingOrder $order): array
     {
         $claimUrl = route('x-change.claim.show', ['code' => $voucher->code]);
+        $amount = data_get($order->instructions_ciphertext, 'cash.amount', 0);
+        $currency = data_get($order->instructions_ciphertext, 'cash.currency', $order->currency);
 
         return [
             'code' => $voucher->code,
+            'amount' => is_numeric($amount) ? (float) $amount : 0.0,
+            'currency' => is_string($currency) && $currency !== '' ? $currency : $order->currency,
             'claim_url' => $claimUrl,
             'claim_qr' => $this->claimQr->render($claimUrl),
             'share_card_url' => $this->shareCardUrl($voucher),

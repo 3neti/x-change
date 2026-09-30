@@ -930,6 +930,8 @@ export type CockpitOnDemandIssuanceFundingProjection = {
         late_payment_detected_at: string | null;
         voucher: {
             code: string;
+            amount: number;
+            currency: string;
             claim_url: string;
             claim_qr: string;
             share_card_url: string;

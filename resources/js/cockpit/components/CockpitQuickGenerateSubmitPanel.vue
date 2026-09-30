@@ -2260,6 +2260,21 @@ const resultCode = computed<string | null>(() => {
     return stringValue(dataGet(lastResponse.value, ['result', 'code']));
 });
 
+const resultAmount = computed<string | number>(() => {
+    const issuedAmount = dataGet(lastResponse.value, ['result', 'amount']);
+
+    return typeof issuedAmount === 'string' || typeof issuedAmount === 'number'
+        ? issuedAmount
+        : amount.value;
+});
+
+const resultCurrency = computed<string>(() => {
+    return (
+        stringValue(dataGet(lastResponse.value, ['result', 'currency'])) ??
+        currency.value
+    );
+});
+
 const resultClaimOutcome = computed<string>(
     () =>
         stringValue(
@@ -4642,6 +4657,8 @@ function handleOnDemandIssued(
         status: 'issued',
         result: {
             code: voucher.code,
+            amount: voucher.amount,
+            currency: voucher.currency,
             links: {
                 redeem: voucher.claim_url,
                 redeem_path: voucher.claim_url,
@@ -7022,8 +7039,8 @@ function instructionRecord(
         <CockpitIssuedPayCodeDialog
             :open="issuedPayCodeDialogOpen"
             :code="resultCode"
-            :amount="amount"
-            :currency="currency"
+            :amount="resultAmount"
+            :currency="resultCurrency"
             :recipient="payeeDisplayReference"
             :purpose="purpose"
             :claim-outcome="

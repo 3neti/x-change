@@ -546,6 +546,8 @@ describe('issued Pay Code dialog', () => {
                 status: 'issued',
                 result: {
                     code: 'PAY-MODAL-1',
+                    amount: 125.5,
+                    currency: 'PHP',
                     issue_cost: {
                         currency: 'PHP',
                         charges: [
@@ -602,6 +604,11 @@ describe('issued Pay Code dialog', () => {
                 .get('[data-testid="cockpit-issued-pay-code-dialog"]')
                 .text(),
         ).toContain('Pay Code PAY-MODAL-1 Is Ready');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-issued-pay-code-dialog"]')
+                .text(),
+        ).toContain('PHP 125.50');
         expect(
             wrapper
                 .get('[data-testid="cockpit-issued-pay-code-detail"]')

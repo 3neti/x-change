@@ -673,6 +673,8 @@ it('settles exact provider funds into a hold and resumes issuance exactly once',
     $projection = app(OnDemandIssuanceFundingOrderPresenter::class)->present($order->refresh());
     expect(data_get($projection, 'lifecycle.current'))->toBe('pay_code_ready')
         ->and(data_get($projection, 'order.voucher.code'))->toBe('ODIF-4242')
+        ->and(data_get($projection, 'order.voucher.amount'))->toBe(50.0)
+        ->and(data_get($projection, 'order.voucher.currency'))->toBe('PHP')
         ->and(data_get($projection, 'order.voucher.claim_qr'))->toStartWith('data:image/png;base64,')
         ->and(data_get($projection, 'order.voucher.share_card_url'))->toBeString()
         ->and(data_get($projection, 'order.receipt.order_reference'))->toBe($order->reference)
