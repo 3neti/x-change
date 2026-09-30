@@ -19,10 +19,6 @@
         },
         {
             "type": "git",
-            "url": "https://github.com/3neti/x-affiliation.git"
-        },
-        {
-            "type": "git",
             "url": "https://github.com/3neti/x-action.git"
         },
         {

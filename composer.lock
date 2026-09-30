@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3dcb9a3af5084a0d43581a9fdaf72b89",
+    "content-hash": "ad2d498c59ad609ae82d873ca7371997",
     "packages": [
         {
             "name": "3neti/cash",
@@ -1565,6 +1565,12 @@
                 "url": "https://github.com/3neti/x-affiliation.git",
                 "reference": "a8ef2a24eaf8e311660c5fab43cc6271a9e00f94"
             },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/3neti/x-affiliation/zipball/a8ef2a24eaf8e311660c5fab43cc6271a9e00f94",
+                "reference": "a8ef2a24eaf8e311660c5fab43cc6271a9e00f94",
+                "shasum": ""
+            },
             "require": {
                 "illuminate/contracts": "^12.0 || ^13.0",
                 "illuminate/database": "^12.0 || ^13.0",
@@ -1590,19 +1596,7 @@
                     "LBHurtado\\XAffiliation\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "LBHurtado\\XAffiliation\\Tests\\": "tests/"
-                }
-            },
-            "scripts": {
-                "test": [
-                    "vendor/bin/pest --compact"
-                ],
-                "pint": [
-                    "vendor/bin/pint --format agent"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -1612,6 +1606,10 @@
                 }
             ],
             "description": "Application-scoped membership and sponsorship lineage for the 3neti ecosystem.",
+            "support": {
+                "issues": "https://github.com/3neti/x-affiliation/issues",
+                "source": "https://github.com/3neti/x-affiliation/tree/v0.1.1"
+            },
             "time": "2026-09-29T03:07:37+00:00"
         },
         {
