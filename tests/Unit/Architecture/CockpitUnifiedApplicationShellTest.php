@@ -39,6 +39,7 @@ it('keeps cockpit pages inside the single package-owned host shell', function ()
         ->not->toContain('Repository')
         ->and($appBootstrap)->toContain(
             "case name.startsWith('x-change/claim/'):",
+            "case name.startsWith('x-change/public/'):",
             "case name.startsWith('form-flow/'):",
             'return null;',
         )

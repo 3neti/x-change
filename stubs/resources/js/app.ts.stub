@@ -13,6 +13,7 @@ void createInertiaApp({
             case name === 'Welcome':
                 return null;
             case name.startsWith('x-change/claim/'):
+            case name.startsWith('x-change/public/'):
             case name.startsWith('form-flow/'):
                 return null;
             case name.startsWith('auth/'):
