@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Route;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
 use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
+use LBHurtado\XChange\Enums\FundingIntentStatus;
+use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use Throwable;
 
@@ -46,6 +48,11 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
                     ['order' => $order->reference],
                     false,
                 ),
+                'verify' => route(
+                    'x-change.cockpit.quick-generate.funding-orders.verification',
+                    ['order' => $order->reference],
+                    false,
+                ),
                 'cancel' => route(
                     'x-change.cockpit.quick-generate.funding-orders.cancel',
                     ['order' => $order->reference],
@@ -70,11 +77,14 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
                     'payment_ambiguous',
                     'issuance_attention',
                 ], true),
+                'late_payment_disposition' => $order->late_payment_disposition,
+                'late_payment_detected_at' => $order->late_payment_detected_at?->toIso8601String(),
                 'voucher' => ! $order->voucher instanceof Voucher
                     ? null
                     : $this->voucher($order->voucher),
                 'receipt' => $this->receipt($order),
             ],
+            'monitor' => $this->monitor($order),
             'funding_selector' => $this->selectors->forOnDemandIssuance(
                 orderReference: $order->reference,
                 amountMinor: $order->expected_payment_minor,
@@ -131,6 +141,9 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
         $latestIntentEvent = $order->fundingIntent?->events->last()?->event_type;
         $verificationUnavailable = $latestIntentEvent === 'provider_verification_unavailable';
 
+        $latePaymentCredited = $order->status === PayCodeIssuanceFundingOrderStatus::Expired
+            && $order->late_payment_disposition === 'client_funds';
+
         return [
             'current' => $current,
             'verification_unavailable' => $verificationUnavailable,
@@ -142,9 +155,11 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
                     'issuing_pay_code' => 'Payment verified. Your Pay Code is being issued.',
                     'pay_code_ready' => 'Payment verified and Pay Code issued.',
                     'cancelled' => 'Funding was cancelled safely. No Pay Code was issued.',
-                    'expired' => 'This funding order expired. Any late payment is handled separately and will not revive it.',
+                    'expired' => $latePaymentCredited
+                        ? 'Your payment arrived after this order expired and was added to Client Funds. No Pay Code was issued.'
+                        : 'This order expired. Do not pay these instructions. No Pay Code was issued.',
                     'attention' => 'This funding order needs attention. Do not make another payment.',
-                    default => 'Transfer the exact amount, then ask x-change to check the payment.',
+                    default => 'Pay the exact amount once. We will check for it automatically.',
                 },
             'steps' => collect([
                 ['key' => 'awaiting_payment', 'label' => 'Awaiting payment'],
@@ -164,6 +179,55 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
                         : ($stepIndex < $currentIndex ? 'complete' : ($stepIndex === $currentIndex ? 'current' : 'pending')),
                 ];
             })->all(),
+        ];
+    }
+
+    /**
+     * @return array<string, bool|int|string|null>
+     */
+    private function monitor(PayCodeIssuanceFundingOrder $order): array
+    {
+        $enabled = (bool) config(
+            'x-change.issuance_funding.on_demand.automatic_verification.enabled',
+            true,
+        );
+        $intervalSeconds = max(
+            5,
+            (int) config(
+                'x-change.issuance_funding.on_demand.automatic_verification.interval_seconds',
+                10,
+            ),
+        );
+        $intent = $order->fundingIntent;
+        $eligible = $intent !== null
+            && in_array($order->status, [
+                PayCodeIssuanceFundingOrderStatus::AwaitingPayment,
+                PayCodeIssuanceFundingOrderStatus::PayerAcknowledged,
+                PayCodeIssuanceFundingOrderStatus::Verifying,
+                PayCodeIssuanceFundingOrderStatus::Underfunded,
+                PayCodeIssuanceFundingOrderStatus::PaymentAmbiguous,
+            ], true)
+            && in_array($intent->status, [
+                FundingIntentStatus::AwaitingFunds,
+                FundingIntentStatus::EvidenceReceived,
+                FundingIntentStatus::Verifying,
+                FundingIntentStatus::Verified,
+            ], true);
+        $latestVerification = $intent?->events
+            ->filter(static fn ($event): bool => in_array($event->event_type, [
+                'provider_verification_started',
+                'provider_funds_not_observed',
+                'provider_verification_unavailable',
+                'provider_settlement_pending',
+                'provider_settlement_verified',
+            ], true))
+            ->last();
+
+        return [
+            'enabled' => $enabled,
+            'eligible' => $eligible,
+            'interval_milliseconds' => $intervalSeconds * 1000,
+            'last_checked_at' => $latestVerification?->occurred_at?->toIso8601String(),
         ];
     }
 

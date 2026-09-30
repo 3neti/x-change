@@ -665,6 +665,11 @@ Route::prefix('x')->middleware([
             [CockpitOnDemandIssuanceFundingOrderController::class, 'acknowledge'],
         )->middleware('throttle:6,1,quick-generate-funding-order-check:')
             ->name('x-change.cockpit.quick-generate.funding-orders.acknowledge');
+        Route::post(
+            'quick-generate/funding-orders/{order:reference}/verification',
+            [CockpitOnDemandIssuanceFundingOrderController::class, 'verifyAutomatically'],
+        )->middleware('throttle:15,1,quick-generate-funding-order-monitor:')
+            ->name('x-change.cockpit.quick-generate.funding-orders.verification');
         Route::delete(
             'quick-generate/funding-orders/{order:reference}',
             [CockpitOnDemandIssuanceFundingOrderController::class, 'cancel'],

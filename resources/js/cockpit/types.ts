@@ -905,7 +905,14 @@ export type CockpitOnDemandIssuanceFundingProjection = {
     actions: {
         show: string;
         acknowledge: string;
+        verify: string;
         cancel: string;
+    };
+    monitor: {
+        enabled: boolean;
+        eligible: boolean;
+        interval_milliseconds: number;
+        last_checked_at: string | null;
     };
     order: {
         reference: string;
@@ -919,6 +926,8 @@ export type CockpitOnDemandIssuanceFundingProjection = {
         status: string;
         expires_at: string | null;
         can_cancel: boolean;
+        late_payment_disposition: string | null;
+        late_payment_detected_at: string | null;
         voucher: {
             code: string;
             claim_url: string;

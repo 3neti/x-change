@@ -4658,10 +4658,25 @@ function handleOnDemandIssued(
     issuedPayCodeDialogOpen.value = true;
 }
 
-function handleOnDemandClosed(): void {
+function handleOnDemandClosed(
+    projection: CockpitOnDemandIssuanceFundingProjection,
+): void {
     onDemandFundingDialogOpen.value = false;
+
+    if (['expired', 'cancelled'].includes(projection.status)) {
+        onDemandFundingProjection.value = null;
+        lastStatus.value = 'ready';
+        lastMessage.value =
+            projection.order.late_payment_disposition === 'client_funds'
+                ? 'The late payment was added to Client Funds. You may prepare a new Pay Code.'
+                : 'Ready to prepare another Pay Code.';
+
+        return;
+    }
+
     lastStatus.value = 'awaiting_funds';
-    lastMessage.value = 'Funding is still active. Resume it when you are ready to check payment.';
+    lastMessage.value =
+        'Funding is still active. Payment checking will continue when you resume this window.';
 }
 
 function generateAnotherAfterOnDemandIssuance(): void {

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -29,6 +30,7 @@ use LBHurtado\XChange\Enums\FundingVerificationTrigger;
 use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
+use LBHurtado\XChange\Jobs\Funding\VerifyFundingIntentJob;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrderEvent;
@@ -214,6 +216,7 @@ it('persists append-only order state and exposes only owner-scoped routes', func
         ->toThrow(LogicException::class, 'guarded actions')
         ->and(Route::has('x-change.cockpit.quick-generate.funding-orders.show'))->toBeTrue()
         ->and(Route::has('x-change.cockpit.quick-generate.funding-orders.acknowledge'))->toBeTrue()
+        ->and(Route::has('x-change.cockpit.quick-generate.funding-orders.verification'))->toBeTrue()
         ->and(Route::has('x-change.cockpit.quick-generate.funding-orders.cancel'))->toBeTrue();
 });
 
@@ -227,10 +230,100 @@ it('isolates polling, acknowledgement, and cancellation throttle buckets', funct
     $cancelMiddleware = Route::getRoutes()
         ->getByName('x-change.cockpit.quick-generate.funding-orders.cancel')
         ?->gatherMiddleware();
+    $verificationMiddleware = Route::getRoutes()
+        ->getByName('x-change.cockpit.quick-generate.funding-orders.verification')
+        ?->gatherMiddleware();
 
     expect($showMiddleware)->toContain('throttle:60,1,quick-generate-funding-order-read:')
         ->and($acknowledgeMiddleware)->toContain('throttle:6,1,quick-generate-funding-order-check:')
+        ->and($verificationMiddleware)->toContain('throttle:15,1,quick-generate-funding-order-monitor:')
         ->and($cancelMiddleware)->toContain('throttle:6,1,quick-generate-funding-order-cancel:');
+});
+
+it('queues one automatic provider check without claiming that the payer acknowledged payment', function (): void {
+    Cache::clear();
+    Queue::fake();
+    config()->set('x-change.issuance_funding.on_demand.automatic_verification.enabled', true);
+    config()->set('x-change.issuance_funding.on_demand.automatic_verification.interval_seconds', 10);
+    $user = actingAsTestUser(0);
+    $order = issuanceFundingOrder($user, 'automatic-modal-verification');
+    $intent = FundingIntent::query()->create([
+        'account_reference' => $order->account_reference,
+        'provider_code' => 'netbank',
+        'purpose' => FundingIntentPurpose::OnDemandIssuance,
+        'expected_amount_minor' => 5_000,
+        'currency' => 'PHP',
+        'status' => FundingIntentStatus::AwaitingFunds,
+        'version' => 1,
+        'idempotency_key_hash' => hash('sha256', 'automatic-modal-intent-key'),
+        'idempotency_fingerprint' => hash('sha256', 'automatic-modal-intent-fingerprint'),
+        'created_by_type' => $user::class,
+        'created_by_id' => (string) $user->getAuthIdentifier(),
+        'expires_at' => now()->addMinutes(30),
+    ]);
+    $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();
+
+    $route = route(
+        'x-change.cockpit.quick-generate.funding-orders.verification',
+        $order,
+    );
+    $this->postJson($route)->assertAccepted()
+        ->assertJsonPath('monitor.eligible', true);
+    $this->postJson($route)->assertAccepted();
+
+    expect($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::AwaitingPayment)
+        ->and($order->payer_acknowledged_at)->toBeNull();
+    Queue::assertPushed(
+        VerifyFundingIntentJob::class,
+        1,
+    );
+    Queue::assertPushed(
+        VerifyFundingIntentJob::class,
+        fn (VerifyFundingIntentJob $job): bool => $job->fundingIntentId === $intent->getKey()
+            && $job->trigger === FundingVerificationTrigger::Schedule
+            && $job->actorId === 'funding-modal-monitor',
+    );
+});
+
+it('returns an expired order outcome without queuing an ineligible payment check', function (): void {
+    Cache::clear();
+    Queue::fake();
+    $user = actingAsTestUser(0);
+    $order = issuanceFundingOrder($user, 'expired-modal-verification');
+    $intent = FundingIntent::query()->create([
+        'account_reference' => $order->account_reference,
+        'provider_code' => 'netbank',
+        'purpose' => FundingIntentPurpose::OnDemandIssuance,
+        'expected_amount_minor' => 5_000,
+        'currency' => 'PHP',
+        'status' => FundingIntentStatus::Settled,
+        'version' => 1,
+        'idempotency_key_hash' => hash('sha256', 'expired-modal-intent-key'),
+        'idempotency_fingerprint' => hash('sha256', 'expired-modal-intent-fingerprint'),
+        'created_by_type' => $user::class,
+        'created_by_id' => (string) $user->getAuthIdentifier(),
+        'expires_at' => now()->subMinute(),
+    ]);
+    $order->forceFill([
+        'funding_intent_id' => $intent->getKey(),
+        'status' => PayCodeIssuanceFundingOrderStatus::Expired,
+        'expires_at' => now()->subMinute(),
+        'late_payment_detected_at' => now(),
+        'late_payment_disposition' => 'client_funds',
+    ])->saveQuietly();
+
+    $this->postJson(route(
+        'x-change.cockpit.quick-generate.funding-orders.verification',
+        $order,
+    ))->assertSuccessful()
+        ->assertJsonPath('monitor.eligible', false)
+        ->assertJsonPath('order.late_payment_disposition', 'client_funds')
+        ->assertJsonPath(
+            'lifecycle.message',
+            'Your payment arrived after this order expired and was added to Client Funds. No Pay Code was issued.',
+        );
+
+    Queue::assertNothingPushed();
 });
 
 it('keeps write capacity available after repeated funding-order polling', function (): void {

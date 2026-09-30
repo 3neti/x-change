@@ -1144,6 +1144,13 @@ return [
                 'enabled' => (bool) env('XCHANGE_ON_DEMAND_FIXED_QR_PH_ENABLED', false),
                 'netbank_mode' => env('XCHANGE_ON_DEMAND_NETBANK_QR_MODE', 'direct_qr'),
             ],
+            'automatic_verification' => [
+                'enabled' => (bool) env('XCHANGE_ON_DEMAND_AUTOMATIC_VERIFICATION_ENABLED', true),
+                'interval_seconds' => max(
+                    5,
+                    (int) env('XCHANGE_ON_DEMAND_AUTOMATIC_VERIFICATION_INTERVAL_SECONDS', 10),
+                ),
+            ],
             'amount_lease' => [
                 'maximum_adjustment_minor' => max(0, (int) env('XCHANGE_ON_DEMAND_AMOUNT_LEASE_MAXIMUM_ADJUSTMENT_MINOR', 99)),
                 'reuse_delay_seconds' => max(60, (int) env('XCHANGE_ON_DEMAND_AMOUNT_LEASE_REUSE_DELAY_SECONDS', 3600)),

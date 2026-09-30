@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import CockpitOnDemandIssuanceFundingDialog from '../../../resources/js/cockpit/components/CockpitOnDemandIssuanceFundingDialog.vue';
 import type { CockpitOnDemandIssuanceFundingProjection } from '../../../resources/js/cockpit/types';
@@ -11,20 +11,48 @@ const projection: CockpitOnDemandIssuanceFundingProjection = {
     lifecycle: {
         current: 'awaiting_payment',
         verification_unavailable: false,
-        message: 'Transfer the exact amount, then ask x-change to check the payment.',
+        message:
+            'Transfer the exact amount, then ask x-change to check the payment.',
         steps: [
-            { key: 'awaiting_payment', label: 'Awaiting payment', state: 'current' },
-            { key: 'checking_payment', label: 'Checking payment', state: 'pending' },
-            { key: 'payment_verified', label: 'Payment verified', state: 'pending' },
-            { key: 'issuing_pay_code', label: 'Issuing Pay Code', state: 'pending' },
-            { key: 'pay_code_ready', label: 'Pay Code ready', state: 'pending' },
+            {
+                key: 'awaiting_payment',
+                label: 'Awaiting payment',
+                state: 'current',
+            },
+            {
+                key: 'checking_payment',
+                label: 'Checking payment',
+                state: 'pending',
+            },
+            {
+                key: 'payment_verified',
+                label: 'Payment verified',
+                state: 'pending',
+            },
+            {
+                key: 'issuing_pay_code',
+                label: 'Issuing Pay Code',
+                state: 'pending',
+            },
+            {
+                key: 'pay_code_ready',
+                label: 'Pay Code ready',
+                state: 'pending',
+            },
         ],
     },
     actions: {
         show: '/x/cockpit/quick-generate/funding-orders/ORDER-1',
         acknowledge:
             '/x/cockpit/quick-generate/funding-orders/ORDER-1/acknowledge',
+        verify: '/x/cockpit/quick-generate/funding-orders/ORDER-1/verification',
         cancel: '/x/cockpit/quick-generate/funding-orders/ORDER-1',
+    },
+    monitor: {
+        enabled: true,
+        eligible: true,
+        interval_milliseconds: 10_000,
+        last_checked_at: null,
     },
     order: {
         reference: 'ORDER-1',
@@ -38,6 +66,8 @@ const projection: CockpitOnDemandIssuanceFundingProjection = {
         status: 'awaiting_payment',
         expires_at: '2026-09-29T09:00:00+08:00',
         can_cancel: true,
+        late_payment_disposition: null,
+        late_payment_detected_at: null,
         voucher: null,
         receipt: {
             order_reference: 'ORDER-1',
@@ -135,15 +165,54 @@ describe('CockpitOnDemandIssuanceFundingDialog', () => {
             attachTo: document.body,
         });
 
-        expect(document.body.textContent).toContain('Pay ₱50.00 to issue this Pay Code');
+        expect(document.body.textContent).toContain(
+            'Pay ₱50.00 to issue this Pay Code',
+        );
         expect(document.body.textContent).toContain('Exact transfer amount');
         expect(document.body.textContent).toContain('113-001-00001-9');
+        expect(document.body.textContent).toContain(
+            'Payment checking is automatic',
+        );
+        expect(document.body.textContent).toContain('Pay only once');
         expect(
-            document.body.querySelector('[data-testid="on-demand-payment-check"]'),
+            document.body.querySelector(
+                '[data-testid="on-demand-payment-check"]',
+            ),
         ).not.toBeNull();
         expect(document.body.querySelector('[aria-label="Close"]')).toBeNull();
 
         wrapper.unmount();
+    });
+
+    it('automatically requests an idempotent provider check while the order is open', async () => {
+        vi.useFakeTimers();
+        const fetchMock = vi
+            .spyOn(globalThis, 'fetch')
+            .mockResolvedValue({
+                ok: true,
+                json: async () => structuredClone(projection),
+            } as Response);
+        const wrapper = mount(CockpitOnDemandIssuanceFundingDialog, {
+            props: { open: true, projection },
+            attachTo: document.body,
+        });
+
+        await vi.advanceTimersByTimeAsync(10_000);
+
+        expect(fetchMock).toHaveBeenNthCalledWith(
+            1,
+            projection.actions.show,
+            expect.objectContaining({ credentials: 'same-origin' }),
+        );
+        expect(fetchMock).toHaveBeenNthCalledWith(
+            2,
+            projection.actions.verify,
+            expect.objectContaining({ method: 'POST' }),
+        );
+
+        wrapper.unmount();
+        fetchMock.mockRestore();
+        vi.useRealTimers();
     });
 
     it('fails closed when funding instructions need operator attention', () => {
@@ -158,31 +227,34 @@ describe('CockpitOnDemandIssuanceFundingDialog', () => {
         });
 
         expect(document.body.textContent).toContain('Funding needs attention');
-        expect(document.body.textContent).toContain('No payment should be made');
-        expect(document.body.textContent).not.toContain('I’ve made the transfer');
+        expect(document.body.textContent).toContain(
+            'No payment should be made',
+        );
+        expect(document.body.textContent).not.toContain(
+            'I’ve made the transfer',
+        );
         expect(document.body.textContent).toContain('Cancel safely');
 
         wrapper.unmount();
     });
 
-    it('allows verification to be dismissed and resumed without cancelling the order', async () => {
+    it('keeps an active verification workspace open until it reaches an outcome', () => {
         const checkingProjection = structuredClone(projection);
         checkingProjection.status = 'payer_acknowledged';
         checkingProjection.order.status = 'payer_acknowledged';
         checkingProjection.lifecycle.current = 'checking_payment';
-        checkingProjection.lifecycle.message = 'Payment is not visible yet. You do not need to pay again.';
+        checkingProjection.lifecycle.message =
+            'Payment is not visible yet. You do not need to pay again.';
         const wrapper = mount(CockpitOnDemandIssuanceFundingDialog, {
             props: { open: true, projection: checkingProjection },
             attachTo: document.body,
         });
 
-        expect(document.body.textContent).toContain('Payment is not visible yet');
-        expect(document.body.textContent).toContain('Check again');
-        document
-            .querySelector<HTMLButtonElement>('[aria-label="Close for now"]')
-            ?.click();
-        await nextTick();
-        expect(wrapper.emitted('closed')).toHaveLength(1);
+        expect(document.body.textContent).toContain(
+            'Payment is not visible yet',
+        );
+        expect(document.body.textContent).toContain('Check now');
+        expect(document.body.querySelector('[aria-label="Close"]')).toBeNull();
         expect(wrapper.emitted('cancelled')).toBeUndefined();
 
         wrapper.unmount();
@@ -194,14 +266,19 @@ describe('CockpitOnDemandIssuanceFundingDialog', () => {
         unavailableProjection.order.status = 'payer_acknowledged';
         unavailableProjection.lifecycle.current = 'checking_payment';
         unavailableProjection.lifecycle.verification_unavailable = true;
-        unavailableProjection.lifecycle.message = 'Verification is temporarily unavailable. You do not need to pay again.';
+        unavailableProjection.lifecycle.message =
+            'Verification is temporarily unavailable. You do not need to pay again.';
         const wrapper = mount(CockpitOnDemandIssuanceFundingDialog, {
             props: { open: true, projection: unavailableProjection },
             attachTo: document.body,
         });
 
-        expect(document.body.textContent).toContain('Verification is temporarily unavailable');
-        expect(document.body.textContent).toContain('You do not need to pay again');
+        expect(document.body.textContent).toContain(
+            'Verification is temporarily unavailable',
+        );
+        expect(document.body.textContent).toContain(
+            'You do not need to pay again',
+        );
 
         wrapper.unmount();
     });
@@ -227,14 +304,56 @@ describe('CockpitOnDemandIssuanceFundingDialog', () => {
         });
 
         document
-            .querySelector<HTMLButtonElement>('[data-testid="funding-mode-self_top_up"]')
+            .querySelector<HTMLButtonElement>(
+                '[data-testid="funding-mode-self_top_up"]',
+            )
             ?.click();
         await nextTick();
 
-        expect(document.body.querySelector('[data-testid="on-demand-fixed-qr-ph"]')).not.toBeNull();
+        expect(
+            document.body.querySelector(
+                '[data-testid="on-demand-fixed-qr-ph"]',
+            ),
+        ).not.toBeNull();
         expect(document.body.textContent).toContain('Exact QR Ph amount');
-        expect(document.body.textContent).toContain('I’ve paid by QR Ph — Check payment');
-        expect(document.body.querySelector('img')?.getAttribute('src')).toBe('data:image/png;base64,ZmFrZQ==');
+        expect(document.body.textContent).toContain('Check now');
+        expect(document.body.querySelector('img')?.getAttribute('src')).toBe(
+            'data:image/png;base64,ZmFrZQ==',
+        );
+
+        wrapper.unmount();
+    });
+
+    it('replaces payment controls with a calm late-payment outcome after expiry', () => {
+        const expiredProjection = structuredClone(projection);
+        expiredProjection.status = 'expired';
+        expiredProjection.order.status = 'expired';
+        expiredProjection.order.can_cancel = false;
+        expiredProjection.order.late_payment_disposition = 'client_funds';
+        expiredProjection.order.late_payment_detected_at =
+            '2026-09-29T09:01:00+08:00';
+        expiredProjection.monitor.eligible = false;
+        expiredProjection.lifecycle.current = 'expired';
+        expiredProjection.lifecycle.message =
+            'Your payment arrived after this order expired and was added to Client Funds. No Pay Code was issued.';
+        const wrapper = mount(CockpitOnDemandIssuanceFundingDialog, {
+            props: { open: true, projection: expiredProjection },
+            attachTo: document.body,
+        });
+
+        expect(document.body.textContent).toContain(
+            'Payment added to Client Funds',
+        );
+        expect(document.body.textContent).toContain('Your money is safe');
+        expect(document.body.textContent).not.toContain('Check now');
+        expect(
+            document.body.querySelector(
+                '[data-testid="on-demand-fixed-qr-ph"]',
+            ),
+        ).toBeNull();
+        expect(
+            document.body.querySelector('[aria-label="Close"]'),
+        ).not.toBeNull();
 
         wrapper.unmount();
     });

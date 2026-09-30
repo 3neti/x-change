@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { Check, Circle, LoaderCircle, ShieldCheck, X } from 'lucide-vue-next';
+import {
+    Check,
+    Circle,
+    LoaderCircle,
+    RefreshCw,
+    ShieldCheck,
+    X,
+} from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import type {
     CockpitOnDemandIssuanceFundingProjection,
@@ -15,23 +22,41 @@ const props = defineProps<{
 const emit = defineEmits<{
     issued: [projection: CockpitOnDemandIssuanceFundingProjection];
     cancelled: [];
-    closed: [];
+    closed: [projection: CockpitOnDemandIssuanceFundingProjection];
 }>();
 
-const current = ref<CockpitOnDemandIssuanceFundingProjection | null>(props.projection);
+const current = ref<CockpitOnDemandIssuanceFundingProjection | null>(
+    props.projection,
+);
 const selectedMode = ref<CockpitPrimaryFundingWorkspaceMode>('bank_transfer');
 const checking = ref(false);
+const monitoring = ref(false);
 const cancelling = ref(false);
 const error = ref<string | null>(null);
+const monitorMessage = ref<string | null>(null);
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
-let pollAttempt = 0;
 let emittedIssuedReference: string | null = null;
-const pollDelays = [2000, 3000, 5000, 8000, 13000];
 
 const terminal = computed(() =>
     ['issued', 'cancelled', 'expired'].includes(current.value?.status ?? ''),
 );
-const needsAttention = computed(() => current.value?.status === 'issuance_attention');
+const needsAttention = computed(
+    () => current.value?.status === 'issuance_attention',
+);
+const paymentOpen = computed(() =>
+    [
+        'awaiting_payment',
+        'payer_acknowledged',
+        'verifying',
+        'underfunded',
+        'payment_ambiguous',
+    ].includes(current.value?.status ?? ''),
+);
+const latePaymentCredited = computed(
+    () =>
+        current.value?.status === 'expired' &&
+        current.value.order.late_payment_disposition === 'client_funds',
+);
 const amount = computed(() => {
     const order = current.value?.order;
 
@@ -48,18 +73,57 @@ const instructions = computed<Record<string, unknown>>(
     () => current.value?.funding_selector.bank_transfer.instructions ?? {},
 );
 const fixedQrPh = computed(() => current.value?.funding_selector.qr_ph ?? null);
-const canCloseForNow = computed(() =>
-    ['payer_acknowledged', 'verifying', 'funded', 'issuing'].includes(
-        current.value?.status ?? '',
-    ),
-);
+const dialogTitle = computed(() => {
+    if (current.value?.status === 'expired') {
+        return latePaymentCredited.value
+            ? 'Payment added to Client Funds'
+            : 'This order expired';
+    }
+
+    if (current.value?.status === 'cancelled') {
+        return 'Funding cancelled';
+    }
+
+    if (needsAttention.value) {
+        return 'Funding needs attention';
+    }
+
+    if (['funded', 'issuing'].includes(current.value?.status ?? '')) {
+        return 'Payment received';
+    }
+
+    return `Pay ${amount.value} to issue this Pay Code`;
+});
+const dialogDescription = computed(() => {
+    if (needsAttention.value) {
+        return 'No payment should be made from these instructions. Cancel safely and prepare a fresh order.';
+    }
+
+    if (terminal.value) {
+        return current.value?.lifecycle.message ?? '';
+    }
+
+    if (['funded', 'issuing'].includes(current.value?.status ?? '')) {
+        return 'Your payment is verified. Keep this window open while we finish issuing the Pay Code.';
+    }
+
+    return 'Choose Bank Transfer or QR Ph, pay the exact amount once, and keep this window open. We will check the payment automatically.';
+});
+const lastCheckedLabel = computed(() => {
+    const checkedAt = current.value?.monitor.last_checked_at;
+
+    return checkedAt === null || checkedAt === undefined
+        ? 'Waiting for the first automatic check'
+        : `Last checked ${new Date(checkedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}`;
+});
 
 watch(
     () => props.projection,
     (projection) => {
         current.value = projection;
-        pollAttempt = 0;
-        selectedMode.value = projection?.funding_selector.default_mode ?? 'bank_transfer';
+        selectedMode.value =
+            projection?.funding_selector.default_mode ?? 'bank_transfer';
+        monitorMessage.value = null;
         schedulePoll();
     },
     { immediate: true },
@@ -94,7 +158,7 @@ function schedulePoll(): void {
         return;
     }
 
-    const delay = pollDelays[Math.min(pollAttempt, pollDelays.length - 1)];
+    const delay = Math.max(5000, current.value.monitor.interval_milliseconds);
     pollTimer = setTimeout(() => void refresh(), delay);
 }
 
@@ -108,14 +172,16 @@ async function refresh(): Promise<void> {
     try {
         const response = await fetch(current.value.actions.show, {
             credentials: 'same-origin',
-            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
         });
 
         if (response.ok) {
-            const next = (await response.json()) as CockpitOnDemandIssuanceFundingProjection;
-            const changed = next.status !== current.value.status;
+            const next =
+                (await response.json()) as CockpitOnDemandIssuanceFundingProjection;
             current.value = next;
-            pollAttempt = changed ? 0 : pollAttempt + 1;
             error.value = null;
 
             if (
@@ -125,13 +191,20 @@ async function refresh(): Promise<void> {
                 emittedIssuedReference = current.value.order.reference;
                 emit('issued', current.value);
             }
+
+            if (
+                current.value.monitor.enabled &&
+                current.value.monitor.eligible
+            ) {
+                await requestVerification(true);
+            }
         } else {
-            pollAttempt += 1;
-            error.value = 'Verification temporarily unavailable. You do not need to pay again.';
+            monitorMessage.value =
+                'Automatic checking will retry shortly. You do not need to pay again.';
         }
     } catch {
-        pollAttempt += 1;
-        error.value = 'Verification temporarily unavailable. You do not need to pay again.';
+        monitorMessage.value =
+            'Automatic checking will retry shortly. You do not need to pay again.';
     } finally {
         schedulePoll();
     }
@@ -139,19 +212,31 @@ async function refresh(): Promise<void> {
 
 function closeForNow(): void {
     clearPoll();
-    emit('closed');
+    if (current.value !== null) {
+        emit('closed', current.value);
+    }
 }
 
-async function acknowledge(): Promise<void> {
-    if (current.value === null || checking.value) {
+async function requestVerification(automatic = false): Promise<void> {
+    if (
+        current.value === null ||
+        checking.value ||
+        monitoring.value ||
+        !current.value.monitor.eligible
+    ) {
         return;
     }
 
-    checking.value = true;
-    error.value = null;
+    if (automatic) {
+        monitoring.value = true;
+        monitorMessage.value = 'Checking for your payment…';
+    } else {
+        checking.value = true;
+        error.value = null;
+    }
 
     try {
-        const response = await fetch(current.value.actions.acknowledge, {
+        const response = await fetch(current.value.actions.verify, {
             method: 'POST',
             credentials: 'same-origin',
             headers: {
@@ -160,23 +245,51 @@ async function acknowledge(): Promise<void> {
                 ...csrfHeader(),
             },
         });
-        const body = (await response.json()) as CockpitOnDemandIssuanceFundingProjection & { message?: string };
+        const body =
+            (await response.json()) as CockpitOnDemandIssuanceFundingProjection & {
+                message?: string;
+            };
 
         if (!response.ok) {
-            throw new Error(body.message ?? 'The payment check could not be started.');
+            throw new Error(
+                body.message ?? 'The payment check could not be started.',
+            );
         }
 
         current.value = body;
+        monitorMessage.value = automatic
+            ? 'Automatic checking is active. Please pay only once.'
+            : 'Payment check started. You do not need to pay again.';
     } catch (exception) {
-        error.value = exception instanceof Error ? exception.message : 'The payment check failed.';
+        if (automatic) {
+            monitorMessage.value =
+                'Automatic checking will retry shortly. You do not need to pay again.';
+        } else {
+            error.value =
+                exception instanceof Error
+                    ? exception.message
+                    : 'The payment check failed.';
+        }
     } finally {
-        checking.value = false;
+        if (automatic) {
+            monitoring.value = false;
+        } else {
+            checking.value = false;
+        }
         schedulePoll();
     }
 }
 
+function checkNow(): void {
+    void requestVerification(false);
+}
+
 async function cancel(): Promise<void> {
-    if (current.value === null || !current.value.order.can_cancel || cancelling.value) {
+    if (
+        current.value === null ||
+        !current.value.order.can_cancel ||
+        cancelling.value
+    ) {
         return;
     }
 
@@ -193,23 +306,33 @@ async function cancel(): Promise<void> {
                 ...csrfHeader(),
             },
         });
-        const body = (await response.json()) as CockpitOnDemandIssuanceFundingProjection & { message?: string };
+        const body =
+            (await response.json()) as CockpitOnDemandIssuanceFundingProjection & {
+                message?: string;
+            };
 
         if (!response.ok) {
-            throw new Error(body.message ?? 'The funding order could not be cancelled.');
+            throw new Error(
+                body.message ?? 'The funding order could not be cancelled.',
+            );
         }
 
         current.value = body;
         emit('cancelled');
     } catch (exception) {
-        error.value = exception instanceof Error ? exception.message : 'Cancellation failed.';
+        error.value =
+            exception instanceof Error
+                ? exception.message
+                : 'Cancellation failed.';
     } finally {
         cancelling.value = false;
     }
 }
 
 function text(value: unknown): string | null {
-    return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
+    return typeof value === 'string' && value.trim() !== ''
+        ? value.trim()
+        : null;
 }
 </script>
 
@@ -226,29 +349,37 @@ function text(value: unknown): string | null {
             @keydown.esc.prevent.stop
         >
             <section
-                class="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl dark:bg-slate-950 sm:p-7"
+                class="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl sm:p-7 dark:bg-slate-950"
             >
                 <header class="flex items-start justify-between gap-4">
                     <div>
-                        <p class="text-xs font-bold tracking-[0.18em] text-emerald-600 uppercase">
+                        <p
+                            class="text-xs font-bold uppercase tracking-[0.18em] text-emerald-600"
+                        >
                             On-demand issuance funding
                         </p>
-                        <h2 id="on-demand-funding-title" class="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
-                            {{ needsAttention ? 'Funding needs attention' : `Pay ${amount} to issue this Pay Code` }}
+                        <h2
+                            id="on-demand-funding-title"
+                            class="mt-1 text-2xl font-bold text-slate-950 dark:text-white"
+                        >
+                            {{ dialogTitle }}
                         </h2>
-                        <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                            {{ needsAttention
-                                ? 'No payment should be made from these instructions. Cancel safely and prepare a fresh order.'
-                                : 'The instruction is frozen. This window stays open until payment is verified, the Pay Code is issued, or you cancel safely.' }}
+                        <p
+                            class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300"
+                        >
+                            {{ dialogDescription }}
                         </p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <ShieldCheck class="size-8 shrink-0 text-emerald-600" aria-hidden="true" />
+                        <ShieldCheck
+                            class="size-8 shrink-0 text-emerald-600"
+                            aria-hidden="true"
+                        />
                         <button
-                            v-if="canCloseForNow"
+                            v-if="terminal"
                             type="button"
                             class="inline-flex size-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-800 dark:hover:bg-slate-900"
-                            aria-label="Close for now"
+                            aria-label="Close"
                             @click="closeForNow"
                         >
                             <X class="size-5" aria-hidden="true" />
@@ -256,40 +387,136 @@ function text(value: unknown): string | null {
                     </div>
                 </header>
 
-                <ol class="mt-5 grid grid-cols-5 gap-1" aria-label="Funding progress">
+                <ol
+                    v-if="!terminal && !needsAttention"
+                    class="mt-5 grid grid-cols-5 gap-1"
+                    aria-label="Funding progress"
+                >
                     <li
                         v-for="step in current.lifecycle.steps"
                         :key="step.key"
                         class="min-w-0 text-center"
-                        :aria-current="step.state === 'current' ? 'step' : undefined"
+                        :aria-current="
+                            step.state === 'current' ? 'step' : undefined
+                        "
                     >
                         <div class="flex items-center gap-1">
-                            <span class="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-                            <Check v-if="step.state === 'complete'" class="size-4 text-emerald-600" aria-hidden="true" />
-                            <LoaderCircle v-else-if="step.state === 'current'" class="size-4 animate-spin text-emerald-600" aria-hidden="true" />
-                            <Circle v-else class="size-3 text-slate-300 dark:text-slate-700" aria-hidden="true" />
-                            <span class="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+                            <span
+                                class="h-px flex-1 bg-slate-200 dark:bg-slate-800"
+                            />
+                            <Check
+                                v-if="step.state === 'complete'"
+                                class="size-4 text-emerald-600"
+                                aria-hidden="true"
+                            />
+                            <LoaderCircle
+                                v-else-if="step.state === 'current'"
+                                class="size-4 animate-spin text-emerald-600"
+                                aria-hidden="true"
+                            />
+                            <Circle
+                                v-else
+                                class="size-3 text-slate-300 dark:text-slate-700"
+                                aria-hidden="true"
+                            />
+                            <span
+                                class="h-px flex-1 bg-slate-200 dark:bg-slate-800"
+                            />
                         </div>
-                        <span class="mt-1 block truncate text-[0.62rem] font-semibold text-slate-500">{{ step.label }}</span>
+                        <span
+                            class="mt-1 block truncate text-[0.62rem] font-semibold text-slate-500"
+                            >{{ step.label }}</span
+                        >
                     </li>
                 </ol>
 
-                <div class="mt-4 grid gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
+                <div
+                    class="mt-4 grid gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-800 dark:bg-slate-900"
+                >
                     <div class="flex justify-between gap-4">
                         <span class="text-slate-500">Order reference</span>
-                        <span class="font-mono font-semibold text-slate-900 dark:text-white">{{ current.order.reference }}</span>
+                        <span
+                            class="font-mono font-semibold text-slate-900 dark:text-white"
+                            >{{ current.order.reference }}</span
+                        >
                     </div>
                     <div class="flex justify-between gap-4">
                         <span class="text-slate-500">Expires</span>
-                        <span class="font-semibold text-slate-900 dark:text-white">{{ current.order.expires_at ? new Date(current.order.expires_at).toLocaleString() : 'No expiry' }}</span>
+                        <span
+                            class="font-semibold text-slate-900 dark:text-white"
+                            >{{
+                                current.order.expires_at
+                                    ? new Date(
+                                          current.order.expires_at,
+                                      ).toLocaleString()
+                                    : 'No expiry'
+                            }}</span
+                        >
                     </div>
-                    <p class="border-t border-slate-200 pt-2 text-slate-600 dark:border-slate-800 dark:text-slate-300" role="status">
+                    <p
+                        class="border-t border-slate-200 pt-2 text-slate-600 dark:border-slate-800 dark:text-slate-300"
+                        role="status"
+                    >
                         {{ current.lifecycle.message }}
                     </p>
                 </div>
 
+                <div
+                    v-if="paymentOpen && current.monitor.enabled"
+                    class="mt-4 flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-100"
+                    role="status"
+                    aria-live="polite"
+                    data-testid="on-demand-automatic-verification"
+                >
+                    <RefreshCw
+                        :class="[
+                            'mt-0.5 size-4 shrink-0',
+                            monitoring ? 'animate-spin' : '',
+                        ]"
+                        aria-hidden="true"
+                    />
+                    <div>
+                        <p class="font-bold">Payment checking is automatic</p>
+                        <p class="mt-1 leading-5">
+                            {{
+                                monitorMessage ??
+                                'Pay only once. We will keep checking while this order is open.'
+                            }}
+                        </p>
+                        <p class="mt-1 text-xs text-sky-700 dark:text-sky-300">
+                            {{ lastCheckedLabel }}
+                        </p>
+                    </div>
+                </div>
+
+                <div
+                    v-if="terminal"
+                    :class="[
+                        'mt-5 rounded-2xl border p-4 text-sm',
+                        latePaymentCredited
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100'
+                            : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200',
+                    ]"
+                    data-testid="on-demand-terminal-outcome"
+                >
+                    <p class="font-bold">
+                        {{
+                            latePaymentCredited
+                                ? 'Your money is safe'
+                                : 'No further action on this order'
+                        }}
+                    </p>
+                    <p class="mt-1 leading-6">
+                        {{ current.lifecycle.message }}
+                    </p>
+                    <p v-if="latePaymentCredited" class="mt-2 leading-6">
+                        Start a new issuance when you are ready. Under shortfall
+                        funding, your Client Funds will be applied first.
+                    </p>
+                </div>
+
                 <CockpitFundingMethodSelector
-                    v-if="!needsAttention"
+                    v-if="paymentOpen && !needsAttention"
                     v-model="selectedMode"
                     :selector="current.funding_selector"
                 />
@@ -299,80 +526,141 @@ function text(value: unknown): string | null {
                     class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
                     role="status"
                 >
-                    Funding instructions could not be prepared safely. No Pay Code was issued and payment has not been accepted for this order.
+                    Funding instructions could not be prepared safely. No Pay
+                    Code was issued and payment has not been accepted for this
+                    order.
                 </div>
 
                 <div
-                    v-else-if="selectedMode === 'bank_transfer'"
+                    v-else-if="paymentOpen && selectedMode === 'bank_transfer'"
                     class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900"
                     data-testid="on-demand-bank-transfer-instructions"
                 >
-                    <p class="text-xs font-bold tracking-wider text-slate-500 uppercase">Exact transfer amount</p>
-                    <p class="mt-1 text-3xl font-black text-slate-950 dark:text-white">{{ amount }}</p>
+                    <p
+                        class="text-xs font-bold uppercase tracking-wider text-slate-500"
+                    >
+                        Exact transfer amount
+                    </p>
+                    <p
+                        class="mt-1 text-3xl font-black text-slate-950 dark:text-white"
+                    >
+                        {{ amount }}
+                    </p>
                     <dl class="mt-4 grid gap-3 text-sm">
-                        <div v-if="text(instructions.institution)" class="flex justify-between gap-4">
+                        <div
+                            v-if="text(instructions.institution)"
+                            class="flex justify-between gap-4"
+                        >
                             <dt class="text-slate-500">Bank</dt>
-                            <dd class="font-semibold text-slate-900 dark:text-white">{{ text(instructions.institution) }}</dd>
+                            <dd
+                                class="font-semibold text-slate-900 dark:text-white"
+                            >
+                                {{ text(instructions.institution) }}
+                            </dd>
                         </div>
-                        <div v-if="text(instructions.account_name)" class="flex justify-between gap-4">
+                        <div
+                            v-if="text(instructions.account_name)"
+                            class="flex justify-between gap-4"
+                        >
                             <dt class="text-slate-500">Account name</dt>
-                            <dd class="text-right font-semibold text-slate-900 dark:text-white">{{ text(instructions.account_name) }}</dd>
+                            <dd
+                                class="text-right font-semibold text-slate-900 dark:text-white"
+                            >
+                                {{ text(instructions.account_name) }}
+                            </dd>
                         </div>
-                        <div v-if="text(instructions.funding_address)" class="flex justify-between gap-4">
+                        <div
+                            v-if="text(instructions.funding_address)"
+                            class="flex justify-between gap-4"
+                        >
                             <dt class="text-slate-500">Account number</dt>
-                            <dd class="font-mono font-semibold text-slate-900 dark:text-white">{{ text(instructions.funding_address) }}</dd>
+                            <dd
+                                class="font-mono font-semibold text-slate-900 dark:text-white"
+                            >
+                                {{ text(instructions.funding_address) }}
+                            </dd>
                         </div>
                     </dl>
                 </div>
 
                 <div
-                    v-else-if="selectedMode === 'self_top_up' && fixedQrPh?.fixed_amount && fixedQrPh.image"
+                    v-else-if="
+                        paymentOpen &&
+                        selectedMode === 'self_top_up' &&
+                        fixedQrPh?.fixed_amount &&
+                        fixedQrPh.image
+                    "
                     class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center dark:border-slate-800 dark:bg-slate-900"
                     data-testid="on-demand-fixed-qr-ph"
                 >
-                    <p class="text-xs font-bold tracking-wider text-slate-500 uppercase">Exact QR Ph amount</p>
-                    <p class="mt-1 text-3xl font-black text-slate-950 dark:text-white">{{ amount }}</p>
+                    <p
+                        class="text-xs font-bold uppercase tracking-wider text-slate-500"
+                    >
+                        Exact QR Ph amount
+                    </p>
+                    <p
+                        class="mt-1 text-3xl font-black text-slate-950 dark:text-white"
+                    >
+                        {{ amount }}
+                    </p>
                     <img
                         :src="fixedQrPh.image"
                         alt="Order-specific fixed-amount QR Ph"
                         class="mx-auto mt-4 aspect-square w-full max-w-72 rounded-2xl bg-white p-3 shadow-sm"
                     />
-                    <p class="mx-auto mt-4 max-w-sm text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    <p
+                        class="mx-auto mt-4 max-w-sm text-sm leading-6 text-slate-600 dark:text-slate-300"
+                    >
                         {{ fixedQrPh.notice }}
                     </p>
                 </div>
 
-                <div v-else class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                    {{ current.funding_selector.methods.find((method) => method.workspace_mode === selectedMode)?.unavailable_reason }}
+                <div
+                    v-else-if="paymentOpen"
+                    class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+                >
+                    {{
+                        current.funding_selector.methods.find(
+                            (method) => method.workspace_mode === selectedMode,
+                        )?.unavailable_reason
+                    }}
                 </div>
 
-                <p v-if="error" class="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700" role="alert">
+                <p
+                    v-if="error"
+                    class="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700"
+                    role="alert"
+                >
                     {{ error }}
                 </p>
 
-                <footer v-if="current.status !== 'issued'" class="mt-6 grid gap-3 sm:grid-cols-[1fr_auto]">
+                <footer
+                    v-if="current.status !== 'issued'"
+                    class="mt-6 grid gap-3 sm:grid-cols-[1fr_auto]"
+                >
                     <button
-                        v-if="!needsAttention"
+                        v-if="paymentOpen && !needsAttention"
                         type="button"
                         class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
-                        :disabled="checking"
+                        :disabled="checking || monitoring"
                         data-testid="on-demand-payment-check"
-                        @click="acknowledge"
+                        @click="checkNow"
                     >
-                        <LoaderCircle v-if="checking" class="size-4 animate-spin" aria-hidden="true" />
-                        {{ current.status === 'awaiting_payment'
-                            ? (selectedMode === 'self_top_up'
-                                ? 'I’ve paid by QR Ph — Check payment'
-                                : 'I’ve made the transfer — Check payment')
-                            : 'Check again' }}
+                        <LoaderCircle
+                            v-if="checking"
+                            class="size-4 animate-spin"
+                            aria-hidden="true"
+                        />
+                        <RefreshCw v-else class="size-4" aria-hidden="true" />
+                        Check now
                     </button>
                     <button
-                        v-if="canCloseForNow"
+                        v-if="terminal"
                         type="button"
                         class="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-300 px-4 font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200"
                         @click="closeForNow"
                     >
-                        Close for now
+                        Close
                     </button>
                     <button
                         v-if="current.order.can_cancel"
