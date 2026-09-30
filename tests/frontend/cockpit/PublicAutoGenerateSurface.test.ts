@@ -21,11 +21,24 @@ config.global.stubs = {
 };
 
 describe("Public Auto Generate surface", () => {
-  it("keeps composition available while removing cockpit-only controls", () => {
+  it("starts blank while removing every template control", () => {
     const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
       props: {
         templates: cockpitQuickGenerateTemplates,
         publicMode: true,
+        startupMode: "repeat_last",
+        lastInstructions: {
+          schema: "x-change.cockpit.quick-generate-last-instructions.v1",
+          saved_at: "2026-10-01T00:00:00Z",
+          instructions: {
+            cash: { amount: 999, currency: "PHP" },
+            metadata: {
+              custom: {
+                cockpit: { template_key: "money-changer" },
+              },
+            },
+          },
+        },
         showEngineeringPreview: false,
         showWorkspaceSwitcher: false,
         allowTemplateManagement: false,
@@ -53,6 +66,16 @@ describe("Public Auto Generate surface", () => {
     ).toBe(false);
     expect(
       wrapper
+        .find('[data-testid="cockpit-quick-generate-starting-point"]')
+        .exists(),
+    ).toBe(false);
+    expect(
+      wrapper
+        .find('[data-testid="cockpit-quick-generate-choose-template"]')
+        .exists(),
+    ).toBe(false);
+    expect(
+      wrapper
         .find('[data-testid="cockpit-quick-generate-save-template"]')
         .exists(),
     ).toBe(false);
@@ -66,5 +89,10 @@ describe("Public Auto Generate surface", () => {
         .find('[data-testid="cockpit-quick-generate-submit-button"]')
         .exists(),
     ).toBe(true);
+    expect(
+      wrapper
+        .get('[data-testid="cockpit-quick-generate-primary-amount"]')
+        .attributes("value"),
+    ).toBe("");
   });
 });

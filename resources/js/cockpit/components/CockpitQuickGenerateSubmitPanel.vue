@@ -1079,6 +1079,12 @@ function startBlank(): void {
 }
 
 function initializeStartingPoint(): void {
+  if (props.publicMode) {
+    startBlank();
+
+    return;
+  }
+
   if (props.campaignContext?.status === "available") {
     startingPoint.value =
       selectedTemplate.value === "blank-pay-code" ? "blank" : "template";
@@ -6729,6 +6735,7 @@ function instructionRecord(
         </section>
 
         <section
+          v-if="!publicMode"
           class="mt-4 border-t border-emerald-100 pt-4 dark:border-emerald-900/70"
           data-testid="cockpit-quick-generate-starting-point"
         >
