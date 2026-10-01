@@ -31,7 +31,7 @@ withDefaults(
 );
 
 const painPoints = [
-  "No asking for someone’s bank or wallet details",
+  "No asking for someone’s mobile number",
   "No transaction screenshot to send and verify",
   "No guessing whether the Pay Code was claimed",
 ];
