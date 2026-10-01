@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from "@inertiajs/vue3";
+import PayCodeLogo from "../../components/x-change/PayCodeLogo.vue";
 import {
   ArrowRight,
   BadgeCheck,
@@ -60,11 +61,12 @@ const painPoints = [
           class="inline-flex items-center gap-2 text-sm font-black tracking-tight text-slate-950 dark:text-white"
           data-testid="public-auto-generate-brand"
         >
-          <span
-            class="grid size-9 place-items-center rounded-xl bg-slate-950 text-sm text-white shadow-sm dark:bg-white dark:text-slate-950"
-            aria-hidden="true"
-            >||</span
-          >
+          <PayCodeLogo
+            variant="mark"
+            size="header"
+            class-name="!h-9 !max-h-9 !max-w-9"
+            data-testid="public-auto-generate-brand-mark"
+          />
           <span>Pay Code</span>
         </Link>
 
@@ -94,11 +96,22 @@ const painPoints = [
           class="pt-2 lg:sticky lg:top-6 lg:pt-8"
           data-testid="public-auto-generate-header"
         >
-          <p
-            class="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200"
-          >
-            No x-change Account required
-          </p>
+          <div class="flex flex-wrap items-center gap-2">
+            <p
+              class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200"
+            >
+              <span
+                class="size-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.14)]"
+                aria-hidden="true"
+              />
+              Live public utility
+            </p>
+            <p
+              class="inline-flex rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-slate-600 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-300"
+            >
+              No x-change Account required
+            </p>
+          </div>
           <h1
             class="mt-5 max-w-xl text-4xl font-black tracking-[-0.04em] text-slate-950 sm:text-5xl lg:text-6xl dark:text-white"
           >
@@ -111,9 +124,37 @@ const painPoints = [
             recipient claim it to the account they choose.
           </p>
           <p
+            class="mt-4 max-w-xl text-sm leading-6 text-slate-600 dark:text-slate-300"
+          >
+            Configure a Pay Code, review the exact cost, and pay once. Your
+            shareable Pay Code is issued after payment is verified.
+          </p>
+          <p
             class="mt-5 max-w-xl border-l-2 border-emerald-500 pl-4 text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100"
           >
             Let the meaning arrive with the money.
+          </p>
+
+          <div class="mt-6 flex flex-wrap items-center gap-3">
+            <a
+              href="#public-pay-code-builder"
+              class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+              data-testid="public-auto-generate-primary-action"
+            >
+              Create one now
+              <ArrowRight class="size-4" aria-hidden="true" />
+            </a>
+            <a
+              href="#public-how-it-works"
+              class="inline-flex rounded-full px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-white hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white"
+            >
+              How it works
+            </a>
+          </div>
+          <p
+            class="mt-3 max-w-xl text-xs leading-5 text-slate-500 dark:text-slate-400"
+          >
+            This uses real money. Nothing is issued until payment is confirmed.
           </p>
 
           <ul class="mt-7 grid gap-3" aria-label="Pay Code advantages">
@@ -132,6 +173,7 @@ const painPoints = [
         </header>
 
         <div
+          id="public-pay-code-builder"
           class="rounded-[1.75rem] border border-slate-200/80 bg-white/85 py-5 shadow-[0_24px_80px_-44px_rgba(15,23,42,0.55)] backdrop-blur sm:p-6 dark:border-slate-800 dark:bg-slate-900/80"
           data-testid="public-auto-generate-tool"
         >

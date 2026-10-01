@@ -138,7 +138,11 @@ describe("Public Auto Generate surface", () => {
     });
 
     expect(wrapper.text()).toContain("Create a Pay Code in seconds");
+    expect(wrapper.text()).toContain("Live public utility");
     expect(wrapper.text()).toContain("No asking for someone’s mobile number");
+    expect(wrapper.text()).toContain(
+      "This uses real money. Nothing is issued until payment is confirmed.",
+    );
     expect(wrapper.text()).toContain("Let the meaning arrive with the money");
     expect(wrapper.text()).toContain("Pull, not push");
     expect(wrapper.text()).toContain("Send more than money");
@@ -152,5 +156,15 @@ describe("Public Auto Generate surface", () => {
         .get('[data-testid="public-auto-generate-sign-in"]')
         .attributes("href"),
     ).toBe("/login");
+    expect(
+      wrapper
+        .get('[data-testid="public-auto-generate-brand-mark"]')
+        .attributes("src"),
+    ).toBe("/vendor/x-change/images/pay-code/pay-code-mark.svg");
+    expect(
+      wrapper
+        .get('[data-testid="public-auto-generate-primary-action"]')
+        .attributes("href"),
+    ).toBe("#public-pay-code-builder");
   });
 });
