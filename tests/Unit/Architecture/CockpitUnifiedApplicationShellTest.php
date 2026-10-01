@@ -7,6 +7,7 @@ it('keeps cockpit pages inside the single package-owned host shell', function ()
     $layout = file_get_contents($root.'/resources/js/cockpit/layouts/CockpitLayout.vue');
     $sidebar = file_get_contents($root.'/stubs/resources/js/components/AppSidebar.vue.stub');
     $appBootstrap = file_get_contents($root.'/stubs/resources/js/app.ts.stub');
+    $cockpitShell = file_get_contents($root.'/stubs/resources/js/layouts/app/AppSidebarLayoutCockpit.vue.stub');
     $serviceProvider = file_get_contents($root.'/src/Providers/XChangeServiceProvider.php');
     $documentationPage = file_get_contents($root.'/resources/js/pages/x-change/cockpit/Documentation.vue');
     $documentationWorkspace = file_get_contents($root.'/resources/js/cockpit/pages/Documentation.vue');
@@ -44,6 +45,7 @@ it('keeps cockpit pages inside the single package-owned host shell', function ()
         )
         ->not->toContain('Repository')
         ->and($appBootstrap)->toContain(
+            "import AppSidebarLayoutCockpit from '@/layouts/app/AppSidebarLayoutCockpit.vue';",
             "case name.startsWith('x-change/claim/'):",
             "case name.startsWith('x-change/public/'):",
             "case name.startsWith('form-flow/'):",
@@ -56,10 +58,23 @@ it('keeps cockpit pages inside the single package-owned host shell', function ()
         ->and($appBootstrap)->toContain(
             "case name.startsWith('auth/'):",
             "case name.startsWith('settings/'):",
+            "case name.startsWith('x-change/cockpit/'):",
+            'return AppSidebarLayoutCockpit;',
             'return AppLayout;',
+        )
+        ->and($cockpitShell)->toContain(
+            '<div class="hidden md:block">',
+            "const mobileBreakpoint = '(max-width: 767px)';",
+            'window.scrollY <= 0',
+            'distance >= revealDistance',
+            'data-testid="cockpit-mobile-revealed-header"',
+            'fixed inset-x-0 top-0',
+            'md:hidden',
+            'window.removeEventListener',
         )
         ->and($serviceProvider)->toContain(
             "stubs/resources/js/app.ts.stub') => resource_path('js/app.ts')",
+            "stubs/resources/js/layouts/app/AppSidebarLayoutCockpit.vue.stub') => resource_path('js/layouts/app/AppSidebarLayoutCockpit.vue')",
         )
         ->and($documentationPage)->toContain(
             "import Documentation from '../../../cockpit/pages/Documentation.vue';",

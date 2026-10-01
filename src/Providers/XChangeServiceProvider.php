@@ -2429,6 +2429,7 @@ class XChangeServiceProvider extends ServiceProvider
 
         $this->publishes([
             $this->packagePath('stubs/resources/js/components/AppSidebar.vue.stub') => resource_path('js/components/AppSidebar.vue'),
+            $this->packagePath('stubs/resources/js/layouts/app/AppSidebarLayoutCockpit.vue.stub') => resource_path('js/layouts/app/AppSidebarLayoutCockpit.vue'),
             $this->packagePath('stubs/resources/js/app.ts.stub') => resource_path('js/app.ts'),
         ], 'x-change-shell');
 
