@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Http\Request;
 use Illuminate\Session\ArraySessionHandler;
 use Illuminate\Session\Store;
+use Illuminate\Support\Facades\URL;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitOnDemandIssuanceFundingOrderController;
 use LBHurtado\XChange\Models\CommercialPrincipal;
@@ -132,6 +133,70 @@ it('authorizes funding-order access for the non-login commercial principal', fun
         ->and($response->getData(true)['order']['reference'])->toBe($order->reference);
 });
 
+it('exposes signed recovery and receipt links without exposing a cockpit URL', function (): void {
+    $order = makePublicAutoGenerateFundingOrder();
+    $request = request();
+    $request->setLaravelSession(app('session')->driver());
+    $request->session()->start();
+
+    $token = app(PublicIssuanceOrderAccess::class)->bind($order, $request);
+    $projection = app(OnDemandIssuanceFundingOrderPresenter::class)->present(
+        $order->refresh(),
+        $token,
+        true,
+    );
+
+    expect(data_get($projection, 'public_links.recovery'))->toContain('signature=')
+        ->and(data_get($projection, 'public_links.receipt'))->toContain('signature=')
+        ->and(data_get($projection, 'order.voucher.detail_url'))->toBeNull();
+});
+
+it('recovers only a public order through its valid signed link', function (): void {
+    provisionPublicAutoGeneratePrincipal();
+    $order = makePublicAutoGenerateFundingOrder();
+    $bindingRequest = request();
+    $bindingRequest->setLaravelSession(app('session')->driver());
+    $bindingRequest->session()->start();
+    app(PublicIssuanceOrderAccess::class)->bind($order, $bindingRequest);
+
+    $url = URL::temporarySignedRoute(
+        'x-change.public-auto-generate.recover',
+        now()->addMinute(),
+        ['order' => $order->reference],
+    );
+
+    $this->get($url)
+        ->assertRedirect(route('x-change.public-auto-generate.show'))
+        ->assertSessionHas('x-change.public-auto-generate.active-order.reference', $order->reference);
+
+    $this->get($url.'&tampered=1')->assertNotFound();
+});
+
+it('renders a signed redacted public issuance receipt', function (): void {
+    provisionPublicAutoGeneratePrincipal();
+    $order = makePublicAutoGenerateFundingOrder();
+    $bindingRequest = request();
+    $bindingRequest->setLaravelSession(app('session')->driver());
+    $bindingRequest->session()->start();
+    app(PublicIssuanceOrderAccess::class)->bind($order, $bindingRequest);
+
+    $url = URL::temporarySignedRoute(
+        'x-change.public-auto-generate.receipt',
+        now()->addMinute(),
+        ['order' => $order->reference],
+    );
+
+    $this->withHeaders([
+        'X-Inertia' => 'true',
+        'Accept' => 'text/html, application/xhtml+xml',
+    ])->get($url)
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/public/IssuanceReceipt')
+        ->assertJsonPath('props.receipt.order_reference', $order->reference)
+        ->assertJsonPath('props.receipt.redactions.payer_identity', true)
+        ->assertJsonMissingPath('props.receipt.provider_transaction_id');
+});
+
 function makePublicAutoGenerateFundingOrder(string $issuerId = '1'): PayCodeIssuanceFundingOrder
 {
     return PayCodeIssuanceFundingOrder::query()->create([
@@ -157,5 +222,16 @@ function makePublicAutoGenerateFundingOrder(string $issuerId = '1'): PayCodeIssu
         'idempotency_fingerprint' => str_repeat('d', 64),
         'expires_at' => now()->addMinutes(30),
         'metadata' => [],
+    ]);
+}
+
+function provisionPublicAutoGeneratePrincipal(): CommercialPrincipal
+{
+    return CommercialPrincipal::query()->create([
+        'reference' => 'commercial-public',
+        'legal_name' => '3neti R&D OPC',
+        'authorization_reference' => 'commissioning:commercial-public:v1',
+        'active' => true,
+        'metadata' => ['interactive_login' => false],
     ]);
 }

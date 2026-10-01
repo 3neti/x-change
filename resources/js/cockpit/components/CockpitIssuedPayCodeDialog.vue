@@ -3,6 +3,7 @@ import {
     Check,
     ExternalLink,
     LoaderCircle,
+    ReceiptText,
     ScanQrCode,
     X,
 } from 'lucide-vue-next';
@@ -55,6 +56,8 @@ const props = withDefaults(
             settled_at: string | null;
             issued_at: string | null;
         } | null;
+        publicReceiptUrl?: string | null;
+        publicAccountUrl?: string | null;
     }>(),
     {
         code: null,
@@ -76,6 +79,8 @@ const props = withDefaults(
         costEstimate: null,
         quantity: 1,
         fundingReceipt: null,
+        publicReceiptUrl: null,
+        publicAccountUrl: null,
     },
 );
 
@@ -671,6 +676,27 @@ function handleEscape(): void {
                                 </div>
                             </dl>
                         </details>
+
+                        <a
+                            v-if="publicReceiptUrl"
+                            :href="publicReceiptUrl"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-emerald-400 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                            data-testid="public-issued-pay-code-receipt-link"
+                        >
+                            <ReceiptText class="size-4" aria-hidden="true" />
+                            Open issuance receipt
+                        </a>
+
+                        <a
+                            v-if="publicAccountUrl"
+                            :href="publicAccountUrl"
+                            class="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-emerald-300 bg-emerald-50 px-4 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
+                            data-testid="public-issued-pay-code-account-link"
+                        >
+                            Go professional · Open an Account
+                        </a>
 
                         <button
                             v-if="fundingReceipt"

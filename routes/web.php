@@ -150,6 +150,8 @@ use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentVerificationCheckContr
 use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationAcceptanceController;
 use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationPageController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicAutoGeneratePageController;
+use LBHurtado\XChange\Http\Controllers\Web\PublicIssuanceReceiptController;
+use LBHurtado\XChange\Http\Controllers\Web\PublicIssuanceRecoveryController;
 use LBHurtado\XChange\Http\Controllers\Web\StoredValueInstrumentPageController;
 use LBHurtado\XChange\Http\Middleware\AuthorizePublicIssuanceOrderAccess;
 use LBHurtado\XChange\Http\Middleware\GuardPairedCampaignClaim;
@@ -200,6 +202,12 @@ Route::prefix('x/auto-generate')->middleware([
     Route::post('/', CockpitQuickGenerateMutationRouteShellController::class)
         ->middleware('throttle:6,1,public-auto-generate-issue:')
         ->name('x-change.public-auto-generate.store');
+    Route::get('recover/{order:reference}', PublicIssuanceRecoveryController::class)
+        ->middleware('throttle:6,1,public-auto-generate-recover:')
+        ->name('x-change.public-auto-generate.recover');
+    Route::get('receipts/{order:reference}', PublicIssuanceReceiptController::class)
+        ->middleware('throttle:30,1,public-auto-generate-receipt:')
+        ->name('x-change.public-auto-generate.receipt');
 
     Route::prefix('funding-orders/{order:reference}')
         ->middleware(AuthorizePublicIssuanceOrderAccess::class)

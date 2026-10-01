@@ -885,6 +885,10 @@ export type CockpitOnDemandIssuanceFundingProjection = {
   status: string;
   funding_required: boolean;
   guest_access_token?: string | null;
+  public_links?: {
+    recovery: string;
+    receipt: string;
+  } | null;
   lifecycle: {
     current:
       | "awaiting_payment"

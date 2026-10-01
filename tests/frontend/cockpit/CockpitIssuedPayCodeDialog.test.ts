@@ -19,6 +19,34 @@ afterEach(() => {
 });
 
 describe('issued Pay Code dialog', () => {
+    it('offers a public receipt and professional account handoff', () => {
+        const wrapper = mount(CockpitIssuedPayCodeDialog, {
+            props: {
+                open: true,
+                code: 'READY-1',
+                amount: '25.00',
+                currency: 'PHP',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'redeemable',
+                publicReceiptUrl:
+                    'https://example.test/x/auto-generate/receipts/ORDER-1?signature=signed',
+                publicAccountUrl: '/register',
+            },
+            global: { stubs: { Teleport: true } },
+        });
+
+        expect(
+            wrapper
+                .get('[data-testid="public-issued-pay-code-receipt-link"]')
+                .attributes('href'),
+        ).toContain('/receipts/ORDER-1');
+        expect(
+            wrapper
+                .get('[data-testid="public-issued-pay-code-account-link"]')
+                .attributes('href'),
+        ).toBe('/register');
+    });
+
     it('loads a distinct payer QR for a payable Pay Code', async () => {
         const fetchMock = vi.fn().mockResolvedValue({
             ok: true,

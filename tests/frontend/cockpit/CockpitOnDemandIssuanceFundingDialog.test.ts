@@ -8,6 +8,12 @@ const projection: CockpitOnDemandIssuanceFundingProjection = {
   schema: "x-change.cockpit.on-demand-issuance-funding.v1",
   status: "awaiting_payment",
   funding_required: true,
+  public_links: {
+    recovery:
+      "https://example.test/x/auto-generate/recover/ORDER-1?signature=signed",
+    receipt:
+      "https://example.test/x/auto-generate/receipts/ORDER-1?signature=signed",
+  },
   lifecycle: {
     current: "awaiting_payment",
     verification_unavailable: false,
@@ -173,6 +179,11 @@ describe("CockpitOnDemandIssuanceFundingDialog", () => {
       "Payment checking is automatic",
     );
     expect(document.body.textContent).toContain("Pay only once");
+    expect(
+      document.body.querySelector(
+        '[data-testid="public-issuance-recovery-link"]',
+      ),
+    ).not.toBeNull();
     expect(
       document.body.querySelector('[data-testid="on-demand-payment-check"]'),
     ).not.toBeNull();

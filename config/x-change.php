@@ -1167,6 +1167,8 @@ return [
 
     'public_auto_generate' => [
         'enabled' => (bool) env('XCHANGE_PUBLIC_AUTO_GENERATE_ENABLED', true),
+        'recovery_link_ttl_days' => (int) env('XCHANGE_PUBLIC_AUTO_GENERATE_RECOVERY_TTL_DAYS', 7),
+        'receipt_link_ttl_days' => (int) env('XCHANGE_PUBLIC_AUTO_GENERATE_RECEIPT_TTL_DAYS', 30),
     ],
 
     'funding' => [

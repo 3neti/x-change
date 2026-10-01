@@ -33,6 +33,7 @@ use LBHurtado\XChange\Services\Cockpit\QuickGenerateLastInstructionsStore;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingPolicy;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingRequirement;
 use LBHurtado\XChange\Services\IdempotencyService;
+use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceInstructionPolicy;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceOrderAccess;
 use LBHurtado\XChange\Services\QrArtifactFactory;
 use Throwable;
@@ -63,6 +64,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         QuickGenerateLastInstructionsStore $lastInstructions,
         RememberRiderLibraryUsage $rememberRiderLibraryUsage,
         PublicIssuanceOrderAccess $publicOrderAccess,
+        PublicIssuanceInstructionPolicy $publicIssuancePolicy,
     ): JsonResponse {
         $publicAutoGenerate = $request->attributes->get('x_change_public_auto_generate') === true;
 
@@ -78,6 +80,11 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         }
         $payload = $this->posSaleReferences->sanitizeBrowserPayload($request->validated());
         $payload = $this->normalizePayloadForIssuance($payload);
+
+        if ($publicAutoGenerate) {
+            $publicIssuancePolicy->assertAllowed($payload);
+        }
+
         $validatedPayload = $payload;
         $key = $idempotency->extractKey($request);
         $correlationId = $request->header((string) config('x-change.api.correlation.header', 'X-Correlation-ID'));

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Cockpit;
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\URL;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
@@ -41,6 +42,18 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
             'funding_required' => $order->on_demand_amount_minor > 0,
             'lifecycle' => $this->lifecycle($order),
             'guest_access_token' => $public ? $guestAccessToken : null,
+            'public_links' => $public ? [
+                'recovery' => URL::temporarySignedRoute(
+                    'x-change.public-auto-generate.recover',
+                    now()->addDays(max(1, (int) config('x-change.public_auto_generate.recovery_link_ttl_days', 7))),
+                    ['order' => $order->reference],
+                ),
+                'receipt' => URL::temporarySignedRoute(
+                    'x-change.public-auto-generate.receipt',
+                    now()->addDays(max(1, (int) config('x-change.public_auto_generate.receipt_link_ttl_days', 30))),
+                    ['order' => $order->reference],
+                ),
+            ] : null,
             'actions' => $public ? [
                 'show' => route('x-change.public-auto-generate.funding-orders.show', ['order' => $order->reference], false),
                 'acknowledge' => route('x-change.public-auto-generate.funding-orders.acknowledge', ['order' => $order->reference], false),

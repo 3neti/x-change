@@ -1203,6 +1203,7 @@ function stringValue(value: unknown): string | null {
           :active-on-demand-funding-order="props.active_on_demand_funding_order"
           :on-demand-issuance-policy="props.on_demand_issuance_policy"
           :public-mode="publicAutoGenerate"
+          :public-account-url="props.public_navigation?.register_url ?? null"
           :show-engineering-preview="
             props.surface_profile?.show_engineering_preview ?? true
           "

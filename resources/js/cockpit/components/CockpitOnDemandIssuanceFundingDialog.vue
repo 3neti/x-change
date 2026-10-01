@@ -464,6 +464,14 @@ function text(value: unknown): string | null {
           >
             {{ current.lifecycle.message }}
           </p>
+          <a
+            v-if="current.public_links?.recovery"
+            :href="current.public_links.recovery"
+            class="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700 transition hover:border-emerald-400 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+            data-testid="public-issuance-recovery-link"
+          >
+            Save or reopen this order
+          </a>
         </div>
 
         <div

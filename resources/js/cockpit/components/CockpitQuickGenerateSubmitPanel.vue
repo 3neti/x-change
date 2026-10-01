@@ -140,6 +140,7 @@ const props = withDefaults(
       basis: "full_amount" | "shortfall";
     };
     publicMode?: boolean;
+    publicAccountUrl?: string | null;
     showEngineeringPreview?: boolean;
     showWorkspaceSwitcher?: boolean;
     allowTemplateManagement?: boolean;
@@ -153,6 +154,7 @@ const props = withDefaults(
     instructionCapabilities: () => ({}),
     riderLibrary: () => [],
     publicMode: false,
+    publicAccountUrl: null,
     showEngineeringPreview: true,
     showWorkspaceSwitcher: true,
     allowTemplateManagement: true,
@@ -7090,6 +7092,12 @@ function instructionRecord(
       :collection-attempt-url="collectionAttemptUrl"
       :payment-url="publicPaymentUrl"
       :funding-receipt="onDemandFundingProjection?.order.receipt ?? null"
+      :public-receipt-url="
+        publicMode
+          ? (onDemandFundingProjection?.public_links?.receipt ?? null)
+          : null
+      "
+      :public-account-url="publicMode ? publicAccountUrl : null"
       @close="issuedPayCodeDialogOpen = false"
       @generate-another="generateAnotherAfterOnDemandIssuance"
     />
