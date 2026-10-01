@@ -15,7 +15,6 @@ use LBHurtado\XChange\Actions\Funding\PrepareOnDemandPayCodeIssuance;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
-use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftCompilerContract;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftValidatorContract;
 use LBHurtado\XChange\Contracts\CockpitQuickGenerateDraftFactoryContract;
@@ -35,12 +34,13 @@ use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingPolicy;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingRequirement;
 use LBHurtado\XChange\Services\IdempotencyService;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceOrderAccess;
+use LBHurtado\XChange\Services\QrArtifactFactory;
 use Throwable;
 
 class CockpitQuickGenerateMutationRouteShellController extends Controller
 {
     public function __construct(
-        private readonly ClaimUrlQrRendererContract $claimUrlQrRenderer,
+        private readonly QrArtifactFactory $qrArtifacts,
         private readonly ClaimShareCardUrlResolverContract $shareCardUrls,
         private readonly CockpitPosSaleReferenceService $posSaleReferences,
     ) {}
@@ -426,6 +426,8 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         $posReference = $voucher instanceof Voucher
             ? $this->posSaleReferences->forVoucher($voucher)
             : null;
+        $directClaimQr = $this->qrArtifacts->payCode($result->code, $result->links->redeem);
+        $claimEntryQr = $this->qrArtifacts->claimEntry($result->code);
 
         return [
             'code' => $result->code,
@@ -444,7 +446,11 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
             'links' => [
                 'redeem' => $result->links->redeem,
                 'redeem_path' => $result->links->redeem_path,
-                'claim_qr' => $this->claimUrlQrRenderer->render($result->links->redeem),
+                'claim_qr' => $directClaimQr->image_data_uri,
+                'qr_artifacts' => [
+                    'direct_claim' => $directClaimQr->toArray(),
+                    'claim_entry' => $claimEntryQr->toArray(),
+                ],
                 'share_card' => $voucher instanceof Voucher
                     ? $this->shareCardUrls->resolve($voucher)
                     : null,

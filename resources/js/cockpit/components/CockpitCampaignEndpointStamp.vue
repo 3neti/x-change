@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { QrCode } from 'lucide-vue-next';
 import { nextTick, ref, watch } from 'vue';
+import XChangeQrArtifact from '@/components/x-change/XChangeQrArtifact.vue';
 import CockpitExpandedStampQr from './CockpitExpandedStampQr.vue';
 
 const props = withDefaults(
@@ -115,12 +116,15 @@ function escape(event: KeyboardEvent): void {
                     @click="showQr"
                     class="flex min-h-40 items-center justify-center rounded-xl border border-slate-200 bg-white p-2"
                 >
-                    <img
+                    <XChangeQrArtifact
                         v-if="campaign.qr_data_uri"
                         :src="campaign.qr_data_uri"
                         :alt="`Endpoint stamp code for ${campaign.title}`"
-                        class="size-36"
-                        data-testid="campaign-endpoint-stamp-qr"
+                        kind="campaign_endpoint"
+                        title="Start Pay Code journey"
+                        description="Scan to generate a fresh Pay Code."
+                        test-id="campaign-endpoint-stamp-artifact"
+                        image-test-id="campaign-endpoint-stamp-qr"
                     />
                     <QrCode
                         v-else

@@ -22,6 +22,7 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
+import XChangeQrArtifact from '@/components/x-change/XChangeQrArtifact.vue';
 import { store as createPaymentAttempt } from '@/routes/x-change/pay/attempts';
 import { store as checkPaymentAttempt } from '@/routes/x-change/pay/attempts/checks';
 import { download as downloadPaymentQr } from '@/routes/x-change/pay/attempts/qr';
@@ -529,12 +530,15 @@ function printReceipt(): void {
                         </div>
                         <div
                             v-else-if="qrSource"
-                            class="mx-auto grid w-fit justify-items-center gap-3 rounded-xl border border-border bg-white p-4 shadow-sm"
+                            class="mx-auto grid w-fit max-w-full justify-items-center gap-3"
                         >
-                            <img
+                            <XChangeQrArtifact
                                 :src="qrSource"
                                 :alt="`QR Ph code for ${attemptAmount}`"
-                                class="size-64 max-w-full"
+                                kind="qrph_payment"
+                                :title="`Pay ${attemptAmount}`"
+                                description="Provider-generated payment QR"
+                                test-id="payer-qr-ph-artifact"
                             />
                             <Button
                                 v-if="qrDownloadUrl"
@@ -544,7 +548,8 @@ function printReceipt(): void {
                                 data-testid="payer-download-qr"
                             >
                                 <a :href="qrDownloadUrl" download>
-                                    <Download class="mr-2 h-4 w-4" />Download QR Ph
+                                    <Download class="mr-2 h-4 w-4" />Download QR
+                                    Ph
                                 </a>
                             </Button>
                         </div>

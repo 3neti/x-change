@@ -72,7 +72,12 @@ describe('Cockpit funding QR address', () => {
             wrapper
                 .get('[data-testid="standing-funding-address-qr"]')
                 .classes(),
-        ).toEqual(expect.arrayContaining(['size-64', 'sm:size-72']));
+        ).toEqual(expect.arrayContaining(['aspect-square', 'w-full']));
+        expect(
+            wrapper
+                .get('[data-testid="standing-funding-address-artifact"]')
+                .attributes('data-kind'),
+        ).toBe('qrph_payment');
     });
 
     it('previews format changes and blocks labels over 25 characters', async () => {

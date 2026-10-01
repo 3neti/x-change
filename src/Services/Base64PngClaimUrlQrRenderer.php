@@ -35,6 +35,9 @@ class Base64PngClaimUrlQrRenderer implements ClaimUrlQrRendererContract
             size: 240,
             margin: 8,
             roundBlockSizeMode: RoundBlockSizeMode::Margin,
+            logoPath: dirname(__DIR__, 2).'/resources/assets/images/pay-code/pay-code-mark.png',
+            logoResizeToWidth: 44,
+            logoPunchoutBackground: true,
         ))->build();
 
         return $result->getDataUri();

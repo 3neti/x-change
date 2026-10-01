@@ -3,6 +3,11 @@ import CockpitPayCodeTemplateStoreController from "@/actions/LBHurtado/XChange/H
 import CockpitPayCodeTemplateUpdateController from "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPayCodeTemplateUpdateController";
 import type { RequestPayload } from "@inertiajs/core";
 import { Link, router } from "@inertiajs/vue3";
+import type {
+  XChangePayCodeQrArtifacts,
+  XChangeQrArtifactData,
+  XChangeQrArtifactKind,
+} from "@/components/x-change/qrArtifacts";
 import {
   Check,
   ChevronDown,
@@ -2314,6 +2319,31 @@ const beneficiaryClaimQr = computed<string | null>(() => {
   );
 });
 
+const beneficiaryQrArtifacts = computed<XChangePayCodeQrArtifacts | null>(
+  () => {
+    const directClaim = qrArtifactValue(
+      dataGet(lastResponse.value, [
+        "result",
+        "links",
+        "qr_artifacts",
+        "direct_claim",
+      ]),
+    );
+    const claimEntry = qrArtifactValue(
+      dataGet(lastResponse.value, [
+        "result",
+        "links",
+        "qr_artifacts",
+        "claim_entry",
+      ]),
+    );
+
+    return directClaim && claimEntry
+      ? { direct_claim: directClaim, claim_entry: claimEntry }
+      : null;
+  },
+);
+
 const beneficiaryShareCardUrl = computed<string | null>(() => {
   return stringValue(
     dataGet(lastResponse.value, ["result", "links", "share_card"]),
@@ -4613,6 +4643,7 @@ function handleOnDemandIssued(
         redeem: voucher.claim_url,
         redeem_path: voucher.claim_url,
         claim_qr: voucher.claim_qr,
+        qr_artifacts: voucher.qr_artifacts,
         share_card: voucher.share_card_url,
         cockpit_detail: voucher.detail_url,
       },
@@ -5074,6 +5105,46 @@ function stringValue(value: unknown): string | null {
   const normalized = String(value).trim();
 
   return normalized === "" ? null : normalized;
+}
+
+function qrArtifactValue(value: unknown): XChangeQrArtifactData | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+
+  const artifact = value as Record<string, unknown>;
+  const kind = stringValue(artifact.kind);
+  const destination = stringValue(artifact.destination);
+  const imageDataUri = stringValue(artifact.image_data_uri);
+  const title = stringValue(artifact.title);
+  const description = stringValue(artifact.description);
+  const identifier = stringValue(artifact.identifier);
+  const supportedKinds: XChangeQrArtifactKind[] = [
+    "claim_entry",
+    "pay_code",
+    "campaign_endpoint",
+    "qrph_payment",
+  ];
+
+  if (
+    !supportedKinds.includes(kind as XChangeQrArtifactKind) ||
+    destination === null ||
+    imageDataUri === null ||
+    title === null ||
+    description === null
+  ) {
+    return null;
+  }
+
+  return {
+    kind: kind as XChangeQrArtifactKind,
+    destination,
+    image_data_uri: imageDataUri,
+    title,
+    description,
+    identifier,
+    center_mark: artifact.center_mark === "none" ? "none" : "pay_code",
+  };
 }
 
 function isValidEmail(value: string): boolean {
@@ -6918,6 +6989,7 @@ function instructionRecord(
       :quantity="count"
       :claim-url="beneficiaryClaimUrl"
       :claim-qr="beneficiaryClaimQr"
+      :qr-artifacts="beneficiaryQrArtifacts"
       :share-card-url="beneficiaryShareCardUrl"
       :detail-url="cockpitDetailUrl"
       :collection-attempt-url="collectionAttemptUrl"

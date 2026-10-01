@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Minimize2 } from 'lucide-vue-next';
 import { ref } from 'vue';
+import XChangeQrArtifact from '@/components/x-change/XChangeQrArtifact.vue';
+import type { XChangeQrArtifactKind } from '@/components/x-change/qrArtifacts';
 
 withDefaults(
     defineProps<{
@@ -9,10 +11,16 @@ withDefaults(
         title: string;
         description: string;
         testId: string;
+        kind?: XChangeQrArtifactKind;
+        identifier?: string | null;
         returnLabel?: string;
         returnTestId?: string;
     }>(),
-    { returnLabel: 'Back to stamp' },
+    {
+        kind: 'campaign_endpoint',
+        identifier: null,
+        returnLabel: 'Back to stamp',
+    },
 );
 defineEmits<{ restore: [] }>();
 const returnButton = ref<HTMLButtonElement | null>(null);
@@ -37,17 +45,20 @@ defineExpose({ focus: () => returnButton.value?.focus() });
                     {{ description }}
                 </p>
             </div>
-            <button
-                ref="returnButton"
-                type="button"
-                class="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-                :data-testid="returnTestId ?? `${testId}-restore`"
-                @click="$emit('restore')"
-            >
-                <Minimize2 class="size-3.5" aria-hidden="true" />{{
-                    returnLabel
-                }}
-            </button>
+            <div class="flex flex-wrap items-center justify-end gap-2">
+                <slot name="toolbar" />
+                <button
+                    ref="returnButton"
+                    type="button"
+                    class="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                    :data-testid="returnTestId ?? `${testId}-restore`"
+                    @click="$emit('restore')"
+                >
+                    <Minimize2 class="size-3.5" aria-hidden="true" />{{
+                        returnLabel
+                    }}
+                </button>
+            </div>
         </div>
         <button
             type="button"
@@ -57,14 +68,16 @@ defineExpose({ focus: () => returnButton.value?.focus() });
             :data-testid="`${testId}-button`"
             @click="$emit('restore')"
         >
-            <img
+            <XChangeQrArtifact
                 :src="src"
                 :alt="alt"
-                class="aspect-square w-full max-w-2xl object-contain"
-                width="1024"
-                height="1024"
-                decoding="async"
-                :data-testid="`${testId}-image`"
+                :kind="kind"
+                :title="title"
+                :description="description"
+                :identifier="identifier"
+                :test-id="`${testId}-artifact`"
+                :image-test-id="`${testId}-image`"
+                expanded
             />
         </button>
     </div>

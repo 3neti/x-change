@@ -935,6 +935,7 @@ export type CockpitOnDemandIssuanceFundingProjection = {
       currency: string;
       claim_url: string;
       claim_qr: string;
+      qr_artifacts: import("@/components/x-change/qrArtifacts").XChangePayCodeQrArtifacts;
       share_card_url: string;
       detail_url: string | null;
     } | null;

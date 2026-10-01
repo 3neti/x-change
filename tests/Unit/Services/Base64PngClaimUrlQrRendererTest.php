@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use LBHurtado\XChange\Services\Base64PngClaimUrlQrRenderer;
+use Zxing\QrReader;
 
 it('renders a canonical claim URL as a base64 PNG data URI', function (): void {
     $rendered = (new Base64PngClaimUrlQrRenderer)
@@ -12,6 +13,11 @@ it('renders a canonical claim URL as a base64 PNG data URI', function (): void {
         ->toStartWith('data:image/png;base64,')
         ->and(base64_decode(str_replace('data:image/png;base64,', '', $rendered), true))
         ->toStartWith("\x89PNG");
+
+    $png = base64_decode(str_replace('data:image/png;base64,', '', $rendered), true);
+    $decoded = new QrReader($png, QrReader::SOURCE_TYPE_BLOB, false);
+
+    expect($decoded->text())->toBe('https://example.test/x/claim/PAY-QR-1');
 });
 
 it('rejects non-HTTP claim destinations', function (string $claimUrl): void {

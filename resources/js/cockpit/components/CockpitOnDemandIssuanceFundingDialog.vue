@@ -8,6 +8,7 @@ import {
   X,
 } from "lucide-vue-next";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
+import XChangeQrArtifact from "@/components/x-change/XChangeQrArtifact.vue";
 import type {
   CockpitOnDemandIssuanceFundingProjection,
   CockpitPrimaryFundingWorkspaceMode,
@@ -608,10 +609,14 @@ function text(value: unknown): string | null {
           <p class="mt-1 text-3xl font-black text-slate-950 dark:text-white">
             {{ amount }}
           </p>
-          <img
+          <XChangeQrArtifact
             :src="fixedQrPh.image"
             alt="Order-specific fixed-amount QR Ph"
-            class="mx-auto mt-4 aspect-square w-full max-w-72 rounded-2xl bg-white p-3 shadow-sm"
+            kind="qrph_payment"
+            :title="`Pay ${amount}`"
+            description="Order-specific fixed-amount QR Ph"
+            class="mx-auto mt-4 max-w-sm"
+            test-id="on-demand-qr-ph-artifact"
           />
           <p
             class="mx-auto mt-4 max-w-sm text-sm leading-6 text-slate-600 dark:text-slate-300"

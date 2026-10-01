@@ -7,10 +7,10 @@ namespace LBHurtado\XChange\Services\Cockpit;
 use Illuminate\Support\Facades\Route;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
-use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
+use LBHurtado\XChange\Services\QrArtifactFactory;
 use Throwable;
 
 final readonly class OnDemandIssuanceFundingOrderPresenter
@@ -18,7 +18,7 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
     public function __construct(
         private FundingInstructionPresenter $instructions,
         private FundingMethodSelectorCockpitReadModel $selectors,
-        private ClaimUrlQrRendererContract $claimQr,
+        private QrArtifactFactory $qrArtifacts,
         private ClaimShareCardUrlResolverContract $shareCardUrls,
     ) {}
 
@@ -111,6 +111,8 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
     private function voucher(Voucher $voucher, PayCodeIssuanceFundingOrder $order): array
     {
         $claimUrl = route('x-change.claim.show', ['code' => $voucher->code]);
+        $directClaimQr = $this->qrArtifacts->payCode((string) $voucher->code, $claimUrl);
+        $claimEntryQr = $this->qrArtifacts->claimEntry((string) $voucher->code);
         $amount = data_get($order->instructions_ciphertext, 'cash.amount', 0);
         $currency = data_get($order->instructions_ciphertext, 'cash.currency', $order->currency);
 
@@ -119,7 +121,11 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
             'amount' => is_numeric($amount) ? (float) $amount : 0.0,
             'currency' => is_string($currency) && $currency !== '' ? $currency : $order->currency,
             'claim_url' => $claimUrl,
-            'claim_qr' => $this->claimQr->render($claimUrl),
+            'claim_qr' => $directClaimQr->image_data_uri,
+            'qr_artifacts' => [
+                'direct_claim' => $directClaimQr->toArray(),
+                'claim_entry' => $claimEntryQr->toArray(),
+            ],
             'share_card_url' => $this->shareCardUrl($voucher),
             'detail_url' => Route::has('x-change.cockpit.pay-codes.show')
                 ? route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code], false)

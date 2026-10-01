@@ -2,6 +2,7 @@
 import { useForm } from '@inertiajs/vue3';
 import { RefreshCw } from 'lucide-vue-next';
 import { computed } from 'vue';
+import XChangeQrArtifact from '@/components/x-change/XChangeQrArtifact.vue';
 import { update as updateFundingQrMerchantProfile } from '@/routes/x-change/cockpit/accounts/funding-qr-merchant-profile';
 import { renderFundingQrMerchantLabel } from '../fundingQrMerchantLabel';
 import type {
@@ -96,14 +97,15 @@ function updateQr(): void {
                 </p>
             </div>
 
-            <div
-                class="mt-4 rounded-3xl border border-sky-200 bg-white p-3 shadow-[0_18px_50px_-24px_rgba(14,116,144,0.55)] sm:p-4 dark:border-sky-900"
-            >
-                <img
+            <div class="mt-4">
+                <XChangeQrArtifact
                     :src="address.qr_code"
                     :alt="`QR Ph Account Funding code for ${displayedLabel}`"
-                    class="size-64 object-contain sm:size-72"
-                    data-testid="standing-funding-address-qr"
+                    kind="qrph_payment"
+                    title="Account funding"
+                    :description="`Merchant: ${displayedLabel}`"
+                    test-id="standing-funding-address-artifact"
+                    image-test-id="standing-funding-address-qr"
                 />
             </div>
 

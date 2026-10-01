@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Download, Maximize2, Printer } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import XChangeQrArtifact from '@/components/x-change/XChangeQrArtifact.vue';
 
 const props = defineProps<{
     campaign: {
@@ -66,13 +67,17 @@ function printStamp(): void {
             data-testid="campaign-payment-qr-enlarge"
             @click="expanded = !expanded"
         >
-            <img
+            <XChangeQrArtifact
                 v-if="campaign.payment_qr.qr_data_uri"
                 :src="campaign.payment_qr.qr_data_uri"
                 :alt="`QR Ph for ${campaign.title}`"
-                :class="expanded ? 'size-[min(78vw,30rem)]' : 'size-64'"
-                class="object-contain transition-all"
-                data-testid="campaign-payment-qr-image"
+                kind="qrph_payment"
+                :title="amount"
+                :description="campaign.merchant_display_name"
+                :expanded="expanded"
+                :class="expanded ? 'w-[min(78vw,34rem)]' : 'w-72'"
+                test-id="campaign-payment-qr-artifact"
+                image-test-id="campaign-payment-qr-image"
             />
             <Maximize2
                 v-else

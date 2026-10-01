@@ -93,9 +93,9 @@ describe('issued Pay Code dialog', () => {
         await flushPromises();
 
         expect(
-            wrapper.get(
-                '[data-testid="cockpit-issued-pay-code-payment-error"]',
-            ).text(),
+            wrapper
+                .get('[data-testid="cockpit-issued-pay-code-payment-error"]')
+                .text(),
         ).toContain('temporarily unavailable');
         expect(
             wrapper
@@ -156,9 +156,9 @@ describe('issued Pay Code dialog', () => {
         );
         expect(wrapper.text()).toContain('Pay Code PAY-READY-7 Is Ready');
         expect(
-            wrapper.find(
-                '[data-testid="cockpit-issued-pay-code-payment"]',
-            ).exists(),
+            wrapper
+                .find('[data-testid="cockpit-issued-pay-code-payment"]')
+                .exists(),
         ).toBe(false);
         expect(wrapper.text()).toContain('Issued Pay Code');
         expect(wrapper.text()).toContain('Final design ready to share.');
@@ -373,9 +373,7 @@ describe('issued Pay Code dialog', () => {
         ).toContain('max-w-2xl');
         expect(
             wrapper
-                .find(
-                    '[data-testid="cockpit-issued-pay-code-sharing-sidebar"]',
-                )
+                .find('[data-testid="cockpit-issued-pay-code-sharing-sidebar"]')
                 .exists(),
         ).toBe(false);
         expect(wrapper.emitted('close')).toBeUndefined();
@@ -394,12 +392,99 @@ describe('issued Pay Code dialog', () => {
         ).toBe(true);
         expect(
             wrapper
-                .find(
-                    '[data-testid="cockpit-issued-pay-code-sharing-sidebar"]',
-                )
+                .find('[data-testid="cockpit-issued-pay-code-sharing-sidebar"]')
                 .exists(),
         ).toBe(true);
         expect(wrapper.emitted('close')).toBeUndefined();
+    });
+
+    it('switches the enlarged stamp between direct claim and manual Pay Code entry', async () => {
+        const wrapper = mount(CockpitIssuedPayCodeDialog, {
+            props: {
+                open: true,
+                code: 'ABCD',
+                amount: 50,
+                currency: 'PHP',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'redeemable',
+                claimQr: 'data:image/png;base64,DIRECT-LEGACY',
+                claimUrl: 'https://example.test/x/claim/ABCD',
+                shareCardUrl:
+                    'https://example.test/x/claim/ABCD/share-card.png',
+                qrArtifacts: {
+                    direct_claim: {
+                        kind: 'pay_code',
+                        destination: 'https://example.test/x/claim/ABCD',
+                        image_data_uri: 'data:image/png;base64,DIRECT',
+                        title: 'Scan to claim',
+                        description: 'Scan to open Pay Code ABCD directly.',
+                        identifier: 'ABCD',
+                        center_mark: 'pay_code',
+                    },
+                    claim_entry: {
+                        kind: 'claim_entry',
+                        destination: 'https://example.test/x/claim',
+                        image_data_uri: 'data:image/png;base64,ENTRY',
+                        title: 'Enter Pay Code',
+                        description:
+                            'Scan to open the entry page, then enter ABCD.',
+                        identifier: 'ABCD',
+                        center_mark: 'pay_code',
+                    },
+                },
+            },
+            global: { stubs: { Teleport: true } },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-issued-pay-code-artifact-qr-button"]')
+            .trigger('click');
+
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-issued-pay-code-expanded-qr-image"]',
+                )
+                .attributes('src'),
+        ).toBe('data:image/png;base64,DIRECT');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-issued-pay-code-qr-mode-direct"]')
+                .attributes('aria-selected'),
+        ).toBe('true');
+        expect(wrapper.text()).toContain('|| ABCD ||');
+
+        await wrapper
+            .get('[data-testid="cockpit-issued-pay-code-qr-mode-entry"]')
+            .trigger('click');
+
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-issued-pay-code-expanded-qr-image"]',
+                )
+                .attributes('src'),
+        ).toBe('data:image/png;base64,ENTRY');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-issued-pay-code-qr-mode-entry"]')
+                .attributes('aria-selected'),
+        ).toBe('true');
+        expect(wrapper.text()).toContain(
+            'Scan to open the entry page, then enter ABCD.',
+        );
+
+        await wrapper.setProps({ open: false });
+        await wrapper.setProps({ open: true });
+        await wrapper
+            .get('[data-testid="cockpit-issued-pay-code-artifact-qr-button"]')
+            .trigger('click');
+
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-issued-pay-code-qr-mode-direct"]')
+                .attributes('aria-selected'),
+        ).toBe('true');
     });
 
     it('enlarges the QR from the finalized canvas fallback', async () => {

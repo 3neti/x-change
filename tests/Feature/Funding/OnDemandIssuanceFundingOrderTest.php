@@ -977,6 +977,9 @@ it('settles exact provider funds into a hold and resumes issuance exactly once',
         ->and(data_get($projection, 'order.voucher.amount'))->toBe(50.0)
         ->and(data_get($projection, 'order.voucher.currency'))->toBe('PHP')
         ->and(data_get($projection, 'order.voucher.claim_qr'))->toStartWith('data:image/png;base64,')
+        ->and(data_get($projection, 'order.voucher.qr_artifacts.direct_claim.kind'))->toBe('pay_code')
+        ->and(data_get($projection, 'order.voucher.qr_artifacts.claim_entry.kind'))->toBe('claim_entry')
+        ->and(data_get($projection, 'order.voucher.qr_artifacts.claim_entry.identifier'))->toBe('ODIF-4242')
         ->and(data_get($projection, 'order.voucher.share_card_url'))->toBeString()
         ->and(data_get($projection, 'order.receipt.order_reference'))->toBe($order->reference)
         ->and(data_get($projection, 'order.receipt.issued_at'))->not->toBeNull();
