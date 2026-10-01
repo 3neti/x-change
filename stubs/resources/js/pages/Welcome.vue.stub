@@ -2,7 +2,8 @@
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { login } from '@/routes';
 import { start as startClaim } from '@/routes/x-change/claim';
-import { entry } from '@/routes/x-change/cockpit';
+import { entry, quickGenerate } from '@/routes/x-change/cockpit';
+import { show as showPublicAutoGenerate } from '@/routes/x-change/public-auto-generate';
 import CockpitLandingClaimExperiencePresentation from '@/cockpit/components/CockpitLandingClaimExperiencePresentation.vue';
 import CockpitQuickGenerateOrderPresentation from '@/cockpit/components/CockpitQuickGenerateOrderPresentation.vue';
 import XChangeLogo from '@/components/x-change/XChangeLogo.vue';
@@ -112,9 +113,17 @@ withDefaults(
                 <div class="mt-7 flex flex-wrap items-center gap-3">
                     <Link
                         :href="startClaim()"
+                        data-testid="landing-claim-pay-code"
                         class="rounded-full bg-[#ef6a1a] px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-[#d85f15] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ef6a1a]"
                     >
                         Claim Pay Code
+                    </Link>
+                    <Link
+                        :href="$page.props.auth.user ? quickGenerate() : showPublicAutoGenerate()"
+                        data-testid="landing-create-pay-code"
+                        class="rounded-full border border-slate-300 bg-white/80 px-6 py-3.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-slate-400 hover:bg-white hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950"
+                    >
+                        Create Pay Code
                     </Link>
                 </div>
             </div>

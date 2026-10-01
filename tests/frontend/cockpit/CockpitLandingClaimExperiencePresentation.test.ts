@@ -19,7 +19,7 @@ describe('Cockpit landing claim experience presentation', () => {
         expect(manifest.journey.step_count).toBe(5);
         expect(manifest.journey.steps[0].screen?.kind).toBe('claim_entry');
         expect(manifest.journey.steps[0].screen).toMatchObject({
-            code: 'AA-317',
+            code: 'AA317',
             amount: '₱537.00',
         });
         expect(manifest.journey.steps[1].screen).toMatchObject({
@@ -27,7 +27,7 @@ describe('Cockpit landing claim experience presentation', () => {
             component: 'form-flow/core/Splash',
             props: {
                 preview_mode: true,
-                voucher_code: 'AA-317',
+                voucher_code: 'AA317',
                 app_logo: '/vendor/x-change/images/pay-code/pay-code-logo.svg',
             },
         });
