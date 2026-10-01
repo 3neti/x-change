@@ -31,6 +31,14 @@ withDefaults(
   },
 );
 
+const emit = defineEmits<{
+  create: [trigger: HTMLButtonElement];
+}>();
+
+function beginCreatingPayCode(event: MouseEvent): void {
+  emit("create", event.currentTarget as HTMLButtonElement);
+}
+
 const painPoints = [
   "No asking for someone’s mobile number",
   "No transaction screenshot to send and verify",
@@ -136,14 +144,15 @@ const painPoints = [
           </p>
 
           <div class="mt-6 flex flex-wrap items-center gap-3">
-            <a
-              href="#public-pay-code-builder"
+            <button
+              type="button"
               class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
               data-testid="public-auto-generate-primary-action"
+              @click="beginCreatingPayCode"
             >
               Create one now
               <ArrowRight class="size-4" aria-hidden="true" />
-            </a>
+            </button>
             <a
               href="#public-how-it-works"
               class="inline-flex rounded-full px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-white hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white"

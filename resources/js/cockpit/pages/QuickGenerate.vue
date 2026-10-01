@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link } from "@inertiajs/vue3";
 import { Landmark } from "lucide-vue-next";
-import { computed, ref } from "vue";
+import { computed, nextTick, ref } from "vue";
 import { index as fundingIndex } from "@/routes/x-change/cockpit/funding";
 import CockpitGenerateActionPanel from "../components/CockpitGenerateActionPanel.vue";
 import CockpitIssuanceBoundaryPanel from "../components/CockpitIssuanceBoundaryPanel.vue";
@@ -76,6 +76,18 @@ const issuanceSurface = ref<CockpitQuickGenerateSurface>(
   props.display_session ? "qr" : "composer",
 );
 const displaySession = ref(props.display_session ?? null);
+const submitPanelElement = ref<InstanceType<
+  typeof CockpitQuickGenerateSubmitPanel
+> | null>(null);
+
+async function beginPublicIssuance(trigger: HTMLButtonElement): Promise<void> {
+  document.getElementById("public-pay-code-builder")?.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
+  await nextTick();
+  await submitPanelElement.value?.openAmountCalculator(trigger);
+}
 
 const clientFundsMinor = computed<number | null>(() => {
   const amount = props.cockpit_header_read_model?.balances?.find(
@@ -1132,7 +1144,11 @@ function stringValue(value: unknown): string | null {
 </script>
 
 <template>
-  <component :is="pageLayout" v-bind="pageLayoutProps">
+  <component
+    :is="pageLayout"
+    v-bind="pageLayoutProps"
+    @create="beginPublicIssuance"
+  >
     <section
       class="space-y-4 px-4 md:px-0"
       data-testid="cockpit-quick-generate-shell"
@@ -1182,6 +1198,7 @@ function stringValue(value: unknown): string | null {
       >
         <CockpitQuickGenerateSubmitPanel
           v-if="issuanceSurface === 'composer'"
+          ref="submitPanelElement"
           v-model:issuance-surface="issuanceSurface"
           :client-funds-minor="clientFundsMinor"
           :collection-destination="props.collection_destination"

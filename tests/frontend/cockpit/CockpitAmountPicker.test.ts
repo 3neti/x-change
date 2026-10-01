@@ -71,6 +71,37 @@ describe("CockpitAmountPicker", () => {
     wrapper.unmount();
   });
 
+  it("opens for an external call to action and restores focus when cancelled", async () => {
+    const returnFocusButton = document.createElement("button");
+    document.body.appendChild(returnFocusButton);
+
+    const wrapper = mount(CockpitAmountPicker, {
+      props: {
+        modelValue: "",
+      },
+      attachTo: document.body,
+    });
+
+    (
+      wrapper.vm as unknown as {
+        open: (returnFocusTo: HTMLElement) => void;
+      }
+    ).open(returnFocusButton);
+    await nextTick();
+
+    expect(wrapper.get('[role="dialog"]').text()).toContain("Pay Code Amount");
+
+    await wrapper
+      .get('[data-testid="numeric-keypad-cancel"]')
+      .trigger("click");
+    await nextTick();
+
+    expect(document.activeElement).toBe(returnFocusButton);
+
+    wrapper.unmount();
+    returnFocusButton.remove();
+  });
+
   it("carries the first focused numeric key into the calculator", async () => {
     const wrapper = mount(CockpitAmountPicker, {
       props: {

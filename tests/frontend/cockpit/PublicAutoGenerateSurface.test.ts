@@ -123,7 +123,7 @@ describe("Public Auto Generate surface", () => {
     ).toBe("");
   });
 
-  it("presents the public tool as a claim-led product", () => {
+  it("presents the public tool as a claim-led product", async () => {
     const wrapper = mount(PublicIssuanceLayout, {
       props: {
         navigation: {
@@ -161,10 +161,16 @@ describe("Public Auto Generate surface", () => {
         .get('[data-testid="public-auto-generate-brand-mark"]')
         .attributes("src"),
     ).toBe("/vendor/x-change/images/pay-code/pay-code-mark.svg");
-    expect(
-      wrapper
-        .get('[data-testid="public-auto-generate-primary-action"]')
-        .attributes("href"),
-    ).toBe("#public-pay-code-builder");
+    const primaryAction = wrapper.get(
+      '[data-testid="public-auto-generate-primary-action"]',
+    );
+
+    expect(primaryAction.element.tagName).toBe("BUTTON");
+    expect(primaryAction.attributes("type")).toBe("button");
+
+    await primaryAction.trigger("click");
+
+    expect(wrapper.emitted("create")).toHaveLength(1);
+    expect(wrapper.emitted("create")?.[0]?.[0]).toBe(primaryAction.element);
   });
 });

@@ -884,6 +884,15 @@ async function focusAmountEditor(): Promise<void> {
   amountInputElement.value?.focus();
 }
 
+async function openAmountCalculator(
+  returnFocusTo: HTMLElement | null = null,
+): Promise<void> {
+  await nextTick();
+  amountInputElement.value?.open(returnFocusTo);
+}
+
+defineExpose({ openAmountCalculator });
+
 watch(
   selectedTemplate,
   (templateKey): void => {
