@@ -215,13 +215,18 @@ const systemItems = computed<XChangeNavigationItem[]>(() => [
         : []),
 ]);
 
-const navigationGroups = computed<XChangeNavigationGroup[]>(() => [
-    { label: 'Workspace', items: workspaceItems },
-    { label: 'Account & Help', items: accountHelpItems },
-    ...(systemItems.value.length > 0
-        ? [{ label: 'System', items: systemItems.value }]
-        : []),
-]);
+const navigationGroups = computed<XChangeNavigationGroup[]>(() => {
+    const groups: XChangeNavigationGroup[] = [
+        { label: 'Workspace', items: workspaceItems },
+        { label: 'Account & Help', items: accountHelpItems },
+    ];
+
+    if (systemItems.value.length > 0) {
+        groups.push({ label: 'System', items: systemItems.value });
+    }
+
+    return groups;
+});
 
 const { isCurrentUrl } = useCurrentUrl();
 
