@@ -177,6 +177,85 @@ describe('CockpitClaimRequirementsControl', () => {
         ).toBe(false);
     });
 
+    it('provides visible close and done actions with a truthful live selection count', async () => {
+        const wrapper = mount(CockpitClaimRequirementsControl, {
+            props: {
+                options: [
+                    option({
+                        value: 'name',
+                        label: 'Full Name',
+                        selected: true,
+                    }),
+                ],
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-claim-requirements-trigger"]')
+            .trigger('click');
+
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-claim-requirements-selected-count"]',
+                )
+                .text(),
+        ).toBe('1 requirement selected');
+        expect(wrapper.text()).toContain(
+            'Changes are applied as you select them.',
+        );
+        expect(wrapper.text()).not.toContain('Accept');
+        expect(wrapper.text()).not.toContain('Cancel');
+
+        await wrapper
+            .get('[data-testid="cockpit-claim-requirements-close"]')
+            .trigger('click');
+
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-claim-requirements-popover"]')
+                .exists(),
+        ).toBe(false);
+
+        await wrapper
+            .get('[data-testid="cockpit-claim-requirements-trigger"]')
+            .trigger('click');
+        await wrapper
+            .get('[data-testid="cockpit-claim-requirements-done"]')
+            .trigger('click');
+
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-claim-requirements-popover"]')
+                .exists(),
+        ).toBe(false);
+    });
+
+    it('describes an empty live selection without changing the completion action', async () => {
+        const wrapper = mount(CockpitClaimRequirementsControl, {
+            props: {
+                options: [option({ value: 'name', label: 'Full Name' })],
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-claim-requirements-trigger"]')
+            .trigger('click');
+
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-claim-requirements-selected-count"]',
+                )
+                .text(),
+        ).toBe('No requirements selected');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-claim-requirements-done"]')
+                .text(),
+        ).toBe('Done');
+    });
+
     it('presents quick sets followed by Evidence, Verification, and Details in operational order', async () => {
         const wrapper = mount(CockpitClaimRequirementsControl, {
             props: {

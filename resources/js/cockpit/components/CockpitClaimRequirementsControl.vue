@@ -5,9 +5,7 @@ import type { LucideIcon } from 'lucide-vue-next';
 import CockpitFieldHelp from './CockpitFieldHelp.vue';
 
 export type CockpitClaimRequirementCategory =
-    | 'evidence'
-    | 'verification'
-    | 'details';
+    'evidence' | 'verification' | 'details';
 
 export type CockpitClaimRequirementOption = {
     value: string;
@@ -101,6 +99,16 @@ const claimRequirementOptionRank = new Map(
 const selectedChips = computed<CockpitClaimRequirementOption[]>(() =>
     props.options.filter((option) => option.selected),
 );
+
+const selectedRequirementsLabel = computed<string>(() => {
+    const count = selectedChips.value.length;
+
+    if (count === 0) {
+        return 'No requirements selected';
+    }
+
+    return `${count} ${count === 1 ? 'requirement' : 'requirements'} selected`;
+});
 
 function openPopover(): void {
     if (props.disabled) {
@@ -304,11 +312,37 @@ function applyPreset(key: string): void {
             style="top: 5rem; left: 50%; transform: translateX(-50%)"
             role="dialog"
             aria-modal="true"
-            aria-label="Choose claim requirements"
+            aria-labelledby="claim-requirements-dialog-title"
             data-testid="cockpit-claim-requirements-popover"
             @keydown.esc="closePopover"
         >
-            <div class="border-b border-slate-200 p-2 dark:border-slate-800">
+            <div
+                class="grid gap-2 border-b border-slate-200 p-3 dark:border-slate-800"
+            >
+                <div class="flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <h3
+                            id="claim-requirements-dialog-title"
+                            class="text-sm font-semibold text-slate-950 dark:text-slate-50"
+                        >
+                            Claim Requirements
+                        </h3>
+                        <p
+                            class="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400"
+                        >
+                            Changes are applied as you select them.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        class="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100"
+                        aria-label="Close claim requirements"
+                        data-testid="cockpit-claim-requirements-close"
+                        @click="closePopover"
+                    >
+                        <X class="size-4" aria-hidden="true" />
+                    </button>
+                </div>
                 <div class="relative">
                     <Search
                         class="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400"
@@ -424,6 +458,26 @@ function applyPreset(key: string): void {
                 >
                     No matching requirement
                 </p>
+            </div>
+
+            <div
+                class="flex items-center justify-between gap-3 border-t border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950"
+                data-testid="cockpit-claim-requirements-footer"
+            >
+                <p
+                    class="min-w-0 text-xs text-slate-500 dark:text-slate-400"
+                    data-testid="cockpit-claim-requirements-selected-count"
+                >
+                    {{ selectedRequirementsLabel }}
+                </p>
+                <button
+                    type="button"
+                    class="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                    data-testid="cockpit-claim-requirements-done"
+                    @click="closePopover"
+                >
+                    Done
+                </button>
             </div>
         </div>
     </div>
