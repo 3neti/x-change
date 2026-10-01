@@ -36,6 +36,9 @@ vi.mock('@inertiajs/vue3', () => ({
     router: {
         reload: vi.fn(),
     },
+    usePage: () => ({
+        props: {},
+    }),
 }));
 
 config.global.stubs = {
@@ -188,7 +191,11 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(toggle.attributes('aria-expanded')).toBe('false');
         expect(toggle.text()).toContain('Options');
         expect(toggle.text()).not.toContain('Order options');
-        expect(toggle.text()).toContain('0');
+        expect(toggle.text()).toContain('Default');
+        expect(toggle.text()).not.toContain('0');
+        expect(toggle.attributes('aria-label')).toBe(
+            'Options. Default configuration.',
+        );
         expect(panel.attributes('style')).toContain('display: none');
         expect(
             orderFields
@@ -222,7 +229,124 @@ describe('Cockpit Quick Generate foundation', () => {
                 .exists(),
         ).toBe(true);
 
-        expect(toggle.text()).toContain('0');
+        expect(toggle.text()).toContain('Default');
+    });
+
+    it('names each configured option category instead of showing an opaque count', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                settlementRailCapabilities: {
+                    schema: 'x-change.cockpit.settlement-rail-capabilities.v1',
+                    provider: {
+                        code: 'netbank',
+                        label: 'NetBank',
+                        enabled: true,
+                        binding_provider: 'netbank',
+                        binding_coherent: true,
+                    },
+                    connection_reference: 'netbank-primary',
+                    default_mode: 'automatic',
+                    automatic_policy: {
+                        instapay_below_amount_minor: 5_000_000,
+                        resolved_per_payout: true,
+                    },
+                    rails: [
+                        {
+                            code: 'INSTAPAY',
+                            label: 'InstaPay',
+                            enabled: true,
+                            currency: 'PHP',
+                            minimum_amount_minor: 1,
+                            maximum_amount_minor: 5_000_000,
+                            provider_fee_minor: 1_000,
+                            availability_reason: null,
+                        },
+                    ],
+                    source: 'configured-provider-capabilities',
+                    live_provider_call: false,
+                },
+            },
+        });
+        const toggle = wrapper.get(
+            '[data-testid="cockpit-quick-generate-order-options-toggle"]',
+        );
+
+        await toggle.trigger('click');
+        await wrapper
+            .get('[data-testid="cockpit-claim-requirements-trigger"]')
+            .trigger('click');
+        await wrapper
+            .get('[data-testid="cockpit-claim-requirement-option-kyc"]')
+            .get('input[type="checkbox"]')
+            .setValue(true);
+        await wrapper
+            .get('[data-testid="cockpit-claim-requirements-done"]')
+            .trigger('click');
+
+        await wrapper
+            .get('[data-testid="cockpit-feedback-destination-editor"]')
+            .trigger('paste', {
+                clipboardData: {
+                    getData: () => '09173011987',
+                },
+            });
+        await wrapper
+            .get('[data-testid="cockpit-value-use-trigger"]')
+            .trigger('click');
+        await wrapper
+            .get('[data-testid="cockpit-value-use-mode-fixed"]')
+            .trigger('click');
+        await wrapper
+            .get('[data-testid="cockpit-value-use-fixed-count"]')
+            .setValue('2');
+        await wrapper
+            .get('[data-testid="cockpit-value-use-done"]')
+            .trigger('click');
+        await wrapper
+            .get(
+                '[data-testid="cockpit-quick-generate-settlement-rail-cycle"]',
+            )
+            .trigger('click');
+
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-order-options-default"]',
+                )
+                .exists(),
+        ).toBe(false);
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-order-option-summary-requirements"]',
+                )
+                .text(),
+        ).toBe('Requirements · 1');
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-order-option-summary-updates"]',
+                )
+                .text(),
+        ).toBe('Status Updates');
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-order-option-summary-value-use"]',
+                )
+                .text(),
+        ).toBe('Value Use');
+        expect(
+            wrapper
+                .get(
+                    '[data-testid="cockpit-quick-generate-order-option-summary-network"]',
+                )
+                .text(),
+        ).toBe('Transfer Network');
+        expect(toggle.attributes('aria-label')).toBe(
+            'Options. Configured: Claim Requirements (1), Status Updates (1), Value Use, Transfer Network.',
+        );
     });
 
     it('keeps Amount beside the longer issue action and aligns cost with Value Flow', () => {

@@ -3416,15 +3416,62 @@ const selectedInputFields = computed<string[]>(() => {
   return voucherInputFieldPayloadOrder.filter((field) => fields.has(field));
 });
 
-const orderOptionsActiveCount = computed<number>(() => {
-  return [
-    selectedInputFields.value.length > 0,
-    Object.values(feedbackDestinations.value).some(
-      (destination) => destination !== "",
-    ),
-    reusableBalance.value || sliceMode.value !== "whole",
-    settlementRail.value.trim() !== "",
-  ].filter(Boolean).length;
+type OrderOptionSummary = {
+  key: "requirements" | "updates" | "value-use" | "network";
+  label: string;
+  accessibleLabel: string;
+};
+
+const orderOptionSummaries = computed<OrderOptionSummary[]>(() => {
+  const summaries: OrderOptionSummary[] = [];
+  const requirementCount = selectedInputFields.value.length;
+  const updateDestinationCount = Object.values(
+    feedbackDestinations.value,
+  ).filter((destination) => destination !== "").length;
+
+  if (requirementCount > 0) {
+    summaries.push({
+      key: "requirements",
+      label: `Requirements · ${requirementCount}`,
+      accessibleLabel: `Claim Requirements (${requirementCount})`,
+    });
+  }
+
+  if (updateDestinationCount > 0) {
+    summaries.push({
+      key: "updates",
+      label: "Status Updates",
+      accessibleLabel: `Status Updates (${updateDestinationCount})`,
+    });
+  }
+
+  if (reusableBalance.value || sliceMode.value !== "whole") {
+    summaries.push({
+      key: "value-use",
+      label: "Value Use",
+      accessibleLabel: "Value Use",
+    });
+  }
+
+  if (settlementRail.value.trim() !== "") {
+    summaries.push({
+      key: "network",
+      label: "Transfer Network",
+      accessibleLabel: "Transfer Network",
+    });
+  }
+
+  return summaries;
+});
+
+const orderOptionsAccessibleLabel = computed<string>(() => {
+  if (orderOptionSummaries.value.length === 0) {
+    return "Options. Default configuration.";
+  }
+
+  return `Options. Configured: ${orderOptionSummaries.value
+    .map((summary) => summary.accessibleLabel)
+    .join(", ")}.`;
 });
 
 const validationSummary = computed<Record<string, unknown>>(() => {
@@ -6642,19 +6689,29 @@ function instructionRecord(
         >
           <button
             type="button"
-            class="flex min-h-11 w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 text-left text-sm font-semibold text-slate-800 transition hover:border-slate-300 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-slate-700 dark:hover:bg-slate-900"
+            class="flex min-h-11 w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left text-sm font-semibold text-slate-800 transition hover:border-slate-300 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-slate-700 dark:hover:bg-slate-900"
             :aria-expanded="orderOptionsOpen"
+            :aria-label="orderOptionsAccessibleLabel"
             aria-controls="cockpit-quick-generate-order-options-panel"
             data-testid="cockpit-quick-generate-order-options-toggle"
             @click="orderOptionsOpen = !orderOptionsOpen"
           >
-            <span class="flex min-w-0 items-center gap-2">
-              <span class="min-w-0 truncate">Options</span>
+            <span class="flex min-w-0 flex-wrap items-center gap-1.5">
+              <span class="mr-0.5 shrink-0">Options</span>
               <span
-                class="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[0.68rem] font-bold tabular-nums text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
-                aria-label="Configured options"
+                v-if="orderOptionSummaries.length === 0"
+                class="inline-flex shrink-0 items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[0.68rem] font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400"
+                data-testid="cockpit-quick-generate-order-options-default"
               >
-                {{ orderOptionsActiveCount }}
+                Default
+              </span>
+              <span
+                v-for="summary in orderOptionSummaries"
+                :key="summary.key"
+                class="inline-flex shrink-0 items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[0.68rem] font-semibold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200"
+                :data-testid="`cockpit-quick-generate-order-option-summary-${summary.key}`"
+              >
+                {{ summary.label }}
               </span>
             </span>
             <ChevronDown
