@@ -89,6 +89,29 @@ describe('CockpitFeedbackDestinationInput', () => {
         ).toBe(false);
     });
 
+    it('rejects channels that are unavailable on a limited public surface', async () => {
+        const wrapper = mount(CockpitFeedbackDestinationInput, {
+            props: {
+                modelValue: emptyFeedbackDestinations(),
+                allowedChannels: ['email', 'mobile'],
+                'onUpdate:modelValue': (value) =>
+                    wrapper.setProps({ modelValue: value }),
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-feedback-destination-editor"]')
+            .setValue('https://example.test/hook');
+        await wrapper
+            .get('[data-testid="cockpit-feedback-destination-editor"]')
+            .trigger('keydown', { key: 'Enter' });
+
+        expect(wrapper.props('modelValue')).toEqual(
+            emptyFeedbackDestinations(),
+        );
+        expect(wrapper.text()).not.toContain('https://example.test/hook');
+    });
+
     it('renders a compact editor without the removed instructional paragraph', () => {
         const wrapper = mount(CockpitFeedbackDestinationInput, {
             props: {
@@ -103,8 +126,7 @@ describe('CockpitFeedbackDestinationInput', () => {
             'Updates are sent after the Pay Code is claimed',
         );
         expect(
-            wrapper
-                .get('[data-testid="cockpit-feedback-destination-editor"]')
+            wrapper.get('[data-testid="cockpit-feedback-destination-editor"]')
                 .element.parentElement?.className,
         ).toContain('min-h-9');
     });
@@ -159,9 +181,9 @@ describe('CockpitFeedbackDestinationInput', () => {
         expect(
             suggestions.map((button) => button.attributes('aria-label')),
         ).toEqual(['Use My Email', 'Use My Mobile', 'Use My Webhook']);
-        expect(
-            suggestions.map((button) => button.attributes('title')),
-        ).toEqual(['Use My Email', 'Use My Mobile', 'Use My Webhook']);
+        expect(suggestions.map((button) => button.attributes('title'))).toEqual(
+            ['Use My Email', 'Use My Mobile', 'Use My Webhook'],
+        );
         expect(
             suggestions.every(
                 (button) => button.attributes('tabindex') !== '-1',

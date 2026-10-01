@@ -12,11 +12,13 @@ const props = withDefaults(
     defineProps<{
         defaults?: Partial<FeedbackDestinations>;
         unavailable?: Partial<Record<FeedbackChannel, string>>;
+        allowedChannels?: FeedbackChannel[];
         disabled?: boolean;
     }>(),
     {
         defaults: () => ({}),
         unavailable: () => ({}),
+        allowedChannels: () => ['email', 'mobile', 'webhook'],
         disabled: false,
     },
 );
@@ -41,13 +43,13 @@ const channelPresentation: Record<
 };
 
 const configuredChannels = computed<FeedbackChannel[]>(() =>
-    (['email', 'mobile', 'webhook'] as FeedbackChannel[]).filter(
+    props.allowedChannels.filter(
         (channel) => destinations.value[channel] !== '',
     ),
 );
 
 const suggestedChannels = computed<FeedbackChannel[]>(() =>
-    (['email', 'mobile', 'webhook'] as FeedbackChannel[]).filter(
+    props.allowedChannels.filter(
         (channel) =>
             (props.defaults[channel] ?? '') !== '' &&
             destinations.value[channel] === '',
@@ -131,6 +133,12 @@ function commit(value: string): void {
         }
 
         const unavailableReason = props.unavailable[classified.channel];
+
+        if (!props.allowedChannels.includes(classified.channel)) {
+            latestStatus = `${channelPresentation[classified.channel].label} is not available on this surface.`;
+
+            return;
+        }
 
         if (unavailableReason !== undefined && unavailableReason !== '') {
             latestStatus = unavailableReason;

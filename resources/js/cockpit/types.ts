@@ -805,7 +805,9 @@ export type CockpitFundingRequestReadModel = {
 export type CockpitFundingMethodKey = "qr_ph" | "bank_transfer" | "pay_code";
 
 export type CockpitPrimaryFundingWorkspaceMode =
-  "self_top_up" | "bank_transfer" | "pay_code";
+  | "self_top_up"
+  | "bank_transfer"
+  | "pay_code";
 
 export type CockpitFundingMethodSelectorReadModel = {
   schema: "x-change.cockpit.funding-method-selector.v1";
@@ -1028,7 +1030,10 @@ export type CockpitFundingPageProps = CockpitHeaderPageProps & {
   funding_notice?: string | null;
   funding_request_submitted_reference?: string | null;
   funding_workspace_mode?:
-    "self_top_up" | "bank_transfer" | "pay_code" | "reviewed_value";
+    | "self_top_up"
+    | "bank_transfer"
+    | "pay_code"
+    | "reviewed_value";
   funding_poll_interval?: number;
   funding_realtime?: {
     enabled: boolean;
@@ -1791,6 +1796,11 @@ export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
     show_engineering_preview: boolean;
     show_workspace_switcher: boolean;
     allow_template_management: boolean;
+  };
+  public_navigation?: {
+    claim_url: string | null;
+    login_url: string | null;
+    register_url: string | null;
   };
   commercial_principal?: {
     reference: string;

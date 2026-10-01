@@ -6321,7 +6321,8 @@ function instructionRecord(
               >
                 <button
                   type="submit"
-                  class="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-l-xl bg-emerald-600 px-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 sm:px-4 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+                  class="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap bg-emerald-600 px-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 sm:px-4 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+                  :class="publicMode ? 'rounded-xl' : 'rounded-l-xl'"
                   data-testid="cockpit-quick-generate-submit-button"
                   :aria-label="issueActionLabel"
                   :disabled="!canSubmit || processing"
@@ -6355,6 +6356,7 @@ function instructionRecord(
                   </template>
                 </button>
                 <details
+                  v-if="!publicMode"
                   ref="issueActionMenuElement"
                   class="relative"
                   data-testid="cockpit-quick-generate-issue-action-menu"
@@ -6476,6 +6478,7 @@ function instructionRecord(
                 </span>
               </div>
               <fieldset
+                v-if="!publicMode"
                 class="col-start-2 row-start-2 min-w-0"
                 data-testid="cockpit-quick-generate-voucher-kind"
               >
@@ -6748,19 +6751,54 @@ function instructionRecord(
                 <span class="min-w-0 truncate">Status Updates</span>
                 <CockpitFieldHelp
                   label="About Status Updates"
-                  tooltip="Optional email, mobile, or webhook destinations notified after the claim."
+                  :tooltip="
+                    publicMode
+                      ? 'Optional email or mobile destination notified after the claim.'
+                      : 'Optional email, mobile, or webhook destinations notified after the claim.'
+                  "
                 />
               </span>
               <CockpitFeedbackDestinationInput
                 v-model="feedbackDestinations"
                 :defaults="feedbackDestinationDefaults"
                 :unavailable="feedbackUnavailableReasons"
+                :allowed-channels="publicMode ? ['email', 'mobile'] : undefined"
                 :disabled="processing"
                 @validation="feedbackTokenErrors = $event"
               />
             </div>
 
-            <div class="min-w-0">
+            <label
+              v-if="publicMode"
+              class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+              data-testid="public-auto-generate-after-claim-destination"
+            >
+              <span class="flex min-w-0 items-center gap-1">
+                <span class="min-w-0 truncate">After-claim destination</span>
+                <CockpitFieldHelp
+                  label="About After-claim destination"
+                  tooltip="An optional page the recipient can open after completing the claim."
+                />
+              </span>
+              <input
+                v-model="riderUrl"
+                type="url"
+                inputmode="url"
+                autocomplete="url"
+                placeholder="https://your-page.example"
+                class="h-11 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 shadow-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50 dark:focus:border-emerald-600 dark:focus:ring-emerald-950"
+                data-testid="public-auto-generate-rider-url"
+                :disabled="processing"
+              />
+              <span
+                class="text-[11px] font-normal leading-5 text-slate-500 dark:text-slate-400"
+              >
+                Continue the moment on your website, video, music, article, or
+                thank-you page.
+              </span>
+            </label>
+
+            <div v-if="!publicMode" class="min-w-0">
               <CockpitValueUseControl
                 :mode="sliceMode"
                 :amount="normalizedPayCodeAmount()"
@@ -6812,7 +6850,7 @@ function instructionRecord(
             </div>
 
             <fieldset
-              v-if="!isAccountFundingClaim && !reusableBalance"
+              v-if="!publicMode && !isAccountFundingClaim && !reusableBalance"
               class="grid min-w-0 gap-1.5 border-t border-slate-200 pt-4 dark:border-slate-800"
               data-testid="cockpit-quick-generate-primary-settlement-rail"
             >
@@ -10169,7 +10207,8 @@ function instructionRecord(
       <pre
         class="mt-3 max-h-96 overflow-auto rounded-xl border border-slate-800 bg-slate-950 p-3 text-[11px] leading-5 text-slate-200"
         data-testid="cockpit-quick-generate-engineering-preview-json"
-        >{{ sanitizedInstructionPayloadJson }}</pre>
+        >{{ sanitizedInstructionPayloadJson }}</pre
+      >
     </details>
 
     <p class="mt-3 text-xs leading-5 text-slate-600 dark:text-slate-300">

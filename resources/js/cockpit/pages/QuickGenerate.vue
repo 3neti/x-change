@@ -62,7 +62,9 @@ const pageLayout = computed(() =>
 );
 const pageLayoutProps = computed(() =>
   publicAutoGenerate.value
-    ? {}
+    ? {
+        navigation: props.public_navigation,
+      }
     : {
         activeNavigation: "quick-generate",
         mobilePresentation: "edge",
@@ -1136,6 +1138,7 @@ function stringValue(value: unknown): string | null {
       data-testid="cockpit-quick-generate-shell"
     >
       <header
+        v-if="!publicAutoGenerate"
         class="hidden items-start justify-between gap-4 px-1 md:flex"
         data-testid="cockpit-quick-generate-header"
       >

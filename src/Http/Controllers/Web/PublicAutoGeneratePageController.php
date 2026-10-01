@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Http\Controllers\Web;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\XChange\Contracts\CommercialPrincipalResolverContract;
@@ -61,6 +62,13 @@ final class PublicAutoGeneratePageController extends Controller
                 'show_engineering_preview' => false,
                 'show_workspace_switcher' => false,
                 'allow_template_management' => false,
+            ],
+            'public_navigation' => [
+                'claim_url' => Route::has('x-change.claim.start')
+                    ? route('x-change.claim.start', [], false)
+                    : null,
+                'login_url' => Route::has('login') ? route('login', [], false) : null,
+                'register_url' => Route::has('register') ? route('register', [], false) : null,
             ],
             'commercial_principal' => [
                 'reference' => $principal->reference,
