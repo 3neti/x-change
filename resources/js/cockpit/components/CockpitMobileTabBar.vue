@@ -5,9 +5,10 @@ import {
     CircleGauge,
     FileStack,
     Landmark,
-    Megaphone,
+    ScanQrCode,
 } from 'lucide-vue-next';
 import type { Component } from 'vue';
+import { openCockpitClaimEntryLauncher } from '../claimEntryLauncher';
 import { cockpitMobilePrimaryNavigation } from '../navigation';
 
 const props = withDefaults(
@@ -22,7 +23,7 @@ const props = withDefaults(
 const navigationIcons: Record<string, Component> = {
     funding: Landmark,
     'quick-generate': BadgePlus,
-    campaigns: Megaphone,
+    claim: ScanQrCode,
     'pay-codes': FileStack,
     dashboard: CircleGauge,
 };
@@ -35,11 +36,13 @@ const navigationIcons: Record<string, Component> = {
         data-testid="cockpit-mobile-tab-bar"
     >
         <div class="mx-auto grid min-h-16 max-w-lg grid-cols-5 px-1">
-            <Link
+            <component
                 v-for="item in cockpitMobilePrimaryNavigation"
                 :key="item.key"
-                :href="item.href"
-                prefetch
+                :is="item.key === 'claim' ? 'button' : Link"
+                :type="item.key === 'claim' ? 'button' : undefined"
+                :href="item.key === 'claim' ? undefined : item.href"
+                :prefetch="item.key === 'claim' ? undefined : true"
                 class="focus-visible:outline-primary flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-center text-[0.65rem] font-semibold leading-none transition focus-visible:outline-2 focus-visible:outline-offset-[-2px]"
                 :class="
                     props.activeKey === item.key
@@ -50,6 +53,11 @@ const navigationIcons: Record<string, Component> = {
                     props.activeKey === item.key ? 'page' : undefined
                 "
                 :data-testid="`cockpit-mobile-tab-${item.key}`"
+                @click="
+                    item.key === 'claim'
+                        ? openCockpitClaimEntryLauncher()
+                        : undefined
+                "
             >
                 <component
                     :is="navigationIcons[item.key]"
@@ -57,7 +65,7 @@ const navigationIcons: Record<string, Component> = {
                     aria-hidden="true"
                 />
                 <span class="w-full truncate">{{ item.label }}</span>
-            </Link>
+            </component>
         </div>
     </nav>
 </template>

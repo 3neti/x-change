@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { router } from '@inertiajs/vue3';
+import { router, usePage } from '@inertiajs/vue3';
 import { useEcho } from '@laravel/echo-vue';
 import { computed, onUnmounted } from 'vue';
 import CockpitGlobalHeader from '../components/CockpitGlobalHeader.vue';
+import CockpitClaimEntryLauncher from '../components/CockpitClaimEntryLauncher.vue';
 import CockpitMobileTabBar from '../components/CockpitMobileTabBar.vue';
+import type { XChangeQrArtifactData } from '../../components/x-change/qrArtifacts';
 import type {
     CockpitBalanceMetric,
     CockpitEntryNotice,
@@ -27,6 +29,15 @@ const props = withDefaults(
         connectivity: 'Online',
         mobilePresentation: 'contained',
     },
+);
+
+type CockpitSharedProps = {
+    cockpit_claim_entry_artifact?: XChangeQrArtifactData | null;
+};
+
+const page = usePage<CockpitSharedProps>();
+const claimEntryArtifact = computed(
+    () => page.props.cockpit_claim_entry_artifact ?? null,
 );
 
 const headerBalances = computed(() => {
@@ -82,7 +93,7 @@ if (fundingRealtime?.enabled === true) {
             }
 
             balanceRefreshTimer = setTimeout(() => {
-                if (! balanceRefreshInFlight) {
+                if (!balanceRefreshInFlight) {
                     balanceRefreshInFlight = true;
                     router.reload({
                         only: ['cockpit_header_read_model'],
@@ -150,6 +161,7 @@ onUnmounted(() => {
             </main>
 
             <CockpitMobileTabBar :active-key="activeNavigation" />
+            <CockpitClaimEntryLauncher :artifact="claimEntryArtifact" />
         </div>
     </div>
 </template>

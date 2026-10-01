@@ -278,6 +278,10 @@ it('hydrates the cockpit dashboard with header balance read-model props', functi
         ->assertJsonPath('props.cockpit_header_read_model.redactions.mutates_wallets', false)
         ->assertJsonPath('props.cockpit_header_read_model.redactions.releases_funds', false)
         ->assertJsonPath('props.cockpit_header_read_model.redactions.calls_providers', false)
+        ->assertJsonPath('props.cockpit_claim_entry_artifact.kind', 'claim_entry')
+        ->assertJsonPath('props.cockpit_claim_entry_artifact.destination', route('x-change.claim.start'))
+        ->assertJsonPath('props.cockpit_claim_entry_artifact.title', 'Enter Pay Code')
+        ->assertJsonPath('props.cockpit_claim_entry_artifact.identifier', null)
         ->assertJsonMissingPath('props.cockpit_header_read_model.wallet')
         ->assertJsonMissingPath('props.cockpit_header_read_model.provider_payload')
         ->assertJsonMissingPath('props.cockpit_header_read_model.raw_payload');

@@ -16,6 +16,7 @@ it('keeps cockpit pages inside the single package-owned host shell', function ()
             'X-CHANGE HOST SHELL',
             "title: 'Funding'",
             "title: 'Issuance'",
+            "title: 'Claim'",
             "title: 'Campaigns'",
             "title: 'Pay Codes'",
             "title: 'Overview'",
@@ -29,6 +30,8 @@ it('keeps cockpit pages inside the single package-owned host shell', function ()
             'branch: true',
             'dividerBefore: true',
             'CockpitWorkspaceNavigationItem',
+            'openCockpitClaimEntryLauncher',
+            'cockpit-desktop-claim-launcher',
             'cockpitWorkspaceGuides',
             "type XChangeNavigationItem = Omit<NavItem, 'icon'>",
             "icon: NonNullable<NavItem['icon']>;",
@@ -64,6 +67,8 @@ it('keeps cockpit pages inside the single package-owned host shell', function ()
     expect(strpos($sidebar, "title: 'Funding'"))
         ->toBeLessThan(strpos($sidebar, "title: 'Issuance'"))
         ->and(strpos($sidebar, "title: 'Issuance'"))
+        ->toBeLessThan(strpos($sidebar, "title: 'Claim'"))
+        ->and(strpos($sidebar, "title: 'Claim'"))
         ->toBeLessThan(strpos($sidebar, "title: 'Campaigns'"))
         ->and(strpos($sidebar, "title: 'Campaigns'"))
         ->toBeLessThan(strpos($sidebar, "title: 'Pay Codes'"))

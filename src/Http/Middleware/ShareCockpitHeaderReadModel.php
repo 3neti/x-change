@@ -11,6 +11,7 @@ use Inertia\Inertia;
 use LBHurtado\XChange\Contracts\CockpitHeaderReadModelProviderContract;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitEntryPageController;
 use LBHurtado\XChange\Services\Funding\FundingProjectionChannel;
+use LBHurtado\XChange\Services\QrArtifactFactory;
 use Symfony\Component\HttpFoundation\Response;
 
 class ShareCockpitHeaderReadModel
@@ -18,6 +19,7 @@ class ShareCockpitHeaderReadModel
     public function __construct(
         private readonly CockpitHeaderReadModelProviderContract $headerReadModels,
         private readonly FundingProjectionChannel $fundingChannels,
+        private readonly QrArtifactFactory $qrArtifacts,
     ) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -42,6 +44,10 @@ class ShareCockpitHeaderReadModel
         Inertia::share(
             'cockpit_entry_notice',
             fn (): mixed => $request->session()->get(CockpitEntryPageController::NOTICE_SESSION_KEY),
+        );
+        Inertia::share(
+            'cockpit_claim_entry_artifact',
+            fn (): array => $this->qrArtifacts->claimEntry()->toArray(),
         );
 
         return $next($request);

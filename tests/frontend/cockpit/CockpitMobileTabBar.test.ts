@@ -13,22 +13,22 @@ vi.mock('@inertiajs/vue3', () => ({
 describe('Cockpit mobile tab bar', () => {
     it('renders the five primary workspaces in their governed order', () => {
         const wrapper = mount(CockpitMobileTabBar);
-        const tabs = wrapper.findAll('a');
+        const tabs = wrapper.findAll('a, button');
 
         expect(tabs).toHaveLength(5);
         expect(tabs.map((tab) => tab.text())).toEqual([
             'Funding',
             'Issuance',
-            'Overview',
+            'Claim',
             'Pay Codes',
-            'Campaigns',
+            'Overview',
         ]);
-        expect(tabs.map((tab) => tab.attributes('href'))).toEqual([
+        expect(tabs.map((tab) => tab.attributes('href') ?? null)).toEqual([
             '/x/cockpit/funding',
             '/x/cockpit/quick-generate',
-            '/x/cockpit/overview',
+            null,
             '/x/cockpit/pay-codes',
-            '/x/cockpit/campaigns',
+            '/x/cockpit/overview',
         ]);
         expect(
             wrapper.get('[data-testid="cockpit-mobile-tab-bar"]').classes(),
@@ -38,16 +38,38 @@ describe('Cockpit mobile tab bar', () => {
         );
     });
 
+    it('opens the Claim launcher without navigating away', async () => {
+        const listener = vi.fn();
+        window.addEventListener('x-change:open-cockpit-claim-entry', listener);
+        const wrapper = mount(CockpitMobileTabBar);
+
+        await wrapper
+            .get('[data-testid="cockpit-mobile-tab-claim"]')
+            .trigger('click');
+
+        expect(listener).toHaveBeenCalledOnce();
+        expect(
+            wrapper.get('[data-testid="cockpit-mobile-tab-claim"]').element
+                .tagName,
+        ).toBe('BUTTON');
+        expect(wrapper.text()).not.toContain('Campaigns');
+
+        window.removeEventListener(
+            'x-change:open-cockpit-claim-entry',
+            listener,
+        );
+    });
+
     it('marks only the active workspace as the current page', () => {
         const wrapper = mount(CockpitMobileTabBar, {
             props: {
-                activeKey: 'campaigns',
+                activeKey: 'dashboard',
             },
         });
 
         expect(
             wrapper
-                .get('[data-testid="cockpit-mobile-tab-campaigns"]')
+                .get('[data-testid="cockpit-mobile-tab-dashboard"]')
                 .attributes('aria-current'),
         ).toBe('page');
         expect(
@@ -57,7 +79,7 @@ describe('Cockpit mobile tab bar', () => {
         ).toBeUndefined();
         expect(
             wrapper
-                .get('[data-testid="cockpit-mobile-tab-campaigns"]')
+                .get('[data-testid="cockpit-mobile-tab-dashboard"]')
                 .classes(),
         ).toEqual(expect.arrayContaining(['bg-primary/10', 'text-primary']));
     });

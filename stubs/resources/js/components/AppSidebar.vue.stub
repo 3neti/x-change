@@ -9,6 +9,7 @@ import {
     Megaphone,
     PlugZap,
     RadioTower,
+    ScanQrCode,
     Scale,
     ShieldCheck,
     UsersRound,
@@ -17,6 +18,7 @@ import { computed } from 'vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import NavUser from '@/components/NavUser.vue';
 import CockpitWorkspaceNavigationItem from '@/cockpit/components/CockpitWorkspaceNavigationItem.vue';
+import { openCockpitClaimEntryLauncher } from '@/cockpit/claimEntryLauncher';
 import {
     cockpitWorkspaceGuides,
     type CockpitWorkspaceGuide,
@@ -62,7 +64,18 @@ type XChangeWorkspaceNavigationItem = XChangeNavigationItem & {
     dividerBefore?: boolean;
 };
 
-const workspaceItems: XChangeWorkspaceNavigationItem[] = [
+type XChangeWorkspaceActionItem = {
+    title: string;
+    description: string;
+    icon: NonNullable<NavItem['icon']>;
+    action: 'claim-entry';
+};
+
+type XChangeWorkspaceItem =
+    | XChangeWorkspaceNavigationItem
+    | XChangeWorkspaceActionItem;
+
+const workspaceItems: XChangeWorkspaceItem[] = [
     {
         title: 'Funding',
         description: 'Add and confirm funds',
@@ -78,6 +91,12 @@ const workspaceItems: XChangeWorkspaceNavigationItem[] = [
         icon: BadgePlus,
         step: '2',
         guide: cockpitWorkspaceGuides.issuance,
+    },
+    {
+        title: 'Claim',
+        description: 'Show the universal claim QR',
+        icon: ScanQrCode,
+        action: 'claim-entry',
     },
     {
         title: 'Campaigns',
@@ -195,6 +214,12 @@ const navigationGroups = computed(() => [
 ]);
 
 const { isCurrentUrl } = useCurrentUrl();
+
+function isWorkspaceAction(
+    item: XChangeWorkspaceItem,
+): item is XChangeWorkspaceActionItem {
+    return 'action' in item;
+}
 </script>
 
 <template>
@@ -233,22 +258,48 @@ const { isCurrentUrl } = useCurrentUrl();
             >
                 <SidebarGroupLabel>{{ group.label }}</SidebarGroupLabel>
                 <SidebarMenu>
-                    <CockpitWorkspaceNavigationItem
+                    <template
                         v-for="item in group.label === 'Workspace'
-                            ? (group.items as XChangeWorkspaceNavigationItem[])
+                            ? (group.items as XChangeWorkspaceItem[])
                             : []"
                         :key="item.title"
-                        :title="item.title"
-                        :description="item.description"
-                        :href="item.href"
-                        :icon="item.icon"
-                        :active="isCurrentUrl(item.href)"
-                        :guide="item.guide"
-                        :guide-href="documentation()"
-                        :step="item.step"
-                        :branch="item.branch"
-                        :divider-before="item.dividerBefore"
-                    />
+                    >
+                        <SidebarMenuItem v-if="isWorkspaceAction(item)">
+                            <SidebarMenuButton
+                                size="lg"
+                                :tooltip="`${item.title} — ${item.description}`"
+                                data-testid="cockpit-desktop-claim-launcher"
+                                @click="openCockpitClaimEntryLauncher"
+                            >
+                                <component :is="item.icon" class="mt-0.5" />
+                                <span
+                                    class="min-w-0 flex-1 text-left group-data-[collapsible=icon]:hidden"
+                                >
+                                    <span class="block truncate font-medium">
+                                        {{ item.title }}
+                                    </span>
+                                    <span
+                                        class="block truncate text-[0.7rem] leading-4 text-sidebar-foreground/60"
+                                    >
+                                        {{ item.description }}
+                                    </span>
+                                </span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                        <CockpitWorkspaceNavigationItem
+                            v-else
+                            :title="item.title"
+                            :description="item.description"
+                            :href="item.href"
+                            :icon="item.icon"
+                            :active="isCurrentUrl(item.href)"
+                            :guide="item.guide"
+                            :guide-href="documentation()"
+                            :step="item.step"
+                            :branch="item.branch"
+                            :divider-before="item.dividerBefore"
+                        />
+                    </template>
                     <SidebarMenuItem
                         v-for="item in group.label !== 'Workspace'
                             ? group.items

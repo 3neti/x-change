@@ -63,19 +63,28 @@ export const cockpitPrimaryNavigation = cockpitNavigationItems.filter(
     (item) => item.group === 'primary',
 );
 
+export const cockpitClaimEntryNavigationItem: CockpitNavigationItem = {
+    key: 'claim',
+    label: 'Claim',
+    href: '/x/claim',
+    group: 'primary',
+    description: 'Show the universal claim QR',
+};
+
 const cockpitMobileNavigationOrder = [
     'funding',
     'quick-generate',
-    'dashboard',
+    'claim',
     'pay-codes',
-    'campaigns',
+    'dashboard',
 ] as const;
 
 export const cockpitMobilePrimaryNavigation =
     cockpitMobileNavigationOrder.flatMap((key) => {
-        const item = cockpitPrimaryNavigation.find(
-            (candidate) => candidate.key === key,
-        );
+        const item = [
+            ...cockpitPrimaryNavigation,
+            cockpitClaimEntryNavigationItem,
+        ].find((candidate) => candidate.key === key);
 
         return item ? [item] : [];
     });

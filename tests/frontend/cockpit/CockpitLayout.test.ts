@@ -13,6 +13,7 @@ vi.mock('@inertiajs/vue3', () => ({
         template: '<a :href="href?.url ?? href"><slot /></a>',
     },
     router: { reload: vi.fn() },
+    usePage: () => ({ props: {} }),
 }));
 vi.mock('@laravel/echo-vue', () => ({
     useEcho: vi.fn(),
