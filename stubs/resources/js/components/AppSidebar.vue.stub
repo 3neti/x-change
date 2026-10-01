@@ -75,6 +75,16 @@ type XChangeWorkspaceItem =
     | XChangeWorkspaceNavigationItem
     | XChangeWorkspaceActionItem;
 
+type XChangeNavigationGroup =
+    | {
+          label: 'Workspace';
+          items: XChangeWorkspaceItem[];
+      }
+    | {
+          label: 'Account & Help' | 'System';
+          items: XChangeNavigationItem[];
+      };
+
 const workspaceItems: XChangeWorkspaceItem[] = [
     {
         title: 'Funding',
@@ -205,7 +215,7 @@ const systemItems = computed<XChangeNavigationItem[]>(() => [
         : []),
 ]);
 
-const navigationGroups = computed(() => [
+const navigationGroups = computed<XChangeNavigationGroup[]>(() => [
     { label: 'Workspace', items: workspaceItems },
     { label: 'Account & Help', items: accountHelpItems },
     ...(systemItems.value.length > 0
@@ -219,6 +229,18 @@ function isWorkspaceAction(
     item: XChangeWorkspaceItem,
 ): item is XChangeWorkspaceActionItem {
     return 'action' in item;
+}
+
+function workspaceItemsForGroup(
+    group: XChangeNavigationGroup,
+): XChangeWorkspaceItem[] {
+    return group.label === 'Workspace' ? group.items : [];
+}
+
+function navigationItemsForGroup(
+    group: XChangeNavigationGroup,
+): XChangeNavigationItem[] {
+    return group.label === 'Workspace' ? [] : group.items;
 }
 </script>
 
@@ -259,9 +281,7 @@ function isWorkspaceAction(
                 <SidebarGroupLabel>{{ group.label }}</SidebarGroupLabel>
                 <SidebarMenu>
                     <template
-                        v-for="item in group.label === 'Workspace'
-                            ? (group.items as XChangeWorkspaceItem[])
-                            : []"
+                        v-for="item in workspaceItemsForGroup(group)"
                         :key="item.title"
                     >
                         <SidebarMenuItem v-if="isWorkspaceAction(item)">
@@ -301,9 +321,7 @@ function isWorkspaceAction(
                         />
                     </template>
                     <SidebarMenuItem
-                        v-for="item in group.label !== 'Workspace'
-                            ? group.items
-                            : []"
+                        v-for="item in navigationItemsForGroup(group)"
                         :key="item.title"
                     >
                         <SidebarMenuButton
