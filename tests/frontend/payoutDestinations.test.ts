@@ -88,6 +88,9 @@ describe("payout destination display helpers", () => {
     expect(iconAssetForRail("INSTAPAY")).toBe(
       "/vendor/x-change/images/payout-destinations/rail-instapay-128.png",
     );
+    expect(iconAssetForRail("PESONET")).toBe(
+      "/vendor/x-change/images/payout-destinations/rail-pesonet-128.png",
+    );
     expect(iconAssetForProvider("NetBank")).toBe(
       "/vendor/x-change/images/payout-destinations/netbank-128.png",
     );

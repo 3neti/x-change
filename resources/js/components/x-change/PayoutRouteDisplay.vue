@@ -119,7 +119,7 @@ function shouldShowSegmentText(index: number): boolean {
                                 :icon-asset="routeIcons[index]"
                                 :fallback-icon="fallbackIconFor(index, segment)"
                                 :alt="segment"
-                                size-class="h-5 w-5"
+                                :size-class="segment === rail ? 'h-5 w-14' : 'h-5 w-5'"
                             />
                             <span
                                 v-if="shouldShowSegmentText(index)"

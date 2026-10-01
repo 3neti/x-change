@@ -86,7 +86,7 @@ describe('PayoutRouteDisplay', () => {
         expect(bank.text()).not.toContain('Maya Wallet');
     });
 
-    it('keeps InstaPay and PESONet textually distinct even though they share an operator icon', () => {
+    it('keeps InstaPay and PESONet visually and textually distinct', () => {
         const instapay = mount(PayoutRouteDisplay, {
             props: {
                 mode: 'operational',
@@ -107,6 +107,14 @@ describe('PayoutRouteDisplay', () => {
 
         expect(pesonet.text()).toContain('PESONet');
         expect(pesonet.text()).not.toContain('InstaPay');
+
+        const instapayRailIcon = instapay.find('img[alt="InstaPay"]');
+        const pesonetRailIcon = pesonet.find('img[alt="PESONet"]');
+
+        expect(instapayRailIcon.attributes('src')).toContain('rail-instapay-128.png');
+        expect(pesonetRailIcon.attributes('src')).toContain('rail-pesonet-128.png');
+        expect(instapayRailIcon.classes()).toContain('w-14');
+        expect(pesonetRailIcon.classes()).toContain('w-14');
     });
 
     it('renders cleanly with the generic fallback glyph when a destination has no icon', () => {

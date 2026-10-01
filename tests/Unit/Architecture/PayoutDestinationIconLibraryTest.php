@@ -65,3 +65,21 @@ it('flags every third-party bank/EMI/provider mark for legal review while keepin
         expect($entry['needs_legal_review'])->toBeTrue("{$code} should be flagged for legal review");
     }
 });
+
+it('ships distinct official-reference wordmarks for InstaPay and PESONet', function (): void {
+    $packageRoot = dirname(__DIR__, 3);
+    $metadata = json_decode(
+        file_get_contents($packageRoot.'/resources/documents/payout-destination-icons.json') ?: '',
+        true,
+        flags: JSON_THROW_ON_ERROR,
+    );
+
+    $instapay = $metadata['entries']['RAIL:INSTAPAY'];
+    $pesonet = $metadata['entries']['RAIL:PESONET'];
+
+    expect($instapay['assets']['png128'])->toBe('rail-instapay-128.png')
+        ->and($pesonet['assets']['png128'])->toBe('rail-pesonet-128.png')
+        ->and($instapay['assets']['png128'])->not->toBe($pesonet['assets']['png128'])
+        ->and($instapay['source_type'])->toBe('official_bsp_publication')
+        ->and($pesonet['source_type'])->toBe('official_bsp_publication');
+});

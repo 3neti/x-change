@@ -1933,32 +1933,32 @@
                 "png128": "rail-instapay-128.png",
                 "png256": "rail-instapay-256.png"
             },
-            "source_url": "https://www.philpayments.org.ph/instapay",
-            "source_type": "official_site_favicon",
-            "confidence": "medium",
+            "source_url": "https://www.bsp.gov.ph/Inclusive%20Finance/EFLP/DAY2_Digitalpayments.pdf",
+            "source_type": "official_bsp_publication",
+            "confidence": "high",
             "needs_legal_review": true,
-            "license_notes": "PPMI (Philippine Payments Management, Inc.) operates both InstaPay and PESONet under one operator mark; this favicon does not visually distinguish the two rails from each other. Recommend commissioning distinct InstaPay/PESONet rail badges for production.",
-            "retrieved_at": "2026-08-10"
+            "license_notes": "Distinct InstaPay wordmark reproduced from an official BSP digital-payments presentation. BSP's 2025 E-Kita material confirms the same red-and-blue InstaPay identity for InstaPay QR. Retain legal review because no publicly downloadable PPMI brand kit or reproduction licence was found.",
+            "retrieved_at": "2026-10-01"
         },
         "RAIL:PESONET": {
             "code": "RAIL:PESONET",
-            "slug": "rail-instapay",
+            "slug": "rail-pesonet",
             "display_name": "PESONet",
             "kind": "rail",
             "rails": [
                 "pesonet"
             ],
             "assets": {
-                "png64": "rail-instapay-64.png",
-                "png128": "rail-instapay-128.png",
-                "png256": "rail-instapay-256.png"
+                "png64": "rail-pesonet-64.png",
+                "png128": "rail-pesonet-128.png",
+                "png256": "rail-pesonet-256.png"
             },
-            "source_url": "https://www.philpayments.org.ph/pesonet",
-            "source_type": "official_site_favicon",
-            "confidence": "medium",
+            "source_url": "https://www.bsp.gov.ph/Inclusive%20Finance/EFLP/DAY2_Digitalpayments.pdf",
+            "source_type": "official_bsp_publication",
+            "confidence": "high",
             "needs_legal_review": true,
-            "license_notes": "Shares the PPMI operator mark with InstaPay (see RAIL:INSTAPAY); no distinct official PESONet mark was found. Recommend commissioning a distinct badge for production.",
-            "retrieved_at": "2026-08-10"
+            "license_notes": "Distinct PESONet wordmark reproduced from an official BSP digital-payments presentation and cross-checked against PPMI's current PESONet service page. Retain legal review because no publicly downloadable PPMI brand kit or reproduction licence was found.",
+            "retrieved_at": "2026-10-01"
         },
         "RARLPHM1XXX": {
             "code": "RARLPHM1XXX",
