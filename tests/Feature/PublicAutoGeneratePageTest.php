@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Session\ArraySessionHandler;
 use Illuminate\Session\Store;
 use Illuminate\Support\Facades\URL;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitOnDemandIssuanceFundingOrderController;
 use LBHurtado\XChange\Models\CommercialPrincipal;
@@ -170,6 +171,136 @@ it('recovers only a public order through its valid signed link', function (): vo
         ->assertSessionHas('x-change.public-auto-generate.active-order.reference', $order->reference);
 
     $this->get($url.'&tampered=1')->assertNotFound();
+});
+
+it('recovers an issued public order through its signed redacted receipt', function (): void {
+    provisionPublicAutoGeneratePrincipal();
+    $order = makePublicAutoGenerateFundingOrder();
+    $bindingRequest = request();
+    $bindingRequest->setLaravelSession(app('session')->driver());
+    $bindingRequest->session()->start();
+    app(PublicIssuanceOrderAccess::class)->bind($order, $bindingRequest);
+    $voucher = Voucher::query()->create([
+        'code' => 'PUB-RCV1',
+        'metadata' => ['source' => 'public_recovery_test'],
+    ]);
+    $order->forceFill([
+        'status' => 'issued',
+        'voucher_id' => $voucher->getKey(),
+        'funded_at' => now(),
+        'issued_at' => now(),
+    ])->saveQuietly();
+    $bindingMetadata = data_get($order->refresh()->metadata, 'public_auto_generate');
+    $this->flushSession();
+
+    $url = URL::temporarySignedRoute(
+        'x-change.public-auto-generate.recover',
+        now()->addMinute(),
+        ['order' => $order->reference],
+    );
+
+    $response = $this->get($url)
+        ->assertRedirect()
+        ->assertHeader('Cache-Control', 'no-store, private')
+        ->assertHeader('Referrer-Policy', 'no-referrer')
+        ->assertHeader('X-Robots-Tag', 'noindex, nofollow, noarchive')
+        ->assertSessionMissing('x-change.public-auto-generate.active-order');
+    $location = (string) $response->headers->get('Location');
+
+    expect($location)
+        ->toContain('/x/auto-generate/receipts/'.$order->reference)
+        ->toContain('signature=')
+        ->and(URL::hasValidSignature(Request::create($location)))
+        ->toBeTrue()
+        ->and(data_get($order->refresh()->metadata, 'public_auto_generate'))
+        ->toBe($bindingMetadata);
+
+    $this->withHeaders([
+        'X-Inertia' => 'true',
+        'Accept' => 'text/html, application/xhtml+xml',
+    ])->get($location)
+        ->assertOk()
+        ->assertHeader('Cache-Control', 'no-store, private')
+        ->assertHeader('Referrer-Policy', 'no-referrer')
+        ->assertHeader('X-Robots-Tag', 'noindex, nofollow, noarchive')
+        ->assertJsonPath('component', 'x-change/public/IssuanceReceipt')
+        ->assertJsonPath('props.receipt.order_reference', $order->reference)
+        ->assertJsonPath('props.receipt.status', 'issued')
+        ->assertJsonPath('props.receipt.pay_code.code', 'PUB-RCV1')
+        ->assertJsonPath('props.receipt.pay_code.claim_url', route('x-change.claim.show', [
+            'code' => 'PUB-RCV1',
+        ]))
+        ->assertJsonPath('props.receipt.redactions.payer_identity', true)
+        ->assertJsonMissingPath('props.receipt.guest_access_token')
+        ->assertJsonMissingPath('props.receipt.actions')
+        ->assertJsonMissingPath('props.receipt.provider_transaction_id')
+        ->assertJsonMissingPath('props.receipt.cockpit_url');
+
+    $this->get($url.'&tampered=1')->assertNotFound();
+});
+
+it('redirects non-issued terminal public orders to their signed receipt', function (
+    string $status,
+): void {
+    provisionPublicAutoGeneratePrincipal();
+    $order = makePublicAutoGenerateFundingOrder();
+    $bindingRequest = request();
+    $bindingRequest->setLaravelSession(app('session')->driver());
+    $bindingRequest->session()->start();
+    app(PublicIssuanceOrderAccess::class)->bind($order, $bindingRequest);
+    $order->forceFill([
+        'status' => $status,
+        'cancelled_at' => $status === 'cancelled' ? now() : null,
+        'expired_at' => $status === 'expired' ? now() : null,
+    ])->saveQuietly();
+
+    $url = URL::temporarySignedRoute(
+        'x-change.public-auto-generate.recover',
+        now()->addMinute(),
+        ['order' => $order->reference],
+    );
+
+    $location = (string) $this->get($url)
+        ->assertRedirect()
+        ->headers->get('Location');
+
+    $this->withHeaders([
+        'X-Inertia' => 'true',
+        'Accept' => 'text/html, application/xhtml+xml',
+    ])->get($location)
+        ->assertOk()
+        ->assertJsonPath('props.receipt.status', $status)
+        ->assertJsonPath('props.receipt.pay_code', null);
+})->with(['cancelled', 'expired']);
+
+it('refuses recovery when the order was not created by public issuance', function (): void {
+    provisionPublicAutoGeneratePrincipal();
+    $order = makePublicAutoGenerateFundingOrder();
+    $url = URL::temporarySignedRoute(
+        'x-change.public-auto-generate.recover',
+        now()->addMinute(),
+        ['order' => $order->reference],
+    );
+
+    $this->get($url)->assertNotFound();
+});
+
+it('refuses an expired public issuance recovery link', function (): void {
+    provisionPublicAutoGeneratePrincipal();
+    $order = makePublicAutoGenerateFundingOrder();
+    $bindingRequest = request();
+    $bindingRequest->setLaravelSession(app('session')->driver());
+    $bindingRequest->session()->start();
+    app(PublicIssuanceOrderAccess::class)->bind($order, $bindingRequest);
+    $url = URL::temporarySignedRoute(
+        'x-change.public-auto-generate.recover',
+        now()->addSecond(),
+        ['order' => $order->reference],
+    );
+
+    $this->travel(2)->seconds();
+
+    $this->get($url)->assertNotFound();
 });
 
 it('renders a signed redacted public issuance receipt', function (): void {
