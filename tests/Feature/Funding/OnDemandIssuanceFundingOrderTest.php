@@ -903,7 +903,7 @@ it('does not use corporate account fallback outside on-demand issuance', functio
         ->toBe('915008422914050308952');
 });
 
-it('settles exact provider funds into a hold and resumes issuance exactly once', function (): void {
+it('resumes an expired issuance-attention order whose provider payment was already held', function (): void {
     Queue::fake();
     enableNetbankTreasuryForTests();
     $user = actingAsTestUser(0);
@@ -927,6 +927,12 @@ it('settles exact provider funds into a hold and resumes issuance exactly once',
         ResumeOnDemandPayCodeIssuanceJob::class,
         fn (ResumeOnDemandPayCodeIssuanceJob $job): bool => $job->fundingOrderId === $order->getKey(),
     );
+
+    $order->forceFill([
+        'status' => PayCodeIssuanceFundingOrderStatus::IssuanceAttention,
+        'attention_at' => now(),
+        'expires_at' => now()->subMinute(),
+    ])->saveQuietly();
 
     $voucher = Voucher::query()->create([
         'code' => 'ODIF-4242',

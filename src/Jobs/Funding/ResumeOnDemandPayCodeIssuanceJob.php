@@ -73,7 +73,7 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
                     PayCodeIssuanceFundingOrderStatus::IssuanceAttention,
                 ], true)
                     || $order->treasury_hold_reference === null
-                    || $order->expires_at->isPast()) {
+                    || $order->funded_at === null) {
                     throw new RuntimeException('The issuance funding order is not ready to issue.');
                 }
 
