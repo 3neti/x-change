@@ -100,6 +100,7 @@ final class BootstrapXChangeFromManifestCommand extends Command
             '--provision-system-principal',
             '--confirm-system-principal',
             '--system-principal-name='.$this->systemPrincipalName($manifest),
+            '--defer-operational-manifest',
         ];
 
         $profile = trim((string) data_get($manifest, 'deployment.profile'));

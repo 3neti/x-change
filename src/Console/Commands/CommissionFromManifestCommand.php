@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Console\Commands;
 
 use Illuminate\Console\Command;
+use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Commissioning\CommissioningManifestCommissioner;
+use LBHurtado\XChange\Services\Configuration\CommissioningConfigurationFingerprint;
+use LBHurtado\XChange\Services\Configuration\CommissioningManifestRecorder;
 use Throwable;
 
 final class CommissionFromManifestCommand extends Command
@@ -16,8 +19,12 @@ final class CommissionFromManifestCommand extends Command
 
     protected $description = 'Commission app-specific onboarding Pay Codes from a YAML manifest.';
 
-    public function handle(CommissioningManifestCommissioner $commissioner): int
-    {
+    public function handle(
+        CommissioningManifestCommissioner $commissioner,
+        CommissioningConfigurationFingerprint $fingerprint,
+        CommissioningManifestRecorder $commissioningManifests,
+        ProvisionCommercialBaselines $commercialBaselines,
+    ): int {
         $manifest = trim((string) $this->option('manifest'));
 
         if ($manifest === '') {
@@ -26,6 +33,10 @@ final class CommissionFromManifestCommand extends Command
 
         try {
             $result = $commissioner->commission($manifest);
+            $commercialBaselines->provision(
+                'installation-manifest:'.$fingerprint->current(),
+            );
+            $commissioningManifests->record();
         } catch (Throwable $exception) {
             return $this->reject($exception->getMessage());
         }
@@ -51,7 +62,6 @@ final class CommissionFromManifestCommand extends Command
 
         return self::SUCCESS;
     }
-
 
     /** @param array<string, mixed> $funding */
     private function renderFundingSummary(array $funding): void

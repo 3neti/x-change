@@ -46,4 +46,11 @@ final readonly class CommissioningManifestRecorder
             ],
         );
     }
+
+    public function invalidate(): void
+    {
+        XChangeInstallationManifest::query()
+            ->whereKey(CommissioningStateResolver::ManifestKey)
+            ->delete();
+    }
 }

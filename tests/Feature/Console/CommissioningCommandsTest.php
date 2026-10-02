@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use LBHurtado\XChange\Services\Configuration\CommissioningManifestRecorder;
+use LBHurtado\XChange\Services\Configuration\CommissioningStateResolver;
 
 it('reports commissioning status without exposing configuration values', function (): void {
     $this->artisan('x-change:commissioning:status', ['--json' => true])
@@ -23,6 +24,23 @@ it('records a sanitized manifest idempotently', function (): void {
         ->and($second->configuration_fingerprint)->toHaveLength(64)
         ->and($second->active_connection_references)->toBe([])
         ->and($second->getAttributes())->not->toHaveKey('configuration');
+});
+
+it('invalidates an operational marker while manifest commissioning is incomplete', function (): void {
+    provisionTestSystemPrincipalForCommissioning();
+
+    $recorder = app(CommissioningManifestRecorder::class);
+    $recorder->record();
+
+    expect(app(CommissioningStateResolver::class)
+        ->resolve()
+        ->isOperational())->toBeTrue();
+
+    $recorder->invalidate();
+
+    expect(app(CommissioningStateResolver::class)
+        ->resolve()
+        ->isOperational())->toBeFalse();
 });
 
 it('refuses to record a manifest without the system principal Account', function (): void {

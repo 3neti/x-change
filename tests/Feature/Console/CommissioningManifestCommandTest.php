@@ -10,10 +10,13 @@ use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\XChange\Console\Commands\BootstrapXChangeFromManifestCommand;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
+use LBHurtado\XChange\Enums\CommissioningState;
 use LBHurtado\XChange\Models\ProviderBalanceSnapshot;
 use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
+use LBHurtado\XChange\Models\XChangeInstallationManifest;
 use LBHurtado\XChange\Services\CheckNetbankSourceAccountReadiness;
 use LBHurtado\XChange\Services\Commissioning\CommissioningManifestRepository;
+use LBHurtado\XChange\Services\Configuration\CommissioningStateResolver;
 use LBHurtado\XChange\Services\Configuration\LocalEnvironmentFileWriter;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 
@@ -86,6 +89,7 @@ it('keeps bootstrap strict while allowing interactive credential capture', funct
         ->toContain("'x-change:doctor', '--pre-commission', '--strict'")
         ->toContain("'x-change:doctor', '--strict'")
         ->toContain("'--profile='.\$profile")
+        ->toContain("'--defer-operational-manifest'")
         ->toContain("'npm', 'install', '--include=dev'")
         ->toContain("'npm', 'run', 'build'")
         ->not->toContain("'key:generate'");
@@ -354,7 +358,11 @@ it('commissions maker and checker onboarding invitations from the package manife
         ->and(commissioningSystemFundingPositionBalance(
             $system,
             TreasuryPositionPurpose::PayCodeReserve,
-        ))->toBe(20_000);
+        ))->toBe(20_000)
+        ->and(XChangeInstallationManifest::query()->sole()->manifest_version)
+        ->toBe(CommissioningStateResolver::ManifestVersion)
+        ->and(app(CommissioningStateResolver::class)->resolve()->state)
+        ->toBe(CommissioningState::Operational);
 
     $vouchers->each(function (Voucher $voucher): void {
         expect(route('x-change.claim.show', ['code' => $voucher->code]))
@@ -533,7 +541,10 @@ it('rejects funded commissioning invitations when provider liquidity cannot be r
         ->and(commissioningSystemFundingPositionBalance(
             $system,
             TreasuryPositionPurpose::PayCodeReserve,
-        ))->toBe(0);
+        ))->toBe(0)
+        ->and(XChangeInstallationManifest::query()->count())->toBe(0)
+        ->and(app(CommissioningStateResolver::class)->resolve()->state)
+        ->toBe(CommissioningState::InstallationIncomplete);
 });
 
 it('rejects funded commissioning invitations without an authorization reference', function (): void {
@@ -587,7 +598,10 @@ it('rejects funded commissioning invitations when the Account Funding Reserve ca
         ->and(commissioningSystemFundingPositionBalance(
             $system,
             TreasuryPositionPurpose::PayCodeReserve,
-        ))->toBe(0);
+        ))->toBe(0)
+        ->and(XChangeInstallationManifest::query()->count())->toBe(0)
+        ->and(app(CommissioningStateResolver::class)->resolve()->state)
+        ->toBe(CommissioningState::InstallationIncomplete);
 });
 
 /**

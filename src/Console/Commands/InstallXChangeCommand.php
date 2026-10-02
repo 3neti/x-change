@@ -43,6 +43,7 @@ class InstallXChangeCommand extends Command
         {--treasury-opening-policy= : unattributed, system-capital, or configured}
         {--capitalization-authorization-reference= : Stable deployment or control authorization reference}
         {--confirm-system-ownership : Confirm that opening provider funds belong to the system principal}
+        {--defer-operational-manifest : Leave commissioning fail-closed until a later manifest step succeeds}
         {--provision-system-principal : Create or adopt the configured non-interactive system principal}
         {--system-principal-name= : Display name for a newly created system principal}
         {--system-principal-email= : Email; must match XCHANGE_SYSTEM_USER_ID}
@@ -296,10 +297,6 @@ class InstallXChangeCommand extends Command
                     ->connectionReferences(
                         $this->option('treasury-opening-policy'),
                     );
-                $capitalizationConnections = array_values(array_intersect(
-                    $capitalizationConnections,
-                    $openingConnections,
-                ));
             } catch (TreasuryConfigurationException $exception) {
                 $this->components->error($exception->getMessage());
                 $this->components->warn(
@@ -390,10 +387,11 @@ class InstallXChangeCommand extends Command
                 }
             }
 
-            $capitalizationConnections = array_values(array_intersect(
+            $capitalizationConnections = $this->eligibleCapitalizationConnections(
                 $capitalizationConnections,
+                $initializedConnections,
                 $liveReadyOpeningConnections,
-            ));
+            );
         } else {
             $this->components->warn(
                 'Treasury initialization is explicitly deferred [--no-treasury]. '
@@ -630,28 +628,7 @@ class InstallXChangeCommand extends Command
                 return self::FAILURE;
             }
 
-            if ($capitalizationConnections !== []) {
-                $exitCode = $this->call(
-                    'x-change:treasury:capitalize-opening',
-                    [
-                        '--connection' => $capitalizationConnections,
-                        '--authorization-reference' => (string) $this->option(
-                            'capitalization-authorization-reference',
-                        ),
-                        '--confirm-system-ownership' => true,
-                        '--commit' => true,
-                        '--no-interaction' => true,
-                    ],
-                );
-
-                if ($exitCode !== self::SUCCESS) {
-                    $this->components->error(
-                        'Treasury opening capitalization failed; X-Change installation is incomplete.',
-                    );
-
-                    return self::FAILURE;
-                }
-            } else {
+            if ($capitalizationConnections === []) {
                 $this->components->warn(
                     'Opening provider funds remain Legacy Unattributed; no system Account Funding Reserve was capitalized.',
                 );
@@ -665,13 +642,39 @@ class InstallXChangeCommand extends Command
             );
         }
 
+        if (! $this->option('no-treasury') && $capitalizationConnections !== []) {
+            $exitCode = $this->call(
+                'x-change:treasury:capitalize-opening',
+                [
+                    '--connection' => $capitalizationConnections,
+                    '--authorization-reference' => (string) $this->option(
+                        'capitalization-authorization-reference',
+                    ),
+                    '--confirm-system-ownership' => true,
+                    '--commit' => true,
+                    '--no-interaction' => true,
+                ],
+            );
+
+            if ($exitCode !== self::SUCCESS) {
+                $this->components->error(
+                    'Treasury opening capitalization failed; X-Change installation is incomplete.',
+                );
+
+                return self::FAILURE;
+            }
+        }
+
         if (! $publishResources()) {
             $this->components->error('Resource publication failed; X-Change installation is incomplete.');
 
             return self::FAILURE;
         }
 
-        if (! $this->option('no-treasury')) {
+        if (
+            ! $this->option('no-treasury')
+            && ! (bool) $this->option('defer-operational-manifest')
+        ) {
             try {
                 $manifest = $commissioningManifests->record();
                 $commercialBaselines->provision(
@@ -685,9 +688,14 @@ class InstallXChangeCommand extends Command
 
                 return self::FAILURE;
             }
-        } else {
+        } elseif ($this->option('no-treasury')) {
             $this->components->warn(
                 'Commissioning remains incomplete because Treasury was explicitly deferred.',
+            );
+        } else {
+            $commissioningManifests->invalidate();
+            $this->components->warn(
+                'Commissioning remains incomplete until manifest commissioning succeeds.',
             );
         }
 
@@ -700,6 +708,26 @@ class InstallXChangeCommand extends Command
         $this->newLine();
 
         return self::SUCCESS;
+    }
+
+    /**
+     * @param  list<string>  $requestedConnections
+     * @param  list<string>  $initializedConnections
+     * @param  list<string>  $liveReadyOpeningConnections
+     * @return list<string>
+     */
+    private function eligibleCapitalizationConnections(
+        array $requestedConnections,
+        array $initializedConnections,
+        array $liveReadyOpeningConnections,
+    ): array {
+        return array_values(array_intersect(
+            $requestedConnections,
+            array_values(array_unique([
+                ...$initializedConnections,
+                ...$liveReadyOpeningConnections,
+            ])),
+        ));
     }
 
     /** @return list<string> */

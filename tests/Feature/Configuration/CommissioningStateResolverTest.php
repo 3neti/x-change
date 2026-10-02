@@ -49,6 +49,25 @@ it('becomes operational only with a matching installation manifest', function ()
         ->toBe(CommissioningState::InstallationIncomplete);
 });
 
+it('fails closed for a manifest recorded by the interrupted commissioning contract', function (): void {
+    provisionTestSystemPrincipalForCommissioning();
+
+    XChangeInstallationManifest::query()->create([
+        'key' => CommissioningStateResolver::ManifestKey,
+        'manifest_version' => 1,
+        'package_version' => 'v1.0.95',
+        'profile' => 'development',
+        'active_connection_references' => [],
+        'configuration_fingerprint' => app(CommissioningConfigurationFingerprint::class)->current(),
+        'completed_at' => now(),
+    ]);
+
+    $state = app(CommissioningStateResolver::class)->resolve();
+
+    expect($state->state)->toBe(CommissioningState::InstallationIncomplete)
+        ->and($state->reason)->toBe('installation_manifest_stale');
+});
+
 it('fails closed when a matching manifest has no persisted system principal Account', function (): void {
     config()->set('x-change.payout.system_user_column', 'email');
     config()->set('x-change.payout.system_user_id', 'missing-system@example.test');

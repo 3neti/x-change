@@ -18,6 +18,7 @@ use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
+use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
 use LBHurtado\XChange\Services\Treasury\TreasuryInitializationStateService;
 use LBHurtado\XChange\Services\Treasury\TreasuryOpeningBalanceReconciliationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
@@ -442,6 +443,23 @@ it('skips provider access and opening reconciliation for an initialized Treasury
         ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
         ->and($commands)->not->toContain('x-change:treasury:provision')
         ->not->toContain('x-change:treasury:reconcile-opening');
+});
+
+it('keeps initialized connections eligible for an authorized capitalization retry', function () {
+    $method = new ReflectionMethod(
+        app(InstallXChangeCommand::class),
+        'eligibleCapitalizationConnections',
+    );
+
+    $eligible = $method->invoke(
+        app(InstallXChangeCommand::class),
+        ['netbank-primary', 'netbank-optional', 'paynamics-primary'],
+        ['netbank-primary'],
+        ['paynamics-primary'],
+    );
+
+    expect($eligible)->toBe(['netbank-primary', 'paynamics-primary'])
+        ->not->toContain('netbank-optional');
 });
 
 it('resumes an exact partial Treasury topology through the opening workflow', function () {
