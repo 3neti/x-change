@@ -59,10 +59,17 @@ results.
 
 1. [x] Test x-change contracts and public HTTP boundaries.
 2. [x] Test x-mcp tools and confirm the Partner MCP remains unchanged.
-3. [ ] Publish x-change before x-mcp after explicit authorization.
-4. [ ] Upgrade the sandbox and verify browser plus MCP discovery after package
+3. [x] Publish x-change before x-mcp after explicit authorization.
+4. [x] Upgrade the sandbox and verify browser plus MCP discovery after package
    publication.
-5. [ ] Deploy testing only after separate authorization.
+5. [x] Deploy testing only after separate authorization.
+
+Testing acceptance used `3neti/x-change v1.0.95`, `3neti/x-mcp v0.2.0`, and
+the public browser handoff for PHP 25.00. Strict doctor passed 37 checks with
+zero failures. No order or financial mutation was created.
+
+The browser/API/MCP parameter contract is documented in
+[Public AI Issuance Integration Guide](./PUBLIC_AI_ISSUANCE_INTEGRATION_GUIDE.md).
 
 ## Stop conditions
 

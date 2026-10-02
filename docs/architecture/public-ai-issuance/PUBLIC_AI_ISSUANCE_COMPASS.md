@@ -10,7 +10,8 @@ is introduced only behind a separately accepted guest-authorization boundary.
 
 ## Current position
 
-Status: **Gates 1–3 are release-reviewed locally. Native mutations remain out of scope.**
+Status: **Gates 1–3 are published and accepted in the Laravel Cloud testing
+environment. Native mutations remain out of scope.**
 
 The shipped foundations already include the public Auto-Generate browser
 surface, authoritative pricing, full-amount funding, provider verification,
@@ -53,14 +54,22 @@ receipts.
 - Strict Composer validation passes for both packages.
 - No implementation path calls issuance, creates a funding order, calls a
   provider, or returns a possession token.
+- Published versions are `3neti/x-change v1.0.95` and `3neti/x-mcp v0.2.0`.
+- Laravel Cloud testing strict doctor passed 37 checks with zero failures.
+- The public MCP advertised all three read-only tools and negotiated protocol
+  version `2025-06-18`.
+- A PHP 25.00 handoff visibly prefilled the testing browser without creating an
+  order, hold, payment request, provider call, or Pay Code.
 
 ## Next gate
 
-Prepare the reviewed local commits for proposed releases `3neti/x-change
-v1.0.95` and `3neti/x-mcp v0.2.0`. Publication, tagging, host adoption, browser
-verification, deployment, order creation, provider access, and money movement
-remain separately authorized gates.
+Run native AI read-only acceptance against the testing MCP: discover the
+service, estimate a low-value request, prepare a browser handoff, and prove no
+mutation occurred. Guest-authorized order creation, provider access, and money
+movement remain separately designed and authorized gates.
 
 ## Companion document
 
 - Plan: `PUBLIC_AI_ISSUANCE_PLAN.md`
+- AI and developer integration guide:
+  `PUBLIC_AI_ISSUANCE_INTEGRATION_GUIDE.md`

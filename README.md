@@ -31,6 +31,12 @@ In one sentence: the System Principal operates x-change, the Commercial
 Principal owns earned service fees, and named humans govern consequential
 changes.
 
+AI clients and public integrations should begin with the
+[Public AI Issuance Integration Guide](./docs/architecture/public-ai-issuance/PUBLIC_AI_ISSUANCE_INTEGRATION_GUIDE.md).
+It documents the read-only discovery, estimate, and browser-handoff contracts,
+including the exact supported query parameters and the Voucher instructions
+that must still be reviewed inside x-change.
+
 ## The model in one minute
 
 A Pay Code is an externally visible bearer reference. It resolves to a Voucher,
