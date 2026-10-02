@@ -57,6 +57,33 @@ it('renders the public issuance surface without cockpit navigation', function ()
         ->assertJsonPath('props.commercial_principal.reference', 'commercial-public');
 });
 
+it('accepts only safe public amount and currency prefill values', function (): void {
+    CommercialPrincipal::query()->create([
+        'reference' => 'commercial-public',
+        'legal_name' => '3neti R&D OPC',
+        'authorization_reference' => 'commissioning:commercial-public:v1',
+        'active' => true,
+        'metadata' => ['interactive_login' => false],
+    ]);
+
+    $headers = [
+        'X-Inertia' => 'true',
+        'Accept' => 'text/html, application/xhtml+xml',
+    ];
+
+    $this->withHeaders($headers)
+        ->get(route('x-change.public-auto-generate.show', ['amount' => '25.50', 'currency' => 'php']))
+        ->assertOk()
+        ->assertJsonPath('props.public_prefill.amount', '25.50')
+        ->assertJsonPath('props.public_prefill.currency', 'PHP')
+        ->assertJsonPath('props.service_discovery.structured_data.@type', 'Service');
+
+    $this->withHeaders($headers)
+        ->get(route('x-change.public-auto-generate.show', ['amount' => '-1', 'currency' => 'USD']))
+        ->assertOk()
+        ->assertJsonPath('props.public_prefill', null);
+});
+
 it('can be disabled with the public issuance kill switch', function (): void {
     config()->set('x-change.public_auto_generate.enabled', false);
     CommercialPrincipal::query()->create([

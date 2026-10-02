@@ -11,6 +11,12 @@ vi.mock('@inertiajs/vue3', () => ({
         props: ['href'],
         template: '<a :href="href?.url ?? href"><slot /></a>',
     },
+    router: {
+        reload: vi.fn(),
+    },
+    usePage: () => ({
+        props: {},
+    }),
 }));
 
 const documentation = {

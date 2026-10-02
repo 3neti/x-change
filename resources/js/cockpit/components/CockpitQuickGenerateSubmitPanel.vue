@@ -140,6 +140,10 @@ const props = withDefaults(
       basis: "full_amount" | "shortfall";
     };
     publicMode?: boolean;
+    publicPrefill?: {
+      amount: string;
+      currency: string;
+    } | null;
     publicAccountUrl?: string | null;
     showEngineeringPreview?: boolean;
     showWorkspaceSwitcher?: boolean;
@@ -1097,6 +1101,10 @@ function startBlank(): void {
 function initializeStartingPoint(): void {
   if (props.publicMode) {
     startBlank();
+    if (props.publicPrefill) {
+      amount.value = props.publicPrefill.amount;
+      currency.value = props.publicPrefill.currency;
+    }
 
     return;
   }

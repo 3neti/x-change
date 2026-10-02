@@ -1808,6 +1808,15 @@ export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
     login_url: string | null;
     register_url: string | null;
   };
+  public_prefill?: {
+    amount: string;
+    currency: string;
+  } | null;
+  service_discovery?: {
+    canonical_url: string;
+    description: string;
+    structured_data: Record<string, unknown>;
+  };
   commercial_principal?: {
     reference: string;
     display_name: string;

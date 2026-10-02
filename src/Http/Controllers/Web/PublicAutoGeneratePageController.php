@@ -13,6 +13,8 @@ use LBHurtado\XChange\Contracts\CommercialPrincipalResolverContract;
 use LBHurtado\XChange\Contracts\SettlementRailCapabilityRegistryContract;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegistry;
+use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceDiscoveryService;
+use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceInput;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceOrderAccess;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
 
@@ -25,6 +27,8 @@ final class PublicAutoGeneratePageController extends Controller
         private readonly SettlementRailCapabilityRegistryContract $settlementRails,
         private readonly PublicIssuanceOrderAccess $publicOrderAccess,
         private readonly OnDemandIssuanceFundingOrderPresenter $fundingOrderPresenter,
+        private readonly PublicIssuanceInput $publicIssuanceInput,
+        private readonly PublicIssuanceDiscoveryService $publicIssuanceDiscovery,
     ) {}
 
     public function __invoke(Request $request): Response
@@ -51,6 +55,11 @@ final class PublicAutoGeneratePageController extends Controller
         unset($props['cockpit_header_read_model'], $props['cockpit_entry_notice']);
 
         $activeOrder = $this->publicOrderAccess->active($request);
+        $prefill = $this->publicIssuanceInput->prefill(
+            $request->query('amount'),
+            $request->query('currency'),
+        );
+        $discovery = $this->publicIssuanceDiscovery->describe();
 
         return Inertia::render('x-change/public/AutoGenerate', [
             ...$props,
@@ -89,6 +98,22 @@ final class PublicAutoGeneratePageController extends Controller
             'onboarding_policy' => ['otp_required' => false],
             'invitation_preset' => ['enabled' => false, 'source' => 'public'],
             'startup_mode' => 'blank',
+            'public_prefill' => $prefill,
+            'service_discovery' => [
+                'canonical_url' => $discovery->canonical_url,
+                'description' => 'Create, fund, and share a Pay Code without opening an account.',
+                'structured_data' => [
+                    '@context' => 'https://schema.org',
+                    '@type' => 'Service',
+                    'name' => 'On-Demand Pay Code Issuance',
+                    'description' => 'Create, fund, and share a Pay Code without opening an account.',
+                    'url' => $discovery->canonical_url,
+                    'provider' => [
+                        '@type' => 'Organization',
+                        'name' => (string) config('app.name', 'x-change'),
+                    ],
+                ],
+            ],
             'last_instructions' => null,
             'saved_templates' => [],
             'rider_library' => [],

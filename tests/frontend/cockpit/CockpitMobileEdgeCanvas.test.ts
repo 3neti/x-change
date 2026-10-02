@@ -21,7 +21,11 @@ describe('Cockpit mobile edge canvas', () => {
     it.each(pageFiles)('opts %s into the edge canvas with contained secondary sections', (file) => {
         const source = pageSource(file);
 
-        expect(source).toContain('mobile-presentation="edge"');
+        if (file === 'QuickGenerate.vue') {
+            expect(source).toContain('mobilePresentation: "edge"');
+        } else {
+            expect(source).toContain('mobile-presentation="edge"');
+        }
         expect(source).toContain('px-4 md:px-0');
     });
 

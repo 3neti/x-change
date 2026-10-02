@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Route;
+use LBHurtado\XChange\Http\Controllers\PublicIssuance\PublicIssuanceDiscoveryController;
 use LBHurtado\XChange\Http\Controllers\Web\BalancePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimApprovalOtpController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimApprovalPageController;
@@ -163,6 +164,10 @@ use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
 use LBHurtado\XChange\Http\Middleware\UseCommercialPrincipalForPublicIssuance;
 
 $middleware = config('x-change.routes.web_middleware', ['web', 'auth']);
+
+Route::get('.well-known/x-change-service', PublicIssuanceDiscoveryController::class)
+    ->middleware('throttle:30,1,public-issuance-discovery:')
+    ->name('x-change.public-issuance.discovery');
 
 Route::get(
     'x/claim/{code}/share-card/{sha256}.png',

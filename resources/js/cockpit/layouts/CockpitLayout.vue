@@ -37,7 +37,7 @@ type CockpitSharedProps = {
 
 const page = usePage<CockpitSharedProps>();
 const claimEntryArtifact = computed(
-    () => page.props.cockpit_claim_entry_artifact ?? null,
+    () => page.props?.cockpit_claim_entry_artifact ?? null,
 );
 
 const headerBalances = computed(() => {

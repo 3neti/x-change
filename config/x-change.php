@@ -1167,6 +1167,12 @@ return [
 
     'public_auto_generate' => [
         'enabled' => (bool) env('XCHANGE_PUBLIC_AUTO_GENERATE_ENABLED', true),
+        'minimum_principal_minor' => max(1, (int) env('XCHANGE_PUBLIC_AUTO_GENERATE_MINIMUM_PRINCIPAL_MINOR', 100)),
+        'maximum_principal_minor' => max(100, (int) env('XCHANGE_PUBLIC_AUTO_GENERATE_MAXIMUM_PRINCIPAL_MINOR', 100_000)),
+        'currencies' => array_values(array_filter(array_map(
+            static fn (string $currency): string => strtoupper(trim($currency)),
+            explode(',', (string) env('XCHANGE_PUBLIC_AUTO_GENERATE_CURRENCIES', 'PHP')),
+        ))),
         'recovery_link_ttl_days' => (int) env('XCHANGE_PUBLIC_AUTO_GENERATE_RECOVERY_TTL_DAYS', 7),
         'receipt_link_ttl_days' => (int) env('XCHANGE_PUBLIC_AUTO_GENERATE_RECEIPT_TTL_DAYS', 30),
     ],

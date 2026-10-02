@@ -8,6 +8,9 @@ use LBHurtado\XChange\Http\Controllers\Onboarding\OpenIssuerWalletController;
 use LBHurtado\XChange\Http\Controllers\PayCode\EstimatePayCodeController;
 use LBHurtado\XChange\Http\Controllers\PayCode\GeneratePayCodeController;
 use LBHurtado\XChange\Http\Controllers\PayCode\InspectPayCodeXRayController;
+use LBHurtado\XChange\Http\Controllers\PublicIssuance\PublicIssuanceDiscoveryController;
+use LBHurtado\XChange\Http\Controllers\PublicIssuance\PublicIssuanceEstimateController;
+use LBHurtado\XChange\Http\Controllers\PublicIssuance\PublicIssuanceHandoffController;
 use LBHurtado\XChange\Http\Controllers\Redemption\LoadPayCodeRedemptionCompletionContextController;
 use LBHurtado\XChange\Http\Controllers\Redemption\PreparePayCodeRedemptionFlowController;
 use LBHurtado\XChange\Http\Controllers\Redemption\RedeemPayCodeController;
@@ -17,6 +20,15 @@ $prefix = trim((string) config('x-change.routes.api_prefix', 'api/x'), '/');
 $version = trim((string) config('x-change.routes.api_version', 'v1'), '/');
 
 Route::prefix($prefix.'/'.$version)->group(function (): void {
+    Route::prefix('public-issuance')->middleware('throttle:30,1,public-issuance-api:')->group(function (): void {
+        Route::get('/', PublicIssuanceDiscoveryController::class)
+            ->name('x-change.api.public-issuance.discovery');
+        Route::post('estimate', PublicIssuanceEstimateController::class)
+            ->name('x-change.api.public-issuance.estimate');
+        Route::post('handoff', PublicIssuanceHandoffController::class)
+            ->name('x-change.api.public-issuance.handoff');
+    });
+
     Route::post('/pay-codes/x-ray', InspectPayCodeXRayController::class)
         ->name('x-change.api.pay-codes.x-ray');
 
