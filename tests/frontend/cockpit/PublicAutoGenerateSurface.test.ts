@@ -127,7 +127,9 @@ describe("Public Auto Generate surface", () => {
     const wrapper = mount(PublicIssuanceLayout, {
       props: {
         navigation: {
+          pricing_url: "/x/pricing",
           claim_url: "/x/claim",
+          create_url: "/x/auto-generate",
           login_url: "/login",
           register_url: "/register",
         },
@@ -153,14 +155,24 @@ describe("Public Auto Generate surface", () => {
     );
     expect(
       wrapper
-        .get('[data-testid="public-auto-generate-sign-in"]')
+        .get('[data-testid="public-navigation-sign-in"]')
         .attributes("href"),
     ).toBe("/login");
     expect(
       wrapper
-        .get('[data-testid="public-auto-generate-brand-mark"]')
+        .get('[data-testid="public-navigation-brand-mark"]')
         .attributes("src"),
     ).toBe("/vendor/x-change/images/pay-code/pay-code-mark.svg");
+    expect(
+      wrapper
+        .get('[data-testid="public-navigation-pricing"]')
+        .attributes("href"),
+    ).toBe("/x/pricing");
+    expect(
+      wrapper
+        .get('[data-testid="public-auto-generate-pricing-link"]')
+        .attributes("href"),
+    ).toBe("/x/pricing");
     const primaryAction = wrapper.get(
       '[data-testid="public-auto-generate-primary-action"]',
     );

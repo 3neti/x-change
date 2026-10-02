@@ -51,6 +51,7 @@ it('renders the public issuance surface without cockpit navigation', function ()
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.route', 'x-change.public-auto-generate.store')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.authorization', 'commercial-principal-server-bound')
         ->assertJsonPath('props.on_demand_issuance_policy.basis', 'full_amount')
+        ->assertJsonPath('props.public_navigation.pricing_url', '/x/pricing')
         ->assertJsonPath('props.public_navigation.claim_url', '/x/claim')
         ->assertJsonPath('props.public_navigation.login_url', null)
         ->assertJsonPath('props.commercial_principal.reference', 'commercial-public');

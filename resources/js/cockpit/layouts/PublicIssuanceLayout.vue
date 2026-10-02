@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from "@inertiajs/vue3";
-import PayCodeLogo from "../../components/x-change/PayCodeLogo.vue";
+import PublicNavigation from "../components/PublicNavigation.vue";
 import {
   ArrowRight,
   BadgeCheck,
@@ -17,14 +17,18 @@ import {
 withDefaults(
   defineProps<{
     navigation?: {
+      pricing_url: string | null;
       claim_url: string | null;
+      create_url: string | null;
       login_url: string | null;
       register_url: string | null;
     };
   }>(),
   {
     navigation: () => ({
+      pricing_url: null,
       claim_url: null,
+      create_url: null,
       login_url: null,
       register_url: null,
     }),
@@ -60,42 +64,7 @@ const painPoints = [
     <div
       class="relative z-10 mx-auto w-full max-w-[90rem] px-4 sm:px-6 lg:px-8"
     >
-      <nav
-        class="flex min-h-20 items-center justify-between gap-4 border-b border-slate-200/70 dark:border-slate-800"
-        aria-label="Public issuance"
-      >
-        <Link
-          :href="navigation.claim_url ?? '#'"
-          class="inline-flex items-center gap-2 text-sm font-black tracking-tight text-slate-950 dark:text-white"
-          data-testid="public-auto-generate-brand"
-        >
-          <PayCodeLogo
-            variant="mark"
-            size="header"
-            class-name="!h-9 !max-h-9 !max-w-9"
-            data-testid="public-auto-generate-brand-mark"
-          />
-          <span>Pay Code</span>
-        </Link>
-
-        <div class="flex items-center gap-2 text-sm font-semibold">
-          <Link
-            v-if="navigation.claim_url"
-            :href="navigation.claim_url"
-            class="hidden rounded-full px-3 py-2 text-slate-600 transition hover:bg-white hover:text-slate-950 sm:inline-flex dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white"
-          >
-            Claim a Pay Code
-          </Link>
-          <Link
-            v-if="navigation.login_url"
-            :href="navigation.login_url"
-            class="inline-flex rounded-full border border-slate-300 bg-white px-4 py-2 text-slate-700 shadow-sm transition hover:border-emerald-400 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-            data-testid="public-auto-generate-sign-in"
-          >
-            Sign in
-          </Link>
-        </div>
-      </nav>
+      <PublicNavigation :navigation="navigation" active="create" />
 
       <section
         class="grid items-start gap-8 py-9 lg:grid-cols-[minmax(0,0.82fr)_minmax(36rem,1.18fr)] lg:gap-12 lg:py-14"
@@ -187,11 +156,21 @@ const painPoints = [
           data-testid="public-auto-generate-tool"
         >
           <div class="mb-4 px-4 sm:px-0">
-            <p
-              class="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300"
-            >
-              Quick tool
-            </p>
+            <div class="flex items-center justify-between gap-4">
+              <p
+                class="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300"
+              >
+                Quick tool
+              </p>
+              <Link
+                v-if="navigation.pricing_url"
+                :href="navigation.pricing_url"
+                class="text-xs font-bold text-emerald-700 underline decoration-emerald-300 underline-offset-4 transition hover:text-emerald-900 dark:text-emerald-300 dark:hover:text-emerald-100"
+                data-testid="public-auto-generate-pricing-link"
+              >
+                See prices
+              </Link>
+            </div>
             <h2 class="mt-1 text-xl font-bold tracking-tight">
               Build your Pay Code
             </h2>

@@ -1802,7 +1802,9 @@ export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
     allow_template_management: boolean;
   };
   public_navigation?: {
+    pricing_url: string | null;
     claim_url: string | null;
+    create_url: string | null;
     login_url: string | null;
     register_url: string | null;
   };
