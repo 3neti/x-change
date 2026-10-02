@@ -260,7 +260,7 @@ describe("CockpitOnDemandIssuanceFundingDialog", () => {
     vi.useRealTimers();
   });
 
-  it("fails closed when funding instructions need operator attention", () => {
+  it("truthfully presents a verified payment that needs issuance attention", () => {
     const attentionProjection = structuredClone(projection);
     attentionProjection.status = "issuance_attention";
     attentionProjection.order.status = "issuance_attention";
@@ -271,8 +271,17 @@ describe("CockpitOnDemandIssuanceFundingDialog", () => {
       attachTo: document.body,
     });
 
-    expect(document.body.textContent).toContain("Funding needs attention");
-    expect(document.body.textContent).toContain("No payment should be made");
+    expect(document.body.textContent).toContain(
+      "Payment received — issuance needs attention",
+    );
+    expect(document.body.textContent).toContain(
+      "Your payment was verified and remains protected",
+    );
+    expect(document.body.textContent).toContain("Do not pay again");
+    expect(document.body.textContent).toContain("No Pay Code was issued");
+    expect(document.body.textContent).not.toContain(
+      "payment has not been accepted",
+    );
     expect(document.body.textContent).not.toContain("I’ve made the transfer");
     expect(document.body.textContent).toContain("Cancel safely");
 

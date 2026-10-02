@@ -91,7 +91,7 @@ const dialogTitle = computed(() => {
   }
 
   if (needsAttention.value) {
-    return "Funding needs attention";
+    return "Payment received — issuance needs attention";
   }
 
   if (paymentNeedsReview.value) {
@@ -106,7 +106,7 @@ const dialogTitle = computed(() => {
 });
 const dialogDescription = computed(() => {
   if (needsAttention.value) {
-    return "No payment should be made from these instructions. Cancel safely and prepare a fresh order.";
+    return "Your payment was verified and remains protected. Pay Code issuance could not complete. Do not pay again.";
   }
 
   if (paymentNeedsReview.value) {
@@ -536,11 +536,14 @@ function text(value: unknown): string | null {
 
         <div
           v-if="needsAttention"
-          class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+          class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
           role="status"
         >
-          Funding instructions could not be prepared safely. No Pay Code was
-          issued and payment has not been accepted for this order.
+          <p class="font-bold">Your payment is protected</p>
+          <p class="mt-1 leading-6">
+            No Pay Code was issued. An operator can retry issuance after the
+            blocker is resolved. Do not pay again.
+          </p>
         </div>
 
         <div

@@ -25,8 +25,27 @@ final readonly class CommercialCustomerChargingGuard
             return;
         }
 
+        if ($this->betaChargingExceptionIsAuthorized($status)) {
+            return;
+        }
+
         throw new PayCodeIssuanceFailed(
             'Customer charging is not authorized until the approved pricing schedule has resolved tax and invoicing authority.',
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $status
+     */
+    private function betaChargingExceptionIsAuthorized(array $status): bool
+    {
+        return config('x-change.commercial.beta_customer_charging_exception.enabled') === true
+            && filled(config(
+                'x-change.commercial.beta_customer_charging_exception.authorization_reference',
+            ))
+            && ($status['schedule_ready'] ?? false) === true
+            && data_get($status, 'principal.excluded_from_charges_and_revenue') === true
+            && data_get($status, 'customer_authorization.explicit') === true
+            && data_get($status, 'receipt_reporting.verified') === true;
     }
 }

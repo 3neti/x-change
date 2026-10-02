@@ -124,6 +124,41 @@ it('blocks a positive production charge while tax treatment is unresolved', func
         );
 });
 
+it('allows an explicitly authorized beta charge while preserving the principal boundary', function (): void {
+    config()->set('x-change.deployment.runtime_tier', 'production');
+    config()->set('x-change.commercial.beta_customer_charging_exception', [
+        'enabled' => true,
+        'authorization_reference' => 'production-beta:2026-10-02:lester-hurtado',
+    ]);
+
+    app(CommercialCustomerChargingGuard::class)->ensureAuthorized(1_500);
+
+    expect(true)->toBeTrue();
+});
+
+it('rejects a beta charging exception without a durable authorization reference', function (): void {
+    config()->set('x-change.deployment.runtime_tier', 'production');
+    config()->set('x-change.commercial.beta_customer_charging_exception', [
+        'enabled' => true,
+        'authorization_reference' => null,
+    ]);
+
+    expect(fn () => app(CommercialCustomerChargingGuard::class)->ensureAuthorized(1_500))
+        ->toThrow(PayCodeIssuanceFailed::class);
+});
+
+it('rejects a beta charging exception when the principal boundary is invalid', function (): void {
+    config()->set('x-change.deployment.runtime_tier', 'production');
+    config()->set('x-change.commercial.beta_customer_charging_exception', [
+        'enabled' => true,
+        'authorization_reference' => 'production-beta:2026-10-02:lester-hurtado',
+    ]);
+    config()->set('x-change.commercial.pricing_schedule.principal_treatment', 'revenue');
+
+    expect(fn () => app(CommercialCustomerChargingGuard::class)->ensureAuthorized(1_500))
+        ->toThrow(PayCodeIssuanceFailed::class);
+});
+
 it('allows zero charges and non-production characterization', function (): void {
     $guard = app(CommercialCustomerChargingGuard::class);
 

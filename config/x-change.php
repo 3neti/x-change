@@ -1574,6 +1574,15 @@ return [
             'service_charge_collection_enabled' => false,
             'tax_invoice_issuance_enabled' => false,
         ],
+        'beta_customer_charging_exception' => [
+            'enabled' => (bool) env(
+                'XCHANGE_COMMERCIAL_BETA_CHARGING_EXCEPTION_ENABLED',
+                false,
+            ),
+            'authorization_reference' => env(
+                'XCHANGE_COMMERCIAL_BETA_CHARGING_EXCEPTION_AUTHORIZATION_REFERENCE',
+            ),
+        ],
         'pricing_schedule' => [
             'reference' => 'beta-pricing-schedule-v1',
             'version' => 1,
