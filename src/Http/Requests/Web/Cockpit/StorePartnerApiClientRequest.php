@@ -25,6 +25,7 @@ final class StorePartnerApiClientRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:120'],
             'environment' => ['required', Rule::in(['sandbox'])],
+            'issuer_type' => ['sometimes', 'string', Rule::in(['account', 'commercial_principal'])],
             'issuer_id' => ['required', 'string', 'max:100'],
             'scopes' => ['required', 'array', 'min:1'],
             'scopes.*' => ['required', 'string', Rule::in(array_keys((array) config('x-change.partner_api.scopes', [])))],

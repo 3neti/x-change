@@ -25,11 +25,13 @@ it('returns only the authenticated client mandate and safe identity', function (
 
     Passport::actingAsClient($oauthClient, ['capabilities:read']);
 
+    $contractPath = dirname(__DIR__, 3).'/resources/api/x-change-partner-api.openapi.json';
+
     $this->getJson('/api/partner/v1/capabilities')
         ->assertSuccessful()
         ->assertJsonPath('data.schema', 'x-change.partner-capabilities.v1')
-        ->assertJsonPath('data.contract.version', '1.2.0')
-        ->assertJson(fn ($json) => $json->whereType('data.contract.sha256', 'string')->etc())
+        ->assertJsonPath('data.contract.version', '1.4.0')
+        ->assertJsonPath('data.contract.sha256', hash_file('sha256', $contractPath))
         ->assertJsonPath('data.client.reference', $credential->reference)
         ->assertJsonPath('data.client.name', 'Saras AI Sandbox')
         ->assertJsonPath('data.constraints.maximum_amount_minor', 50000)

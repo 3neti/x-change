@@ -24,6 +24,7 @@ final class StorePartnerApiProductionMandateRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:120'],
+            'issuer_type' => ['sometimes', 'string', Rule::in(['account', 'commercial_principal'])],
             'issuer_id' => ['required', 'string', 'max:100'],
             'scopes' => ['required', 'array', 'min:1'],
             'scopes.*' => ['required', 'string', Rule::in(array_keys((array) config('x-change.partner_api.scopes', [])))],

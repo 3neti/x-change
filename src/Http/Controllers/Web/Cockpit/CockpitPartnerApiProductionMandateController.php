@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Http\Controllers\Web\Cockpit;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Validation\ValidationException;
@@ -16,17 +15,15 @@ use LBHurtado\XChange\Http\Requests\Web\Cockpit\ActivatePartnerApiProductionMand
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\ApprovePartnerApiProductionMandateRequest;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\StorePartnerApiProductionMandateRequest;
 use LBHurtado\XChange\Models\PartnerApiProductionMandate;
+use LBHurtado\XChange\Services\PartnerApi\PartnerApiIssuerResolver;
 use Throwable;
 
 final class CockpitPartnerApiProductionMandateController extends Controller
 {
-    public function store(StorePartnerApiProductionMandateRequest $request, RequestPartnerApiProductionMandate $action, WalletAccessContract $wallets): JsonResponse
+    public function store(StorePartnerApiProductionMandateRequest $request, RequestPartnerApiProductionMandate $action, WalletAccessContract $wallets, PartnerApiIssuerResolver $issuers): JsonResponse
     {
         $validated = $request->validated();
-        $modelClass = (string) config('auth.providers.users.model');
-        abort_unless(is_subclass_of($modelClass, Model::class), 422, 'The Account model is unavailable.');
-        $issuer = $modelClass::query()->find($validated['issuer_id']);
-        abort_unless($issuer instanceof Model, 422, 'The selected issuer Account is unavailable.');
+        $issuer = $issuers->resolve($validated['issuer_type'] ?? PartnerApiIssuerResolver::Account, $validated['issuer_id']);
         try {
             $wallets->resolveForUser($issuer);
         } catch (Throwable) {

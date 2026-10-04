@@ -9,20 +9,19 @@ use Illuminate\Support\Number;
 use LBHurtado\XChange\Enums\PartnerApiOperatorCapability;
 use LBHurtado\XChange\Models\PartnerApiClient;
 use LBHurtado\XChange\Models\PartnerApiProductionMandate;
+use LBHurtado\XChange\Services\PartnerApi\PartnerApiIssuerResolver;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiOperatorAuthority;
 
 final readonly class PartnerApiClientReadModel
 {
-    public function __construct(private PartnerApiOperatorAuthority $authority) {}
+    public function __construct(
+        private PartnerApiOperatorAuthority $authority,
+        private PartnerApiIssuerResolver $issuers,
+    ) {}
 
     /** @return array<string, mixed> */
     public function build(Model $operator): array
     {
-        $modelClass = (string) config('auth.providers.users.model');
-        $issuers = is_subclass_of($modelClass, Model::class)
-            ? $modelClass::query()->latest()->limit(100)->get()
-            : collect();
-
         return [
             'schema' => 'x-change.cockpit.partner-api-clients.v1',
             'api_enabled' => (bool) config('x-change.partner_api.enabled', false),
@@ -37,10 +36,15 @@ final readonly class PartnerApiClientReadModel
                 ->map(fn (string $description, string $scope): array => compact('scope', 'description'))
                 ->values()->all(),
             'rails' => ['automatic', 'INSTAPAY', 'PESONET'],
-            'issuers' => $issuers->map(fn (Model $issuer): array => [
-                'id' => (string) $issuer->getKey(),
-                'name' => (string) ($issuer->getAttribute('name') ?: 'Account holder'),
-                'identity' => $this->maskedIdentity($issuer),
+            'issuers' => collect($this->issuers->options())->map(fn (array $option): array => [
+                'type' => $option['type'],
+                'id' => $option['id'],
+                'name' => (string) ($option['model']->getAttribute('legal_name')
+                    ?: $option['model']->getAttribute('name')
+                    ?: 'Account holder'),
+                'identity' => $option['type'] === PartnerApiIssuerResolver::CommercialPrincipal
+                    ? 'Commercial Principal · '.$option['id']
+                    : $this->maskedIdentity($option['model']),
             ])->values()->all(),
             'clients' => PartnerApiClient::query()
                 ->with(['issuer'])

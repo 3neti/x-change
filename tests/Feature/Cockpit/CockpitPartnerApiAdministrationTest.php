@@ -8,6 +8,7 @@ use LBHurtado\XChange\Actions\PartnerApi\CreatePartnerApiClient;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Enums\PartnerApiClientStatus;
 use LBHurtado\XChange\Enums\PartnerApiOperatorCapability;
+use LBHurtado\XChange\Models\CommercialPrincipal;
 use LBHurtado\XChange\Models\PartnerApiClient;
 use LBHurtado\XChange\Models\PartnerApiOperatorAuthorization;
 use LBHurtado\XChange\Models\PartnerApiProductionMandate;
@@ -15,6 +16,8 @@ use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
 beforeEach(function (): void {
+    config()->set('x-change.legal.eula.enabled', false);
+
     $system = User::query()->create([
         'name' => 'Non-Interactive System Principal',
         'email' => 'partner-api-system@example.test',
@@ -386,4 +389,71 @@ it('creates no production credential before independent approval and reveals the
         ->assertOk()
         ->assertJsonMissing([$secret])
         ->assertJsonMissing(['client_secret']);
+});
+
+it('binds a governed production client to the commissioned Commercial Principal', function (): void {
+    $maker = actingAsTestUser();
+    $checker = User::query()->create([
+        'name' => 'Commercial API Checker',
+        'email' => 'commercial-api-checker@example.test',
+        'password' => 'password',
+    ]);
+    $principal = CommercialPrincipal::query()->create([
+        'reference' => 'commercial-primary',
+        'legal_name' => '3neti R&D OPC',
+        'authorization_reference' => 'commissioning:test',
+        'active' => true,
+    ]);
+    config()->set('x-change.commercial.principal.reference', $principal->reference);
+    allowPartnerApiIssuerWallet();
+    authorizePartnerApiOperator(
+        $maker,
+        PartnerApiOperatorCapability::ViewClients,
+        PartnerApiOperatorCapability::RequestProductionClients,
+    );
+    authorizePartnerApiOperator(
+        $checker,
+        PartnerApiOperatorCapability::ViewClients,
+        PartnerApiOperatorCapability::ApproveProductionClients,
+        PartnerApiOperatorCapability::ActivateProductionClients,
+    );
+
+    $page = $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.api-partners.index'))
+        ->assertOk();
+
+    $issuers = collect($page->json('props.partner_api.issuers'));
+    expect($issuers->firstWhere('type', 'commercial_principal'))->toMatchArray([
+        'id' => 'commercial-primary',
+        'name' => '3neti R&D OPC',
+    ]);
+
+    $created = $this->postJson(route('x-change.cockpit.api-partners.production-mandates.store'), [
+        'name' => 'PayOut Institutional Read Only',
+        'issuer_type' => 'commercial_principal',
+        'issuer_id' => 'commercial-primary',
+        'scopes' => ['capabilities:read', 'pay-codes:estimate', 'pay-codes:read'],
+        'currencies' => ['PHP'],
+        'settlement_rails' => ['automatic'],
+        'maximum_amount_minor' => 5000,
+        'daily_principal_limit_minor' => 10000,
+        'unbound_pay_codes' => false,
+    ])->assertCreated();
+
+    $mandate = PartnerApiProductionMandate::query()->where('reference', $created->json('reference'))->sole();
+
+    $this->actingAs($checker)
+        ->postJson(route('x-change.cockpit.api-partners.production-mandates.approvals.store', $mandate), [
+            'confirm_snapshot' => true,
+        ])->assertOk();
+
+    $this->actingAs($checker)
+        ->postJson(route('x-change.cockpit.api-partners.production-mandates.activations.store', $mandate), [
+            'acknowledge_secret_once' => true,
+        ])->assertCreated();
+
+    $client = PartnerApiClient::query()->sole();
+    expect($client->issuer_type)->toBe($principal->getMorphClass())
+        ->and((string) $client->issuer_id)->toBe((string) $principal->getKey())
+        ->and($client->scopes)->toBe(['capabilities:read', 'pay-codes:estimate', 'pay-codes:read']);
 });
