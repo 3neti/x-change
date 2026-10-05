@@ -151,6 +151,7 @@ use LBHurtado\XChange\Console\Commands\PayCode\GeneratePayCodeCommand;
 use LBHurtado\XChange\Console\Commands\Payment\MonitorOpenPaymentAttemptsCommand;
 use LBHurtado\XChange\Console\Commands\Payment\ResumeVerifiedPaymentAttemptsCommand;
 use LBHurtado\XChange\Console\Commands\Payment\VerifyOpenPaymentAttemptsCommand;
+use LBHurtado\XChange\Console\Commands\PreviewCommissioningManifestCommand;
 use LBHurtado\XChange\Console\Commands\Provisioning\AuthorizeProvisioningOperatorCommand;
 use LBHurtado\XChange\Console\Commands\Provisioning\ExpireProvisioningOffersCommand;
 use LBHurtado\XChange\Console\Commands\Provisioning\ProvisionCommissioningSeatsCommand;
@@ -1640,6 +1641,7 @@ class XChangeServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 CleanupLegacyEventIndexCommand::class,
+                PreviewCommissioningManifestCommand::class,
                 OnboardIssuerCommand::class,
                 OpenIssuerWalletCommand::class,
                 VerifyTestMobileCommand::class,

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Console\Commands;
 
 use Illuminate\Console\Command;
+use LBHurtado\XChange\Services\Commissioning\CommissioningManifestPreviewer;
 use LBHurtado\XChange\Services\Commissioning\CommissioningManifestRepository;
 use LBHurtado\XChange\Services\Configuration\LocalEnvironmentFileWriter;
 use Symfony\Component\Process\Process;
@@ -14,6 +15,7 @@ final class BootstrapXChangeFromManifestCommand extends Command
     protected $signature = 'x-change:bootstrap
         {--manifest= : YAML manifest path, URL, or x-change:// URI}
         {--force : Force database migrations when bootstrapping in production}
+        {--commissioning-preview-token= : Exact token emitted by x-change:commission:preview}
         {--skip-build : Skip npm install and npm run build}
         {--skip-verify : Skip final environment and route-list verification}';
 
@@ -21,6 +23,7 @@ final class BootstrapXChangeFromManifestCommand extends Command
 
     public function handle(
         CommissioningManifestRepository $manifests,
+        CommissioningManifestPreviewer $previewer,
         LocalEnvironmentFileWriter $environment,
     ): int {
         $manifestReference = trim((string) $this->option('manifest'));
@@ -32,6 +35,10 @@ final class BootstrapXChangeFromManifestCommand extends Command
         }
 
         $manifest = $manifests->load($manifestReference);
+
+        if (! $this->verifyCommissioningPreview($manifestReference, $manifest, $previewer)) {
+            return self::FAILURE;
+        }
 
         $this->ensureEnvironmentFile((bool) data_get($manifest, 'bootstrap.environment.copy_env', true));
         $this->ensureSqliteDatabase(data_get($manifest, 'bootstrap.environment.sqlite_database', 'database/database.sqlite'));
@@ -109,7 +116,10 @@ final class BootstrapXChangeFromManifestCommand extends Command
             $install[] = '--profile='.$profile;
         }
 
-        array_push($install, ...$this->treasuryOpeningInstallOptions($manifest));
+        array_push($install, ...$this->treasuryOpeningInstallOptions(
+            $manifest,
+            trim((string) $this->option('commissioning-preview-token')),
+        ));
 
         return [
             $install,
@@ -387,7 +397,7 @@ final class BootstrapXChangeFromManifestCommand extends Command
      * @param  array<string, mixed>  $manifest
      * @return list<string>
      */
-    private function treasuryOpeningInstallOptions(array $manifest): array
+    private function treasuryOpeningInstallOptions(array $manifest, string $previewToken = ''): array
     {
         $fundingSource = trim((string) data_get($manifest, 'onboarding.funding_source'));
 
@@ -401,11 +411,58 @@ final class BootstrapXChangeFromManifestCommand extends Command
             return [];
         }
 
+        if ($previewToken !== '') {
+            $authorizationReference .= ':preview:'.substr($previewToken, 0, 16);
+        }
+
         return [
             '--treasury-opening-policy=system-capital',
             '--capitalization-authorization-reference='.$authorizationReference,
             '--confirm-system-ownership',
         ];
+    }
+
+    /** @param array<string, mixed> $manifest */
+    private function verifyCommissioningPreview(
+        string $manifestReference,
+        array $manifest,
+        CommissioningManifestPreviewer $previewer,
+    ): bool {
+        $openingPolicy = trim((string) data_get($manifest, 'commissioning.opening.policy'));
+
+        if ($openingPolicy === '') {
+            return true;
+        }
+
+        $providedToken = trim((string) $this->option('commissioning-preview-token'));
+
+        if ($providedToken === '') {
+            $this->components->error(
+                'Hardened commissioning requires --commissioning-preview-token from x-change:commission:preview.',
+            );
+
+            return false;
+        }
+
+        try {
+            $preview = $previewer->preview($manifestReference);
+        } catch (\Throwable $exception) {
+            $this->components->error($exception->getMessage());
+
+            return false;
+        }
+
+        if (! hash_equals((string) $preview['preview_token'], $providedToken)) {
+            $this->components->error(
+                'Commissioning preview token no longer matches the live provider and cutover facts.',
+            );
+
+            return false;
+        }
+
+        $this->components->info('Commissioning preview token matched the live provider and cutover facts.');
+
+        return true;
     }
 
     /**

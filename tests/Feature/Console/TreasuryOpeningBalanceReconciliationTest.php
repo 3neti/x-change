@@ -47,6 +47,76 @@ use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
+it('previews hardened commissioning without mutation and invalidates changed provider facts', function (): void {
+    [$service, $reader, $catalog] = openingBalanceReconciliationService(450_693);
+    app()->instance(TreasuryOpeningBalanceReconciliationService::class, $service);
+    app()->instance(TreasuryProviderConnectionCatalog::class, $catalog);
+    $manifestPath = storage_path('framework/testing/hardened-commissioning-'.str()->uuid().'.yaml');
+
+    if (! is_dir(dirname($manifestPath))) {
+        mkdir(dirname($manifestPath), 0755, true);
+    }
+
+    file_put_contents($manifestPath, implode("\n", [
+        'schema: x-change.commissioning.manifest.v1',
+        'commissioning:',
+        '  opening:',
+        '    policy: system-capital',
+        '    connection: future-primary',
+        "    cutover_at: '2026-10-03T23:11:14+00:00'",
+        '    cutover_transaction_id: cleanroom-no-balance-continuity',
+        '  invitations:',
+        '    delivery_mode: manual',
+        'onboarding:',
+        '  invitation_amount: 100.00',
+        '  currency: PHP',
+        '  connection_reference: future-primary',
+        'invitations:',
+        '  roles:',
+        '    - role: maker',
+        '    - role: checker',
+        '',
+    ]));
+
+    $firstExit = Artisan::call('x-change:commission:preview', [
+        '--manifest' => $manifestPath,
+        '--json' => true,
+    ]);
+    $firstOutput = Artisan::output();
+    $first = json_decode(trim($firstOutput), true, flags: JSON_THROW_ON_ERROR);
+
+    expect($firstExit)->toBe(Command::SUCCESS, $firstOutput)
+        ->and($first['ready'])->toBeTrue()
+        ->and($first['mutation'])->toBeFalse()
+        ->and(data_get($first, 'facts.provider_balance_minor'))->toBe(450_693)
+        ->and(data_get($first, 'facts.invitation_reserve_minor'))->toBe(20_000)
+        ->and(data_get($first, 'facts.remaining_reserve_minor'))->toBe(430_693)
+        ->and(data_get($first, 'facts.delivery_mode'))->toBe('manual')
+        ->and(TreasuryInventory::query()->count())->toBe(0)
+        ->and(TreasuryPosition::query()->count())->toBe(0)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(0)
+        ->and(TreasuryPositionOperation::query()->count())->toBe(0);
+
+    Artisan::call('x-change:commission:preview', [
+        '--manifest' => $manifestPath,
+        '--json' => true,
+    ]);
+    $same = json_decode(trim(Artisan::output()), true, flags: JSON_THROW_ON_ERROR);
+
+    expect($same['preview_token'])->toBe($first['preview_token']);
+
+    $reader->amountMinor = 450_694;
+    Artisan::call('x-change:commission:preview', [
+        '--manifest' => $manifestPath,
+        '--json' => true,
+    ]);
+    $changed = json_decode(trim(Artisan::output()), true, flags: JSON_THROW_ON_ERROR);
+
+    expect($changed['preview_token'])->not->toBe($first['preview_token'])
+        ->and(TreasuryInventory::query()->count())->toBe(0)
+        ->and(TreasuryPosition::query()->count())->toBe(0);
+});
+
 it('governs the provider call through independent approval and executes it once', function (): void {
     [$service, $reader, $catalog, , $systemResolver] = openingBalanceReconciliationService(750_00);
     app()->instance(TreasuryOpeningBalanceReconciliationService::class, $service);
