@@ -35,10 +35,10 @@ This Compass is the program-level memory. Future workstream compasses should be 
 
 ## Payment confirmation resilience recovery track
 
-Updated 2026-10-06. Recovery is in progress on
-`codex/payment-confirmation-resilience-recovery`, created from current
-x-change `main`. The two unique local-only payment-resilience patches have
-been forward-ported; their duplicate release branch has not been merged.
+Updated 2026-10-06. Recovery is complete on x-change `main` at
+`dbee25b7` and immutable release `v1.0.101`. The two unique local-only
+payment-resilience patches were forward-ported and reconciled with current
+payment monitoring; duplicate and superseded branches were retired.
 
 The target capability is a transaction-bound, durable partner payment-event
 outbox with signed, queued, retryable delivery to deployment-managed HTTPS
@@ -53,7 +53,12 @@ its 2 GB memory limit while exporting accumulated failures, so it is explicitly
 not recorded as green and is not being used to obscure the focused acceptance
 evidence.
 
-The ordered release, x-PayOut adoption, and branch-retirement gates are in the
+The capability was adopted by x-PayOut `v1.0.0-beta.75`; x-PayOut `main`
+includes the subsequent CI bootstrap/action refresh at `18b62a3`. Host
+acceptance passed 166 tests / 1,046 assertions and a production build. No live
+deployment or receiver enablement occurred.
+
+The completed release, x-PayOut adoption, and branch-retirement gates are in the
 [Payment Confirmation Resilience Recovery Plan](PAYMENT_CONFIRMATION_RESILIENCE_RECOVERY_PLAN.md).
 Live deployment and receiver enablement remain separately gated.
 
@@ -92,7 +97,7 @@ historical `expired` label alone is not recovery-entitlement evidence.
 ## Current Position
 
 Current wave: Payment Confirmation Resilience Recovery
-Current status: x-change forward-port and focused hardening complete; immutable release and x-PayOut adoption in progress
+Current status: Complete through x-change v1.0.101, x-PayOut beta.75 adoption, and stranded-branch retirement; live enablement separately gated
 Last updated: 2026-10-06
 
 | Wave | Workstream | Role | Status | Compass |

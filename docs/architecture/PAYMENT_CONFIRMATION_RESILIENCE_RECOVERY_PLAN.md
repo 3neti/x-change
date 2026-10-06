@@ -2,7 +2,7 @@
 
 **Opened:** 2026-10-06
 
-**Status:** x-change forward-port verified; immutable release and x-PayOut adoption in progress
+**Status:** Complete through immutable release, x-PayOut adoption, and branch retirement
 
 ## Objective
 
@@ -27,12 +27,12 @@ truth, or make a webhook authoritative.
 
 | Branch | Disposition |
 | --- | --- |
-| x-change `codex/payment-confirmation-resilience-v1` | Forward-port its two unique patches, then retire |
-| x-change `release/payment-resilience-v1030` | Patch-equivalent duplicate; retire after forward-port acceptance |
-| x-change `codex/commissioning-recovery` | Already patch-equivalent to `main`; retire without merge |
-| x-change-sandbox `release/payment-resilience-v1` | Use as host configuration reference; retire when x-PayOut adoption supersedes it |
-| x-change-sandbox `codex/x-change-v1.0.56-testing` | Zero commits ahead of `main`; retire without merge |
-| x-PayOut Dependabot PR 1 | Rebase or recreate and merge only when green; otherwise close as superseded |
+| x-change `codex/payment-confirmation-resilience-v1` | Retired after its two source patches were forward-ported and reconciled onto current `main` |
+| x-change `release/payment-resilience-v1030` | Retired as a patch-equivalent duplicate of the recovered work |
+| x-change `codex/commissioning-recovery` | Retired after patch-equivalence to `main` was proved |
+| x-change-sandbox `release/payment-resilience-v1` | Retired after x-PayOut beta.75 superseded its host configuration |
+| x-change-sandbox `codex/x-change-v1.0.56-testing` | Retired locally and remotely with zero commits ahead of sandbox `main` |
+| x-PayOut Dependabot PR 1 | Closed and branch deleted after its action upgrades were reapplied and tested on current `main` |
 | x-PayOut immutable release branches | Preserve; they are release evidence, not stranded work |
 
 ## Ordered gates
@@ -110,3 +110,18 @@ Verification checkpoint (2026-10-06):
 - No branch deletion before patch-equivalence or merged-ancestry proof.
 - No live deployment, receiver activation, or OAuth issuance without a
   separately explicit gate.
+
+## Completion evidence
+
+- x-change `main`: `dbee25b7816d090e8ad0fc90c0c81b86c0c07864`.
+- Immutable x-change release: `v1.0.101`.
+- x-PayOut immutable adoption release: `v1.0.0-beta.75` at
+  `d3ab8af`.
+- x-PayOut `main` after CI bootstrap and action refresh: `18b62a3`.
+- x-PayOut acceptance: 166 tests, 1,046 assertions; production frontend build
+  and strict Composer validation passed.
+- The x-PayOut repository-wide frontend formatting command still reports its
+  pre-existing 333-file baseline. That baseline was not auto-rewritten or
+  hidden during this recovery.
+- No live deployment occurred and partner payment-event delivery remains
+  disabled until separately configured and authorized.
