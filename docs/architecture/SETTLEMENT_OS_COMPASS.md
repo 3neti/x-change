@@ -56,11 +56,12 @@ is immutable evidence; broadcasts are best-effort refresh signals.
 The operative documents are the
 [Standing Funding Runtime Plan](STANDING_FUNDING_RUNTIME_ISOLATION_AND_RECOVERY_PLAN.md)
 and [Standing Funding Runtime Compass](STANDING_FUNDING_RUNTIME_COMPASS.md).
-Slices 1–10 are complete. Immutable release `v1.0.102` at
-`c5fb539a448714144fe5ce029ea3c4ec419843f0` is adopted by the local host with
-runtime synchronization disabled and empty runtime state. Laravel Cloud
-deployment, infrastructure changes, live provider calls, and schedule
-enablement remain separately gated.
+Slices 1–10 and the disabled Cloud deployment gate are complete. Immutable
+release `v1.0.103` at `2f9db7b56c05a172e327fd604f059a3358cee0ea`
+is deployed to `x-change-testing/testing` at host commit
+`992366c4050e79c2643a34a5944753dcd509b797`. Runtime synchronization remains
+disabled with empty runtime state. Infrastructure changes, live provider calls,
+live canary, and schedule enablement remain separately gated.
 
 ## Payment confirmation resilience recovery track
 
@@ -127,7 +128,7 @@ historical `expired` label alone is not recovery-entitlement evidence.
 ## Current Position
 
 Current wave: Standing Funding Runtime Isolation and Controlled Recommissioning
-Current status: Standing Funding Slices 1–10 complete; `v1.0.102` adopted locally with synchronization disabled; Cloud deployment and live recommissioning gated
+Current status: Standing Funding Slices 1–10 and disabled Cloud deployment complete on `v1.0.103`; live recommissioning gated
 Last updated: 2026-10-07
 
 | Wave | Workstream | Role | Status | Compass |
@@ -140,7 +141,7 @@ Last updated: 2026-10-07
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 | 6 | Onboarding Vouchers | Recipient account invitation and provisioning | Slice 3 complete; Slice 4 in progress | [onboarding-vouchers/ONBOARDING_VOUCHER_COMPASS.md](onboarding-vouchers/ONBOARDING_VOUCHER_COMPASS.md) |
 | 7 | Governed Provisioning | Vacant commissioning seats, exact-capability authority offers, delivery, activation/revocation/supersession, production API mandates, and Treasury-safe Account Grants | Controlled Cockpit lifecycle implemented; authority remains separate from cash and provider execution | [PROVISIONING_AND_ACCOUNT_GRANTS.md](PROVISIONING_AND_ACCOUNT_GRANTS.md) |
-| 8 | Standing Funding Runtime | Recovery-safe provider synchronization control plane | Slices 1–10 complete; `v1.0.102` adopted locally disabled; Cloud deployment and live recommissioning gated | [STANDING_FUNDING_RUNTIME_COMPASS.md](STANDING_FUNDING_RUNTIME_COMPASS.md) |
+| 8 | Standing Funding Runtime | Recovery-safe provider synchronization control plane | Slices 1–10 and disabled Cloud deployment complete on `v1.0.103`; live recommissioning gated | [STANDING_FUNDING_RUNTIME_COMPASS.md](STANDING_FUNDING_RUNTIME_COMPASS.md) |
 
 ## Package Map
 

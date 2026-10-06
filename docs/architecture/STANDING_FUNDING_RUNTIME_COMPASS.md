@@ -2,11 +2,12 @@
 
 **Last updated:** 2026-10-07
 
-**Current phase:** Slices 1–10 complete; immutable release `v1.0.102` is
-adopted by the local host with synchronization disabled
+**Current phase:** Slices 1–10 and the disabled Cloud deployment gate are
+complete on immutable release `v1.0.103`
 
-**Runtime posture:** Scheduled synchronization remains disabled. Live canary,
-schedule enablement, and Laravel Cloud deployment remain separately gated.
+**Runtime posture:** Scheduled synchronization remains disabled in
+`x-change-testing/testing`. Live canary and schedule enablement remain
+separately gated.
 
 ## Mission
 
@@ -148,13 +149,17 @@ Local implementation closure verification on 2026-10-06:
 The combined focused gate includes the pre-existing Standing Funding lifecycle
 protocol rather than testing the new control plane in isolation.
 
-Release and disabled-host adoption closure on 2026-10-07:
+Release, disabled-host adoption, and Cloud deployment closure on 2026-10-07:
 
-- annotated immutable release `v1.0.102` points to
-  `c5fb539a448714144fe5ce029ea3c4ec419843f0`;
-- the host lockfile resolves exactly that release and commit;
-- only the four Standing Funding runtime migrations were applied; the unrelated
-  pending partner-payment migration was not applied;
+- initial immutable release `v1.0.102` exposed a PostgreSQL 63-character
+  identifier collision during the first Cloud deploy attempt;
+- immutable patch release `v1.0.103` points to
+  `2f9db7b56c05a172e327fd604f059a3358cee0ea` and assigns distinct explicit
+  unique and foreign-key names;
+- the host lockfile resolves exactly `v1.0.103` and that commit;
+- during local host adoption, only the four Standing Funding runtime migrations
+  were applied; the unrelated pending partner-payment migration was not applied
+  locally;
 - no runtime-control, address-state, synchronization-run, or runtime-outbox rows
   were created during adoption;
 - runtime status for `netbank` is disabled with no generation, active run,
@@ -163,9 +168,21 @@ Release and disabled-host adoption closure on 2026-10-07:
   projector remains scheduled;
 - the authenticated Pay Code Explorer Dusk smoke passed with 18 assertions;
 - host strict Composer validation passed.
+- Laravel Cloud deployment `depl-a2eb82e3-47fc-48e1-af18-752710ed4f69`
+  succeeded at host commit `992366c4050e79c2643a34a5944753dcd509b797`;
+- Cloud reports all four runtime migrations installed, zero runtime controls,
+  address states, synchronization runs, and outbox records, effective
+  environment and configuration values of `false`, disabled `netbank` runtime,
+  and no standing synchronization schedule;
+- the failed first deployment applied the previously pending
+  `2026_09_22_000000_create_partner_payment_events_table` migration and the
+  runtime-control migration before PostgreSQL rolled back the failing
+  address-state migration; the successful retry completed the remaining
+  runtime migrations without runtime mutations.
 
-This closes Slice 10. It does not authorize Laravel Cloud deployment, a live
-canary, schedule enablement, or any provider or financial operation.
+This closes Slice 10 and the disabled Cloud deployment gate. It does not
+authorize a live canary, schedule enablement, or any provider or financial
+operation.
 
 Automated acceptance uses fake providers and may not initiate a payment,
 provider mutation, wallet credit outside test transactions, or other live
@@ -177,6 +194,6 @@ changes, and database capacity changes require later explicit authorization.
 
 ## Next action
 
-Keep synchronization disabled. The next separate decision is whether to deploy
-the adopted release to Laravel Cloud while preserving the disabled environment
-flag. A live canary remains a later explicit operational gate.
+Keep synchronization disabled. A live NetBank canary is the next separate
+operational decision and requires explicit authorization before any runtime
+control row, provider observation, or synchronization work is created.

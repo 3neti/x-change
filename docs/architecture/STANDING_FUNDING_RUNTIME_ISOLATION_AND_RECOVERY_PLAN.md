@@ -2,9 +2,8 @@
 
 **Opened:** 2026-10-06
 
-**Status:** Slices 1–10 complete; immutable release `v1.0.102` is adopted by
-the local host with synchronization disabled; Cloud deployment and live
-recommissioning remain separately gated
+**Status:** Slices 1–10 and disabled Cloud deployment complete on immutable
+release `v1.0.103`; live recommissioning remains separately gated
 
 ## Implementation checkpoint — 2026-10-06
 
@@ -29,14 +28,22 @@ and Treasury paths remain authoritative. No production runtime was enabled,
 no infrastructure was changed, and no live provider or financial operation was
 performed by this implementation wave.
 
-Slice 10 closed on 2026-10-07. The annotated immutable tag `v1.0.102` points
-to `c5fb539a448714144fe5ce029ea3c4ec419843f0`, and the local host lockfile
-adopts that exact release. The four runtime migrations are installed without
-applying the unrelated pending partner-payment migration. Runtime facts remain
-empty and fail closed, `netbank` reports disabled, and the synchronization
-command is absent from the scheduler. The authenticated Pay Code Explorer
-Dusk smoke passed with 18 assertions. No Cloud deployment, provider call,
-financial operation, or recommissioning occurred.
+Slice 10 closed on 2026-10-07. The initial `v1.0.102` Cloud deployment exposed
+a PostgreSQL identifier collision between the generated unique and foreign-key
+names for Standing Funding address state. Immutable patch release `v1.0.103`
+at `2f9db7b56c05a172e327fd604f059a3358cee0ea` gives both constraints explicit,
+distinct PostgreSQL-safe names. Deployment
+`depl-a2eb82e3-47fc-48e1-af18-752710ed4f69` then succeeded at host commit
+`992366c4050e79c2643a34a5944753dcd509b797`.
+
+The Cloud environment resolves `v1.0.103`, has all four runtime migrations,
+and contains zero runtime controls, address states, synchronization runs, or
+outbox records. Both environment and effective configuration report scheduled
+synchronization as `false`; `netbank` reports disabled and the synchronization
+command is absent from the effective scheduler. The first failed deployment's
+global migration command also applied the previously pending partner-payment
+migration before reaching the runtime migration failure. No provider call,
+financial operation, runtime admission, or recommissioning occurred.
 
 Combined focused verification is green at 47 tests / 369 assertions across the
 new runtime control plane and the established Standing Funding protocol, with
@@ -44,8 +51,8 @@ Pint and strict Composer validation passing. The package-wide Pest wrapper
 exceeded its existing 300-second timeout. A diagnostic run across the 717-file
 unit tree also surfaced unrelated legacy failures and continued beyond the
 bounded release-gate window; neither broad run is claimed as green. The
-code-first and disabled-host adoption gates are closed. Laravel Cloud deployment
-and live recommissioning remain open as separate decisions.
+code-first, disabled-host adoption, and disabled Cloud deployment gates are
+closed. Live recommissioning remains open as a separate decision.
 
 ## Objective
 
