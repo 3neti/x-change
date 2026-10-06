@@ -2,12 +2,13 @@
 
 **Last updated:** 2026-10-07
 
-**Current phase:** Slices 1–10 and the disabled Cloud deployment gate are
-complete on immutable release `v1.0.103`
+**Current phase:** Slices 1–10, disabled Cloud deployment, and the first
+operator-authorized live NetBank canary are complete on immutable release
+`v1.0.103`
 
-**Runtime posture:** Scheduled synchronization remains disabled in
-`x-change-testing/testing`. Live canary and schedule enablement remain
-separately gated.
+**Runtime posture:** The canary was closed back to `disabled` at generation 3
+in `x-change-testing/testing`. Scheduled synchronization remains disabled.
+Bounded mode and schedule enablement remain separately gated.
 
 ## Mission
 
@@ -118,7 +119,8 @@ balance, or amount.
 | 7 | x-journal projection | Complete |
 | 8 | Private broadcasts | Complete |
 | 9 | Recovery lifecycle scenario | Complete |
-| 10 | Immutable release and disabled host adoption | Complete (`v1.0.102`) |
+| 10 | Immutable release and disabled host adoption | Complete (`v1.0.103`) |
+| Live gate 1 | One-address NetBank canary and fail-closed return | Complete |
 
 ## Recovery playbooks
 
@@ -180,20 +182,46 @@ Release, disabled-host adoption, and Cloud deployment closure on 2026-10-07:
   address-state migration; the successful retry completed the remaining
   runtime migrations without runtime mutations.
 
-This closes Slice 10 and the disabled Cloud deployment gate. It does not
-authorize a live canary, schedule enablement, or any provider or financial
+This closes Slice 10 and the disabled Cloud deployment gate.
+
+Live NetBank canary closure on 2026-10-07:
+
+- the operator explicitly authorized one live NetBank canary only;
+- address ID `1`, an active `account_funding` address with the most recent
+  prior check, was selected to minimize the unobserved interval;
+- runtime transitioned from missing/disabled generation 1 to `canary` at
+  generation 2 with batch limit 1 and that address as the sole admissible
+  target;
+- the manual scanner inspected the six due candidates but admitted and queued
+  exactly one synchronization run;
+- run `01M49M8JJGQJMWY20A2KCQ0DRY` succeeded with 67 already-known settled
+  observations, zero newly applied receipts, zero suspense, zero ambiguity,
+  and zero failure;
+- receipt totals stayed at 67, settled net stayed at 9,127,684 minor PHP units,
+  and wallet-effect references stayed at 67, proving no new financial effect;
+- queue and failed-job counts returned to zero, with no active, quarantined, or
+  ambiguous address;
+- runtime was deliberately returned to `disabled` at generation 3 rather than
+  promoted to bounded mode;
+- an immediate disabled rerun queued zero work;
+- both generation-2 and generation-3 mode-change outbox records were delivered
+  once to journal and broadcast; and
+- effective `scheduled_sync_enabled` remained `false` throughout.
+
+This closes live operational gate 1. It does not authorize bounded mode,
+schedule enablement, infrastructure changes, or another provider/financial
 operation.
 
 Automated acceptance uses fake providers and may not initiate a payment,
 provider mutation, wallet credit outside test transactions, or other live
 financial operation.
 
-The package wave may publish and be adopted by a host while runtime mode remains
-disabled. Live canary, schedule enablement, cache/queue isolation, worker
-changes, and database capacity changes require later explicit authorization.
+The package remains adopted while runtime mode is disabled. Bounded mode,
+schedule enablement, cache/queue isolation, worker changes, database capacity
+changes, and any later live provider operation require explicit authorization.
 
 ## Next action
 
-Keep synchronization disabled. A live NetBank canary is the next separate
-operational decision and requires explicit authorization before any runtime
-control row, provider observation, or synchronization work is created.
+Keep synchronization disabled. The next possible operational decision is a
+separately authorized bounded NetBank observation gate; do not enable the
+schedule or promote automatically.

@@ -2,8 +2,8 @@
 
 **Opened:** 2026-10-06
 
-**Status:** Slices 1–10 and disabled Cloud deployment complete on immutable
-release `v1.0.103`; live recommissioning remains separately gated
+**Status:** Slices 1–10, disabled Cloud deployment, and live NetBank canary
+gate 1 complete on immutable release `v1.0.103`; runtime returned to disabled
 
 ## Implementation checkpoint — 2026-10-06
 
@@ -52,7 +52,19 @@ exceeded its existing 300-second timeout. A diagnostic run across the 717-file
 unit tree also surfaced unrelated legacy failures and continued beyond the
 bounded release-gate window; neither broad run is claimed as green. The
 code-first, disabled-host adoption, and disabled Cloud deployment gates are
-closed. Live recommissioning remains open as a separate decision.
+closed.
+
+Live operational gate 1 closed on 2026-10-07. The explicitly authorized
+one-address NetBank canary transitioned to generation 2, admitted exactly one
+address, and completed run `01M49M8JJGQJMWY20A2KCQ0DRY`. The provider returned
+67 existing settled observations and the run applied zero new receipts. Receipt
+count, settled amount, and wallet-effect-reference count were unchanged before
+and after the run. No suspense, ambiguity, failure, queued job, or failed job
+remained. Runtime then returned to `disabled` at generation 3, and an immediate
+scanner rerun queued zero work. Both mode transitions reached x-journal and the
+private broadcast projector through the normal outbox path. Effective scheduled
+synchronization remained false. Bounded mode and scheduled recommissioning are
+still separate decisions.
 
 ## Objective
 
@@ -435,7 +447,8 @@ The code-first wave is complete only when:
 - Redis or another dedicated cache;
 - managed queue provisioning;
 - worker concurrency changes;
-- live NetBank canary;
+- another live NetBank provider operation;
+- bounded-mode promotion;
 - schedule enablement;
 - x-feedback incident notifications;
 - x-action automated remediation;

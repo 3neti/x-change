@@ -44,7 +44,7 @@ not classified as the deterministic source of the incident.
 The testing runtime is currently mitigated: scheduled Standing Funding
 synchronization is disabled and queue/failed-job counts are zero. The shared
 database queue, database cache, and 0.25-CU PostgreSQL topology remain a common
-failure domain, so recommissioning is not authorized.
+failure domain, so automatic or scheduled recommissioning is not authorized.
 
 The code-first recovery wave added persisted runtime generations, leases,
 cooldown, provider circuits, scoped quarantine, append-only run history,
@@ -59,9 +59,17 @@ and [Standing Funding Runtime Compass](STANDING_FUNDING_RUNTIME_COMPASS.md).
 Slices 1–10 and the disabled Cloud deployment gate are complete. Immutable
 release `v1.0.103` at `2f9db7b56c05a172e327fd604f059a3358cee0ea`
 is deployed to `x-change-testing/testing` at host commit
-`992366c4050e79c2643a34a5944753dcd509b797`. Runtime synchronization remains
-disabled with empty runtime state. Infrastructure changes, live provider calls,
-live canary, and schedule enablement remain separately gated.
+`992366c4050e79c2643a34a5944753dcd509b797`.
+
+The first explicitly authorized live NetBank canary completed on 2026-10-07.
+One account-funding address was admitted at generation 2; its sole run
+`01M49M8JJGQJMWY20A2KCQ0DRY` succeeded against 67 already-known settled
+observations and applied zero new receipts. Receipt, settled-amount, and
+wallet-effect-reference totals did not change. The runtime returned to
+`disabled` at generation 3, the immediate rerun queued zero work, both
+mode-change events were delivered to journal and broadcast, and scheduled sync
+remained false. Infrastructure changes, bounded-mode promotion, another live
+provider operation, and schedule enablement remain separately gated.
 
 ## Payment confirmation resilience recovery track
 
@@ -128,7 +136,7 @@ historical `expired` label alone is not recovery-entitlement evidence.
 ## Current Position
 
 Current wave: Standing Funding Runtime Isolation and Controlled Recommissioning
-Current status: Standing Funding Slices 1–10 and disabled Cloud deployment complete on `v1.0.103`; live recommissioning gated
+Current status: Standing Funding Slices 1–10, disabled Cloud deployment, and one-address live canary complete on `v1.0.103`; runtime disabled at generation 3
 Last updated: 2026-10-07
 
 | Wave | Workstream | Role | Status | Compass |
@@ -141,7 +149,7 @@ Last updated: 2026-10-07
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 | 6 | Onboarding Vouchers | Recipient account invitation and provisioning | Slice 3 complete; Slice 4 in progress | [onboarding-vouchers/ONBOARDING_VOUCHER_COMPASS.md](onboarding-vouchers/ONBOARDING_VOUCHER_COMPASS.md) |
 | 7 | Governed Provisioning | Vacant commissioning seats, exact-capability authority offers, delivery, activation/revocation/supersession, production API mandates, and Treasury-safe Account Grants | Controlled Cockpit lifecycle implemented; authority remains separate from cash and provider execution | [PROVISIONING_AND_ACCOUNT_GRANTS.md](PROVISIONING_AND_ACCOUNT_GRANTS.md) |
-| 8 | Standing Funding Runtime | Recovery-safe provider synchronization control plane | Slices 1–10 and disabled Cloud deployment complete on `v1.0.103`; live recommissioning gated | [STANDING_FUNDING_RUNTIME_COMPASS.md](STANDING_FUNDING_RUNTIME_COMPASS.md) |
+| 8 | Standing Funding Runtime | Recovery-safe provider synchronization control plane | Slices 1–10, disabled Cloud deployment, and live canary gate 1 complete on `v1.0.103`; bounded/scheduled modes gated | [STANDING_FUNDING_RUNTIME_COMPASS.md](STANDING_FUNDING_RUNTIME_COMPASS.md) |
 
 ## Package Map
 
