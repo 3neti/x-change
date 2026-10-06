@@ -19,6 +19,7 @@ use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use LBHurtado\XChange\Services\Funding\StandingFundingSyncAdmission;
 use Throwable;
 
 class VerifyFundingWebhookReceiptJob implements ShouldQueue
@@ -49,6 +50,7 @@ class VerifyFundingWebhookReceiptJob implements ShouldQueue
         VerifyFundingWebhookReceipt $verify,
         SettleVerifiedFundingIntent $settle,
         FinalizeFundingSuspenseMonitoring $finalizeMonitoring,
+        StandingFundingSyncAdmission $admission,
     ): void {
         $receipt = WebhookReceipt::query()->findOrFail($this->webhookReceiptId);
 
@@ -73,12 +75,23 @@ class VerifyFundingWebhookReceiptJob implements ShouldQueue
                 1,
                 (int) config('x-change.funding.standing_addresses.webhook_batch_size', 100),
             ))
-            ->eachById(fn (StandingFundingAddress $address) => SyncStandingFundingAddressJob::dispatch(
-                standingFundingAddressId: (int) $address->getKey(),
-                providerCode: $receipt->provider_code,
-                trigger: 'webhook',
-                webhookReceiptId: (int) $receipt->getKey(),
-            )->afterCommit());
+            ->eachById(function (StandingFundingAddress $address) use ($admission, $receipt): void {
+                $decision = $admission->admit($address, 'webhook', (int) $receipt->getKey());
+
+                if (! $decision->admitted) {
+                    return;
+                }
+
+                SyncStandingFundingAddressJob::dispatch(
+                    standingFundingAddressId: (int) $address->getKey(),
+                    providerCode: $receipt->provider_code,
+                    trigger: 'webhook',
+                    webhookReceiptId: (int) $receipt->getKey(),
+                    runtimeGeneration: $decision->generation,
+                    runReference: $decision->runReference,
+                    leaseToken: $decision->leaseToken,
+                )->afterCommit();
+            });
 
         $finalizeMonitoring->handle($receipt->getKey());
     }

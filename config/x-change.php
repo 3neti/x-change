@@ -1428,6 +1428,12 @@ return [
                 'XCHANGE_STANDING_FUNDING_WEBHOOK_BATCH_SIZE',
                 100,
             ),
+            'runtime' => [
+                'lease_seconds' => (int) env('XCHANGE_STANDING_FUNDING_RUNTIME_LEASE_SECONDS', 180),
+                'backlog_ceiling' => (int) env('XCHANGE_STANDING_FUNDING_RUNTIME_BACKLOG_CEILING', 25),
+                'circuit_failure_threshold' => (int) env('XCHANGE_STANDING_FUNDING_RUNTIME_CIRCUIT_FAILURE_THRESHOLD', 3),
+                'circuit_cooldown_seconds' => (int) env('XCHANGE_STANDING_FUNDING_RUNTIME_CIRCUIT_COOLDOWN_SECONDS', 900),
+            ],
             'limits' => [
                 'minimum_amount_minor' => (int) env(
                     'XCHANGE_STANDING_FUNDING_MINIMUM_AMOUNT_MINOR',

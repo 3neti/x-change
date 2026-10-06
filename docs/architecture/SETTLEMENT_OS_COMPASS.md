@@ -33,6 +33,32 @@ Campaign / Program Scale
 
 This Compass is the program-level memory. Future workstream compasses should be summarized here when a slice begins, completes, reveals a significant risk, or changes a package boundary.
 
+## Standing Funding runtime isolation and recovery track
+
+Updated 2026-10-06. A transient `/x/cockpit/pay-codes` 500 in the
+`x-change-testing/testing` Laravel Cloud environment was traced to PostgreSQL
+memory exhaustion while `SyncStandingFundingAddressJob` repeatedly processed
+six Standing Funding Addresses. The Cockpit page later loaded normally and is
+not classified as the deterministic source of the incident.
+
+The testing runtime is currently mitigated: scheduled Standing Funding
+synchronization is disabled and queue/failed-job counts are zero. The shared
+database queue, database cache, and 0.25-CU PostgreSQL topology remain a common
+failure domain, so recommissioning is not authorized.
+
+The code-first recovery wave will add persisted runtime generations, leases,
+cooldown, provider circuits, scoped quarantine, append-only run history,
+preview-first recovery commands, ambiguous-outcome reconciliation, a durable
+runtime event outbox, selected x-journal evidence, and private sanitized
+Cockpit invalidation broadcasts. Runtime truth remains in x-change; x-journal
+is immutable evidence; broadcasts are best-effort refresh signals.
+
+The operative documents are the
+[Standing Funding Runtime Plan](STANDING_FUNDING_RUNTIME_ISOLATION_AND_RECOVERY_PLAN.md)
+and [Standing Funding Runtime Compass](STANDING_FUNDING_RUNTIME_COMPASS.md).
+Implementation begins with characterization only. Infrastructure changes, live
+provider calls, and schedule enablement remain separately gated.
+
 ## Payment confirmation resilience recovery track
 
 Updated 2026-10-06. Recovery is complete on x-change `main` at
@@ -97,8 +123,8 @@ historical `expired` label alone is not recovery-entitlement evidence.
 
 ## Current Position
 
-Current wave: Payment Confirmation Resilience Recovery
-Current status: Complete through x-change v1.0.101, x-PayOut beta.75 adoption, and stranded-branch retirement; live enablement separately gated
+Current wave: Standing Funding Runtime Isolation and Controlled Recommissioning
+Current status: Runtime isolation code-first Slices 1–9 complete and locally verified (47 tests / 369 assertions); immutable release and disabled host adoption remain gated; testing schedule remains disabled
 Last updated: 2026-10-06
 
 | Wave | Workstream | Role | Status | Compass |
@@ -111,12 +137,13 @@ Last updated: 2026-10-06
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 | 6 | Onboarding Vouchers | Recipient account invitation and provisioning | Slice 3 complete; Slice 4 in progress | [onboarding-vouchers/ONBOARDING_VOUCHER_COMPASS.md](onboarding-vouchers/ONBOARDING_VOUCHER_COMPASS.md) |
 | 7 | Governed Provisioning | Vacant commissioning seats, exact-capability authority offers, delivery, activation/revocation/supersession, production API mandates, and Treasury-safe Account Grants | Controlled Cockpit lifecycle implemented; authority remains separate from cash and provider execution | [PROVISIONING_AND_ACCOUNT_GRANTS.md](PROVISIONING_AND_ACCOUNT_GRANTS.md) |
+| 8 | Standing Funding Runtime | Recovery-safe provider synchronization control plane | Code-first Slices 1–9 complete locally; release/adoption and live recommissioning gated | [STANDING_FUNDING_RUNTIME_COMPASS.md](STANDING_FUNDING_RUNTIME_COMPASS.md) |
 
 ## Package Map
 
 | Layer | Primary package path | Boundary |
 |---|---|---|
-| x-change | `/Users/rli/PhpstormProjects/x-change-sandbox/packages/x-change` | Settlement OS orchestration, product experience, APIs, provider coordination, analytics/reporting |
+| x-change | `/Users/rli/PhpstormProjects/packages/x-change` | Settlement OS orchestration, product experience, APIs, provider coordination, analytics/reporting |
 | voucher | `/Users/rli/PhpstormProjects/packages/voucher` | Voucher lifecycle and execution semantics |
 | x-journal | `/Users/rli/PhpstormProjects/packages/x-journal` | Durable system log and audit trail |
 | x-action | `/Users/rli/PhpstormProjects/packages/x-action` | Workflow continuation and CTA state |

@@ -7,8 +7,10 @@ use Illuminate\Support\Facades\Bus;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
+use LBHurtado\XChange\Enums\StandingFundingRuntimeMode;
 use LBHurtado\XChange\Jobs\Funding\SyncStandingFundingAddressJob;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use LBHurtado\XChange\Models\StandingFundingRuntimeControl;
 
 it('queues only active provider addresses within the configured batch', function () {
     Bus::fake();
@@ -18,6 +20,7 @@ it('queues only active provider addresses within the configured batch', function
         'x-change.funding.providers.netbank.enabled' => true,
     ]);
     $active = standingAddressForCommand();
+    enableStandingFundingRuntimeForCommand(10);
     standingAddressForCommand([
         'provider_code' => 'netbank',
         'status' => FundingAddressStatus::Suspended,
@@ -60,6 +63,7 @@ it('queues only addresses whose scheduled polling cadence is due', function () {
         'funding_address_hash' => hash('sha256', 'never-checked-address'),
         'last_checked_at' => null,
     ]);
+    enableStandingFundingRuntimeForCommand(10);
     $stale = standingAddressForCommand([
         'binding_key' => hash('sha256', 'stale-binding'),
         'funding_address_hash' => hash('sha256', 'stale-address'),
@@ -126,4 +130,17 @@ function standingAddressForCommand(array $overrides = []): StandingFundingAddres
         'currency' => 'PHP',
         'activated_at' => now(),
     ], $overrides));
+}
+
+function enableStandingFundingRuntimeForCommand(int $batchLimit): StandingFundingRuntimeControl
+{
+    return StandingFundingRuntimeControl::query()->create([
+        'provider_code' => 'netbank',
+        'mode' => StandingFundingRuntimeMode::Scheduled,
+        'generation' => 1,
+        'batch_limit' => $batchLimit,
+        'backlog_ceiling' => $batchLimit,
+        'last_transition' => 'test_fixture',
+        'transitioned_at' => now(),
+    ]);
 }

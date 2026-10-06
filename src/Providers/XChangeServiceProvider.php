@@ -122,10 +122,22 @@ use LBHurtado\XChange\Console\Commands\Funding\ApproveFundingRequestCommand;
 use LBHurtado\XChange\Console\Commands\Funding\ApproveStandingFundingAddressBindingMigrationCommand;
 use LBHurtado\XChange\Console\Commands\Funding\AttestAccountFundingPayCodeJournalIntegrityCommand;
 use LBHurtado\XChange\Console\Commands\Funding\BackfillAccountFundingPayCodeJournalCommand;
+use LBHurtado\XChange\Console\Commands\Funding\DrainStandingFundingRuntimeCommand;
 use LBHurtado\XChange\Console\Commands\Funding\ExpireOnDemandIssuanceFundingOrdersCommand;
 use LBHurtado\XChange\Console\Commands\Funding\IssueSystemAccountFundingPayCodeCommand;
 use LBHurtado\XChange\Console\Commands\Funding\MigrateStandingFundingAddressBindingCommand;
+use LBHurtado\XChange\Console\Commands\Funding\PauseStandingFundingRuntimeCommand;
+use LBHurtado\XChange\Console\Commands\Funding\ProcessStandingFundingRuntimeOutboxCommand;
+use LBHurtado\XChange\Console\Commands\Funding\PromoteStandingFundingRuntimeCommand;
+use LBHurtado\XChange\Console\Commands\Funding\QuarantineStandingFundingAddressCommand;
+use LBHurtado\XChange\Console\Commands\Funding\ReconcileAmbiguousStandingFundingCommand;
+use LBHurtado\XChange\Console\Commands\Funding\ReleaseStandingFundingStaleLeaseCommand;
 use LBHurtado\XChange\Console\Commands\Funding\RepairStandingFundingAddressBindingEffectiveAtCommand;
+use LBHurtado\XChange\Console\Commands\Funding\ResumeStandingFundingCanaryCommand;
+use LBHurtado\XChange\Console\Commands\Funding\RetryStandingFundingAddressCommand;
+use LBHurtado\XChange\Console\Commands\Funding\StandingFundingAddressRecoveryCommand;
+use LBHurtado\XChange\Console\Commands\Funding\StandingFundingRuntimeStatusCommand;
+use LBHurtado\XChange\Console\Commands\Funding\StandingFundingRuntimeTransitionCommand;
 use LBHurtado\XChange\Console\Commands\Funding\SyncStandingFundingAddressesCommand;
 use LBHurtado\XChange\Console\Commands\Funding\VerifyFundingRequestBackingCommand;
 use LBHurtado\XChange\Console\Commands\Funding\VerifyOpenFundingIntentsCommand;
@@ -485,6 +497,7 @@ use LBHurtado\XChange\Services\Funding\FundingProjectionChannel;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\QrPhSimulatorFundingProviderAdapter;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressProviderRegistry;
+use LBHurtado\XChange\Services\Funding\StandingFundingRuntimeChannel;
 use LBHurtado\XChange\Services\InstructionBackedPricingService;
 use LBHurtado\XChange\Services\Keepsake\Contributors\AccountSnapshotKeepsakeContributor;
 use LBHurtado\XChange\Services\Keepsake\Contributors\ClaimEvidenceKeepsakeContributor;
@@ -1688,6 +1701,18 @@ class XChangeServiceProvider extends ServiceProvider
                 MonitorOpenPaymentAttemptsCommand::class,
                 ResumeVerifiedPaymentAttemptsCommand::class,
                 SyncStandingFundingAddressesCommand::class,
+                StandingFundingRuntimeStatusCommand::class,
+                StandingFundingRuntimeTransitionCommand::class,
+                StandingFundingAddressRecoveryCommand::class,
+                PauseStandingFundingRuntimeCommand::class,
+                DrainStandingFundingRuntimeCommand::class,
+                ResumeStandingFundingCanaryCommand::class,
+                PromoteStandingFundingRuntimeCommand::class,
+                QuarantineStandingFundingAddressCommand::class,
+                ReleaseStandingFundingStaleLeaseCommand::class,
+                ReconcileAmbiguousStandingFundingCommand::class,
+                RetryStandingFundingAddressCommand::class,
+                ProcessStandingFundingRuntimeOutboxCommand::class,
                 ReconcilePendingDisbursementsCommand::class,
                 TestFeedbackEmailCommand::class,
                 TestFeedbackSmsCommand::class,
@@ -1890,6 +1915,13 @@ class XChangeServiceProvider extends ServiceProvider
                 FundingProjectionChannel::class,
             )->authorizes($user, $token),
         );
+
+        Broadcast::channel(
+            'x-change.standing-funding.{token}',
+            fn (Model $user, string $token): bool => app(
+                StandingFundingRuntimeChannel::class,
+            )->authorizes($user, $token),
+        );
     }
 
     protected function bootFundingVerificationSchedule(): void
@@ -1942,6 +1974,15 @@ class XChangeServiceProvider extends ServiceProvider
                 ->everyMinute()
                 ->onOneServer()
                 ->withoutOverlapping(10);
+        });
+
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            $schedule
+                ->command('xchange:funding:standing-runtime:process-outbox --limit=100')
+                ->name('xchange:funding:standing-runtime:process-outbox')
+                ->everyMinute()
+                ->onOneServer()
+                ->withoutOverlapping(5);
         });
 
         if ((bool) config(

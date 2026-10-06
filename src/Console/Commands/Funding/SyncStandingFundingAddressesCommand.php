@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Jobs\Funding\SyncStandingFundingAddressJob;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use LBHurtado\XChange\Services\Funding\StandingFundingSyncAdmission;
 
 final class SyncStandingFundingAddressesCommand extends Command
 {
@@ -18,7 +19,7 @@ final class SyncStandingFundingAddressesCommand extends Command
 
     protected $description = 'Queue authoritative provider synchronization for active Standing Funding Addresses';
 
-    public function handle(): int
+    public function handle(StandingFundingSyncAdmission $admission): int
     {
         $provider = strtolower(trim((string) $this->option('provider')));
 
@@ -64,11 +65,20 @@ final class SyncStandingFundingAddressesCommand extends Command
             ->oldest('last_checked_at')
             ->oldest('id')
             ->limit($limit)
-            ->each(function (StandingFundingAddress $address) use ($provider, &$queued): void {
+            ->each(function (StandingFundingAddress $address) use ($admission, $provider, &$queued): void {
+                $decision = $admission->admit($address, 'schedule');
+
+                if (! $decision->admitted) {
+                    return;
+                }
+
                 SyncStandingFundingAddressJob::dispatch(
                     standingFundingAddressId: (int) $address->getKey(),
                     providerCode: $provider,
                     trigger: 'schedule',
+                    runtimeGeneration: $decision->generation,
+                    runReference: $decision->runReference,
+                    leaseToken: $decision->leaseToken,
                 );
                 $queued++;
             });

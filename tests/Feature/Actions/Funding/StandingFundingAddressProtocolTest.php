@@ -57,6 +57,7 @@ use LBHurtado\XChange\Support\Logging\CacheAuditLogger;
 
 beforeEach(function () {
     enableNetbankTreasuryForTests();
+    config()->set('x-change.legal.eula.enabled', false);
 });
 use Carbon\CarbonImmutable;
 use Illuminate\Validation\ValidationException;

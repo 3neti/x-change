@@ -5,20 +5,19 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Jobs\Funding;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\RateLimited;
-use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use LBHurtado\XChange\Actions\Funding\SyncStandingFundingAddress;
 use LBHurtado\XChange\Actions\Operations\RecordExternalJobFailure;
 use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use LBHurtado\XChange\Services\Funding\StandingFundingSyncRuntime;
 use Throwable;
 
-final class SyncStandingFundingAddressJob implements ShouldBeUnique, ShouldQueue
+final class SyncStandingFundingAddressJob implements ShouldQueue
 {
     use Dispatchable;
     use InteractsWithQueue;
@@ -33,8 +32,6 @@ final class SyncStandingFundingAddressJob implements ShouldBeUnique, ShouldQueue
 
     public bool $failOnTimeout = true;
 
-    public int $uniqueFor;
-
     /** @var list<int> */
     public array $backoff = [30, 120, 300, 900];
 
@@ -43,11 +40,10 @@ final class SyncStandingFundingAddressJob implements ShouldBeUnique, ShouldQueue
         public readonly string $providerCode,
         public readonly string $trigger,
         public readonly ?int $webhookReceiptId = null,
+        public readonly ?int $runtimeGeneration = null,
+        public readonly ?string $runReference = null,
+        public readonly ?string $leaseToken = null,
     ) {
-        $this->uniqueFor = max(
-            1,
-            (int) config('x-change.funding.standing_addresses.lock_seconds', 120),
-        );
         $this->onQueue(self::Queue);
     }
 
@@ -57,40 +53,60 @@ final class SyncStandingFundingAddressJob implements ShouldBeUnique, ShouldQueue
     public function middleware(): array
     {
         return [
-            (new WithoutOverlapping($this->uniqueId()))
-                ->releaseAfter(5)
-                ->expireAfter($this->uniqueFor)
-                ->shared(),
             new RateLimited('x-change-funding-verification'),
         ];
     }
 
-    public function uniqueId(): string
+    public function handle(SyncStandingFundingAddress $sync, StandingFundingSyncRuntime $runtime): void
     {
-        return 'standing-funding-address:'.$this->standingFundingAddressId;
-    }
+        if ($this->runtimeGeneration === null || $this->runReference === null || $this->leaseToken === null
+            || ! $runtime->start($this->runReference, $this->leaseToken, $this->runtimeGeneration)) {
+            return;
+        }
 
-    public function handle(SyncStandingFundingAddress $sync): void
-    {
         $address = StandingFundingAddress::query()->findOrFail($this->standingFundingAddressId);
 
         if ($address->provider_code !== strtolower(trim($this->providerCode))
             || $address->status !== FundingAddressStatus::Active) {
+            $runtime->succeed($this->runReference, ['outcome' => 'address_inactive']);
+
             return;
         }
 
-        $sync->handle($address, $this->trigger, $this->webhookReceiptId);
+        try {
+            $result = $sync->handle($address, $this->trigger, $this->webhookReceiptId);
+            $runtime->succeed($this->runReference, [
+                'observed' => $result->observed,
+                'settled' => $result->settled,
+                'awaiting_approval' => $result->awaitingApproval,
+                'suspense' => $result->suspense,
+                'applied' => $result->applied,
+                'recognized' => $result->recognized,
+            ]);
+        } catch (Throwable $failure) {
+            $runtime->fail($this->runReference, $failure);
+
+            throw $failure;
+        }
     }
 
     public function failed(Throwable $exception): void
     {
-        app(RecordExternalJobFailure::class)->handle(
-            jobType: class_basename(self::class),
-            subjectType: 'standing_funding_address',
-            subjectId: $this->standingFundingAddressId,
-            failure: $exception,
-            providerCode: $this->providerCode,
-            trigger: $this->trigger,
-        );
+        try {
+            app(RecordExternalJobFailure::class)->handle(
+                jobType: class_basename(self::class),
+                subjectType: 'standing_funding_address',
+                subjectId: $this->standingFundingAddressId,
+                failure: $exception,
+                providerCode: $this->providerCode,
+                trigger: $this->trigger,
+                metadata: ['run_reference' => $this->runReference],
+            );
+        } catch (Throwable $recordingFailure) {
+            try {
+                report($recordingFailure);
+            } catch (Throwable) {
+            }
+        }
     }
 }
