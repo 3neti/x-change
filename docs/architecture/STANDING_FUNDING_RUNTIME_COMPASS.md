@@ -1,12 +1,12 @@
 # Standing Funding Runtime Compass
 
-**Last updated:** 2026-10-06
+**Last updated:** 2026-10-07
 
-**Current phase:** Code-first Slices 1–9 complete and locally verified; Slice 10
-immutable release and disabled host adoption remain separately gated
+**Current phase:** Slices 1–10 complete; immutable release `v1.0.102` is
+adopted by the local host with synchronization disabled
 
-**Runtime posture:** Scheduled synchronization remains disabled in
-`x-change-testing/testing`
+**Runtime posture:** Scheduled synchronization remains disabled. Live canary,
+schedule enablement, and Laravel Cloud deployment remain separately gated.
 
 ## Mission
 
@@ -117,7 +117,7 @@ balance, or amount.
 | 7 | x-journal projection | Complete |
 | 8 | Private broadcasts | Complete |
 | 9 | Recovery lifecycle scenario | Complete |
-| 10 | Immutable release and disabled host adoption | Pending |
+| 10 | Immutable release and disabled host adoption | Complete (`v1.0.102`) |
 
 ## Recovery playbooks
 
@@ -146,9 +146,26 @@ Local implementation closure verification on 2026-10-06:
   bounded release-gate window, so neither broad run is recorded as green.
 
 The combined focused gate includes the pre-existing Standing Funding lifecycle
-protocol rather than testing the new control plane in isolation. This evidence
-closes the local code-first implementation gate, but does not authorize an
-immutable release, host adoption, a live canary, or schedule enablement.
+protocol rather than testing the new control plane in isolation.
+
+Release and disabled-host adoption closure on 2026-10-07:
+
+- annotated immutable release `v1.0.102` points to
+  `c5fb539a448714144fe5ce029ea3c4ec419843f0`;
+- the host lockfile resolves exactly that release and commit;
+- only the four Standing Funding runtime migrations were applied; the unrelated
+  pending partner-payment migration was not applied;
+- no runtime-control, address-state, synchronization-run, or runtime-outbox rows
+  were created during adoption;
+- runtime status for `netbank` is disabled with no generation, active run,
+  quarantine, or ambiguous address;
+- the scheduled synchronization command is absent while the empty outbox
+  projector remains scheduled;
+- the authenticated Pay Code Explorer Dusk smoke passed with 18 assertions;
+- host strict Composer validation passed.
+
+This closes Slice 10. It does not authorize Laravel Cloud deployment, a live
+canary, schedule enablement, or any provider or financial operation.
 
 Automated acceptance uses fake providers and may not initiate a payment,
 provider mutation, wallet credit outside test transactions, or other live
@@ -160,6 +177,6 @@ changes, and database capacity changes require later explicit authorization.
 
 ## Next action
 
-Make an explicit decision about an immutable package release and disabled host
-adoption. The host must adopt the release with the runtime still disabled. Do
-not enable a live canary or schedule as part of that decision.
+Keep synchronization disabled. The next separate decision is whether to deploy
+the adopted release to Laravel Cloud while preserving the disabled environment
+flag. A live canary remains a later explicit operational gate.

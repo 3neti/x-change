@@ -35,7 +35,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 
 ## Standing Funding runtime isolation and recovery track
 
-Updated 2026-10-06. A transient `/x/cockpit/pay-codes` 500 in the
+Updated 2026-10-07. A transient `/x/cockpit/pay-codes` 500 in the
 `x-change-testing/testing` Laravel Cloud environment was traced to PostgreSQL
 memory exhaustion while `SyncStandingFundingAddressJob` repeatedly processed
 six Standing Funding Addresses. The Cockpit page later loaded normally and is
@@ -46,7 +46,7 @@ synchronization is disabled and queue/failed-job counts are zero. The shared
 database queue, database cache, and 0.25-CU PostgreSQL topology remain a common
 failure domain, so recommissioning is not authorized.
 
-The code-first recovery wave will add persisted runtime generations, leases,
+The code-first recovery wave added persisted runtime generations, leases,
 cooldown, provider circuits, scoped quarantine, append-only run history,
 preview-first recovery commands, ambiguous-outcome reconciliation, a durable
 runtime event outbox, selected x-journal evidence, and private sanitized
@@ -56,8 +56,11 @@ is immutable evidence; broadcasts are best-effort refresh signals.
 The operative documents are the
 [Standing Funding Runtime Plan](STANDING_FUNDING_RUNTIME_ISOLATION_AND_RECOVERY_PLAN.md)
 and [Standing Funding Runtime Compass](STANDING_FUNDING_RUNTIME_COMPASS.md).
-Implementation begins with characterization only. Infrastructure changes, live
-provider calls, and schedule enablement remain separately gated.
+Slices 1–10 are complete. Immutable release `v1.0.102` at
+`c5fb539a448714144fe5ce029ea3c4ec419843f0` is adopted by the local host with
+runtime synchronization disabled and empty runtime state. Laravel Cloud
+deployment, infrastructure changes, live provider calls, and schedule
+enablement remain separately gated.
 
 ## Payment confirmation resilience recovery track
 
@@ -124,8 +127,8 @@ historical `expired` label alone is not recovery-entitlement evidence.
 ## Current Position
 
 Current wave: Standing Funding Runtime Isolation and Controlled Recommissioning
-Current status: Runtime isolation code-first Slices 1–9 complete and locally verified (47 tests / 369 assertions); immutable release and disabled host adoption remain gated; testing schedule remains disabled
-Last updated: 2026-10-06
+Current status: Standing Funding Slices 1–10 complete; `v1.0.102` adopted locally with synchronization disabled; Cloud deployment and live recommissioning gated
+Last updated: 2026-10-07
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
@@ -137,7 +140,7 @@ Last updated: 2026-10-06
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 | 6 | Onboarding Vouchers | Recipient account invitation and provisioning | Slice 3 complete; Slice 4 in progress | [onboarding-vouchers/ONBOARDING_VOUCHER_COMPASS.md](onboarding-vouchers/ONBOARDING_VOUCHER_COMPASS.md) |
 | 7 | Governed Provisioning | Vacant commissioning seats, exact-capability authority offers, delivery, activation/revocation/supersession, production API mandates, and Treasury-safe Account Grants | Controlled Cockpit lifecycle implemented; authority remains separate from cash and provider execution | [PROVISIONING_AND_ACCOUNT_GRANTS.md](PROVISIONING_AND_ACCOUNT_GRANTS.md) |
-| 8 | Standing Funding Runtime | Recovery-safe provider synchronization control plane | Code-first Slices 1–9 complete locally; release/adoption and live recommissioning gated | [STANDING_FUNDING_RUNTIME_COMPASS.md](STANDING_FUNDING_RUNTIME_COMPASS.md) |
+| 8 | Standing Funding Runtime | Recovery-safe provider synchronization control plane | Slices 1–10 complete; `v1.0.102` adopted locally disabled; Cloud deployment and live recommissioning gated | [STANDING_FUNDING_RUNTIME_COMPASS.md](STANDING_FUNDING_RUNTIME_COMPASS.md) |
 
 ## Package Map
 

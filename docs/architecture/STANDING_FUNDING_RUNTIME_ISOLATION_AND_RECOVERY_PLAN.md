@@ -2,9 +2,9 @@
 
 **Opened:** 2026-10-06
 
-**Status:** Code-first Slices 1–9 complete and locally verified; Slice 10
-immutable release, disabled host adoption, and live recommissioning remain
-separately gated
+**Status:** Slices 1–10 complete; immutable release `v1.0.102` is adopted by
+the local host with synchronization disabled; Cloud deployment and live
+recommissioning remain separately gated
 
 ## Implementation checkpoint — 2026-10-06
 
@@ -29,14 +29,23 @@ and Treasury paths remain authoritative. No production runtime was enabled,
 no infrastructure was changed, and no live provider or financial operation was
 performed by this implementation wave.
 
+Slice 10 closed on 2026-10-07. The annotated immutable tag `v1.0.102` points
+to `c5fb539a448714144fe5ce029ea3c4ec419843f0`, and the local host lockfile
+adopts that exact release. The four runtime migrations are installed without
+applying the unrelated pending partner-payment migration. Runtime facts remain
+empty and fail closed, `netbank` reports disabled, and the synchronization
+command is absent from the scheduler. The authenticated Pay Code Explorer
+Dusk smoke passed with 18 assertions. No Cloud deployment, provider call,
+financial operation, or recommissioning occurred.
+
 Combined focused verification is green at 47 tests / 369 assertions across the
 new runtime control plane and the established Standing Funding protocol, with
 Pint and strict Composer validation passing. The package-wide Pest wrapper
 exceeded its existing 300-second timeout. A diagnostic run across the 717-file
 unit tree also surfaced unrelated legacy failures and continued beyond the
-bounded release-gate window; neither broad run is claimed as green. The local
-code-first gate is closed, while Slice 10 remains open for immutable release and
-disabled host adoption.
+bounded release-gate window; neither broad run is claimed as green. The
+code-first and disabled-host adoption gates are closed. Laravel Cloud deployment
+and live recommissioning remain open as separate decisions.
 
 ## Objective
 
