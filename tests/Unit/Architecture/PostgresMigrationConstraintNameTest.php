@@ -74,6 +74,25 @@ it('uses distinct PostgreSQL-safe constraint names for standing funding binding 
     }
 });
 
+it('uses distinct PostgreSQL-safe constraint names for standing funding address states', function () {
+    $migration = file_get_contents(
+        dirname(__DIR__, 3).'/database/migrations/2026_10_06_143245_create_x_change_standing_funding_address_states_table.php',
+    );
+
+    $constraintNames = [
+        'xchg_standing_state_address_unique',
+        'xchg_standing_state_address_foreign',
+    ];
+
+    expect($migration)->not->toBeFalse()
+        ->and(max(array_map(strlen(...), $constraintNames)))->toBeLessThanOrEqual(63)
+        ->and(array_unique($constraintNames))->toHaveCount(count($constraintNames));
+
+    foreach ($constraintNames as $constraintName) {
+        expect($migration)->toContain("'{$constraintName}'");
+    }
+});
+
 it('uses distinct PostgreSQL-safe constraint names for affiliation invitation authorities', function () {
     $migration = file_get_contents(
         dirname(__DIR__, 3).'/database/migrations/2026_09_30_000100_create_x_change_affiliation_invitation_authorities_table.php',

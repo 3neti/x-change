@@ -13,7 +13,12 @@ return new class extends Migration
     {
         Schema::create('x_change_standing_funding_address_states', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('standing_funding_address_id')->unique()->constrained('x_change_standing_funding_addresses')->cascadeOnDelete();
+            $table->foreignId('standing_funding_address_id');
+            $table->unique('standing_funding_address_id', 'xchg_standing_state_address_unique');
+            $table->foreign('standing_funding_address_id', 'xchg_standing_state_address_foreign')
+                ->references('id')
+                ->on('x_change_standing_funding_addresses')
+                ->cascadeOnDelete();
             $table->string('provider_code', 64)->index();
             $table->string('status', 24)->default('idle')->index();
             $table->unsignedBigInteger('generation')->default(1);
