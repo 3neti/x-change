@@ -3,7 +3,8 @@
 **Opened:** 2026-10-06
 
 **Status:** Slices 1–10, disabled Cloud deployment, and live NetBank canary
-gate 1 complete on immutable release `v1.0.103`; runtime returned to disabled
+gate 1 complete on immutable release `v1.0.103`; bounded gate 2 stopped safely
+on existing suspense and runtime returned to disabled
 
 ## Implementation checkpoint — 2026-10-06
 
@@ -65,6 +66,19 @@ scanner rerun queued zero work. Both mode transitions reached x-journal and the
 private broadcast projector through the normal outbox path. Effective scheduled
 synchronization remained false. Bounded mode and scheduled recommissioning are
 still separate decisions.
+
+Bounded operational gate 2 began on 2026-10-07 and closed as a controlled
+partial pass. Runtime entered bounded mode at generation 4 with batch limit 1.
+The first sequential target, payment-purpose address ID `4`, completed run
+`01M49MRC9WZCQ6NP71RM4APDTV` with one suspense result. The result replayed an
+existing immutable campaign-payment quarantine classified as
+`qualification_rejected / unsupported_rule`; it created no provider
+observation, quarantine, receipt, campaign recognition, wallet effect, or
+funding suspense case. Per the fail-closed gate, no further addresses were
+contacted. Runtime returned to disabled at generation 5, the immediate scanner
+rerun queued zero work, and journal/broadcast outbox projection completed.
+Addresses `2`, `3`, `5`, and `6` remain pending a separately authorized resume
+after the existing campaign qualification quarantine is dispositioned.
 
 ## Objective
 

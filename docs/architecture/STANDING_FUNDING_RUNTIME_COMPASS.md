@@ -4,11 +4,12 @@
 
 **Current phase:** Slices 1–10, disabled Cloud deployment, and the first
 operator-authorized live NetBank canary are complete on immutable release
-`v1.0.103`
+`v1.0.103`; the first bounded observation stopped safely on existing suspense
 
-**Runtime posture:** The canary was closed back to `disabled` at generation 3
-in `x-change-testing/testing`. Scheduled synchronization remains disabled.
-Bounded mode and schedule enablement remain separately gated.
+**Runtime posture:** The bounded observation was closed back to `disabled` at
+generation 5 in `x-change-testing/testing`. Scheduled synchronization remains
+disabled. Resuming the remaining bounded addresses and schedule enablement are
+separately gated.
 
 ## Mission
 
@@ -121,6 +122,7 @@ balance, or amount.
 | 9 | Recovery lifecycle scenario | Complete |
 | 10 | Immutable release and disabled host adoption | Complete (`v1.0.103`) |
 | Live gate 1 | One-address NetBank canary and fail-closed return | Complete |
+| Live gate 2 | Bounded NetBank fleet observation | Partial; stopped on existing suspense |
 
 ## Recovery playbooks
 
@@ -212,6 +214,31 @@ This closes live operational gate 1. It does not authorize bounded mode,
 schedule enablement, infrastructure changes, or another provider/financial
 operation.
 
+Bounded NetBank observation checkpoint on 2026-10-07:
+
+- the operator explicitly authorized a bounded live NetBank observation;
+- the runtime transitioned from disabled generation 3 to bounded generation 4
+  while preserving batch limit 1 and scheduled synchronization `false`;
+- the plan was to process the five addresses not covered by the preceding
+  canary sequentially, stopping on failure, ambiguity, quarantine, or suspense;
+- the oldest address, ID `4`, completed run
+  `01M49MRC9WZCQ6NP71RM4APDTV` with one suspense result and no applied,
+  settled, recognized, awaiting-approval, or failed result;
+- the suspense was the replay of the already-known campaign-payment quarantine
+  `qualification_rejected / unsupported_rule`; it did not create a new
+  provider observation, quarantine, receipt, campaign recognition, or wallet
+  effect;
+- global totals remained 228 provider observations, 71 receipts, 71 receipt
+  wallet-effect references, 11 campaign recognitions, one campaign quarantine,
+  and zero funding suspense cases;
+- the runtime immediately returned to disabled at generation 5, a disabled
+  rerun queued zero work, and all runtime outbox projections were delivered;
+- addresses `2`, `3`, `5`, and `6` were not contacted after the stop condition.
+
+Live gate 2 is therefore a controlled partial pass, not a completed fleet run.
+The existing campaign qualification quarantine must be dispositioned before a
+separately authorized bounded resume.
+
 Automated acceptance uses fake providers and may not initiate a payment,
 provider mutation, wallet credit outside test transactions, or other live
 financial operation.
@@ -222,6 +249,7 @@ changes, and any later live provider operation require explicit authorization.
 
 ## Next action
 
-Keep synchronization disabled. The next possible operational decision is a
-separately authorized bounded NetBank observation gate; do not enable the
-schedule or promote automatically.
+Keep synchronization disabled. Review the existing address-4 campaign
+qualification quarantine, then decide separately whether to resume the bounded
+pass for addresses `2`, `3`, `5`, and `6`. Do not enable the schedule or
+promote automatically.

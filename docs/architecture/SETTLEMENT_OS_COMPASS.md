@@ -71,6 +71,17 @@ mode-change events were delivered to journal and broadcast, and scheduled sync
 remained false. Infrastructure changes, bounded-mode promotion, another live
 provider operation, and schedule enablement remain separately gated.
 
+The first bounded observation then entered generation 4 with a one-address
+concurrency limit. Its first target, payment-purpose address ID `4`, replayed
+one existing campaign-payment quarantine classified as
+`qualification_rejected / unsupported_rule`. No provider observation, receipt,
+recognition, quarantine, funding suspense case, or wallet effect was added. The
+gate stopped without contacting addresses `2`, `3`, `5`, or `6`; runtime
+returned to disabled at generation 5, a disabled rerun queued zero work, and
+all outbox projections were delivered. This is a controlled partial pass. The
+existing qualification quarantine must be dispositioned before any separately
+authorized bounded resume.
+
 ## Payment confirmation resilience recovery track
 
 Updated 2026-10-06. Recovery is complete on x-change `main` at
@@ -136,7 +147,7 @@ historical `expired` label alone is not recovery-entitlement evidence.
 ## Current Position
 
 Current wave: Standing Funding Runtime Isolation and Controlled Recommissioning
-Current status: Standing Funding Slices 1–10, disabled Cloud deployment, and one-address live canary complete on `v1.0.103`; runtime disabled at generation 3
+Current status: Standing Funding Slices 1–10, disabled Cloud deployment, and one-address live canary complete on `v1.0.103`; bounded fleet pass stopped safely on existing suspense; runtime disabled at generation 5
 Last updated: 2026-10-07
 
 | Wave | Workstream | Role | Status | Compass |
@@ -149,7 +160,7 @@ Last updated: 2026-10-07
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 | 6 | Onboarding Vouchers | Recipient account invitation and provisioning | Slice 3 complete; Slice 4 in progress | [onboarding-vouchers/ONBOARDING_VOUCHER_COMPASS.md](onboarding-vouchers/ONBOARDING_VOUCHER_COMPASS.md) |
 | 7 | Governed Provisioning | Vacant commissioning seats, exact-capability authority offers, delivery, activation/revocation/supersession, production API mandates, and Treasury-safe Account Grants | Controlled Cockpit lifecycle implemented; authority remains separate from cash and provider execution | [PROVISIONING_AND_ACCOUNT_GRANTS.md](PROVISIONING_AND_ACCOUNT_GRANTS.md) |
-| 8 | Standing Funding Runtime | Recovery-safe provider synchronization control plane | Slices 1–10, disabled Cloud deployment, and live canary gate 1 complete on `v1.0.103`; bounded/scheduled modes gated | [STANDING_FUNDING_RUNTIME_COMPASS.md](STANDING_FUNDING_RUNTIME_COMPASS.md) |
+| 8 | Standing Funding Runtime | Recovery-safe provider synchronization control plane | Canary complete; bounded gate partial on existing campaign quarantine; disabled at generation 5 | [STANDING_FUNDING_RUNTIME_COMPASS.md](STANDING_FUNDING_RUNTIME_COMPASS.md) |
 
 ## Package Map
 
