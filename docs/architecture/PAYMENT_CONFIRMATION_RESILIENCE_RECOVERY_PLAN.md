@@ -117,11 +117,13 @@ Verification checkpoint (2026-10-06):
 - Immutable x-change release: `v1.0.101`.
 - x-PayOut immutable adoption release: `v1.0.0-beta.75` at
   `d3ab8af`.
-- x-PayOut `main` after CI bootstrap and action refresh: `18b62a3`.
+- x-PayOut `main` after CI dependency bootstrap, action refresh, and exclusion
+  of interactive commissioning from ordinary checks: `426d03e` (followed by
+  documentation-only closure commits).
 - x-PayOut acceptance: 166 tests, 1,046 assertions; production frontend build
   and strict Composer validation passed.
 - The x-PayOut repository-wide frontend formatting command still reports its
-  pre-existing 333-file baseline. That baseline was not auto-rewritten or
-  hidden during this recovery.
+  pre-existing 333-file baseline. Remote CI now reaches and reports that exact
+  baseline; it was not auto-rewritten or hidden during this recovery.
 - No live deployment occurred and partner payment-event delivery remains
   disabled until separately configured and authorized.

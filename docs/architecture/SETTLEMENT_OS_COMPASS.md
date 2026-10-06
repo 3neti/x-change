@@ -54,7 +54,8 @@ not recorded as green and is not being used to obscure the focused acceptance
 evidence.
 
 The capability was adopted by x-PayOut `v1.0.0-beta.75`; x-PayOut `main`
-includes the subsequent CI bootstrap/action refresh at `18b62a3`. Host
+includes the subsequent CI dependency bootstrap/action refresh and keeps
+interactive commissioning outside ordinary CI. Host
 acceptance passed 166 tests / 1,046 assertions and a production build. No live
 deployment or receiver enablement occurred.
 
