@@ -17,17 +17,10 @@ use LBHurtado\XChange\Events\CampaignPaymentRecognized;
 use LBHurtado\XChange\Models\CampaignPaymentEvidenceQuarantine;
 use LBHurtado\XChange\Models\CampaignPaymentQrBinding;
 use LBHurtado\XChange\Models\CampaignPaymentRecognition;
+use LBHurtado\XChange\Support\Payment\CampaignPaymentRuleKeys;
 
 final readonly class RecognizeQualifyingCampaignPayment
 {
-    /** @var list<string> */
-    private const SupportedRuleKeys = [
-        'allowed_rails',
-        'maximum_amount_minor',
-        'maximum_payments',
-        'minimum_amount_minor',
-    ];
-
     public function __construct(
         private ReduceProviderFundingTransactionEvidence $reduce,
         private QuarantineCampaignPaymentEvidence $quarantine,
@@ -185,7 +178,7 @@ final readonly class RecognizeQualifyingCampaignPayment
     ): ?string {
         $address = $binding->standingFundingAddress;
         $rules = $binding->permitted_payment_rules ?? [];
-        $unsupported = array_diff(array_keys($rules), self::SupportedRuleKeys);
+        $unsupported = CampaignPaymentRuleKeys::unsupported($rules);
 
         if ($unsupported !== []) {
             return 'unsupported_rule';

@@ -361,6 +361,27 @@ it('rejects ordinary endpoint campaigns and conflicting revision bindings', func
     ))->toThrow(ValidationException::class, 'already bound');
 });
 
+it('rejects unsupported payment rule keys before binding persistence', function (string $rule): void {
+    $owner = campaignPaymentQrOwner();
+    $campaign = campaignPaymentQrCampaign($owner, CampaignEntryMode::ReusablePaymentQr);
+    [$address, $artifact] = campaignPaymentQrAddress($owner);
+
+    expect(fn () => app(BindCampaignPaymentQr::class)->handle(
+        owner: $owner,
+        campaign: $campaign,
+        address: $address,
+        artifact: $artifact,
+        amountMode: CampaignPaymentAmountMode::Open,
+        permittedPaymentRules: [$rule => ['INSTAPAY']],
+    ))->toThrow(ValidationException::class, 'Unsupported campaign payment rule');
+
+    expect(CampaignPaymentQrBinding::query()->count())->toBe(0);
+})->with([
+    'legacy rails alias' => 'rails',
+    'unimplemented institutions' => 'allowed_institutions',
+    'unimplemented payer applications' => 'payer_applications',
+]);
+
 it('requires an active payment-purpose static QR and coherent amount availability', function (): void {
     $owner = campaignPaymentQrOwner();
     $campaign = campaignPaymentQrCampaign($owner, CampaignEntryMode::ReusablePaymentQr);

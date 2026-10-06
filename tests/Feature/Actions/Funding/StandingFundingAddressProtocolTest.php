@@ -151,7 +151,7 @@ it('provisions and binds one reusable campaign payment QR idempotently', functio
     $action = app(ProvisionCampaignPaymentQr::class);
     $rules = [
         'allowed_rails' => ['INSTAPAY'],
-        'allowed_institutions' => ['GCASH', 'MAYA'],
+        'maximum_payments' => 500,
     ];
 
     $first = $action->handle(

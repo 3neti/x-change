@@ -16,6 +16,7 @@ use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Models\CampaignPaymentQrBinding;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Models\StandingFundingQrArtifact;
+use LBHurtado\XChange\Support\Payment\CampaignPaymentRuleKeys;
 
 final readonly class BindCampaignPaymentQr
 {
@@ -52,6 +53,7 @@ final readonly class BindCampaignPaymentQr
             availableUntil: $availableUntil,
         );
 
+        $this->validatePermittedPaymentRules($permittedPaymentRules);
         $rules = $this->canonicalize($permittedPaymentRules);
         $configurationHash = hash('sha256', json_encode([
             'campaign_reference' => $campaign->reference,
@@ -219,5 +221,22 @@ final readonly class BindCampaignPaymentQr
             fn (mixed $item): mixed => is_array($item) ? $this->canonicalize($item) : $item,
             $value,
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $rules
+     */
+    private function validatePermittedPaymentRules(array $rules): void
+    {
+        $unsupported = CampaignPaymentRuleKeys::unsupported($rules);
+
+        if ($unsupported !== []) {
+            throw ValidationException::withMessages([
+                'permitted_payment_rules' => sprintf(
+                    'Unsupported campaign payment rule(s): %s.',
+                    implode(', ', $unsupported),
+                ),
+            ]);
+        }
     }
 }
