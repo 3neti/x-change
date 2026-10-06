@@ -79,8 +79,19 @@ recognition, quarantine, funding suspense case, or wallet effect was added. The
 gate stopped without contacting addresses `2`, `3`, `5`, or `6`; runtime
 returned to disabled at generation 5, a disabled rerun queued zero work, and
 all outbox projections were delivered. This is a controlled partial pass. The
-existing qualification quarantine must be dispositioned before any separately
+existing qualification quarantine required disposition before any separately
 authorized bounded resume.
+
+The follow-up investigation established that address `4` belongs to an active
+scenario-run campaign whose immutable fixed PHP 50 binding uses legacy keys
+`payer_applications` and `rails`. Those keys cannot be retroactively translated:
+the recognizer has no authoritative payer-application fact and the stored
+provider evidence has no settlement-rail value. The historical payment remains
+quarantined and unrecognized. Address `4` is now runtime-quarantined under
+generation 5 with reason `legacy_campaign_binding_unsupported_rules`; financial
+totals remained unchanged and the recovery event reached journal and broadcast.
+A new campaign revision/binding must use supported rule keys, and binding-time
+validation should reject unsupported keys before persistence.
 
 ## Payment confirmation resilience recovery track
 
@@ -147,7 +158,7 @@ historical `expired` label alone is not recovery-entitlement evidence.
 ## Current Position
 
 Current wave: Standing Funding Runtime Isolation and Controlled Recommissioning
-Current status: Standing Funding Slices 1–10, disabled Cloud deployment, and one-address live canary complete on `v1.0.103`; bounded fleet pass stopped safely on existing suspense; runtime disabled at generation 5
+Current status: Standing Funding Slices 1–10, disabled Cloud deployment, and one-address live canary complete on `v1.0.103`; bounded fleet pass partial; legacy address 4 quarantined; runtime disabled at generation 5
 Last updated: 2026-10-07
 
 | Wave | Workstream | Role | Status | Compass |
@@ -160,7 +171,7 @@ Last updated: 2026-10-07
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 | 6 | Onboarding Vouchers | Recipient account invitation and provisioning | Slice 3 complete; Slice 4 in progress | [onboarding-vouchers/ONBOARDING_VOUCHER_COMPASS.md](onboarding-vouchers/ONBOARDING_VOUCHER_COMPASS.md) |
 | 7 | Governed Provisioning | Vacant commissioning seats, exact-capability authority offers, delivery, activation/revocation/supersession, production API mandates, and Treasury-safe Account Grants | Controlled Cockpit lifecycle implemented; authority remains separate from cash and provider execution | [PROVISIONING_AND_ACCOUNT_GRANTS.md](PROVISIONING_AND_ACCOUNT_GRANTS.md) |
-| 8 | Standing Funding Runtime | Recovery-safe provider synchronization control plane | Canary complete; bounded gate partial on existing campaign quarantine; disabled at generation 5 | [STANDING_FUNDING_RUNTIME_COMPASS.md](STANDING_FUNDING_RUNTIME_COMPASS.md) |
+| 8 | Standing Funding Runtime | Recovery-safe provider synchronization control plane | Canary complete; bounded gate partial; legacy address 4 dispositioned through quarantine; disabled at generation 5 | [STANDING_FUNDING_RUNTIME_COMPASS.md](STANDING_FUNDING_RUNTIME_COMPASS.md) |
 
 ## Package Map
 

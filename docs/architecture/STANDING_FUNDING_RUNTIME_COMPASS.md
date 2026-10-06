@@ -4,12 +4,13 @@
 
 **Current phase:** Slices 1–10, disabled Cloud deployment, and the first
 operator-authorized live NetBank canary are complete on immutable release
-`v1.0.103`; the first bounded observation stopped safely on existing suspense
+`v1.0.103`; the first bounded observation stopped safely and its legacy
+campaign-rule blocker is dispositioned through runtime quarantine
 
 **Runtime posture:** The bounded observation was closed back to `disabled` at
 generation 5 in `x-change-testing/testing`. Scheduled synchronization remains
-disabled. Resuming the remaining bounded addresses and schedule enablement are
-separately gated.
+disabled. Address `4` is quarantined. Resuming the remaining bounded addresses
+and schedule enablement are separately gated.
 
 ## Mission
 
@@ -123,6 +124,7 @@ balance, or amount.
 | 10 | Immutable release and disabled host adoption | Complete (`v1.0.103`) |
 | Live gate 1 | One-address NetBank canary and fail-closed return | Complete |
 | Live gate 2 | Bounded NetBank fleet observation | Partial; stopped on existing suspense |
+| Live gate 2A | Address-4 campaign rule investigation and disposition | Complete; address quarantined |
 
 ## Recovery playbooks
 
@@ -236,8 +238,35 @@ Bounded NetBank observation checkpoint on 2026-10-07:
 - addresses `2`, `3`, `5`, and `6` were not contacted after the stop condition.
 
 Live gate 2 is therefore a controlled partial pass, not a completed fleet run.
-The existing campaign qualification quarantine must be dispositioned before a
-separately authorized bounded resume.
+The existing campaign qualification quarantine required explicit disposition
+before any separately authorized bounded resume.
+
+Address-4 disposition closure on 2026-10-07:
+
+- the immutable binding belongs to the active scenario-run campaign `AUI
+  On-Demand Insurance Payment`; it is not a governed workflow publication and
+  has zero payment recognitions;
+- its fixed PHP 50 binding stored legacy rule keys `payer_applications` and
+  `rails`, while production recognition supports only `allowed_rails`,
+  `minimum_amount_minor`, `maximum_amount_minor`, and `maximum_payments`;
+- `rails` cannot be silently rewritten because the stored canonical provider
+  evidence has no settlement-rail value, and `payer_applications` has no
+  implemented authoritative observation fact;
+- the historical PHP 50 payment therefore remains in its immutable
+  `qualification_rejected / unsupported_rule` quarantine and is not
+  retroactively recognized;
+- generation-fenced recovery quarantined Standing Funding Address ID `4` with
+  reason `legacy_campaign_binding_unsupported_rules` while runtime remained
+  disabled at generation 5;
+- receipt, wallet-effect-reference, campaign-recognition, and campaign-
+  quarantine totals remained unchanged; no lease, queued job, failed job, or
+  financial effect was created; and
+- the quarantine event was delivered through both x-journal and the private
+  broadcast outbox projection.
+
+The domain campaign and its immutable binding remain historical evidence. A
+future usable campaign QR must use a new revision/binding with supported rules;
+the legacy row must not be rewritten or released merely to resume polling.
 
 Automated acceptance uses fake providers and may not initiate a payment,
 provider mutation, wallet credit outside test transactions, or other live
@@ -249,7 +278,8 @@ changes, and any later live provider operation require explicit authorization.
 
 ## Next action
 
-Keep synchronization disabled. Review the existing address-4 campaign
-qualification quarantine, then decide separately whether to resume the bounded
-pass for addresses `2`, `3`, `5`, and `6`. Do not enable the schedule or
-promote automatically.
+Keep synchronization disabled. Harden campaign QR binding validation so
+unsupported rule keys fail before persistence, then decide separately whether
+to resume the bounded pass for addresses `2`, `3`, `5`, and `6`. Address `4`
+must remain quarantined unless a distinct operator review proves a valid
+replacement path. Do not enable the schedule or promote automatically.

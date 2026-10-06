@@ -3,8 +3,9 @@
 **Opened:** 2026-10-06
 
 **Status:** Slices 1–10, disabled Cloud deployment, and live NetBank canary
-gate 1 complete on immutable release `v1.0.103`; bounded gate 2 stopped safely
-on existing suspense and runtime returned to disabled
+gate 1 complete on immutable release `v1.0.103`; bounded gate 2 stopped safely,
+legacy address `4` was dispositioned through runtime quarantine, and runtime
+remains disabled
 
 ## Implementation checkpoint — 2026-10-06
 
@@ -77,8 +78,20 @@ observation, quarantine, receipt, campaign recognition, wallet effect, or
 funding suspense case. Per the fail-closed gate, no further addresses were
 contacted. Runtime returned to disabled at generation 5, the immediate scanner
 rerun queued zero work, and journal/broadcast outbox projection completed.
-Addresses `2`, `3`, `5`, and `6` remain pending a separately authorized resume
-after the existing campaign qualification quarantine is dispositioned.
+Addresses `2`, `3`, `5`, and `6` remain pending a separately authorized resume;
+the existing campaign qualification quarantine required disposition first.
+
+Gate 2A disposition completed on 2026-10-07. Investigation proved the immutable
+scenario binding contains unsupported legacy keys `payer_applications` and
+`rails`. Current recognition has no authoritative payer-application fact, and
+the canonical provider evidence has no settlement-rail value, so neither a
+retroactive alias rewrite nor payment recognition is safe. Address ID `4` was
+generation-fenced into runtime quarantine with reason
+`legacy_campaign_binding_unsupported_rules`. The immutable PHP 50 evidence and
+qualification quarantine remain unchanged; no receipt, recognition, wallet
+effect, job, or lease was added. Journal and broadcast projection delivered the
+recovery event. Binding-time supported-key validation and any replacement
+campaign revision remain separate code/product work before a new QR is issued.
 
 ## Objective
 
