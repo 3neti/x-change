@@ -33,6 +33,30 @@ Campaign / Program Scale
 
 This Compass is the program-level memory. Future workstream compasses should be summarized here when a slice begins, completes, reveals a significant risk, or changes a package boundary.
 
+## Payment confirmation resilience recovery track
+
+Updated 2026-10-06. Recovery is in progress on
+`codex/payment-confirmation-resilience-recovery`, created from current
+x-change `main`. The two unique local-only payment-resilience patches have
+been forward-ported; their duplicate release branch has not been merged.
+
+The target capability is a transaction-bound, durable partner payment-event
+outbox with signed, queued, retryable delivery to deployment-managed HTTPS
+receivers. Payment settlement remains authoritative in the existing collection
+path. Notification delivery is downstream communication state and cannot
+repeat settlement or become payment truth.
+
+Focused recovery verification is green: the partner payment-event and payment
+attempt lifecycle suites pass together (21 tests), Pint passes, and strict
+Composer validation passes. The unpartitioned package-wide Pest run exhausted
+its 2 GB memory limit while exporting accumulated failures, so it is explicitly
+not recorded as green and is not being used to obscure the focused acceptance
+evidence.
+
+The ordered release, x-PayOut adoption, and branch-retirement gates are in the
+[Payment Confirmation Resilience Recovery Plan](PAYMENT_CONFIRMATION_RESILIENCE_RECOVERY_PLAN.md).
+Live deployment and receiver enablement remain separately gated.
+
 ## Payment monitoring track
 
 Updated 2026-09-23. Automatic QR Ph payment observation is paused after a
@@ -67,9 +91,9 @@ historical `expired` label alone is not recovery-entitlement evidence.
 
 ## Current Position
 
-Current wave: Onboarding Voucher Revised Claim Architecture
-Current status: Onboarding Voucher Slice 3 complete; generic claim authentication slice in progress
-Last updated: 2026-07-30
+Current wave: Payment Confirmation Resilience Recovery
+Current status: x-change forward-port and focused hardening complete; immutable release and x-PayOut adoption in progress
+Last updated: 2026-10-06
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
