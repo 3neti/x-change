@@ -446,6 +446,33 @@ after `horizon:status` is active, then terminate and remove Horizon and verify
 that removal is materialized. Stop without dispatch if either process command
 does not match the approved configuration.
 
+**Background-process materialization deployment (2026-10-07): safely
+stopped.** Deployment `depl-a2ec2cd9-a435-48de-a736-6e066dfafb01` successfully
+materialized the temporary Horizon process on exact tested host commit
+`4c8d3a696fdbfb9de0f943b8b8d045fcb25995be`. Horizon reported running, and
+the live supervisor and worker commands proved it was restricted to one Redis
+process on the `campaigns` planning lane.
+
+The same live process inspection proved the existing database worker still ran
+`x-change-funding,x-change-feedback,default`. Its Cloud resource reports desired
+configuration containing `x-change-issuance`, but deployment did not update the
+rendered runtime command. This failed the explicit two-command verification
+gate, so no synthetic canary was dispatched.
+
+Cleanup completed successfully: the temporary process definition was deleted,
+Horizon was terminated gracefully, and deployment
+`depl-a2ec2ea1-a439-4860-be73-47496f0f9816` materialized its removal on the
+same exact host commit. Horizon is inactive, only the stale database worker
+remains, database and failed-job tables are empty, all Redis queues have zero
+ready/delayed/reserved depth, persistent Horizon enablement and authorization
+remain empty, and scheduled Standing Funding remains disabled.
+
+The next separate gate is a zero-backlog database-worker replacement, not
+another in-place update. Create a new one-process database worker with
+`x-change-funding,x-change-issuance,x-change-feedback,default`, deploy and
+verify its live command, then retire the stale worker and materialize that
+removal. Do not create Horizon or dispatch a canary in that replacement gate.
+
 ### Gate 5 — Drain and non-financial canary
 
 1. Stop new dispatch to the selected canary lane.

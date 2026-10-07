@@ -367,6 +367,39 @@ corrected database worker and a temporary Horizon process. It must verify the
 rendered process commands before any canary dispatch and include a second
 deployment or equivalent verified removal step during cleanup.
 
+Background-process materialization deployment was safely stopped on
+2026-10-07 before canary dispatch:
+
+- temporary campaigns-only Horizon process
+  `process-a2ec2ca1-dbfa-419f-86fa-d9fa30af82a0` was recreated with
+  command-scoped enablement and no persistent environment change;
+- deployment `depl-a2ec2cd9-a435-48de-a736-6e066dfafb01` succeeded on exact
+  tested host commit `4c8d3a696fdbfb9de0f943b8b8d045fcb25995be`;
+- the deployed Horizon master became active and its live supervisor command
+  proved one Redis worker for only `campaigns`, with one process, 60-second
+  timeout, and one try;
+- live process inspection also proved that the database worker still executed
+  its earlier command for
+  `x-change-funding,x-change-feedback,default`, despite the Cloud resource's
+  desired configuration listing `x-change-issuance`;
+- because both rendered process commands did not match the approved state, no
+  synthetic canary job was dispatched;
+- the temporary process definition was deleted and `horizon:terminate`
+  gracefully stopped the active master and supervisor;
+- cleanup deployment `depl-a2ec2ea1-a439-4860-be73-47496f0f9816` succeeded on
+  the same exact host commit; and
+- recovery probe `cexe-a2ec2f99-8cdb-43e1-a8e2-fe7480fd42a0` confirmed zero
+  database jobs, zero failed jobs, every Redis queue empty in ready, delayed,
+  and reserved state, database queue and cache defaults, Horizon disabled with
+  no authorized queues, and scheduled Standing Funding disabled.
+
+The existing worker resource now has a proven control-plane/runtime divergence:
+updating its queue configuration and redeploying does not change its rendered
+command. Do not proceed to a Horizon canary until a separately authorized
+database-worker replacement creates a new one-process worker with the complete
+queue list, deploys it, verifies its live command, and retires the stale worker
+under a zero-backlog fence.
+
 ## Stop conditions
 
 - Redis or Horizon would become financial truth.

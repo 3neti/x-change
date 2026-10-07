@@ -4604,3 +4604,19 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - The next separate gate requires deployment materialization of both the
   database worker correction and a temporary Horizon process before any
   synthetic canary may be dispatched.
+
+## 2026-10-07 Update — Background Process Materialization Safely Stopped
+
+- Deployment `depl-a2ec2cd9-a435-48de-a736-6e066dfafb01` successfully started
+  a temporary Horizon master and one Redis worker restricted to `campaigns`.
+- Live inspection showed the existing database worker still omitted
+  `x-change-issuance`, despite its Cloud control-plane configuration containing
+  that queue.
+- The mismatch failed the required rendered-command check; no synthetic canary
+  was dispatched.
+- The temporary process was deleted, Horizon was terminated, and cleanup
+  deployment `depl-a2ec2ea1-a439-4860-be73-47496f0f9816` materialized removal.
+- Horizon is inactive, all database and Redis queues are empty, and every
+  persistent safety switch remains disabled.
+- The next separate gate is replacement of the stale database worker under a
+  zero-backlog fence. No Horizon process or canary belongs in that gate.
