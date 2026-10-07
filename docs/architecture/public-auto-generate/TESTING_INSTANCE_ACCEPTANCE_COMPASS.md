@@ -11,8 +11,9 @@ run, or duplicate issuance.
 
 ## Current position
 
-**Status: Gates 0 through 4B complete. Gate 5 authorizes one fresh,
-exact-payment issuance acceptance under a PHP 40.99 ceiling.**
+**Status: Gates 0 through 4B complete. Gate 5 proved live issuance but stopped
+fail-closed because the one-cent amount-lease adjustment remained generally
+spendable Client Funds. Gate 5A hardening is proposed but not authorized.**
 
 The implementation is deployed on x-change `v1.0.110`, public Auto-Generate and
 On-Demand Issuance are configured, fixed-amount QR Ph is configured, and
@@ -152,7 +153,8 @@ Code.
 | 2 | Repair and run authenticated rollback-only lifecycle proof; prove queue posture | Complete: immutable repair adopted; authenticated run fully rolled back with unchanged baseline |
 | 3 | One bounded PHP 25 payable order | Complete: historical order later expired; it has no Pay Code or retained issuance hold |
 | 4 | First real-payment attempt and incident disposition | Complete through Gate 4A isolation repair and Gate 4B append-only correction; expired payment credited to Client Funds without issuance |
-| 5 | Fresh exact-payment issuance acceptance | Authorized: one PHP 25 principal, Bank Transfer, total capped at PHP 40.99, minimum 60-minute lifetime |
+| 5 | Fresh exact-payment issuance acceptance | Partial: exactly-once settlement, hold/consume, and issuance passed; Client Funds residual invariant failed; replay not run |
+| 5A | Amount-lease residual containment hardening | Proposed; separate authorization required |
 | 6 | Claim and redemption | Separately gated; not authorized by Gate 5 |
 | 7 | Persistent Horizon commissioning | Separately gated; not authorized by Gate 5 |
 
@@ -192,19 +194,13 @@ Code.
 
 ## Immediate next gate
 
-**Gate 5 — Fresh Exact-Payment Issuance Acceptance.**
+**Gate 5A — Amount-Lease Residual Containment Hardening.**
 
-The authorized exercise creates exactly one fresh public order for a PHP 25.00
-principal. Bank Transfer is the only authorized rail, the operator is the
-payer, the authoritative total must not exceed PHP 40.99, and the order and
-Funding Intent must remain active for at least 60 minutes. After the operator
-reports payment, observation is bounded to 30 minutes.
-
-Acceptance requires exactly one provider observation, one effective evidence
-claim, one settlement, one order-bound Treasury hold/consumption path, and one
-Pay Code. The same-order replay and immediate state rerun must be mutation-free.
-No claim, redemption, payout, second order, second payment, scheduled Standing
-Funding, or persistent Horizon process is authorized.
+This gate is proposed but not authorized. It must reproduce the one-cent
+residual in tests, define its Treasury disposition, prevent it from becoming
+generally spendable Client Funds, and preserve exact evidence matching and
+exactly-once issuance. A repaired immutable release must be adopted before a
+fresh live acceptance payment and mutation-free replay can be authorized.
 
 ## Companion documents
 
@@ -354,3 +350,27 @@ and no new payment was accepted. Gate 4B is complete.
 
 Gate 5 is intentionally paused until the operator completes that exact payment
 and reports it. No second order or payment is authorized.
+
+## 2026-10-08 Gate 5 — Live Issuance Evidence and Fail-Closed Stop
+
+- Payment was observed within the authorized window. Order 36 reached
+  `issued`; intent 35 reached `settled`; observation 2847985, claim 12,
+  settlement 20, and voucher 385 are the sole order-bound records.
+- Inspection `cexe-a2ed80b2-058c-4799-bca6-527b83c0dfee` proved cardinality
+  of one order, one claim, one settlement, and one voucher with zero database
+  jobs and zero failed jobs.
+- The Treasury hold path reserved PHP 40.00 and activated an allocation from
+  zero to PHP 40.00, then consumed PHP 40.00 and returned the allocation to
+  zero. Both position operations and both allocation operations are committed.
+- The public receipt rendered one Pay Code and its canonical HTTPS claim link.
+  The voucher remains unredeemed; claim and redemption were not exercised.
+- The PHP 40.01 provider settlement includes the one-cent amount-lease
+  adjustment, but the order-bound hold protects only the PHP 40.00
+  authoritative issuance requirement. The exact issuer's Client Funds balance
+  is now PHP 80.03 versus the documented PHP 80.02 pre-Gate-5 baseline.
+  Inspection `cexe-a2ed8173-1c5c-46cf-8b8e-888f67a02ad8` therefore proves a
+  PHP 0.01 generally spendable residual.
+- This violates the Gate 5 isolation invariant. The acceptance stopped before
+  replay, as required. No second order, payment, repair, claim, redemption,
+  payout, persistent Horizon process, scheduled Standing Funding run, or
+  quarantine change was performed.

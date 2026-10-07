@@ -419,3 +419,18 @@ settlement, Treasury path, queue posture, or exactly-once facts diverge. Gate 5
 does not authorize claim, redemption, payout, a second order or payment,
 persistent Horizon commissioning, scheduled Standing Funding, or release of a
 quarantined address.
+
+### Gate 5 live outcome
+
+Gate 5 reached exactly one settlement, one hold/consumption path, and one Pay
+Code. It did not close. The PHP 40.01 collision-safe transfer amount funded a
+PHP 40.00 authoritative issuance requirement, and the remaining PHP 0.01 was
+left in the issuer's generally spendable Client Funds. The explicit stop
+condition therefore applied before replay.
+
+The next proposed slice is **Gate 5A — Amount-Lease Residual Containment
+Hardening**. It must first reproduce this behavior in tests, define a
+package-owned Treasury disposition for the adjustment, prevent the adjustment
+from increasing generally spendable Client Funds, and retain exact matching,
+hold, consumption, issuance, and replay idempotency. Publishing, adoption, and
+any new live payment remain separately authorized steps.

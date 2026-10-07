@@ -4941,3 +4941,28 @@ observation window.
   Treasury hold, voucher, queued job, or failed job attributable to Gate 5.
 - Gate 5 is paused at its intentional human-payment boundary. No second order
   or payment is authorized.
+
+## 2026-10-08 Update — Gate 5 Live Issuance and Residual Stop
+
+- The exact PHP 40.01 Bank Transfer was observed within the bounded window.
+  Order 36 reached `issued`; intent 35 reached `settled`; provider observation
+  2847985, evidence claim 12, settlement 20, and voucher 385 are each unique.
+- Sanitized inspection `cexe-a2ed80b2-058c-4799-bca6-527b83c0dfee` proved the
+  exactly-once cardinality, the committed PHP 40.00 hold placement, and the
+  committed PHP 40.00 hold consumption. The allocation moved
+  `0 -> 4000 -> 0` minor units, and database/failed queues remained empty.
+- The public receipt rendered exactly one issued Pay Code and an HTTPS claim
+  link. The voucher remains unredeemed. No claim, redemption, payout, second
+  order, second payment, Horizon process, Standing Funding run, or quarantine
+  change occurred.
+- Gate 5 stopped fail-closed on its Client Funds isolation invariant. The
+  collision-safe transfer amount exceeded the authoritative issuance
+  requirement by PHP 0.01; that adjustment remained in generally spendable
+  Client Funds. Read-only Treasury inspection
+  `cexe-a2ed8173-1c5c-46cf-8b8e-888f67a02ad8` found PHP 80.03 versus the
+  documented PHP 80.02 pre-Gate-5 baseline.
+- Same-order replay was not run after this divergence. The next proposed,
+  separately authorized slice is **Gate 5A — Amount-Lease Residual Containment
+  Hardening**: reproduce the defect, define a Treasury disposition for the
+  adjustment, keep it outside spendable Client Funds, publish/adopt an
+  immutable repair, and only then authorize a new exact-payment acceptance.
