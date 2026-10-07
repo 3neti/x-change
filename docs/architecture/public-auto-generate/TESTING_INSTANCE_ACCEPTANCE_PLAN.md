@@ -208,6 +208,20 @@ Funding mutation. Gate 2 is complete.
    payment instruction is open-amount, ambiguous, non-PHP, or not bound to the
    order.
 
+Acceptance evidence, 2026-10-07: explicit authority and later ratification
+bounded the exercise to one PHP 25.00 principal and a PHP 40.00
+authoritative-total ceiling. The live estimate and editor agreed on PHP 15.00
+fees and PHP 40.00 total. The browser submitted once and received the HTTP 202
+payable workspace for order `01M4B6MS7DA7SMEF1WY76VYHVJ`. The order is
+`awaiting_payment` with `full_amount` funding and a PHP 40.00 NetBank intent in
+`awaiting_funds`; it has no voucher, hold, payment evidence, settlement, or
+issuance state. Pre/post probes differ only by the expected single order and
+single intent. Provider, wallet, transfer, queue, failed-job, and Standing
+Funding facts are unchanged. The browser session and recovery capability were
+preserved without writing their possession token, idempotency secret, signed
+URL, or bank details into versioned evidence. Gate 3 is complete. Gate 4
+remains separately gated.
+
 ## Gate 4 — One separately authorized real payment
 
 1. Obtain explicit approval naming:

@@ -11,8 +11,9 @@ run, or duplicate issuance.
 
 ## Current position
 
-**Status: Gates 0, 1, and 2 complete. Gate 3 payable-order creation remains
-separately gated, and no live payment is authorized by this compass update.**
+**Status: Gates 0 through 3 complete. One bounded payable order is awaiting
+payment. Gate 4 real payment remains separately gated and is not authorized by
+this compass update.**
 
 The implementation is deployed on x-change `v1.0.108`, public Auto-Generate and
 On-Demand Issuance are configured, fixed-amount QR Ph is configured, and
@@ -95,6 +96,37 @@ Gate 2 completed live on 2026-10-07:
 Gate 2 retained no order, Pay Code, hold, provider evidence, wallet effect,
 queued job, failed job, Standing Funding state, or monetary value.
 
+Gate 3 completed live on 2026-10-07:
+
+- the operator explicitly authorized and ratified exactly one PHP 25.00
+  payable order under a PHP 40.00 authoritative-total ceiling;
+- the read-only estimate and browser cost review both returned PHP 25.00
+  principal, PHP 15.00 service and instruction fees, and PHP 40.00 total;
+- the browser submitted `POST /x/auto-generate` once and received the package's
+  HTTP 202 payable-order workspace for order
+  `01M4B6MS7DA7SMEF1WY76VYHVJ`;
+- command `comm-a2ecc377-a1b5-4e4b-a4c5-7cd129679df9` confirmed the order is
+  `awaiting_payment`, `full_amount`, PHP 40.00, and bound to NetBank funding
+  intent 32 in `awaiting_funds` state;
+- the order has no voucher, Treasury hold, acknowledgement, payment evidence,
+  match, settlement, issuance, cancellation, expiry, reversal, or attention
+  state;
+- baseline command `comm-a2ecc057-19c3-4349-bf9d-94e8a1c57612` and post-order
+  command `comm-a2ecc2db-d5b4-4bc3-ae71-3c5e447c50eb` differ only by one
+  funding order and one funding intent; voucher, Treasury, provider,
+  settlement, wallet, transfer, queue, failed-job, and Standing Funding facts
+  are unchanged;
+- strict queue inspection `comm-a2ecc31b-b2b5-4575-8191-67c9e6d7e2fd`
+  remained ready with Horizon disabled and no authorized Redis queues; and
+- Standing Funding command `comm-a2ecc33b-c2bf-479b-9c0c-17a36c80dfa1`
+  remained disabled at generation 7 with zero active runs and one quarantined
+  address.
+
+The browser session and signed recovery capability remain in the controlled
+acceptance browser. No possession token, idempotency secret, signed recovery
+URL, provider payload, bank credential, or beneficiary secret is persisted in
+this evidence.
+
 ## Canonical testing URLs
 
 | Surface | URL |
@@ -119,7 +151,7 @@ Code.
 | 0 | Commissioning recovery and HTTPS URL integrity | Complete: operational, strict doctor 37/37, public surfaces HTTP 200, generated URLs HTTPS |
 | 1 | Read-only discovery, estimate, and handoff | Complete: authoritative PHP 25 estimate and HTTPS handoff were mutation-free |
 | 2 | Repair and run authenticated rollback-only lifecycle proof; prove queue posture | Complete: immutable repair adopted; authenticated run fully rolled back with unchanged baseline |
-| 3 | One bounded PHP 25 payable order | Separately gated |
+| 3 | One bounded PHP 25 payable order | Complete: one PHP 40 full-amount order awaits payment with no Pay Code or financial effect |
 | 4 | One exact real payment | Separately gated; ceiling and rail not authorized |
 | 5 | Operator and beneficiary evidence | Pending issuance |
 | 6 | Idempotent retry and mutation-free rerun | Pending issuance |
@@ -141,8 +173,8 @@ Code.
 9. Scheduled Standing Funding remains disabled and is not required for public
    issuance.
 10. Standing Funding address 4 remains quarantined.
-11. Live payable-order acceptance waits for the separately commissioned Queue
-    Operations and Horizon canary.
+11. Gate 3 payable-order acceptance is complete under the disabled-Horizon,
+    database-queue safety posture proven by Queue Operations.
 
 ## Invariants
 
@@ -161,13 +193,12 @@ Code.
 
 ## Immediate next gate
 
-**Gate 3 — One bounded PHP 25 payable order, only after separate explicit
-authorization.**
+**Gate 4 — One exact real payment, only after separate explicit authorization.**
 
-Gate 2 does not authorize `POST /x/auto-generate`, order creation, payment,
-provider contact, queue commissioning, or financial Redis processing. The
-operator must approve Gate 3 independently, including the authoritative total
-ceiling. A real payment remains a second independent Gate 4 decision.
+Gate 3 authorizes no payment. Before Gate 4, the operator must independently
+name the PHP 40.00 ceiling, choose Bank Transfer or fixed-amount QR Ph, identify
+the payer, and approve a bounded observation window. Queue commissioning,
+scheduled Standing Funding, claim, and redemption remain outside that gate.
 
 ## Companion documents
 

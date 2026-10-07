@@ -4807,3 +4807,29 @@ still unauthorized.
 
 Gate 2 is closed without retained financial state. Gate 3 payable-order
 creation and Gate 4 real payment remain independently unauthorized.
+
+## 2026-10-07 Update — Public Issuance Payable-Order Gate Accepted
+
+- Gate 3 was explicitly authorized and ratified for one PHP 25.00 public Pay
+  Code principal under a PHP 40.00 authoritative-total ceiling.
+- The live estimate and browser cost review agreed on PHP 15.00 service and
+  instruction fees and PHP 40.00 total before the single submission.
+- Order `01M4B6MS7DA7SMEF1WY76VYHVJ` is `awaiting_payment`, uses
+  `full_amount` funding, and is linked to one PHP 40.00 NetBank intent in
+  `awaiting_funds` state.
+- The order has no voucher, Treasury hold, payment evidence, provider match,
+  settlement, issuance state, wallet effect, or queued work.
+- Live pre/post probes changed only the funding-order and funding-intent counts
+  by one. Provider observations, payment attempts, vouchers, holds,
+  settlements, wallet balances and transactions, transfers, jobs, failed jobs,
+  and Standing Funding state remained unchanged.
+- Horizon remains disabled, no Redis queues are authorized, and Standing
+  Funding remains disabled at generation 7 with zero active runs and its
+  existing quarantine intact.
+- Possession tokens, idempotency secrets, signed recovery URLs, provider
+  payloads, bank credentials, and beneficiary secrets were deliberately
+  excluded from versioned evidence.
+
+Gate 3 is closed. Gate 4 real payment remains a new decision that must name the
+PHP 40.00 ceiling, Bank Transfer or fixed-amount QR Ph, the payer, and a bounded
+observation window.

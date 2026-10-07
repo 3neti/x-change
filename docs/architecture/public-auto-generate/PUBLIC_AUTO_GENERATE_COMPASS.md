@@ -28,6 +28,12 @@ exactly one Pay Code and normal stamp/share output inside the transaction,
 reported zero provider calls and no persisted value, and left the complete
 live mutation baseline unchanged.
 
+Gate 3 then created exactly one bounded public payable order for a PHP 25.00
+principal under the PHP 40.00 authoritative-total ceiling. The order is
+`awaiting_payment` with `full_amount` funding and no voucher, Treasury hold,
+payment evidence, settlement, provider observation, wallet effect, queued job,
+or Standing Funding run. No real payment is authorized yet.
+
 The required financial engine is already proven:
 
 - authoritative Quick Generate compilation and pricing;
@@ -108,8 +114,8 @@ public_auto_generate:
 
 ## Immediate next gate
 
-**Testing-instance Gate 3 — One bounded PHP 25 payable order, subject to new
-explicit authorization.**
+**Testing-instance Gate 4 — One exact real payment, subject to new explicit
+authorization.**
 
 Gate 2 is complete. The rollback dependency repair is immutable in x-change
 `v1.0.108`; focused and adjacent suites passed 43 tests with 271 assertions;
@@ -117,9 +123,9 @@ the authenticated Cloud runner proved same-order replay, exactly-once projected
 issuance, full rollback, zero provider calls, and no retained financial,
 wallet, queue, or Standing Funding state.
 
-Do not submit the public editor until Gate 3 separately authorizes order
-creation and an authoritative-total ceiling. Do not make a real payment unless
-Gate 4 is independently authorized afterward.
+Gate 3 is complete for order `01M4B6MS7DA7SMEF1WY76VYHVJ`. Do not make a real
+payment unless Gate 4 independently names the PHP 40.00 ceiling, payment rail,
+payer, and observation window.
 
 ## Following gates
 
