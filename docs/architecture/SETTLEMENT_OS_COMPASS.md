@@ -4620,3 +4620,20 @@ Workstream compasses remain the source of detailed slice history. This Compass s
   persistent safety switch remains disabled.
 - The next separate gate is replacement of the stale database worker under a
   zero-backlog fence. No Horizon process or canary belongs in that gate.
+
+## 2026-10-07 Update — Database Worker Replacement Complete
+
+- Replacement process `process-a2ec3303-51b9-43e6-9bd3-97533118bd70` is now
+  the sole Laravel Cloud background worker.
+- Its verified live command consumes
+  `x-change-funding,x-change-issuance,x-change-feedback,default` with one
+  process and the existing retry and timeout posture.
+- The stale worker was retired and its removal materialized by deployment
+  `depl-a2ec3519-9f7a-4e13-8374-abfef201334f` on exact host commit
+  `4c8d3a696fdbfb9de0f943b8b8d045fcb25995be`.
+- Final inspection found no database jobs, failed jobs, open issuance funding
+  orders, Redis work, or Horizon process.
+- Horizon and scheduled Standing Funding remain disabled. No provider or
+  financial operation occurred.
+- The bounded synthetic `campaigns` Horizon canary is unblocked but remains a
+  separate authorization and must include deployment-backed cleanup.

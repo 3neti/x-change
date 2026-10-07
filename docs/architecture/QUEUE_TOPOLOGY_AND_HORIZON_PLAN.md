@@ -473,6 +473,30 @@ another in-place update. Create a new one-process database worker with
 verify its live command, then retire the stale worker and materialize that
 removal. Do not create Horizon or dispatch a canary in that replacement gate.
 
+**Database-worker replacement checkpoint (2026-10-07): complete.** Replacement
+process `process-a2ec3303-51b9-43e6-9bd3-97533118bd70` was created with one
+database worker for
+`x-change-funding,x-change-issuance,x-change-feedback,default`. Deployment
+`depl-a2ec332c-8934-4627-a3b2-955ee35da9ab` materialized it on exact tested
+host commit `4c8d3a696fdbfb9de0f943b8b8d045fcb25995be`, and live process inspection
+proved the rendered command contained the complete queue list.
+
+With database jobs, failed jobs, and open issuance funding orders all still at
+zero, stale process `process-a26660bc-ca50-4c26-9f41-9ca29ca5d5ba` was deleted.
+Cleanup deployment `depl-a2ec3519-9f7a-4e13-8374-abfef201334f` materialized
+that retirement on the same exact commit. Final live inspection proves the
+replacement is the only background process and no Horizon command is running.
+Final database and Redis inspection reports zero queued, failed, ready,
+delayed, or reserved work. Database remains the queue and cache default;
+Horizon enablement and authorization remain empty; scheduled Standing Funding
+remains disabled.
+
+No job, retry, migration, provider call, voucher issuance, or financial
+operation occurred. The stale-worker blocker is resolved. A separately
+authorized bounded synthetic Cloud Horizon canary may now resume from a fresh
+zero-backlog fence; it must still create and later remove its temporary process
+through explicit deployments.
+
 ### Gate 5 — Drain and non-financial canary
 
 1. Stop new dispatch to the selected canary lane.

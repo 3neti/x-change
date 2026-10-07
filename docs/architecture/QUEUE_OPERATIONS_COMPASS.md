@@ -400,6 +400,34 @@ database-worker replacement creates a new one-process worker with the complete
 queue list, deploys it, verifies its live command, and retires the stale worker
 under a zero-backlog fence.
 
+Zero-backlog database-worker replacement was verified on 2026-10-07:
+
+- preflight probe `cexe-a2ec32da-3623-426a-9cfb-5fb28aebe917` found zero
+  database jobs, zero failed jobs, zero open issuance funding orders, and zero
+  Redis queue depth while Horizon and scheduled Standing Funding were disabled;
+- replacement process `process-a2ec3303-51b9-43e6-9bd3-97533118bd70` was
+  created as one database worker for
+  `x-change-funding,x-change-issuance,x-change-feedback,default`, preserving 3
+  tries, 30-second backoff, 3-second sleep, zero rest, and 60-second timeout;
+- deployment `depl-a2ec332c-8934-4627-a3b2-955ee35da9ab` succeeded on exact
+  tested host commit `4c8d3a696fdbfb9de0f943b8b8d045fcb25995be`;
+- live process command `comm-a2ec33f5-a0be-4d1d-8523-d117c5b25818`
+  proved the replacement worker rendered the complete queue list alongside the
+  stale worker;
+- a fresh zero-backlog fence then permitted deletion of stale process
+  `process-a26660bc-ca50-4c26-9f41-9ca29ca5d5ba`;
+- cleanup deployment `depl-a2ec3519-9f7a-4e13-8374-abfef201334f` succeeded on
+  the same exact host commit and materialized stale-worker retirement;
+- final live command `comm-a2ec3655-320f-41b3-8f2f-2c3e651d9f12` proved the
+  replacement is the sole runtime worker and visibly includes
+  `x-change-issuance`;
+- final recovery probe `cexe-a2ec365b-f750-4632-bc88-4f5882d46f59` found zero
+  database jobs, zero failed jobs, zero open issuance funding orders, and zero
+  ready, delayed, or reserved work on every Redis queue; and
+- Horizon remained absent and disabled, no queue authorization changed,
+  scheduled Standing Funding remained disabled, and no job, retry, provider
+  call, voucher issuance, or financial operation occurred.
+
 ## Stop conditions
 
 - Redis or Horizon would become financial truth.
