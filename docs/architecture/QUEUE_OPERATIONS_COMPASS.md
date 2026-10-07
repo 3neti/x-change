@@ -11,7 +11,7 @@ authority for financial recovery.
 
 ## Current position
 
-**Status: Gate 1 complete and verified; package manifests for adjacent systems are next.**
+**Status: Gates 1 and 2 complete; host discovery and Horizon preparation are next.**
 
 The testing host uses database queues and database cache. PHP Redis support is
 available, but Horizon is not installed, no Redis queue has been commissioned,
@@ -79,7 +79,7 @@ names. Redis prefixes isolate environments.
 | --- | --- | --- |
 | 1A | Characterize and publish the x-change queue catalog | Complete |
 | 1B | Remove financial `default` fallback and add safe operational tags | Complete |
-| 2 | x-journal, x-action, x-feedback, and x-campaign manifests | Planned |
+| 2 | x-journal, x-action, x-feedback, and x-campaign manifests | Complete |
 | 3 | Host discovery, Horizon install, and authenticated dashboard | Planned |
 | 4 | Laravel Cloud Redis foundation | Separately gated infrastructure change |
 | 5 | Database drain and non-financial Redis canary | Pending Gate 4 |
@@ -106,12 +106,13 @@ names. Redis prefixes isolate environments.
 
 ## Immediate next gate
 
-**Gate 2 — Adjacent Settlement OS package manifests.**
+**Gate 3 — Host discovery, Horizon install, and authenticated dashboard.**
 
-Inventory queued work in x-journal, x-action, x-feedback, and x-campaign. Add a
-versioned manifest to each clean package worktree, preserve current runtime
-routing, and fail package tests when a queued job is undeclared. Do not install
-Horizon or change host queue infrastructure in this gate.
+Install Horizon in the host, add package-manifest discovery and strict
+inspection, generate supervisors only from explicitly authorized lanes, and
+protect `/horizon` with normal authentication plus recent password
+confirmation. Keep the host on its current queue connection and keep Horizon
+disabled until the separate Redis infrastructure gate is authorized.
 
 ## Verification checkpoint
 
@@ -137,6 +138,20 @@ Gate 1B was verified on 2026-10-07:
 - the broader on-demand issuance file retained 26 passing scenarios, while four
   existing HTTP scenarios returned unrelated 428/302 readiness responses and
   remain outside this queue-routing change.
+
+Gate 2 was verified on 2026-10-07:
+
+- x-journal commit `5791f1c` declares no queued workloads: 1 test passed,
+  10 assertions;
+- x-action commit `7312529` declares no queued workloads: 1 test passed,
+  10 assertions;
+- x-feedback commit `7d60330` declares no queued workloads: 1 test passed,
+  10 assertions;
+- x-campaign commit `f5e4d53` declares its existing `campaigns` planning lane,
+  preserves dispatch-provided queue overrides, and exposes safe tags: 5 tests
+  passed, 34 assertions; and
+- no package installed Horizon, changed its queue connection, or commissioned
+  a worker.
 
 ## Stop conditions
 
