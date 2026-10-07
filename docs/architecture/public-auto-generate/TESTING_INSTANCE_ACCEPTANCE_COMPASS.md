@@ -328,3 +328,29 @@ Gate 4B completion evidence:
 
 No Pay Code was issued, no order was revived, no Treasury hold was created,
 and no new payment was accepted. Gate 4B is complete.
+
+## 2026-10-08 Gate 5 — Pre-Payment Checkpoint
+
+- Initial preflight `cexe-a2ed7b73-15b9-4bdd-9b8a-48bb9e009d99` rejected the
+  existing 1,800-second lifetime before order creation.
+- The testing-only lifetime was raised to 7,200 seconds and deployment
+  `depl-a2ed7bbc-5196-4dbe-8520-9f8e7a52c416` succeeded.
+- Fence `cexe-a2ed7c9d-a9f7-4dcf-ad8a-5c3a2c5c6dad` verified x-change
+  `v1.0.110` at `6bc14dbc`, zero jobs and failed jobs, Horizon disabled, no
+  authorized Redis lanes, and scheduled Standing Funding disabled at
+  generation 7 with zero active runs and one quarantined address.
+- Public discovery, estimate, and handoff were read-only. The authoritative
+  estimate was PHP 25.00 principal plus PHP 15.00 fees, for PHP 40.00 total.
+- Pre-order baseline `cexe-a2ed7d2a-2f62-45c7-ba92-86c0c28791c1` recorded
+  voucher, order, intent, provider, claim, settlement, Treasury, wallet, and
+  queue counts.
+- One browser submission created order `01M4C4PEEKKVKPR5EWKMHY19AK`
+  (database id 36) and Funding Intent 35. Amount leasing produced the exact
+  PHP 40.01 Bank Transfer instruction.
+- Verification `cexe-a2ed7d8a-da50-4916-9fd8-8ae89bac06f0` found the order
+  `awaiting_payment`, the intent `awaiting_funds`, expiry
+  `2026-10-07T23:35:45+00:00`, and no provider match, evidence claim,
+  settlement, Treasury hold, voucher, queued job, or failed job.
+
+Gate 5 is intentionally paused until the operator completes that exact payment
+and reports it. No second order or payment is authorized.

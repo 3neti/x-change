@@ -215,3 +215,17 @@ Future agents must update this compass after every completed or blocked gate.
 - The immediate replay in `cexe-a2ecfa0d-8f2b-4217-a5f7-270546f75099`
   returned identical state fingerprints. No further order or payment is
   authorized by this closure.
+
+## 2026-10-08 Update — Gate 5 Awaiting Exact Payment
+
+- The testing-only On-Demand Issuance lifetime is now 7,200 seconds. Deployment
+  `depl-a2ed7bbc-5196-4dbe-8520-9f8e7a52c416` retained x-change `v1.0.110`,
+  database queues, disabled Horizon, and disabled scheduled Standing Funding.
+- Read-only discovery, estimate, and handoff returned PHP 25.00 principal, PHP
+  15.00 fees, and PHP 40.00 authoritative total.
+- Exactly one fresh order was created: `01M4C4PEEKKVKPR5EWKMHY19AK`
+  (order 36, intent 35). The leased exact Bank Transfer amount is PHP 40.01,
+  within the PHP 40.99 Gate 5 ceiling.
+- The order is `awaiting_payment` with approximately 120 minutes from creation.
+  No observation, claim, settlement, hold, voucher, queue job, or failed job
+  exists for this exercise yet. The gate is paused for the operator's payment.

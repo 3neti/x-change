@@ -4920,3 +4920,24 @@ observation window.
   immediate mutation-free replay.
 - Claim, redemption, payout, a second order or payment, persistent Horizon,
   scheduled Standing Funding, and quarantine changes remain outside Gate 5.
+- Preflight `cexe-a2ed7b73-15b9-4bdd-9b8a-48bb9e009d99` found the prior
+  30-minute order lifetime below the Gate 5 minimum, so no order was created.
+  The testing-only lifetime was raised to 120 minutes and deployment
+  `depl-a2ed7bbc-5196-4dbe-8520-9f8e7a52c416` succeeded without changing the
+  deployed x-change release.
+- Post-deployment fence `cexe-a2ed7c9d-a9f7-4dcf-ad8a-5c3a2c5c6dad`
+  verified `v1.0.110` at `6bc14dbc`, the 7,200-second lifetime, empty database
+  and failed queues, Horizon disabled, and scheduled Standing Funding disabled
+  at generation 7 with zero active runs and one quarantined address.
+- Discovery, estimate, and handoff remained read-only and returned a PHP 25.00
+  principal, PHP 15.00 fees, and PHP 40.00 authoritative total. Baseline
+  `cexe-a2ed7d2a-2f62-45c7-ba92-86c0c28791c1` was captured before mutation.
+- Exactly one order was created: reference
+  `01M4C4PEEKKVKPR5EWKMHY19AK`, order 36, intent 35, `full_amount`, and an
+  exact leased Bank Transfer amount of PHP 40.01. Read-only verification
+  `cexe-a2ed7d8a-da50-4916-9fd8-8ae89bac06f0` confirmed the order is
+  `awaiting_payment`, intent is `awaiting_funds`, expiry is
+  `2026-10-07T23:35:45+00:00`, and there is no observation, claim, settlement,
+  Treasury hold, voucher, queued job, or failed job attributable to Gate 5.
+- Gate 5 is paused at its intentional human-payment boundary. No second order
+  or payment is authorized.
