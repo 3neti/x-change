@@ -375,3 +375,16 @@ cases. That disposition is a separately approved Gate 4B.
 
 Gate 4B does not authorize another order, another payment, Pay Code issuance,
 order revival, claim redemption, provider payout, or unrelated reconciliation.
+
+### Gate 4B completion
+
+Gate 4B completed on 2026-10-07 using immutable x-change `v1.0.110`
+(`6bc14dbc`), host adoption `97f97df9`, and deployment
+`depl-a2ecf75d-0449-412d-960e-7f0dcfa237bc`. The exact-record preflight
+passed before the correction. Supersession 1 now provides effective ownership
+of claim 11 to intent 34 without altering the original claim. Settlement 19
+credited PHP 40.01 to Client Funds under the existing expired-order policy,
+resolved cases 1 and 2, and left both orders expired without a voucher,
+Treasury hold, or queued issuance job. The immediate approval replay was
+mutation-free. This plan authorizes no further order, payment, issuance,
+redemption, payout, or reconciliation.

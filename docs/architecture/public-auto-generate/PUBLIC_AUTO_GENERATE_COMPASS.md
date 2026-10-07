@@ -200,3 +200,12 @@ Future agents must update this compass after every completed or blocked gate.
   is append-only: the original claim remains immutable while one supersession
   records effective ownership. The expired replacement follows the existing
   late-payment rule and credits PHP 40.01 to Client Funds without issuance.
+- Gate 4B completed on immutable x-change `v1.0.110` (`6bc14dbc`), adopted by
+  host commit `97f97df9` and deployed as
+  `depl-a2ecf75d-0449-412d-960e-7f0dcfa237bc`. Supersession 1 makes intent 34
+  the effective owner of claim 11; settlement 19 credited PHP 40.01 to Client
+  Funds and resolved cases 1 and 2. Both orders remain expired, and no voucher,
+  Treasury hold, or queue job was created.
+- The immediate replay in `cexe-a2ecfa0d-8f2b-4217-a5f7-270546f75099`
+  returned identical state fingerprints. No further order or payment is
+  authorized by this closure.

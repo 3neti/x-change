@@ -294,6 +294,27 @@ exact reconciliation replay is mutation-free.
 
 Local verification is green for the live-shaped correction, replay,
 immutability, active-order rejection, existing reconciliation behavior, and
-existing On-Demand Issuance funding behavior. Publication, adoption,
-deployment, read-only live preflight, and the bounded live apply remain the
-next ordered steps.
+existing On-Demand Issuance funding behavior.
+
+Gate 4B completion evidence:
+
+- immutable release `v1.0.110` points to package commit `6bc14dbc`;
+- host commit `97f97df9` adopted only that package release;
+- deployment `depl-a2ecf75d-0449-412d-960e-7f0dcfa237bc` succeeded;
+- read-only preflight `cexe-a2ecf901-34f2-40ce-abb5-448be5ad9abd` matched
+  claim 11, observation 2847983, intents 32 and 34, cases 1 and 2, expired
+  orders 33 and 35, and zero prior supersessions or settlements;
+- final fence `cexe-a2ecf957-3782-4651-959e-c851acae42b6` found zero queued
+  jobs, zero target-case requests, verified destination evidence, and a PHP
+  40.01 Client Funds baseline;
+- application `cexe-a2ecf99e-984d-46e4-9fc4-9b6ff8a06bee` created
+  supersession 1, reconciliation request 1, and settlement 19;
+- inspection `cexe-a2ecf9c5-e2bf-4513-8ee3-610e61066cfe` proved effective
+  ownership is intent 34, both cases are resolved, both orders remain expired,
+  and Client Funds increased exactly PHP 40.01 to PHP 80.02; and
+- replay `cexe-a2ecfa0d-8f2b-4217-a5f7-270546f75099` returned identical
+  before/after fingerprints with one supersession, one settlement, and zero
+  queued jobs.
+
+No Pay Code was issued, no order was revived, no Treasury hold was created,
+and no new payment was accepted. Gate 4B is complete.

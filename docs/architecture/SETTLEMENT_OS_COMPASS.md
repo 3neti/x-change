@@ -4883,5 +4883,22 @@ observation window.
   intent and applies the established expired-order policy: PHP 40.01 moves to
   Client Funds, while no Pay Code, order revival, Treasury hold, or issuance job
   is created. Replay and supersession immutability are covered.
-- Immutable publication, host adoption, deployment, exact-record preflight,
-  and bounded live application remain ordered gates within Gate 4B.
+- Immutable x-change release `v1.0.110` points to package commit
+  `6bc14dbc`; lock-only host commit `97f97df9` adopted it and deployment
+  `depl-a2ecf75d-0449-412d-960e-7f0dcfa237bc` succeeded.
+- Post-deployment preflight `cexe-a2ecf901-34f2-40ce-abb5-448be5ad9abd`
+  confirmed the exact claim, observation, intents, suspense cases, expired
+  orders, same-Account boundary, and absence of supersession or settlement.
+  Fence `cexe-a2ecf957-3782-4651-959e-c851acae42b6` additionally confirmed
+  verified destination evidence, zero reconciliation requests, zero queued
+  jobs, and a PHP 40.01 Client Funds baseline.
+- Bounded application `cexe-a2ecf99e-984d-46e4-9fc4-9b6ff8a06bee`
+  appended supersession 1 and executed maker-checker request 1. Read-only
+  inspection `cexe-a2ecf9c5-e2bf-4513-8ee3-610e61066cfe` confirmed effective
+  ownership moved to intent 34, settlement 19 credited PHP 40.01, Client Funds
+  became PHP 80.02, and both cases resolved while both orders stayed expired.
+- No Pay Code, Treasury hold, order revival, or queued job was created. Claim
+  11 still physically records intent 32; supersession 1 is the append-only
+  effective-ownership correction.
+- Replay `cexe-a2ecfa0d-8f2b-4217-a5f7-270546f75099` produced identical
+  before/after fingerprints and no mutation. Gate 4B is closed.
