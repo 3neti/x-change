@@ -337,6 +337,21 @@ five declared Redis queue sizes were zero. Stable prefixes
 No Horizon process, Redis queue migration, job dispatch, or financial operation
 occurred.
 
+**Host-release deployment checkpoint (2026-10-07):** the three tested host
+commits were pushed to `main`, and Laravel Cloud push-to-deploy completed
+deployment `depl-a2ec1775-ba1c-4257-ad03-e79b94f8caa3` from exact commit
+`4c8d3a696fdbfb9de0f943b8b8d045fcb25995be`. Runtime inspection confirms that
+the queue default and cache default remain `database`, the attached Redis
+service is reachable, all five declared Redis queues remain empty, Horizon is
+disabled with no authorized queues and no supervisor environments, and the
+existing database worker is still the only background queue process. Scheduled
+Standing Funding synchronization also remains disabled. The Horizon guard
+returns 404 inside the deployed runtime. An unauthenticated public request is
+currently intercepted by the host commissioning redirect before reaching that
+guard, so authenticated browser acceptance remains part of a later Horizon
+commissioning gate. No Redis queue migration, Horizon process, canary dispatch,
+or financial operation occurred.
+
 ### Gate 5 — Drain and non-financial canary
 
 1. Stop new dispatch to the selected canary lane.

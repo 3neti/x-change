@@ -4538,3 +4538,17 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Claim inputs are translated into a safe operator projection. Mobile and email are masked; OTP and secrets are never returned; image evidence is omitted from page props.
 - Selfies, signatures, KYC images, and envelope documents use owner/system-principal-authorized, throttled, `no-store` reveal endpoints. Every successful reveal records `pay_code.evidence.viewed` in x-journal without persisting the binary payload.
 - Reading this workspace performs no provider call, execution, delivery, voucher mutation, journal mutation other than the explicit sensitive-evidence access record, or money movement.
+
+## 2026-10-07 Update — Disabled Horizon Host Release Deployment
+
+- The tested host queue-topology commits are deployed on Laravel Cloud as
+  `depl-a2ec1775-ba1c-4257-ad03-e79b94f8caa3` from exact host commit
+  `4c8d3a696fdbfb9de0f943b8b8d045fcb25995be`.
+- Redis is attached and reachable but is not the default queue or cache store;
+  all declared Redis queues remain empty.
+- Horizon remains disabled, has no authorized queues or supervisors, and no
+  Horizon background process exists. The pre-existing database worker remains
+  the sole queue process.
+- Scheduled Standing Funding synchronization remains disabled.
+- The next separately authorized gate remains database-queue characterization
+  and drain planning before any Cloud Horizon canary.

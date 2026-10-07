@@ -254,6 +254,29 @@ Laravel Cloud Redis foundation was verified on 2026-10-07:
 - the only background process remains the pre-existing database queue worker;
   no Horizon process was created.
 
+Tested host release deployment was verified on 2026-10-07:
+
+- host `main` commits `c079ff13`, `d0cd4ce1`, and `4c8d3a69` were pushed
+  without including unrelated host worktree changes;
+- push-to-deploy produced successful deployment
+  `depl-a2ec1775-ba1c-4257-ad03-e79b94f8caa3` from exact commit
+  `4c8d3a696fdbfb9de0f943b8b8d045fcb25995be`;
+- deployed discovery reports the topology ready with no errors and declares
+  `campaigns`, `x-change-funding`, `x-change-feedback`, `partner-payments`, and
+  `x-change-issuance`;
+- the runtime remains on `QUEUE_CONNECTION=database` and
+  `CACHE_STORE=database`, while the attached Redis service responds to
+  `PING` and every declared Redis queue remains empty;
+- `HORIZON_ENABLED=false`, the authorized queue list is empty, Horizon has
+  zero configured supervisor environments, and its runtime guard returns 404;
+- the only Cloud background process remains the existing one-process database
+  worker; no Horizon process was created;
+- scheduled Standing Funding synchronization remains disabled; and
+- the public unauthenticated `/horizon` request is currently redirected to the
+  host commissioning surface before Horizon route middleware runs. The
+  deployed Horizon guard itself was therefore verified inside the application
+  runtime rather than inferred from that public redirect.
+
 ## Stop conditions
 
 - Redis or Horizon would become financial truth.
