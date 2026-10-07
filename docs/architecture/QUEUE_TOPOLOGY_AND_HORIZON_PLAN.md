@@ -523,6 +523,41 @@ This checkpoint proves successful synthetic consumption and recovery. It does
 not yet prove the authenticated `/horizon` operator experience or a deliberate
 synthetic retry/failure path; those remain separately gated portions of Gate 5.
 
+**Authenticated authorization and synthetic retry/failure checkpoint
+(2026-10-07): complete with one browser limitation and one cleanup debt.** Host
+commit `ea775eb5a3ea426bdfb7ec4710f7f71e817bc294` added a planning-only failure
+canary bounded to two attempts and a one-second backoff. The focused queue and
+Horizon suite passed 17 tests with 83 assertions. Deployment
+`depl-a2ec440d-9aa4-4216-b00f-aa51664a5dc1` materialized one temporary
+campaigns-only Horizon process on that exact commit while the full-coverage
+database worker remained unchanged.
+
+A live read-only authorization probe proved an existing authenticated operator
+passes `viewHorizon`, a guest does not, and the route stack requires Horizon
+enablement, normal authentication, and recent password confirmation. The
+public browser route still resolves to the host commissioning screen before
+Horizon middleware, so external dashboard acceptance remains deferred until
+commissioning permits it; this safety boundary was not bypassed.
+
+Exactly one synthetic failure canary, `01M4AJSKF7ZR0P6JCWRG1WRYWE`, retried
+twice and failed as planned. Its database failed-job row and Horizon dashboard
+row were observed through sanitized projections only. Cleanup exposed an
+identifier mismatch between the stock Horizon and queue forget commands. The
+gate therefore used exact UUID, numeric row ID, queue, and connection guards to
+remove only this synthetic record and its two marker keys. No flush or bulk
+deletion occurred.
+
+Cleanup deployment `depl-a2ec4848-d345-4c9e-a3e3-7a650c59ebf1` removed the
+temporary process on the same commit. Final inspection proved Horizon
+inactive, only the database worker present, no authorized queues, database
+queue/cache defaults intact, scheduled Standing Funding disabled, and no
+database, failed-job, Horizon, or Redis queue residue.
+
+The next prerequisite before any further deliberate failure exercise is a
+tested host-owned targeted cleanup command that safely reconciles Horizon job
+UUIDs with the configured failed-job provider. External `/horizon` browser
+acceptance remains tied to a separately authorized commissioning state change.
+
 ### Gate 5 — Drain and non-financial canary
 
 1. Stop new dispatch to the selected canary lane.

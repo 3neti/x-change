@@ -472,6 +472,66 @@ provider call, voucher issuance, Standing Funding schedule, or financial
 operation occurred. This proves the temporary campaigns-only Horizon
 commissioning, one-job consumption, and deployment-backed recovery procedure.
 
+Authenticated operator authorization and the synthetic retry/failure path were
+characterized on 2026-10-07:
+
+- host commit `ea775eb5a3ea426bdfb7ec4710f7f71e817bc294` added a failure-only
+  canary job with exactly two attempts, a one-second backoff, sanitized tags,
+  and short-lived Redis markers; 17 focused tests passed with 83 assertions;
+- push deployment `depl-a2ec4128-6bf3-44f6-b166-ffe5f8ceb577` adopted that
+  exact commit while Horizon remained absent, and preflight probe
+  `cexe-a2ec439d-f587-439f-b0d7-181f18a02ff4` found all database and Redis
+  queue states empty;
+- temporary process `process-a2ec43e1-8e90-416f-ae39-69b290d2590d` was
+  materialized by deployment `depl-a2ec440d-9aa4-4216-b00f-aa51664a5dc1` on
+  the same exact commit;
+- live process inspection `comm-a2ec44c4-413f-4697-93cf-7ec02581dd3f`
+  proved that the database worker retained its complete queue list and the
+  sole Horizon supervisor used Redis for only `campaigns`; Horizon reported
+  active through `comm-a2ec44f0-e810-4105-bc24-ee8f6828a459`;
+- authorization probe `cexe-a2ec4524-4480-45ca-8bfe-6fc01d79f1f6` found an
+  existing authenticated operator authorized, a guest denied, and the route
+  stack protected by enablement, authentication, and recent password
+  confirmation. Persistent Horizon enablement and authorization remained
+  disabled and empty;
+- the public browser route remained intercepted by the host commissioning
+  screen, so this gate proves live authorization and Horizon read-model access,
+  not external browser acceptance. The commissioning boundary was not
+  bypassed;
+- immediate pre-dispatch probe
+  `cexe-a2ec4559-31d0-472d-8ff3-8a82753baec3` remained empty before command
+  `comm-a2ec457d-74d4-4fb4-ab5c-116fb7a36df1` dispatched exactly one
+  synthetic, non-financial failure canary;
+- canary `01M4AJSKF7ZR0P6JCWRG1WRYWE`, queue job
+  `8a90dab8-c472-4f8f-b24d-38b7cae36730`, failed as planned after exactly two
+  attempts. Database probe `cexe-a2ec4604-2e95-4f31-8b8b-90d5e75f9be2` and
+  Horizon probe `cexe-a2ec4628-0023-469e-8d46-1b6ac3ed1924` proved durable
+  failed-job evidence and the sanitized dashboard row without reading payload
+  or exception detail;
+- stock `horizon:forget` and `queue:forget` commands did not consistently
+  reconcile Horizon's job UUID with this host's failed-job row identifier.
+  No bulk cleanup was used. Guarded cleanup
+  `cexe-a2ec4710-b64a-43aa-bd7f-478d7b2503d4` deleted only verified row
+  `4145` and the two known marker keys, while
+  `cexe-a2ec47c4-e21f-4ac9-83d5-7ca58fa86e06` removed only the exact Horizon
+  repository record;
+- the temporary process was deleted, Horizon was terminated by
+  `comm-a2ec481a-ac70-48ad-9501-eea964827d20`, and cleanup deployment
+  `depl-a2ec4848-d345-4c9e-a3e3-7a650c59ebf1` succeeded on the same exact
+  host commit; and
+- final live inspection `comm-a2ec4912-3953-41d4-80e9-b78180f00e12` found
+  only the full-coverage database worker, Horizon reported inactive through
+  `comm-a2ec4931-5b78-4061-9af7-9f476bdf23e3`, fail-closed topology remained
+  ready through `comm-a2ec495e-ba86-4a42-816a-082bc627b600`, and final probes
+  `cexe-a2ec49a6-22ca-4d57-a355-04cd24c3fe3b` and
+  `cexe-a2ec49d0-e5de-45bf-9801-16eea5a46376` found no database, failed-job,
+  Redis queue, or synthetic Horizon residue.
+
+No financial lane was commissioned and no provider or voucher operation was
+performed. Before another deliberate failure canary, add and test a host-owned
+targeted cleanup command that resolves the Horizon UUID and failed-job storage
+identifier without relying on the incompatible stock-command sequence.
+
 ## Stop conditions
 
 - Redis or Horizon would become financial truth.

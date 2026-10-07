@@ -4663,3 +4663,34 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - The next Horizon work, if authorized, is operator observability and a
   deliberately synthetic retry/failure characterization. Financial lane
   commissioning remains a later, separate gate.
+
+## 2026-10-07 Update — Horizon Authorization and Failure Path Characterized
+
+- Tested host commit `ea775eb5a3ea426bdfb7ec4710f7f71e817bc294` adds a
+  planning-only synthetic failure canary bounded to two attempts, a one-second
+  backoff, sanitized Horizon tags, and short-lived markers.
+- Deployment `depl-a2ec440d-9aa4-4216-b00f-aa51664a5dc1` materialized one
+  temporary Redis worker for only `campaigns`; the full-coverage database
+  worker remained unchanged.
+- Live authorization evidence proved an existing authenticated operator is
+  allowed, a guest is denied, and Horizon routes require enablement,
+  authentication, and recent password confirmation.
+- The external `/horizon` browser route remains behind the host commissioning
+  screen. This gate did not bypass commissioning, so external dashboard visual
+  acceptance remains deferred.
+- Synthetic canary `01M4AJSKF7ZR0P6JCWRG1WRYWE` retried exactly twice and
+  failed as planned. Its database and Horizon failure projections were
+  observed without reading payload or exception detail.
+- Stock Horizon and queue cleanup commands exposed an identifier mismatch.
+  Guarded cleanup removed only the verified synthetic failed row, its exact
+  Horizon record, and two known marker keys; no flush or bulk deletion ran.
+- Cleanup deployment `depl-a2ec4848-d345-4c9e-a3e3-7a650c59ebf1` removed the
+  temporary process on the same tested commit. Horizon is inactive, only the
+  complete database worker remains, and all database and Redis queues are
+  empty.
+- Persistent Horizon authorization remains empty, scheduled Standing Funding
+  remains disabled, and no financial lane, provider call, voucher issuance, or
+  money movement was commissioned.
+- Next prerequisite: implement and test a host-owned targeted failure cleanup
+  command before any further intentional failure canary. Browser acceptance of
+  `/horizon` remains a separate commissioning decision.
