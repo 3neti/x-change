@@ -314,7 +314,11 @@ Gate 4B completion evidence:
   and Client Funds increased exactly PHP 40.01 to PHP 80.02; and
 - replay `cexe-a2ecfa0d-8f2b-4217-a5f7-270546f75099` returned identical
   before/after fingerprints with one supersession, one settlement, and zero
-  queued jobs.
+  queued jobs; and
+- final safety probe `cexe-a2ecfaf7-20e4-47a4-9ca0-95d422831a64` verified
+  `v1.0.110` at `6bc14dbc`, database queues, Horizon disabled with no
+  authorized lanes, and scheduled Standing Funding disabled at generation 7
+  with zero active runs and one quarantined address.
 
 No Pay Code was issued, no order was revived, no Treasury hold was created,
 and no new payment was accepted. Gate 4B is complete.

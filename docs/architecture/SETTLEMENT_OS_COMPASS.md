@@ -4902,3 +4902,8 @@ observation window.
   effective-ownership correction.
 - Replay `cexe-a2ecfa0d-8f2b-4217-a5f7-270546f75099` produced identical
   before/after fingerprints and no mutation. Gate 4B is closed.
+- Final safety probe `cexe-a2ecfaf7-20e4-47a4-9ca0-95d422831a64` verified the
+  deployed package is exactly `v1.0.110` at `6bc14dbc`, the queue connection
+  remains database, Horizon is disabled with no authorized lanes, and
+  scheduled Standing Funding remains disabled at generation 7 with zero active
+  runs and one quarantined address.
