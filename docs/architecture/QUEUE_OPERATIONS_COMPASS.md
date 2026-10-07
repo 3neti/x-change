@@ -11,12 +11,22 @@ authority for financial recovery.
 
 ## Current position
 
-**Status: Gates 1 and 2 complete; host discovery and Horizon preparation are next.**
+**Status: Gates 1 through 3 complete; immutable package release adoption is the next gate.**
 
-The testing host uses database queues and database cache. PHP Redis support is
-available, but Horizon is not installed, no Redis queue has been commissioned,
-and no Horizon background process exists. Scheduled Standing Funding remains
+The testing host still uses database queues and database cache. PHP Redis
+support is available and Horizon is now installed in the host, but it is
+disabled, `/horizon` is hidden, no Redis queue has been commissioned, and no
+Horizon background process exists. Scheduled Standing Funding remains
 disabled.
+
+The host now discovers package queue manifests from Composer metadata, builds
+supervisors only for explicitly authorized queues, and exposes strict
+inspection commands. Inspection rejects financial use of `default`, unknown
+queue authorization, incompatible shared-lane semantics, unsafe timeout versus
+`retry_after`, excessive concurrency, and enabled financial lanes that were
+not explicitly commissioned. The currently installed package releases predate
+their new manifests, so host discovery correctly reports no manifests until
+immutable releases are published and adopted.
 
 x-change now publishes a versioned, Horizon-neutral queue manifest through
 Composer metadata. The catalog characterizes all 17 queued package jobs across
@@ -80,7 +90,7 @@ names. Redis prefixes isolate environments.
 | 1A | Characterize and publish the x-change queue catalog | Complete |
 | 1B | Remove financial `default` fallback and add safe operational tags | Complete |
 | 2 | x-journal, x-action, x-feedback, and x-campaign manifests | Complete |
-| 3 | Host discovery, Horizon install, and authenticated dashboard | Planned |
+| 3 | Host discovery, Horizon install, and authenticated dashboard | Complete, disabled |
 | 4 | Laravel Cloud Redis foundation | Separately gated infrastructure change |
 | 5 | Database drain and non-financial Redis canary | Pending Gate 4 |
 | 6 | Bounded x-change Horizon canary | Pending Gate 5 |
@@ -106,13 +116,14 @@ names. Redis prefixes isolate environments.
 
 ## Immediate next gate
 
-**Gate 3 — Host discovery, Horizon install, and authenticated dashboard.**
+**Immutable package releases and disabled-host adoption.**
 
-Install Horizon in the host, add package-manifest discovery and strict
-inspection, generate supervisors only from explicitly authorized lanes, and
-protect `/horizon` with normal authentication plus recent password
-confirmation. Keep the host on its current queue connection and keep Horizon
-disabled until the separate Redis infrastructure gate is authorized.
+Publish immutable releases containing the manifests from Gates 1 and 2, adopt
+those exact releases in the host, and prove discovery plus strict inspection
+while `QUEUE_CONNECTION=database`, `HORIZON_ENABLED=false`, and the authorized
+queue list remains empty. After that, DBngin Redis may be used for a local,
+non-financial Horizon canary. Laravel Cloud Redis remains a separately gated
+infrastructure operation.
 
 ## Verification checkpoint
 
@@ -152,6 +163,21 @@ Gate 2 was verified on 2026-10-07:
   passed, 34 assertions; and
 - no package installed Horizon, changed its queue connection, or commissioned
   a worker.
+
+Gate 3 was verified on 2026-10-07:
+
+- host commit `c079ff13` installs Horizon 5.50 while keeping it disabled;
+- 11 focused tests passed with 44 assertions;
+- `/horizon` is hidden while disabled and requires authentication plus recent
+  password confirmation when enabled;
+- supervisor configuration is generated only from installed manifests and an
+  explicit queue allowlist;
+- strict inspection covers Redis, authorization, financial commissioning,
+  semantic conflicts, retry timing, and concurrency ceilings;
+- configuration caching, Composer strict validation, and Horizon route
+  registration passed; and
+- live host discovery returned no manifests because the installed package
+  releases have not yet adopted the Gate 1 and Gate 2 commits.
 
 ## Stop conditions
 

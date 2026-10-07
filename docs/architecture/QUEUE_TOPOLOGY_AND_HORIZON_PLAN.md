@@ -108,6 +108,13 @@ issuance recovery through the configurable `x-change-issuance` lane, and gives
 every queued job sanitized package/lane/job tags. No host queue connection or
 infrastructure has changed.
 
+**Host checkpoint:** Gate 3 is implemented in host commit `c079ff13`. Horizon
+5.50 is installed but disabled, `/horizon` fails closed while disabled,
+authenticated access requires recent password confirmation by default, and
+supervisors are generated only from installed manifests plus an explicit queue
+allowlist. Package releases containing the manifests must be published and
+adopted before Redis or any Horizon worker is commissioned.
+
 Each participating package should expose a package-owned manifest with this
 conceptual shape:
 
