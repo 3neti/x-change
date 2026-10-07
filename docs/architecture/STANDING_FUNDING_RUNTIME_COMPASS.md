@@ -2,15 +2,14 @@
 
 **Last updated:** 2026-10-07
 
-**Current phase:** Slices 1–10, disabled Cloud deployment, and the first
-operator-authorized live NetBank canary are complete on immutable release
-`v1.0.103`; the first bounded observation stopped safely and its legacy
-campaign-rule blocker is dispositioned through runtime quarantine
+**Current phase:** Slices 1–10, binding-time campaign-rule hardening, and the
+operator-authorized NetBank canary and bounded fleet observation are complete
+on immutable release `v1.0.104`; the legacy address remains quarantined
 
 **Runtime posture:** The bounded observation was closed back to `disabled` at
-generation 5 in `x-change-testing/testing`. Scheduled synchronization remains
-disabled. Address `4` is quarantined. Resuming the remaining bounded addresses
-and schedule enablement are separately gated.
+generation 7 in `x-change-testing/testing`. Scheduled synchronization remains
+disabled. Addresses `2`, `3`, `5`, and `6` completed successfully. Address `4`
+remains quarantined. Schedule enablement is separately gated.
 
 ## Mission
 
@@ -123,8 +122,9 @@ balance, or amount.
 | 9 | Recovery lifecycle scenario | Complete |
 | 10 | Immutable release and disabled host adoption | Complete (`v1.0.103`) |
 | Live gate 1 | One-address NetBank canary and fail-closed return | Complete |
-| Live gate 2 | Bounded NetBank fleet observation | Partial; stopped on existing suspense |
+| Live gate 2 | Bounded NetBank fleet observation | Complete across the initial stop and gate 2B resume |
 | Live gate 2A | Address-4 campaign rule investigation and disposition | Complete; address quarantined |
+| Live gate 2B | Binding validation, immutable patch, and bounded resume | Complete (`v1.0.104`); addresses 2, 3, 5, and 6 succeeded |
 
 ## Recovery playbooks
 
@@ -268,6 +268,31 @@ The domain campaign and its immutable binding remain historical evidence. A
 future usable campaign QR must use a new revision/binding with supported rules;
 the legacy row must not be rewritten or released merely to resume polling.
 
+Binding hardening and bounded-resume closure on 2026-10-07:
+
+- campaign payment QR binding now rejects every rule key outside
+  `allowed_rails`, `minimum_amount_minor`, `maximum_amount_minor`, and
+  `maximum_payments` before persistence, while recognition retains its
+  defense-in-depth check for legacy rows;
+- focused validation, standing-protocol, and runtime-recovery verification
+  passed at 17 tests / 116 assertions, with Pint and strict Composer validation
+  passing;
+- immutable release `v1.0.104` points to
+  `8deada0aa711200872c8b7298be6e14ff2b20308`; host commit
+  `ad7c1bc43f27987cd6348ab6ba1da5eb76d47de4` adopts it, and Laravel Cloud
+  deployment `depl-a2ebab9b-cb82-4ab3-86f0-2533f8c017c4` succeeded;
+- the runtime moved from disabled generation 5 to bounded generation 6 with
+  batch limit 1 and scheduled synchronization still `false`;
+- sequential runs for addresses `3`, `2`, `5`, and `6` all succeeded; address
+  `4` was never admitted and remained quarantined with reason
+  `legacy_campaign_binding_unsupported_rules`;
+- provider observations remained 228, receipts 71, wallet-effect references
+  71, campaign recognitions 11, campaign quarantines 1, and funding suspense
+  cases 0;
+- runtime returned to disabled at generation 7, the immediate rerun queued
+  zero work, no active or failed jobs remained, and all journal/broadcast
+  outbox records were delivered.
+
 Automated acceptance uses fake providers and may not initiate a payment,
 provider mutation, wallet credit outside test transactions, or other live
 financial operation.
@@ -278,8 +303,7 @@ changes, and any later live provider operation require explicit authorization.
 
 ## Next action
 
-Keep synchronization disabled. Harden campaign QR binding validation so
-unsupported rule keys fail before persistence, then decide separately whether
-to resume the bounded pass for addresses `2`, `3`, `5`, and `6`. Address `4`
-must remain quarantined unless a distinct operator review proves a valid
-replacement path. Do not enable the schedule or promote automatically.
+Keep synchronization disabled. Address `4` must remain quarantined unless a
+distinct operator review proves a valid replacement path. Any scheduled-mode
+promotion, infrastructure change, or additional live provider operation is a
+separate explicit gate; do not enable or promote automatically.

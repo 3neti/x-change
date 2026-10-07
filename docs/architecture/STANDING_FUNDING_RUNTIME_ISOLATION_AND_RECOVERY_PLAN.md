@@ -2,10 +2,9 @@
 
 **Opened:** 2026-10-06
 
-**Status:** Slices 1–10, disabled Cloud deployment, and live NetBank canary
-gate 1 complete on immutable release `v1.0.103`; bounded gate 2 stopped safely,
-legacy address `4` was dispositioned through runtime quarantine, and runtime
-remains disabled
+**Status:** Slices 1–10, binding-time rule validation, and live NetBank canary
+and bounded gates are complete on immutable release `v1.0.104`; legacy address
+`4` remains quarantined and runtime is disabled at generation 7
 
 ## Implementation checkpoint — 2026-10-06
 
@@ -92,6 +91,24 @@ qualification quarantine remain unchanged; no receipt, recognition, wallet
 effect, job, or lease was added. Journal and broadcast projection delivered the
 recovery event. Binding-time supported-key validation and any replacement
 campaign revision remain separate code/product work before a new QR is issued.
+
+Gate 2B completed on 2026-10-07. Binding now rejects unsupported campaign
+payment rule keys before persistence, while recognition continues to fail
+closed for legacy rows. Focused verification passed at 17 tests / 116
+assertions; Pint and strict Composer validation passed. Immutable release
+`v1.0.104` at `8deada0aa711200872c8b7298be6e14ff2b20308` was adopted by host
+commit `ad7c1bc43f27987cd6348ab6ba1da5eb76d47de4` and deployed successfully as
+`depl-a2ebab9b-cb82-4ab3-86f0-2533f8c017c4`.
+
+The authorized bounded resume used generation 6, batch limit 1, and four
+sequential admissions. Addresses `3`, `2`, `5`, and `6` all succeeded. Address
+`4` was not admitted and retained quarantine reason
+`legacy_campaign_binding_unsupported_rules`. The run added no provider
+observation, receipt, wallet effect, recognition, quarantine, or suspense case.
+Runtime returned to disabled at generation 7; the immediate rerun queued zero,
+scheduled synchronization remained false, active/failed job counts were zero,
+and all outbox projections were delivered. Scheduled recommissioning remains a
+separate explicit decision.
 
 ## Objective
 
