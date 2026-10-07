@@ -97,7 +97,8 @@
         "symfony/yaml": "^7.4"
     },
     "suggest": {
-        "3neti/x-legal": "Provides jurisdiction-aware advisory Treasury vocabulary and policy traceability."
+        "3neti/x-legal": "Provides jurisdiction-aware advisory Treasury vocabulary and policy traceability.",
+        "laravel/horizon": "Allows a Redis-enabled host application to operate and inspect the declared x-change queue lanes."
     },
     "require-dev": {
         "dedoc/scramble": "^0.13.20",
@@ -125,6 +126,9 @@
             "cloud-recipe": "resources/deployment/laravel-cloud.yaml",
             "deployment-guide": "docs/deployment/X_CHANGE_CLOUD_RECIPE.md",
             "adopt-command": "x-change:adopt"
+        },
+        "settlement-os": {
+            "queue-manifest": "resources/settlement-os/queues.php"
         },
         "laravel": {
             "providers": [

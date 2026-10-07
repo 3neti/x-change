@@ -101,6 +101,13 @@ Rules:
 
 ## Machine-readable queue manifest
 
+**Implementation checkpoint:** x-change Gate 1A now publishes this manifest at
+`resources/settlement-os/queues.php` and advertises it through Composer extra
+metadata. It currently characterizes all 17 queued x-change jobs without
+changing runtime routing. The legacy `default` issuance queue remains visible
+until Gate 1B moves it through a backward-compatible selector to
+`x-change-issuance`.
+
 Each participating package should expose a package-owned manifest with this
 conceptual shape:
 
@@ -370,4 +377,3 @@ The workstream is complete only when:
 - deploying to Laravel Cloud;
 - enabling scheduled Standing Funding; or
 - initiating a provider call or financial operation.
-

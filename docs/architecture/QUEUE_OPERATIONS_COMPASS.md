@@ -11,12 +11,26 @@ authority for financial recovery.
 
 ## Current position
 
-**Status: Plan persisted; implementation has not started.**
+**Status: Gate 1A implemented and verified; runtime routing is unchanged.**
 
 The testing host uses database queues and database cache. PHP Redis support is
 available, but Horizon is not installed, no Redis queue has been commissioned,
 and no Horizon background process exists. Scheduled Standing Funding remains
 disabled.
+
+x-change now publishes a versioned, Horizon-neutral queue manifest through
+Composer metadata. The catalog characterizes all 17 queued package jobs across
+four currently effective lane groups:
+
+- `x-change-funding` for funding and payment verification work;
+- `x-change-feedback` plus any explicitly configured feedback override;
+- `partner-payments` for partner payment event delivery; and
+- the legacy `default` queue used by on-demand Pay Code issuance recovery.
+
+The last item is recorded as boundary debt with migration target
+`x-change-issuance`; it has not been silently rerouted in this characterization
+slice. Horizon remains optional and no queue connection, worker, schedule, or
+Cloud resource changed.
 
 The agreed ownership model is:
 
@@ -63,7 +77,8 @@ names. Redis prefixes isolate environments.
 
 | Gate | Scope | Status |
 | --- | --- | --- |
-| 1 | Queue convention and x-change catalog | Planned |
+| 1A | Characterize and publish the x-change queue catalog | Complete |
+| 1B | Remove financial `default` fallback and add safe operational tags | Next |
 | 2 | x-journal, x-action, x-feedback, and x-campaign manifests | Planned |
 | 3 | Host discovery, Horizon install, and authenticated dashboard | Planned |
 | 4 | Laravel Cloud Redis foundation | Separately gated infrastructure change |
@@ -91,12 +106,26 @@ names. Redis prefixes isolate environments.
 
 ## Immediate next gate
 
-**Gate 1 — Queue convention and x-change catalog.**
+**Gate 1B — Explicit issuance lane and safe operational tags.**
 
-Characterize every x-change queue selection, define the manifest schema, add a
-package-owned manifest, consolidate duplicate queue literals without changing
-runtime routing, and prove every queued x-change job resolves to a declared
-lane. Do not install Horizon or change queue infrastructure in this gate.
+Move on-demand Pay Code issuance recovery from implicit `default` selection to
+the declared `x-change-issuance` lane through a backward-compatible config
+selector. Add sanitized package/lane tags without exposing financial payloads,
+provider secrets, beneficiary data, or exception internals. Prove dispatch
+routing and tags in focused tests. Do not install Horizon or change queue
+infrastructure in this gate.
+
+## Verification checkpoint
+
+Gate 1A was verified on 2026-10-07:
+
+- queue manifest tests: 4 passed, 13 assertions;
+- all 17 queued x-change jobs are declared exactly once;
+- configurable queue selectors remain distinct rather than being silently
+  merged;
+- Horizon is suggested but is not a package requirement; and
+- Composer lock metadata was refreshed without changing declared dependency
+  versions.
 
 ## Stop conditions
 
@@ -115,4 +144,3 @@ lane. Do not install Horizon or change queue infrastructure in this gate.
 
 Future agents must update this compass after every completed, blocked, or
 reversed gate.
-

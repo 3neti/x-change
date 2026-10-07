@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ad2d498c59ad609ae82d873ca7371997",
+    "content-hash": "ca594905368b309263efd995ac326c8d",
     "packages": [
         {
             "name": "3neti/cash",
