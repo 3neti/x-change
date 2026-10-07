@@ -11,10 +11,9 @@ wallet, or Client Funds.
 
 ## Current position
 
-Status: **Testing-instance Gates 0 through 4B complete. Gate 5 proved the live
-issuance path but stopped fail-closed on a one-cent Client Funds residual.
-Gate 5A containment is implemented and test-green; release, deployment, and
-fresh live acceptance remain.**
+Status: **Testing-instance Gates 0 through 5A complete. Gate 5A proved the
+repaired live issuance path with a positive amount-lease adjustment, zero new
+Client Funds residual, exactly one Pay Code, and a mutation-free replay.**
 
 The operative testing-instance sequence is now tracked in the
 [Testing-Instance Acceptance Plan](TESTING_INSTANCE_ACCEPTANCE_PLAN.md) and
@@ -116,22 +115,26 @@ public_auto_generate:
 
 ## Immediate next gate
 
-**Gate 5A — Publish, deploy, and accept the containment repair.**
+**No further live-payment gate is authorized.**
 
-The tested repair preserves the authoritative issuance hold and moves only the
-amount-lease adjustment into a separate deterministic Treasury hold in Pay
-Code Reserve. The adjustment is no longer generally spendable Client Funds;
-zero adjustments create no extra hold; drift rolls back; and replay remains
-idempotent. Publish and deploy the immutable repair, then complete one fresh
-authorized low-value payment acceptance with zero Client Funds residual and a
-mutation-free immediate replay.
+Gate 5A is closed. Immutable x-change `v1.0.111` at `df1eadff` was adopted and
+deployed, and one PHP 40.01 Bank Transfer proved that the PHP 40.00 issuance
+requirement is consumed once while the PHP 0.01 lease adjustment remains in a
+separate deterministic Treasury hold. Client Funds remained PHP 80.03, so the
+new residual was zero. The immediate settlement-and-issuance replay produced
+identical before/after fingerprints.
+
+The next proposed policy slice is **Gate 5B — Amount-Lease Residual Final
+Disposition**. It must decide release, refund, fee recognition, or another
+audited disposition for contained residual holds. It is not authorized by
+Gate 5A and must not create another order or payment by default.
 
 ## Following gates
 
-1. Publish, adopt, and deploy the Gate 5A repair.
-2. Repeat Gate 5 with the authorized fresh exact payment and immediate replay.
-3. Make the policy commissionable.
-4. Add Turnstile as a later security adapter.
+1. Define and test the final disposition policy for contained amount-lease
+   residuals.
+2. Make the public issuance policy commissionable.
+3. Add Turnstile as a later security adapter.
 
 ## Deferred TODO
 

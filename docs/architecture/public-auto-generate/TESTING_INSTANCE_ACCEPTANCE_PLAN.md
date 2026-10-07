@@ -461,3 +461,34 @@ Standing Funding, and quarantine safety fences remain unchanged. The live
 exercise must then prove zero residual Client Funds and an immediate
 mutation-free replay. Claim, redemption, payout, persistent Horizon, scheduled
 Standing Funding, and quarantine changes remain excluded.
+
+### Gate 5A live acceptance result
+
+Gate 5A completed on the testing instance:
+
+- immutable x-change `v1.0.111` at `df1eadff` was adopted by host commit
+  `02011c36` and deployed as
+  `depl-a2ed91e0-f050-4b27-8105-04e9c4ff3b63`;
+- strict readiness passed 37 of 37 checks, queue inspection remained ready on
+  the database connection with Horizon disabled, and scheduled Standing
+  Funding remained disabled at generation 7 with zero active runs and one
+  quarantined address;
+- one PHP 25.00 Pay Code order, `01M4C8QZYGE8GKZ989F5JJRA20`, leased the exact
+  PHP 40.01 Bank Transfer amount against a PHP 40.00 authoritative issuance
+  requirement;
+- provider observation 2847986 produced exactly evidence claim 13,
+  settlement 21, funding intent 36, order 37, and voucher 386;
+- the main PHP 40.00 hold was activated and consumed once, while the PHP 0.01
+  adjustment remains active in the deterministic residual hold;
+- Commercial Principal Client Funds remained exactly PHP 80.03 before and
+  after settlement, proving a zero new generally spendable residual;
+- database and failed queues remained empty; and
+- immediate settlement and issuance replay returned settlement 21 and
+  identical fingerprint
+  `b685d2940e8e3660359df07bdda8d9b0aabec6a8553bd1fe2db721487b65ede2`
+  before and after.
+
+The residual hold remains containment, not final disposition. A later Gate 5B
+must define release, refund, fee recognition, or another audited terminal
+policy before contained residuals are treated as fully resolved. No further
+live-payment gate is authorized by this result.

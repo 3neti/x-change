@@ -4988,7 +4988,39 @@ observation window.
 - The residual hold is intentionally containment-only. Its eventual release,
   refund, fee recognition, or other commercial disposition remains a separate
   policy decision.
-- Next: publish and deploy an immutable x-change repair, preserve all existing
-  queue and financial safety fences, then run one fresh authorized low-value
-  payment acceptance. Closure requires zero Client Funds residual and an
-  immediate mutation-free replay.
+- Immutable x-change `v1.0.111` at `df1eadff` was adopted by host commit
+  `02011c36` and deployed as
+  `depl-a2ed91e0-f050-4b27-8105-04e9c4ff3b63`.
+- Post-deployment readiness command
+  `comm-a2ed94c8-e0b2-4985-83dd-a7db9cfb3f2b` passed 37 of 37 checks. Queue
+  command `comm-a2ed94f8-317e-4a20-bad5-d42617c64506` remained ready on the
+  database connection with Horizon disabled and no authorized Redis lanes.
+  Standing Funding command `comm-a2ed952a-cd40-41bf-81ea-c5f5727ae9ba`
+  remained disabled at generation 7 with zero active runs and one quarantined
+  address.
+- One fresh PHP 25.00 order, `01M4C8QZYGE8GKZ989F5JJRA20` (id 37), leased a
+  PHP 40.01 Bank Transfer amount against the PHP 40.00 authoritative issuance
+  requirement. Pre-payment command
+  `comm-a2ed96d8-2846-4947-b6cf-a2ef4e21c7db` proved zero jobs, zero failed
+  jobs, no hold, no voucher, and a PHP 80.03 Client Funds baseline.
+- The paid order produced exactly provider observation 2847986, evidence claim
+  13, settlement 21, funding intent 36, and voucher 386. Inspection
+  `comm-a2ed9fd2-50e7-49a9-8ead-c3ff92c130c8` proved one settlement, one
+  claim, one voucher, zero queued or failed jobs, and Client Funds still at
+  PHP 80.03.
+- Treasury inspection `comm-a2ed9ffa-f302-4f8d-82da-577b20fd932a` proved the
+  main PHP 40.00 allocation moved `0 -> 4000 -> 0` and is depleted, while the
+  deterministic residual allocation contains PHP 0.01 and remains active.
+- Immediate settlement-and-issuance replay command
+  `comm-a2eda057-bb57-45db-a3f0-b466174b4df6` returned existing settlement 21
+  and identical before/after fingerprint
+  `b685d2940e8e3660359df07bdda8d9b0aabec6a8553bd1fe2db721487b65ede2`.
+  It created no new claim, settlement, allocation, operation, voucher, queued
+  job, failed job, or Client Funds movement.
+- Final queue command `comm-a2eda19e-e5c0-43f2-a104-347ea2e79e72` remained
+  ready on database queues with Horizon disabled. Final Standing Funding
+  command `comm-a2eda1b4-d0bf-44c0-92fb-bd3d6fed3f66` remained disabled at
+  generation 7 with zero active runs and one quarantined address.
+- Gate 5A is complete. No further live-payment gate is authorized. The next
+  proposed policy slice is Gate 5B, which must define an audited final
+  disposition for contained residual holds.

@@ -11,12 +11,11 @@ run, or duplicate issuance.
 
 ## Current position
 
-**Status: Gates 0 through 4B complete. Gate 5 proved live issuance but stopped
-fail-closed on a one-cent Client Funds residual. Gate 5A containment is
-implemented and test-green; immutable publication, host adoption, deployment,
-and a fresh live acceptance remain in progress.**
+**Status: Gates 0 through 5A complete. Gate 5A proved the repaired live
+issuance path with a positive amount-lease adjustment, zero new Client Funds
+residual, exactly one Pay Code, and a mutation-free replay.**
 
-The implementation is deployed on x-change `v1.0.110`, public Auto-Generate and
+The implementation is deployed on x-change `v1.0.111`, public Auto-Generate and
 On-Demand Issuance are configured, fixed-amount QR Ph is configured, and
 scheduled Standing Funding synchronization remains disabled. The public
 surface forces `full_amount` even though the host-wide authenticated policy is
@@ -195,23 +194,14 @@ Code.
 
 ## Immediate next gate
 
-**Gate 5A — Publish, deploy, and accept the tested containment repair.**
+**No further live-payment gate is authorized.**
 
-The package repair is implemented and focused tests are green. A positive
-amount-lease adjustment now receives its own deterministic Treasury hold in
-Pay Code Reserve, while the primary issuance hold remains exactly the
-authoritative required amount. Zero adjustment is a no-op; drift fails and
-rolls back; settlement and issuance replay do not duplicate either hold.
-
-The focused containment group passes 4 scenarios with 84 assertions. The
-rollback lifecycle and public-surface regressions pass 20 tests with 155
-assertions after aligning the runner with container-resolved job dependencies
-and authoritative Treasury Client Funds.
-
-Publish and adopt an immutable repair, deploy it under the existing safety
-fences, then run one fresh authorized low-value payment. Acceptance requires
-zero generally spendable Client Funds residual and an immediate mutation-free
-replay. Final residual refund/release policy remains deferred.
+Gate 5A is complete. The next proposed separately authorized policy slice is
+**Gate 5B — Amount-Lease Residual Final Disposition**. It must decide how a
+contained residual is eventually released, refunded, recognized, or otherwise
+disposed without weakening the now-proven settlement and issuance isolation.
+No new order, payment, claim, redemption, payout, persistent Horizon process,
+scheduled Standing Funding run, or quarantine change is implied.
 
 ## Companion documents
 
@@ -385,3 +375,45 @@ and reports it. No second order or payment is authorized.
   replay, as required. No second order, payment, repair, claim, redemption,
   payout, persistent Horizon process, scheduled Standing Funding run, or
   quarantine change was performed.
+
+## 2026-10-08 Gate 5A — Residual Containment Acceptance
+
+- Immutable x-change `v1.0.111` at `df1eadff` was adopted by host commit
+  `02011c36`; deployment `depl-a2ed91e0-f050-4b27-8105-04e9c4ff3b63`
+  succeeded on that exact host commit.
+- Strict doctor command `comm-a2ed94c8-e0b2-4985-83dd-a7db9cfb3f2b`
+  passed 37 of 37 checks. Strict queue command
+  `comm-a2ed94f8-317e-4a20-bad5-d42617c64506` remained database-backed with
+  Horizon disabled and no authorized Redis lanes. Standing Funding command
+  `comm-a2ed952a-cd40-41bf-81ea-c5f5727ae9ba` remained disabled at
+  generation 7 with zero active runs and one quarantined address.
+- Read-only lease preflight `comm-a2ed95ef-affe-46f7-8819-79aede6b4950`
+  confirmed an existing PHP 40.00 collision, ensuring the fresh acceptance
+  would exercise a positive adjustment rather than the zero-adjustment path.
+- One browser submission created order `01M4C8QZYGE8GKZ989F5JJRA20` (id 37)
+  and intent 36. Pre-payment command
+  `comm-a2ed96d8-2846-4947-b6cf-a2ef4e21c7db` recorded PHP 40.00 required,
+  PHP 0.01 adjustment, PHP 40.01 exact payment, PHP 80.03 Client Funds, no
+  hold, no voucher, and empty database and failed queues.
+- The single Bank Transfer produced provider observation 2847986, evidence
+  claim 13, settlement 21, and voucher 386. The public receipt reached
+  `issued` and exposed exactly one Pay Code.
+- Inspection `comm-a2ed9fd2-50e7-49a9-8ead-c3ff92c130c8` proved one claim,
+  one settlement, one voucher, zero queued or failed jobs, a contained PHP
+  0.01 residual, and Client Funds unchanged at PHP 80.03.
+- Treasury inspection `comm-a2ed9ffa-f302-4f8d-82da-577b20fd932a` proved the
+  PHP 40.00 main hold was activated then consumed to zero, while the separate
+  deterministic residual hold remains active at PHP 0.01.
+- Immediate replay `comm-a2eda057-bb57-45db-a3f0-b466174b4df6` invoked both
+  settlement and issued-order execution again. Before and after fingerprints
+  were identical at
+  `b685d2940e8e3660359df07bdda8d9b0aabec6a8553bd1fe2db721487b65ede2`.
+- Final queue command `comm-a2eda19e-e5c0-43f2-a104-347ea2e79e72`
+  remained ready with database queues and Horizon disabled. Final Standing
+  Funding command `comm-a2eda1b4-d0bf-44c0-92fb-bd3d6fed3f66` remained
+  disabled at generation 7 with zero active runs and one quarantined address.
+
+Gate 5A is complete. Claim, redemption, payout, another payment, persistent
+Horizon, scheduled Standing Funding, and quarantine changes were not exercised.
+The residual hold's final disposition remains a separate Gate 5B policy
+decision.
