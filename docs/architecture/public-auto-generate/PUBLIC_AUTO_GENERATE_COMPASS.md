@@ -1,6 +1,6 @@
 # Public Auto-Generate Compass
 
-Last updated: 2026-09-30
+Last updated: 2026-10-07
 
 ## North Star
 
@@ -11,16 +11,18 @@ wallet, or Client Funds.
 
 ## Current position
 
-Status: **Gate 8 rollback proof complete; testing-instance payment pending separate authorization.**
+Status: **Testing-instance Gates 0 and 1 complete; rollback-only Gate 2 repair is next. Payment remains separately authorized.**
 
 The operative testing-instance sequence is now tracked in the
 [Testing-Instance Acceptance Plan](TESTING_INSTANCE_ACCEPTANCE_PLAN.md) and
 [Testing-Instance Acceptance Compass](TESTING_INSTANCE_ACCEPTANCE_COMPASS.md).
-As verified on 2026-10-07, the deployed testing environment is blocked at Gate
-0 by a stale installation manifest and must also prove HTTPS external URL
-generation before a payable order is created. Focused verification also found
-rollback-runner dependency drift, which must be repaired and pass before the
-testing-instance lifecycle proof.
+As verified on 2026-10-07, the testing environment is commissioned and
+operational, its public surfaces return HTTP 200, and public URLs are HTTPS.
+Live discovery, estimate, and handoff acceptance returned the authoritative
+PHP 25.00 principal, PHP 15.00 fee, and PHP 40.00 total without changing any
+order, voucher, Treasury, provider, wallet, or queue fact. Focused verification
+still identifies rollback-runner dependency drift, which must be repaired and
+pass before the testing-instance lifecycle proof.
 
 The required financial engine is already proven:
 
@@ -102,7 +104,7 @@ public_auto_generate:
 
 ## Immediate next gate
 
-**Gate 8b — Separately authorized testing-instance acceptance.**
+**Testing-instance Gate 2 — Rollback-only lifecycle repair and acceptance.**
 
 Completed locally:
 
@@ -114,13 +116,16 @@ Completed locally:
 5. exactly one projected Pay Code and the normal stamp/share result; and
 6. operator browser report with no provider calls and complete rollback.
 
-Next, only after explicit authorization:
+Next:
 
-1. publish the reviewed package version;
-2. upgrade and deploy the testing host;
-3. run the rollback browser report in that host; and
-4. make one ₱25.00-principal public order payment, aborting if the
-   authoritative total exceeds the separately approved ceiling.
+1. repair the rollback runner's current webhook-verification dependency;
+2. update its commissioned browser fixture and pass focused package/browser
+   coverage;
+3. publish and adopt the immutable tested repair;
+4. run the rollback browser report once and prove the live baseline remains
+   unchanged; and
+5. only then request separate authority for one PHP 25 payable order. A real
+   payment remains another independent gate.
 
 ## Following gates
 

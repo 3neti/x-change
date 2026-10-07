@@ -11,8 +11,8 @@ run, or duplicate issuance.
 
 ## Current position
 
-**Status: Gate 0 complete; Gate 1 read-only acceptance is next. No payable
-order or live payment is authorized by this compass update.**
+**Status: Gates 0 and 1 complete; Gate 2 rollback-only repair and acceptance is
+next. No payable order or live payment is authorized by this compass update.**
 
 The implementation is deployed on x-change `v1.0.107`, public Auto-Generate and
 On-Demand Issuance are configured, fixed-amount QR Ph is configured, and
@@ -41,6 +41,31 @@ Verification checkpoint: 18 public discovery/page tests passed with 121 total
 assertions in the combined run; three rollback lifecycle tests failed. This is
 recorded as a blocker, not a green lifecycle proof.
 
+Gate 1 completed live on 2026-10-07 with PHP 25.00 read-only inputs:
+
+- both discovery documents reported the service available, `PHP` supported,
+  bounds of PHP 1.00 through PHP 1,000.00, `full_amount` funding, and
+  `creates_order: false`;
+- the authoritative estimate returned PHP 25.00 principal, PHP 15.00 service
+  fees, PHP 40.00 total, `billing_mode: billable`, and
+  `creates_order: false`;
+- the handoff returned method `GET`, the HTTPS URL
+  `/x/auto-generate?amount=25.00&currency=PHP`, the same embedded estimate,
+  and `creates_order: false`;
+- baseline probe `cexe-a2ecaf9f-0143-45f2-b72d-7407dde929e3` and post-call
+  probe `cexe-a2ecb022-0922-4904-93dd-3f504c8186d0` matched exactly for
+  vouchers, issuance funding orders, Treasury holds, provider observations,
+  receipts, settlements, payment attempts, wallet transactions, transfers,
+  wallet count and aggregate balance, database jobs, failed jobs, and Standing
+  Funding runs; and
+- final strict queue inspection `comm-a2ecb05b-3061-49bd-b238-7786c46bd224`
+  remained ready with database queues, Horizon disabled, and no authorized
+  queues. Standing Funding remained disabled at generation 7 with zero active
+  runs.
+
+Gate 1 created no order, Pay Code, hold, provider observation, receipt,
+settlement, wallet effect, queued job, or financial state.
+
 ## Canonical testing URLs
 
 | Surface | URL |
@@ -63,7 +88,7 @@ Code.
 | Gate | Scope | Status |
 | --- | --- | --- |
 | 0 | Commissioning recovery and HTTPS URL integrity | Complete: operational, strict doctor 37/37, public surfaces HTTP 200, generated URLs HTTPS |
-| 1 | Read-only discovery, estimate, and handoff | Ready; discovery accepted, estimate and handoff pending |
+| 1 | Read-only discovery, estimate, and handoff | Complete: authoritative PHP 25 estimate and HTTPS handoff were mutation-free |
 | 2 | Repair and run authenticated rollback-only lifecycle proof; prove queue canary | Blocked by rollback-runner dependency drift |
 | 3 | One bounded PHP 25 payable order | Separately gated |
 | 4 | One exact real payment | Separately gated; ceiling and rail not authorized |
@@ -107,20 +132,20 @@ Code.
 
 ## Immediate next gate
 
-**Gate 1 — Read-only estimate and handoff acceptance.**
+**Gate 2 — Repair and run the rollback-only lifecycle proof.**
 
-Discovery and the editor are accepted. Exercise the public estimate and
-handoff contracts with bounded non-mutating inputs, prove that neither creates
-an order or financial state, and preserve HTTPS-only URLs. Do not create an
-order or contact a provider in this gate.
+Repair the package-owned runner's current webhook-verification dependency
+contract, update its browser fixture for the commissioned agreement posture,
+run the focused package and browser suites, publish and adopt an immutable
+repair, then run the authenticated rollback scenario once. Require complete
+rollback, zero provider calls, zero retained monetary effects, exactly one
+projected Pay Code inside the rolled-back transaction, and an unchanged live
+baseline afterward.
 
 ## Following gate
 
-Run discovery, estimate, and handoff; repair the rollback lifecycle runner and
-its browser fixture; publish/adopt the tested repair; then run the rollback-only
-browser scenario. Only after those proofs pass should the operator decide
-whether to authorize one PHP 25 payable order and, independently, one real
-payment.
+Only after Gate 2 passes should the operator decide whether to authorize one
+PHP 25 payable order and, independently, one real payment.
 
 ## Companion documents
 

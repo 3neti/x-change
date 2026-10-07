@@ -81,6 +81,14 @@ HTTPS authentication boundary instead of the commissioning page. No payable
 order, voucher, provider call, or financial operation was performed during
 commissioning.
 
+Read-only Gate 1 is also complete. Both discovery contracts reported the
+service available and PHP 25.00 within bounds. The authoritative estimate
+returned PHP 25.00 principal, PHP 15.00 fees, and PHP 40.00 total; the handoff
+returned an HTTPS GET URL for the PHP 25.00 editor prefill. Both contracts
+reported `creates_order: false`, and matching pre/post snapshots proved no
+change to orders, vouchers, Treasury holds, provider observations, receipts,
+settlements, wallet facts, jobs, failed jobs, or Standing Funding runs.
+
 Focused package verification previously exposed rollback-runner drift: the
 runner does not yet supply the Standing Funding admission dependency added to
 webhook verification. Commissioning redirects are no longer a blocker, but the
@@ -4750,3 +4758,26 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 Testing-instance commissioning is complete. Persistent Horizon operation,
 financial Redis-lane commissioning, the public On-Demand Issuance rollback
 proof, and any financial exercise remain separate gates.
+
+## 2026-10-07 Update — Public Issuance Read-Only Gate Accepted
+
+- Public service and issuance discovery returned matching available contracts
+  with `PHP` support, PHP 1.00–1,000.00 bounds, server-bound Commercial
+  Principal authority, `full_amount` funding, and `creates_order: false`.
+- `POST /api/x/v1/public-issuance/estimate` with PHP 25.00 returned the
+  authoritative PHP 15.00 service fee and PHP 40.00 total.
+- `POST /api/x/v1/public-issuance/handoff` returned method `GET`, the same
+  estimate, and the HTTPS URL
+  `/x/auto-generate?amount=25.00&currency=PHP`.
+- Pre/post probes `cexe-a2ecaf9f-0143-45f2-b72d-7407dde929e3` and
+  `cexe-a2ecb022-0922-4904-93dd-3f504c8186d0` matched across all tracked
+  voucher, funding-order, Treasury, provider, receipt, settlement, wallet,
+  queue, failed-job, and Standing Funding facts.
+- Strict queue inspection remained ready, Horizon remained inactive with no
+  authorized queues, and Standing Funding remained disabled at generation 7
+  with zero active runs.
+
+Gate 1 is closed without a financial mutation. The next work is the separately
+bounded Gate 2 rollback-runner repair, immutable release adoption, and
+rollback-only browser acceptance. Payable-order creation and live payment are
+still unauthorized.
