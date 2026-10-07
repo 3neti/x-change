@@ -558,6 +558,28 @@ tested host-owned targeted cleanup command that safely reconciles Horizon job
 UUIDs with the configured failed-job provider. External `/horizon` browser
 acceptance remains tied to a separately authorized commissioning state change.
 
+**Targeted failure cleanup prerequisite (2026-10-07): complete.** Exact tested
+host commit `7d11dda16a64a8d339e3a2e12a5159d94768d894` introduces
+`settlement-os:queues:cleanup-failure`. It validates the job UUID, canary
+ULID, database-UUID provider, queue, connection, Horizon display name, payload
+job class, and embedded canary identity before any deletion. It deletes only
+the guarded database row, exact Horizon UUID, and two known marker keys.
+Partial cleanup is recoverable, an already-clean rerun is successful, and any
+mismatch fails closed.
+
+The focused suite passed 24 tests with 142 assertions. Deployment
+`depl-a2ec7a9c-0714-4ce8-8db9-2660468b9266` adopted the exact revision with
+Horizon disabled. Two consecutive live cleanup invocations for the prior
+synthetic failure returned `already_clean` with zero mutations. Final probes
+showed Horizon inactive, no authorized queues, zero database or failed jobs,
+zero Redis `campaigns` residue, and only the established database worker.
+No job was dispatched and no financial or provider operation occurred.
+
+This closes the cleanup prerequisite. The remaining Gate 5 item is external
+authenticated dashboard acceptance after host commissioning permits
+`/horizon`; it does not authorize a persistent Horizon process or any
+financial lane.
+
 ### Gate 5 — Drain and non-financial canary
 
 1. Stop new dispatch to the selected canary lane.

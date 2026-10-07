@@ -4694,3 +4694,28 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Next prerequisite: implement and test a host-owned targeted failure cleanup
   command before any further intentional failure canary. Browser acceptance of
   `/horizon` remains a separate commissioning decision.
+
+## 2026-10-07 Update — Targeted Horizon Failure Cleanup Complete
+
+- Host commit `7d11dda16a64a8d339e3a2e12a5159d94768d894` adds a
+  fail-closed `settlement-os:queues:cleanup-failure` command for the exact
+  synthetic `campaigns` failure canary only.
+- It reconciles the database failed-job UUID and Horizon UUID, validates the
+  complete sanitized identity before deletion, and supports recovery when
+  either storage side was already removed.
+- The focused queue/Horizon suite passed 24 tests with 142 assertions,
+  including exact cleanup, both partial states, no-op rerun, and mismatch
+  refusal.
+- Deployment `depl-a2ec7a9c-0714-4ce8-8db9-2660468b9266` adopted the exact
+  tested revision with Horizon disabled.
+- Consecutive live commands
+  `comm-a2ec7b85-4b29-4185-b468-dfdc20c03a73` and
+  `comm-a2ec7bb1-6ce4-4512-85b1-466b53f66ee8` both returned
+  `already_clean` and performed zero deletions.
+- Horizon remains inactive, authorization remains empty, all database and
+  Redis `campaigns` queues are empty, and the sole background process remains
+  the complete database worker. No job dispatch, provider call, voucher
+  issuance, or financial operation occurred.
+- The cleanup prerequisite is closed. External authenticated `/horizon`
+  browser acceptance and any persistent or financial Horizon commissioning
+  remain separate gates.

@@ -532,6 +532,39 @@ performed. Before another deliberate failure canary, add and test a host-owned
 targeted cleanup command that resolves the Horizon UUID and failed-job storage
 identifier without relying on the incompatible stock-command sequence.
 
+The targeted failure-cleanup prerequisite was completed on 2026-10-07:
+
+- host commit `7d11dda16a64a8d339e3a2e12a5159d94768d894` adds
+  `settlement-os:queues:cleanup-failure`, restricted to local and testing
+  environments and to the exact synthetic `campaigns` failure job;
+- the command requires both the job UUID and canary ULID, validates the
+  configured database-UUID provider, connection, queue, display name, job
+  class, and serialized canary identity before deleting any record;
+- cleanup removes only the exact guarded database row, exact Horizon UUID, and
+  the two known short-lived marker keys. It fails closed on mismatched or
+  ambiguous evidence and supports database-only, Horizon-only, and
+  already-clean recovery states;
+- 24 focused queue/Horizon tests passed with 142 assertions, including exact
+  dual-store cleanup, both partial-state recoveries, idempotent rerun, mismatch
+  refusal, and invalid-identifier refusal;
+- deployment `depl-a2ec7a9c-0714-4ce8-8db9-2660468b9266` adopted the exact
+  tested host revision while Horizon remained disabled;
+- live commands `comm-a2ec7b85-4b29-4185-b468-dfdc20c03a73` and
+  `comm-a2ec7bb1-6ce4-4512-85b1-466b53f66ee8` both returned
+  `already_clean` for the prior synthetic job and canary, with zero database,
+  Horizon, or marker deletions;
+- `comm-a2ec7be6-f40e-4291-895a-b4a559e8c353` confirmed Horizon inactive,
+  and `cexe-a2ec7c1a-750c-429a-a943-18e50d4b00b8` confirmed Horizon
+  authorization empty, zero database jobs, zero failed jobs, and zero pending,
+  delayed, or reserved `campaigns` work; and
+- the sole process remains the full-coverage database worker
+  `process-a2ec3303-51b9-43e6-9bd3-97533118bd70`. No Horizon process, job
+  dispatch, provider call, voucher issuance, or financial operation occurred.
+
+The cleanup debt is closed. External authenticated `/horizon` browser
+acceptance remains behind host commissioning, and financial-lane commissioning
+remains a separate gate.
+
 ## Stop conditions
 
 - Redis or Horizon would become financial truth.
