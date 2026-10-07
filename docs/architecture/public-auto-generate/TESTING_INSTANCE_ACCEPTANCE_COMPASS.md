@@ -11,10 +11,10 @@ run, or duplicate issuance.
 
 ## Current position
 
-**Status: Gates 0 and 1 complete; Gate 2 rollback-only repair and acceptance is
-next. No payable order or live payment is authorized by this compass update.**
+**Status: Gates 0, 1, and 2 complete. Gate 3 payable-order creation remains
+separately gated, and no live payment is authorized by this compass update.**
 
-The implementation is deployed on x-change `v1.0.107`, public Auto-Generate and
+The implementation is deployed on x-change `v1.0.108`, public Auto-Generate and
 On-Demand Issuance are configured, fixed-amount QR Ph is configured, and
 scheduled Standing Funding synchronization remains disabled. The public
 surface forces `full_amount` even though the host-wide authenticated policy is
@@ -33,13 +33,15 @@ Testing-instance commissioning and HTTPS URL integrity are now ready:
 - scheduled Standing Funding, Horizon processing, and every financial Redis
   lane remain disabled.
 
-Focused package verification previously found the rollback runner calling the
-current funding webhook job with one missing dependency. Commissioning
-redirects are resolved, but that runner drift remains a blocker for Gate 2.
+Gate 2 repaired the rollback runner to invoke the webhook verification job
+through Laravel's container, so the current Standing Funding admission
+dependency and later method-injection additions resolve without positional
+runner drift. The browser fixture now establishes a matching commissioning
+manifest and current agreement acceptance instead of bypassing either gate.
 
-Verification checkpoint: 18 public discovery/page tests passed with 121 total
-assertions in the combined run; three rollback lifecycle tests failed. This is
-recorded as a blocker, not a green lifecycle proof.
+The focused runner suite passed 3 tests with 43 assertions. The combined
+runner, webhook verification, read-only issuance, commissioning, and provider
+job contract suite passed 43 tests with 271 assertions.
 
 Gate 1 completed live on 2026-10-07 with PHP 25.00 read-only inputs:
 
@@ -66,6 +68,33 @@ Gate 1 completed live on 2026-10-07 with PHP 25.00 read-only inputs:
 Gate 1 created no order, Pay Code, hold, provider observation, receipt,
 settlement, wallet effect, queued job, or financial state.
 
+Gate 2 completed live on 2026-10-07:
+
+- immutable x-change `v1.0.108` points to package commit `db6e6a29`; host
+  adoption commit `42079024` changed only the x-change lock entry, and Cloud
+  deployment `depl-a2ecb8d7-c3a9-4c7c-8915-bb97bb0f1eba` succeeded;
+- strict doctor command `comm-a2ecbb6d-afe8-4f40-bc79-2bd81c6b0347`
+  remained green at 37 of 37 checks;
+- authenticated Cockpit acceptance ran `public_auto_generate_demo` exactly
+  once and reported full rollback, zero provider calls, no persisted value,
+  same-order replay, one projected Pay Code, and a projected stamp/share
+  result;
+- pre-run probe `comm-a2ecbc1a-14ec-441f-aeae-56a87def3d07` and post-run
+  probe `comm-a2ecbcdb-efdc-4389-a487-3496fa6da798` matched exactly across
+  vouchers, funding orders and intents, Treasury holds, provider observations,
+  receipts, settlements, simulated transactions, payment attempts, wallets,
+  wallet transactions and aggregate amount, transfers, database jobs, failed
+  jobs, Standing Funding address states, and Standing Funding runs;
+- strict queue inspection `comm-a2ecbceb-ac3e-4ff4-9904-64a7d9bf5003`
+  remained ready with the database queue, Horizon disabled, and no authorized
+  Redis queues; and
+- Standing Funding command `comm-a2ecbcfb-322d-40bf-9040-5c8fa0ffb75d`
+  remained disabled at generation 7 with zero active runs and one quarantined
+  address. Horizon remained inactive.
+
+Gate 2 retained no order, Pay Code, hold, provider evidence, wallet effect,
+queued job, failed job, Standing Funding state, or monetary value.
+
 ## Canonical testing URLs
 
 | Surface | URL |
@@ -89,7 +118,7 @@ Code.
 | --- | --- | --- |
 | 0 | Commissioning recovery and HTTPS URL integrity | Complete: operational, strict doctor 37/37, public surfaces HTTP 200, generated URLs HTTPS |
 | 1 | Read-only discovery, estimate, and handoff | Complete: authoritative PHP 25 estimate and HTTPS handoff were mutation-free |
-| 2 | Repair and run authenticated rollback-only lifecycle proof; prove queue canary | Blocked by rollback-runner dependency drift |
+| 2 | Repair and run authenticated rollback-only lifecycle proof; prove queue posture | Complete: immutable repair adopted; authenticated run fully rolled back with unchanged baseline |
 | 3 | One bounded PHP 25 payable order | Separately gated |
 | 4 | One exact real payment | Separately gated; ceiling and rail not authorized |
 | 5 | Operator and beneficiary evidence | Pending issuance |
@@ -132,20 +161,13 @@ Code.
 
 ## Immediate next gate
 
-**Gate 2 — Repair and run the rollback-only lifecycle proof.**
+**Gate 3 — One bounded PHP 25 payable order, only after separate explicit
+authorization.**
 
-Repair the package-owned runner's current webhook-verification dependency
-contract, update its browser fixture for the commissioned agreement posture,
-run the focused package and browser suites, publish and adopt an immutable
-repair, then run the authenticated rollback scenario once. Require complete
-rollback, zero provider calls, zero retained monetary effects, exactly one
-projected Pay Code inside the rolled-back transaction, and an unchanged live
-baseline afterward.
-
-## Following gate
-
-Only after Gate 2 passes should the operator decide whether to authorize one
-PHP 25 payable order and, independently, one real payment.
+Gate 2 does not authorize `POST /x/auto-generate`, order creation, payment,
+provider contact, queue commissioning, or financial Redis processing. The
+operator must approve Gate 3 independently, including the authoritative total
+ceiling. A real payment remains a second independent Gate 4 decision.
 
 ## Companion documents
 

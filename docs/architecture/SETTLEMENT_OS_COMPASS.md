@@ -4781,3 +4781,29 @@ Gate 1 is closed without a financial mutation. The next work is the separately
 bounded Gate 2 rollback-runner repair, immutable release adoption, and
 rollback-only browser acceptance. Payable-order creation and live payment are
 still unauthorized.
+
+## 2026-10-07 Update — Public Issuance Rollback Gate Accepted
+
+- x-change `v1.0.108` at `db6e6a29` repairs the package-owned lifecycle runner
+  by resolving the webhook verification job through Laravel's container and
+  extends rollback verification to Standing Funding state and run facts.
+- The browser fixture now establishes the commissioned installation manifest
+  and current agreement acceptance. The focused runner suite passed 3 tests
+  with 43 assertions; the adjacent combined suite passed 43 tests with 271
+  assertions.
+- Host commit `42079024` adopted only the immutable x-change lock entry.
+  Deployment `depl-a2ecb8d7-c3a9-4c7c-8915-bb97bb0f1eba` succeeded and the
+  strict doctor remained green at 37 of 37 checks.
+- One authenticated Cockpit run reported full rollback, zero provider calls,
+  no persisted value, same-order replay, exactly one projected Pay Code, and
+  normal stamp/share projection.
+- Live probes `comm-a2ecbc1a-14ec-441f-aeae-56a87def3d07` and
+  `comm-a2ecbcdb-efdc-4389-a487-3496fa6da798` matched across every tracked
+  voucher, funding, Treasury, provider, wallet, queue, failed-job, and Standing
+  Funding fact.
+- Strict queue inspection remained ready with Horizon disabled and no
+  authorized Redis queues. Standing Funding remained disabled at generation 7
+  with zero active runs and its existing quarantined address unchanged.
+
+Gate 2 is closed without retained financial state. Gate 3 payable-order
+creation and Gate 4 real payment remain independently unauthorized.

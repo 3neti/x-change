@@ -11,7 +11,8 @@ wallet, or Client Funds.
 
 ## Current position
 
-Status: **Testing-instance Gates 0 and 1 complete; rollback-only Gate 2 repair is next. Payment remains separately authorized.**
+Status: **Testing-instance Gates 0, 1, and 2 complete. Payable-order creation
+and payment remain separately authorized.**
 
 The operative testing-instance sequence is now tracked in the
 [Testing-Instance Acceptance Plan](TESTING_INSTANCE_ACCEPTANCE_PLAN.md) and
@@ -20,9 +21,12 @@ As verified on 2026-10-07, the testing environment is commissioned and
 operational, its public surfaces return HTTP 200, and public URLs are HTTPS.
 Live discovery, estimate, and handoff acceptance returned the authoritative
 PHP 25.00 principal, PHP 15.00 fee, and PHP 40.00 total without changing any
-order, voucher, Treasury, provider, wallet, or queue fact. Focused verification
-still identifies rollback-runner dependency drift, which must be repaired and
-pass before the testing-instance lifecycle proof.
+order, voucher, Treasury, provider, wallet, or queue fact. Gate 2 then adopted
+x-change `v1.0.108` and ran the authenticated rollback lifecycle once with the
+scenario's current PHP 25.00 principal and PHP 18.00 service fee. It projected
+exactly one Pay Code and normal stamp/share output inside the transaction,
+reported zero provider calls and no persisted value, and left the complete
+live mutation baseline unchanged.
 
 The required financial engine is already proven:
 
@@ -104,28 +108,18 @@ public_auto_generate:
 
 ## Immediate next gate
 
-**Testing-instance Gate 2 — Rollback-only lifecycle repair and acceptance.**
+**Testing-instance Gate 3 — One bounded PHP 25 payable order, subject to new
+explicit authorization.**
 
-Completed locally:
+Gate 2 is complete. The rollback dependency repair is immutable in x-change
+`v1.0.108`; focused and adjacent suites passed 43 tests with 271 assertions;
+the authenticated Cloud runner proved same-order replay, exactly-once projected
+issuance, full rollback, zero provider calls, and no retained financial,
+wallet, queue, or Standing Funding state.
 
-1. rollback-only `public_auto_generate` lifecycle runner;
-2. complete authoritative total and server-selected principal;
-3. cross-session order isolation and idempotent resume;
-4. exact-payment lifecycle plus shared mismatch, duplicate, late, expired, and
-   reversal regressions;
-5. exactly one projected Pay Code and the normal stamp/share result; and
-6. operator browser report with no provider calls and complete rollback.
-
-Next:
-
-1. repair the rollback runner's current webhook-verification dependency;
-2. update its commissioned browser fixture and pass focused package/browser
-   coverage;
-3. publish and adopt the immutable tested repair;
-4. run the rollback browser report once and prove the live baseline remains
-   unchanged; and
-5. only then request separate authority for one PHP 25 payable order. A real
-   payment remains another independent gate.
+Do not submit the public editor until Gate 3 separately authorizes order
+creation and an authoritative-total ceiling. Do not make a real payment unless
+Gate 4 is independently authorized afterward.
 
 ## Following gates
 

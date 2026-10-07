@@ -183,6 +183,16 @@ payment:
 
 Gate 2 is the final gate that may complete without live-payment authorization.
 
+Acceptance evidence, 2026-10-07: x-change `v1.0.108` repaired queued-job
+dependency resolution through Laravel's container; the commissioned browser
+fixture now records real agreement acceptance; 43 adjacent tests passed with
+271 assertions; deployment `depl-a2ecb8d7-c3a9-4c7c-8915-bb97bb0f1eba`
+adopted the immutable repair; and one authenticated browser run reported full
+rollback, zero provider calls, no persisted value, same-order replay, and one
+projected Pay Code. Identical pre/post live probes confirmed no retained
+voucher, funding, Treasury, provider, wallet, queue, failed-job, or Standing
+Funding mutation. Gate 2 is complete.
+
 ## Gate 3 — Create one bounded payable order
 
 1. Obtain explicit approval for order creation and a ceiling for the
