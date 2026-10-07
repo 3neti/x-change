@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Console\Command;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use LBHurtado\Voucher\Models\Voucher;
@@ -13,8 +14,14 @@ use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Models\SimulatedFundingTransaction;
+use LBHurtado\XChange\Models\StandingFundingAddressState;
+use LBHurtado\XChange\Models\StandingFundingSyncRun;
+use LBHurtado\XChange\Models\XChangeInstallationManifest;
 use LBHurtado\XChange\Services\Commercial\CommercialPrincipalProvisioningService;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
+use LBHurtado\XChange\Services\Configuration\CommissioningConfigurationFingerprint;
+use LBHurtado\XChange\Services\Configuration\CommissioningStateResolver;
+use LBHurtado\XChange\Services\Legal\CurrentAgreementService;
 use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 
 function preparePublicAutoGenerateLifecycle(): array
@@ -46,6 +53,25 @@ function preparePublicAutoGenerateLifecycle(): array
         'mobile' => '639173011987',
         'mobile_verified_at' => now(),
     ])->save();
+    XChangeInstallationManifest::query()->updateOrCreate([
+        'key' => CommissioningStateResolver::ManifestKey,
+    ], [
+        'manifest_version' => CommissioningStateResolver::ManifestVersion,
+        'package_version' => 'test',
+        'profile' => 'development',
+        'active_connection_references' => [],
+        'configuration_fingerprint' => app(CommissioningConfigurationFingerprint::class)->current(),
+        'completed_at' => now(),
+    ]);
+    $agreement = app(CurrentAgreementService::class);
+
+    if ($agreement->enabled()) {
+        $agreementRequest = Request::create('/x/legal/eula/accept', 'POST');
+        $session = app('session')->driver();
+        $session->start();
+        $agreementRequest->setLaravelSession($session);
+        $agreement->accept($issuer, $agreementRequest, $agreement->document());
+    }
 
     return [$issuer, $principal];
 }
@@ -62,6 +88,8 @@ it('runs public Auto-Generate through exact simulated funding and rolls everythi
         FundingSettlement::query()->count(),
         DB::table('webhook_receipts')->count(),
         DB::table('provider_funding_observations')->count(),
+        StandingFundingAddressState::query()->count(),
+        StandingFundingSyncRun::query()->count(),
     ];
     $command = new class extends Command
     {
@@ -104,6 +132,8 @@ it('runs public Auto-Generate through exact simulated funding and rolls everythi
             FundingSettlement::query()->count(),
             DB::table('webhook_receipts')->count(),
             DB::table('provider_funding_observations')->count(),
+            StandingFundingAddressState::query()->count(),
+            StandingFundingSyncRun::query()->count(),
         ])->toBe($countsBefore)
         ->and((int) $principal->getWallet('platform')->refresh()->balance)->toBe($balanceBefore);
 

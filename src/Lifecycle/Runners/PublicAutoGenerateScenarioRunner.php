@@ -15,11 +15,8 @@ use LBHurtado\EmiCore\Actions\Funding\StoreProviderWebhookReceipt;
 use LBHurtado\EmiCore\Data\Funding\ProviderWebhookReceiptData;
 use LBHurtado\EmiCore\Data\Funding\ProviderWebhookRequestData;
 use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Actions\Funding\FinalizeFundingSuspenseMonitoring;
 use LBHurtado\XChange\Actions\Funding\PrepareOnDemandPayCodeIssuance;
-use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Actions\Funding\SimulateQrPhPayment;
-use LBHurtado\XChange\Actions\Funding\VerifyFundingWebhookReceipt;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Contracts\CommercialPrincipalResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
@@ -67,9 +64,6 @@ final class PublicAutoGenerateScenarioRunner implements ScenarioRunnerContract
         private readonly SimulateQrPhPayment $simulatePayment,
         private readonly QrPhSimulatorFundingProviderAdapter $adapter,
         private readonly StoreProviderWebhookReceipt $storeReceipt,
-        private readonly VerifyFundingWebhookReceipt $verifyReceipt,
-        private readonly SettleVerifiedFundingIntent $settleIntent,
-        private readonly FinalizeFundingSuspenseMonitoring $finalizeMonitoring,
         private readonly QrPhFundingSimulatorGuard $simulatorGuard,
         private readonly PublicIssuanceOrderAccess $orderAccess,
         private readonly OnDemandIssuanceFundingOrderPresenter $presenter,
@@ -208,11 +202,8 @@ final class PublicAutoGenerateScenarioRunner implements ScenarioRunnerContract
             ProviderWebhookReceiptData::fromRequest($request, $authentication),
         );
         $receipt = $this->storeReceipt->handle($request, $authentication, $event);
-        (new VerifyFundingWebhookReceiptJob($receipt->getKey()))->handle(
-            $this->verifyReceipt,
-            $this->settleIntent,
-            $this->finalizeMonitoring,
-        );
+        $verification = new VerifyFundingWebhookReceiptJob($receipt->getKey());
+        app()->call([$verification, 'handle']);
 
         $order->refresh();
 
@@ -407,6 +398,8 @@ final class PublicAutoGenerateScenarioRunner implements ScenarioRunnerContract
             'webhook_receipts' => $connection->table('webhook_receipts')->count(),
             'provider_observations' => $connection->table('provider_funding_observations')->count(),
             'funding_settlements' => $connection->table('x_change_funding_settlements')->count(),
+            'standing_funding_address_states' => $connection->table('x_change_standing_funding_address_states')->count(),
+            'standing_funding_sync_runs' => $connection->table('x_change_standing_funding_sync_runs')->count(),
         ], JSON_THROW_ON_ERROR));
     }
 
