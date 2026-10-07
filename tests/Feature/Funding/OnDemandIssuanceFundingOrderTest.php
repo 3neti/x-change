@@ -12,9 +12,12 @@ use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\EmiCore\Exceptions\ProviderFundingNotObserved;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Actions\Funding\ApproveFundingReconciliation;
 use LBHurtado\XChange\Actions\Funding\ClaimFundingEvidence;
 use LBHurtado\XChange\Actions\Funding\ClassifyOnDemandIssuanceFundingMismatch;
 use LBHurtado\XChange\Actions\Funding\ExpireOnDemandIssuanceFundingOrder;
+use LBHurtado\XChange\Actions\Funding\OpenFundingSuspenseCase;
+use LBHurtado\XChange\Actions\Funding\RequestFundingReconciliation;
 use LBHurtado\XChange\Actions\Funding\ReserveOnDemandIssuanceAmountLease;
 use LBHurtado\XChange\Actions\Funding\ReverseSettledFundingIntent;
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
@@ -29,6 +32,7 @@ use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
+use LBHurtado\XChange\Enums\FundingReconciliationAction;
 use LBHurtado\XChange\Enums\FundingVerificationTrigger;
 use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
@@ -36,7 +40,9 @@ use LBHurtado\XChange\Exceptions\FundingEvidenceAlreadyClaimed;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingIntentJob;
 use LBHurtado\XChange\Models\FundingEvidenceClaim;
+use LBHurtado\XChange\Models\FundingEvidenceClaimSupersession;
 use LBHurtado\XChange\Models\FundingIntent;
+use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrderEvent;
 use LBHurtado\XChange\Services\Cockpit\FundingInstructionPresenter;
@@ -878,6 +884,147 @@ it('does not let an expired mismatched intent claim evidence for an exact replac
         ->and($replacementOrder->refresh()->status)
         ->toBe(PayCodeIssuanceFundingOrderStatus::AwaitingPayment)
         ->and($replacementOrder->voucher_id)->toBeNull();
+});
+
+it('reconciles pre-repair evidence to an exact expired replacement without reviving issuance', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->sole();
+    $observation = onDemandFundingObservation(4_001);
+    $sourceIntent = onDemandFundingIntent($wallet->uuid, $observation, 4_000);
+    $targetIntent = onDemandFundingIntent($wallet->uuid, $observation, 4_001);
+    $sourceIntent->forceFill(['status' => FundingIntentStatus::Suspense])->saveQuietly();
+    $targetIntent->forceFill(['status' => FundingIntentStatus::Suspense])->saveQuietly();
+    $sourceOrder = issuanceFundingOrder($user, 'pre-repair-source');
+    $targetOrder = issuanceFundingOrder($user, 'pre-repair-target');
+
+    foreach ([[$sourceOrder, $sourceIntent, 4_000], [$targetOrder, $targetIntent, 4_001]] as [
+        $order,
+        $intent,
+        $amountMinor,
+    ]) {
+        $order->forceFill([
+            'funding_intent_id' => $intent->getKey(),
+            'expected_payment_minor' => $amountMinor,
+            'status' => PayCodeIssuanceFundingOrderStatus::Expired,
+            'expired_at' => now(),
+        ])->saveQuietly();
+    }
+
+    $claim = app(ClaimFundingEvidence::class)->handle($sourceIntent, $observation);
+    $sourceCase = app(OpenFundingSuspenseCase::class)->handle(
+        provider: 'netbank',
+        reasonCode: 'on_demand_issuance_excess_payment',
+        intent: $sourceIntent,
+        observation: $observation,
+    );
+    $targetCase = app(OpenFundingSuspenseCase::class)->handle(
+        provider: 'netbank',
+        reasonCode: 'on_demand_issuance_duplicate_evidence',
+        intent: $targetIntent,
+        observation: $observation,
+    );
+    $request = app(RequestFundingReconciliation::class)->handle(
+        case: $targetCase,
+        action: FundingReconciliationAction::MatchVerifiedObservation,
+        actorType: 'operator',
+        actorId: 'maker-1',
+    );
+
+    $approved = app(ApproveFundingReconciliation::class)->handle(
+        $request,
+        'operator',
+        'checker-2',
+    );
+    $replayed = app(ApproveFundingReconciliation::class)->handle(
+        $approved,
+        'operator',
+        'checker-2',
+    );
+    $supersession = FundingEvidenceClaimSupersession::query()->sole();
+
+    expect($replayed->is($approved))->toBeTrue()
+        ->and($approved->result)->toMatchArray([
+            'outcome' => 'observation_matched_and_settled',
+            'funding_evidence_claim_supersession_id' => $supersession->getKey(),
+        ])->and($claim->refresh()->funding_intent_id)->toBe($sourceIntent->getKey())
+        ->and($supersession->from_funding_intent_id)->toBe($sourceIntent->getKey())
+        ->and($supersession->to_funding_intent_id)->toBe($targetIntent->getKey())
+        ->and($supersession->provider_funding_observation_id)->toBe($observation->getKey())
+        ->and(FundingEvidenceClaimSupersession::query()->count())->toBe(1)
+        ->and($sourceIntent->refresh()->status)->toBe(FundingIntentStatus::Suspense)
+        ->and($targetIntent->refresh()->status)->toBe(FundingIntentStatus::Settled)
+        ->and($sourceCase->refresh()->status)->toBe('resolved')
+        ->and($targetCase->refresh()->status)->toBe('resolved')
+        ->and(FundingSettlement::query()->sole()->funding_intent_id)->toBe($targetIntent->getKey())
+        ->and($sourceOrder->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::Expired)
+        ->and($sourceOrder->voucher_id)->toBeNull()
+        ->and($targetOrder->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::Expired)
+        ->and($targetOrder->late_payment_disposition)->toBe('client_funds')
+        ->and($targetOrder->voucher_id)->toBeNull()
+        ->and($targetOrder->treasury_hold_reference)->toBeNull()
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(4_001);
+
+    Queue::assertNotPushed(ResumeOnDemandPayCodeIssuanceJob::class);
+
+    expect(fn () => $supersession->update(['reason_code' => 'tampered']))
+        ->toThrow(LogicException::class, 'are immutable')
+        ->and(fn () => $supersession->delete())
+        ->toThrow(LogicException::class, 'cannot be deleted');
+});
+
+it('refuses to supersede evidence while either issuance order remains active', function (): void {
+    enableNetbankTreasuryForTests();
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->sole();
+    $observation = onDemandFundingObservation(4_001);
+    $sourceIntent = onDemandFundingIntent($wallet->uuid, $observation, 4_000);
+    $targetIntent = onDemandFundingIntent($wallet->uuid, $observation, 4_001);
+    $sourceIntent->forceFill(['status' => FundingIntentStatus::Suspense])->saveQuietly();
+    $targetIntent->forceFill(['status' => FundingIntentStatus::Suspense])->saveQuietly();
+    $sourceOrder = issuanceFundingOrder($user, 'active-guard-source');
+    $targetOrder = issuanceFundingOrder($user, 'active-guard-target');
+    $sourceOrder->forceFill([
+        'funding_intent_id' => $sourceIntent->getKey(),
+        'expected_payment_minor' => 4_000,
+        'status' => PayCodeIssuanceFundingOrderStatus::Expired,
+        'expired_at' => now(),
+    ])->saveQuietly();
+    $targetOrder->forceFill([
+        'funding_intent_id' => $targetIntent->getKey(),
+        'expected_payment_minor' => 4_001,
+    ])->saveQuietly();
+    app(ClaimFundingEvidence::class)->handle($sourceIntent, $observation);
+    app(OpenFundingSuspenseCase::class)->handle(
+        provider: 'netbank',
+        reasonCode: 'on_demand_issuance_excess_payment',
+        intent: $sourceIntent,
+        observation: $observation,
+    );
+    $targetCase = app(OpenFundingSuspenseCase::class)->handle(
+        provider: 'netbank',
+        reasonCode: 'on_demand_issuance_duplicate_evidence',
+        intent: $targetIntent,
+        observation: $observation,
+    );
+    $request = app(RequestFundingReconciliation::class)->handle(
+        case: $targetCase,
+        action: FundingReconciliationAction::MatchVerifiedObservation,
+        actorType: 'operator',
+        actorId: 'maker-1',
+    );
+
+    expect(fn () => app(ApproveFundingReconciliation::class)->handle(
+        $request,
+        'operator',
+        'checker-2',
+    ))->toThrow(
+        InvalidArgumentException::class,
+        'does not satisfy the guarded supersession contract',
+    )->and(FundingEvidenceClaimSupersession::query()->count())->toBe(0)
+        ->and(FundingSettlement::query()->count())->toBe(0)
+        ->and($targetIntent->refresh()->status)->toBe(FundingIntentStatus::Suspense);
 });
 
 it('rejects one provider transaction from funding two issuance orders', function (): void {

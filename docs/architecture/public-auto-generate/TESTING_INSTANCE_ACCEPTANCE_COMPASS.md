@@ -266,3 +266,34 @@ Adoption evidence:
 Gate 4A is complete. Gate 4B, if authorized, must design and prove a guarded
 live disposition for the pre-repair immutable claim and two suspense cases.
 No reconciliation or further payment occurred in Gate 4A.
+
+## 2026-10-07 Gate 4B — Authorized Append-Only Disposition
+
+Gate 4B is explicitly authorized for the exact pre-repair records only:
+
+- Funding Evidence Claim 11;
+- NetBank observation 2847983 for PHP 40.01;
+- mismatched source Funding Intent 32;
+- exact replacement Funding Intent 34; and
+- suspense cases 1 and 2.
+
+The tested implementation keeps claim 11 immutable and appends a separate
+supersession record that identifies intent 34 as the effective owner. The
+existing maker-checker reconciliation then settles intent 34. Because the
+replacement order expired normally during diagnosis, the established
+late-payment rule credits PHP 40.01 to Client Funds, records the terminal
+disposition, releases the identifying amount lease, and does not revive the
+order, issue a Pay Code, create a Treasury hold, or enqueue issuance.
+
+The correction fails closed unless both orders are expired or cancelled, the
+source is a genuine amount mismatch, the target is an exact match, both open
+suspense reason codes match the characterized incident, both intents belong to
+the same Account/provider/currency, and neither side has prior settlement,
+voucher, or Treasury-hold state. The supersession itself is immutable and an
+exact reconciliation replay is mutation-free.
+
+Local verification is green for the live-shaped correction, replay,
+immutability, active-order rejection, existing reconciliation behavior, and
+existing On-Demand Issuance funding behavior. Publication, adoption,
+deployment, read-only live preflight, and the bounded live apply remain the
+next ordered steps.

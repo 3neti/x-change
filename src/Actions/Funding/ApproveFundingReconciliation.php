@@ -21,6 +21,7 @@ class ApproveFundingReconciliation
     public function __construct(
         private readonly TransitionFundingIntent $transition,
         private readonly SettleVerifiedFundingIntent $settle,
+        private readonly SupersedeMismatchedFundingEvidenceClaim $supersedeEvidence,
     ) {}
 
     public function handle(
@@ -64,6 +65,7 @@ class ApproveFundingReconciliation
                     $actorId,
                 ),
                 FundingReconciliationAction::MatchVerifiedObservation => $this->matchObservation(
+                    $locked,
                     $case,
                     $intent,
                     (int) data_get($locked->payload, 'provider_observation_id'),
@@ -147,6 +149,7 @@ class ApproveFundingReconciliation
      * @return array<string, int|string>
      */
     private function matchObservation(
+        FundingReconciliationRequest $request,
         FundingSuspenseCase $case,
         ?FundingIntent $intent,
         int $observationId,
@@ -159,6 +162,14 @@ class ApproveFundingReconciliation
 
         $observation = ProviderFundingObservation::query()->lockForUpdate()->findOrFail($observationId);
         $this->assertObservationMatches($intent, $observation);
+        $supersession = $this->supersedeEvidence->handle(
+            $request,
+            $case,
+            $intent,
+            $observation,
+            $actorType,
+            $actorId,
+        );
         $intent = $this->transition->handle($intent, new FundingIntentTransitionData(
             status: FundingIntentStatus::Verifying,
             eventType: 'reconciliation_observation_match_approved',
@@ -187,11 +198,17 @@ class ApproveFundingReconciliation
         $this->resolveCase($case, 'observation_matched_and_settled', [
             'funding_settlement_id' => $settlement->getKey(),
             'provider_observation_id' => $observation->getKey(),
+            ...($supersession === null ? [] : [
+                'funding_evidence_claim_supersession_id' => $supersession->getKey(),
+            ]),
         ], $actorType, $actorId);
 
         return [
             'outcome' => 'observation_matched_and_settled',
             'funding_settlement_id' => $settlement->getKey(),
+            ...($supersession === null ? [] : [
+                'funding_evidence_claim_supersession_id' => $supersession->getKey(),
+            ]),
         ];
     }
 

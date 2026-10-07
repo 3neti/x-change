@@ -349,3 +349,29 @@ The exercise passes only when all of the following are true:
 Gate 4A repairs future evidence isolation. It does not retroactively mutate the
 existing immutable claim or authorize resolution of the two live suspense
 cases. That disposition is a separately approved Gate 4B.
+
+## Gate 4B — Append-Only Evidence Claim Correction and Expired-Payment Disposition
+
+1. Preserve the original Funding Evidence Claim without update or deletion.
+2. Append one immutable supersession that records the original and effective
+   Funding Intent, provider observation, source and target suspense cases,
+   reconciliation request, and independent approver.
+3. Permit correction only when the original intent is an amount mismatch, the
+   replacement intent is an exact match, both issuance orders are terminal,
+   both cases are open with the expected reason codes, and neither intent has
+   a settlement, voucher, or Treasury hold.
+4. Continue through the existing maker-checker reconciliation path.
+5. Apply the existing expired-order policy: recognize PHP 40.01 into the
+   Account's Client Funds without reviving issuance or creating a Pay Code.
+6. Prove replay creates no second supersession, settlement, Treasury posting,
+   Account credit, order transition, or queued issuance job.
+7. Publish and adopt one immutable x-change patch, deploy it with all queue and
+   Standing Funding safety fences unchanged, and verify the exact release.
+8. Run a read-only live preflight against claim 11, observation 2847983,
+   intents 32 and 34, and suspense cases 1 and 2 before applying the approved
+   correction.
+9. Stop if any identifier, amount, status, ownership fact, or absence check
+   differs from the characterized contract.
+
+Gate 4B does not authorize another order, another payment, Pay Code issuance,
+order revival, claim redemption, provider payout, or unrelated reconciliation.

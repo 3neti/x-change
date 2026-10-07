@@ -195,3 +195,8 @@ Future agents must update this compass after every completed or blocked gate.
   voucher, or Treasury-hold facts.
 - Gate 4A is closed before reconciliation. A guarded disposition of the
   pre-repair live records is a separately authorized Gate 4B.
+- Gate 4B is now authorized for claim 11, observation 2847983, source intent
+  32, exact replacement intent 34, and suspense cases 1 and 2 only. The repair
+  is append-only: the original claim remains immutable while one supersession
+  records effective ownership. The expired replacement follows the existing
+  late-payment rule and credits PHP 40.01 to Client Funds without issuance.

@@ -10,15 +10,24 @@ use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\XChange\Exceptions\FundingEvidenceAlreadyClaimed;
 use LBHurtado\XChange\Models\FundingEvidenceClaim;
 use LBHurtado\XChange\Models\FundingIntent;
+use LBHurtado\XChange\Services\Funding\FundingEvidenceClaimOwnership;
 
 final readonly class ClaimFundingEvidence
 {
+    public function __construct(
+        private FundingEvidenceClaimOwnership $ownership,
+    ) {}
+
     public function handle(
         FundingIntent $intent,
         ProviderFundingObservation $observation,
     ): FundingEvidenceClaim {
         try {
             return DB::transaction(function () use ($intent, $observation): FundingEvidenceClaim {
+                $ownedClaim = $this->ownership->effectiveClaimForIntent(
+                    (int) $intent->getKey(),
+                    lock: true,
+                );
                 $transactionHash = hash('sha256', implode('|', [
                     $observation->provider_code,
                     $observation->provider_transaction_id,
@@ -30,11 +39,16 @@ final readonly class ClaimFundingEvidence
                     ->first();
 
                 if ($existing instanceof FundingEvidenceClaim) {
-                    if ((int) $existing->funding_intent_id !== (int) $intent->getKey()) {
+                    if ($this->ownership->effectiveIntentId($existing, lock: true)
+                        !== (int) $intent->getKey()) {
                         throw FundingEvidenceAlreadyClaimed::forAnotherIntent();
                     }
 
                     return $existing;
+                }
+
+                if ($ownedClaim instanceof FundingEvidenceClaim) {
+                    throw FundingEvidenceAlreadyClaimed::forAnotherIntent();
                 }
 
                 return FundingEvidenceClaim::query()->create([
@@ -54,9 +68,12 @@ final readonly class ClaimFundingEvidence
                 ])))
                 ->first();
 
-            if ($existing instanceof FundingEvidenceClaim
-                && (int) $existing->funding_intent_id !== (int) $intent->getKey()) {
-                throw FundingEvidenceAlreadyClaimed::forAnotherIntent();
+            if ($existing instanceof FundingEvidenceClaim) {
+                if ($this->ownership->effectiveIntentId($existing) !== (int) $intent->getKey()) {
+                    throw FundingEvidenceAlreadyClaimed::forAnotherIntent();
+                }
+
+                return $existing;
             }
 
             throw $exception;

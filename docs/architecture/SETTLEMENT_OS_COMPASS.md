@@ -4863,3 +4863,25 @@ observation window.
   both suspense cases remain open, settlements remain zero, and neither order
   has a voucher or Treasury hold. Gate 4A performed no reconciliation or
   further payment.
+
+## 2026-10-07 Update — Gate 4B Append-Only Evidence Disposition
+
+- Gate 4B is explicitly authorized for the exact pre-repair NetBank evidence:
+  claim 11, observation 2847983, source intent 32, replacement intent 34, and
+  suspense cases 1 and 2.
+- The original Funding Evidence Claim remains immutable. A new immutable
+  supersession records the original owner, effective owner, observation,
+  source and target cases, maker-checker request, approver, reason, and time.
+- Claim exclusivity now resolves effective ownership through that append-only
+  record and still prevents one intent or provider transaction from acquiring
+  a second effective claim.
+- Correction fails closed unless both issuance orders are terminal, the source
+  amount mismatches, the target amount matches exactly, expected suspense
+  reasons remain open, Account/provider/currency identity matches, and no
+  settlement, voucher, or Treasury hold exists.
+- The live-shaped test proves that reconciliation settles the exact replacement
+  intent and applies the established expired-order policy: PHP 40.01 moves to
+  Client Funds, while no Pay Code, order revival, Treasury hold, or issuance job
+  is created. Replay and supersession immutability are covered.
+- Immutable publication, host adoption, deployment, exact-record preflight,
+  and bounded live application remain ordered gates within Gate 4B.
