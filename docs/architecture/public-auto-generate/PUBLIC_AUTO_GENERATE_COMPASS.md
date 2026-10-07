@@ -13,6 +13,15 @@ wallet, or Client Funds.
 
 Status: **Gate 8 rollback proof complete; testing-instance payment pending separate authorization.**
 
+The operative testing-instance sequence is now tracked in the
+[Testing-Instance Acceptance Plan](TESTING_INSTANCE_ACCEPTANCE_PLAN.md) and
+[Testing-Instance Acceptance Compass](TESTING_INSTANCE_ACCEPTANCE_COMPASS.md).
+As verified on 2026-10-07, the deployed testing environment is blocked at Gate
+0 by a stale installation manifest and must also prove HTTPS external URL
+generation before a payable order is created. Focused verification also found
+rollback-runner dependency drift, which must be repaired and pass before the
+testing-instance lifecycle proof.
+
 The required financial engine is already proven:
 
 - authoritative Quick Generate compilation and pricing;
@@ -147,6 +156,10 @@ Stop rather than improvise if:
 ## Companion documents
 
 - Plan: `docs/architecture/public-auto-generate/PUBLIC_AUTO_GENERATE_PLAN.md`
+- Testing-instance acceptance plan:
+  `docs/architecture/public-auto-generate/TESTING_INSTANCE_ACCEPTANCE_PLAN.md`
+- Testing-instance acceptance compass:
+  `docs/architecture/public-auto-generate/TESTING_INSTANCE_ACCEPTANCE_COMPASS.md`
 - On-Demand Issuance plan:
   `docs/architecture/on-demand-issuance-funding/ON_DEMAND_ISSUANCE_FUNDING_PLAN.md`
 - On-Demand Issuance compass:

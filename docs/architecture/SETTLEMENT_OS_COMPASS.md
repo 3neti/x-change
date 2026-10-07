@@ -33,6 +33,40 @@ Campaign / Program Scale
 
 This Compass is the program-level memory. Future workstream compasses should be summarized here when a slice begins, completes, reveals a significant risk, or changes a package boundary.
 
+## Public On-Demand Issuance testing-instance acceptance track
+
+Updated 2026-10-07. The next Pay Code generation exercise is explicitly based
+on the public On-Demand Issuance workflow at
+`https://x-change-testing-testing-uw1gvj.laravel.cloud/x/auto-generate`, not on
+scheduled Standing Funding synchronization. The public surface server-binds
+the Commercial Principal, forces `full_amount`, and issues only after
+authoritative settlement through the existing `GeneratePayCode` authority.
+
+The exercise is planned but blocked at readiness Gate 0. The testing host is on
+x-change `v1.0.104`, has public Auto-Generate, On-Demand Issuance, and
+fixed-amount QR Ph configured, and keeps scheduled Standing Funding disabled.
+However, its commissioning state is `installation_incomplete` because the
+installation manifest is stale. Public discovery returns HTTP 503 and the
+editor redirects to commissioning. The observed redirect also used an HTTP
+scheme behind Laravel Cloud, so HTTPS URL generation is a mandatory preflight
+before order creation.
+
+Focused package verification passed the public discovery/page coverage but
+exposed rollback-runner drift: the runner does not yet supply the Standing
+Funding admission dependency added to webhook verification, and its Cockpit
+test currently redirects through commissioning. The rollback proof must be
+repaired, tested, released, and adopted before any payable-order gate.
+
+The gated sequence is: commissioning and HTTPS recovery; read-only discovery,
+estimate, and handoff; rollback-only browser proof; separately authorized
+payable-order creation; separately authorized exact payment; evidence;
+idempotent retry; and closeout. Claim and redemption are outside this exercise.
+
+The operative documents are the
+[Public On-Demand Issuance Testing-Instance Acceptance Plan](public-auto-generate/TESTING_INSTANCE_ACCEPTANCE_PLAN.md)
+and
+[Public On-Demand Issuance Testing-Instance Acceptance Compass](public-auto-generate/TESTING_INSTANCE_ACCEPTANCE_COMPASS.md).
+
 ## Standing Funding runtime isolation and recovery track
 
 Updated 2026-10-07. A transient `/x/cockpit/pay-codes` 500 in the
@@ -172,8 +206,8 @@ historical `expired` label alone is not recovery-entitlement evidence.
 
 ## Current Position
 
-Current wave: Standing Funding Runtime Isolation and Controlled Recommissioning
-Current status: Standing Funding Slices 1–10 and binding validation complete on `v1.0.104`; canary and bounded fleet observation complete; legacy address 4 quarantined; runtime disabled at generation 7
+Current wave: Public On-Demand Issuance Testing-Instance Acceptance
+Current status: Planned; blocked by stale commissioning manifest, HTTPS URL-integrity proof, and rollback-runner drift
 Last updated: 2026-10-07
 
 | Wave | Workstream | Role | Status | Compass |
@@ -187,6 +221,7 @@ Last updated: 2026-10-07
 | 6 | Onboarding Vouchers | Recipient account invitation and provisioning | Slice 3 complete; Slice 4 in progress | [onboarding-vouchers/ONBOARDING_VOUCHER_COMPASS.md](onboarding-vouchers/ONBOARDING_VOUCHER_COMPASS.md) |
 | 7 | Governed Provisioning | Vacant commissioning seats, exact-capability authority offers, delivery, activation/revocation/supersession, production API mandates, and Treasury-safe Account Grants | Controlled Cockpit lifecycle implemented; authority remains separate from cash and provider execution | [PROVISIONING_AND_ACCOUNT_GRANTS.md](PROVISIONING_AND_ACCOUNT_GRANTS.md) |
 | 8 | Standing Funding Runtime | Recovery-safe provider synchronization control plane | Canary and bounded fleet gate complete; legacy address 4 quarantined; disabled at generation 7 | [STANDING_FUNDING_RUNTIME_COMPASS.md](STANDING_FUNDING_RUNTIME_COMPASS.md) |
+| 9 | Public On-Demand Issuance Acceptance | Testing-instance Pay Code order, exact funding, exactly-once issuance, and no-op retry proof | Planned; readiness and rollback-runner repair required before order creation | [public-auto-generate/TESTING_INSTANCE_ACCEPTANCE_COMPASS.md](public-auto-generate/TESTING_INSTANCE_ACCEPTANCE_COMPASS.md) |
 
 ## Package Map
 
