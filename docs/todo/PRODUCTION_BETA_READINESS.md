@@ -23,6 +23,14 @@ legal, financial, security, or operational control.
 The balance report must state that it is evidence only and does not authorize a
 credit, transfer, settlement, or recreation of an Account or Pay Code.
 
+## Scoped public Auto-Generate beta
+
+The public Auto-Generate lifecycle has separate, more specific admission,
+abuse-control, residual-liability, queue, observability, and promotion gates.
+Its invite-controlled beta decision and open work are tracked in
+[Public Auto-Generate Invite-Controlled Beta](PUBLIC_AUTO_GENERATE_INVITE_BETA.md).
+That scoped checklist does not relax any shared-host gate in this document.
+
 ## Gate 1 — Read-only balance report
 
 **Owner:** X-Change package maintainer

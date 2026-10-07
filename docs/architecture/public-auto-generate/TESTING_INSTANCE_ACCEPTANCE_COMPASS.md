@@ -153,8 +153,8 @@ Code.
 | 2 | Repair and run authenticated rollback-only lifecycle proof; prove queue posture | Complete: immutable repair adopted; authenticated run fully rolled back with unchanged baseline |
 | 3 | One bounded PHP 25 payable order | Complete: historical order later expired; it has no Pay Code or retained issuance hold |
 | 4 | First real-payment attempt and incident disposition | Complete through Gate 4A isolation repair and Gate 4B append-only correction; expired payment credited to Client Funds without issuance |
-| 5 | Fresh exact-payment issuance acceptance | Partial: exactly-once settlement, hold/consume, and issuance passed; Client Funds residual invariant failed; replay not run |
-| 5A | Amount-lease residual containment hardening | Implementation test-green; publication, deployment, and live acceptance pending |
+| 5 | Fresh exact-payment issuance acceptance | Complete through the Gate 5A repair: the initial residual defect was contained and the repaired lifecycle was accepted live |
+| 5A | Amount-lease residual containment hardening | Complete: immutable repair published and deployed; live issuance left zero new Client Funds residual and replay was mutation-free |
 | 6 | Claim and redemption | Separately gated; not authorized by Gate 5 |
 | 7 | Persistent Horizon commissioning | Separately gated; not authorized by Gate 5 |
 
@@ -203,6 +203,11 @@ disposed without weakening the now-proven settlement and issuance isolation.
 No new order, payment, claim, redemption, payout, persistent Horizon process,
 scheduled Standing Funding run, or quarantine change is implied.
 
+The accepted path is now a candidate for an invite-controlled, low-value beta,
+not unrestricted anonymous launch. The beta's required entry controls,
+remaining risks, mitigations, stop triggers, and promotion criteria are tracked
+in [`docs/todo/PUBLIC_AUTO_GENERATE_INVITE_BETA.md`](../../todo/PUBLIC_AUTO_GENERATE_INVITE_BETA.md).
+
 ## Companion documents
 
 - [Testing-Instance Acceptance Plan](TESTING_INSTANCE_ACCEPTANCE_PLAN.md)
@@ -212,6 +217,7 @@ scheduled Standing Funding run, or quarantine change is implied.
 - [On-Demand Issuance Funding Compass](../on-demand-issuance-funding/ON_DEMAND_ISSUANCE_FUNDING_COMPASS.md)
 - [Queue Topology and Horizon Commissioning Plan](../QUEUE_TOPOLOGY_AND_HORIZON_PLAN.md)
 - [Queue Operations Compass](../QUEUE_OPERATIONS_COMPASS.md)
+- [Invite-Controlled Beta TODO](../../todo/PUBLIC_AUTO_GENERATE_INVITE_BETA.md)
 
 Future agents must update this compass after every completed or blocked gate.
 

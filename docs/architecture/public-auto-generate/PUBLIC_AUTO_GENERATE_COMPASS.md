@@ -129,12 +129,35 @@ Disposition**. It must decide release, refund, fee recognition, or another
 audited disposition for contained residual holds. It is not authorized by
 Gate 5A and must not create another order or payment by default.
 
+## Invite-controlled beta decision
+
+The accepted lifecycle is suitable for an invite-controlled, low-value beta,
+but not for unrestricted anonymous public launch. This is a product-readiness
+decision, not authorization to commission the beta automatically.
+
+Before the first invited payable order, the host must enforce server-side
+invitation authority, monetary and volume ceilings, an abuse challenge,
+operator-owned queue and incident monitoring, an exact-release failure and
+recovery/load acceptance, and the applicable commercial and regulatory
+approvals.
+Gate 5A's contained residual may be tolerated only under a hard aggregate and
+age ceiling with daily reconciliation. Gate 5B remains required before open
+public promotion.
+
+The authoritative risk register, entry checklist, stop triggers, mitigations,
+and promotion criteria are maintained in
+[`docs/todo/PUBLIC_AUTO_GENERATE_INVITE_BETA.md`](../../todo/PUBLIC_AUTO_GENERATE_INVITE_BETA.md).
+
 ## Following gates
 
-1. Define and test the final disposition policy for contained amount-lease
+1. Complete the invite-beta entry checklist and enforce invitations before
+   payable-order creation.
+2. Define and test the final disposition policy for contained amount-lease
    residuals.
-2. Make the public issuance policy commissionable.
-3. Add Turnstile as a later security adapter.
+3. Make the bounded public issuance policy commissionable.
+4. Add Turnstile or an equivalent order-creation abuse-control adapter.
+5. Prove queue recovery, bounded load, operational monitoring, and commercial
+   authority before audience expansion.
 
 ## Deferred TODO
 
@@ -168,6 +191,8 @@ Stop rather than improvise if:
   `docs/architecture/public-auto-generate/TESTING_INSTANCE_ACCEPTANCE_PLAN.md`
 - Testing-instance acceptance compass:
   `docs/architecture/public-auto-generate/TESTING_INSTANCE_ACCEPTANCE_COMPASS.md`
+- Invite-controlled beta TODO:
+  `docs/todo/PUBLIC_AUTO_GENERATE_INVITE_BETA.md`
 - On-Demand Issuance plan:
   `docs/architecture/on-demand-issuance-funding/ON_DEMAND_ISSUANCE_FUNDING_PLAN.md`
 - On-Demand Issuance compass:
