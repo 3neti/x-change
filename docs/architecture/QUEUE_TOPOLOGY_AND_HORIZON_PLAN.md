@@ -352,6 +352,53 @@ guard, so authenticated browser acceptance remains part of a later Horizon
 commissioning gate. No Redis queue migration, Horizon process, canary dispatch,
 or financial operation occurred.
 
+**Database-queue characterization checkpoint (2026-10-07):** two read-only
+Cloud snapshots taken at `05:07:19Z` and `05:13:27Z` both reported zero rows in
+`jobs` and `failed_jobs`. The snapshots span more than six executions of the
+minute scheduler. The only worker remains a single database process watching
+`x-change-funding,x-change-feedback,default`; its 60-second timeout remains
+below the database connection's 90-second `retry_after`.
+
+The five discovered queues are not all covered by that worker. `campaigns`,
+`partner-payments`, and `x-change-issuance` are currently unconsumed on the
+database connection. Partner payment events and Campaign NetBank dispatch are
+disabled, their related durable sources contain no pending work, and they do
+not currently create backlog. On-demand issuance is enabled and explicitly
+targets `x-change-issuance`. Its existing orders are all issued, expired, or
+cancelled, but a future settled funding order could enqueue issuance work that
+the current database worker would not consume. That is a pre-existing
+operational gap and a stop condition for canary commissioning until it is
+corrected or the producer is explicitly fenced.
+
+The drain procedure for the next separately authorized gates is:
+
+1. Keep Horizon disabled, Redis queues empty, scheduled Standing Funding
+   disabled, and the existing database worker running.
+2. In a bounded quiet window, prohibit Campaign queue dispatch and manual
+   queue retry/forget/flush operations.
+3. Correct the database worker to include `x-change-issuance`, or explicitly
+   disable on-demand issuance for the duration. Updating the worker is the
+   preferred resolution because the endpoint is already enabled.
+4. Take a pre-window database snapshot by queue and state: ready, delayed,
+   reserved, attempts, oldest creation time, and failed count.
+5. If any row exists, identify its safe job display name and durable source,
+   stop that producer, and let only the original database worker consume it.
+   Do not copy database rows into Redis and do not bulk retry or delete failed
+   work.
+6. Require `jobs=0`, `failed_jobs=0`, and no reserved rows in two observations
+   separated by at least two scheduler cycles. Recheck durable producers and
+   all Redis queue depths at the second observation.
+7. Leave the database worker active during the later canary. Authorize only
+   the `campaigns` planning lane in Horizon and dispatch only the host-owned
+   synthetic canary explicitly through the Redis connection.
+8. After the canary, terminate Horizon and prove both Redis and database queues
+   are empty. Package workload migration remains a later gate.
+
+Stop if an unknown job class, an unaccounted producer, a reserved job, a failed
+job, a non-zero Redis queue, or new `x-change-issuance` work appears. This gate
+performed no dispatch, retry, deletion, process change, queue migration,
+provider call, or financial operation.
+
 ### Gate 5 — Drain and non-financial canary
 
 1. Stop new dispatch to the selected canary lane.

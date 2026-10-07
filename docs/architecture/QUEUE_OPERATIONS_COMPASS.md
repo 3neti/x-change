@@ -277,6 +277,42 @@ Tested host release deployment was verified on 2026-10-07:
   deployed Horizon guard itself was therefore verified inside the application
   runtime rather than inferred from that public redirect.
 
+Database-queue characterization and drain planning was verified on 2026-10-07:
+
+- read-only Cloud probes `cexe-a2ec1be0-01f6-4d8c-9489-7fcce8472322`
+  and `cexe-a2ec1e12-c5ca-43e1-a6b4-e7e1c22948a6`, taken more than six
+  scheduler cycles apart, both found zero database jobs and zero failed jobs;
+- the sole worker is still one database process for
+  `x-change-funding,x-change-feedback,default`, with a 60-second worker
+  timeout against a 90-second database `retry_after`;
+- deployed package manifests declare five queues, so `campaigns`,
+  `partner-payments`, and `x-change-issuance` are not consumed by the current
+  database worker;
+- partner payment events and Campaign NetBank dispatch are disabled, both
+  related durable sources are empty, and no current backlog exists for those
+  lanes;
+- on-demand issuance is enabled and targets `x-change-issuance`. No issuance
+  funding order is currently in an open state, but the worker omission is a
+  pre-existing coverage gap that must be corrected or the producer must be
+  fenced before a Cloud Horizon canary;
+- redemption feedback remains enabled on the covered `x-change-feedback`
+  queue, while scheduled Standing Funding remains disabled;
+- all current Funding Intents and Payment Attempts are settled, expired, or
+  still `pending_instructions`, so the enabled minute schedules had no
+  eligible records to enqueue during the observation window;
+- Campaign batch, partner commission, Standing Funding runtime, and pending
+  slice-journal outboxes contain no pending work; and
+- no job was dispatched, retried, deleted, migrated, or drained during this
+  characterization gate.
+
+The approved drain plan is fail-closed: first correct the database worker's
+`x-change-issuance` coverage in a separate infrastructure gate, then repeat two
+zero-backlog snapshots around a bounded quiet window. Existing database work
+must drain through its original worker and may not be copied into Redis. The
+later non-financial canary may authorize only `campaigns`, must dispatch only
+the host-owned synthetic job explicitly to Redis, and must leave every package
+producer on its existing database connection.
+
 ## Stop conditions
 
 - Redis or Horizon would become financial truth.

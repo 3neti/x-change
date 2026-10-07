@@ -4552,3 +4552,21 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Scheduled Standing Funding synchronization remains disabled.
 - The next separately authorized gate remains database-queue characterization
   and drain planning before any Cloud Horizon canary.
+
+## 2026-10-07 Update — Database Queue Characterization and Drain Plan
+
+- Two read-only Laravel Cloud snapshots, more than six minute-scheduler cycles
+  apart, found zero queued jobs and zero failed jobs.
+- The existing database worker covers `x-change-funding`,
+  `x-change-feedback`, and `default` only.
+- On-demand issuance is enabled and targets the currently unconsumed
+  `x-change-issuance` database queue. There is no present backlog, but worker
+  coverage must be corrected or the producer must be fenced before Horizon is
+  commissioned.
+- Existing database jobs, if any appear, must drain through their original
+  database worker. They must not be copied to Redis, bulk retried, or deleted.
+- The later Cloud canary remains synthetic and non-financial: only `campaigns`
+  may be authorized, the canary must explicitly select Redis, and all package
+  producers remain on their current database connection.
+- No queue, worker, schedule, provider, or financial state changed in this
+  characterization gate.
