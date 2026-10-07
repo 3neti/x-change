@@ -330,3 +330,22 @@ The exercise passes only when all of the following are true:
 - Pay Code claim, redemption, or payout;
 - a second live payment; and
 - production deployment or commissioning.
+
+## Gate 4A — Expired Intent Evidence Isolation Hardening
+
+1. Reproduce an expired mismatched intent observing replacement-order evidence
+   before the exact replacement intent.
+2. Require mismatch eligibility evaluation before immutable evidence claim.
+3. Prove the expired mismatched intent creates no claim.
+4. Prove the exact replacement intent becomes the sole claimant.
+5. Preserve exact expired-payment disposition and exact duplicate rejection.
+6. Publish and adopt one immutable x-change patch.
+7. Deploy with Horizon, Redis financial lanes, and scheduled Standing Funding
+   unchanged.
+8. Verify the exact package release and safety fences read-only.
+9. Stop before live claim reassignment, reconciliation, settlement, issuance,
+   another order, or another payment.
+
+Gate 4A repairs future evidence isolation. It does not retroactively mutate the
+existing immutable claim or authorize resolution of the two live suspense
+cases. That disposition is a separately approved Gate 4B.

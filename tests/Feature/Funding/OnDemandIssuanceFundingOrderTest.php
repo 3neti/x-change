@@ -802,7 +802,7 @@ it('routes authoritative amount mismatches to explicit review states', function 
         ->and($order->refresh()->status)->toBe($expectedOrderStatus)
         ->and($order->events()->where('event_type', $expectedOrderEvent)->exists())->toBeTrue()
         ->and($order->voucher_id)->toBeNull()
-        ->and(FundingEvidenceClaim::query()->count())->toBe(1);
+        ->and(FundingEvidenceClaim::query()->count())->toBe(0);
 })->with([
     'underpayment' => [
         6_000,
@@ -817,6 +817,68 @@ it('routes authoritative amount mismatches to explicit review states', function 
         'payment_excess_requires_review',
     ],
 ]);
+
+it('does not let an expired mismatched intent claim evidence for an exact replacement intent', function (): void {
+    $user = actingAsTestUser(0);
+    $expiredOrder = issuanceFundingOrder($user, 'expired-mismatched-intent');
+    $replacementOrder = issuanceFundingOrder($user, 'exact-replacement-intent');
+
+    $expiredOrder->forceFill([
+        'expected_payment_minor' => 4_000,
+        'status' => PayCodeIssuanceFundingOrderStatus::Expired,
+        'expired_at' => now(),
+    ])->saveQuietly();
+    $replacementOrder->forceFill([
+        'expected_payment_minor' => 4_001,
+    ])->saveQuietly();
+
+    $expiredIntent = fundingIntentAwaitingOnDemandBankTransfer();
+    $replacementIntent = fundingIntentAwaitingOnDemandBankTransfer();
+    $expiredIntent->forceFill(['expected_amount_minor' => 4_000])->saveQuietly();
+    $replacementIntent->forceFill(['expected_amount_minor' => 4_001])->saveQuietly();
+    $expiredOrder->forceFill(['funding_intent_id' => $expiredIntent->getKey()])->saveQuietly();
+    $replacementOrder->forceFill(['funding_intent_id' => $replacementIntent->getKey()])->saveQuietly();
+
+    $adapter = new FakeFundingProviderAdapter;
+    $adapter->fundingVerificationResolver = static fn (): ProviderFundingObservationData => new ProviderFundingObservationData(
+        provider: 'netbank',
+        providerTransactionId: 'REPLACEMENT-EXACT-TX-1',
+        grossAmountMinor: 4_001,
+        feeAmountMinor: 0,
+        netAmountMinor: 4_001,
+        currency: 'PHP',
+        providerStatus: 'settled',
+        verificationSource: 'expired-intent-isolation-test',
+        payloadHash: hash('sha256', 'replacement-exact-payload'),
+        fundingAddress: 'sha256:'.hash('sha256', '113001000019'),
+        providerAccountReference: 'sha256:'.hash('sha256', '113001000019'),
+        occurredAt: now()->subMinute()->toDateTimeImmutable(),
+        settledAt: now()->toDateTimeImmutable(),
+        metadata: ['destination_verified' => true],
+    );
+    $this->app->instance(FakeFundingProviderAdapter::class, $adapter);
+    $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
+    $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
+    $verification = new FundingIntentVerificationData(
+        trigger: FundingVerificationTrigger::Operator,
+        actorId: 'operator-1',
+    );
+
+    $expiredResult = app(VerifyFundingIntent::class)->handle($expiredIntent, $verification);
+
+    expect($expiredResult->status)->toBe(FundingIntentStatus::Suspense)
+        ->and(FundingEvidenceClaim::query()->count())->toBe(0);
+
+    $replacementResult = app(VerifyFundingIntent::class)->handle($replacementIntent, $verification);
+
+    expect($replacementResult->status)->toBe(FundingIntentStatus::Verified)
+        ->and(FundingEvidenceClaim::query()->count())->toBe(1)
+        ->and(FundingEvidenceClaim::query()->sole()->funding_intent_id)
+        ->toBe($replacementIntent->getKey())
+        ->and($replacementOrder->refresh()->status)
+        ->toBe(PayCodeIssuanceFundingOrderStatus::AwaitingPayment)
+        ->and($replacementOrder->voucher_id)->toBeNull();
+});
 
 it('rejects one provider transaction from funding two issuance orders', function (): void {
     $user = actingAsTestUser(0);

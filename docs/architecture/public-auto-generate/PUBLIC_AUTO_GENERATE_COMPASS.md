@@ -171,3 +171,18 @@ Stop rather than improvise if:
   `docs/architecture/on-demand-issuance-funding/ON_DEMAND_ISSUANCE_FUNDING_COMPASS.md`
 
 Future agents must update this compass after every completed or blocked gate.
+
+## 2026-10-07 Update — Replacement Evidence Isolation
+
+- A live acceptance payment revealed that evidence was claimed before exact
+  intent matching.
+- The old expired PHP 40.00 intent could therefore claim the replacement PHP
+  40.01 observation and force the exact replacement intent into duplicate
+  evidence suspense.
+- Verification now classifies mismatched evidence before the immutable claim
+  boundary. Only an exact eligible intent may attempt the exclusive claim.
+- Underpayment, excess-payment, provider mismatch, duplicate evidence, and
+  exact late-payment semantics remain fail-closed and covered by tests.
+- Existing live suspense and evidence records are deliberately unchanged.
+  Reconciliation, claim reassignment, settlement, issuance, and any further
+  payment remain separate authority gates.

@@ -142,28 +142,6 @@ class VerifyFundingIntent
             $this->matchPayerIdentity->handle($intent, $observationData),
         );
 
-        if ($intent->purpose === FundingIntentPurpose::OnDemandIssuance
-            && $observation->provider_status === 'settled') {
-            try {
-                $this->claimEvidence->handle($intent, $observation);
-            } catch (FundingEvidenceAlreadyClaimed) {
-                $classification = $this->classifyOnDemandMismatch->handle(
-                    intent: $intent,
-                    observation: $observation,
-                    duplicateEvidence: true,
-                );
-
-                return $this->moveToSuspense(
-                    intent: $intent,
-                    verification: $verification,
-                    reasonCode: $classification->reasonCode,
-                    receipt: $receipt,
-                    observation: $observation,
-                    details: $classification->details,
-                );
-            }
-        }
-
         $targetStatus = $this->targetStatus($intent, $observation);
 
         if ($targetStatus === FundingIntentStatus::Suspense) {
@@ -194,6 +172,28 @@ class VerifyFundingIntent
                     'destination_verified' => data_get($observation->metadata, 'destination_verified') === true,
                 ],
             );
+        }
+
+        if ($intent->purpose === FundingIntentPurpose::OnDemandIssuance
+            && $observation->provider_status === 'settled') {
+            try {
+                $this->claimEvidence->handle($intent, $observation);
+            } catch (FundingEvidenceAlreadyClaimed) {
+                $classification = $this->classifyOnDemandMismatch->handle(
+                    intent: $intent,
+                    observation: $observation,
+                    duplicateEvidence: true,
+                );
+
+                return $this->moveToSuspense(
+                    intent: $intent,
+                    verification: $verification,
+                    reasonCode: $classification->reasonCode,
+                    receipt: $receipt,
+                    observation: $observation,
+                    details: $classification->details,
+                );
+            }
         }
 
         return $this->transition->handle($intent, $this->transitionData(

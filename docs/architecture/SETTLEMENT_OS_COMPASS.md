@@ -4833,3 +4833,21 @@ creation and Gate 4 real payment remain independently unauthorized.
 Gate 3 is closed. Gate 4 real payment remains a new decision that must name the
 PHP 40.00 ceiling, Bank Transfer or fixed-amount QR Ph, the payer, and a bounded
 observation window.
+
+## 2026-10-07 Update — Gate 4A Evidence Isolation Repair
+
+- The real-payment acceptance run exposed an ordering defect: On-Demand
+  Issuance verification claimed settled provider evidence before verifying its
+  amount, currency, destination, settlement timestamp, and required payer
+  identity against the intent.
+- An expired PHP 40.00 intent could consequently own a replacement order's
+  exact PHP 40.01 observation before the replacement intent was inspected.
+- Verification now classifies mismatched evidence before the immutable claim
+  boundary. Review and suspense facts are retained, but mismatched intents do
+  not consume the provider transaction claim.
+- Regression coverage proves expired-mismatch-first and exact-replacement-next
+  ordering, zero claim for the mismatch, exclusive claim for the replacement,
+  and preservation of existing duplicate and exact late-payment behavior.
+- This is code hardening only. The existing live claim and both suspense cases
+  remain untouched. Live reconciliation, settlement, issuance, another order,
+  or another payment requires a separately authorized gate.

@@ -211,3 +211,32 @@ scheduled Standing Funding, claim, and redemption remain outside that gate.
 - [Queue Operations Compass](../QUEUE_OPERATIONS_COMPASS.md)
 
 Future agents must update this compass after every completed or blocked gate.
+
+## 2026-10-07 Gate 4A — Expired Intent Evidence Isolation Hardening
+
+The first live payment exercise exposed an evidence-isolation defect without
+creating a Pay Code, Treasury hold, settlement, wallet credit, queued job, or
+other platform financial effect. An expired PHP 40.00 intent inspected the
+replacement order's exact PHP 40.01 NetBank observation before the replacement
+intent and created the immutable evidence claim even though its amount did not
+match. Both intents and the replacement order therefore remained fail-closed
+in suspense/review.
+
+The package repair now evaluates provider status, amount, currency,
+destination, settlement timestamp, and required payer identity before an
+On-Demand Issuance intent may claim evidence. Mismatched or indeterminate
+evidence can still create review/suspense facts, but cannot monopolize the
+provider transaction. An exact replacement intent continues through the
+existing immutable exclusive-claim guard. Existing exact late-payment and
+same-transaction duplicate protections remain covered.
+
+The regression reproduces the production ordering: expired PHP 40.00 intent
+first, exact PHP 40.01 replacement intent second. It proves the first intent
+creates no claim and the replacement becomes the sole claimant. The existing
+amount-mismatch expectations now explicitly require zero evidence claims.
+
+Live order, intent, evidence-claim, and suspense records remain untouched.
+Gate 4A authorizes repair, immutable release, adoption, deployment, and
+read-only verification only. Reassigning claim 11, reconciling either suspense
+case, settling funds, issuing a Pay Code, creating another order, or accepting
+another payment remains prohibited and requires a later gate.
