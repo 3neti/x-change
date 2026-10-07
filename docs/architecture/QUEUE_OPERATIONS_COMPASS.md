@@ -428,6 +428,50 @@ Zero-backlog database-worker replacement was verified on 2026-10-07:
   scheduled Standing Funding remained disabled, and no job, retry, provider
   call, voucher issuance, or financial operation occurred.
 
+The bounded synthetic `campaigns` Horizon canary completed and recovered on
+2026-10-07:
+
+- preflight probe `cexe-a2ec3a53-4d46-4114-8561-5e853575f4cb` found zero
+  database jobs, zero failed jobs, and zero ready, delayed, or reserved work
+  on every declared Redis queue;
+- temporary process `process-a2ec3aa8-e36d-4942-a75d-9b311f903a50` authorized
+  only `campaigns` and selected Redis only inside its Horizon command;
+- materialization deployment `depl-a2ec3adb-7337-49a7-84a9-8499a40a066e`
+  succeeded on exact tested host commit
+  `4c8d3a696fdbfb9de0f943b8b8d045fcb25995be`;
+- live command inspection `comm-a2ec3bbb-985d-4111-a258-086251623548`
+  proved the database worker retained
+  `x-change-funding,x-change-issuance,x-change-feedback,default`, while the
+  sole Horizon supervisor used Redis, one process, one try, and only the
+  `campaigns` queue;
+- Horizon reported active through
+  `comm-a2ec3bdd-efdd-4fd8-b808-3dfadc0e076d`, and the immediate pre-dispatch
+  fence `cexe-a2ec3c04-ca47-44b9-9c1a-fd298c4ddea3` remained empty;
+- command `comm-a2ec3c3d-f09a-4fab-8758-8e05506e12a3` dispatched exactly one
+  host-owned synthetic, non-financial canary. Canary
+  `01M4AHA89J0JD449DFGJXHE7XR` completed on `campaigns` and wrote its bounded
+  completion marker;
+- post-canary probe `cexe-a2ec3c65-d9bb-474d-b209-d49d59491ff8` found zero
+  database jobs, zero failed jobs, and zero Redis queue residue;
+- the temporary process was deleted, Horizon was gracefully terminated by
+  `comm-a2ec3cca-808d-4bf4-868a-17db92eca9be`, and cleanup deployment
+  `depl-a2ec3cec-c21f-41b4-b920-419aabd8f83b` succeeded on the same exact
+  host commit;
+- final live inspection `comm-a2ec3d9c-311d-43ed-ac06-6e958601b747` showed
+  only the full-coverage database worker, while
+  `comm-a2ec3dc9-2688-4d16-b3da-c659969f14f0` confirmed Horizon inactive;
+  and
+- restored topology inspection `comm-a2ec3ded-675e-4a13-92b4-f98a7c368919`
+  remained ready with database queue/cache defaults, no Horizon authorization,
+  and uncommissioned financial lanes. Final probe
+  `cexe-a2ec3e17-178f-41fd-862c-bff155a1179d` found every database and Redis
+  queue empty.
+
+No package producer was migrated, no persistent queue default changed, and no
+provider call, voucher issuance, Standing Funding schedule, or financial
+operation occurred. This proves the temporary campaigns-only Horizon
+commissioning, one-job consumption, and deployment-backed recovery procedure.
+
 ## Stop conditions
 
 - Redis or Horizon would become financial truth.

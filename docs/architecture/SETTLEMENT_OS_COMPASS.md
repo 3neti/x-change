@@ -4637,3 +4637,29 @@ Workstream compasses remain the source of detailed slice history. This Compass s
   financial operation occurred.
 - The bounded synthetic `campaigns` Horizon canary is unblocked but remains a
   separate authorization and must include deployment-backed cleanup.
+
+## 2026-10-07 Update — Campaigns-Only Horizon Canary Complete
+
+- Preflight and immediate pre-dispatch probes found zero database jobs, zero
+  failed jobs, and every declared Redis queue empty.
+- Temporary process `process-a2ec3aa8-e36d-4942-a75d-9b311f903a50` was
+  materialized by deployment `depl-a2ec3adb-7337-49a7-84a9-8499a40a066e` on
+  exact tested host commit
+  `4c8d3a696fdbfb9de0f943b8b8d045fcb25995be`.
+- Live process inspection proved the database worker still consumed
+  `x-change-funding,x-change-issuance,x-change-feedback,default`, while Horizon
+  ran exactly one Redis worker authorized only for `campaigns`.
+- Synthetic non-financial canary `01M4AHA89J0JD449DFGJXHE7XR` completed once.
+  The post-run probe found no failed job or queue residue.
+- The temporary process was deleted, Horizon was gracefully terminated, and
+  cleanup deployment `depl-a2ec3cec-c21f-41b4-b920-419aabd8f83b`
+  materialized removal on the same exact commit.
+- Final runtime inspection showed only the full-coverage database worker;
+  Horizon reported inactive, queue topology remained fail-closed with no
+  authorized queues, and every database and Redis queue remained empty.
+- Database remains the queue and cache default. Scheduled Standing Funding
+  remains disabled. No package producer migration, provider call, voucher
+  issuance, or financial operation occurred.
+- The next Horizon work, if authorized, is operator observability and a
+  deliberately synthetic retry/failure characterization. Financial lane
+  commissioning remains a later, separate gate.

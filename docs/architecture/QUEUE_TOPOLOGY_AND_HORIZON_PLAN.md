@@ -497,6 +497,32 @@ authorized bounded synthetic Cloud Horizon canary may now resume from a fresh
 zero-backlog fence; it must still create and later remove its temporary process
 through explicit deployments.
 
+**Successful campaigns-only Horizon canary checkpoint (2026-10-07):
+complete.** Preflight and immediate pre-dispatch probes found database jobs,
+failed jobs, and all Redis queue states empty. Temporary process
+`process-a2ec3aa8-e36d-4942-a75d-9b311f903a50` was materialized by deployment
+`depl-a2ec3adb-7337-49a7-84a9-8499a40a066e` on exact tested host commit
+`4c8d3a696fdbfb9de0f943b8b8d045fcb25995be`.
+
+Live inspection proved that the database worker retained its complete queue
+list and that Horizon ran one Redis worker for only `campaigns`, with one try
+and one process. Synthetic non-financial canary
+`01M4AHA89J0JD449DFGJXHE7XR` completed once through command
+`comm-a2ec3c3d-f09a-4fab-8758-8e05506e12a3`. The immediate post-run probe
+found no database failure and no ready, delayed, or reserved Redis residue.
+
+The temporary process was then deleted and Horizon was gracefully terminated.
+Cleanup deployment `depl-a2ec3cec-c21f-41b4-b920-419aabd8f83b` materialized
+removal on the same commit. Final inspection showed only the full-coverage
+database worker, Horizon inactive, no authorized queues, database queue/cache
+defaults intact, scheduled Standing Funding disabled, and every database and
+Redis queue empty. No package producer was migrated and no provider or
+financial operation occurred.
+
+This checkpoint proves successful synthetic consumption and recovery. It does
+not yet prove the authenticated `/horizon` operator experience or a deliberate
+synthetic retry/failure path; those remain separately gated portions of Gate 5.
+
 ### Gate 5 — Drain and non-financial canary
 
 1. Stop new dispatch to the selected canary lane.
