@@ -1,6 +1,6 @@
 # Public On-Demand Issuance Testing-Instance Acceptance Compass
 
-**Last updated:** 2026-10-07
+**Last updated:** 2026-10-08
 
 ## North Star
 
@@ -11,11 +11,10 @@ run, or duplicate issuance.
 
 ## Current position
 
-**Status: Gates 0 through 3 complete. One bounded payable order is awaiting
-payment. Gate 4 real payment remains separately gated and is not authorized by
-this compass update.**
+**Status: Gates 0 through 4B complete. Gate 5 authorizes one fresh,
+exact-payment issuance acceptance under a PHP 40.99 ceiling.**
 
-The implementation is deployed on x-change `v1.0.108`, public Auto-Generate and
+The implementation is deployed on x-change `v1.0.110`, public Auto-Generate and
 On-Demand Issuance are configured, fixed-amount QR Ph is configured, and
 scheduled Standing Funding synchronization remains disabled. The public
 surface forces `full_amount` even though the host-wide authenticated policy is
@@ -151,11 +150,11 @@ Code.
 | 0 | Commissioning recovery and HTTPS URL integrity | Complete: operational, strict doctor 37/37, public surfaces HTTP 200, generated URLs HTTPS |
 | 1 | Read-only discovery, estimate, and handoff | Complete: authoritative PHP 25 estimate and HTTPS handoff were mutation-free |
 | 2 | Repair and run authenticated rollback-only lifecycle proof; prove queue posture | Complete: immutable repair adopted; authenticated run fully rolled back with unchanged baseline |
-| 3 | One bounded PHP 25 payable order | Complete: one PHP 40 full-amount order awaits payment with no Pay Code or financial effect |
-| 4 | One exact real payment | Separately gated; ceiling and rail not authorized |
-| 5 | Operator and beneficiary evidence | Pending issuance |
-| 6 | Idempotent retry and mutation-free rerun | Pending issuance |
-| 7 | Closeout and compass evidence | Pending |
+| 3 | One bounded PHP 25 payable order | Complete: historical order later expired; it has no Pay Code or retained issuance hold |
+| 4 | First real-payment attempt and incident disposition | Complete through Gate 4A isolation repair and Gate 4B append-only correction; expired payment credited to Client Funds without issuance |
+| 5 | Fresh exact-payment issuance acceptance | Authorized: one PHP 25 principal, Bank Transfer, total capped at PHP 40.99, minimum 60-minute lifetime |
+| 6 | Claim and redemption | Separately gated; not authorized by Gate 5 |
+| 7 | Persistent Horizon commissioning | Separately gated; not authorized by Gate 5 |
 
 ## Settled decisions
 
@@ -193,12 +192,19 @@ Code.
 
 ## Immediate next gate
 
-**Gate 4 — One exact real payment, only after separate explicit authorization.**
+**Gate 5 — Fresh Exact-Payment Issuance Acceptance.**
 
-Gate 3 authorizes no payment. Before Gate 4, the operator must independently
-name the PHP 40.00 ceiling, choose Bank Transfer or fixed-amount QR Ph, identify
-the payer, and approve a bounded observation window. Queue commissioning,
-scheduled Standing Funding, claim, and redemption remain outside that gate.
+The authorized exercise creates exactly one fresh public order for a PHP 25.00
+principal. Bank Transfer is the only authorized rail, the operator is the
+payer, the authoritative total must not exceed PHP 40.99, and the order and
+Funding Intent must remain active for at least 60 minutes. After the operator
+reports payment, observation is bounded to 30 minutes.
+
+Acceptance requires exactly one provider observation, one effective evidence
+claim, one settlement, one order-bound Treasury hold/consumption path, and one
+Pay Code. The same-order replay and immediate state rerun must be mutation-free.
+No claim, redemption, payout, second order, second payment, scheduled Standing
+Funding, or persistent Horizon process is authorized.
 
 ## Companion documents
 

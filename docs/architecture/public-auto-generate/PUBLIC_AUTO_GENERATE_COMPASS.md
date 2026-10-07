@@ -1,6 +1,6 @@
 # Public Auto-Generate Compass
 
-Last updated: 2026-10-07
+Last updated: 2026-10-08
 
 ## North Star
 
@@ -11,8 +11,8 @@ wallet, or Client Funds.
 
 ## Current position
 
-Status: **Testing-instance Gates 0, 1, and 2 complete. Payable-order creation
-and payment remain separately authorized.**
+Status: **Testing-instance Gates 0 through 4B complete. Gate 5 authorizes one
+fresh exact-payment issuance acceptance under the bounded contract below.**
 
 The operative testing-instance sequence is now tracked in the
 [Testing-Instance Acceptance Plan](TESTING_INSTANCE_ACCEPTANCE_PLAN.md) and
@@ -28,11 +28,11 @@ exactly one Pay Code and normal stamp/share output inside the transaction,
 reported zero provider calls and no persisted value, and left the complete
 live mutation baseline unchanged.
 
-Gate 3 then created exactly one bounded public payable order for a PHP 25.00
-principal under the PHP 40.00 authoritative-total ceiling. The order is
-`awaiting_payment` with `full_amount` funding and no voucher, Treasury hold,
-payment evidence, settlement, provider observation, wallet effect, queued job,
-or Standing Funding run. No real payment is authorized yet.
+Gate 3 created one bounded public payable order. The Gate 4 payment exercise
+later exposed the evidence-ordering defect repaired by Gate 4A. Gate 4B then
+resolved the pre-repair evidence append-only and credited its expired-order
+payment to Client Funds without issuance. Those historical orders are expired
+and no longer participate in the acceptance path.
 
 The required financial engine is already proven:
 
@@ -114,22 +114,28 @@ public_auto_generate:
 
 ## Immediate next gate
 
-**Testing-instance Gate 4 — One exact real payment, subject to new explicit
-authorization.**
+**Testing-instance Gate 5 — Fresh Exact-Payment Issuance Acceptance.**
 
-Gate 2 is complete. The rollback dependency repair is immutable in x-change
-`v1.0.108`; focused and adjacent suites passed 43 tests with 271 assertions;
-the authenticated Cloud runner proved same-order replay, exactly-once projected
-issuance, full rollback, zero provider calls, and no retained financial,
-wallet, queue, or Standing Funding state.
+Gate 5 is authorized for exactly one new public order with these bounds:
 
-Gate 3 is complete for order `01M4B6MS7DA7SMEF1WY76VYHVJ`. Do not make a real
-payment unless Gate 4 independently names the PHP 40.00 ceiling, payment rail,
-payer, and observation window.
+- PHP 25.00 principal;
+- Bank Transfer paid by the operator;
+- authoritative payable total no greater than PHP 40.99;
+- an order and Funding Intent lifetime of at least 60 minutes;
+- continuous observation for up to 30 minutes after payment is reported;
+- exactly one provider observation, effective evidence claim, settlement,
+  Treasury hold/consumption path, and Pay Code; and
+- immediate same-order replay with an identical financial and voucher state.
+
+Stop before order creation if the estimate exceeds the ceiling or the runtime
+cannot provide the minimum lifetime. Stop after presenting the exact transfer
+instruction until the operator reports payment. Claim, redemption, payout,
+persistent Horizon commissioning, scheduled Standing Funding, and any second
+order or payment remain separate gates.
 
 ## Following gates
 
-1. Perform separately authorized testing-instance acceptance.
+1. Complete the separately bounded Gate 5 testing-instance acceptance.
 2. Make the policy commissionable.
 3. Add Turnstile as a later security adapter.
 

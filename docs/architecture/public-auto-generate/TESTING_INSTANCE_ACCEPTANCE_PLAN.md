@@ -388,3 +388,34 @@ resolved cases 1 and 2, and left both orders expired without a voucher,
 Treasury hold, or queued issuance job. The immediate approval replay was
 mutation-free. This plan authorizes no further order, payment, issuance,
 redemption, payout, or reconciliation.
+
+## Gate 5 — Fresh Exact-Payment Issuance Acceptance
+
+Gate 5 is authorized for one new public issuance exercise only:
+
+1. Verify commissioning, the deployed x-change release, database-queue
+   posture, zero relevant backlog, disabled Horizon, disabled scheduled
+   Standing Funding, generation 7, and the existing quarantine.
+2. Run discovery, estimate, and handoff read-only for a PHP 25.00 principal.
+3. Stop if the authoritative payable total exceeds PHP 40.99.
+4. Require an order and Funding Intent lifetime of at least 60 minutes before
+   creating exactly one payable order.
+5. Use Bank Transfer only. The operator is the payer. Present the exact amount
+   and provider instruction, then stop until the operator reports payment.
+6. Observe continuously for at most 30 minutes after payment is reported.
+7. Require exactly one immutable provider observation, one effective evidence
+   claim, one settlement, one order-bound Treasury hold/consumption path, and
+   one Pay Code issued through the existing `GeneratePayCode` authority.
+8. Require the order to reach its issued terminal result without placing the
+   received amount into generally spendable Client Funds.
+9. Replay the same order immediately and compare sanitized financial,
+   Treasury, voucher, provider-evidence, queue, and failed-job fingerprints.
+10. Record the exact release, order, intent, observation, claim, settlement,
+    Treasury operation, voucher, deployment, and replay evidence in the
+    compasses.
+
+Stop if the amount, expiry, payer binding, provider evidence, destination,
+settlement, Treasury path, queue posture, or exactly-once facts diverge. Gate 5
+does not authorize claim, redemption, payout, a second order or payment,
+persistent Horizon commissioning, scheduled Standing Funding, or release of a
+quarantined address.

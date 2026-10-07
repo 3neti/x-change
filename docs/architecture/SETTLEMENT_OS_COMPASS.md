@@ -4907,3 +4907,16 @@ observation window.
   remains database, Horizon is disabled with no authorized lanes, and
   scheduled Standing Funding remains disabled at generation 7 with zero active
   runs and one quarantined address.
+
+## 2026-10-08 Update — Gate 5 Fresh Exact-Payment Issuance Acceptance
+
+- The stale Gate 4 next-step language is retired. Gates 4A and 4B are closed.
+- Gate 5 is authorized for one fresh public order: PHP 25.00 principal, Bank
+  Transfer paid by the operator, authoritative total capped at PHP 40.99, and
+  an order/Funding Intent lifetime of at least 60 minutes.
+- After payment is reported, observation is bounded to 30 minutes. Acceptance
+  requires exactly one observation, effective claim, settlement,
+  order-bound Treasury hold/consumption path, and Pay Code, followed by an
+  immediate mutation-free replay.
+- Claim, redemption, payout, a second order or payment, persistent Horizon,
+  scheduled Standing Funding, and quarantine changes remain outside Gate 5.
