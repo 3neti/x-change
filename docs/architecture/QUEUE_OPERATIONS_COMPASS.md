@@ -313,6 +313,31 @@ later non-financial canary may authorize only `campaigns`, must dispatch only
 the host-owned synthetic job explicitly to Redis, and must leave every package
 producer on its existing database connection.
 
+Database worker coverage correction was verified on 2026-10-07:
+
+- pre-change probe `cexe-a2ec2437-c162-4e88-a9d3-1b21a912c0bc` found zero
+  database jobs, zero failed jobs, and zero open issuance funding orders while
+  Horizon and scheduled Standing Funding remained disabled;
+- Laravel Cloud process `process-a26660bc-ca50-4c26-9f41-9ca29ca5d5ba` was
+  updated in place from
+  `x-change-funding,x-change-feedback,default` to
+  `x-change-funding,x-change-issuance,x-change-feedback,default`;
+- the process remains a single database worker with 3 tries, 30-second
+  backoff, 3-second sleep, no rest, and a 60-second timeout;
+- the first update request was rejected before mutation because the Cloud API
+  did not accept a textual `false` maintenance-mode value; the successful
+  retry omitted that unchanged optional field;
+- observations at `05:33:06Z`, `05:34:17Z`, and `05:35:32Z` all found zero
+  database jobs, zero failed jobs, and zero open issuance funding orders;
+- final probe `cexe-a2ec25f8-52d8-4505-83cf-d499370c2855` also found ready,
+  delayed, and reserved depth zero on all five Redis queues;
+- `QUEUE_CONNECTION` and `CACHE_STORE` remain `database`, Horizon remains
+  disabled with no authorized queues, scheduled Standing Funding remains
+  disabled, and the corrected database worker remains the only background
+  process; and
+- no test job, retry, deletion, provider call, voucher issuance, or financial
+  operation occurred.
+
 ## Stop conditions
 
 - Redis or Horizon would become financial truth.

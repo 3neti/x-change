@@ -399,6 +399,30 @@ job, a non-zero Redis queue, or new `x-change-issuance` work appears. This gate
 performed no dispatch, retry, deletion, process change, queue migration,
 provider call, or financial operation.
 
+**Database worker coverage correction checkpoint (2026-10-07):** the existing
+Laravel Cloud process `process-a26660bc-ca50-4c26-9f41-9ca29ca5d5ba` was
+updated in place to consume
+`x-change-funding,x-change-issuance,x-change-feedback,default`. It remains one
+database worker with 3 tries, 30-second backoff, 3-second sleep, zero rest, and
+a 60-second timeout. The database connection retains its 90-second
+`retry_after`.
+
+The pre-change fence found zero database jobs, zero failed jobs, and zero open
+issuance funding orders. Three post-change observations spanning multiple
+minute-scheduler cycles found the same zero state. The final observation also
+proved ready, delayed, and reserved depth zero on `campaigns`,
+`x-change-funding`, `x-change-feedback`, `partner-payments`, and
+`x-change-issuance` in Redis. The default queue and cache stores remain
+`database`; Horizon remains disabled with no authorized queues or supervisors;
+scheduled Standing Funding remains disabled; and no Horizon process exists.
+
+The first Cloud update request was rejected before mutation because the API did
+not accept the textual `false` supplied for the optional maintenance-mode
+field. The single corrected retry omitted that unchanged field and succeeded.
+No test job, manual retry, deletion, queue migration, provider call, voucher
+issuance, or financial operation occurred. Database worker coverage is no
+longer a blocker for a separately authorized synthetic Cloud Horizon canary.
+
 ### Gate 5 — Drain and non-financial canary
 
 1. Stop new dispatch to the selected canary lane.

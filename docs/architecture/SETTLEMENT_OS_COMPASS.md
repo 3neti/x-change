@@ -4570,3 +4570,22 @@ Workstream compasses remain the source of detailed slice history. This Compass s
   producers remain on their current database connection.
 - No queue, worker, schedule, provider, or financial state changed in this
   characterization gate.
+
+## 2026-10-07 Update — Database Worker Coverage Correction
+
+- The existing one-process Laravel Cloud database worker now consumes
+  `x-change-funding,x-change-issuance,x-change-feedback,default`.
+- Retry and timing settings remain unchanged: 3 tries, 30-second backoff,
+  3-second sleep, zero rest, and a 60-second timeout against a 90-second
+  database `retry_after`.
+- A clean pre-change snapshot and three post-change observations across
+  multiple scheduler cycles found zero database jobs, zero failed jobs, and
+  zero open issuance funding orders.
+- Every declared Redis queue remained empty in ready, delayed, and reserved
+  state. Database remains the default queue and cache store.
+- Horizon and scheduled Standing Funding remain disabled, and no Horizon
+  process exists.
+- No synthetic or package job, provider call, voucher issuance, or financial
+  operation was performed.
+- The next separately authorized gate may be the bounded non-financial Cloud
+  Horizon canary on the `campaigns` planning lane.
