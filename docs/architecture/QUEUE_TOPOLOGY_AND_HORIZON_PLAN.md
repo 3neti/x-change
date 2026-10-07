@@ -315,6 +315,28 @@ Redis is transport and transient coordination. PostgreSQL remains authoritative
 for funding orders, receipts, settlements, runtime generations, leases,
 quarantine, Treasury effects, and audit evidence.
 
+**Completion checkpoint (2026-10-07):** Gate 4 is complete. Laravel Cloud cache
+`cache-a2ec07b3-e957-456f-af26-7226b45406d4`, named
+`x-change-testing-queue-operations`, is attached only through the
+`x-change-testing/testing` environment identity. It is a private, same-region
+Laravel Valkey Pro 250 MB resource with automatic upsizing disabled. Probe
+`cexe-a2ec11d8-0284-4f9f-a73c-bedfdcefe8bb` confirms the effective
+`noeviction` policy and 262,144,000-byte memory ceiling. The deployed runtime
+reports Valkey 9.0.0, primary role, AOF disabled, and a successful most recent
+RDB save. Provider persistence is recovery assistance, not financial authority.
+
+Deployment `depl-a2ec0be9-09d0-471f-a047-3d96eb8b1752` redeployed the unchanged
+remote host commit `ad7c1bc43f27987cd6348ab6ba1da5eb76d47de4` only to inject
+the attached cache credentials. Read-only probe
+`cexe-a2ec0df2-a3d8-4f57-8cdc-4401fff2173a` proved Redis connectivity while
+`QUEUE_CONNECTION=database`, `CACHE_STORE=database`, `HORIZON_ENABLED=false`,
+the authorized queue list empty, and scheduled Standing Funding disabled. All
+five declared Redis queue sizes were zero. Stable prefixes
+`x_change_testing_testing_database_` and
+`x_change_testing_testing_horizon:` are persisted for the next deployment.
+No Horizon process, Redis queue migration, job dispatch, or financial operation
+occurred.
+
 ### Gate 5 — Drain and non-financial canary
 
 1. Stop new dispatch to the selected canary lane.

@@ -11,13 +11,15 @@ authority for financial recovery.
 
 ## Current position
 
-**Status: Gates 1 through 3, immutable package publication, disabled-host adoption, and the local non-financial Redis canary complete.**
+**Status: Gates 1 through 4 complete; Cloud Redis is connected but no Cloud queue or Horizon process is commissioned.**
 
-The testing host still uses database queues and database cache. PHP Redis
-support is available and Horizon is now installed in the host, but it is
-disabled, `/horizon` is hidden, no Redis queue has been commissioned, and no
-Horizon background process exists. Scheduled Standing Funding remains
-disabled.
+The testing environment still uses database queues and database cache. A
+private same-region Laravel Valkey cache is now attached and reachable, but no
+Redis queue has been commissioned and no Horizon background process exists.
+The local host has Horizon installed and disabled; the current Cloud deployment
+remains the unchanged remote commit `ad7c1bc4`, which predates the three local
+host commits for Horizon foundation, package adoption, and bounded canary
+tooling. Scheduled Standing Funding remains disabled.
 
 The host now discovers package queue manifests from Composer metadata, builds
 supervisors only for explicitly authorized queues, and exposes strict
@@ -93,8 +95,8 @@ names. Redis prefixes isolate environments.
 | 3 | Host discovery, Horizon install, and authenticated dashboard | Complete, disabled |
 | 3A | Exact package adoption with Horizon and Redis processing disabled | Complete |
 | 3B | Local Redis characterization and planning-only Horizon canary | Complete; returned to disabled baseline |
-| 4 | Laravel Cloud Redis foundation | Separately gated infrastructure change |
-| 5 | Database drain and non-financial Redis canary | Pending Gate 4 |
+| 4 | Laravel Cloud Redis foundation | Complete; attached, reachable, empty, and unused by queues |
+| 5 | Database drain and non-financial Redis canary | Pending host release publication and disabled Cloud adoption |
 | 6 | Bounded x-change Horizon canary | Pending Gate 5 |
 | 7 | Full declared-lane adoption and alerts | Pending Gate 6 |
 
@@ -118,13 +120,14 @@ names. Redis prefixes isolate environments.
 
 ## Immediate next gate
 
-**Laravel Cloud Redis foundation.**
+**Publish and deploy the host Horizon foundation while it remains disabled.**
 
-The local rehearsal is complete. The next gate may provision and characterize
-a supported, isolated Redis service in the testing environment without starting
-a Cloud Horizon process or migrating a queue. Cloud capacity, eviction policy,
-persistence expectations, environment prefix, and connectivity must be
-recorded before the later database-drain and non-financial Cloud canary gate.
+Push the three tested host commits, deploy their exact remote commit with the
+five immutable package releases, and prove the Cloud environment still uses
+database queues and cache, Horizon remains disabled, the authorization list is
+empty, and no Horizon process exists. Only after that release checkpoint may a
+separate Gate 5 inspect and drain database work before a planning-only Cloud
+canary.
 
 ## Verification checkpoint
 
@@ -226,6 +229,30 @@ Local Redis characterization and the non-financial canary were verified on
   planning-only; and
 - the focused queue-operations suite passed 15 tests with 64 assertions,
   Composer strict validation passed, and configuration caching passed.
+
+Laravel Cloud Redis foundation was verified on 2026-10-07:
+
+- private Laravel Valkey resource
+  `cache-a2ec07b3-e957-456f-af26-7226b45406d4` is available in
+  `ap-southeast-1` at the Pro 250 MB size;
+- automatic upsizing is disabled, and read-only probe
+  `cexe-a2ec11d8-0284-4f9f-a73c-bedfdcefe8bb` confirms the effective
+  `noeviction` policy so capacity pressure fails visibly rather than evicting
+  queued work;
+- the resource is attached to `x-change-testing/testing`, with explicit Redis
+  and Horizon prefixes persisted for environment isolation;
+- unchanged host commit `ad7c1bc4` was redeployed successfully as
+  `depl-a2ec0be9-09d0-471f-a047-3d96eb8b1752` solely to inject credentials;
+- probe `cexe-a2ec0df2-a3d8-4f57-8cdc-4401fff2173a` confirmed injected host and
+  password values plus a successful `PING`;
+- the runtime reports Valkey 9.0.0, primary role, 250 MB maximum memory, AOF
+  disabled, and successful RDB snapshot status; persistence remains
+  non-authoritative;
+- `QUEUE_CONNECTION` and `CACHE_STORE` remain `database`, Horizon is disabled,
+  the authorization list is empty, and scheduled Standing Funding is disabled;
+- all five declared Redis queue sizes are zero; and
+- the only background process remains the pre-existing database queue worker;
+  no Horizon process was created.
 
 ## Stop conditions
 

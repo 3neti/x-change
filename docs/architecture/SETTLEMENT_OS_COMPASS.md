@@ -42,10 +42,12 @@ criticality, safe tags, and operating recommendations. The host discovers and
 reviews those manifests, owns `config/horizon.php`, authorizes `/horizon`, and
 operates Redis-backed supervisors.
 
-The testing host currently uses database queues and database cache, has PHP
-Redis support, and has Horizon installed but disabled. It has adopted the five
-exact immutable queue-manifest releases and discovers their topology without
-authorizing or processing any Redis lane. The planned dashboard URL is
+The testing environment currently uses database queues and database cache. A
+private same-region Laravel Valkey foundation is attached, reachable, and empty,
+but no Redis queue or Horizon Cloud process is commissioned. The local host has
+Horizon installed and disabled and has adopted the five exact immutable
+queue-manifest releases; those three tested host commits remain local and are
+not yet deployed to Cloud. The planned dashboard URL is
 `https://x-change-testing-testing-uw1gvj.laravel.cloud/horizon`. Its initial
 testing authorization policy is any authenticated user with recent password
 confirmation. A shared Horizon password is deferred and disabled.
@@ -234,7 +236,7 @@ historical `expired` label alone is not recovery-entitlement evidence.
 ## Current Position
 
 Current wave: Queue Topology and Horizon Commissioning
-Current status: Local planning-only Redis/Horizon canary complete and returned to disabled baseline; Laravel Cloud Redis foundation is the next separate gate
+Current status: Laravel Cloud Redis foundation complete with no queue migration; disabled host release publication and Cloud adoption is the next separate gate
 Last updated: 2026-10-07
 
 | Wave | Workstream | Role | Status | Compass |
@@ -249,7 +251,7 @@ Last updated: 2026-10-07
 | 7 | Governed Provisioning | Vacant commissioning seats, exact-capability authority offers, delivery, activation/revocation/supersession, production API mandates, and Treasury-safe Account Grants | Controlled Cockpit lifecycle implemented; authority remains separate from cash and provider execution | [PROVISIONING_AND_ACCOUNT_GRANTS.md](PROVISIONING_AND_ACCOUNT_GRANTS.md) |
 | 8 | Standing Funding Runtime | Recovery-safe provider synchronization control plane | Canary and bounded fleet gate complete; legacy address 4 quarantined; disabled at generation 7 | [STANDING_FUNDING_RUNTIME_COMPASS.md](STANDING_FUNDING_RUNTIME_COMPASS.md) |
 | 9 | Public On-Demand Issuance Acceptance | Testing-instance Pay Code order, exact funding, exactly-once issuance, and no-op retry proof | Planned; readiness and rollback-runner repair required before order creation | [public-auto-generate/TESTING_INSTANCE_ACCEPTANCE_COMPASS.md](public-auto-generate/TESTING_INSTANCE_ACCEPTANCE_COMPASS.md) |
-| 10 | Queue Operations and Horizon | Cross-package queue discovery, Redis-backed Horizon workers, visual operations, and fail-closed commissioning | Local planning-only canary complete; Cloud Redis foundation remains separately gated | [QUEUE_OPERATIONS_COMPASS.md](QUEUE_OPERATIONS_COMPASS.md) |
+| 10 | Queue Operations and Horizon | Cross-package queue discovery, Redis-backed Horizon workers, visual operations, and fail-closed commissioning | Cloud Redis foundation complete; host Horizon release remains disabled and separately gated | [QUEUE_OPERATIONS_COMPASS.md](QUEUE_OPERATIONS_COMPASS.md) |
 
 ## Package Map
 
