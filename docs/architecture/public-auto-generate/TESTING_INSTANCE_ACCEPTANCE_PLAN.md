@@ -30,6 +30,8 @@ Standing Funding synchronization to create Pay Codes.
 | Standing Funding address 4 | quarantined; must remain quarantined |
 | Commissioning state | `installation_incomplete` |
 | Commissioning reason | `installation_manifest_stale` |
+| Queue connection | `database` |
+| Horizon | not installed or commissioned |
 
 The public discovery endpoint currently returns HTTP 503 and
 `/x/auto-generate` redirects to commissioning. This is a real Gate 0 blocker,
@@ -131,6 +133,11 @@ payment:
 7. Recheck that scheduled Standing Funding synchronization is `false`, runtime
    mode is disabled, generation remains 7 unless an explicit recovery action
    changes it, and address 4 remains quarantined.
+8. Complete the separately gated Queue Operations and Horizon readiness gates
+   through a bounded x-change canary before creating the live payable order in
+   Gate 3. The rollback-only proof may be used during that canary, but Redis,
+   Horizon, and worker changes remain independently reviewed infrastructure
+   operations.
 
 ## Gate 1 — Discovery, estimate, and handoff
 
@@ -256,6 +263,8 @@ Stop rather than improvise if:
 - commissioning is not operational;
 - any external URL is generated with HTTP;
 - the rollback runner or its focused browser/command tests are not green;
+- Horizon strict topology inspection or its bounded x-change canary is not
+  green before live order creation;
 - the public route accepts a browser-supplied issuer or funding basis;
 - the public workflow does not force `full_amount`;
 - estimate or handoff creates persistent financial state;
@@ -281,14 +290,17 @@ The exercise passes only when all of the following are true:
 5. The Pay Code is available through its HTTPS claim and Cockpit inspection
    URLs.
 6. Replay and immediate rerun create no duplicate financial or voucher state.
-7. Scheduled Standing Funding remains disabled and address 4 remains
+7. The approved Redis/Horizon topology is healthy, authenticated, sanitized,
+   and strict inspection is green.
+8. Scheduled Standing Funding remains disabled and address 4 remains
    quarantined.
 
 ## Explicitly out of scope
 
 - enabling scheduled Standing Funding;
 - releasing Standing Funding address 4;
-- changing database, queue, cache, or worker infrastructure;
+- infrastructure changes outside the separately approved
+  [Queue Topology and Horizon Commissioning Plan](../QUEUE_TOPOLOGY_AND_HORIZON_PLAN.md);
 - changing host-wide `shortfall` policy;
 - public issuer selection;
 - Pay Code claim, redemption, or payout;

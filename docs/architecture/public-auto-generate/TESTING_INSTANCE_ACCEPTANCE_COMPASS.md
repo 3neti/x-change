@@ -30,7 +30,9 @@ The testing environment is not currently ready for the exercise:
   external URL generation must be verified before order creation; and
 - focused package verification found the rollback runner calling the current
   funding webhook job with one missing dependency, while the Cockpit runner
-  test receives a commissioning redirect.
+  test receives a commissioning redirect; and
+- the host still uses database queues and has no commissioned Horizon/Redis
+  queue topology.
 
 Verification checkpoint: 18 public discovery/page tests passed with 121 total
 assertions in the combined run; three rollback lifecycle tests failed. This is
@@ -59,7 +61,7 @@ Code.
 | --- | --- | --- |
 | 0 | Commissioning recovery and HTTPS URL integrity | Blocked: stale installation manifest and HTTP-generated redirect observed |
 | 1 | Read-only discovery, estimate, and handoff | Pending Gate 0 |
-| 2 | Repair and run authenticated rollback-only lifecycle proof | Blocked by runner dependency drift and browser commissioning fixture |
+| 2 | Repair and run authenticated rollback-only lifecycle proof; prove queue canary | Blocked by runner drift and uncommissioned Horizon/Redis topology |
 | 3 | One bounded PHP 25 payable order | Separately gated |
 | 4 | One exact real payment | Separately gated; ceiling and rail not authorized |
 | 5 | Operator and beneficiary evidence | Pending issuance |
@@ -82,6 +84,8 @@ Code.
 9. Scheduled Standing Funding remains disabled and is not required for public
    issuance.
 10. Standing Funding address 4 remains quarantined.
+11. Live payable-order acceptance waits for the separately commissioned Queue
+    Operations and Horizon canary.
 
 ## Invariants
 
@@ -123,5 +127,7 @@ payment.
 - [Public Auto-Generate Compass](PUBLIC_AUTO_GENERATE_COMPASS.md)
 - [On-Demand Issuance Funding Plan](../on-demand-issuance-funding/ON_DEMAND_ISSUANCE_FUNDING_PLAN.md)
 - [On-Demand Issuance Funding Compass](../on-demand-issuance-funding/ON_DEMAND_ISSUANCE_FUNDING_COMPASS.md)
+- [Queue Topology and Horizon Commissioning Plan](../QUEUE_TOPOLOGY_AND_HORIZON_PLAN.md)
+- [Queue Operations Compass](../QUEUE_OPERATIONS_COMPASS.md)
 
 Future agents must update this compass after every completed or blocked gate.

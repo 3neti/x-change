@@ -33,6 +33,31 @@ Campaign / Program Scale
 
 This Compass is the program-level memory. Future workstream compasses should be summarized here when a slice begins, completes, reveals a significant risk, or changes a package boundary.
 
+## Queue topology and Horizon commissioning track
+
+Updated 2026-10-07. Queue visibility will be commissioned through Laravel
+Horizon in the host application. Settlement OS packages remain Horizon-neutral
+and publish versioned queue manifests describing stable capability lanes,
+criticality, safe tags, and operating recommendations. The host discovers and
+reviews those manifests, owns `config/horizon.php`, authorizes `/horizon`, and
+operates Redis-backed supervisors.
+
+The testing host currently uses database queues and database cache, has PHP
+Redis support, and does not have Horizon installed. The planned dashboard URL
+is `https://x-change-testing-testing-uw1gvj.laravel.cloud/horizon`. Its initial
+testing authorization policy is any authenticated user with recent password
+confirmation. A shared Horizon password is deferred and disabled.
+
+Dynamic package discovery does not authorize new financial lanes. Strict
+inspection must stop deployment until an undeclared, unsupervised, conflicting,
+or unsafe critical queue is explicitly commissioned. PostgreSQL remains the
+financial authority, x-journal remains immutable evidence, and Horizon remains
+transient operational telemetry.
+
+The operative documents are the
+[Queue Topology and Horizon Commissioning Plan](QUEUE_TOPOLOGY_AND_HORIZON_PLAN.md)
+and [Queue Operations Compass](QUEUE_OPERATIONS_COMPASS.md).
+
 ## Public On-Demand Issuance testing-instance acceptance track
 
 Updated 2026-10-07. The next Pay Code generation exercise is explicitly based
@@ -206,8 +231,8 @@ historical `expired` label alone is not recovery-entitlement evidence.
 
 ## Current Position
 
-Current wave: Public On-Demand Issuance Testing-Instance Acceptance
-Current status: Planned; blocked by stale commissioning manifest, HTTPS URL-integrity proof, and rollback-runner drift
+Current wave: Queue Topology and Horizon Commissioning
+Current status: Plan persisted; Gate 1 package queue catalog is next; no Horizon or Redis mutation authorized
 Last updated: 2026-10-07
 
 | Wave | Workstream | Role | Status | Compass |
@@ -222,6 +247,7 @@ Last updated: 2026-10-07
 | 7 | Governed Provisioning | Vacant commissioning seats, exact-capability authority offers, delivery, activation/revocation/supersession, production API mandates, and Treasury-safe Account Grants | Controlled Cockpit lifecycle implemented; authority remains separate from cash and provider execution | [PROVISIONING_AND_ACCOUNT_GRANTS.md](PROVISIONING_AND_ACCOUNT_GRANTS.md) |
 | 8 | Standing Funding Runtime | Recovery-safe provider synchronization control plane | Canary and bounded fleet gate complete; legacy address 4 quarantined; disabled at generation 7 | [STANDING_FUNDING_RUNTIME_COMPASS.md](STANDING_FUNDING_RUNTIME_COMPASS.md) |
 | 9 | Public On-Demand Issuance Acceptance | Testing-instance Pay Code order, exact funding, exactly-once issuance, and no-op retry proof | Planned; readiness and rollback-runner repair required before order creation | [public-auto-generate/TESTING_INSTANCE_ACCEPTANCE_COMPASS.md](public-auto-generate/TESTING_INSTANCE_ACCEPTANCE_COMPASS.md) |
+| 10 | Queue Operations and Horizon | Cross-package queue discovery, Redis-backed Horizon workers, visual operations, and fail-closed commissioning | Planned; Gate 1 package catalog next | [QUEUE_OPERATIONS_COMPASS.md](QUEUE_OPERATIONS_COMPASS.md) |
 
 ## Package Map
 
