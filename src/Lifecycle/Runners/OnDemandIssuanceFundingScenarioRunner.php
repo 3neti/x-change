@@ -11,11 +11,8 @@ use LBHurtado\EmiCore\Actions\Funding\StoreProviderWebhookReceipt;
 use LBHurtado\EmiCore\Data\Funding\ProviderWebhookReceiptData;
 use LBHurtado\EmiCore\Data\Funding\ProviderWebhookRequestData;
 use LBHurtado\XChange\Actions\Funding\ExpireOnDemandIssuanceFundingOrder;
-use LBHurtado\XChange\Actions\Funding\FinalizeFundingSuspenseMonitoring;
 use LBHurtado\XChange\Actions\Funding\PrepareOnDemandPayCodeIssuance;
-use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Actions\Funding\SimulateQrPhPayment;
-use LBHurtado\XChange\Actions\Funding\VerifyFundingWebhookReceipt;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
@@ -23,6 +20,7 @@ use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingWebhookReceiptJob;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Services\Funding\QrPhSimulatorFundingProviderAdapter;
+use LBHurtado\XChange\Services\Treasury\TreasuryAccountBalanceReadModel;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use LBHurtado\XChange\Support\Funding\QrPhFundingSimulatorGuard;
 use Throwable;
@@ -50,10 +48,8 @@ final class OnDemandIssuanceFundingScenarioRunner implements ScenarioRunnerContr
         private readonly SimulateQrPhPayment $simulatePayment,
         private readonly QrPhSimulatorFundingProviderAdapter $adapter,
         private readonly StoreProviderWebhookReceipt $storeReceipt,
-        private readonly VerifyFundingWebhookReceipt $verifyReceipt,
-        private readonly SettleVerifiedFundingIntent $settleIntent,
-        private readonly FinalizeFundingSuspenseMonitoring $finalizeMonitoring,
         private readonly QrPhFundingSimulatorGuard $simulatorGuard,
+        private readonly TreasuryAccountBalanceReadModel $accountBalances,
     ) {}
 
     public function run(ScenarioRunContext $context): ScenarioRunResult
@@ -126,8 +122,7 @@ final class OnDemandIssuanceFundingScenarioRunner implements ScenarioRunnerContr
     private function execute(ScenarioRunContext $context, string $mobile): array
     {
         $owner = $context->issuer;
-        $wallet = $this->wallets->resolveForUser($owner);
-        $balanceBefore = (int) $this->wallets->getBalance($wallet);
+        $clientFundsBefore = $this->accountBalances->balanceMinor($owner, 'PHP') ?? 0;
         $amountMinor = (int) data_get($context->scenario, 'amount_minor', 2_500);
         $pricing = new PricingEstimateData(
             currency: 'PHP',
@@ -196,15 +191,14 @@ final class OnDemandIssuanceFundingScenarioRunner implements ScenarioRunnerContr
             ProviderWebhookReceiptData::fromRequest($request, $authentication),
         );
         $receipt = $this->storeReceipt->handle($request, $authentication, $event);
-        (new VerifyFundingWebhookReceiptJob($receipt->getKey()))->handle(
-            $this->verifyReceipt,
-            $this->settleIntent,
-            $this->finalizeMonitoring,
-        );
+        app()->call([
+            new VerifyFundingWebhookReceiptJob($receipt->getKey()),
+            'handle',
+        ]);
         $expired->refresh();
         $firstIntent->refresh();
-        $wallet->refresh();
-        $balanceAfter = (int) $this->wallets->getBalance($wallet);
+        $this->accountBalances->forget($owner, 'PHP');
+        $clientFundsAfter = $this->accountBalances->balanceMinor($owner, 'PHP') ?? 0;
         $steps[] = $this->step('late_payment_disposed', 'A verified late payment becomes Client Funds without reviving issuance', 'protected', [
             'Payment authenticated' => $authentication->authenticated ? 'Yes' : 'No',
             'Funding intent' => $firstIntent->status->value,
@@ -219,7 +213,7 @@ final class OnDemandIssuanceFundingScenarioRunner implements ScenarioRunnerContr
             && $expired->late_payment_disposition === 'client_funds'
             && $expired->voucher_id === null
             && $firstIntent->status === FundingIntentStatus::Settled
-            && $balanceAfter - $balanceBefore === $first->expected_payment_minor;
+            && $clientFundsAfter - $clientFundsBefore === $first->expected_payment_minor;
 
         return [
             'success' => $success,

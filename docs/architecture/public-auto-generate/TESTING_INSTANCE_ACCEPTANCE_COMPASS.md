@@ -12,8 +12,9 @@ run, or duplicate issuance.
 ## Current position
 
 **Status: Gates 0 through 4B complete. Gate 5 proved live issuance but stopped
-fail-closed because the one-cent amount-lease adjustment remained generally
-spendable Client Funds. Gate 5A hardening is proposed but not authorized.**
+fail-closed on a one-cent Client Funds residual. Gate 5A containment is
+implemented and test-green; immutable publication, host adoption, deployment,
+and a fresh live acceptance remain in progress.**
 
 The implementation is deployed on x-change `v1.0.110`, public Auto-Generate and
 On-Demand Issuance are configured, fixed-amount QR Ph is configured, and
@@ -154,7 +155,7 @@ Code.
 | 3 | One bounded PHP 25 payable order | Complete: historical order later expired; it has no Pay Code or retained issuance hold |
 | 4 | First real-payment attempt and incident disposition | Complete through Gate 4A isolation repair and Gate 4B append-only correction; expired payment credited to Client Funds without issuance |
 | 5 | Fresh exact-payment issuance acceptance | Partial: exactly-once settlement, hold/consume, and issuance passed; Client Funds residual invariant failed; replay not run |
-| 5A | Amount-lease residual containment hardening | Proposed; separate authorization required |
+| 5A | Amount-lease residual containment hardening | Implementation test-green; publication, deployment, and live acceptance pending |
 | 6 | Claim and redemption | Separately gated; not authorized by Gate 5 |
 | 7 | Persistent Horizon commissioning | Separately gated; not authorized by Gate 5 |
 
@@ -194,13 +195,23 @@ Code.
 
 ## Immediate next gate
 
-**Gate 5A — Amount-Lease Residual Containment Hardening.**
+**Gate 5A — Publish, deploy, and accept the tested containment repair.**
 
-This gate is proposed but not authorized. It must reproduce the one-cent
-residual in tests, define its Treasury disposition, prevent it from becoming
-generally spendable Client Funds, and preserve exact evidence matching and
-exactly-once issuance. A repaired immutable release must be adopted before a
-fresh live acceptance payment and mutation-free replay can be authorized.
+The package repair is implemented and focused tests are green. A positive
+amount-lease adjustment now receives its own deterministic Treasury hold in
+Pay Code Reserve, while the primary issuance hold remains exactly the
+authoritative required amount. Zero adjustment is a no-op; drift fails and
+rolls back; settlement and issuance replay do not duplicate either hold.
+
+The focused containment group passes 4 scenarios with 84 assertions. The
+rollback lifecycle and public-surface regressions pass 20 tests with 155
+assertions after aligning the runner with container-resolved job dependencies
+and authoritative Treasury Client Funds.
+
+Publish and adopt an immutable repair, deploy it under the existing safety
+fences, then run one fresh authorized low-value payment. Acceptance requires
+zero generally spendable Client Funds residual and an immediate mutation-free
+replay. Final residual refund/release policy remains deferred.
 
 ## Companion documents
 

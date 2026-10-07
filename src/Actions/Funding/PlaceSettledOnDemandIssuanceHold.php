@@ -20,6 +20,7 @@ final readonly class PlaceSettledOnDemandIssuanceHold
     public function __construct(
         private TreasuryAccountPortfolioProvisioningContract $portfolios,
         private TreasuryHoldOperationContract $holds,
+        private ContainOnDemandIssuanceAmountLeaseResidual $residuals,
         private TransitionPayCodeIssuanceFundingOrder $transition,
     ) {}
 
@@ -88,6 +89,15 @@ final readonly class PlaceSettledOnDemandIssuanceHold
             ));
         }
 
+        $residualHoldReference = $this->residuals->handle(
+            order: $order,
+            intent: $intent,
+            settledAmountMinor: $settledAmountMinor,
+            clientFundsPositionReference: $clientFunds->positionReference,
+            payCodeReservePositionReference: $payCodeReserve->positionReference,
+        );
+        $containedAdjustmentMinor = $order->reconciliation_adjustment_minor;
+
         return $this->transition->handle(
             order: $order,
             status: PayCodeIssuanceFundingOrderStatus::Funded,
@@ -99,11 +109,24 @@ final readonly class PlaceSettledOnDemandIssuanceHold
                 'funded_at' => now(),
                 'amount_lease_active_key' => null,
                 'amount_lease_released_at' => now(),
+                'metadata' => [
+                    ...($order->metadata ?? []),
+                    'amount_lease_residual' => [
+                        'hold_reference' => $residualHoldReference,
+                        'amount_minor' => $containedAdjustmentMinor,
+                        'currency' => $order->currency,
+                        'status' => $residualHoldReference === null
+                            ? 'not_required'
+                            : 'contained',
+                    ],
+                ],
             ],
             metadata: [
                 'settled_amount_minor' => $settledAmountMinor,
                 'held_amount_minor' => $order->required_amount_minor,
-                'residual_client_funds_minor' => max(0, $settledAmountMinor - $order->on_demand_amount_minor),
+                'contained_amount_lease_adjustment_minor' => $containedAdjustmentMinor,
+                'amount_lease_residual_hold_reference' => $residualHoldReference,
+                'residual_client_funds_minor' => 0,
                 'amount_lease_release_reason' => 'authoritative_payment_matched',
             ],
         );

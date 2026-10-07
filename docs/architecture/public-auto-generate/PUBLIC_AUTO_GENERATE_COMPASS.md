@@ -12,8 +12,9 @@ wallet, or Client Funds.
 ## Current position
 
 Status: **Testing-instance Gates 0 through 4B complete. Gate 5 proved the live
-issuance path but stopped fail-closed on a one-cent Client Funds residual. A
-separate Gate 5A repair is required before acceptance can close.**
+issuance path but stopped fail-closed on a one-cent Client Funds residual.
+Gate 5A containment is implemented and test-green; release, deployment, and
+fresh live acceptance remain.**
 
 The operative testing-instance sequence is now tracked in the
 [Testing-Instance Acceptance Plan](TESTING_INSTANCE_ACCEPTANCE_PLAN.md) and
@@ -115,21 +116,20 @@ public_auto_generate:
 
 ## Immediate next gate
 
-**Gate 5A — Amount-Lease Residual Containment Hardening.**
+**Gate 5A — Publish, deploy, and accept the containment repair.**
 
-Gate 5A is proposed but not yet authorized. It must characterize the live
-one-cent residual in tests, keep the collision-adjustment outside generally
-spendable Client Funds, preserve exact-payment evidence matching, and prove
-that hold placement, hold consumption, issuance, and replay remain
-exactly-once. It must publish and adopt an immutable repair before a new live
-acceptance payment is considered. Gate 5A authorizes no payment, claim,
-redemption, payout, persistent Horizon process, scheduled Standing Funding,
-or quarantine change by itself.
+The tested repair preserves the authoritative issuance hold and moves only the
+amount-lease adjustment into a separate deterministic Treasury hold in Pay
+Code Reserve. The adjustment is no longer generally spendable Client Funds;
+zero adjustments create no extra hold; drift rolls back; and replay remains
+idempotent. Publish and deploy the immutable repair, then complete one fresh
+authorized low-value payment acceptance with zero Client Funds residual and a
+mutation-free immediate replay.
 
 ## Following gates
 
-1. Complete Gate 5A residual-containment hardening under separate approval.
-2. Repeat Gate 5 with a fresh, separately authorized exact payment.
+1. Publish, adopt, and deploy the Gate 5A repair.
+2. Repeat Gate 5 with the authorized fresh exact payment and immediate replay.
 3. Make the policy commissionable.
 4. Add Turnstile as a later security adapter.
 

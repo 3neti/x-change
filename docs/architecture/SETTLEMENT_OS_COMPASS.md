@@ -4966,3 +4966,29 @@ observation window.
   Hardening**: reproduce the defect, define a Treasury disposition for the
   adjustment, keep it outside spendable Client Funds, publish/adopt an
   immutable repair, and only then authorize a new exact-payment acceptance.
+
+## 2026-10-08 Update — Gate 5A Residual Containment Implementation
+
+- Gate 5A is implemented in x-change. The original issuance hold remains
+  bounded to the authoritative Pay Code requirement, while a positive
+  amount-lease adjustment is moved into a separate deterministic Treasury
+  hold in Pay Code Reserve.
+- The contained adjustment cannot remain generally spendable Client Funds.
+  Zero adjustment creates no residual hold, and any mismatch among settled,
+  leased, and recorded adjustment amounts fails closed inside the settlement
+  transaction.
+- Focused tests cover full-amount containment, shortfall replenishment,
+  zero-adjustment behavior, drift rollback, settlement replay, and issuance-job
+  replay. Four scenarios pass with 84 assertions.
+- The rollback lifecycle runner was also realigned with current runtime
+  contracts: its webhook job is container-invoked so added dependencies cannot
+  cause positional drift, and its late-payment assertion reads authoritative
+  Treasury Client Funds instead of the legacy wallet. The lifecycle and public
+  surface regressions pass 20 tests with 155 assertions.
+- The residual hold is intentionally containment-only. Its eventual release,
+  refund, fee recognition, or other commercial disposition remains a separate
+  policy decision.
+- Next: publish and deploy an immutable x-change repair, preserve all existing
+  queue and financial safety fences, then run one fresh authorized low-value
+  payment acceptance. Closure requires zero Client Funds residual and an
+  immediate mutation-free replay.

@@ -434,3 +434,30 @@ package-owned Treasury disposition for the adjustment, prevent the adjustment
 from increasing generally spendable Client Funds, and retain exact matching,
 hold, consumption, issuance, and replay idempotency. Publishing, adoption, and
 any new live payment remain separately authorized steps.
+
+## Gate 5A — Amount-Lease Residual Containment Hardening
+
+Gate 5A keeps the authoritative issuance hold unchanged and contains any
+positive amount-lease adjustment in a second, deterministic Treasury hold:
+
+- the primary hold continues to contain exactly `required_amount_minor` and is
+  the only hold consumed by Pay Code issuance;
+- the residual hold contains exactly `reconciliation_adjustment_minor` in the
+  issuer's Pay Code Reserve position;
+- the residual never remains generally spendable Client Funds;
+- a zero adjustment creates no residual hold;
+- settlement fails and rolls back when the settled amount, expected leased
+  amount, or recorded adjustment diverges; and
+- deterministic references and idempotency keys make settlement and issuance
+  replay mutation-free.
+
+The residual hold is containment, not final commercial disposition. Refund,
+release, fee recognition, or other disposition requires a later separately
+authorized policy gate.
+
+Before a fresh live acceptance payment, publish an immutable x-change release,
+adopt and deploy that exact release, and prove the queue, Horizon, scheduled
+Standing Funding, and quarantine safety fences remain unchanged. The live
+exercise must then prove zero residual Client Funds and an immediate
+mutation-free replay. Claim, redemption, payout, persistent Horizon, scheduled
+Standing Funding, and quarantine changes remain excluded.

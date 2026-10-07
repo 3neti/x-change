@@ -15,6 +15,7 @@ use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 
 function prepareOnDemandFundingLifecycleIssuer(): FakeLifecycleUser
 {
+    enableNetbankTreasuryForTests();
     config()->set('x-change.lifecycle.defaults.user_model', FakeLifecycleUser::class);
     config()->set('x-change.lifecycle.qrph_funding_simulation.enabled', true);
     $issuer = FakeLifecycleUser::query()->create([

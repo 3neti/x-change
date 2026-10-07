@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Bavix\Wallet\Models\Wallet;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
@@ -12,6 +13,12 @@ use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\EmiCore\Exceptions\ProviderFundingNotObserved;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryHoldOperationContract;
+use LBHurtado\Wallet\Treasury\Data\TreasuryHoldPlacementData;
+use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
+use LBHurtado\Wallet\Treasury\Models\TreasuryAllocation;
+use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
+use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
 use LBHurtado\XChange\Actions\Funding\ApproveFundingReconciliation;
 use LBHurtado\XChange\Actions\Funding\ClaimFundingEvidence;
 use LBHurtado\XChange\Actions\Funding\ClassifyOnDemandIssuanceFundingMismatch;
@@ -24,6 +31,7 @@ use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Actions\Funding\TransitionPayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Actions\Funding\VerifyFundingIntent;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Data\DebitData;
 use LBHurtado\XChange\Data\Funding\FundingIntentVerificationData;
 use LBHurtado\XChange\Data\IssuerData;
@@ -1130,6 +1138,15 @@ it('resumes an expired issuance-attention order whose provider payment was alrea
         ->and($order->treasury_hold_reference)->not->toBeNull()
         ->and($order->amount_lease_active_key)->toBeNull()
         ->and($order->amount_lease_released_at)->not->toBeNull()
+        ->and(data_get($order->metadata, 'amount_lease_residual'))->toMatchArray([
+            'hold_reference' => null,
+            'amount_minor' => 0,
+            'currency' => 'PHP',
+            'status' => 'not_required',
+        ])
+        ->and(TreasuryAllocation::query()
+            ->where('external_reference', 'issuance-funding-order:'.$order->reference)
+            ->count())->toBe(1)
         ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(0);
 
     Queue::assertPushed(
@@ -1198,6 +1215,218 @@ it('resumes an expired issuance-attention order whose provider payment was alrea
         ->and(data_get($projection, 'order.voucher.share_card_url'))->toBeString()
         ->and(data_get($projection, 'order.receipt.order_reference'))->toBe($order->reference)
         ->and(data_get($projection, 'order.receipt.issued_at'))->not->toBeNull();
+});
+
+it('contains a leased transfer amount adjustment outside spendable client funds', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->sole();
+    app(ReserveOnDemandIssuanceAmountLease::class)->handle(
+        issuanceFundingOrder($user, 'amount-lease-collision'),
+    );
+    $order = app(ReserveOnDemandIssuanceAmountLease::class)->handle(
+        issuanceFundingOrder($user, 'amount-lease-residual'),
+    );
+    $observation = onDemandFundingObservation($order->expected_payment_minor);
+    $intent = onDemandFundingIntent(
+        $wallet->uuid,
+        $observation,
+        $order->expected_payment_minor,
+    );
+    $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();
+
+    $settlement = app(SettleVerifiedFundingIntent::class)->handle($intent);
+    $order->refresh();
+    $residualHoldReference = 'issuance-amount-lease-residual:'.mb_strtolower($order->reference);
+    $mainHold = TreasuryAllocation::query()
+        ->where('allocation_reference', $order->treasury_hold_reference)
+        ->sole();
+    $residualHold = TreasuryAllocation::query()
+        ->where('allocation_reference', $residualHoldReference)
+        ->sole();
+    $payCodeReserve = TreasuryPosition::query()
+        ->whereMorphedTo('principal', $user)
+        ->where('provider', 'netbank')
+        ->where('purpose', TreasuryPositionPurpose::PayCodeReserve)
+        ->sole();
+    $payCodeReserveLedger = Wallet::query()
+        ->findOrFail($payCodeReserve->internal_ledger_id);
+    $externalReference = 'issuance-funding-order:'.$order->reference;
+    $operationCount = TreasuryPositionOperation::query()
+        ->where('external_reference', $externalReference)
+        ->count();
+    $fundingEvent = $order->events()
+        ->where('event_type', 'funding_verified_and_held')
+        ->sole();
+
+    expect($order->reconciliation_adjustment_minor)->toBe(1)
+        ->and($order->expected_payment_minor)->toBe(5_001)
+        ->and($order->status)->toBe(PayCodeIssuanceFundingOrderStatus::Funded)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(0)
+        ->and($payCodeReserveLedger->getBalanceIntAttribute())->toBe(5_001)
+        ->and($mainHold->balance_minor)->toBe(5_000)
+        ->and($residualHold->balance_minor)->toBe(1)
+        ->and(data_get($order->metadata, 'amount_lease_residual'))->toMatchArray([
+            'hold_reference' => $residualHoldReference,
+            'amount_minor' => 1,
+            'currency' => 'PHP',
+            'status' => 'contained',
+        ])->and(data_get($fundingEvent->metadata, 'residual_client_funds_minor'))->toBe(0)
+        ->and(data_get($fundingEvent->metadata, 'contained_amount_lease_adjustment_minor'))->toBe(1)
+        ->and(data_get($fundingEvent->metadata, 'amount_lease_residual_hold_reference'))
+        ->toBe($residualHoldReference)
+        ->and($operationCount)->toBe(2);
+
+    $replayed = app(SettleVerifiedFundingIntent::class)->handle($intent->refresh());
+
+    expect($replayed->is($settlement))->toBeTrue()
+        ->and(FundingSettlement::query()->count())->toBe(1)
+        ->and(TreasuryAllocation::query()->whereIn('allocation_reference', [
+            $order->treasury_hold_reference,
+            $residualHoldReference,
+        ])->count())->toBe(2)
+        ->and(TreasuryPositionOperation::query()
+            ->where('external_reference', $externalReference)
+            ->count())->toBe($operationCount)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(0)
+        ->and($payCodeReserveLedger->refresh()->getBalanceIntAttribute())->toBe(5_001);
+
+    $voucher = Voucher::query()->create([
+        'code' => 'ODIF-RS01',
+        'metadata' => ['source' => 'amount_lease_residual_test'],
+    ]);
+    $result = new GeneratePayCodeResultData(
+        voucher_id: $voucher->getKey(),
+        code: 'ODIF-RS01',
+        amount: 50,
+        currency: 'PHP',
+        issuer: new IssuerData(id: $user->getKey()),
+        cost: new PricingEstimateData(currency: 'PHP', pay_code_value: 50, account_debit: 50),
+        wallet: ['balance_before' => 50, 'balance_after' => 0],
+        debit: new DebitData(id: 100, amount: 50),
+        links: new PayCodeLinksData(
+            redeem: 'https://example.test/x/claim/ODIF-RS01',
+            redeem_path: '/x/claim/ODIF-RS01',
+        ),
+    );
+    $generate = Mockery::mock(GeneratePayCode::class);
+    $generate->shouldReceive('handle')->once()->andReturn($result);
+    app()->instance(GeneratePayCode::class, $generate);
+    $job = new ResumeOnDemandPayCodeIssuanceJob($order->getKey());
+
+    app()->call([$job, 'handle']);
+    app()->call([$job, 'handle']);
+
+    expect($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::Issued)
+        ->and($order->voucher_id)->toBe($voucher->getKey())
+        ->and($mainHold->refresh()->balance_minor)->toBe(0)
+        ->and($mainHold->status)->toBe('depleted')
+        ->and($residualHold->refresh()->balance_minor)->toBe(1)
+        ->and($residualHold->status)->toBe('active')
+        ->and($payCodeReserveLedger->refresh()->getBalanceIntAttribute())->toBe(1);
+});
+
+it('rolls back settlement when the leased transfer adjustment drifts', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->sole();
+    app(ReserveOnDemandIssuanceAmountLease::class)->handle(
+        issuanceFundingOrder($user, 'amount-lease-drift-collision'),
+    );
+    $order = app(ReserveOnDemandIssuanceAmountLease::class)->handle(
+        issuanceFundingOrder($user, 'amount-lease-drift'),
+    );
+    $observation = onDemandFundingObservation(5_002);
+    $intent = onDemandFundingIntent($wallet->uuid, $observation, 5_002);
+    $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();
+
+    expect(fn () => app(SettleVerifiedFundingIntent::class)->handle($intent))
+        ->toThrow(
+            RuntimeException::class,
+            'settled amount does not match the leased issuance payment amount',
+        );
+
+    expect($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::AwaitingPayment)
+        ->and($order->treasury_hold_reference)->toBeNull()
+        ->and($intent->refresh()->status)->toBe(FundingIntentStatus::Verified)
+        ->and(FundingEvidenceClaim::query()->count())->toBe(0)
+        ->and(FundingSettlement::query()->count())->toBe(0)
+        ->and(TreasuryAllocation::query()->count())->toBe(0)
+        ->and(TreasuryPositionOperation::query()->count())->toBe(0)
+        ->and(TreasuryPosition::query()->whereMorphedTo('principal', $user)->count())->toBe(0);
+
+    Queue::assertNothingPushed();
+});
+
+it('contains a shortfall lease adjustment in a separate bounded hold', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->sole();
+    $positions = app(TreasuryAccountPortfolioProvisioningContract::class)
+        ->provision($user, ['netbank-primary'])
+        ->positions;
+    $clientFunds = collect($positions)->first(
+        static fn ($position): bool => $position->purpose === TreasuryPositionPurpose::ClientFunds,
+    );
+    $payCodeReserve = collect($positions)->first(
+        static fn ($position): bool => $position->purpose === TreasuryPositionPurpose::PayCodeReserve,
+    );
+    $openingObservation = onDemandFundingObservation(3_000);
+    $openingIntent = onDemandFundingIntent($wallet->uuid, $openingObservation, 3_000);
+    $openingIntent->forceFill(['purpose' => FundingIntentPurpose::AccountFunding])->saveQuietly();
+    app(SettleVerifiedFundingIntent::class)->handle($openingIntent);
+    expect(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(3_000);
+    $order = issuanceFundingOrder($user, 'shortfall-amount-lease-residual');
+    $holdReference = 'issuance-hold:shortfall-amount-lease-residual';
+    $order->forceFill([
+        'funding_basis' => OnDemandIssuanceFundingBasis::Shortfall,
+        'reserved_client_funds_minor' => 3_000,
+        'on_demand_amount_minor' => 2_000,
+        'reconciliation_adjustment_minor' => 1,
+        'expected_payment_minor' => 2_001,
+        'treasury_hold_reference' => $holdReference,
+        'amount_lease_active_key' => hash('sha256', 'shortfall-amount-lease-residual'),
+        'amount_lease_reserved_at' => now(),
+    ])->saveQuietly();
+    app(TreasuryHoldOperationContract::class)->place(new TreasuryHoldPlacementData(
+        operationReference: 'issuance-hold-place:'.$order->reference,
+        holdReference: $holdReference,
+        sourcePositionReference: $clientFunds->positionReference,
+        heldPositionReference: $payCodeReserve->positionReference,
+        amountMinor: 3_000,
+        currency: 'PHP',
+        idempotencyKey: 'issuance-hold-place-key:'.$order->reference,
+        externalReference: 'issuance-funding-order:'.$order->reference,
+        maximumAmountMinor: 5_000,
+        replenishable: true,
+        metadata: ['funding_order_reference' => $order->reference],
+    ));
+    $observation = onDemandFundingObservation(2_001);
+    $intent = onDemandFundingIntent($wallet->uuid, $observation, 2_001);
+    $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();
+
+    app(SettleVerifiedFundingIntent::class)->handle($intent);
+    $order->refresh();
+    $mainHold = TreasuryAllocation::query()
+        ->where('allocation_reference', $order->treasury_hold_reference)
+        ->sole();
+    $residualHold = TreasuryAllocation::query()
+        ->where('allocation_reference', data_get(
+            $order->metadata,
+            'amount_lease_residual.hold_reference',
+        ))->sole();
+
+    expect($order->status)->toBe(PayCodeIssuanceFundingOrderStatus::Funded)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(0)
+        ->and($mainHold->initial_amount_minor)->toBe(3_000)
+        ->and($mainHold->maximum_amount_minor)->toBe(5_000)
+        ->and($mainHold->balance_minor)->toBe(5_000)
+        ->and($residualHold->initial_amount_minor)->toBe(1)
+        ->and($residualHold->maximum_amount_minor)->toBe(1)
+        ->and($residualHold->balance_minor)->toBe(1);
 });
 
 function issuanceFundingOrder(User $user, ?string $identity = null): PayCodeIssuanceFundingOrder
