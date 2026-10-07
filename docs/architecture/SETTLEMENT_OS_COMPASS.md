@@ -43,8 +43,10 @@ reviews those manifests, owns `config/horizon.php`, authorizes `/horizon`, and
 operates Redis-backed supervisors.
 
 The testing host currently uses database queues and database cache, has PHP
-Redis support, and does not have Horizon installed. The planned dashboard URL
-is `https://x-change-testing-testing-uw1gvj.laravel.cloud/horizon`. Its initial
+Redis support, and has Horizon installed but disabled. It has adopted the five
+exact immutable queue-manifest releases and discovers their topology without
+authorizing or processing any Redis lane. The planned dashboard URL is
+`https://x-change-testing-testing-uw1gvj.laravel.cloud/horizon`. Its initial
 testing authorization policy is any authenticated user with recent password
 confirmation. A shared Horizon password is deferred and disabled.
 
@@ -232,7 +234,7 @@ historical `expired` label alone is not recovery-entitlement evidence.
 ## Current Position
 
 Current wave: Queue Topology and Horizon Commissioning
-Current status: Plan persisted; Gate 1 package queue catalog is next; no Horizon or Redis mutation authorized
+Current status: Package catalog, host foundation, immutable publication, and disabled-host adoption complete; no Horizon or Redis queue processing authorized
 Last updated: 2026-10-07
 
 | Wave | Workstream | Role | Status | Compass |
@@ -247,7 +249,7 @@ Last updated: 2026-10-07
 | 7 | Governed Provisioning | Vacant commissioning seats, exact-capability authority offers, delivery, activation/revocation/supersession, production API mandates, and Treasury-safe Account Grants | Controlled Cockpit lifecycle implemented; authority remains separate from cash and provider execution | [PROVISIONING_AND_ACCOUNT_GRANTS.md](PROVISIONING_AND_ACCOUNT_GRANTS.md) |
 | 8 | Standing Funding Runtime | Recovery-safe provider synchronization control plane | Canary and bounded fleet gate complete; legacy address 4 quarantined; disabled at generation 7 | [STANDING_FUNDING_RUNTIME_COMPASS.md](STANDING_FUNDING_RUNTIME_COMPASS.md) |
 | 9 | Public On-Demand Issuance Acceptance | Testing-instance Pay Code order, exact funding, exactly-once issuance, and no-op retry proof | Planned; readiness and rollback-runner repair required before order creation | [public-auto-generate/TESTING_INSTANCE_ACCEPTANCE_COMPASS.md](public-auto-generate/TESTING_INSTANCE_ACCEPTANCE_COMPASS.md) |
-| 10 | Queue Operations and Horizon | Cross-package queue discovery, Redis-backed Horizon workers, visual operations, and fail-closed commissioning | Planned; Gate 1 package catalog next | [QUEUE_OPERATIONS_COMPASS.md](QUEUE_OPERATIONS_COMPASS.md) |
+| 10 | Queue Operations and Horizon | Cross-package queue discovery, Redis-backed Horizon workers, visual operations, and fail-closed commissioning | Disabled-host adoption complete; local non-financial Redis characterization is the next separate gate | [QUEUE_OPERATIONS_COMPASS.md](QUEUE_OPERATIONS_COMPASS.md) |
 
 ## Package Map
 

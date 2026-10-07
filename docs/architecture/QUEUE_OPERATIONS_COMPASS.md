@@ -11,7 +11,7 @@ authority for financial recovery.
 
 ## Current position
 
-**Status: Gates 1 through 3 and immutable package publication complete; disabled-host adoption is next.**
+**Status: Gates 1 through 3, immutable package publication, and disabled-host adoption complete.**
 
 The testing host still uses database queues and database cache. PHP Redis
 support is available and Horizon is now installed in the host, but it is
@@ -24,9 +24,9 @@ supervisors only for explicitly authorized queues, and exposes strict
 inspection commands. Inspection rejects financial use of `default`, unknown
 queue authorization, incompatible shared-lane semantics, unsafe timeout versus
 `retry_after`, excessive concurrency, and enabled financial lanes that were
-not explicitly commissioned. The currently installed host package releases
-still predate their new manifests, so host discovery correctly reports no
-manifests until the newly published immutable releases are adopted.
+not explicitly commissioned. The host has adopted the five exact immutable
+releases and now discovers all five manifests while remaining on the database
+queue with Horizon disabled and an empty authorized-queue list.
 
 x-change now publishes a versioned, Horizon-neutral queue manifest through
 Composer metadata. The catalog characterizes all 17 queued package jobs across
@@ -91,6 +91,7 @@ names. Redis prefixes isolate environments.
 | 1B | Remove financial `default` fallback and add safe operational tags | Complete |
 | 2 | x-journal, x-action, x-feedback, and x-campaign manifests | Complete |
 | 3 | Host discovery, Horizon install, and authenticated dashboard | Complete, disabled |
+| 3A | Exact package adoption with Horizon and Redis processing disabled | Complete |
 | 4 | Laravel Cloud Redis foundation | Separately gated infrastructure change |
 | 5 | Database drain and non-financial Redis canary | Pending Gate 4 |
 | 6 | Bounded x-change Horizon canary | Pending Gate 5 |
@@ -116,13 +117,13 @@ names. Redis prefixes isolate environments.
 
 ## Immediate next gate
 
-**Disabled-host adoption of the immutable package releases.**
+**Local Redis characterization and an explicitly authorized non-financial Horizon canary.**
 
-Adopt the published releases in the host and prove discovery plus strict
-inspection while `QUEUE_CONNECTION=database`, `HORIZON_ENABLED=false`, and the
-authorized queue list remains empty. After that, DBngin Redis may be used for
-a local, non-financial Horizon canary. Laravel Cloud Redis remains a separately
-gated infrastructure operation.
+The package releases are now adopted and discoverable without activating any
+worker. The next gate may confirm DBngin Redis reachability and rehearse a
+single non-financial lane locally. It must not authorize `x-change-funding`,
+`x-change-issuance`, or `partner-payments`. Laravel Cloud Redis remains a
+separately gated infrastructure operation.
 
 ## Verification checkpoint
 
@@ -190,6 +191,21 @@ Immutable package publication was verified on 2026-10-07:
 All five annotated tags were verified against their remote peeled commit SHAs.
 The x-feedback merge was additionally verified with 201 passing tests and
 1,102 assertions before publication.
+
+Disabled-host adoption was verified on 2026-10-07:
+
+- the host lock resolves exactly to x-change `v1.0.105`, x-journal `v1.1.1`,
+  x-action `v1.0.2`, x-feedback `v1.1.1`, and x-campaign `v1.1.3`;
+- package discovery returned all five versioned manifests and declared
+  `campaigns`, `x-change-funding`, `x-change-feedback`, `partner-payments`, and
+  `x-change-issuance` without authorizing any of them;
+- strict inspection returned ready with `QUEUE_CONNECTION=database`, Horizon
+  disabled, and an empty authorized-queue list;
+- the uncommissioned financial lanes were reported as warnings rather than
+  activated;
+- no Horizon process was running;
+- the focused host suite passed 11 tests with 44 assertions; and
+- Composer strict validation and configuration cache round-trip passed.
 
 ## Stop conditions
 
