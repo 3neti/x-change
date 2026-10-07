@@ -4571,9 +4571,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - No queue, worker, schedule, provider, or financial state changed in this
   characterization gate.
 
-## 2026-10-07 Update — Database Worker Coverage Correction
+## 2026-10-07 Update — Database Worker Coverage Configuration
 
-- The existing one-process Laravel Cloud database worker now consumes
+- The existing one-process Laravel Cloud database worker now stores desired
+  control-plane configuration for
   `x-change-funding,x-change-issuance,x-change-feedback,default`.
 - Retry and timing settings remain unchanged: 3 tries, 30-second backoff,
   3-second sleep, zero rest, and a 60-second timeout against a 90-second
@@ -4587,5 +4588,19 @@ Workstream compasses remain the source of detailed slice history. This Compass s
   process exists.
 - No synthetic or package job, provider call, voucher issuance, or financial
   operation was performed.
-- The next separately authorized gate may be the bounded non-financial Cloud
-  Horizon canary on the `campaigns` planning lane.
+- The rendered process command still showed the earlier queue list, so a
+  deployment and post-deployment verification remain required before the
+  worker-coverage correction is operationally complete.
+
+## 2026-10-07 Update — First Cloud Horizon Canary Attempt Safely Stopped
+
+- Scoped topology inspection passed for only the `campaigns` planning lane;
+  financial queues remained uncommissioned.
+- A temporary Horizon process definition was created, but Horizon remained
+  inactive before and after one corrective shell-wrapped command.
+- No canary job was dispatched, and the temporary process was deleted.
+- Recovery verification found all database and Redis queues empty, Horizon
+  disabled, no authorized queues, and scheduled Standing Funding disabled.
+- The next separate gate requires deployment materialization of both the
+  database worker correction and a temporary Horizon process before any
+  synthetic canary may be dispatched.

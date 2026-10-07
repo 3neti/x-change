@@ -313,13 +313,14 @@ later non-financial canary may authorize only `campaigns`, must dispatch only
 the host-owned synthetic job explicitly to Redis, and must leave every package
 producer on its existing database connection.
 
-Database worker coverage correction was verified on 2026-10-07:
+Database worker coverage correction was staged in the Cloud control plane on
+2026-10-07, but runtime materialization remains pending:
 
 - pre-change probe `cexe-a2ec2437-c162-4e88-a9d3-1b21a912c0bc` found zero
   database jobs, zero failed jobs, and zero open issuance funding orders while
   Horizon and scheduled Standing Funding remained disabled;
-- Laravel Cloud process `process-a26660bc-ca50-4c26-9f41-9ca29ca5d5ba` was
-  updated in place from
+- Laravel Cloud process `process-a26660bc-ca50-4c26-9f41-9ca29ca5d5ba` now
+  stores desired configuration changing
   `x-change-funding,x-change-feedback,default` to
   `x-change-funding,x-change-issuance,x-change-feedback,default`;
 - the process remains a single database worker with 3 tries, 30-second
@@ -331,12 +332,40 @@ Database worker coverage correction was verified on 2026-10-07:
   database jobs, zero failed jobs, and zero open issuance funding orders;
 - final probe `cexe-a2ec25f8-52d8-4505-83cf-d499370c2855` also found ready,
   delayed, and reserved depth zero on all five Redis queues;
+- the Cloud process resource continued to render its earlier command without
+  `x-change-issuance`, so a deployment and post-deployment process check are
+  still required before the coverage correction may be called operational;
 - `QUEUE_CONNECTION` and `CACHE_STORE` remain `database`, Horizon remains
   disabled with no authorized queues, scheduled Standing Funding remains
   disabled, and the corrected database worker remains the only background
   process; and
 - no test job, retry, deletion, provider call, voucher issuance, or financial
   operation occurred.
+
+The first bounded Cloud Horizon canary attempt was safely stopped on
+2026-10-07:
+
+- command `comm-a2ec2829-33c7-48b1-ac03-7c4fd6f451ab` proved that
+  command-scoped Horizon configuration was topology-ready for only the
+  `campaigns` planning lane over Redis while both financial lanes remained
+  uncommissioned;
+- temporary process `process-a2ec2853-9074-47ad-a57b-549fd0573aea` was created
+  without changing persistent environment variables or deploying application
+  code;
+- Horizon remained inactive with both the direct scoped command and one
+  corrective `/bin/sh -lc` command, indicating that the new process definition
+  was not materialized by the running deployment;
+- no canary job was dispatched;
+- the inactive temporary process was deleted; and
+- recovery probe `cexe-a2ec2a23-2855-431a-aa2d-2a2c55df7808` confirmed zero
+  database jobs, zero failed jobs, all Redis queue states empty, database queue
+  and cache defaults intact, Horizon disabled with no authorized queues, and
+  scheduled Standing Funding disabled.
+
+The next gate must explicitly authorize deployment materialization of the
+corrected database worker and a temporary Horizon process. It must verify the
+rendered process commands before any canary dispatch and include a second
+deployment or equivalent verified removal step during cleanup.
 
 ## Stop conditions
 

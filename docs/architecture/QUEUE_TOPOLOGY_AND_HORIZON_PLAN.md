@@ -399,9 +399,10 @@ job, a non-zero Redis queue, or new `x-change-issuance` work appears. This gate
 performed no dispatch, retry, deletion, process change, queue migration,
 provider call, or financial operation.
 
-**Database worker coverage correction checkpoint (2026-10-07):** the existing
-Laravel Cloud process `process-a26660bc-ca50-4c26-9f41-9ca29ca5d5ba` was
-updated in place to consume
+**Database worker coverage configuration checkpoint (2026-10-07):** the
+existing Laravel Cloud process
+`process-a26660bc-ca50-4c26-9f41-9ca29ca5d5ba` stores desired configuration to
+consume
 `x-change-funding,x-change-issuance,x-change-feedback,default`. It remains one
 database worker with 3 tries, 30-second backoff, 3-second sleep, zero rest, and
 a 60-second timeout. The database connection retains its 90-second
@@ -420,8 +421,30 @@ The first Cloud update request was rejected before mutation because the API did
 not accept the textual `false` supplied for the optional maintenance-mode
 field. The single corrected retry omitted that unchanged field and succeeded.
 No test job, manual retry, deletion, queue migration, provider call, voucher
-issuance, or financial operation occurred. Database worker coverage is no
-longer a blocker for a separately authorized synthetic Cloud Horizon canary.
+issuance, or financial operation occurred. The process resource continued to
+render its earlier command without `x-change-issuance`; therefore a deployment
+and post-deployment runtime check are still required before this coverage
+correction is operationally closed.
+
+**First Cloud Horizon canary attempt (2026-10-07): safely stopped.** A
+command-scoped strict inspection succeeded for exactly the `campaigns`
+planning lane over Redis. Temporary custom process
+`process-a2ec2853-9074-47ad-a57b-549fd0573aea` was then created with Horizon
+enabled only in its command environment. Horizon remained inactive after the
+initial command and one corrective shell-wrapped command. No canary was
+dispatched. The process was deleted, and final recovery inspection found zero
+database jobs, zero failed jobs, and zero ready, delayed, or reserved jobs on
+all five Redis queues. Persistent Horizon configuration remained disabled and
+the existing database worker remained the only process.
+
+The evidence indicates that new or changed Cloud background-process definitions
+must be materialized by a deployment before runtime verification. The next
+separate gate must authorize that deployment explicitly. It should create the
+temporary scoped process, deploy the exact tested host commit, verify the
+rendered database-worker and Horizon commands, run one synthetic canary only
+after `horizon:status` is active, then terminate and remove Horizon and verify
+that removal is materialized. Stop without dispatch if either process command
+does not match the approved configuration.
 
 ### Gate 5 — Drain and non-financial canary
 
