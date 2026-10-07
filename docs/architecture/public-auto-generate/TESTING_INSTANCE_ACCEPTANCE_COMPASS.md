@@ -240,3 +240,29 @@ Gate 4A authorizes repair, immutable release, adoption, deployment, and
 read-only verification only. Reassigning claim 11, reconciling either suspense
 case, settling funds, issuing a Pay Code, creating another order, or accepting
 another payment remains prohibited and requires a later gate.
+
+Adoption evidence:
+
+- immutable release `v1.0.109` points to package commit `bd1c0f05`;
+- host commit `ed3d7190` changes only the x-change lock entry;
+- deployment `depl-a2ecdfd3-531f-46e9-940d-5d4ac6f29402` succeeded on that
+  exact host commit;
+- Cloud command `comm-a2ece165-8fca-4a80-8047-e4a83be2dda4` confirmed
+  x-change `v1.0.109` at `bd1c0f05`;
+- commissioning remained operational and strict doctor command
+  `comm-a2ece1a7-28a3-4b1f-8f22-46a6719293f1` passed 37 of 37 checks;
+- strict queue command `comm-a2ece1d2-d879-4793-8123-1a9932cfd3e0`
+  remained ready with database queues, Horizon disabled, and no authorized
+  Redis lanes;
+- Standing Funding command `comm-a2ece2b4-be05-48bb-82c0-431fccd3651c`
+  remained disabled at generation 7 with zero active runs and one quarantined
+  address; and
+- read-only probe `cexe-a2ece313-8156-4eb5-9859-c3f336d62629` confirmed
+  claim 11 still belongs to intent 32, both suspense cases remain open, both
+  intents remain in suspense, settlements remain zero, and neither order has a
+  voucher or Treasury hold. The replacement order has since expired through
+  normal time-based lifecycle.
+
+Gate 4A is complete. Gate 4B, if authorized, must design and prove a guarded
+live disposition for the pre-repair immutable claim and two suspense cases.
+No reconciliation or further payment occurred in Gate 4A.

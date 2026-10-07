@@ -186,3 +186,12 @@ Future agents must update this compass after every completed or blocked gate.
 - Existing live suspense and evidence records are deliberately unchanged.
   Reconciliation, claim reassignment, settlement, issuance, and any further
   payment remain separate authority gates.
+- Immutable x-change `v1.0.109` at `bd1c0f05` was adopted by lock-only host
+  commit `ed3d7190` and deployed successfully as
+  `depl-a2ecdfd3-531f-46e9-940d-5d4ac6f29402`.
+- Cloud verification confirmed operational commissioning, strict doctor 37 of
+  37, Horizon disabled, no authorized Redis queues, Standing Funding disabled
+  at generation 7, and no change to the existing claim, suspense, settlement,
+  voucher, or Treasury-hold facts.
+- Gate 4A is closed before reconciliation. A guarded disposition of the
+  pre-repair live records is a separately authorized Gate 4B.

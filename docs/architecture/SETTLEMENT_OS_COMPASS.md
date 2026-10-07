@@ -4851,3 +4851,15 @@ observation window.
 - This is code hardening only. The existing live claim and both suspense cases
   remain untouched. Live reconciliation, settlement, issuance, another order,
   or another payment requires a separately authorized gate.
+- Immutable x-change `v1.0.109` at `bd1c0f05` was adopted by lock-only host
+  commit `ed3d7190`; deployment
+  `depl-a2ecdfd3-531f-46e9-940d-5d4ac6f29402` succeeded.
+- Post-deployment verification confirmed operational commissioning, strict
+  doctor 37 of 37, database queues with Horizon disabled and no authorized
+  Redis lanes, and Standing Funding disabled at generation 7 with zero active
+  runs and one quarantined address.
+- Read-only probe `cexe-a2ece313-8156-4eb5-9859-c3f336d62629` confirmed the
+  pre-repair immutable claim still belongs to the expired PHP 40.00 intent,
+  both suspense cases remain open, settlements remain zero, and neither order
+  has a voucher or Treasury hold. Gate 4A performed no reconciliation or
+  further payment.
