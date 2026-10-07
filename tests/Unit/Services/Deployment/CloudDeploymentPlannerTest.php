@@ -22,7 +22,7 @@ it('renders a stable sanitized no-op plan for ready Cloud state', function (): v
                     'websockets' => ['attached' => false],
                 ],
                 'runtime' => [
-                    'queues' => ['default', 'x-change-feedback', 'x-change-funding'],
+                    'queues' => ['x-change-feedback', 'x-change-funding', 'x-change-issuance'],
                     'scheduler' => true,
                 ],
             ];
@@ -74,7 +74,7 @@ it('marks missing resources and queues without inventing scheduler state', funct
 
     expect($plan['changes_required'])->toBeTrue()
         ->and(collect($plan['operations'])->firstWhere('resource', 'workers')['missing_queues'])
-        ->toBe(['x-change-funding', 'x-change-feedback'])
+        ->toBe(['x-change-funding', 'x-change-feedback', 'x-change-issuance'])
         ->and(collect($plan['operations'])->firstWhere('resource', 'scheduler')['status'])
         ->toBe('verification_required')
         ->and(collect($plan['operations'])->firstWhere('resource', 'websockets')['status'])

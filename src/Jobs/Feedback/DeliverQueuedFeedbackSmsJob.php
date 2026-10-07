@@ -13,11 +13,13 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use LBHurtado\XChange\Actions\Feedback\CompleteQueuedFeedbackSmsDelivery;
+use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
 use Throwable;
 
 final class DeliverQueuedFeedbackSmsJob implements ShouldBeEncrypted, ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;
+    use HasSafeQueueTags;
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;

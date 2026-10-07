@@ -15,11 +15,13 @@ use Illuminate\Queue\SerializesModels;
 use LBHurtado\XChange\Actions\Operations\RecordExternalJobFailure;
 use LBHurtado\XChange\Actions\Payment\MonitorPaymentAttempt;
 use LBHurtado\XChange\Models\PaymentAttempt;
+use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
 use Throwable;
 
 final class MonitorPaymentAttemptJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;
+    use HasSafeQueueTags;
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;

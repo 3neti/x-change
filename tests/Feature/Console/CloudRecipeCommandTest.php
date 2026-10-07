@@ -53,7 +53,7 @@ it('rechecks live state before resuming from a sanitized checkpoint', function (
                     'websockets' => ['attached' => false],
                 ],
                 'runtime' => [
-                    'queues' => ['x-change-funding', 'x-change-feedback', 'default'],
+                    'queues' => ['x-change-funding', 'x-change-feedback', 'x-change-issuance'],
                     'scheduler' => true,
                 ],
             ];
@@ -104,7 +104,7 @@ it('ships a converged Cloud environment through the single recipe command', func
                     'websockets' => ['attached' => false],
                 ],
                 'runtime' => [
-                    'queues' => ['x-change-funding', 'x-change-feedback', 'default'],
+                    'queues' => ['x-change-funding', 'x-change-feedback', 'x-change-issuance'],
                     'scheduler' => true,
                 ],
             ];

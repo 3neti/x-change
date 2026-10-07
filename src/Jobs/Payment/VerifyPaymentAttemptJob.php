@@ -16,11 +16,13 @@ use LBHurtado\XChange\Actions\Operations\RecordExternalJobFailure;
 use LBHurtado\XChange\Actions\Payment\VerifyPaymentAttempt;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Models\PaymentAttempt;
+use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
 use Throwable;
 
 class VerifyPaymentAttemptJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;
+    use HasSafeQueueTags;
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;

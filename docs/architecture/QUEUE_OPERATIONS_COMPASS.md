@@ -11,7 +11,7 @@ authority for financial recovery.
 
 ## Current position
 
-**Status: Gate 1A implemented and verified; runtime routing is unchanged.**
+**Status: Gate 1 complete and verified; package manifests for adjacent systems are next.**
 
 The testing host uses database queues and database cache. PHP Redis support is
 available, but Horizon is not installed, no Redis queue has been commissioned,
@@ -25,12 +25,12 @@ four currently effective lane groups:
 - `x-change-funding` for funding and payment verification work;
 - `x-change-feedback` plus any explicitly configured feedback override;
 - `partner-payments` for partner payment event delivery; and
-- the legacy `default` queue used by on-demand Pay Code issuance recovery.
+- `x-change-issuance` for funded on-demand Pay Code issuance recovery.
 
-The last item is recorded as boundary debt with migration target
-`x-change-issuance`; it has not been silently rerouted in this characterization
-slice. Horizon remains optional and no queue connection, worker, schedule, or
-Cloud resource changed.
+The former implicit `default` issuance route now uses a backward-compatible
+configuration selector whose default is `x-change-issuance`. Every queued job
+exposes only package, lane, and job-class tags. Horizon remains optional and no
+queue connection, worker, schedule, or Cloud resource changed.
 
 The agreed ownership model is:
 
@@ -78,7 +78,7 @@ names. Redis prefixes isolate environments.
 | Gate | Scope | Status |
 | --- | --- | --- |
 | 1A | Characterize and publish the x-change queue catalog | Complete |
-| 1B | Remove financial `default` fallback and add safe operational tags | Next |
+| 1B | Remove financial `default` fallback and add safe operational tags | Complete |
 | 2 | x-journal, x-action, x-feedback, and x-campaign manifests | Planned |
 | 3 | Host discovery, Horizon install, and authenticated dashboard | Planned |
 | 4 | Laravel Cloud Redis foundation | Separately gated infrastructure change |
@@ -106,14 +106,12 @@ names. Redis prefixes isolate environments.
 
 ## Immediate next gate
 
-**Gate 1B — Explicit issuance lane and safe operational tags.**
+**Gate 2 — Adjacent Settlement OS package manifests.**
 
-Move on-demand Pay Code issuance recovery from implicit `default` selection to
-the declared `x-change-issuance` lane through a backward-compatible config
-selector. Add sanitized package/lane tags without exposing financial payloads,
-provider secrets, beneficiary data, or exception internals. Prove dispatch
-routing and tags in focused tests. Do not install Horizon or change queue
-infrastructure in this gate.
+Inventory queued work in x-journal, x-action, x-feedback, and x-campaign. Add a
+versioned manifest to each clean package worktree, preserve current runtime
+routing, and fail package tests when a queued job is undeclared. Do not install
+Horizon or change host queue infrastructure in this gate.
 
 ## Verification checkpoint
 
@@ -126,6 +124,19 @@ Gate 1A was verified on 2026-10-07:
 - Horizon is suggested but is not a package requirement; and
 - Composer lock metadata was refreshed without changing declared dependency
   versions.
+
+Gate 1B was verified on 2026-10-07:
+
+- queue topology tests: 6 passed, including explicit issuance routing and all
+  17 sanitized tag contracts;
+- deployment planner and applier tests: 4 passed;
+- Cloud recipe command tests: 5 passed;
+- commissioning checklist tests: 10 passed;
+- deployment documentation tests: 3 passed;
+- Cockpit runtime diagnostics: 5 frontend tests passed; and
+- the broader on-demand issuance file retained 26 passing scenarios, while four
+  existing HTTP scenarios returned unrelated 428/302 readiness responses and
+  remain outside this queue-routing change.
 
 ## Stop conditions
 

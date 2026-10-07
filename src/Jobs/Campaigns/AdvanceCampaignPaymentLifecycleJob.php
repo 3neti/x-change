@@ -15,11 +15,13 @@ use LBHurtado\XChange\Actions\Campaigns\SendCampaignPaymentCompletionSms;
 use LBHurtado\XChange\Actions\Settlement\AdvanceSettlementCampaignLifecycle;
 use LBHurtado\XChange\Jobs\Funding\SyncStandingFundingAddressJob;
 use LBHurtado\XChange\Models\CampaignPaymentRecognition;
+use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
 use Throwable;
 
 final class AdvanceCampaignPaymentLifecycleJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;
+    use HasSafeQueueTags;
     use InteractsWithQueue;
     use Queueable;
 

@@ -13,12 +13,14 @@ use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Support\Facades\Log;
 use LBHurtado\XChange\Actions\Settlement\CompleteAutomaticDemonstrationPolicy;
 use LBHurtado\XChange\Models\CompletionClaimEvidenceProjection;
+use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
 use LBHurtado\XChange\Services\Settlement\AutomaticDemonstrationPolicy;
 use Throwable;
 
 final class CompleteAutomaticDemonstrationPolicyJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;
+    use HasSafeQueueTags;
     use InteractsWithQueue;
     use Queueable;
 

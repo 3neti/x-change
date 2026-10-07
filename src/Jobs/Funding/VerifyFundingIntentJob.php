@@ -19,11 +19,13 @@ use LBHurtado\XChange\Data\Funding\FundingIntentVerificationData;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\FundingVerificationTrigger;
 use LBHurtado\XChange\Models\FundingIntent;
+use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
 use Throwable;
 
 class VerifyFundingIntentJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;
+    use HasSafeQueueTags;
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;

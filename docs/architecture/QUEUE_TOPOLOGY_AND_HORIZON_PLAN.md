@@ -101,12 +101,12 @@ Rules:
 
 ## Machine-readable queue manifest
 
-**Implementation checkpoint:** x-change Gate 1A now publishes this manifest at
+**Implementation checkpoint:** x-change Gate 1 now publishes this manifest at
 `resources/settlement-os/queues.php` and advertises it through Composer extra
-metadata. It currently characterizes all 17 queued x-change jobs without
-changing runtime routing. The legacy `default` issuance queue remains visible
-until Gate 1B moves it through a backward-compatible selector to
-`x-change-issuance`.
+metadata. It characterizes all 17 queued x-change jobs, routes on-demand
+issuance recovery through the configurable `x-change-issuance` lane, and gives
+every queued job sanitized package/lane/job tags. No host queue connection or
+infrastructure has changed.
 
 Each participating package should expose a package-owned manifest with this
 conceptual shape:

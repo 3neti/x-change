@@ -14,7 +14,7 @@ resources:
     queues:
       - x-change-funding
       - x-change-feedback
-      - default
+      - x-change-issuance
     timeout_seconds: 60
   scheduler:
     required: true

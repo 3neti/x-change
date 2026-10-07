@@ -11,6 +11,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Crypt;
 use LBHurtado\XChange\Actions\Feedback\DeliverAndJournalFeedback;
+use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
 use LBHurtado\XFeedback\Data\FeedbackChannelData;
 use LBHurtado\XFeedback\Data\FeedbackIntentData;
 use LBHurtado\XFeedback\Data\FeedbackMessageData;
@@ -20,6 +21,7 @@ use LBHurtado\XProvisioning\Models\ProvisioningOffer;
 final class DeliverProvisioningOfferJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use HasSafeQueueTags;
 
     public function __construct(
         public readonly string $offerReference,

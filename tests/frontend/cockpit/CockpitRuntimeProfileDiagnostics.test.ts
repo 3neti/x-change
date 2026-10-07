@@ -121,9 +121,9 @@ const runtimeProfileReadModel = {
             },
         },
         runtime_processes: {
-            queues: ['x-change-funding', 'x-change-feedback', 'default'],
+            queues: ['x-change-funding', 'x-change-feedback', 'x-change-issuance'],
             local: {
-                queue: 'php artisan queue:work database --queue=x-change-funding,x-change-feedback,default',
+                queue: 'php artisan queue:work database --queue=x-change-funding,x-change-feedback,x-change-issuance',
                 scheduler: 'php artisan schedule:work',
             },
             cloud: [],

@@ -15,10 +15,12 @@ use Illuminate\Queue\SerializesModels;
 use LBHurtado\XChange\Actions\Commercial\ReconcilePartnerCommissionPayoutBatch;
 use LBHurtado\XChange\Enums\PartnerCommissionPayoutBatchStatus;
 use LBHurtado\XChange\Models\PartnerCommissionPayoutBatch;
+use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
 
 final class ReconcilePartnerCommissionPayoutBatchJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;
+    use HasSafeQueueTags;
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;

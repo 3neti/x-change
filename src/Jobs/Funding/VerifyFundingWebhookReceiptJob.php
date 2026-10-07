@@ -19,12 +19,14 @@ use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
 use LBHurtado\XChange\Services\Funding\StandingFundingSyncAdmission;
 use Throwable;
 
 class VerifyFundingWebhookReceiptJob implements ShouldQueue
 {
     use Dispatchable;
+    use HasSafeQueueTags;
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;

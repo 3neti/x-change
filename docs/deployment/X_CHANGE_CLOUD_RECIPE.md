@@ -198,7 +198,8 @@ The initial Laravel Cloud target requires:
 - a PostgreSQL database;
 - durable cache and session infrastructure appropriate to the environment;
 - an application compute cluster;
-- managed workers for `x-change-funding`, `x-change-feedback`, and `default`;
+- managed workers for `x-change-funding`, `x-change-feedback`, and
+  `x-change-issuance`;
 - the Laravel scheduler;
 - Reverb or managed WebSockets only when broadcasting is enabled.
 

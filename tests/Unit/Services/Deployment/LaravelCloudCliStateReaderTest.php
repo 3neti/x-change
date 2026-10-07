@@ -28,7 +28,7 @@ it('reads only sanitized Cloud fields after checking each CLI command', function
             ], JSON_THROW_ON_ERROR)))
             ->push(Process::result(output: 'help'))
             ->push(Process::result(output: json_encode([
-                ['queue' => 'x-change-funding,x-change-feedback,default'],
+                ['queue' => 'x-change-funding,x-change-feedback,x-change-issuance'],
             ], JSON_THROW_ON_ERROR))),
     ]);
 
@@ -38,7 +38,7 @@ it('reads only sanitized Cloud fields after checking each CLI command', function
         ->and($state['environment']['exists'])->toBeTrue()
         ->and($state['resources']['database']['attached'])->toBeTrue()
         ->and($state['runtime']['queues'])->toBe([
-            'x-change-funding', 'x-change-feedback', 'default',
+            'x-change-funding', 'x-change-feedback', 'x-change-issuance',
         ]);
 
     Process::assertRan(static fn (PendingProcess $process): bool => $process->command === [

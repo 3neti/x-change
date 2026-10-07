@@ -103,24 +103,24 @@ return [
                 ],
             ],
         ],
-        'legacy-default-issuance' => [
-            'queue' => 'default',
+        'issuance' => [
+            'queue' => 'x-change-issuance',
             'criticality' => 'financial',
             'ordering' => 'subject-serialized',
             'idempotency_required' => true,
             'durable_recovery_required' => true,
             'explicit_commissioning' => true,
-            'status' => 'legacy',
-            'migration_target' => 'x-change-issuance',
             'recommended' => [
                 'timeout' => 60,
                 'tries' => 5,
                 'backoff' => [5, 15, 45, 120],
                 'max_processes' => 1,
             ],
-            'tags' => ['package:x-change', 'lane:legacy-default-issuance'],
+            'tags' => ['package:x-change', 'lane:issuance'],
             'jobs' => [
-                ResumeOnDemandPayCodeIssuanceJob::class => [],
+                ResumeOnDemandPayCodeIssuanceJob::class => [
+                    'configuration_key' => 'x-change.issuance_funding.on_demand.queue',
+                ],
             ],
         ],
     ],

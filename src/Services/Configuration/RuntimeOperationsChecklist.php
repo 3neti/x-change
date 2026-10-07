@@ -17,7 +17,7 @@ final readonly class RuntimeOperationsChecklist
      */
     public function describe(): array
     {
-        $queues = ['x-change-funding', 'x-change-feedback', 'default'];
+        $queues = ['x-change-funding', 'x-change-feedback', 'x-change-issuance'];
 
         return [
             'queues' => $queues,

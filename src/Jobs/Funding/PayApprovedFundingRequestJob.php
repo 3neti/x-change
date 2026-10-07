@@ -15,12 +15,14 @@ use Illuminate\Support\Facades\DB;
 use LBHurtado\XChange\Actions\Funding\PayApprovedFundingRequest;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Models\FundingRequest;
+use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
 use LBHurtado\XChange\Services\Funding\FundingRequestWorkflowPublisher;
 use Throwable;
 
 final class PayApprovedFundingRequestJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;
+    use HasSafeQueueTags;
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;

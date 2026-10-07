@@ -14,12 +14,14 @@ use LBHurtado\XChange\Actions\Funding\SyncStandingFundingAddress;
 use LBHurtado\XChange\Actions\Operations\RecordExternalJobFailure;
 use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
 use LBHurtado\XChange\Services\Funding\StandingFundingSyncRuntime;
 use Throwable;
 
 final class SyncStandingFundingAddressJob implements ShouldQueue
 {
     use Dispatchable;
+    use HasSafeQueueTags;
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;

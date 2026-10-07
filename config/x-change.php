@@ -1148,6 +1148,7 @@ return [
     'issuance_funding' => [
         'on_demand' => [
             'enabled' => (bool) env('XCHANGE_ON_DEMAND_ISSUANCE_ENABLED', false),
+            'queue' => env('XCHANGE_ON_DEMAND_ISSUANCE_QUEUE', 'x-change-issuance'),
             'basis' => env('XCHANGE_ON_DEMAND_FUNDING_BASIS', 'full_amount'),
             'ttl_seconds' => max(300, (int) env('XCHANGE_ON_DEMAND_FUNDING_TTL_SECONDS', 1800)),
             'fixed_qr_ph' => [

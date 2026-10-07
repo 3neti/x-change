@@ -42,7 +42,7 @@ it('is a no-op when declared Cloud infrastructure already exists', function (): 
                     'websockets' => ['attached' => false],
                 ],
                 'runtime' => [
-                    'queues' => ['x-change-funding', 'x-change-feedback', 'default'],
+                    'queues' => ['x-change-funding', 'x-change-feedback', 'x-change-issuance'],
                     'scheduler' => true,
                 ],
             ];
@@ -166,6 +166,7 @@ it('creates only missing workers and enables the scheduler once', function (): v
             'configureEnvironment',
             'createWorker:x-change-funding',
             'createWorker:x-change-feedback',
+            'createWorker:x-change-issuance',
             'enableScheduler',
         ]);
 });

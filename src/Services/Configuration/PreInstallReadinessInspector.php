@@ -557,7 +557,7 @@ final readonly class PreInstallReadinessInspector
             [
                 'required' => $required,
                 'connection' => $connection,
-                'required_queues' => ['default', 'x-change-feedback', 'x-change-funding'],
+                'required_queues' => ['x-change-feedback', 'x-change-funding', 'x-change-issuance'],
                 'missing_variables' => $missing,
             ],
         );

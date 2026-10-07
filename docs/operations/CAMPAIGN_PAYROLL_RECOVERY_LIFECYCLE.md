@@ -97,7 +97,7 @@ php artisan queue:work database --queue=x-change-feedback --sleep=3 --timeout=60
 For local all-lane development:
 
 ```bash
-php artisan queue:work database --queue=x-change-funding,x-change-feedback,default --sleep=3 --timeout=60
+php artisan queue:work database --queue=x-change-funding,x-change-feedback,x-change-issuance --sleep=3 --timeout=60
 ```
 
 Do not blindly drain all queues during a live recovery investigation. Inspect the queued jobs first and process only the intended campaign recovery job if there are unrelated notifications waiting.

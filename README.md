@@ -287,7 +287,7 @@ manual recovery, and safety gates.
 Local development normally runs:
 
 ```bash
-php artisan queue:work database --queue=x-change-funding,x-change-feedback,default --sleep=3 --timeout=60
+php artisan queue:work database --queue=x-change-funding,x-change-feedback,x-change-issuance --sleep=3 --timeout=60
 php artisan schedule:work
 php artisan reverb:start # only when Reverb broadcasting is enabled
 ```

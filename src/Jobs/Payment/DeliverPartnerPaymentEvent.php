@@ -12,6 +12,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Cache;
 use LBHurtado\XChange\Models\PartnerPaymentEvent;
+use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
 use LBHurtado\XChange\Services\Payment\PartnerPaymentEventDelivery;
 use RuntimeException;
 use Throwable;
@@ -19,6 +20,7 @@ use Throwable;
 final class DeliverPartnerPaymentEvent implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;
+    use HasSafeQueueTags;
     use InteractsWithQueue;
     use Queueable;
 

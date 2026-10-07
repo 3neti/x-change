@@ -21,12 +21,14 @@ use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
+use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
 use RuntimeException;
 use Throwable;
 
 final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;
+    use HasSafeQueueTags;
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
@@ -38,7 +40,13 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
     /** @var list<int> */
     public array $backoff = [5, 15, 45, 120];
 
-    public function __construct(public readonly int $fundingOrderId) {}
+    public function __construct(public readonly int $fundingOrderId)
+    {
+        $this->onQueue((string) config(
+            'x-change.issuance_funding.on_demand.queue',
+            'x-change-issuance',
+        ));
+    }
 
     public function uniqueId(): string
     {

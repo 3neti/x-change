@@ -15,6 +15,7 @@ use Illuminate\Queue\SerializesModels;
 use LBHurtado\XChange\Actions\Campaigns\DispatchCampaignFeedback;
 use LBHurtado\XChange\Actions\Campaigns\RecordCampaignDeliveryAttempt;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
+use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
 use Throwable;
 
 final class DispatchCampaignFeedbackJob implements ShouldBeEncrypted, ShouldBeUnique, ShouldQueue
@@ -22,6 +23,7 @@ final class DispatchCampaignFeedbackJob implements ShouldBeEncrypted, ShouldBeUn
     public const Queue = 'x-change-feedback';
 
     use Dispatchable;
+    use HasSafeQueueTags;
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;

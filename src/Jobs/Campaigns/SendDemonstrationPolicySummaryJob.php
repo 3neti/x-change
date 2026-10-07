@@ -13,11 +13,13 @@ use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Support\Facades\Log;
 use LBHurtado\XChange\Actions\Campaigns\SendDemonstrationPolicySummarySms;
 use LBHurtado\XChange\Models\PolicyCompletionOutcome;
+use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
 use Throwable;
 
 final class SendDemonstrationPolicySummaryJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;
+    use HasSafeQueueTags;
     use InteractsWithQueue;
     use Queueable;
 

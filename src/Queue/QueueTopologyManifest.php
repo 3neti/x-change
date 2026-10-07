@@ -102,6 +102,18 @@ final readonly class QueueTopologyManifest
         return $jobClasses;
     }
 
+    /** @param class-string $jobClass */
+    public function laneFor(string $jobClass): string
+    {
+        foreach ($this->load()['lanes'] as $lane => $definition) {
+            if (array_key_exists($jobClass, $definition['jobs'])) {
+                return $lane;
+            }
+        }
+
+        throw new InvalidArgumentException("Queued job [{$jobClass}] is not declared in the x-change queue topology.");
+    }
+
     /** @param array<string, mixed> $manifest */
     private function validate(array $manifest): void
     {

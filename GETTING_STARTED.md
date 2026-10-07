@@ -260,7 +260,7 @@ requiring an ownership confirmation and an auditable authorization reference.
 For local development, keep the required workers and scheduler running:
 
 ```bash
-php artisan queue:work database --queue=x-change-funding,x-change-feedback,default --sleep=3 --timeout=60
+php artisan queue:work database --queue=x-change-funding,x-change-feedback,x-change-issuance --sleep=3 --timeout=60
 php artisan schedule:work
 ```
 
