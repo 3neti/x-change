@@ -38,6 +38,7 @@ final readonly class EnsureXChangeIsCommissioned
             ! (bool) config('x-change.commissioning.enabled', true)
             || in_array(trim($request->path(), '/'), self::AllowedPaths, true)
             || $this->isAllowedReadOnlyPath($request)
+            || $this->isAllowedOperatorAccessPath($request)
             || $state->isOperational()
         ) {
             return $next($request);
@@ -82,6 +83,31 @@ final readonly class EnsureXChangeIsCommissioned
             $path = trim((string) $path, '/ ');
 
             if ($path !== '' && $request->is($path)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isAllowedOperatorAccessPath(Request $request): bool
+    {
+        foreach ((array) config('x-change.commissioning.operator_access_paths', []) as $rule) {
+            if (! is_array($rule)) {
+                continue;
+            }
+
+            $path = trim((string) ($rule['path'] ?? ''), '/ ');
+            $methods = array_map(
+                static fn (mixed $method): string => mb_strtoupper(trim((string) $method)),
+                (array) ($rule['methods'] ?? []),
+            );
+
+            if (
+                $path !== ''
+                && in_array($request->getMethod(), $methods, true)
+                && $request->is($path)
+            ) {
                 return true;
             }
         }

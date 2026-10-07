@@ -11,10 +11,13 @@ beforeEach(function (): void {
     config()->set('x-change.commissioning.enabled', true);
     config()->set('x-change.commissioning.enforce_during_tests', true);
     config()->set('x-change.commissioning.read_only_paths', []);
+    config()->set('x-change.commissioning.operator_access_paths', []);
     Route::middleware('web')->get('/host-home', fn (): string => 'host home');
     Route::middleware('api')->post('/api/host-webhook', fn (): array => ['accepted' => true]);
     Route::middleware('web')->get('/operations-read-model', fn (): string => 'operations read model');
     Route::middleware('web')->post('/operations-read-model/retry', fn (): string => 'retry started');
+    Route::middleware('web')->match(['GET', 'POST'], '/operator-login', fn (): string => 'operator login');
+    Route::middleware('web')->delete('/operator-login', fn (): string => 'operator login deleted');
 });
 
 it('does not intercept host routes during tests unless explicitly enforced', function (): void {
@@ -66,6 +69,22 @@ it('does not exempt paths that were not explicitly configured', function (): voi
     config()->set('x-change.commissioning.read_only_paths', ['another-read-model/*']);
 
     $this->get('/operations-read-model')->assertRedirect('/x/commissioning');
+});
+
+it('allows only explicitly configured methods through operator access paths', function (): void {
+    config()->set('x-change.commissioning.operator_access_paths', [[
+        'path' => 'operator-login',
+        'methods' => ['GET', 'HEAD', 'POST'],
+    ]]);
+
+    $this->get('/operator-login')
+        ->assertSuccessful()
+        ->assertSee('operator login');
+
+    $this->head('/operator-login')->assertSuccessful();
+    $this->post('/operator-login')->assertSuccessful();
+
+    $this->delete('/operator-login')->assertRedirect('/x/commissioning');
 });
 
 it('allows ordinary routes after a matching manifest exists', function (): void {
