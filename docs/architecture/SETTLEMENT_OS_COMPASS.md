@@ -42,15 +42,15 @@ criticality, safe tags, and operating recommendations. The host discovers and
 reviews those manifests, owns `config/horizon.php`, authorizes `/horizon`, and
 operates Redis-backed supervisors.
 
-The testing environment currently uses database queues and database cache. A
-private same-region Laravel Valkey foundation is attached, reachable, and empty,
-but no Redis queue or Horizon Cloud process is commissioned. The local host has
-Horizon installed and disabled and has adopted the five exact immutable
-queue-manifest releases; those three tested host commits remain local and are
-not yet deployed to Cloud. The planned dashboard URL is
-`https://x-change-testing-testing-uw1gvj.laravel.cloud/horizon`. Its initial
-testing authorization policy is any authenticated user with recent password
-confirmation. A shared Horizon password is deferred and disabled.
+The testing environment uses database queues and database cache. A private
+same-region Laravel Valkey foundation is attached, reachable, and empty, but no
+financial Redis queue or Horizon Cloud process is commissioned. Deployed host
+commit `286f4d4707732d0e085573ead4c1f971a10614eb` has Horizon installed and
+disabled and has adopted the five exact immutable queue-manifest releases.
+Authenticated, recently password-confirmed browser acceptance passed at
+`https://x-change-testing-testing-uw1gvj.laravel.cloud/horizon`; the dashboard
+correctly reported Horizon inactive. A shared Horizon password is deferred and
+disabled.
 
 Dynamic package discovery does not authorize new financial lanes. Strict
 inspection must stop deployment until an undeclared, unsupervised, conflicting,
@@ -71,20 +71,21 @@ scheduled Standing Funding synchronization. The public surface server-binds
 the Commercial Principal, forces `full_amount`, and issues only after
 authoritative settlement through the existing `GeneratePayCode` authority.
 
-The exercise is planned but blocked at readiness Gate 0. The testing host is on
-x-change `v1.0.104`, has public Auto-Generate, On-Demand Issuance, and
-fixed-amount QR Ph configured, and keeps scheduled Standing Funding disabled.
-However, its commissioning state is `installation_incomplete` because the
-installation manifest is stale. Public discovery returns HTTP 503 and the
-editor redirects to commissioning. The observed redirect also used an HTTP
-scheme behind Laravel Cloud, so HTTPS URL generation is a mandatory preflight
-before order creation.
+The testing host is on x-change `v1.0.107`, has public Auto-Generate,
+On-Demand Issuance, and fixed-amount QR Ph configured, and keeps scheduled
+Standing Funding disabled. The commissioning portion of readiness Gate 0 is
+now complete: guarded adoption recorded the verified current manifest,
+commissioning reports `operational`, the strict doctor passes 37 of 37 checks,
+and public readiness returns HTTP 200. Cockpit and Horizon now use the normal
+HTTPS authentication boundary instead of the commissioning page. No payable
+order, voucher, provider call, or financial operation was performed during
+commissioning.
 
-Focused package verification passed the public discovery/page coverage but
-exposed rollback-runner drift: the runner does not yet supply the Standing
-Funding admission dependency added to webhook verification, and its Cockpit
-test currently redirects through commissioning. The rollback proof must be
-repaired, tested, released, and adopted before any payable-order gate.
+Focused package verification previously exposed rollback-runner drift: the
+runner does not yet supply the Standing Funding admission dependency added to
+webhook verification. Commissioning redirects are no longer a blocker, but the
+rollback proof must still be repaired, tested, released, and adopted before any
+payable-order gate.
 
 The gated sequence is: commissioning and HTTPS recovery; read-only discovery,
 estimate, and handoff; rollback-only browser proof; separately authorized
@@ -4719,3 +4720,33 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - The cleanup prerequisite is closed. External authenticated `/horizon`
   browser acceptance and any persistent or financial Horizon commissioning
   remain separate gates.
+
+## 2026-10-07 Update — Testing Instance Commissioned
+
+- x-change `v1.0.107` and host commit
+  `286f4d4707732d0e085573ead4c1f971a10614eb` first passed authenticated
+  read-only Horizon browser acceptance: 1 Dusk test with 6 assertions. The
+  temporary acceptance identity and its sessions were removed afterward.
+- Live readiness then reported `installation_incomplete` only because the
+  recorded sanitized deployment fingerprint was stale. The strict
+  pre-commission doctor passed 27 of 27 checks with no missing variables.
+- Guarded command `comm-a2eca331-9414-4b2b-8b02-26a8a05c0338` adopted the
+  verified existing installation. It did not install infrastructure, dispatch
+  work, call a provider, issue a voucher, or move money.
+- Post-adoption status is `operational`; the strict doctor passes 37 of 37
+  checks and `https://x-change-testing-testing-uw1gvj.laravel.cloud/x/ready`
+  returns HTTP 200 with `ready: true`.
+- Both `/x/cockpit` and `/horizon` now redirect unauthenticated requests to
+  `/login`, confirming that the commissioning interceptor has yielded to the
+  normal authentication boundary.
+- The safe queue posture did not change: database remains the queue and cache
+  default, Horizon is inactive and has no authorized queues, scheduled
+  Standing Funding is disabled with zero active runs, and the sole background
+  process remains the established full-coverage database worker.
+- Final read-only evidence found zero database jobs, zero failed jobs, and no
+  pending, delayed, or reserved Redis work for `campaigns`,
+  `x-change-funding`, or `x-change-issuance`.
+
+Testing-instance commissioning is complete. Persistent Horizon operation,
+financial Redis-lane commissioning, the public On-Demand Issuance rollback
+proof, and any financial exercise remain separate gates.

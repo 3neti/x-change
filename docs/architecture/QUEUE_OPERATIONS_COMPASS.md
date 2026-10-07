@@ -11,15 +11,16 @@ authority for financial recovery.
 
 ## Current position
 
-**Status: Gates 1 through 4 complete; Cloud Redis is connected but no Cloud queue or Horizon process is commissioned.**
+**Status: Gates 1 through 5 complete; authenticated Horizon acceptance and testing-instance commissioning are complete, while Cloud Horizon and every financial Redis lane remain disabled.**
 
 The testing environment still uses database queues and database cache. A
-private same-region Laravel Valkey cache is now attached and reachable, but no
-Redis queue has been commissioned and no Horizon background process exists.
-The local host has Horizon installed and disabled; the current Cloud deployment
-remains the unchanged remote commit `ad7c1bc4`, which predates the three local
-host commits for Horizon foundation, package adoption, and bounded canary
-tooling. Scheduled Standing Funding remains disabled.
+private same-region Laravel Valkey cache is attached and reachable, but no
+financial Redis queue has been commissioned and no Horizon background process
+exists. The deployed host commit is `286f4d4707732d0e085573ead4c1f971a10614eb`
+with x-change `v1.0.107`. Horizon is installed, its authenticated read-only
+dashboard has passed Cloud browser acceptance, and processing remains disabled
+with an empty authorized-queue list. Scheduled Standing Funding remains
+disabled.
 
 The host now discovers package queue manifests from Composer metadata, builds
 supervisors only for explicitly authorized queues, and exposes strict
@@ -96,8 +97,8 @@ names. Redis prefixes isolate environments.
 | 3A | Exact package adoption with Horizon and Redis processing disabled | Complete |
 | 3B | Local Redis characterization and planning-only Horizon canary | Complete; returned to disabled baseline |
 | 4 | Laravel Cloud Redis foundation | Complete; attached, reachable, empty, and unused by queues |
-| 5 | Database drain and non-financial Redis canary | Pending host release publication and disabled Cloud adoption |
-| 6 | Bounded x-change Horizon canary | Pending Gate 5 |
+| 5 | Database drain and non-financial Redis canary | Complete; campaigns-only canary recovered to disabled baseline |
+| 6 | Bounded x-change Horizon canary | Ready but separately authorized; no persistent or financial lane enabled |
 | 7 | Full declared-lane adoption and alerts | Pending Gate 6 |
 
 ## Settled decisions
@@ -120,14 +121,13 @@ names. Redis prefixes isolate environments.
 
 ## Immediate next gate
 
-**Publish and deploy the host Horizon foundation while it remains disabled.**
+**No automatic Horizon expansion follows testing-instance commissioning.**
 
-Push the three tested host commits, deploy their exact remote commit with the
-five immutable package releases, and prove the Cloud environment still uses
-database queues and cache, Horizon remains disabled, the authorization list is
-empty, and no Horizon process exists. Only after that release checkpoint may a
-separate Gate 5 inspect and drain database work before a planning-only Cloud
-canary.
+The application is operational, the authenticated dashboard is accepted, and
+the disabled queue baseline is clean. Any persistent Horizon process or
+financial Redis lane is a new, separately authorized Gate 6 operation. It must
+start from a zero-backlog fence, preserve PostgreSQL as financial authority,
+and leave scheduled Standing Funding unchanged.
 
 ## Verification checkpoint
 
@@ -561,9 +561,42 @@ The targeted failure-cleanup prerequisite was completed on 2026-10-07:
   `process-a2ec3303-51b9-43e6-9bd3-97533118bd70`. No Horizon process, job
   dispatch, provider call, voucher issuance, or financial operation occurred.
 
-The cleanup debt is closed. External authenticated `/horizon` browser
-acceptance remains behind host commissioning, and financial-lane commissioning
-remains a separate gate.
+The cleanup debt is closed. Financial-lane commissioning remains a separate
+gate.
+
+Authenticated Horizon browser acceptance and testing-instance commissioning
+completed on 2026-10-07:
+
+- x-change `v1.0.107` permits only the bounded operator authentication routes
+  and read-only Horizon surface to cross the pre-commissioning boundary;
+- deployed host commit `286f4d4707732d0e085573ead4c1f971a10614eb`
+  passed authenticated Cloud Dusk acceptance with 1 test and 6 assertions;
+  the temporary acceptance user and sessions were removed afterward;
+- pre-adoption command `comm-a2eca2bd-9c91-42ec-b5e9-92d88ac308a3`
+  confirmed `installation_incomplete` solely because the sanitized installation
+  manifest fingerprint was stale;
+- the strict pre-commission doctor passed 27 of 27 checks, after which guarded
+  adoption command `comm-a2eca331-9414-4b2b-8b02-26a8a05c0338` recorded the
+  verified existing installation without provisioning infrastructure or
+  performing a financial operation;
+- post-adoption command `comm-a2eca375-af05-4f6d-bd6b-7c62a7cfac1e`
+  reported `operational`, the strict doctor passed 37 of 37 checks, and
+  `/x/ready` returned HTTP 200 with `ready: true`;
+- strict queue inspection remained ready with `QUEUE_CONNECTION=database`,
+  `HORIZON_ENABLED=false`, and no authorized queues; Horizon remained inactive
+  through `comm-a2eca3c9-d534-47de-9201-a153600619fe`;
+- Standing Funding remained disabled with zero active runs through
+  `comm-a2eca3c1-450d-40ec-9d0d-7a64653a3b9d`; and
+- final probe `cexe-a2eca441-9ddb-41a1-bbb6-b8d1bc70c290` found zero database
+  jobs, zero failed jobs, and zero pending, delayed, or reserved Redis work for
+  `campaigns`, `x-change-funding`, and `x-change-issuance`. The sole Cloud
+  process remains database worker
+  `process-a2ec3303-51b9-43e6-9bd3-97533118bd70`.
+
+Unauthenticated `/x/cockpit` and `/horizon` requests now redirect to `/login`
+rather than the commissioning page. No Horizon process, queue migration, job
+dispatch, provider call, voucher issuance, or money movement occurred in this
+gate.
 
 ## Stop conditions
 

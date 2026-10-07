@@ -11,28 +11,31 @@ run, or duplicate issuance.
 
 ## Current position
 
-**Status: Planned and blocked at Gate 0. No payable order or live payment is
-authorized by this compass update.**
+**Status: Gate 0 complete; Gate 1 read-only acceptance is next. No payable
+order or live payment is authorized by this compass update.**
 
-The implementation is deployed on x-change `v1.0.104`, public Auto-Generate and
+The implementation is deployed on x-change `v1.0.107`, public Auto-Generate and
 On-Demand Issuance are configured, fixed-amount QR Ph is configured, and
 scheduled Standing Funding synchronization remains disabled. The public
 surface forces `full_amount` even though the host-wide authenticated policy is
 `shortfall`.
 
-The testing environment is not currently ready for the exercise:
+Testing-instance commissioning and HTTPS URL integrity are now ready:
 
-- commissioning state is `installation_incomplete`;
-- the reason is `installation_manifest_stale`;
-- `GET /api/x/v1/public-issuance` returns HTTP 503;
-- `GET /x/auto-generate` redirects to commissioning; and
-- the observed redirect/status URL used HTTP behind the Cloud proxy, so HTTPS
-  external URL generation must be verified before order creation; and
-- focused package verification found the rollback runner calling the current
-  funding webhook job with one missing dependency, while the Cockpit runner
-  test receives a commissioning redirect; and
-- the host still uses database queues and has no commissioned Horizon/Redis
-  queue topology.
+- guarded adoption moved commissioning from `installation_incomplete` to
+  `operational` without provisioning infrastructure or performing a financial
+  operation;
+- the strict doctor passes 37 of 37 checks;
+- `GET /x/ready`, `GET /api/x/v1/public-issuance`, and
+  `GET /x/auto-generate?amount=25.00&currency=PHP` return HTTP 200;
+- discovery is available and emits canonical, estimate, handoff, and pricing
+  URLs with HTTPS; and
+- scheduled Standing Funding, Horizon processing, and every financial Redis
+  lane remain disabled.
+
+Focused package verification previously found the rollback runner calling the
+current funding webhook job with one missing dependency. Commissioning
+redirects are resolved, but that runner drift remains a blocker for Gate 2.
 
 Verification checkpoint: 18 public discovery/page tests passed with 121 total
 assertions in the combined run; three rollback lifecycle tests failed. This is
@@ -59,9 +62,9 @@ Code.
 
 | Gate | Scope | Status |
 | --- | --- | --- |
-| 0 | Commissioning recovery and HTTPS URL integrity | Blocked: stale installation manifest and HTTP-generated redirect observed |
-| 1 | Read-only discovery, estimate, and handoff | Pending Gate 0 |
-| 2 | Repair and run authenticated rollback-only lifecycle proof; prove queue canary | Blocked by runner drift and uncommissioned Horizon/Redis topology |
+| 0 | Commissioning recovery and HTTPS URL integrity | Complete: operational, strict doctor 37/37, public surfaces HTTP 200, generated URLs HTTPS |
+| 1 | Read-only discovery, estimate, and handoff | Ready; discovery accepted, estimate and handoff pending |
+| 2 | Repair and run authenticated rollback-only lifecycle proof; prove queue canary | Blocked by rollback-runner dependency drift |
 | 3 | One bounded PHP 25 payable order | Separately gated |
 | 4 | One exact real payment | Separately gated; ceiling and rail not authorized |
 | 5 | Operator and beneficiary evidence | Pending issuance |
@@ -104,13 +107,12 @@ Code.
 
 ## Immediate next gate
 
-**Gate 0 — Commissioning recovery and HTTPS URL integrity.**
+**Gate 1 — Read-only estimate and handoff acceptance.**
 
-Inspect the stale installation manifest and current principals. If existing
-installation facts are complete, review the guarded adoption operation. Then
-prove commissioning is operational, public discovery and the editor return
-HTTP 200, and every externally generated URL uses HTTPS. Do not create an order
-or contact a provider in this gate.
+Discovery and the editor are accepted. Exercise the public estimate and
+handoff contracts with bounded non-mutating inputs, prove that neither creates
+an order or financial state, and preserve HTTPS-only URLs. Do not create an
+order or contact a provider in this gate.
 
 ## Following gate
 
