@@ -11,7 +11,7 @@ authority for financial recovery.
 
 ## Current position
 
-**Status: Gates 1 through 3 complete; immutable package release adoption is the next gate.**
+**Status: Gates 1 through 3 and immutable package publication complete; disabled-host adoption is next.**
 
 The testing host still uses database queues and database cache. PHP Redis
 support is available and Horizon is now installed in the host, but it is
@@ -24,9 +24,9 @@ supervisors only for explicitly authorized queues, and exposes strict
 inspection commands. Inspection rejects financial use of `default`, unknown
 queue authorization, incompatible shared-lane semantics, unsafe timeout versus
 `retry_after`, excessive concurrency, and enabled financial lanes that were
-not explicitly commissioned. The currently installed package releases predate
-their new manifests, so host discovery correctly reports no manifests until
-immutable releases are published and adopted.
+not explicitly commissioned. The currently installed host package releases
+still predate their new manifests, so host discovery correctly reports no
+manifests until the newly published immutable releases are adopted.
 
 x-change now publishes a versioned, Horizon-neutral queue manifest through
 Composer metadata. The catalog characterizes all 17 queued package jobs across
@@ -116,14 +116,13 @@ names. Redis prefixes isolate environments.
 
 ## Immediate next gate
 
-**Immutable package releases and disabled-host adoption.**
+**Disabled-host adoption of the immutable package releases.**
 
-Publish immutable releases containing the manifests from Gates 1 and 2, adopt
-those exact releases in the host, and prove discovery plus strict inspection
-while `QUEUE_CONNECTION=database`, `HORIZON_ENABLED=false`, and the authorized
-queue list remains empty. After that, DBngin Redis may be used for a local,
-non-financial Horizon canary. Laravel Cloud Redis remains a separately gated
-infrastructure operation.
+Adopt the published releases in the host and prove discovery plus strict
+inspection while `QUEUE_CONNECTION=database`, `HORIZON_ENABLED=false`, and the
+authorized queue list remains empty. After that, DBngin Redis may be used for
+a local, non-financial Horizon canary. Laravel Cloud Redis remains a separately
+gated infrastructure operation.
 
 ## Verification checkpoint
 
@@ -178,6 +177,19 @@ Gate 3 was verified on 2026-10-07:
   registration passed; and
 - live host discovery returned no manifests because the installed package
   releases have not yet adopted the Gate 1 and Gate 2 commits.
+
+Immutable package publication was verified on 2026-10-07:
+
+- `3neti/x-change` `v1.0.105` resolves to `380c3eed`;
+- `3neti/x-journal` `v1.1.1` resolves to `5791f1c`;
+- `3neti/x-action` `v1.0.2` resolves to `7312529`;
+- `3neti/x-feedback` `v1.1.1` resolves to merge commit `fa82da0`, preserving
+  the independently published `v1.1.0` transport work; and
+- `3neti/x-campaign` `v1.1.3` resolves to `f5e4d53`.
+
+All five annotated tags were verified against their remote peeled commit SHAs.
+The x-feedback merge was additionally verified with 201 passing tests and
+1,102 assertions before publication.
 
 ## Stop conditions
 
