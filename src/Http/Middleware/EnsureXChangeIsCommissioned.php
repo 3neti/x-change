@@ -37,6 +37,7 @@ final readonly class EnsureXChangeIsCommissioned
         if (
             ! (bool) config('x-change.commissioning.enabled', true)
             || in_array(trim($request->path(), '/'), self::AllowedPaths, true)
+            || $this->isAllowedReadOnlyPath($request)
             || $state->isOperational()
         ) {
             return $next($request);
@@ -69,5 +70,22 @@ final readonly class EnsureXChangeIsCommissioned
             )),
             'X-Robots-Tag' => 'noindex, nofollow, noarchive',
         ];
+    }
+
+    private function isAllowedReadOnlyPath(Request $request): bool
+    {
+        if (! $request->isMethodSafe()) {
+            return false;
+        }
+
+        foreach ((array) config('x-change.commissioning.read_only_paths', []) as $path) {
+            $path = trim((string) $path, '/ ');
+
+            if ($path !== '' && $request->is($path)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

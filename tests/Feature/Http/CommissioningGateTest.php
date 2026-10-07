@@ -10,8 +10,11 @@ use LBHurtado\XChange\Services\Configuration\CommissioningStateResolver;
 beforeEach(function (): void {
     config()->set('x-change.commissioning.enabled', true);
     config()->set('x-change.commissioning.enforce_during_tests', true);
+    config()->set('x-change.commissioning.read_only_paths', []);
     Route::middleware('web')->get('/host-home', fn (): string => 'host home');
     Route::middleware('api')->post('/api/host-webhook', fn (): array => ['accepted' => true]);
+    Route::middleware('web')->get('/operations-read-model', fn (): string => 'operations read model');
+    Route::middleware('web')->post('/operations-read-model/retry', fn (): string => 'retry started');
 });
 
 it('does not intercept host routes during tests unless explicitly enforced', function (): void {
@@ -41,6 +44,28 @@ it('exposes public commissioning and operational readiness safely', function ():
     $this->getJson('/x/ready')
         ->assertServiceUnavailable()
         ->assertJson(['ready' => false, 'state' => 'installation_incomplete']);
+});
+
+it('allows only safe methods through explicitly configured read-only paths', function (): void {
+    config()->set('x-change.commissioning.read_only_paths', [
+        'operations-read-model',
+        'operations-read-model/*',
+    ]);
+
+    $this->get('/operations-read-model')
+        ->assertSuccessful()
+        ->assertSee('operations read model');
+
+    $this->head('/operations-read-model')->assertSuccessful();
+
+    $this->post('/operations-read-model/retry')
+        ->assertRedirect('/x/commissioning');
+});
+
+it('does not exempt paths that were not explicitly configured', function (): void {
+    config()->set('x-change.commissioning.read_only_paths', ['another-read-model/*']);
+
+    $this->get('/operations-read-model')->assertRedirect('/x/commissioning');
 });
 
 it('allows ordinary routes after a matching manifest exists', function (): void {
