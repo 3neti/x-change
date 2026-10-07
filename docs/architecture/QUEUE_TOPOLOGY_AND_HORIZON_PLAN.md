@@ -115,6 +115,18 @@ supervisors are generated only from installed manifests plus an explicit queue
 allowlist. Package releases containing the manifests must be published and
 adopted before Redis or any Horizon worker is commissioned.
 
+**Local characterization checkpoint:** The host adopted x-change `v1.0.105`,
+x-journal `v1.1.1`, x-action `v1.0.2`, x-feedback `v1.1.1`, and x-campaign
+`v1.1.3`, then completed a bounded local Redis rehearsal. DBngin Redis answered
+through PhpRedis, strict inspection authorized only the non-financial
+`campaigns` planning lane, and one synthetic Redis-only canary completed under
+a single Horizon process while the application's default queue connection
+remained `database`. The canary alone selected Redis explicitly. The process
+was terminated, the queue drained to zero, and the ordinary host baseline
+returned to Horizon disabled with no authorized lanes. No domain, financial,
+campaign, feedback, or provider job was dispatched. Laravel Cloud Redis remains
+Gate 4 and requires separate authorization.
+
 Each participating package should expose a package-owned manifest with this
 conceptual shape:
 

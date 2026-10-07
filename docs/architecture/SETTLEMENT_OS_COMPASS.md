@@ -234,7 +234,7 @@ historical `expired` label alone is not recovery-entitlement evidence.
 ## Current Position
 
 Current wave: Queue Topology and Horizon Commissioning
-Current status: Package catalog, host foundation, immutable publication, and disabled-host adoption complete; no Horizon or Redis queue processing authorized
+Current status: Local planning-only Redis/Horizon canary complete and returned to disabled baseline; Laravel Cloud Redis foundation is the next separate gate
 Last updated: 2026-10-07
 
 | Wave | Workstream | Role | Status | Compass |
@@ -249,7 +249,7 @@ Last updated: 2026-10-07
 | 7 | Governed Provisioning | Vacant commissioning seats, exact-capability authority offers, delivery, activation/revocation/supersession, production API mandates, and Treasury-safe Account Grants | Controlled Cockpit lifecycle implemented; authority remains separate from cash and provider execution | [PROVISIONING_AND_ACCOUNT_GRANTS.md](PROVISIONING_AND_ACCOUNT_GRANTS.md) |
 | 8 | Standing Funding Runtime | Recovery-safe provider synchronization control plane | Canary and bounded fleet gate complete; legacy address 4 quarantined; disabled at generation 7 | [STANDING_FUNDING_RUNTIME_COMPASS.md](STANDING_FUNDING_RUNTIME_COMPASS.md) |
 | 9 | Public On-Demand Issuance Acceptance | Testing-instance Pay Code order, exact funding, exactly-once issuance, and no-op retry proof | Planned; readiness and rollback-runner repair required before order creation | [public-auto-generate/TESTING_INSTANCE_ACCEPTANCE_COMPASS.md](public-auto-generate/TESTING_INSTANCE_ACCEPTANCE_COMPASS.md) |
-| 10 | Queue Operations and Horizon | Cross-package queue discovery, Redis-backed Horizon workers, visual operations, and fail-closed commissioning | Disabled-host adoption complete; local non-financial Redis characterization is the next separate gate | [QUEUE_OPERATIONS_COMPASS.md](QUEUE_OPERATIONS_COMPASS.md) |
+| 10 | Queue Operations and Horizon | Cross-package queue discovery, Redis-backed Horizon workers, visual operations, and fail-closed commissioning | Local planning-only canary complete; Cloud Redis foundation remains separately gated | [QUEUE_OPERATIONS_COMPASS.md](QUEUE_OPERATIONS_COMPASS.md) |
 
 ## Package Map
 

@@ -11,7 +11,7 @@ authority for financial recovery.
 
 ## Current position
 
-**Status: Gates 1 through 3, immutable package publication, and disabled-host adoption complete.**
+**Status: Gates 1 through 3, immutable package publication, disabled-host adoption, and the local non-financial Redis canary complete.**
 
 The testing host still uses database queues and database cache. PHP Redis
 support is available and Horizon is now installed in the host, but it is
@@ -92,6 +92,7 @@ names. Redis prefixes isolate environments.
 | 2 | x-journal, x-action, x-feedback, and x-campaign manifests | Complete |
 | 3 | Host discovery, Horizon install, and authenticated dashboard | Complete, disabled |
 | 3A | Exact package adoption with Horizon and Redis processing disabled | Complete |
+| 3B | Local Redis characterization and planning-only Horizon canary | Complete; returned to disabled baseline |
 | 4 | Laravel Cloud Redis foundation | Separately gated infrastructure change |
 | 5 | Database drain and non-financial Redis canary | Pending Gate 4 |
 | 6 | Bounded x-change Horizon canary | Pending Gate 5 |
@@ -117,13 +118,13 @@ names. Redis prefixes isolate environments.
 
 ## Immediate next gate
 
-**Local Redis characterization and an explicitly authorized non-financial Horizon canary.**
+**Laravel Cloud Redis foundation.**
 
-The package releases are now adopted and discoverable without activating any
-worker. The next gate may confirm DBngin Redis reachability and rehearse a
-single non-financial lane locally. It must not authorize `x-change-funding`,
-`x-change-issuance`, or `partner-payments`. Laravel Cloud Redis remains a
-separately gated infrastructure operation.
+The local rehearsal is complete. The next gate may provision and characterize
+a supported, isolated Redis service in the testing environment without starting
+a Cloud Horizon process or migrating a queue. Cloud capacity, eviction policy,
+persistence expectations, environment prefix, and connectivity must be
+recorded before the later database-drain and non-financial Cloud canary gate.
 
 ## Verification checkpoint
 
@@ -206,6 +207,25 @@ Disabled-host adoption was verified on 2026-10-07:
 - no Horizon process was running;
 - the focused host suite passed 11 tests with 44 assertions; and
 - Composer strict validation and configuration cache round-trip passed.
+
+Local Redis characterization and the non-financial canary were verified on
+2026-10-07:
+
+- the local DBngin Redis endpoint answered `PING` through PhpRedis;
+- strict inspection passed with a Redis Horizon supervisor enabled for exactly
+  the `campaigns` planning lane while the host default queue remained
+  `database`; `x-change-funding` and `x-change-issuance` stayed uncommissioned;
+- a host-owned synthetic canary `01M4A5RZZ6YDZE7DPFPYJ5V8M2` was the only job
+  dispatched and wrote only a five-minute Redis completion marker;
+- Horizon recorded the canary as running and then completed in 7.76 ms;
+- the `campaigns` queue drained to zero and Horizon terminated cleanly;
+- the ordinary host baseline returned to database queues, Horizon disabled,
+  and an empty authorized-queue list;
+- the canary command rejects non-local execution, disabled Horizon, non-Redis
+  queues, unauthorized or undeclared queues, and every lane that is not
+  planning-only; and
+- the focused queue-operations suite passed 15 tests with 64 assertions,
+  Composer strict validation passed, and configuration caching passed.
 
 ## Stop conditions
 
