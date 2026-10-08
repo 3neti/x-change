@@ -117,12 +117,18 @@ deferred.
 
 ## Implementation Slices
 
+Current checkpoint: Slices 1–4 are complete locally. Slices 5–7 remain gated.
+
 ### Slice 1 — Documentation and characterization
+
+Status: **Complete locally**
 
 - Persist this plan and update the campaign and Standing Funding compasses.
 - Characterize campaign-only selection and current pause behavior in tests.
 
 ### Slice 2 — Monitoring control
+
+Status: **Complete locally**
 
 - Add enum, model, migration, transition action, validation, and owner-scoped
   Cockpit endpoints.
@@ -130,6 +136,8 @@ deferred.
   idempotent, and one owner cannot control another owner's campaign.
 
 ### Slice 3 — Campaign-only dispatcher
+
+Status: **Complete locally**
 
 - Add configuration, command, and schedule registration.
 - Prove only explicitly live campaign-payment addresses are selected.
@@ -139,6 +147,8 @@ deferred.
 
 ### Slice 4 — Cockpit monitoring UX
 
+Status: **Complete locally**
+
 - Add the compact status row and management dialog.
 - Add QR readiness warning.
 - Use named routes through Wayfinder-generated functions when the host build
@@ -147,11 +157,15 @@ deferred.
 
 ### Slice 5 — Release and disabled adoption
 
+Status: **Not started; separately gated**
+
 - Run focused package tests, formatter, frontend tests, build, and drift checks.
 - Publish an immutable x-change patch.
 - Adopt and deploy it with both campaign and global schedules disabled.
 
 ### Slice 6 — Controlled commissioning
+
+Status: **Not started; separately gated**
 
 - Confirm queues and failed jobs are empty.
 - Promote the NetBank Standing Funding runtime from disabled generation 9 to a
@@ -162,6 +176,8 @@ deferred.
   quarantine growth, or database pressure.
 
 ### Slice 7 — Fresh live acceptance
+
+Status: **Not started; separate financial authorization required**
 
 - Under separate financial authorization, pay one fresh PHP 50 AUI premium.
 - Require exactly one recognition, one provisional coverage, one settlement
@@ -191,4 +207,3 @@ Stop campaign polling and return the runtime to disabled if any of these occur:
 - multi-provider campaign polling;
 - draining mode and provider-side QR revocation; and
 - production deployment.
-

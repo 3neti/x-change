@@ -36,6 +36,37 @@ and Medicard-specific behavior remain separately authorized gates.
 Detailed sequence:
 [Campaign Payment Monitoring Plan](CAMPAIGN_PAYMENT_MONITORING_PLAN.md).
 
+### Campaign payment monitoring local implementation checkpoint — 2026-10-09
+
+The first local implementation is complete. It adds a package-owned monitoring
+control per immutable campaign payment QR binding, fail-closed missing-state
+semantics, optimistic generation fencing, owner-scoped Cockpit transitions, and
+automatic monitor pause when the campaign is paused. Campaign resume does not
+silently restart payment monitoring.
+
+A dedicated `xchange:campaigns:sync-payment-addresses` dispatcher selects only
+explicitly live, active, available payment-purpose campaign bindings. It
+delegates every candidate to the existing Standing Funding admission service,
+so runtime mode, generation, backlog, cooldown, lease, quarantine, ambiguity,
+and circuit protections remain authoritative. The dedicated schedule is named
+separately and defaults off with batch size one. Its command also checks the
+feature flag, providing a second configuration fence.
+
+Cockpit presents one compact Payment Monitoring row and management dialog on
+reusable-payment campaign cards. The QR dialog clearly warns when the artifact
+is displayable but not monitored. `Live` is projected only when the persisted
+control is live, the binding is eligible, the campaign schedule is enabled,
+and the provider runtime is scheduled. No provider payload or payer identity is
+exposed.
+
+Focused verification passed: eight backend tests / 63 assertions across the
+new control, owner scope, atomic pause, dispatcher, replay, schedule, and the
+existing Standing Funding dispatcher; and 27 Campaigns Vue tests. No NetBank
+request, financial mutation, runtime transition, host adoption, Cloud deploy,
+or schedule enablement occurred. Next gate: immutable package release and host
+adoption with both schedules disabled, followed by separately authorized
+controlled commissioning.
+
 ### Payment activity local host acceptance — 2026-09-25
 
 Commit `5c4cc459` passed isolated host adoption from sandbox commit `3873d386`.

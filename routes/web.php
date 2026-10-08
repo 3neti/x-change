@@ -480,6 +480,9 @@ Route::prefix('x')->middleware([
         Route::post('campaigns/endpoints/{campaign}/payment-qr', [CockpitCampaignEndpointController::class, 'provisionPaymentQr'])
             ->middleware('throttle:6,1')
             ->name('x-change.cockpit.campaigns.endpoints.payment-qr.store');
+        Route::patch('campaigns/endpoints/{campaign}/payment-monitoring', [CockpitCampaignEndpointController::class, 'updatePaymentMonitoring'])
+            ->middleware('throttle:6,1')
+            ->name('x-change.cockpit.campaigns.endpoints.payment-monitoring.update');
         Route::patch('campaigns/endpoints/{campaign}/template', [CockpitCampaignEndpointController::class, 'updateTemplate'])
             ->middleware('throttle:12,1')
             ->name('x-change.cockpit.campaigns.endpoints.template.update');

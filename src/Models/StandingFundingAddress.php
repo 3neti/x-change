@@ -127,4 +127,12 @@ class StandingFundingAddress extends Model
             'standing_funding_address_id',
         );
     }
+
+    public function syncState(): HasOne
+    {
+        return $this->hasOne(
+            StandingFundingAddressState::class,
+            'standing_funding_address_id',
+        );
+    }
 }

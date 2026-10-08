@@ -14,6 +14,7 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use InvalidArgumentException;
+use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetImportRepository;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetIntakeRepository;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
@@ -28,7 +29,11 @@ use LBHurtado\XCampaign\Models\CampaignWorksheetAuthorization;
 use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
 use LBHurtado\XCampaign\ReadModels\EndpointCampaignSummary;
 use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
+use LBHurtado\XChange\Enums\CampaignPaymentMonitoringMode;
+use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
+use LBHurtado\XChange\Enums\StandingFundingAddressSyncStatus;
+use LBHurtado\XChange\Enums\StandingFundingRuntimeMode;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRequest;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCampaignWorksheetRowRequest;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
@@ -36,6 +41,7 @@ use LBHurtado\XChange\Models\CampaignDisplaySession;
 use LBHurtado\XChange\Models\CampaignPaymentQrBinding;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
+use LBHurtado\XChange\Models\StandingFundingRuntimeControl;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Cockpit\CampaignPaymentEvidenceAttentionReadModel;
 use LBHurtado\XChange\Services\Cockpit\CampaignPaymentProgressReadModel;
@@ -297,17 +303,25 @@ class CockpitCampaignWorksheetController extends Controller
         )
             ->load('payCodeTemplate');
         $paymentQrBindings = CampaignPaymentQrBinding::query()
-            ->with(['qrArtifact', 'standingFundingAddress'])
+            ->with(['campaign', 'monitoringControl', 'qrArtifact', 'standingFundingAddress.syncState'])
             ->whereIn('endpoint_campaign_id', $campaigns->modelKeys())
             ->get()
             ->keyBy('endpoint_campaign_id');
+        $runtimeControls = StandingFundingRuntimeControl::query()
+            ->whereIn('provider_code', $paymentQrBindings->pluck('provider_code')->unique()->values())
+            ->get()
+            ->keyBy('provider_code');
+        $paymentScheduleEnabled = (bool) config(
+            'x-change.campaigns.payment_monitoring.scheduled_sync_enabled',
+            false,
+        );
         $progress = $this->endpointProgressFor($campaigns);
         $paymentProgress = $this->paymentProgress->forCampaigns($campaigns);
         $attention = $this->paymentEvidenceAttention->forCampaigns($campaigns);
         $creator = $this->endpointCreatorFor($owner);
 
         return $campaigns
-            ->map(function (LeadCampaign $campaign) use ($attention, $creator, $progress, $paymentProgress, $paymentQrBindings): array {
+            ->map(function (LeadCampaign $campaign) use ($attention, $creator, $paymentProgress, $paymentQrBindings, $paymentScheduleEnabled, $progress, $runtimeControls): array {
                 $publicUrl = route('x-change.leads.start', [
                     'merchant_slug' => $campaign->merchant_slug,
                     'endpoint_slug' => $campaign->endpoint_slug,
@@ -336,12 +350,19 @@ class CockpitCampaignWorksheetController extends Controller
                             : null,
                         'generated_at' => $paymentQrArtifact?->generated_at?->toIso8601String(),
                     ],
+                    'payment_monitoring' => $paymentQrBinding === null ? null : $this->paymentMonitoringFor(
+                        binding: $paymentQrBinding,
+                        runtime: $runtimeControls->get($paymentQrBinding->provider_code),
+                        scheduleEnabled: $paymentScheduleEnabled,
+                        needsAttention: isset($attention[$campaign->getKey()]),
+                    ),
                     'actions' => [
                         'template_update_url' => data_get($campaign->settings, 'workflow_publication') === null
                             ? route('x-change.cockpit.campaigns.endpoints.template.update', $campaign->reference) : '',
                         'pause_url' => route('x-change.cockpit.campaigns.endpoints.pause', $campaign->reference),
                         'resume_url' => route('x-change.cockpit.campaigns.endpoints.resume', $campaign->reference),
                         'payment_qr_provision_url' => route('x-change.cockpit.campaigns.endpoints.payment-qr.store', $campaign->reference),
+                        'payment_monitoring_url' => route('x-change.cockpit.campaigns.endpoints.payment-monitoring.update', $campaign->reference),
                     ],
                     'template' => $campaign->payCodeTemplate instanceof PayCodeTemplate ? [
                         'id' => $campaign->payCodeTemplate->getKey(),
@@ -354,6 +375,47 @@ class CockpitCampaignWorksheetController extends Controller
                 ];
             })
             ->all();
+    }
+
+    /** @return array<string, mixed> */
+    private function paymentMonitoringFor(
+        CampaignPaymentQrBinding $binding,
+        ?StandingFundingRuntimeControl $runtime,
+        bool $scheduleEnabled,
+        bool $needsAttention,
+    ): array {
+        $controlMode = $binding->monitoringControl?->mode ?? CampaignPaymentMonitoringMode::Paused;
+        $address = $binding->standingFundingAddress;
+        $addressState = $address?->syncState;
+        $eligibilityReason = match (true) {
+            $binding->campaign?->status !== 'active' => 'campaign_not_active',
+            $binding->available_from?->isFuture() === true => 'binding_not_available',
+            $binding->available_until?->isPast() === true => 'binding_not_available',
+            $address?->purpose !== FundingAddressPurpose::Payment => 'not_payment_address',
+            $address?->status !== FundingAddressStatus::Active => 'address_not_active',
+            $addressState?->status === StandingFundingAddressSyncStatus::Quarantined => 'quarantined',
+            $addressState?->status === StandingFundingAddressSyncStatus::Ambiguous => 'ambiguous',
+            default => null,
+        };
+        $runtimeMode = $runtime?->mode ?? StandingFundingRuntimeMode::Disabled;
+        $status = match (true) {
+            $needsAttention => 'needs_attention',
+            $controlMode === CampaignPaymentMonitoringMode::Paused => 'paused',
+            $eligibilityReason !== null => 'unavailable',
+            ! $scheduleEnabled => 'unavailable',
+            $runtimeMode !== StandingFundingRuntimeMode::Scheduled => 'unavailable',
+            default => 'live',
+        };
+
+        return [
+            'status' => $status,
+            'control_mode' => $controlMode->value,
+            'generation' => $binding->monitoringControl?->generation ?? 0,
+            'last_checked_at' => $address?->last_checked_at?->toIso8601String(),
+            'eligibility_reason' => $eligibilityReason,
+            'runtime_mode' => $runtimeMode->value,
+            'schedule_enabled' => $scheduleEnabled,
+        ];
     }
 
     /**

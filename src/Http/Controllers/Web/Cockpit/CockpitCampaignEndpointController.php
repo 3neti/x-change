@@ -8,14 +8,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\XCampaign\Contracts\EndpointCampaignRepository;
 use LBHurtado\XChange\Actions\Campaigns\ProvisionCampaignPaymentQr;
+use LBHurtado\XChange\Actions\Campaigns\SetCampaignPaymentMonitoring;
 use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Enums\CampaignPaymentAmountMode;
+use LBHurtado\XChange\Enums\CampaignPaymentMonitoringMode;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\StoreCampaignEndpointRequest;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\UpdateCampaignEndpointTemplateRequest;
+use LBHurtado\XChange\Http\Requests\Web\Cockpit\UpdateCampaignPaymentMonitoringRequest;
+use LBHurtado\XChange\Models\CampaignPaymentQrBinding;
 use LBHurtado\XChange\Models\CampaignWorkflowPublication;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
@@ -67,13 +72,87 @@ final class CockpitCampaignEndpointController extends Controller
             ->with('campaign_notice', sprintf('%s is ready to share.', $campaign->title));
     }
 
-    public function pause(Request $request, string $campaign, AuditLoggerContract $audit): RedirectResponse
-    {
+    public function pause(
+        Request $request,
+        string $campaign,
+        AuditLoggerContract $audit,
+        SetCampaignPaymentMonitoring $monitoring,
+    ): RedirectResponse {
         $endpoint = $this->endpointForOwner($request, $campaign);
-        $this->setEndpointStatus($endpoint, 'paused', $request, $audit);
+
+        DB::transaction(function () use ($endpoint, $request, $audit, $monitoring): void {
+            $binding = CampaignPaymentQrBinding::query()
+                ->with('monitoringControl')
+                ->where('endpoint_campaign_id', $endpoint->getKey())
+                ->lockForUpdate()
+                ->first();
+
+            if ($binding?->monitoringControl?->mode === CampaignPaymentMonitoringMode::Live) {
+                $monitoring->handle(
+                    binding: $binding,
+                    mode: CampaignPaymentMonitoringMode::Paused,
+                    expectedGeneration: $binding->monitoringControl->generation,
+                    reason: 'campaign_paused',
+                    actorType: $request->user() instanceof Model ? $request->user()->getMorphClass() : $request->user()::class,
+                    actorId: (string) $request->user()->getAuthIdentifier(),
+                );
+            }
+
+            $this->setEndpointStatus($endpoint, 'paused', $request, $audit);
+        });
 
         return to_route('x-change.cockpit.campaigns.index')
             ->with('campaign_notice', sprintf('%s is paused. Existing Pay Codes remain untouched.', $endpoint->title));
+    }
+
+    public function updatePaymentMonitoring(
+        UpdateCampaignPaymentMonitoringRequest $request,
+        string $campaign,
+        SetCampaignPaymentMonitoring $monitoring,
+        AuditLoggerContract $audit,
+    ): RedirectResponse {
+        $endpoint = $this->endpointForOwner($request, $campaign);
+        $binding = CampaignPaymentQrBinding::query()
+            ->where('endpoint_campaign_id', $endpoint->getKey())
+            ->firstOrFail();
+        $validated = $request->validated();
+        $mode = CampaignPaymentMonitoringMode::from($validated['mode']);
+        $reason = filled($validated['reason'] ?? null)
+            ? (string) $validated['reason']
+            : 'operator_'.$mode->value;
+        $owner = $request->user();
+
+        try {
+            $control = $monitoring->handle(
+                binding: $binding,
+                mode: $mode,
+                expectedGeneration: (int) $validated['expected_generation'],
+                reason: $reason,
+                actorType: $owner instanceof Model ? $owner->getMorphClass() : $owner::class,
+                actorId: (string) $owner->getAuthIdentifier(),
+            );
+        } catch (\DomainException|\LogicException $exception) {
+            throw ValidationException::withMessages([
+                'payment_monitoring' => $exception->getMessage(),
+            ]);
+        }
+
+        $audit->log('campaign.payment_monitoring.changed', [
+            'campaign_reference' => $endpoint->reference,
+            'payment_qr_binding_reference' => $binding->reference,
+            'mode' => $control->mode->value,
+            'generation' => $control->generation,
+            'reason' => $control->transition_reason,
+            'actor_type' => $owner instanceof Model ? $owner->getMorphClass() : $owner::class,
+            'actor_id' => (string) $owner->getAuthIdentifier(),
+        ]);
+
+        return to_route('x-change.cockpit.campaigns.index')
+            ->with('campaign_notice', sprintf(
+                '%s payment monitoring is %s.',
+                $endpoint->title,
+                $mode === CampaignPaymentMonitoringMode::Live ? 'live' : 'paused',
+            ));
     }
 
     public function provisionPaymentQr(

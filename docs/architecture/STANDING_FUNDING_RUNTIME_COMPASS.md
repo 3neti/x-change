@@ -68,6 +68,21 @@ campaign-only bounded dispatcher, and compact Cockpit controls. The global
 No operational mode transition, provider call, live payment, infrastructure
 change, or Cloud deployment is authorized merely by implementing this gate.
 
+### Local implementation checkpoint — 2026-10-09
+
+The campaign-only control plane and dispatcher are implemented locally. Missing
+campaign monitoring control fails closed as paused; transitions are generation
+fenced; candidate selection excludes account-funding addresses and delegates to
+the unchanged Standing Funding admission service. The new scheduler command is
+separately named, defaults disabled, checks its own feature flag, and has an
+initial batch ceiling of one.
+
+Focused backend verification passed at eight tests / 63 assertions, including
+the established global dispatcher regressions. The Cockpit frontend gate passed
+27 tests. Runtime remains operationally disabled at generation 9 in testing;
+neither the global nor campaign-only schedule has been enabled or deployed by
+this local checkpoint.
+
 ## Runtime states
 
 | State | Admission | Meaning |

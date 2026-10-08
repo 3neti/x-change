@@ -106,6 +106,8 @@ const endpointCampaign = {
             '/x/cockpit/campaigns/endpoints/01KYENDPOINT0000000000000/resume',
         payment_qr_provision_url:
             '/x/cockpit/campaigns/endpoints/01KYENDPOINT0000000000000/payment-qr',
+        payment_monitoring_url:
+            '/x/cockpit/campaigns/endpoints/01KYENDPOINT0000000000000/payment-monitoring',
     },
     template: {
         id: 12,
@@ -231,6 +233,82 @@ describe('Cockpit campaign worksheets', () => {
                 .get('[data-testid="campaign-payment-qr-enlarge"]')
                 .attributes('aria-expanded'),
         ).toBe('true');
+    });
+
+    it('keeps campaign payment monitoring compact and warns when the QR is not being watched', async () => {
+        const paymentCampaign = {
+            ...endpointCampaign,
+            entry_mode: 'reusable_payment_qr' as const,
+            payment_qr: {
+                reference: '01KYPAYMENTQRMONITORING',
+                amount_mode: 'fixed' as const,
+                fixed_amount_minor: 5000,
+                currency: 'PHP',
+                qr_data_uri: 'data:image/png;base64,QRPH',
+                generated_at: '2026-10-09T08:00:00+08:00',
+            },
+            payment_monitoring: {
+                status: 'paused' as const,
+                control_mode: 'paused' as const,
+                generation: 0,
+                last_checked_at: null,
+                eligibility_reason: null,
+                runtime_mode: 'disabled',
+                schedule_enabled: false,
+            },
+        };
+        const wrapper = mount(Campaigns, {
+            props: { worksheets: [], endpoint_campaigns: [paymentCampaign] },
+        });
+
+        await wrapper
+            .get('[data-testid="campaign-flavor-endpoints"]')
+            .trigger('click');
+        const monitoring = wrapper.get(
+            `[data-testid="campaign-payment-monitoring-${paymentCampaign.reference}"]`,
+        );
+        expect(monitoring.text()).toContain('Paused');
+        expect(monitoring.text()).toContain('Manage');
+
+        await wrapper
+            .get(
+                `[data-testid="campaign-payment-monitoring-manage-${paymentCampaign.reference}"]`,
+            )
+            .trigger('click');
+        expect(
+            wrapper.get('[data-testid="campaign-payment-monitoring-overlay"]'),
+        ).toBeTruthy();
+        expect(
+            wrapper
+                .get('[data-testid="campaign-payment-monitoring-unavailable"]')
+                .text(),
+        ).toContain('new payments will not appear automatically');
+        expect(
+            (
+                wrapper.get(
+                    '[data-testid="campaign-payment-monitoring-submit"]',
+                ).element as HTMLButtonElement
+            ).disabled,
+        ).toBe(true);
+
+        await wrapper
+            .get('[aria-label="Close payment monitoring"]')
+            .trigger('click');
+        await wrapper
+            .get(
+                `[data-testid="campaign-payment-qr-show-${paymentCampaign.reference}"]`,
+            )
+            .trigger('click');
+        expect(
+            wrapper
+                .get('[data-testid="campaign-payment-qr-monitoring-readiness"]')
+                .text(),
+        ).toContain('Payment monitoring: Paused');
+        expect(
+            wrapper
+                .get('[data-testid="campaign-payment-qr-monitoring-readiness"]')
+                .text(),
+        ).toContain('new payments will not appear automatically');
     });
 
     it('surfaces aggregate payment evidence attention without exposing provider evidence', async () => {

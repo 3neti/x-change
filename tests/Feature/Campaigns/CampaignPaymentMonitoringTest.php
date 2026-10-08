@@ -159,6 +159,86 @@ it('registers only the separately enabled campaign payment schedule', function (
         ->and($campaignEvent->description)->not->toBe('xchange:funding:sync-standing:netbank');
 });
 
+it('exposes owner-scoped monitoring controls and never reports live without the runtime fences', function (): void {
+    config([
+        'x-change.legal.eula.enabled' => false,
+        'x-change.campaigns.payment_monitoring.scheduled_sync_enabled' => true,
+    ]);
+    [$owner, $campaign, $binding] = monitoredCampaignFixture();
+    fakeAuditLogger();
+
+    $this->patch(
+        route('x-change.cockpit.campaigns.endpoints.payment-monitoring.update', $campaign->reference),
+        [
+            'mode' => CampaignPaymentMonitoringMode::Live->value,
+            'expected_generation' => 0,
+            'reason' => 'aui_demo_ready',
+        ],
+    )->assertRedirect(route('x-change.cockpit.campaigns.index'))
+        ->assertSessionHas('campaign_notice', 'AUI monitored campaign payment monitoring is live.');
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.index'))
+        ->assertOk()
+        ->assertJsonPath('props.endpoint_campaigns.0.payment_monitoring.control_mode', 'live')
+        ->assertJsonPath('props.endpoint_campaigns.0.payment_monitoring.status', 'unavailable')
+        ->assertJsonPath('props.endpoint_campaigns.0.payment_monitoring.runtime_mode', 'disabled')
+        ->assertJsonPath('props.endpoint_campaigns.0.payment_monitoring.schedule_enabled', true)
+        ->assertJsonPath('props.endpoint_campaigns.0.payment_monitoring.generation', 1)
+        ->assertJsonPath(
+            'props.endpoint_campaigns.0.actions.payment_monitoring_url',
+            route('x-change.cockpit.campaigns.endpoints.payment-monitoring.update', $campaign->reference),
+        );
+
+    StandingFundingRuntimeControl::query()->create([
+        'provider_code' => 'netbank',
+        'mode' => StandingFundingRuntimeMode::Scheduled,
+        'generation' => 10,
+        'batch_limit' => 1,
+        'backlog_ceiling' => 1,
+        'last_transition' => 'test_campaign_schedule',
+        'transitioned_at' => now(),
+    ]);
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.campaigns.index'))
+        ->assertOk()
+        ->assertJsonPath('props.endpoint_campaigns.0.payment_monitoring.status', 'live');
+
+    actingAsTestUser();
+    $this->patch(
+        route('x-change.cockpit.campaigns.endpoints.payment-monitoring.update', $campaign->reference),
+        [
+            'mode' => CampaignPaymentMonitoringMode::Paused->value,
+            'expected_generation' => 1,
+        ],
+    )->assertNotFound();
+
+    expect($binding->monitoringControl()->sole()->mode)->toBe(CampaignPaymentMonitoringMode::Live);
+});
+
+it('atomically pauses live payment monitoring when its campaign is paused', function (): void {
+    config(['x-change.legal.eula.enabled' => false]);
+    [$owner, $campaign, $binding] = monitoredCampaignFixture();
+    fakeAuditLogger();
+    app(SetCampaignPaymentMonitoring::class)->handle(
+        binding: $binding,
+        mode: CampaignPaymentMonitoringMode::Live,
+        expectedGeneration: 0,
+        reason: 'operator_started',
+        actorType: $owner->getMorphClass(),
+        actorId: (string) $owner->getKey(),
+    );
+
+    $this->patch(route('x-change.cockpit.campaigns.endpoints.pause', $campaign->reference))
+        ->assertRedirect(route('x-change.cockpit.campaigns.index'));
+
+    expect($campaign->fresh()->status)->toBe('paused')
+        ->and($binding->monitoringControl()->sole()->mode)->toBe(CampaignPaymentMonitoringMode::Paused)
+        ->and($binding->monitoringControl()->sole()->generation)->toBe(2)
+        ->and($binding->monitoringControl()->sole()->transition_reason)->toBe('campaign_paused');
+});
+
 /**
  * @return array{mixed, LeadCampaign, CampaignPaymentQrBinding, StandingFundingAddress}
  */
