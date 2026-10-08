@@ -117,6 +117,25 @@ NetBank remains `disabled` at generation 9 with batch limit one, zero active
 runs, one quarantined address, and no ambiguous addresses. No campaign
 activation, provider request, payment, or financial operation occurred.
 
+### Campaign-only commissioning preflight — 2026-10-09
+
+The read-only preflight found zero database jobs, zero failed jobs, and zero
+Redis ready/reserved/delayed entries across all inspected queue lanes. It also
+found zero active runtime runs, zero campaign monitoring controls, no unsafe
+runtime run in the preceding 24 hours, and no undelivered runtime outbox
+evidence. All eight historical runtime runs are successful. An immediate
+second snapshot remained fully empty.
+
+The live database worker has one process and covers `x-change-funding`,
+`x-change-issuance`, `x-change-feedback`, and `default`. Horizon remains
+intentionally inactive. Both polling schedules remain disabled and absent from
+the scheduler; NetBank remains disabled at generation 9.
+
+The commissioning target is campaign `01M3CBP94CANQD2JRANFXHQZSE`, immutable
+binding `3`, Standing Funding address `6`. Address `5` is the earlier supported
+campaign and remains paused by missing monitoring control. Address `4` remains
+quarantined. No provider or financial activity occurred during preflight.
+
 ## Runtime states
 
 | State | Admission | Meaning |
@@ -368,11 +387,10 @@ changes, and any later live provider operation require explicit authorization.
 
 ## Next action
 
-Run a read-only queue and failed-job preflight. If it is clean, define and
-separately authorize controlled campaign-only commissioning: promote the
-runtime through the approved transition, mark only the AUI acceptance campaign
-live, enable only the campaign schedule at batch size one, and observe the
-required scheduler cycles. Keep the global schedule false and address `4`
-quarantined. Campaign activation, runtime promotion, schedule enablement, or
-any provider operation remains separately gated; do not enable or promote
-automatically.
+Separately authorize controlled campaign-only commissioning: promote the
+runtime through the approved transition, mark only campaign
+`01M3CBP94CANQD2JRANFXHQZSE` / address `6` live, enable only the campaign
+schedule at batch size one, and observe at least ten scheduler cycles. Keep the
+global schedule false, address `5` paused, and address `4` quarantined. Stop on
+any backlog, failure, overlap, quarantine growth, ambiguity, or database
+pressure. A live payment remains a later, separately authorized gate.

@@ -110,6 +110,35 @@ explicitly authorize controlled campaign-only commissioning if the safety
 fence is clean. Do not promote runtime state or enable either schedule merely
 because this disabled adoption succeeded.
 
+### Campaign-only commissioning preflight — 2026-10-09
+
+The read-only Cloud preflight passed. Database jobs, failed jobs, and Redis
+ready/reserved/delayed entries are all zero across `campaigns`,
+`x-change-funding`, `x-change-issuance`, `x-change-feedback`,
+`partner-payments`, and `default`. There are no active Standing Funding runs,
+no unsafe runtime runs in the preceding 24 hours, and no undelivered runtime
+outbox evidence. The immediate second snapshot remained zero, proving the
+preflight introduced no queue, runtime, or campaign-control mutation.
+
+The existing database worker has one process and covers `x-change-funding`,
+`x-change-issuance`, `x-change-feedback`, and `default`. Horizon is inactive by
+design. Queue topology inspection is ready; its uncommissioned-financial-lane
+warnings describe the intentionally disabled Horizon path, not missing database
+worker coverage for the campaign sync job.
+
+Target identity is now explicit: campaign
+`01M3CBP94CANQD2JRANFXHQZSE` (`AUI PA5000 Day — connection acceptance
+2026-09-25`), binding `3`, address `6`. It is active, reusable-payment,
+NetBank-backed, idle, non-quarantined, non-ambiguous, and has no monitoring
+control yet. Address `5` belongs to the earlier AUI campaign and remains paused
+by absent control. Address `4` remains quarantined.
+
+Both schedule switches remain false and absent from the scheduler. NetBank
+remains disabled at generation 9 with zero active runs. No campaign activation,
+provider request, payment, or financial operation occurred. Next separate gate:
+controlled campaign-only commissioning and ten-cycle observation, without a
+live payment.
+
 ### Payment activity local host acceptance — 2026-09-25
 
 Commit `5c4cc459` passed isolated host adoption from sandbox commit `3873d386`.

@@ -117,8 +117,9 @@ deferred.
 
 ## Implementation Slices
 
-Current checkpoint: Slices 1–5 and the disabled-deployment prerequisite of
-Slice 6 are complete. Controlled commissioning and Slice 7 remain gated.
+Current checkpoint: Slices 1–5 and the disabled-deployment and read-only
+preflight prerequisites of Slice 6 are complete. Controlled commissioning and
+Slice 7 remain gated.
 
 ### Slice 1 — Documentation and characterization
 
@@ -184,17 +185,33 @@ activated and no provider or financial operation occurred.
 
 ### Slice 6 — Controlled commissioning
 
-Status: **Disabled deployment prerequisite complete; commissioning not started**
+Status: **Disabled deployment and preflight complete; commissioning not started**
 
 - Completed: deploy `v1.0.113` to testing with both schedules still disabled
   and verify the same no-schedule posture before any runtime transition.
-- Confirm queues and failed jobs are empty.
+- Completed: confirm database, Redis, active runtime, and failed-job queues are
+  empty and prove an immediate second read-only snapshot remains empty.
 - Promote the NetBank Standing Funding runtime from disabled generation 9 to a
   separately authorized scheduled generation.
 - Mark only the AUI acceptance campaign live.
 - Enable only the campaign-payment schedule with batch size one.
 - Observe at least ten scheduler cycles with no overlap, retry storm, backlog,
   quarantine growth, or database pressure.
+
+The 2026-10-09 preflight found zero database jobs, zero failed jobs, zero Redis
+ready/reserved/delayed entries across all declared and legacy worker lanes,
+zero active runtime runs, and zero campaign monitoring controls. All eight
+recorded Standing Funding runs are successful, the runtime outbox has no
+undelivered evidence, and no unsafe runtime run exists in the preceding 24
+hours. The configured database worker covers `x-change-funding`,
+`x-change-issuance`, `x-change-feedback`, and `default`; Horizon remains
+intentionally inactive.
+
+The target identity was also reconciled before commissioning. The live target
+is campaign `01M3CBP94CANQD2JRANFXHQZSE`, binding `3`, address `6`. Address `5`
+belongs to the earlier campaign and remains paused by absent monitoring control;
+address `4` remains quarantined. A second snapshot proved that the preflight
+itself created no queue, run, or control state.
 
 ### Slice 7 — Fresh live acceptance
 
