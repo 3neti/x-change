@@ -660,6 +660,20 @@ return [
     ],
 
     'campaigns' => [
+        'payment_monitoring' => [
+            'scheduled_sync_enabled' => (bool) env(
+                'XCHANGE_CAMPAIGN_PAYMENT_SCHEDULED_SYNC_ENABLED',
+                false,
+            ),
+            'scheduled_batch_size' => (int) env(
+                'XCHANGE_CAMPAIGN_PAYMENT_SCHEDULED_BATCH_SIZE',
+                1,
+            ),
+            'scheduled_minimum_interval_seconds' => (int) env(
+                'XCHANGE_CAMPAIGN_PAYMENT_SCHEDULED_MINIMUM_INTERVAL_SECONDS',
+                60,
+            ),
+        ],
         'usage_profiles' => [
             'ayuda' => [
                 'label' => 'Ayuda',

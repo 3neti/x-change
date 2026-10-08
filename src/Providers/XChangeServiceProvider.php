@@ -78,6 +78,7 @@ use LBHurtado\XChange\Console\Commands\Affiliation\EnrollAffiliationRootCommand;
 use LBHurtado\XChange\Console\Commands\BootstrapXChangeFromManifestCommand;
 use LBHurtado\XChange\Console\Commands\Campaigns\ProcessCampaignBatchFulfillmentOutboxCommand;
 use LBHurtado\XChange\Console\Commands\Campaigns\ShowCampaignPayoutRecoveryDeliveriesCommand;
+use LBHurtado\XChange\Console\Commands\Campaigns\SyncCampaignPaymentAddressesCommand;
 use LBHurtado\XChange\Console\Commands\Claim\ClaimWalkthroughCommand;
 use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionContextCommand;
 use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
@@ -1701,6 +1702,7 @@ class XChangeServiceProvider extends ServiceProvider
                 MonitorOpenPaymentAttemptsCommand::class,
                 ResumeVerifiedPaymentAttemptsCommand::class,
                 SyncStandingFundingAddressesCommand::class,
+                SyncCampaignPaymentAddressesCommand::class,
                 StandingFundingRuntimeStatusCommand::class,
                 StandingFundingRuntimeTransitionCommand::class,
                 StandingFundingAddressRecoveryCommand::class,
@@ -2103,6 +2105,22 @@ class XChangeServiceProvider extends ServiceProvider
                 $schedule
                     ->command("xchange:funding:sync-standing --provider=netbank --limit={$batchSize}")
                     ->name('xchange:funding:sync-standing:netbank')
+                    ->everyMinute()
+                    ->onOneServer()
+                    ->withoutOverlapping(5);
+            });
+        }
+
+        if ((bool) config('x-change.funding.standing_addresses.enabled', false)) {
+            $batchSize = max(
+                1,
+                (int) config('x-change.campaigns.payment_monitoring.scheduled_batch_size', 1),
+            );
+
+            $this->callAfterResolving(Schedule::class, function (Schedule $schedule) use ($batchSize): void {
+                $schedule
+                    ->command("xchange:campaigns:sync-payment-addresses --provider=netbank --limit={$batchSize}")
+                    ->name('xchange:campaigns:sync-payment-addresses:netbank')
                     ->everyMinute()
                     ->onOneServer()
                     ->withoutOverlapping(5);

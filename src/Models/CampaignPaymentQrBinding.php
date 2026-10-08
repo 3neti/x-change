@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use LBHurtado\XCampaign\Models\EndpointCampaign;
 use LBHurtado\XChange\Enums\CampaignEntryMode;
@@ -90,6 +91,14 @@ final class CampaignPaymentQrBinding extends Model
     {
         return $this->hasMany(
             CampaignPaymentRecognition::class,
+            'campaign_payment_qr_binding_id',
+        );
+    }
+
+    public function monitoringControl(): HasOne
+    {
+        return $this->hasOne(
+            CampaignPaymentMonitoringControl::class,
             'campaign_payment_qr_binding_id',
         );
     }

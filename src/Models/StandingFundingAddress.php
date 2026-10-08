@@ -119,4 +119,12 @@ class StandingFundingAddress extends Model
     {
         return $this->hasOne(StandingFundingAddressBindingHead::class);
     }
+
+    public function campaignPaymentQrBinding(): HasOne
+    {
+        return $this->hasOne(
+            CampaignPaymentQrBinding::class,
+            'standing_funding_address_id',
+        );
+    }
 }
