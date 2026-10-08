@@ -5,14 +5,14 @@
 **Current phase:** Slices 1–10, binding-time campaign-rule hardening, the
 operator-authorized NetBank canary and bounded fleet observation, and the
 campaign-only polling implementation are complete. Campaign polling is released
-as immutable `v1.0.113` and deployed to testing with both schedules disabled;
+as immutable `v1.0.113` and commissioned in testing for one campaign binding;
 the legacy address remains quarantined
 
-**Runtime posture:** Subsequent AUI campaign acceptance was closed back to
-`disabled` at generation 9 in `x-change-testing/testing`. Global scheduled
-synchronization remains disabled. Address `4` remains quarantined. A separately
-configured campaign-only scheduler is implemented, released, and deployed but
-has not been commissioned.
+**Runtime posture:** NetBank is `scheduled` at generation 12 in
+`x-change-testing/testing` with batch limit one. Only campaign
+`01M3CBP94CANQD2JRANFXHQZSE`, binding `3`, address `6` is live. The global
+Standing Funding schedule remains disabled, address `5` remains paused by
+absent control, and address `4` remains quarantined.
 
 ## Mission
 
@@ -135,6 +135,33 @@ The commissioning target is campaign `01M3CBP94CANQD2JRANFXHQZSE`, immutable
 binding `3`, Standing Funding address `6`. Address `5` is the earlier supported
 campaign and remains paused by missing monitoring control. Address `4` remains
 quarantined. No provider or financial activity occurred during preflight.
+
+### Campaign-only commissioning complete — 2026-10-09
+
+Testing deployment `depl-a2ef9f20-ccad-402a-8ae8-7bbdbb6f783b` enabled only
+the campaign scheduler with batch size one. The global Standing Funding schedule
+remained false. NetBank promoted from disabled generation 9 to scheduled
+generation 10, and only binding `3` / address `6` received a live monitoring
+control.
+
+The first observer sampled a normal just-dispatched job and conservatively
+paused the runtime at generation 11. The job drained successfully with no
+failure, overlap, or residue. The runtime resumed at generation 12 after the
+observer was corrected to distinguish one fresh in-flight job from backlog or
+a stuck lease.
+
+Ten campaign-schedule checks succeeded for address `6` only: four at generation
+10 and six at generation 12. The uninterrupted generation-12 observation
+covered more than ten scheduler minutes. Expected no-op ticks occurred when the
+60-second minimum interval had not elapsed. All checks reported zero newly
+observed or applied provider items, and no campaign payment recognition was
+created.
+
+The final runtime is scheduled at generation 12 with batch limit one, closed
+circuit, zero consecutive failures, zero active or failed jobs, zero Redis
+residue, and a fully delivered runtime outbox. Address `6` is idle, address `5`
+was untouched, and address `4` remains quarantined. No payment or financial
+mutation occurred.
 
 ## Runtime states
 
@@ -387,10 +414,10 @@ changes, and any later live provider operation require explicit authorization.
 
 ## Next action
 
-Separately authorize controlled campaign-only commissioning: promote the
-runtime through the approved transition, mark only campaign
-`01M3CBP94CANQD2JRANFXHQZSE` / address `6` live, enable only the campaign
-schedule at batch size one, and observe at least ten scheduler cycles. Keep the
-global schedule false, address `5` paused, and address `4` quarantined. Stop on
-any backlog, failure, overlap, quarantine growth, ambiguity, or database
-pressure. A live payment remains a later, separately authorized gate.
+Keep the commissioned campaign-only runtime under observation. The next
+separate gate is one fresh PHP 50 AUI payment acceptance against campaign
+`01M3CBP94CANQD2JRANFXHQZSE`, requiring exactly one recognition, provisional
+coverage, settlement envelope, completion Pay Code, the expected SMS journey,
+and a mutation-free replay. Keep the global schedule false, address `5` paused,
+and address `4` quarantined. Stop on any backlog, failure, overlap, quarantine
+growth, ambiguity, duplicate, or database pressure.

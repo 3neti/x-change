@@ -11,6 +11,14 @@ snapshot from inception, and issues one zero-value completion Pay Code.
 
 ## Current Position
 
+Campaign-only payment monitoring is commissioned in testing. NetBank is
+scheduled at generation 12 with batch limit one; only campaign
+`01M3CBP94CANQD2JRANFXHQZSE`, binding `3`, address `6` is live. The global
+Standing Funding schedule remains false, address `5` is paused, and address `4`
+is quarantined. Ten bounded provider checks completed successfully without a
+new payment or financial mutation. Fresh-payment acceptance remains separately
+authorized.
+
 ### Campaign payment monitoring implementation authorized — 2026-10-09
 
 The AUI acceptance campaign completed one bounded live NetBank synchronization,
@@ -138,6 +146,38 @@ remains disabled at generation 9 with zero active runs. No campaign activation,
 provider request, payment, or financial operation occurred. Next separate gate:
 controlled campaign-only commissioning and ten-cycle observation, without a
 live payment.
+
+### Campaign-only commissioning and observation — 2026-10-09
+
+Controlled commissioning completed in testing. Runtime promotion moved NetBank
+from disabled generation 9 to scheduled generation 10. Binding `3` / address
+`6` received the only live monitoring control at generation 1. Deployment
+`depl-a2ef9f20-ccad-402a-8ae8-7bbdbb6f783b` materialized the campaign-only
+schedule at one address per minute while the global Standing Funding schedule
+remained false.
+
+The initial observer conservatively stopped when it sampled one normal
+just-dispatched job. The runtime paused immediately at generation 11, and the
+single generation-10 job drained successfully with no failure or overlap. After
+proving zero queue residue and an idle address, commissioning resumed at
+generation 12 with an observer that permits one fresh in-flight job and still
+fails closed on accumulation, a lease older than 120 seconds, failure,
+ambiguity, quarantine, or wrong-address work.
+
+Ten campaign-schedule provider checks succeeded for address `6` only: four at
+generation 10 and six at generation 12. The uninterrupted generation-12 window
+covered more than ten scheduler minutes. Some ticks correctly queued nothing
+because the previous `last_checked_at` had not yet reached the 60-second
+eligibility interval. All ten summaries reported zero newly observed, settled,
+awaiting-approval, suspense, or applied items. Existing recognized history
+remained four, and no new campaign payment recognition was created.
+
+Final posture is live but bounded: runtime scheduled at generation 12, batch
+limit one, closed circuit, zero consecutive failures, address `6` idle, binding
+`3` live, database and Redis queues empty, failed jobs zero, and runtime outbox
+fully delivered. Address `5` was not checked and remains paused by absent
+control. Address `4` remains quarantined. No payment or financial mutation
+occurred. Next separate gate: one fresh PHP 50 AUI payment acceptance.
 
 ### Payment activity local host acceptance — 2026-09-25
 

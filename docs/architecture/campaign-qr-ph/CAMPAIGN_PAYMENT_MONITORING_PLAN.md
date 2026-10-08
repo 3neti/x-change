@@ -117,9 +117,8 @@ deferred.
 
 ## Implementation Slices
 
-Current checkpoint: Slices 1–5 and the disabled-deployment and read-only
-preflight prerequisites of Slice 6 are complete. Controlled commissioning and
-Slice 7 remain gated.
+Current checkpoint: Slices 1–6 are complete in testing. Slice 7 remains a
+separately authorized financial gate.
 
 ### Slice 1 — Documentation and characterization
 
@@ -185,7 +184,7 @@ activated and no provider or financial operation occurred.
 
 ### Slice 6 — Controlled commissioning
 
-Status: **Disabled deployment and preflight complete; commissioning not started**
+Status: **Complete in testing**
 
 - Completed: deploy `v1.0.113` to testing with both schedules still disabled
   and verify the same no-schedule posture before any runtime transition.
@@ -213,9 +212,33 @@ belongs to the earlier campaign and remains paused by absent monitoring control;
 address `4` remains quarantined. A second snapshot proved that the preflight
 itself created no queue, run, or control state.
 
+Controlled commissioning completed on 2026-10-09. The runtime promoted from
+disabled generation 9 to scheduled generation 10, binding `3` received the only
+live monitoring control at generation 1, and deployment
+`depl-a2ef9f20-ccad-402a-8ae8-7bbdbb6f783b` materialized only the campaign
+schedule. The global Standing Funding schedule remained false.
+
+The first observer treated one normal just-dispatched job as a stop signal and
+immediately paused the runtime at generation 11. That job drained successfully:
+there was no overlap, backlog, failed job, provider failure, or address-state
+degradation. The runtime then resumed at generation 12 with the corrected
+observer rule that permits one fresh in-flight job but rejects accumulation,
+staleness, failure, ambiguity, or wrong-address selection.
+
+The gate recorded ten successful campaign-schedule checks for address `6`
+only: four at generation 10 and six at generation 12. The generation-12 window
+covered more than ten scheduler minutes; expected intermediate ticks were no-ops
+when `last_checked_at` had not yet aged past the 60-second minimum interval.
+Every run reported zero newly observed, settled, awaiting-approval, suspense,
+or applied items. No new campaign payment recognition was created. Final state:
+runtime scheduled at generation 12, batch limit one, one live control for
+binding `3`, zero queued or failed jobs, zero Redis residue, zero consecutive
+failures, closed circuit, idle address `6`, unchanged address `5`, quarantined
+address `4`, and no undelivered runtime outbox evidence.
+
 ### Slice 7 — Fresh live acceptance
 
-Status: **Not started; separate financial authorization required**
+Status: **Not started; campaign polling is commissioned, but financial authorization is still required**
 
 - Under separate financial authorization, pay one fresh PHP 50 AUI premium.
 - Require exactly one recognition, one provisional coverage, one settlement
