@@ -67,6 +67,30 @@ or schedule enablement occurred. Next gate: immutable package release and host
 adoption with both schedules disabled, followed by separately authorized
 controlled commissioning.
 
+### Campaign payment monitoring release and disabled local adoption — 2026-10-09
+
+The implementation is published as immutable x-change `v1.0.113` at
+`7119b8b1c2`. The preceding `v1.0.112` candidate was superseded after disabled
+adoption detected that the campaign schedule registration lacked its separate
+feature-flag condition. No schedule tick, queue dispatch, provider call, or
+financial operation occurred. The corrective regression proves the campaign
+schedule is absent while its switch is false; the focused backend suite passes
+6 tests / 48 assertions.
+
+The local sandbox is locked to `v1.0.113` with minimum constraint `^1.0.113`.
+Only the new campaign-monitoring migration was applied; the two pre-existing
+unrelated pending migrations remain pending. Published assets pass strict drift
+verification (776 checked, 776 matching), Composer validation and the production
+Vite build pass, and the control table contains zero rows. Both
+`XCHANGE_STANDING_FUNDING_SCHEDULED_SYNC_ENABLED` and
+`XCHANGE_CAMPAIGN_PAYMENT_SCHEDULED_SYNC_ENABLED` resolve false, and neither
+schedule appears in `schedule:list`.
+
+No Cloud deployment, runtime promotion, campaign activation, NetBank request,
+payment, or financial mutation occurred. Next separate gate: deploy this exact
+release to testing with both schedules disabled and prove the same posture
+before controlled commissioning.
+
 ### Payment activity local host acceptance — 2026-09-25
 
 Commit `5c4cc459` passed isolated host adoption from sandbox commit `3873d386`.

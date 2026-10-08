@@ -157,16 +157,28 @@ Status: **Complete locally**
 
 ### Slice 5 — Release and disabled adoption
 
-Status: **Not started; separately gated**
+Status: **Complete locally on `v1.0.113`; Cloud deployment remains separately gated**
 
 - Run focused package tests, formatter, frontend tests, build, and drift checks.
 - Publish an immutable x-change patch.
-- Adopt and deploy it with both campaign and global schedules disabled.
+- Adopt it locally with both campaign and global schedules disabled.
+
+Release-gate verification found that the first immutable candidate,
+`v1.0.112`, registered the campaign schedule whenever Standing Funding
+addresses were enabled even though the campaign schedule switch was false.
+No scheduler or provider operation ran. The missing schedule fence was covered
+by a regression and published as corrective immutable release `v1.0.113` at
+`7119b8b1c2`. The sandbox host is locked to that release, its package-owned
+assets are synchronized, the campaign control migration is applied, both
+schedules resolve false and are absent from `schedule:list`, and the control
+table is empty. Cloud deployment remains a separate gate.
 
 ### Slice 6 — Controlled commissioning
 
 Status: **Not started; separately gated**
 
+- Deploy `v1.0.113` to testing with both schedules still disabled and verify
+  the same no-schedule posture before any runtime transition.
 - Confirm queues and failed jobs are empty.
 - Promote the NetBank Standing Funding runtime from disabled generation 9 to a
   separately authorized scheduled generation.

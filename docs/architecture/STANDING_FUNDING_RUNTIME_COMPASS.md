@@ -2,15 +2,17 @@
 
 **Last updated:** 2026-10-09
 
-**Current phase:** Slices 1–10, binding-time campaign-rule hardening, and the
-operator-authorized NetBank canary and bounded fleet observation are complete
-on immutable release `v1.0.104`; the legacy address remains quarantined
+**Current phase:** Slices 1–10, binding-time campaign-rule hardening, the
+operator-authorized NetBank canary and bounded fleet observation, and the
+campaign-only polling implementation are complete. Campaign polling is released
+as immutable `v1.0.113` and adopted locally with both schedules disabled; the
+legacy address remains quarantined
 
 **Runtime posture:** Subsequent AUI campaign acceptance was closed back to
 `disabled` at generation 9 in `x-change-testing/testing`. Global scheduled
 synchronization remains disabled. Address `4` remains quarantined. A separately
-configured campaign-only scheduler is authorized for implementation but has not
-been commissioned.
+configured campaign-only scheduler is implemented and released but has not been
+deployed to testing or commissioned.
 
 ## Mission
 
@@ -57,7 +59,7 @@ structurally resolved.
 12. Campaign monitoring control is an additional fail-closed gate; missing
     control means paused, and the existing runtime admission remains mandatory.
 
-## Next implementation gate — campaign-only payment monitoring
+## Current implementation gate — campaign-only payment monitoring
 
 The approved code-first work is documented in
 [Campaign Payment Monitoring Plan](campaign-qr-ph/CAMPAIGN_PAYMENT_MONITORING_PLAN.md).
@@ -82,6 +84,22 @@ the established global dispatcher regressions. The Cockpit frontend gate passed
 27 tests. Runtime remains operationally disabled at generation 9 in testing;
 neither the global nor campaign-only schedule has been enabled or deployed by
 this local checkpoint.
+
+### Immutable release and disabled local adoption — 2026-10-09
+
+The campaign-only lane is published in `v1.0.113` at `7119b8b1c2` and adopted
+by the local sandbox. Disabled-adoption verification caught and corrected a
+missing scheduler-registration fence in superseded candidate `v1.0.112` before
+any schedule or provider operation ran. A focused regression now proves that a
+false campaign switch prevents registration even when Standing Funding
+addresses are enabled.
+
+The local host has zero campaign-monitoring controls, both global and campaign
+schedule flags resolve false, neither command is registered with the scheduler,
+and the new migration is applied without applying two unrelated older pending
+migrations. Asset drift is zero across 776 generated inputs and the production
+build passes. Testing Cloud still runs the earlier disabled runtime posture at
+generation 9; no deployment or operational transition is implied.
 
 ## Runtime states
 
@@ -334,7 +352,9 @@ changes, and any later live provider operation require explicit authorization.
 
 ## Next action
 
-Keep synchronization disabled. Address `4` must remain quarantined unless a
-distinct operator review proves a valid replacement path. Any scheduled-mode
-promotion, infrastructure change, or additional live provider operation is a
-separate explicit gate; do not enable or promote automatically.
+Deploy exact release `v1.0.113` to testing with both schedule flags explicitly
+false, apply only its campaign-monitoring migration, and prove neither schedule
+is registered. Keep runtime generation 9 disabled and address `4` quarantined.
+Campaign activation, scheduled-mode promotion, infrastructure change, or any
+live provider operation remains a later explicit gate; do not enable or promote
+automatically.
