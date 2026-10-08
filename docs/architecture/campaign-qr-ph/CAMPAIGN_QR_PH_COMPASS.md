@@ -91,6 +91,25 @@ payment, or financial mutation occurred. Next separate gate: deploy this exact
 release to testing with both schedules disabled and prove the same posture
 before controlled commissioning.
 
+### Campaign payment monitoring disabled testing adoption — 2026-10-09
+
+Testing deployment `depl-a2ef9485-f504-419c-b885-4c8a4828ff6d` succeeded from
+exact host commit `cabaf8c804da808b1997704d112c28821c5adc54`, adopting immutable
+x-change `v1.0.113`. The campaign monitoring migration is recorded as batch 47
+and its control table contains zero rows.
+
+Both the global Standing Funding schedule switch and the campaign-only schedule
+switch resolve false in Cloud. Neither polling command is registered in the
+live scheduler. The NetBank Standing Funding runtime remains `disabled` at
+generation 9 with batch limit one, zero active runs, and the legacy quarantine
+preserved. No commissioning, campaign activation, provider request, payment,
+or financial mutation occurred.
+
+Next separate gate: perform the read-only queue and failed-job preflight, then
+explicitly authorize controlled campaign-only commissioning if the safety
+fence is clean. Do not promote runtime state or enable either schedule merely
+because this disabled adoption succeeded.
+
 ### Payment activity local host acceptance — 2026-09-25
 
 Commit `5c4cc459` passed isolated host adoption from sandbox commit `3873d386`.

@@ -117,7 +117,8 @@ deferred.
 
 ## Implementation Slices
 
-Current checkpoint: Slices 1–4 are complete locally. Slices 5–7 remain gated.
+Current checkpoint: Slices 1–5 and the disabled-deployment prerequisite of
+Slice 6 are complete. Controlled commissioning and Slice 7 remain gated.
 
 ### Slice 1 — Documentation and characterization
 
@@ -157,7 +158,7 @@ Status: **Complete locally**
 
 ### Slice 5 — Release and disabled adoption
 
-Status: **Complete locally on `v1.0.113`; Cloud deployment remains separately gated**
+Status: **Complete on `v1.0.113`, including disabled testing adoption**
 
 - Run focused package tests, formatter, frontend tests, build, and drift checks.
 - Publish an immutable x-change patch.
@@ -171,14 +172,22 @@ by a regression and published as corrective immutable release `v1.0.113` at
 `7119b8b1c2`. The sandbox host is locked to that release, its package-owned
 assets are synchronized, the campaign control migration is applied, both
 schedules resolve false and are absent from `schedule:list`, and the control
-table is empty. Cloud deployment remains a separate gate.
+table is empty.
+
+Testing deployment `depl-a2ef9485-f504-419c-b885-4c8a4828ff6d` succeeded from
+exact host commit `cabaf8c804da808b1997704d112c28821c5adc54`. The campaign
+monitoring migration is recorded as batch 47, and the control table still has
+zero rows. Cloud configuration resolves both schedule switches to false,
+neither polling command is registered in `schedule:list`, and NetBank remains
+disabled at runtime generation 9 with zero active runs. No campaign was
+activated and no provider or financial operation occurred.
 
 ### Slice 6 — Controlled commissioning
 
-Status: **Not started; separately gated**
+Status: **Disabled deployment prerequisite complete; commissioning not started**
 
-- Deploy `v1.0.113` to testing with both schedules still disabled and verify
-  the same no-schedule posture before any runtime transition.
+- Completed: deploy `v1.0.113` to testing with both schedules still disabled
+  and verify the same no-schedule posture before any runtime transition.
 - Confirm queues and failed jobs are empty.
 - Promote the NetBank Standing Funding runtime from disabled generation 9 to a
   separately authorized scheduled generation.

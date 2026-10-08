@@ -5,14 +5,14 @@
 **Current phase:** Slices 1–10, binding-time campaign-rule hardening, the
 operator-authorized NetBank canary and bounded fleet observation, and the
 campaign-only polling implementation are complete. Campaign polling is released
-as immutable `v1.0.113` and adopted locally with both schedules disabled; the
-legacy address remains quarantined
+as immutable `v1.0.113` and deployed to testing with both schedules disabled;
+the legacy address remains quarantined
 
 **Runtime posture:** Subsequent AUI campaign acceptance was closed back to
 `disabled` at generation 9 in `x-change-testing/testing`. Global scheduled
 synchronization remains disabled. Address `4` remains quarantined. A separately
-configured campaign-only scheduler is implemented and released but has not been
-deployed to testing or commissioned.
+configured campaign-only scheduler is implemented, released, and deployed but
+has not been commissioned.
 
 ## Mission
 
@@ -98,8 +98,24 @@ The local host has zero campaign-monitoring controls, both global and campaign
 schedule flags resolve false, neither command is registered with the scheduler,
 and the new migration is applied without applying two unrelated older pending
 migrations. Asset drift is zero across 776 generated inputs and the production
-build passes. Testing Cloud still runs the earlier disabled runtime posture at
-generation 9; no deployment or operational transition is implied.
+build passes. Testing Cloud subsequently adopted this exact release while
+preserving the disabled runtime posture at generation 9; no operational
+transition is implied.
+
+### Disabled testing adoption checkpoint — 2026-10-09
+
+Laravel Cloud deployment `depl-a2ef9485-f504-419c-b885-4c8a4828ff6d`
+succeeded from exact host commit
+`cabaf8c804da808b1997704d112c28821c5adc54`. The runtime contains immutable
+x-change `v1.0.113`, and the campaign monitoring migration is recorded as batch
+47. No campaign monitoring control exists yet.
+
+Both `XCHANGE_STANDING_FUNDING_SCHEDULED_SYNC_ENABLED` and
+`XCHANGE_CAMPAIGN_PAYMENT_SCHEDULED_SYNC_ENABLED` resolve false. Neither the
+global nor campaign-only polling command is registered with the scheduler.
+NetBank remains `disabled` at generation 9 with batch limit one, zero active
+runs, one quarantined address, and no ambiguous addresses. No campaign
+activation, provider request, payment, or financial operation occurred.
 
 ## Runtime states
 
@@ -352,9 +368,11 @@ changes, and any later live provider operation require explicit authorization.
 
 ## Next action
 
-Deploy exact release `v1.0.113` to testing with both schedule flags explicitly
-false, apply only its campaign-monitoring migration, and prove neither schedule
-is registered. Keep runtime generation 9 disabled and address `4` quarantined.
-Campaign activation, scheduled-mode promotion, infrastructure change, or any
-live provider operation remains a later explicit gate; do not enable or promote
+Run a read-only queue and failed-job preflight. If it is clean, define and
+separately authorize controlled campaign-only commissioning: promote the
+runtime through the approved transition, mark only the AUI acceptance campaign
+live, enable only the campaign schedule at batch size one, and observe the
+required scheduler cycles. Keep the global schedule false and address `4`
+quarantined. Campaign activation, runtime promotion, schedule enablement, or
+any provider operation remains separately gated; do not enable or promote
 automatically.
