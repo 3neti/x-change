@@ -2111,7 +2111,8 @@ class XChangeServiceProvider extends ServiceProvider
             });
         }
 
-        if ((bool) config('x-change.funding.standing_addresses.enabled', false)) {
+        if ((bool) config('x-change.funding.standing_addresses.enabled', false)
+            && (bool) config('x-change.campaigns.payment_monitoring.scheduled_sync_enabled', false)) {
             $batchSize = max(
                 1,
                 (int) config('x-change.campaigns.payment_monitoring.scheduled_batch_size', 1),

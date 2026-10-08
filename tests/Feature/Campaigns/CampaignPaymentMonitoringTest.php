@@ -20,6 +20,7 @@ use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Models\StandingFundingRuntimeControl;
+use LBHurtado\XChange\Providers\XChangeServiceProvider;
 
 it('fails closed when monitoring control is absent and generation-fences explicit transitions', function (): void {
     [$owner, $campaign, $binding] = monitoredCampaignFixture();
@@ -144,6 +145,7 @@ it('registers only the separately enabled campaign payment schedule', function (
         'x-change.campaigns.payment_monitoring.scheduled_sync_enabled' => true,
         'x-change.campaigns.payment_monitoring.scheduled_batch_size' => 1,
     ]);
+    (new XChangeServiceProvider($this->app))->boot();
 
     $events = collect(app(Schedule::class)->events());
     $campaignEvent = $events->first(
@@ -157,6 +159,21 @@ it('registers only the separately enabled campaign payment schedule', function (
         ->and($campaignEvent->expiresAt)->toBe(5)
         ->and($campaignEvent->command)->toContain('xchange:campaigns:sync-payment-addresses --provider=netbank --limit=1')
         ->and($campaignEvent->description)->not->toBe('xchange:funding:sync-standing:netbank');
+});
+
+it('does not register the campaign payment schedule while its separate switch is disabled', function (): void {
+    config([
+        'x-change.funding.standing_addresses.enabled' => true,
+        'x-change.funding.standing_addresses.scheduled_sync_enabled' => false,
+        'x-change.campaigns.payment_monitoring.scheduled_sync_enabled' => false,
+    ]);
+    (new XChangeServiceProvider($this->app))->boot();
+
+    $events = collect(app(Schedule::class)->events());
+
+    expect($events->contains(
+        fn ($event): bool => $event->description === 'xchange:campaigns:sync-payment-addresses:netbank',
+    ))->toBeFalse();
 });
 
 it('exposes owner-scoped monitoring controls and never reports live without the runtime fences', function (): void {
