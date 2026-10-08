@@ -1,15 +1,16 @@
 # Standing Funding Runtime Compass
 
-**Last updated:** 2026-10-07
+**Last updated:** 2026-10-09
 
 **Current phase:** Slices 1–10, binding-time campaign-rule hardening, and the
 operator-authorized NetBank canary and bounded fleet observation are complete
 on immutable release `v1.0.104`; the legacy address remains quarantined
 
-**Runtime posture:** The bounded observation was closed back to `disabled` at
-generation 7 in `x-change-testing/testing`. Scheduled synchronization remains
-disabled. Addresses `2`, `3`, `5`, and `6` completed successfully. Address `4`
-remains quarantined. Schedule enablement is separately gated.
+**Runtime posture:** Subsequent AUI campaign acceptance was closed back to
+`disabled` at generation 9 in `x-change-testing/testing`. Global scheduled
+synchronization remains disabled. Address `4` remains quarantined. A separately
+configured campaign-only scheduler is authorized for implementation but has not
+been commissioned.
 
 ## Mission
 
@@ -51,6 +52,21 @@ structurally resolved.
    harmlessly stale.
 9. Ambiguous provider outcomes are reconciled before retry.
 10. No infrastructure change is part of the current code-first wave.
+11. Reusable campaign payment polling uses a dedicated, explicitly controlled
+    dispatcher. It must not enable or reuse the global all-address schedule.
+12. Campaign monitoring control is an additional fail-closed gate; missing
+    control means paused, and the existing runtime admission remains mandatory.
+
+## Next implementation gate — campaign-only payment monitoring
+
+The approved code-first work is documented in
+[Campaign Payment Monitoring Plan](campaign-qr-ph/CAMPAIGN_PAYMENT_MONITORING_PLAN.md).
+It adds persisted live/paused control per immutable campaign QR binding, a
+campaign-only bounded dispatcher, and compact Cockpit controls. The global
+`XCHANGE_STANDING_FUNDING_SCHEDULED_SYNC_ENABLED` flag remains false.
+
+No operational mode transition, provider call, live payment, infrastructure
+change, or Cloud deployment is authorized merely by implementing this gate.
 
 ## Runtime states
 

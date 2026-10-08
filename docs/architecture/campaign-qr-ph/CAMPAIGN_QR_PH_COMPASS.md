@@ -1,6 +1,6 @@
 # Campaign QR Ph Compass
 
-Last updated: 2026-09-25
+Last updated: 2026-10-09
 
 ## North Star
 
@@ -10,6 +10,31 @@ coverage, creates a first-class settlement envelope containing that coverage
 snapshot from inception, and issues one zero-value completion Pay Code.
 
 ## Current Position
+
+### Campaign payment monitoring implementation authorized — 2026-10-09
+
+The AUI acceptance campaign completed one bounded live NetBank synchronization,
+one exact recognition, provisional coverage, completion issuance, two SMS
+interactions, claim completion, and the `policy_issued_demo` outcome. Replay was
+mutation-free. The Standing Funding runtime was then returned to disabled at
+generation 9 and global scheduled synchronization remained disabled.
+
+The next implementation is a campaign-only polling lane, not restoration of the
+global Standing Funding scanner. A persisted control will fail closed when
+absent and explicitly mark each immutable campaign payment QR binding live or
+paused. The dedicated dispatcher will select only active, available, supported
+payment-purpose bindings with a live control, then delegate every job to the
+existing Standing Funding admission/runtime protections. Account-funding
+addresses and the quarantined legacy campaign are outside this lane.
+
+Cockpit will add a compact Payment Monitoring status row and management dialog
+to reusable-payment campaign cards plus a readiness warning in the payment QR
+dialog. It will not add a large permanent dashboard panel or expose provider
+payloads. Live commissioning, a fresh PHP 50 payment, production deployment,
+and Medicard-specific behavior remain separately authorized gates.
+
+Detailed sequence:
+[Campaign Payment Monitoring Plan](CAMPAIGN_PAYMENT_MONITORING_PLAN.md).
 
 ### Payment activity local host acceptance — 2026-09-25
 
