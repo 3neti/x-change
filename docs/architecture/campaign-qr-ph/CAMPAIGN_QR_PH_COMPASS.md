@@ -11,15 +11,17 @@ snapshot from inception, and issues one zero-value completion Pay Code.
 
 ## Current Position
 
-Campaign-only payment monitoring is commissioned in testing. NetBank is
-scheduled at generation 12 with batch limit one; only campaign
-`01M3CBP94CANQD2JRANFXHQZSE`, binding `3`, address `6` is live. The global
-Standing Funding schedule remains false, address `5` is paused, and address `4`
-is quarantined. The fresh PHP 50 AUI acceptance completed exactly once through
-payment, coverage, envelope, completion Pay Code, claimant details,
-demonstration outcome, and two SMS records. Later polling remained
-mutation-free. The next planned product slice is Medicard Gate M0; it authorizes
-documentation and sanitized fixtures only.
+The accepted AUI Campaign QR Ph lifecycle remains the reference path. Medicard
+Gates M0 through M5 are complete locally, including the distinct versioned demo
+driver, customer journey, Cockpit projection, and exactly-once synthetic
+acceptance. Gate M6 published immutable x-change `v1.0.114` and adopted it in
+the testing host at exact commit `1ee05e53`.
+
+Both Standing Funding schedule switches now resolve false in testing. Two
+read-only snapshots across a scheduler interval proved stable lifecycle counts,
+zero queued jobs, and zero failed jobs. No Medicard campaign exists or is live.
+The next separately authorized step is Gate M7, a private synthetic rehearsal
+with live payment monitoring kept paused.
 
 ### Campaign payment monitoring implementation authorized — 2026-10-09
 
@@ -262,10 +264,25 @@ Code, claim projection, completion request, `benefit_ready_demo` outcome, and
 each of the two queued SMS delivery records. Immediate completion replay is
 mutation-free and no external HTTP or live provider activity occurred.
 
-The next gate is **M6 — Immutable release and disabled testing adoption**. It
-requires a separately chosen immutable version and host deployment authority.
-Both Standing Funding schedules must remain false, and adoption must create no
-campaign, payment, SMS, or provider activity.
+Gate M6 is complete. Immutable x-change `v1.0.114` at
+`6a66711c3c61c7e7b4d1283a79a40f05639b3a73` is adopted by testing host commit
+`1ee05e53`. Deployment `depl-a2efd6d9-0840-4428-a392-aa57fdccb69c`
+materialized the corrected disabled posture. Both the global Standing Funding
+schedule and campaign-payment schedule resolve false.
+
+The first deployment verification caught the campaign-payment schedule still
+resolving true from the host environment even though the global schedule was
+false. No queued or failed job was present and no lifecycle count changed. The
+environment fence was corrected immediately, both variables were explicitly
+set false, and the exact host commit was redeployed. Two read-only snapshots
+across a scheduler interval remained identical: 13 recognitions, 13 coverages,
+13 completion Pay Code issuances, 11 completion requests, 11 outcomes, 42
+feedback records, zero queued jobs, and zero failed jobs. No campaign was
+created or activated, no provider request was invoked, and no payment, SMS, or
+financial operation was performed by M6.
+
+The next gate is **M7 — Private synthetic rehearsal**. It remains separately
+authorized and must keep live payment monitoring paused.
 
 Detailed sequence:
 [Medicard Campaign Demonstration Plan](MEDICARD_DEMONSTRATION_PLAN.md).

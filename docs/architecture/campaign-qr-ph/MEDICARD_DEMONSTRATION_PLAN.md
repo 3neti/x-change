@@ -13,8 +13,8 @@ The demonstration must look and read like a Medicard benefit journey while
 remaining explicit that it creates no real HMO membership, healthcare coverage,
 letter of authorization, reimbursement right, or provider entitlement.
 
-No implementation, live campaign, payment, or external Medicard integration is
-authorized by this document.
+Gates M0 through M6 are complete. No live Medicard campaign, payment, external
+Medicard integration, or later gate is authorized by this document.
 
 ## Reference Journey
 
@@ -207,12 +207,14 @@ Disposition: [Gate M5 Automated Lifecycle Acceptance](reports/MEDICARD_GATE_M5_A
 
 ### Gate M6 — Immutable release and disabled testing adoption
 
-Status: **Next separately authorized release/adoption gate**
+Status: **Complete; immutable v1.0.114 is adopted in testing with both schedules disabled**
 
 - Publish an immutable x-change release and adopt it in the testing host.
 - Apply required migrations, if any, with campaign and global schedules false.
 - Verify the campaign is absent or paused and creates no provider or financial
   activity merely by deployment.
+
+Disposition: [Gate M6 Immutable Release and Disabled Testing Adoption](reports/MEDICARD_GATE_M6_RELEASE_AND_DISABLED_ADOPTION.md).
 
 ### Gate M7 — Private synthetic rehearsal
 
