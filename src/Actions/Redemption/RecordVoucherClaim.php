@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Actions\Redemption;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\Claim\ContactClaimProfile;
 use LBHurtado\XChange\Support\Claim\PayoutDestinationRegistry;
 use Lorisleiva\Actions\Concerns\AsAction;
 
@@ -18,6 +19,7 @@ class RecordVoucherClaim
         protected QueueVoucherRedemptionFeedback $queueFeedback,
         protected PersistVoucherClaimEvidence $persistEvidence,
         protected PayoutDestinationRegistry $destinations,
+        protected ContactClaimProfile $contactProfiles,
     ) {}
 
     /**
@@ -109,6 +111,7 @@ class RecordVoucherClaim
         }
 
         $this->markVoucherRedeemedWhenFullyClaimed($voucher, $result);
+        $this->contactProfiles->persist($voucher, $result, $payload);
         $claim->setRelation('voucher', $voucher);
         $this->queueFeedback->handle($claim, $result);
 

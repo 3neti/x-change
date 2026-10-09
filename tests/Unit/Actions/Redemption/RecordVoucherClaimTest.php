@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Contact\Models\Contact;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Redemption\RecordVoucherClaim;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
@@ -55,6 +56,9 @@ it('records a voucher claim row from a normalized claim result', function () {
         'reference' => 'REF-CLAIM-001',
         'inputs' => [
             'name' => 'Juan Dela Cruz',
+            'email' => 'juan@example.test',
+            'birth_date' => '1990-01-01',
+            'address' => '123 Sample Street',
             'location' => [
                 'latitude' => 14.5995,
                 'longitude' => 121.0288,
@@ -96,14 +100,19 @@ it('records a voucher claim row from a normalized claim result', function () {
         'formatted_address' => 'Makati City',
     ]);
     expect(data_get($claim->fresh()->meta, 'evidence.persisted'))->toBeTrue()
-        ->and(data_get($claim->fresh()->meta, 'evidence.input_ids'))->toHaveCount(2)
-        ->and(data_get($claim->fresh()->meta, 'evidence.record_ids'))->toHaveCount(2)
+        ->and(data_get($claim->fresh()->meta, 'evidence.input_ids'))->toHaveCount(5)
+        ->and(data_get($claim->fresh()->meta, 'evidence.record_ids'))->toHaveCount(5)
         ->and(data_get($claim->fresh()->meta, 'evidence.manifest_sha256'))->toMatch('/^[a-f0-9]{64}$/')
-        ->and(data_get($claim->fresh()->meta, 'evidence.captured_count'))->toBe(2)
-        ->and(VoucherClaimEvidence::query()->whereBelongsTo($claim, 'claim')->count())->toBe(2)
+        ->and(data_get($claim->fresh()->meta, 'evidence.captured_count'))->toBe(5)
+        ->and(VoucherClaimEvidence::query()->whereBelongsTo($claim, 'claim')->count())->toBe(5)
         ->and($claim->evidence()->where('requirement_key', 'name')->value('summary'))->toBe('Juan Dela Cruz')
         ->and($claim->evidence()->where('requirement_key', 'location')->value('summary'))->toBe('Makati City');
     expect($voucher->fresh()->redeemed_at)->toBeNull();
+    $contact = Contact::query()->where('mobile', '09171234567')->firstOrFail();
+    expect($contact->name)->toBe('Juan Dela Cruz')
+        ->and($contact->email)->toBe('juan@example.test')
+        ->and($contact->birth_date)->toBe('1990-01-01')
+        ->and($contact->address)->toBe('123 Sample Street');
 });
 
 it('increments claim number for subsequent claims on the same voucher', function () {

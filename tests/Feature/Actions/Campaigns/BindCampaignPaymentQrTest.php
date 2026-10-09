@@ -1084,6 +1084,9 @@ it('suggests the wallet sender name and saves the claimant confirmed name to the
 
     expect($result->claimed)->toBeTrue()
         ->and($voucher->fresh()->contact->name)->toBe('Confirmed Beneficiary')
+        ->and($voucher->fresh()->contact->email)->toBe('demo@example.test')
+        ->and($voucher->fresh()->contact->address)->toBe('Test address')
+        ->and($voucher->fresh()->contact->birth_date)->toBe('1990-01-01')
         ->and($recognition->canonicalObservation->payer_name_ciphertext)->toBe('Payment Sender');
     Http::assertNothingSent();
 })->with([
@@ -1127,6 +1130,59 @@ it('keeps the ordinary name default without trusted wallet sender evidence', fun
     ]],
 ]);
 
+it('does not expose saved contact details without a trusted payer mobile', function (): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_name_ciphertext' => 'Other Sender',
+        'payer_institution_ciphertext' => 'BNORPHMMXXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]);
+    app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']);
+    $contact = Contact::fromPhoneNumber(phone('09173011987', 'PH'));
+    $contact->address = 'Private address';
+    $contact->birth_date = '1990-01-01';
+    $contact->save();
+
+    $voucher = $recognition->provisionalCoverage->completionPayCodeIssuance->voucher;
+    $flow = app(VoucherClaimFlowCompiler::class)->compile($voucher)->instructions->toArray();
+    $bioStep = collect($flow['steps'])->first(fn (array $step): bool => data_get($step, 'config.step_name') === 'bio_fields');
+    $fields = collect(data_get($bioStep, 'config.fields', []))->keyBy('name');
+
+    expect($fields['address']['default'])->toBe('$kyc_addr')
+        ->and($fields['birth_date']['default'])->toBe('$kyc_birth');
+});
+
+it('prefills contact details for a verified signed in claimant only when mobiles match', function (): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_institution_ciphertext' => 'BNORPHMMXXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]);
+    app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']);
+    $voucher = $recognition->provisionalCoverage->completionPayCodeIssuance->voucher;
+    $contact = Contact::fromPhoneNumber(phone('09173011987', 'PH'));
+    $contact->address = 'Saved address';
+    $contact->save();
+    $user = User::query()->create([
+        'name' => 'Verified claimant',
+        'email' => 'verified@example.test',
+        'password' => 'password',
+    ]);
+    $user->forceFill(['mobile' => '09173011987', 'mobile_verified_at' => now()])->save();
+    $this->actingAs($user);
+
+    $matched = app(VoucherClaimFlowCompiler::class)->compile($voucher, '09173011987')->instructions->toArray();
+    $mismatched = app(VoucherClaimFlowCompiler::class)->compile($voucher, '09179999999')->instructions->toArray();
+    $field = static function (array $flow): array {
+        $bioStep = collect($flow['steps'])->first(fn (array $step): bool => data_get($step, 'config.step_name') === 'bio_fields');
+
+        return collect(data_get($bioStep, 'config.fields', []))->firstWhere('name', 'address');
+    };
+
+    expect($field($matched)['default'])->toBe('Saved address')
+        ->and($field($mismatched)['default'])->toBe('$kyc_addr');
+});
+
 it('does not use the payment sender name when KYC supplies the name', function (): void {
     Queue::fake();
     [$recognition] = auiRecognizedPaymentForContinuation([
@@ -1137,8 +1193,12 @@ it('does not use the payment sender name when KYC supplies the name', function (
     app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']);
     $voucher = $recognition->provisionalCoverage->completionPayCodeIssuance->voucher;
     $metadata = $voucher->metadata;
-    data_set($metadata, 'instructions.inputs.fields', ['name', 'mobile', 'kyc']);
+    data_set($metadata, 'instructions.inputs.fields', ['name', 'mobile', 'address', 'kyc']);
     $voucher->forceFill(['metadata' => $metadata])->save();
+    $contact = Contact::fromPhoneNumber(phone('09173011987', 'PH'));
+    $contact->name = 'Saved Contact Name';
+    $contact->address = 'Saved address';
+    $contact->save();
     app()->instance(LBHurtado\FormFlowManager\Services\DriverService::class, new class extends LBHurtado\FormFlowManager\Services\DriverService
     {
         public function __construct()
@@ -1150,9 +1210,37 @@ it('does not use the payment sender name when KYC supplies the name', function (
     $flow = app(VoucherClaimFlowCompiler::class)->compile($voucher)->instructions->toArray();
     $bioStep = collect($flow['steps'])->first(fn (array $step): bool => data_get($step, 'config.step_name') === 'bio_fields');
     $nameField = collect(data_get($bioStep, 'config.fields', []))->firstWhere('name', 'full_name');
+    $addressField = collect(data_get($bioStep, 'config.fields', []))->firstWhere('name', 'address');
 
-    expect($nameField['default'])->toBe('$kyc_name');
+    expect($nameField['default'])->toBe('$kyc_name')
+        ->and($addressField['default'])->toBe('$kyc_addr');
     Http::assertNothingSent();
+});
+
+it('prefills a returning wallet payer from the contact profile bound to the payment mobile', function (): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_name_ciphertext' => 'Wallet Sender',
+        'payer_institution_ciphertext' => 'GXCHPHM2XXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]);
+    app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']);
+    $voucher = $recognition->provisionalCoverage->completionPayCodeIssuance->voucher;
+    $contact = Contact::fromPhoneNumber(phone('09173011987', 'PH'));
+    $contact->name = 'Returning Beneficiary';
+    $contact->email = 'returning@example.test';
+    $contact->birth_date = '1990-01-01';
+    $contact->address = 'Saved address';
+    $contact->save();
+
+    $flow = app(VoucherClaimFlowCompiler::class)->compile($voucher)->instructions->toArray();
+    $bioStep = collect($flow['steps'])->first(fn (array $step): bool => data_get($step, 'config.step_name') === 'bio_fields');
+    $fields = collect(data_get($bioStep, 'config.fields', []))->keyBy('name');
+
+    expect($fields['full_name']['default'])->toBe('Returning Beneficiary')
+        ->and($fields['email']['default'])->toBe('returning@example.test')
+        ->and($fields['birth_date']['default'])->toBe('1990-01-01')
+        ->and($fields['address']['default'])->toBe('Saved address');
 });
 
 it('preserves an existing contact name after a campaign completion claim', function (): void {
@@ -1182,7 +1270,9 @@ it('preserves an existing contact name after a campaign completion claim', funct
 
     expect($result->claimed)->toBeTrue()
         ->and($voucher->fresh()->contact->is($contact))->toBeTrue()
-        ->and($contact->fresh()->name)->toBe('Existing Contact Name');
+        ->and($contact->fresh()->name)->toBe('Existing Contact Name')
+        ->and($contact->fresh()->address)->toBe('Test address')
+        ->and($contact->fresh()->birth_date)->toBe('1990-01-01');
     Http::assertNothingSent();
 });
 

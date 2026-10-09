@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Claim;
 
+use LBHurtado\Contact\Models\Contact;
 use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
 use LBHurtado\FormFlowManager\Services\DriverService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Data\Claim\CompiledVoucherClaimFlowData;
 use LBHurtado\XChange\Services\Settlement\CampaignPaymentPayerName;
+use LBHurtado\XChange\Services\Settlement\CampaignWalletPayerMobile;
 use LBHurtado\XChange\Services\SettlementRailResolver;
+use LBHurtado\XChange\Support\Auth\MobileNumber;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\FormFlowSplashSkipPolicy;
 
@@ -25,6 +28,8 @@ final class VoucherClaimFlowCompiler
         private readonly FormFlowSplashSkipPolicy $splashPolicy,
         private readonly SettlementRailResolver $settlementRails,
         private readonly CampaignPaymentPayerName $payerNames,
+        private readonly CampaignWalletPayerMobile $payerMobiles,
+        private readonly ContactClaimProfile $contactProfiles,
     ) {}
 
     public function compile(
@@ -51,6 +56,7 @@ final class VoucherClaimFlowCompiler
         );
 
         $instructionPayload = $this->prefillCampaignPayerName($voucher, $instructions->toArray());
+        $instructionPayload = $this->prefillContactProfile($voucher, $authenticatedMobile, $instructionPayload);
 
         return new CompiledVoucherClaimFlowData(
             experience: $experience,
@@ -94,6 +100,54 @@ final class VoucherClaimFlowCompiler
 
                     return $payload;
                 }
+            }
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function prefillContactProfile(Voucher $voucher, ?string $authenticatedMobile, array $payload): array
+    {
+        $user = auth()->user();
+        $userMobile = $user?->getAttribute('mobile');
+        $verifiedMobile = $user?->getAttribute('mobile_verified_at') !== null
+            && is_string($userMobile)
+            && MobileNumber::normalize($authenticatedMobile) === MobileNumber::normalize($userMobile)
+            ? $authenticatedMobile
+            : null;
+        $mobile = $this->payerMobiles->forCompletionVoucher($voucher) ?? $verifiedMobile;
+        $contact = is_string($mobile) ? $this->contactProfiles->find($mobile) : null;
+
+        if (! $contact instanceof Contact) {
+            return $payload;
+        }
+
+        $hasKyc = in_array('kyc', (array) data_get($voucher->metadata, 'instructions.inputs.fields', []), true);
+        $defaults = [
+            'full_name' => $contact->name,
+            'email' => $contact->email,
+            'birth_date' => $contact->birth_date,
+            'address' => $contact->address,
+        ];
+
+        foreach ((array) ($payload['steps'] ?? []) as $stepIndex => $step) {
+            if (data_get($step, 'config.step_name') !== 'bio_fields') {
+                continue;
+            }
+
+            foreach ((array) data_get($step, 'config.fields', []) as $fieldIndex => $field) {
+                $fieldName = data_get($field, 'name');
+                $value = $defaults[$fieldName] ?? null;
+
+                if (! is_string($value) || trim($value) === '' || $hasKyc) {
+                    continue;
+                }
+
+                data_set($payload, "steps.{$stepIndex}.config.fields.{$fieldIndex}.default", $value);
             }
         }
 

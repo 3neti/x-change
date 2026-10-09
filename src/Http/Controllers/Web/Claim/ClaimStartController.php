@@ -227,6 +227,11 @@ class ClaimStartController extends Controller
             }
         }
 
+        if ($authenticatedMobile === null && $request->user()?->getAttribute('mobile_verified_at') !== null) {
+            $verifiedMobile = $request->user()->getAttribute('mobile');
+            $authenticatedMobile = is_string($verifiedMobile) ? $verifiedMobile : null;
+        }
+
         $slicePlan = $this->sliceExecutions->plan($voucher);
 
         if ($slicePlan !== null) {
