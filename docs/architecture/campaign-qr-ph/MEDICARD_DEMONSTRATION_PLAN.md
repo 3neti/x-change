@@ -131,7 +131,7 @@ external response bodies must not be exposed.
 
 ### Gate M0 — Product and language lock
 
-Status: **Next gate; documentation and fixtures only**
+Status: **Complete; implementation defaults locked in the Gate M0 report**
 
 - Agree on the demonstration name, benefit story, fixed price, fields, result,
   SMS wording, branding, disclaimer, and retention policy.
@@ -140,9 +140,11 @@ Status: **Next gate; documentation and fixtures only**
 - Stop if the proposed language could reasonably be interpreted as real HMO
   membership, coverage, authorization, or reimbursement.
 
+Disposition: [Gate M0 Product and Language Lock](reports/MEDICARD_GATE_M0_PRODUCT_LANGUAGE_LOCK.md).
+
 ### Gate M1 — Multi-product completion characterization
 
-Status: **Not started**
+Status: **Next gate**
 
 - Characterize the current AUI completion driver registry and persisted policy
   request/outcome naming.

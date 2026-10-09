@@ -222,10 +222,17 @@ remain unchanged. The Medicard result must use distinct demonstration semantics
 and must never represent real membership, healthcare coverage, authorization,
 or reimbursement.
 
-The next gate is **M0 — Product and language lock**. It is documentation- and
-fixture-only: agree on the demo product, price, minimal fields, safe result,
-branding, SMS copy, disclaimer, and retention policy. No implementation, live
-campaign, Medicard API call, payment, or monitoring transition is authorized.
+Gate M0 is complete. The implementation baseline is the **MediCard Demo Benefit
+Pass**, PHP 50.00, one-day healthcare-access journey demonstration, the existing
+minimal personal-detail set plus OTP, deterministic local completion, and the
+distinct `benefit_ready_demo` result. It has no insured/treatment value and does
+not create membership, coverage, authorization, or reimbursement. Neutral text
+branding is required until stakeholder-approved assets are supplied.
+
+The next gate is **M1 — Multi-product completion characterization**. It must
+prove that a second exact driver can coexist with AUI without changing AUI
+selection, result semantics, or replay. No live campaign, Medicard API call,
+payment, or monitoring transition is authorized.
 
 Detailed sequence:
 [Medicard Campaign Demonstration Plan](MEDICARD_DEMONSTRATION_PLAN.md).
