@@ -198,12 +198,15 @@ class ClaimSuccessPageController
             $outcome = ($successPresentation['state'] ?? null) === 'ready'
                 ? app(CompletionClaimReceipt::class)->outcome($voucher) : null;
             $url = $outcome === null ? null : app(DemonstrationPolicySummary::class)->url($outcome);
+            $summary = $outcome === null || $url === null
+                ? null
+                : app(DemonstrationPolicySummary::class)->present($outcome);
 
             return $url === null ? null : [
                 'key' => 'x-change.claim-success.view-demo-policy',
-                'label' => 'View demo policy',
+                'label' => $summary['action_label'],
                 'intent' => 'demo_policy_summary',
-                'description' => 'View your demonstration policy summary. This is not actual insurance coverage.',
+                'description' => $summary['action_description'],
                 'enabled' => true,
                 'target' => ['type' => 'url', 'url' => $url, 'method' => 'GET', 'redirectable' => false, 'external' => false],
                 'source' => 'claim_result',

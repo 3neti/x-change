@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 use LBHurtado\XChange\Actions\Feedback\DeliverAndJournalFeedback;
 use LBHurtado\XChange\Models\PolicyCompletionOutcome;
 use LBHurtado\XChange\Services\Feedback\QueuedEngageSparkSmsFeedbackChannelDriver;
+use LBHurtado\XChange\Services\Settlement\CampaignDemonstrationProductPresentation;
 use LBHurtado\XChange\Services\Settlement\CampaignWalletPayerMobile;
 use LBHurtado\XChange\Services\Settlement\DemonstrationPolicySummary;
 use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
@@ -24,6 +25,7 @@ final readonly class SendDemonstrationPolicySummarySms
         private CampaignWalletPayerMobile $payerMobile,
         private DeliverAndJournalFeedback $feedback,
         private FeedbackChannelRegistryContract $channels,
+        private CampaignDemonstrationProductPresentation $presentations,
     ) {}
 
     public function handle(PolicyCompletionOutcome $outcome): void
@@ -47,6 +49,13 @@ final readonly class SendDemonstrationPolicySummarySms
         if (! $this->channels->driver('sms') instanceof QueuedEngageSparkSmsFeedbackChannelDriver) {
             throw new RuntimeException('Demonstration policy summary SMS requires the queued SMS driver.');
         }
+        $presentation = $this->presentations->forDriver(
+            $outcome->request->driver_id,
+            $outcome->request->driver_version,
+        );
+        if ($presentation === null) {
+            return;
+        }
 
         $reference = 'campaign-demo-policy:'.$outcome->reference;
         $result = $this->feedback->handle(
@@ -54,8 +63,8 @@ final readonly class SendDemonstrationPolicySummarySms
                 key: 'campaign.demo_policy.summary',
                 eventType: 'campaign.demo_policy.summary.ready',
                 message: new FeedbackMessageData(
-                    title: 'Demonstration policy summary',
-                    body: 'Your demo policy summary is ready. DEMONSTRATION ONLY, not an issued insurance policy or proof of coverage. View: '.$url,
+                    title: $presentation['summary_sms_title'],
+                    body: str_replace(':url', $url, $presentation['summary_sms_body']),
                 ),
                 recipients: [new FeedbackRecipientData(type: 'campaign_payer', id: $recognition->reference, phone: $mobile)],
                 channels: [new FeedbackChannelData(key: 'sms')],

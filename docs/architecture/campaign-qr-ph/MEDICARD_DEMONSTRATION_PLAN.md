@@ -171,7 +171,7 @@ Disposition: [Gate M2 Contract and Driver](reports/MEDICARD_GATE_M2_CONTRACT_AND
 
 ### Gate M3 — Messaging and customer UI
 
-Status: **Next gate**
+Status: **Complete; exact-driver customer copy and private summary are green**
 
 - Add distinct Medicard first-SMS and summary-SMS templates.
 - Add the Medicard claim presentation and private Demo Benefit Summary.
@@ -179,9 +179,11 @@ Status: **Next gate**
   redaction boundaries.
 - Verify mobile layout, accessibility, expiry, replay, and disclaimer presence.
 
+Disposition: [Gate M3 Messaging and Customer UI](reports/MEDICARD_GATE_M3_MESSAGING_AND_CUSTOMER_UI.md).
+
 ### Gate M4 — Cockpit presentation
 
-Status: **Not started**
+Status: **Next gate**
 
 - Add Medicard-oriented campaign progress labels using existing read models.
 - Keep monitoring controls compact and reuse the existing QR dialog.

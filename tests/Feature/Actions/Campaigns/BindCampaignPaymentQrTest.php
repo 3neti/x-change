@@ -2165,7 +2165,7 @@ it('serves submitted details only on a signed demo summary and rejects tampered 
     $response->assertSuccessful()->assertHeader('Referrer-Policy', 'no-referrer')
         ->assertHeader('X-Robots-Tag', 'noindex, nofollow')
         ->assertJsonPath('component', 'x-change/claim/DemonstrationPolicySummary')
-        ->assertJsonCount(6, 'props.summary')
+        ->assertJsonCount(11, 'props.summary')
         ->assertJsonCount(5, 'props.applicant')
         ->assertJsonPath('props.applicant.name', 'Private AUI Applicant')
         ->assertJsonPath('props.applicant.mobile', '09173011987')
@@ -2662,6 +2662,7 @@ it('completes a Medicard demonstration outcome once without changing AUI semanti
         'enabled' => true,
         'campaign_references' => [$campaign->reference],
     ]);
+    config()->set('x-change.settlement.policy_completion.demonstration_summary.enabled', true);
 
     $complete = app(CompleteAutomaticDemonstrationPolicy::class);
     $outcome = $complete->handle($projection);
@@ -2674,6 +2675,12 @@ it('completes a Medicard demonstration outcome once without changing AUI semanti
         ->and($outcome->request->driver_id)->toBe(MedicardDemoBenefitPolicyCompletionDriver::DRIVER_ID)
         ->and(PolicyCompletionRequest::query()->count())->toBe(1)
         ->and(PolicyCompletionOutcome::query()->count())->toBe(1);
+
+    $summary = app(DemonstrationPolicySummary::class);
+    expect($summary->url($outcome))->not->toBeNull()
+        ->and($summary->present($outcome)['title'])->toBe('Demo benefit summary')
+        ->and($summary->present($outcome)['product'])->toBe('MediCard Demo Benefit Pass')
+        ->and($summary->present($outcome)['notice'])->toContain('DEMONSTRATION ONLY', 'does not create MediCard membership');
 
     Http::assertNothingSent();
 });

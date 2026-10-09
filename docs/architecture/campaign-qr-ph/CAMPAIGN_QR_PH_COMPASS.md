@@ -244,10 +244,15 @@ responder are green. One focused lifecycle test proves a single deterministic
 and automatic-completion regressions remain green. No live campaign, Medicard
 API call, payment, SMS, or monitoring transition occurred.
 
-The next gate is **M3 — Messaging and customer UI**. It makes the first SMS,
-summary SMS, claim presentation, and private result page product-aware while
-retaining the existing claim-token, feedback, evidence, and redaction
-boundaries.
+Gate M3 is complete. An exact-driver presentation catalog now preserves AUI
+wording while giving Medicard distinct first-SMS, summary-SMS, claim-success,
+and private Demo Benefit Summary language. The signed private page retains its
+expiry, no-store, no-referrer, encrypted-history, and applicant-field whitelist
+boundaries. Medicard customer surfaces carry the full demonstration disclaimer.
+
+The next gate is **M4 — Cockpit presentation**. It extends existing campaign
+read models and labels for `benefit_ready_demo` without creating a parallel
+dashboard or runtime.
 
 Detailed sequence:
 [Medicard Campaign Demonstration Plan](MEDICARD_DEMONSTRATION_PLAN.md).

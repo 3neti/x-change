@@ -8,9 +8,14 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Enums\PolicyCompletionOutcomeStatus;
 use LBHurtado\XChange\Enums\PolicyCompletionRequestStatus;
 use LBHurtado\XChange\Models\CompletionPayCodeIssuance;
+use LBHurtado\XChange\Services\Settlement\CampaignDemonstrationProductPresentation;
 
 final class CoverageCompletionSuccessPresentation
 {
+    public function __construct(
+        private readonly CampaignDemonstrationProductPresentation $presentations,
+    ) {}
+
     /** @return array<string, mixed> */
     public function forVoucher(Voucher $voucher): array
     {
@@ -34,11 +39,13 @@ final class CoverageCompletionSuccessPresentation
             return $this->forState('payment_unverified');
         }
 
+        $presentation = $this->presentations->forDriver($issuance->driver_id, $issuance->driver_version);
+
         $projection = $issuance->evidenceProjection;
         if ($projection === null || $projection->projected_at === null
             || (string) $projection->envelope_id !== (string) $issuance->envelope_id
             || (string) $projection->claim?->voucher_id !== (string) $voucher->getKey()) {
-            return $this->forState('details_required');
+            return $this->forState('details_required', $presentation);
         }
 
         $request = $projection->policyCompletionRequest;
@@ -46,24 +53,24 @@ final class CoverageCompletionSuccessPresentation
         if ($request?->status === PolicyCompletionRequestStatus::Succeeded
             && $outcome?->status === PolicyCompletionOutcomeStatus::Succeeded
             && $outcome->recorded_at !== null) {
-            return $this->forState('ready');
+            return $this->forState('ready', $presentation);
         }
 
         if ($request?->status?->terminal() || $outcome !== null) {
-            return $this->forState('needs_attention');
+            return $this->forState('needs_attention', $presentation);
         }
 
-        return $this->forState('processing');
+        return $this->forState('processing', $presentation);
     }
 
     /** @return array<string, mixed> */
-    public function forState(string $state): array
+    public function forState(string $state, ?array $product = null): array
     {
         return match ($state) {
             'payment_unverified' => $this->presentation('payment_unverified', 'Payment verification unavailable', 'We cannot verify the payment linked to this details request. Please contact the campaign operator. Do not pay again.'),
             'details_required' => $this->presentation('details_required', 'Complete your details', 'Your payment has been received. Complete the required personal details to continue.'),
-            'processing' => $this->presentation('processing', 'Details submitted', 'Your payment has been received. Your policy result is being prepared. You will be notified when it is ready.'),
-            'ready' => $this->presentation('ready', 'Policy result ready', 'Your payment has been received and your details have been submitted. Your policy result is ready. Use the link provided by the campaign. A demonstration result is not actual insurance coverage.'),
+            'processing' => $this->presentation('processing', $product['processing_title'] ?? 'Details submitted', $product['processing_body'] ?? 'Your payment has been received. Your policy result is being prepared. You will be notified when it is ready.'),
+            'ready' => $this->presentation('ready', $product['ready_title'] ?? 'Policy result ready', $product['ready_body'] ?? 'Your payment has been received and your details have been submitted. Your policy result is ready. Use the link provided by the campaign. A demonstration result is not actual insurance coverage.'),
             'needs_attention' => $this->presentation('needs_attention', 'Details submitted — processing needs attention', 'Your payment has been received. The policy result is not confirmed. Please contact the campaign operator; do not pay again.'),
             default => throw new \InvalidArgumentException("Unsupported coverage completion presentation state [{$state}]."),
         };

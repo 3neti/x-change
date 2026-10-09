@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 use LBHurtado\XChange\Actions\Feedback\DeliverAndJournalFeedback;
 use LBHurtado\XChange\Models\ProvisionalCoverage;
 use LBHurtado\XChange\Services\Feedback\QueuedEngageSparkSmsFeedbackChannelDriver;
+use LBHurtado\XChange\Services\Settlement\CampaignDemonstrationProductPresentation;
 use LBHurtado\XChange\Services\Settlement\CampaignWalletPayerMobile;
 use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
 use LBHurtado\XFeedback\Data\FeedbackChannelData;
@@ -22,6 +23,7 @@ final readonly class SendCampaignPaymentCompletionSms
         private DeliverAndJournalFeedback $feedback,
         private FeedbackChannelRegistryContract $channels,
         private CampaignWalletPayerMobile $payerMobile,
+        private CampaignDemonstrationProductPresentation $presentations,
     ) {}
 
     public function handle(ProvisionalCoverage $coverage): void
@@ -47,6 +49,10 @@ final readonly class SendCampaignPaymentCompletionSms
         if ($voucher === null) {
             throw new RuntimeException('Campaign completion Pay Code is not ready.');
         }
+        $presentation = $this->presentations->forDriver($coverage->driver_id, $coverage->driver_version);
+        if ($presentation === null) {
+            throw new RuntimeException('Campaign completion SMS requires a supported demonstration product.');
+        }
 
         $reference = 'campaign-payment-completion:'.$recognition->reference;
         $url = route('x-change.claim.show', ['code' => $voucher->code]);
@@ -55,8 +61,8 @@ final readonly class SendCampaignPaymentCompletionSms
                 key: 'campaign.payment.completion',
                 eventType: 'campaign.payment.completion.ready',
                 message: new FeedbackMessageData(
-                    title: 'Campaign payment received',
-                    body: 'Payment received. AUI demonstration only, not an issued insurance policy. Complete your personal details: '.$url,
+                    title: $presentation['first_sms_title'],
+                    body: str_replace(':url', $url, $presentation['first_sms_body']),
                 ),
                 recipients: [new FeedbackRecipientData(
                     type: 'campaign_payer',

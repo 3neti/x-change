@@ -16,6 +16,7 @@ final class DemonstrationPolicySummary
 {
     public function __construct(
         private readonly AutomaticDemonstrationPolicy $automaticDemonstration,
+        private readonly CampaignDemonstrationProductPresentation $presentations,
     ) {}
 
     public function eligible(PolicyCompletionOutcome $outcome): bool
@@ -27,21 +28,23 @@ final class DemonstrationPolicySummary
         $outcome->loadMissing('request.projection.issuance.coverage');
         $request = $outcome->request;
         $coverage = $request?->projection?->issuance?->coverage;
+        $presentation = $request === null ? null : $this->presentations->forDriver(
+            $request->driver_id,
+            $request->driver_version,
+        );
 
-        return $request !== null && $coverage !== null
+        return $request !== null && $coverage !== null && $presentation !== null
             && $outcome->status === PolicyCompletionOutcomeStatus::Succeeded
             && $request->status === PolicyCompletionRequestStatus::Succeeded
             && ($this->automaticDemonstration->matches($request) || $this->independentlyApproved($request))
-            && $request->driver_id === AuiPersonalAccidentPolicyCompletionDriver::DRIVER_ID
-            && $request->driver_version === AuiPersonalAccidentPolicyCompletionDriver::DRIVER_VERSION
             && $coverage->driver_id === $request->driver_id
             && $coverage->driver_version === $request->driver_version
-            && $outcome->result_code === 'policy_issued_demo'
-            && data_get($outcome->safe_result, 'decision') === 'issued_demo'
-            && data_get($outcome->safe_result, 'provider_status') === 'issued_demo'
+            && $outcome->result_code === $presentation['result_code']
+            && data_get($outcome->safe_result, 'decision') === $presentation['decision']
+            && data_get($outcome->safe_result, 'provider_status') === $presentation['decision']
             && data_get($outcome->safe_result, 'reason_code') === 'demonstration_only'
             && data_get($outcome->safe_result, 'document_ready') === false
-            && preg_match('/^AUI-DEMO-[A-Za-z0-9-]{1,100}$/', (string) $outcome->provider_reference) === 1
+            && str_starts_with((string) $outcome->provider_reference, $presentation['reference_prefix'])
             && $outcome->recorded_at !== null;
     }
 
@@ -76,14 +79,23 @@ final class DemonstrationPolicySummary
     {
         abort_unless($this->eligible($outcome), 404);
         $coverage = $outcome->request->projection->issuance->coverage;
+        $presentation = $this->presentations->forDriver(
+            $outcome->request->driver_id,
+            $outcome->request->driver_version,
+        );
 
         return [
             'reference' => $outcome->provider_reference,
-            'product' => 'Personal Accident — demonstration',
+            'product' => $presentation['product'],
             'effective_at' => $coverage->effective_at?->toIso8601String(),
             'expires_at' => $coverage->expires_at?->toIso8601String(),
             'recorded_at' => $outcome->recorded_at->toIso8601String(),
-            'notice' => 'Demonstration only. This is not an issued insurance policy and does not establish insurance coverage.',
+            'notice' => $presentation['notice'],
+            'eyebrow' => $presentation['eyebrow'],
+            'title' => $presentation['title'],
+            'description' => $presentation['description'],
+            'action_label' => $presentation['action_label'],
+            'action_description' => $presentation['action_description'],
         ];
     }
 

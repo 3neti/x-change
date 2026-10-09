@@ -12,6 +12,11 @@ defineProps<{
         expires_at: string | null;
         recorded_at: string;
         notice: string;
+        eyebrow: string;
+        title: string;
+        description: string;
+        action_label: string;
+        action_description: string;
     };
     applicant?: Partial<Record<'name' | 'address' | 'birth_date' | 'mobile' | 'email', string | null>>;
 }>();
@@ -38,15 +43,15 @@ function dateLabel(value: string | null): string {
 
 <template>
     <ClaimStepShell tone="warning" width="md" :show-brand="false" :show-theme-picker="false">
-        <Head title="Demonstration policy summary">
+        <Head :title="summary.title">
             <meta name="robots" content="noindex, nofollow" />
             <meta name="referrer" content="no-referrer" />
         </Head>
         <article class="flex min-w-0 flex-col gap-6 text-left" data-testid="demo-policy-summary">
             <header class="flex flex-col gap-2">
-                <p class="text-sm font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">Demonstration only</p>
-                <h1 class="text-2xl font-semibold">Demo policy summary</h1>
-                <p class="text-sm text-muted-foreground">Your details were submitted and the demonstration response was recorded.</p>
+                <p class="text-sm font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">{{ summary.eyebrow }}</p>
+                <h1 class="text-2xl font-semibold">{{ summary.title }}</h1>
+                <p class="text-sm text-muted-foreground">{{ summary.description }}</p>
             </header>
             <p class="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm font-medium" data-testid="demo-policy-notice">
                 {{ summary.notice }}
