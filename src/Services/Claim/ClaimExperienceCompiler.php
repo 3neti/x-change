@@ -33,7 +33,8 @@ class ClaimExperienceCompiler
         $hasRiderSplash = filled(data_get($rider, 'splash'));
         $hasRiderMessage = filled(data_get($rider, 'message'));
         $redirectUrl = data_get($rider, 'redirect_url') ?? data_get($rider, 'url');
-        if (app(ClaimWorkflowResolverContract::class)->resolve($voucher)->key === 'campaign.coverage-completion.v1') {
+        $isCampaignCoverageCompletion = app(ClaimWorkflowResolverContract::class)->resolve($voucher)->key === 'campaign.coverage-completion.v1';
+        if ($isCampaignCoverageCompletion) {
             $hasRiderMessage = false;
             $redirectUrl = null;
         }
@@ -84,7 +85,9 @@ class ClaimExperienceCompiler
         $phases[] = new ClaimPhaseData(
             key: 'form_flow',
             owner: $formFlowOwner,
-            source: 'voucher-redemption.yaml',
+            source: $isCampaignCoverageCompletion
+                ? 'campaign-payment-completion.yaml'
+                : 'voucher-redemption.yaml',
             fields: $formFlowFields,
             skip_stages: $hasRiderSplash ? ['splash'] : [],
         );

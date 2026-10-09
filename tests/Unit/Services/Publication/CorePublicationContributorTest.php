@@ -68,6 +68,17 @@ it('keeps build publication granular, generated, and safely replaceable', functi
     }
 });
 
+it('publishes both voucher and campaign completion Form Flow drivers', function (): void {
+    $build = (new PublicationCatalog([new CorePublicationContributor]))
+        ->definitions(PublicationScope::Build);
+    $definition = collect($build)->firstWhere('id', 'x-change.form-flow-driver');
+
+    expect($definition?->verificationPaths ?? [])->toContain(
+        config_path('form-flow-drivers/voucher-redemption.yaml'),
+        config_path('form-flow-drivers/campaign-payment-completion.yaml'),
+    );
+});
+
 it('publishes every packaged link-preview driver as a build input', function (): void {
     $build = (new PublicationCatalog([new CorePublicationContributor]))
         ->definitions(PublicationScope::Build);

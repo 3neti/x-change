@@ -37,8 +37,9 @@ final class CorePublicationContributor implements XChangePublicationContributor
             public_path('vendor/x-change/images/payout-destinations/x-change-128.png'),
             public_path('vendor/x-change/images/payout-destinations/gcash-128.png'),
         ]);
-        yield $this->build('x-change.form-flow-driver', '3neti/x-change', 'x-change-form-flow-drivers', 'Voucher redemption Form Flow driver.', [
+        yield $this->build('x-change.form-flow-driver', '3neti/x-change', 'x-change-form-flow-drivers', 'Voucher and campaign completion Form Flow drivers.', [
             config_path('form-flow-drivers/voucher-redemption.yaml'),
+            config_path('form-flow-drivers/campaign-payment-completion.yaml'),
         ]);
         yield $this->build('x-change.link-preview-drivers', '3neti/x-change', 'x-change-link-preview-drivers', 'Safe URL artwork preview drivers.', [
             config_path('link-preview-drivers/spotify.yaml'),

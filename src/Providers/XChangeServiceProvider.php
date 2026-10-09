@@ -2502,6 +2502,7 @@ class XChangeServiceProvider extends ServiceProvider
 
         $this->publishes([
             $this->packagePath('config/form-flow-drivers/voucher-redemption.yaml') => config_path('form-flow-drivers/voucher-redemption.yaml'),
+            $this->packagePath('config/form-flow-drivers/campaign-payment-completion.yaml') => config_path('form-flow-drivers/campaign-payment-completion.yaml'),
         ], 'x-change-form-flow-drivers');
 
         $this->publishes([

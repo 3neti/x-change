@@ -1,6 +1,6 @@
 # Campaign QR Ph Compass
 
-Last updated: 2026-10-09
+Last updated: 2026-10-10
 
 ## North Star
 
@@ -25,6 +25,22 @@ database and failed queues are empty. The immutable live-repair baseline is
 x-change `v1.0.116`; the host materializes the exact Medicard driver manifest.
 There is no external Medicard integration and no real membership, healthcare
 coverage, treatment authorization, or reimbursement right.
+
+### Campaign QR Ph claim form prefill — 2026-10-10
+
+The local package slice suggests the settled NetBank Sender Name in the editable
+completion full-name field and binds Source Account as mobile only for valid
+GCash/Maya wallet evidence. KYC remains authoritative when present. The
+claimant-confirmed name may fill a blank existing Contact name after successful
+redemption; existing names are preserved. No QR scan identity, Cockpit payer
+identity, new Contact model, or financial side effect is introduced.
+The copied campaign Form Flow YAML keeps KYC defaults and is selected only for
+campaign completion. Focused checks and the wider claim/publication suites pass;
+the full campaign suite retains its five independently reproduced baseline
+failures. This remains a local, unreleased package change.
+
+Detailed sequence:
+[Campaign QR Ph Claim Form Prefill Plan](CAMPAIGN_QR_PH_CLAIM_PREFILL_PLAN.md).
 
 ### Medicard Gates M8 and M9 accepted and closed — 2026-10-09
 

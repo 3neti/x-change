@@ -57,6 +57,16 @@ final readonly class CampaignCoverageCompletionExecutionDriver implements Execut
             return ExecutionResultData::failed($this->key(), $result->failure ?? 'voucher_redemption_rejected');
         }
 
+        $name = trim((string) data_get($context->meta, 'inputs.name'));
+
+        if ($context->contact !== null
+            && trim((string) $context->contact->name) === ''
+            && $name !== ''
+            && mb_strlen($name) <= 150) {
+            $context->contact->name = $name;
+            $context->contact->save();
+        }
+
         return new ExecutionResultData(
             execution_id: $result->execution_id,
             successful: true,

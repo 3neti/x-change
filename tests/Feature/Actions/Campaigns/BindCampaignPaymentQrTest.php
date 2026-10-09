@@ -102,6 +102,7 @@ use LBHurtado\XChange\Services\Cockpit\CampaignPaymentEvidenceAttentionReadModel
 use LBHurtado\XChange\Services\Cockpit\CampaignPaymentProgressReadModel;
 use LBHurtado\XChange\Services\Cockpit\CampaignPolicyLifecycleReadModel;
 use LBHurtado\XChange\Services\Cockpit\CampaignPolicyLifecycleStageResolver;
+use LBHurtado\XChange\Services\DefaultRedemptionFlowPreparationService;
 use LBHurtado\XChange\Services\Execution\CampaignCoverageCompletionExecutionDriver;
 use LBHurtado\XChange\Services\Settlement\AuiPersonalAccidentCampaignCoverageDriver;
 use LBHurtado\XChange\Services\Settlement\AuiPersonalAccidentPolicyCompletionDriver;
@@ -1031,6 +1032,181 @@ it('preserves an existing OTP completion issuance on lifecycle retry', function 
     expect(CompletionPayCodeIssuance::query()->count())->toBe(1)
         ->and($issued->issuance->refresh()->requirements_snapshot['requires_otp'])->toBeTrue()
         ->and($issued->voucher->refresh()->expires_at->toIso8601String())->toBe($originalExpiry);
+    Http::assertNothingSent();
+});
+
+it('suggests the wallet sender name and saves the claimant confirmed name to the existing contact', function (string $institution): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_name_ciphertext' => 'Payment Sender',
+        'payer_institution_ciphertext' => $institution,
+        'payer_account_ciphertext' => '09173011987',
+    ]);
+    app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']);
+    $voucher = $recognition->provisionalCoverage->completionPayCodeIssuance->voucher;
+    app()->instance(LBHurtado\FormFlowManager\Services\DriverService::class, new class extends LBHurtado\FormFlowManager\Services\DriverService
+    {
+        public function __construct()
+        {
+            $this->config = Yaml::parseFile(__DIR__.'/../../../../config/form-flow-drivers/voucher-redemption.yaml');
+        }
+    });
+
+    $compiled = app(VoucherClaimFlowCompiler::class)->compile($voucher);
+    $flow = $compiled->instructions->toArray();
+    $formPhase = collect($compiled->experience->toArray()['phases'])->firstWhere('key', 'form_flow');
+    $preparedFlow = app(DefaultRedemptionFlowPreparationService::class)->prepare($voucher);
+    $bioStep = collect($flow['steps'])->first(fn (array $step): bool => data_get($step, 'config.step_name') === 'bio_fields');
+    $nameField = collect(data_get($bioStep, 'config.fields', []))->firstWhere('name', 'full_name');
+
+    expect($formPhase['source'])->toBe('campaign-payment-completion.yaml')
+        ->and($preparedFlow->profile->driver_name)->toBe('campaign-payment-completion')
+        ->and($preparedFlow->flow->driver_name)->toBe('campaign-payment-completion')
+        ->and($nameField['default'])->toBe('Payment Sender')
+        ->and($nameField['readonly'] ?? false)->toBeFalse();
+
+    $collected = app(FormFlowClaimPayloadNormalizer::class)->normalize([
+        'wallet_info' => ['mobile' => '09173011987'],
+        'bio_fields' => [
+            'full_name' => 'Confirmed Beneficiary',
+            'email' => 'demo@example.test',
+            'address' => 'Test address',
+            'birth_date' => '1990-01-01',
+        ],
+    ]);
+    expect($collected['inputs']['name'])->toBe('Confirmed Beneficiary');
+
+    $result = app(SubmitCompiledFormClaim::class)->handle($voucher, new PreparedCompiledClaimData(
+        $voucher->code,
+        $voucher->getKey(),
+        $collected['inputs'],
+    ));
+
+    expect($result->claimed)->toBeTrue()
+        ->and($voucher->fresh()->contact->name)->toBe('Confirmed Beneficiary')
+        ->and($recognition->canonicalObservation->payer_name_ciphertext)->toBe('Payment Sender');
+    Http::assertNothingSent();
+})->with([
+    'GCash' => 'GXCHPHM2XXX',
+    'Maya' => 'PAPHPHM1XXX',
+]);
+
+it('keeps the ordinary name default without trusted wallet sender evidence', function (array $payer): void {
+    Queue::fake();
+    config()->set('form-flow.handlers.otp', OtpHandler::class);
+    [$recognition] = auiRecognizedPaymentForContinuation($payer);
+    app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']);
+    $voucher = $recognition->provisionalCoverage->completionPayCodeIssuance->voucher;
+    $flow = app(VoucherClaimFlowCompiler::class)->compile($voucher)->instructions->toArray();
+    $bioStep = collect($flow['steps'])->first(fn (array $step): bool => data_get($step, 'config.step_name') === 'bio_fields');
+    $nameField = collect(data_get($bioStep, 'config.fields', []))->firstWhere('name', 'full_name');
+
+    expect($nameField['default'])->toBe('$kyc_name')
+        ->and($nameField)->not->toHaveKey('help_text');
+    Http::assertNothingSent();
+})->with([
+    'other institution' => [[
+        'payer_name_ciphertext' => 'Untrusted Sender',
+        'payer_institution_ciphertext' => 'BNORPHMMXXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]],
+    'malformed mobile' => [[
+        'payer_name_ciphertext' => 'Untrusted Sender',
+        'payer_institution_ciphertext' => 'GXCHPHM2XXX',
+        'payer_account_ciphertext' => '123',
+    ]],
+    'blank sender name' => [[
+        'payer_name_ciphertext' => '',
+        'payer_institution_ciphertext' => 'PAPHPHM1XXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]],
+    'control character in name' => [[
+        'payer_name_ciphertext' => "Untrusted\nSender",
+        'payer_institution_ciphertext' => 'GXCHPHM2XXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]],
+]);
+
+it('does not use the payment sender name when KYC supplies the name', function (): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_name_ciphertext' => 'Payment Sender',
+        'payer_institution_ciphertext' => 'GXCHPHM2XXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]);
+    app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']);
+    $voucher = $recognition->provisionalCoverage->completionPayCodeIssuance->voucher;
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.inputs.fields', ['name', 'mobile', 'kyc']);
+    $voucher->forceFill(['metadata' => $metadata])->save();
+    app()->instance(LBHurtado\FormFlowManager\Services\DriverService::class, new class extends LBHurtado\FormFlowManager\Services\DriverService
+    {
+        public function __construct()
+        {
+            $this->config = Yaml::parseFile(__DIR__.'/../../../../config/form-flow-drivers/voucher-redemption.yaml');
+        }
+    });
+
+    $flow = app(VoucherClaimFlowCompiler::class)->compile($voucher)->instructions->toArray();
+    $bioStep = collect($flow['steps'])->first(fn (array $step): bool => data_get($step, 'config.step_name') === 'bio_fields');
+    $nameField = collect(data_get($bioStep, 'config.fields', []))->firstWhere('name', 'full_name');
+
+    expect($nameField['default'])->toBe('$kyc_name');
+    Http::assertNothingSent();
+});
+
+it('preserves an existing contact name after a campaign completion claim', function (): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_name_ciphertext' => 'Payment Sender',
+        'payer_institution_ciphertext' => 'PAPHPHM1XXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]);
+    app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']);
+    $voucher = $recognition->provisionalCoverage->completionPayCodeIssuance->voucher;
+    $contact = Contact::fromPhoneNumber(phone('09173011987', 'PH'));
+    $contact->name = 'Existing Contact Name';
+    $contact->save();
+
+    $result = app(SubmitCompiledFormClaim::class)->handle($voucher, new PreparedCompiledClaimData(
+        $voucher->code,
+        $voucher->getKey(),
+        [
+            'mobile' => '09173011987',
+            'name' => 'New Claim Name',
+            'email' => 'demo@example.test',
+            'address' => 'Test address',
+            'birth_date' => '1990-01-01',
+        ],
+    ));
+
+    expect($result->claimed)->toBeTrue()
+        ->and($voucher->fresh()->contact->is($contact))->toBeTrue()
+        ->and($contact->fresh()->name)->toBe('Existing Contact Name');
+    Http::assertNothingSent();
+});
+
+it('does not save a suggested contact name when completion redemption fails', function (): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_name_ciphertext' => 'Payment Sender',
+        'payer_institution_ciphertext' => 'GXCHPHM2XXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]);
+    app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']);
+    $voucher = $recognition->provisionalCoverage->completionPayCodeIssuance->voucher;
+    $contact = Contact::fromPhoneNumber(phone('09173011987', 'PH'));
+    $default = Mockery::mock(DefaultExecutionDriver::class);
+    $default->shouldReceive('execute')->once()->andReturn(ExecutionResultData::failed('default', 'redemption_rejected'));
+    $result = (new CampaignCoverageCompletionExecutionDriver($default))->execute(
+        ExecutionContextData::fromRedemption($voucher, $contact, $voucher->code, [
+            'inputs' => ['name' => 'Confirmed Beneficiary'],
+        ]),
+    );
+
+    expect($result->successful)->toBeFalse()
+        ->and($contact->fresh()->name)->toBe('')
+        ->and($voucher->fresh()->redeemed_at)->toBeNull();
     Http::assertNothingSent();
 });
 

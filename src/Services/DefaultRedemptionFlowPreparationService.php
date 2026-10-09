@@ -13,6 +13,7 @@ use LBHurtado\XChange\Data\Redemption\PrepareRedemptionResultData;
 use LBHurtado\XChange\Data\Redemption\RedemptionFlowData;
 use LBHurtado\XChange\Data\Redemption\RedemptionRequirementsData;
 use LBHurtado\XChange\Data\Redemption\VoucherRedemptionProfileData;
+use LBHurtado\XChange\Services\Execution\CampaignCoverageCompletionExecutionDriver;
 use RuntimeException;
 
 class DefaultRedemptionFlowPreparationService implements RedemptionFlowPreparationContract
@@ -68,6 +69,9 @@ class DefaultRedemptionFlowPreparationService implements RedemptionFlowPreparati
             $messages[] = 'This voucher is not yet active.';
         }
 
+        $driverName = data_get($voucher->metadata, 'instructions.execution.driver') === CampaignCoverageCompletionExecutionDriver::Key
+            ? 'campaign-payment-completion'
+            : 'voucher-redemption';
         $instructions = $voucher->instructions;
         $inputFields = $this->normalizeInputFields($instructions);
 
@@ -91,11 +95,11 @@ class DefaultRedemptionFlowPreparationService implements RedemptionFlowPreparati
             is_divisible: $this->isDivisible($voucher),
             can_withdraw: method_exists($voucher, 'canWithdraw') ? (bool) $voucher->canWithdraw() : false,
             slice_mode: method_exists($voucher, 'getSliceMode') ? $voucher->getSliceMode() : null,
-            driver_name: 'voucher-redemption',
+            driver_name: $driverName,
         );
 
         $flow = new RedemptionFlowData(
-            driver_name: 'voucher-redemption',
+            driver_name: $driverName,
             driver_version: '1.0',
             reference_id_template: 'disburse-{{ code }}-{{ timestamp }}',
             on_complete_callback: url('/disburse/'.$voucher->code.'/complete'),
