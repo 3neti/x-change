@@ -8,7 +8,6 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use LBHurtado\XChange\Data\Settlement\CompletionPayCodeInstructionsData;
 use LBHurtado\XChange\Models\CampaignPaymentRecognition;
 use LBHurtado\XChange\Models\ProvisionalCoverage;
-use LBHurtado\XChange\Services\Settlement\AuiPersonalAccidentCampaignCoverageDriver;
 use LBHurtado\XChange\Services\Settlement\CampaignWalletPayerMobile;
 use LBHurtado\XChange\Services\Settlement\CampaignWorkflowPublicationResolver;
 
@@ -32,8 +31,7 @@ final readonly class AdvanceSettlementCampaignLifecycle
             'scenario_run.envelope_driver_version',
         );
 
-        if ($driverId !== AuiPersonalAccidentCampaignCoverageDriver::DRIVER_ID
-            || $driverVersion !== AuiPersonalAccidentCampaignCoverageDriver::DRIVER_VERSION) {
+        if ($driverId === '' || $driverVersion === '') {
             return null;
         }
 

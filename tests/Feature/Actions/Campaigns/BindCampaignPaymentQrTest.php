@@ -35,7 +35,6 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\Services\DefaultExecutionDriver;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\XChange\Actions\Campaigns\BindCampaignPaymentQr;
-use LBHurtado\XChange\Actions\Campaigns\SendCampaignPaymentCompletionSms;
 use LBHurtado\XChange\Actions\Campaigns\SendDemonstrationPolicySummarySms;
 use LBHurtado\XChange\Actions\Claim\SubmitCompiledFormClaim;
 use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
@@ -2669,22 +2668,20 @@ it('completes a Medicard demonstration outcome once without changing AUI semanti
         ->and(data_get($decision->terms?->terms, 'membership_created'))->toBeFalse()
         ->and(data_get($decision->terms?->terms, 'healthcare_coverage_created'))->toBeFalse();
 
-    $bound = app(BindProvisionalCoverage::class)->handle(
-        $recognition->fresh(),
-        $decision->terms,
-    );
-    $issued = app(IssueCompletionPayCode::class)->handle(
-        $bound->coverage,
-        $binding->standingFundingAddress->owner,
-        new CompletionPayCodeInstructionsData([
-            'name',
-            'mobile',
-            'email',
-            'address',
-            'birth_date',
-        ]),
-    );
-    app(SendCampaignPaymentCompletionSms::class)->handle($bound->coverage->fresh());
+    $job = new AdvanceCampaignPaymentLifecycleJob($recognition->reference);
+    app()->call([$job, 'handle']);
+    app()->call([$job, 'handle']);
+
+    $bound = $recognition->fresh()->provisionalCoverage;
+    $issued = $bound->completionPayCodeIssuance;
+
+    expect($bound)->not->toBeNull()
+        ->and($bound->driver_id)->toBe(MedicardDemoBenefitCampaignCoverageDriver::DRIVER_ID)
+        ->and($bound->driver_version)->toBe(MedicardDemoBenefitCampaignCoverageDriver::DRIVER_VERSION)
+        ->and(ProvisionalCoverage::query()->count())->toBe(1)
+        ->and(CompletionPayCodeIssuance::query()->count())->toBe(1)
+        ->and(FeedbackDeliveryRecord::query()->count())->toBe(1);
+
     app(SubmitPayCodeClaim::class)->handle($issued->voucher, [
         'mobile' => '09173011987',
         'inputs' => [
