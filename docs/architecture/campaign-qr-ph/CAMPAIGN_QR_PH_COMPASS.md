@@ -17,11 +17,13 @@ driver, customer journey, Cockpit projection, and exactly-once synthetic
 acceptance. Gate M6 published immutable x-change `v1.0.114` and adopted it in
 the testing host at exact commit `1ee05e53`.
 
-Both Standing Funding schedule switches now resolve false in testing. Two
-read-only snapshots across a scheduler interval proved stable lifecycle counts,
-zero queued jobs, and zero failed jobs. No Medicard campaign exists or is live.
-The next separately authorized step is Gate M7, a private synthetic rehearsal
-with live payment monitoring kept paused.
+Both Standing Funding schedule switches resolve false in testing. Gate M7
+created exactly one paused Medicard rehearsal campaign with an immutable
+revision and no payment QR binding or monitoring control. The full Medicard
+payment-to-summary contract remains green against synthetic provider and SMS
+boundaries, while Cloud lifecycle, feedback, queue, and failed-job counts stayed
+unchanged. The next separately authorized step is Gate M8, a bounded live dress
+rehearsal requiring separate financial authorization.
 
 ### Campaign payment monitoring implementation authorized — 2026-10-09
 
@@ -281,8 +283,29 @@ feedback records, zero queued jobs, and zero failed jobs. No campaign was
 created or activated, no provider request was invoked, and no payment, SMS, or
 financial operation was performed by M6.
 
-The next gate is **M7 — Private synthetic rehearsal**. It remains separately
-authorized and must keep live payment monitoring paused.
+Gate M7 is complete. The testing host now contains one paused private rehearsal
+campaign, `01M4F5JP42152MWCJHFZSE8W89`, bound to immutable template revision
+`pctv_49fa84aba1994ef8a2d245c0c7b822c2e2ea51b9` and exact driver
+`medicard.demo-benefit@1.0.0`. It has zero payment QR bindings and zero
+monitoring controls. Both schedule switches stayed false.
+
+The focused synthetic lifecycle passed 1 test / 22 assertions and proved one
+recognition, coverage, envelope, completion Pay Code, claim projection,
+completion request, `benefit_ready_demo` outcome, two queued SMS intents, and
+mutation-free replay without external HTTP. The focused private-summary UI test
+also passed. Authenticated Cockpit acceptance found one paused Medicard card,
+the expected zero-progress labels, no payment QR, an empty activity view, and no
+browser errors.
+
+Cloud lifecycle counts remained at 13 recognitions, 13 coverages, 13 completion
+Pay Code issuances, 11 completion requests, 11 outcomes, and 42 feedback
+records. Database and failed queues remained zero. No NetBank request, payment,
+SMS delivery, Pay Code issuance, or money movement occurred in Cloud.
+
+The next gate is **M8 — Bounded live dress rehearsal**. It requires separate
+financial authorization and must provision a dedicated payment-purpose address,
+commission only the Medicard campaign under batch-one monitoring, and stop after
+one explicitly authorized low-value payment acceptance.
 
 Detailed sequence:
 [Medicard Campaign Demonstration Plan](MEDICARD_DEMONSTRATION_PLAN.md).

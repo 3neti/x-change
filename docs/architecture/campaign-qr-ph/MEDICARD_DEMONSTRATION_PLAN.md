@@ -218,12 +218,14 @@ Disposition: [Gate M6 Immutable Release and Disabled Testing Adoption](reports/M
 
 ### Gate M7 — Private synthetic rehearsal
 
-Status: **Not started; separate authorization required**
+Status: **Complete; paused Cloud campaign and synthetic lifecycle rehearsal are green**
 
 - Create a fresh Medicard demo campaign and immutable revision.
 - Exercise the whole journey using synthetic provider and SMS boundaries.
 - Obtain stakeholder approval of copy, fields, UI, and result presentation.
 - Keep live payment monitoring paused.
+
+Disposition: [Gate M7 Private Synthetic Rehearsal](reports/MEDICARD_GATE_M7_PRIVATE_SYNTHETIC_REHEARSAL.md).
 
 ### Gate M8 — Bounded live dress rehearsal
 
