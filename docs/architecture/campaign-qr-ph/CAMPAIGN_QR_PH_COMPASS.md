@@ -229,10 +229,19 @@ distinct `benefit_ready_demo` result. It has no insured/treatment value and does
 not create membership, coverage, authorization, or reimbursement. Neutral text
 branding is required until stakeholder-approved assets are supplied.
 
-The next gate is **M1 — Multi-product completion characterization**. It must
-prove that a second exact driver can coexist with AUI without changing AUI
-selection, result semantics, or replay. No live campaign, Medicard API call,
-payment, or monitoring transition is authorized.
+Gate M1 is complete. The exact `driver_id@version` preparation registry already
+supports AUI and Medicard side by side and fails closed for duplicate, blank, or
+unavailable identities. The post-preparation automatic-demo responder, summary,
+SMS, and workflow publication paths remain deliberately AUI-specific; those are
+the bounded M2/M3 extension seams. Existing `PolicyCompletion*` persistence is
+accepted as internal legacy vocabulary for this demonstration and will not be
+renamed in this wave.
+
+The next gate is **M2 — Medicard demonstration contract and driver**. It adds an
+exact Medicard coverage/preparation pair and a product-aware, fail-closed local
+demo responder while preserving the existing request/outcome persistence and
+AUI behavior. No live campaign, Medicard API call, payment, SMS, or monitoring
+transition is authorized.
 
 Detailed sequence:
 [Medicard Campaign Demonstration Plan](MEDICARD_DEMONSTRATION_PLAN.md).

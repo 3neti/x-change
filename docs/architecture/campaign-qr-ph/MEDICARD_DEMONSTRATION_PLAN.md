@@ -144,7 +144,7 @@ Disposition: [Gate M0 Product and Language Lock](reports/MEDICARD_GATE_M0_PRODUC
 
 ### Gate M1 — Multi-product completion characterization
 
-Status: **Next gate**
+Status: **Complete; the exact registry seam is reusable and AUI-only automation gaps are mapped**
 
 - Characterize the current AUI completion driver registry and persisted policy
   request/outcome naming.
@@ -155,9 +155,11 @@ Status: **Next gate**
   generic product-completion evolution.
 - Make no customer UI or live provider call in this gate.
 
+Disposition: [Gate M1 Multi-Product Completion Characterization](reports/MEDICARD_GATE_M1_MULTI_PRODUCT_CHARACTERIZATION.md).
+
 ### Gate M2 — Medicard demonstration contract and driver
 
-Status: **Not started**
+Status: **Next gate**
 
 - Add the versioned Medicard demo input and sanitized result contract.
 - Add `medicard.demo-benefit@1.0.0` as a deterministic mocked completion driver.
