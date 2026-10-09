@@ -2652,9 +2652,10 @@ it('completes a Medicard demonstration outcome once without changing AUI semanti
         'envelope_driver_id' => MedicardDemoBenefitCampaignCoverageDriver::DRIVER_ID,
         'envelope_driver_version' => MedicardDemoBenefitCampaignCoverageDriver::DRIVER_VERSION,
         'product' => [
-            'code' => 'MEDICARD_DEMO_DAY',
+            'name' => 'MediCard Demo Benefit Pass',
             'currency' => 'PHP',
-            'price_minor' => 5000,
+            'premium_minor' => 5000,
+            'benefit_duration_hours' => 24,
         ],
     ]);
     $campaign->forceFill(['settings' => $settings])->save();
@@ -2728,6 +2729,40 @@ it('completes a Medicard demonstration outcome once without changing AUI semanti
 
     Http::assertNothingSent();
 });
+
+it('rejects malformed Medicard private rehearsal product facts', function (string $path, mixed $value): void {
+    configureCampaignCoverageTestDriver();
+    [$recognition] = recognizedCampaignPayment(5000);
+    $campaign = $recognition->campaignRecord();
+    $settings = (array) $campaign->settings;
+    data_set($settings, 'scenario_run', [
+        'reference' => 'medicard-demo-scenario',
+        'scenario' => 'medicard_demo_benefit',
+        'envelope_driver_id' => MedicardDemoBenefitCampaignCoverageDriver::DRIVER_ID,
+        'envelope_driver_version' => MedicardDemoBenefitCampaignCoverageDriver::DRIVER_VERSION,
+        'product' => [
+            'name' => 'MediCard Demo Benefit Pass',
+            'currency' => 'PHP',
+            'premium_minor' => 5000,
+            'benefit_duration_hours' => 24,
+        ],
+    ]);
+    data_set($settings, "scenario_run.{$path}", $value);
+    $campaign->forceFill(['settings' => $settings])->save();
+    $recognition->unsetRelation('binding');
+
+    $decision = app(MedicardDemoBenefitCampaignCoverageDriver::class)
+        ->decide($recognition->fresh());
+
+    expect($decision->eligible)->toBeFalse()
+        ->and($decision->reasonCode)->toBe('campaign_or_payment_not_qualified');
+})->with([
+    'wrong product name' => ['product.name', 'Unapproved Benefit Pass'],
+    'wrong premium' => ['product.premium_minor', 4999],
+    'wrong duration' => ['product.benefit_duration_hours', 48],
+    'wrong currency' => ['product.currency', 'USD'],
+    'wrong driver version' => ['envelope_driver_version', '2.0.0'],
+]);
 
 it('does not automatically complete disabled or unlisted campaigns', function (bool $enabled): void {
     Queue::fake();

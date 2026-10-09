@@ -32,9 +32,7 @@ final class MedicardDemoBenefitCampaignCoverageDriver implements CampaignCoverag
         if (data_get($run, 'scenario') !== 'medicard_demo_benefit'
             || data_get($run, 'envelope_driver_id') !== self::DRIVER_ID
             || data_get($run, 'envelope_driver_version') !== self::DRIVER_VERSION
-            || data_get($run, 'product.code') !== 'MEDICARD_DEMO_DAY'
-            || data_get($run, 'product.currency') !== 'PHP'
-            || data_get($run, 'product.price_minor') !== 5000
+            || ! $this->isSupportedProduct((array) data_get($run, 'product', []))
             || $recognition->gross_amount_minor !== 5000
             || $recognition->currency !== 'PHP'
             || $recognition->provider_status !== 'settled'
@@ -71,5 +69,19 @@ final class MedicardDemoBenefitCampaignCoverageDriver implements CampaignCoverag
             ),
             'recognized_demonstration_payment_qualified',
         );
+    }
+
+    /** @param array<string, mixed> $product */
+    private function isSupportedProduct(array $product): bool
+    {
+        $isPublishedProduct = data_get($product, 'code') === 'MEDICARD_DEMO_DAY'
+            && data_get($product, 'price_minor') === 5000;
+
+        $isPrivateRehearsalProduct = data_get($product, 'name') === 'MediCard Demo Benefit Pass'
+            && data_get($product, 'premium_minor') === 5000
+            && data_get($product, 'benefit_duration_hours') === 24;
+
+        return data_get($product, 'currency') === 'PHP'
+            && ($isPublishedProduct || $isPrivateRehearsalProduct);
     }
 }
