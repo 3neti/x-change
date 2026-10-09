@@ -13,8 +13,10 @@ The demonstration must look and read like a Medicard benefit journey while
 remaining explicit that it creates no real HMO membership, healthcare coverage,
 letter of authorization, reimbursement right, or provider entitlement.
 
-Gates M0 through M6 are complete. No live Medicard campaign, payment, external
-Medicard integration, or later gate is authorized by this document.
+Gates M0 through M9 are complete. The bounded live rehearsal and presentation
+window are closed. Medicard monitoring and both Standing Funding schedules are
+disabled, and the automatic-demonstration campaign whitelist is empty. No
+external Medicard integration was introduced.
 
 ## Reference Journey
 
@@ -229,7 +231,7 @@ Disposition: [Gate M7 Private Synthetic Rehearsal](reports/MEDICARD_GATE_M7_PRIV
 
 ### Gate M8 — Bounded live dress rehearsal
 
-Status: **Not started; separate financial authorization required**
+Status: **Complete; live PHP 50 journey and mutation-free replay accepted**
 
 - Provision a dedicated payment-purpose Standing Funding Address and QR.
 - Enable only the Medicard campaign under batch-one monitoring while the global
@@ -240,15 +242,19 @@ Status: **Not started; separate financial authorization required**
 - Pause the campaign after acceptance unless presentation-day monitoring is
   separately authorized.
 
+Disposition: [Gates M8 and M9 Live Acceptance](reports/MEDICARD_GATES_M8_M9_LIVE_ACCEPTANCE.md).
+
 ### Gate M9 — Presentation-day commissioning
 
-Status: **Not started; separate operational authorization required**
+Status: **Complete; presentation window closed and runtime returned to safe posture**
 
 - Run a read-only queue, failed-job, runtime, address, and campaign preflight.
 - Enable only the approved Medicard campaign shortly before the meeting.
 - Keep a tested synthetic fallback ready.
 - Monitor payment, queues, SMS evidence, and Cockpit progress during the demo.
 - Pause monitoring after the agreed window and record sanitized evidence.
+
+Disposition: [Gates M8 and M9 Live Acceptance](reports/MEDICARD_GATES_M8_M9_LIVE_ACCEPTANCE.md).
 
 ## Acceptance Criteria
 

@@ -12,18 +12,49 @@ snapshot from inception, and issues one zero-value completion Pay Code.
 ## Current Position
 
 The accepted AUI Campaign QR Ph lifecycle remains the reference path. Medicard
-Gates M0 through M5 are complete locally, including the distinct versioned demo
-driver, customer journey, Cockpit projection, and exactly-once synthetic
-acceptance. Gate M6 published immutable x-change `v1.0.114` and adopted it in
-the testing host at exact commit `1ee05e53`.
+Gates M0 through M9 are complete. The testing campaign accepted one bounded
+PHP 50 live dress-rehearsal journey and one distinct PHP 50 presentation-day
+journey. Each produced one recognition, coverage, completion Pay Code, claim
+projection, deterministic `benefit_ready_demo` outcome, and two provider-
+accepted SMS records. Immediate replay was mutation-free.
 
-Both Standing Funding schedule switches resolve false in testing. Gate M7
-created exactly one paused Medicard rehearsal campaign with an immutable
-revision and no payment QR binding or monitoring control. The full Medicard
-payment-to-summary contract remains green against synthetic provider and SMS
-boundaries, while Cloud lifecycle, feedback, queue, and failed-job counts stayed
-unchanged. The next separately authorized step is Gate M8, a bounded live dress
-rehearsal requiring separate financial authorization.
+The presentation window is closed. AUI and Medicard monitoring controls are
+paused at generation 2, global Standing Funding polling is false, campaign-only
+polling is false, the automatic-demonstration campaign whitelist is empty, and
+database and failed queues are empty. The immutable live-repair baseline is
+x-change `v1.0.116`; the host materializes the exact Medicard driver manifest.
+There is no external Medicard integration and no real membership, healthcare
+coverage, treatment authorization, or reimbursement right.
+
+### Medicard Gates M8 and M9 accepted and closed — 2026-10-09
+
+M8 commissioned one dedicated payment-purpose QR binding for campaign
+`01M4F5JP42152MWCJHFZSE8W89` under batch-one campaign polling while the global
+scanner stayed disabled. NetBank observation `2848489` became recognition 14,
+Pay Code `POLI-TWLQ`, one claim projection, one completion request, one
+`benefit_ready_demo` outcome, and two accepted SMS records.
+
+The first lifecycle exposed two fail-closed deployment gaps without creating
+partial financial or customer state: the campaign lifecycle router was AUI-
+specific, and the host driver registry did not materialize the Medicard YAML.
+x-change `v1.0.115` generalized routing by exact published driver identity;
+`v1.0.116` accepted the strict canonical rehearsal product shape while rejecting
+wrong name, premium, duration, currency, or driver version. Host commit
+`45891ba5` materialized `medicard.demo-benefit@1.0.0`. The recovered replay then
+completed exactly once, and its immediate replay left recognition, coverage,
+issuance, outcome, and feedback counts unchanged.
+
+During M9, a second distinct PHP 50 provider payment, observation `2848623`,
+became recognition 15 and independently completed through Pay Code `POLI-JPU4`,
+claim projection, demo outcome, and two accepted SMS records. It is separate
+presentation evidence, not a replay duplicate. After the presentation,
+Medicard monitoring was paused at generation 2, campaign polling and the
+automatic whitelist were disabled, and deployment
+`depl-a2f0137c-69c2-4d90-93b1-34d9e66f5771` verified zero queued and zero failed
+jobs.
+
+Detailed evidence:
+[Medicard Gates M8 and M9 Live Acceptance](reports/MEDICARD_GATES_M8_M9_LIVE_ACCEPTANCE.md).
 
 ### Campaign payment monitoring implementation authorized — 2026-10-09
 
