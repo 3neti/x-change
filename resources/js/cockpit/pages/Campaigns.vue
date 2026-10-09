@@ -121,6 +121,8 @@ type EndpointCampaign = {
         source: string;
     };
     payment_progress?: {
+        product_key: 'aui_demo_policy' | 'medicard_demo_benefit';
+        summary_label: string;
         payments_received: number;
         received_amounts: { currency: string; amount_minor: number }[];
         details_submitted: number;
@@ -1661,7 +1663,10 @@ const updatedRelativeTime = (value: string | null): string =>
                                                 campaign.payment_progress
                                                     .demo_summaries_ready
                                             }}
-                                            demo summaries ready
+                                            {{
+                                                campaign.payment_progress
+                                                    .summary_label
+                                            }}
                                         </p>
                                         <p>
                                             {{

@@ -15,7 +15,7 @@ final class CampaignPaymentProgressReadModel
 {
     /**
      * @param  Collection<int, EndpointCampaign>  $campaigns  Owner-scoped campaigns.
-     * @return array<int|string, array{source: string, payments_received: int, received_amounts: list<array{currency: string, amount_minor: int}>, details_submitted: int, demo_summaries_ready: int, awaiting_claim: int, awaiting_invitation: int}>
+     * @return array<int|string, array{source: string, product_key: string, summary_label: string, payments_received: int, received_amounts: list<array{currency: string, amount_minor: int}>, details_submitted: int, demo_summaries_ready: int, awaiting_claim: int, awaiting_invitation: int}>
      */
     public function forCampaigns(Collection $campaigns): array
     {
@@ -45,13 +45,18 @@ final class CampaignPaymentProgressReadModel
         $demos = $this->counts((clone $base)->whereHas($request, fn (Builder $query): Builder => $query
             ->where('status', 'succeeded')
             ->whereHas('outcome', fn (Builder $outcome): Builder => $outcome
-                ->where('status', 'succeeded')->where('result_code', 'policy_issued_demo'))));
+                ->where('status', 'succeeded')
+                ->whereIn('result_code', ['policy_issued_demo', 'benefit_ready_demo']))));
 
-        return collect($ids)->mapWithKeys(function ($id) use ($totals, $details, $awaiting, $pending, $demos): array {
+        return $campaigns->whereIn('id', $ids)->mapWithKeys(function (EndpointCampaign $campaign) use ($totals, $details, $awaiting, $pending, $demos): array {
+            $id = $campaign->getKey();
             $currencies = $totals->get($id, collect());
+            $isMedicard = data_get($campaign->settings, 'scenario_run.envelope_driver_id') === 'medicard.demo-benefit';
 
             return [$id => [
                 'source' => 'recognized_campaign_payments',
+                'product_key' => $isMedicard ? 'medicard_demo_benefit' : 'aui_demo_policy',
+                'summary_label' => $isMedicard ? 'demo benefits ready' : 'demo policies ready',
                 'payments_received' => (int) $currencies->sum('payments_received'),
                 'received_amounts' => $currencies->map(fn ($total): array => [
                     'currency' => $total->currency,

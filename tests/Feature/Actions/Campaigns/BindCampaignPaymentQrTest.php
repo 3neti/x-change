@@ -1496,6 +1496,8 @@ it('counts payment first activity independently of endpoint starts without repla
     $rows = $reader->forCampaigns(LeadCampaign::query()->whereKey([$campaign->id, $empty->id, $ordinary->id])->get());
 
     expect($rows[$campaign->id])->toMatchArray([
+        'product_key' => 'aui_demo_policy',
+        'summary_label' => 'demo policies ready',
         'payments_received' => 3,
         'received_amounts' => [['currency' => 'PHP', 'amount_minor' => 36_600]],
         'details_submitted' => 1,
@@ -1515,6 +1517,36 @@ it('counts payment first activity independently of endpoint starts without repla
         ->etc());
     Http::assertNothingSent();
     Event::assertNotDispatched(CampaignPaymentRecognized::class);
+});
+
+it('labels Medicard campaign progress without exposing applicant or provider payloads', function (): void {
+    $outcome = auiDemoSummaryOutcome();
+    $coverage = $outcome->request->projection->issuance->coverage;
+    $campaign = $coverage->campaign;
+    $settings = (array) $campaign->settings;
+    data_set($settings, 'scenario_run.envelope_driver_id', 'medicard.demo-benefit');
+    data_set($settings, 'scenario_run.envelope_driver_version', '1.0.0');
+    $campaign->forceFill(['settings' => $settings])->save();
+    DB::table($outcome->getTable())->where('id', $outcome->getKey())->update([
+        'result_code' => 'benefit_ready_demo',
+        'provider_reference' => 'MEDICARD-DEMO-READMODEL',
+        'safe_result' => json_encode([
+            'decision' => 'ready_demo',
+            'document_ready' => false,
+            'provider_status' => 'ready_demo',
+            'reason_code' => 'demonstration_only',
+            'retryable' => false,
+        ], JSON_THROW_ON_ERROR),
+    ]);
+
+    $row = app(CampaignPaymentProgressReadModel::class)
+        ->forCampaigns(LeadCampaign::query()->whereKey($campaign->id)->get())[$campaign->id];
+
+    expect($row)->toMatchArray([
+        'product_key' => 'medicard_demo_benefit',
+        'summary_label' => 'demo benefits ready',
+        'demo_summaries_ready' => 1,
+    ])->and(json_encode($row))->not->toContain('Private AUI Applicant', '09173011987');
 });
 
 it('does not count non demo or unsuccessful outcomes as ready demo summaries', function (PolicyCompletionOutcomeStatus $status, string $code): void {

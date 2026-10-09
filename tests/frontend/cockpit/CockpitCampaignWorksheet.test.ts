@@ -134,6 +134,8 @@ describe('Cockpit campaign worksheets', () => {
                 generated_at: null,
             },
             payment_progress: {
+                product_key: 'aui_demo_policy' as const,
+                summary_label: 'demo policies ready',
                 payments_received: 7,
                 received_amounts: [{ currency: 'PHP', amount_minor: 35000 }],
                 details_submitted: 6,
@@ -154,7 +156,7 @@ describe('Cockpit campaign worksheets', () => {
         expect(row.text()).toContain('7 payments received');
         expect(row.text()).toContain('₱350.00 received');
         expect(row.text()).toContain(
-            '6 details submitted · 6 demo summaries ready',
+            '6 details submitted · 6 demo policies ready',
         );
         expect(row.text()).toContain('1 awaiting claim');
         expect(row.text()).toContain('₱50.00 per payment');

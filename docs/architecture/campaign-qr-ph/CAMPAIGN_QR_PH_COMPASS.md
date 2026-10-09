@@ -250,9 +250,15 @@ and private Demo Benefit Summary language. The signed private page retains its
 expiry, no-store, no-referrer, encrypted-history, and applicant-field whitelist
 boundaries. Medicard customer surfaces carry the full demonstration disclaimer.
 
-The next gate is **M4 — Cockpit presentation**. It extends existing campaign
-read models and labels for `benefit_ready_demo` without creating a parallel
-dashboard or runtime.
+Gate M4 is complete. The existing campaign payment-progress projection counts
+both exact demonstration results and derives its scan-friendly label from the
+immutable campaign driver: AUI shows demo policies ready and Medicard shows
+demo benefits ready. The Campaigns page reuses its compact card, QR dialog, and
+monitoring controls; no second dashboard or product mutation path was added.
+
+The next gate is **M5 — Automated lifecycle acceptance**. It runs the combined
+fake-payment, fake-SMS, replay, redaction, and fail-closed verification before
+any release or host adoption.
 
 Detailed sequence:
 [Medicard Campaign Demonstration Plan](MEDICARD_DEMONSTRATION_PLAN.md).

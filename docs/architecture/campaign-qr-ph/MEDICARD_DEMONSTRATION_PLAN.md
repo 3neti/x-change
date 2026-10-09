@@ -183,16 +183,18 @@ Disposition: [Gate M3 Messaging and Customer UI](reports/MEDICARD_GATE_M3_MESSAG
 
 ### Gate M4 — Cockpit presentation
 
-Status: **Next gate**
+Status: **Complete; existing Campaigns read model and card are product-aware**
 
 - Add Medicard-oriented campaign progress labels using existing read models.
 - Keep monitoring controls compact and reuse the existing QR dialog.
 - Show sanitized evidence for payment, Pay Code, details, outcome, and SMS.
 - Do not add a second dashboard or a Medicard-specific operations runtime.
 
+Disposition: [Gate M4 Cockpit Presentation](reports/MEDICARD_GATE_M4_COCKPIT_PRESENTATION.md).
+
 ### Gate M5 — Automated lifecycle acceptance
 
-Status: **Not started**
+Status: **Next gate**
 
 - Use fake NetBank and SMS transports.
 - Prove exactly one recognition, demo-benefit record, envelope, Pay Code, claim
