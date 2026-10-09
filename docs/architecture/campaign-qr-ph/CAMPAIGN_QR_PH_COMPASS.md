@@ -15,9 +15,11 @@ Campaign-only payment monitoring is commissioned in testing. NetBank is
 scheduled at generation 12 with batch limit one; only campaign
 `01M3CBP94CANQD2JRANFXHQZSE`, binding `3`, address `6` is live. The global
 Standing Funding schedule remains false, address `5` is paused, and address `4`
-is quarantined. Ten bounded provider checks completed successfully without a
-new payment or financial mutation. Fresh-payment acceptance remains separately
-authorized.
+is quarantined. The fresh PHP 50 AUI acceptance completed exactly once through
+payment, coverage, envelope, completion Pay Code, claimant details,
+demonstration outcome, and two SMS records. Later polling remained
+mutation-free. The next planned product slice is Medicard Gate M0; it authorizes
+documentation and sanitized fixtures only.
 
 ### Campaign payment monitoring implementation authorized — 2026-10-09
 
@@ -203,6 +205,30 @@ Gate 7 is complete in testing. Provider acceptance records prove submission to
 the SMS provider, while the operator's handset interaction supplied the human
 acceptance evidence. Production rollout, Medicard-specific workflow design,
 and broader polling remain separate decisions.
+
+### Medicard demonstration disposition — 2026-10-09
+
+Medicard will reuse the accepted AUI Campaign QR Ph lifecycle rather than fork
+payment recognition or Pay Code issuance. Shared machinery includes Campaign
+QR provisioning, campaign-only monitoring, NetBank recognition, settlement
+envelopes, completion Pay Codes, claim evidence, x-feedback, x-journal,
+Cockpit projections, and replay protection.
+
+Medicard-specific behavior is isolated behind immutable campaign configuration,
+distinct customer copy and inputs, two distinct SMS templates, a private Demo
+Benefit Summary, and a separate versioned completion driver reserved as
+`medicard.demo-benefit@1.0.0`. The AUI driver and `policy_issued_demo` result
+remain unchanged. The Medicard result must use distinct demonstration semantics
+and must never represent real membership, healthcare coverage, authorization,
+or reimbursement.
+
+The next gate is **M0 — Product and language lock**. It is documentation- and
+fixture-only: agree on the demo product, price, minimal fields, safe result,
+branding, SMS copy, disclaimer, and retention policy. No implementation, live
+campaign, Medicard API call, payment, or monitoring transition is authorized.
+
+Detailed sequence:
+[Medicard Campaign Demonstration Plan](MEDICARD_DEMONSTRATION_PLAN.md).
 
 ### Payment activity local host acceptance — 2026-09-25
 
