@@ -35,6 +35,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\Services\DefaultExecutionDriver;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\XChange\Actions\Campaigns\BindCampaignPaymentQr;
+use LBHurtado\XChange\Actions\Campaigns\SendCampaignPaymentCompletionSms;
 use LBHurtado\XChange\Actions\Campaigns\SendDemonstrationPolicySummarySms;
 use LBHurtado\XChange\Actions\Claim\SubmitCompiledFormClaim;
 use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
@@ -2632,8 +2633,12 @@ it('automatically completes an opted in demo claim without a checker and queues 
 
 it('completes a Medicard demonstration outcome once without changing AUI semantics', function (): void {
     Queue::fake();
+    config()->set('x-feedback.transports.sms.driver', 'engagespark');
     configureCampaignCoverageTestDriver();
-    [$recognition, $binding] = recognizedCampaignPayment(5000);
+    [$recognition, $binding] = recognizedCampaignPayment(5000, [
+        'payer_institution_ciphertext' => 'GXCHPHM2XXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]);
     expect(app(DriverService::class)->list())->toContain([
         'id' => MedicardDemoBenefitCampaignCoverageDriver::DRIVER_ID,
         'version' => MedicardDemoBenefitCampaignCoverageDriver::DRIVER_VERSION,
@@ -2679,6 +2684,7 @@ it('completes a Medicard demonstration outcome once without changing AUI semanti
             'birth_date',
         ]),
     );
+    app(SendCampaignPaymentCompletionSms::class)->handle($bound->coverage->fresh());
     app(SubmitPayCodeClaim::class)->handle($issued->voucher, [
         'mobile' => '09173011987',
         'inputs' => [
@@ -2713,6 +2719,15 @@ it('completes a Medicard demonstration outcome once without changing AUI semanti
         ->and($summary->present($outcome)['title'])->toBe('Demo benefit summary')
         ->and($summary->present($outcome)['product'])->toBe('MediCard Demo Benefit Pass')
         ->and($summary->present($outcome)['notice'])->toContain('DEMONSTRATION ONLY', 'does not create MediCard membership');
+
+    config()->set('x-change.settlement.policy_completion.demonstration_summary.sms_enabled', true);
+    app(SendDemonstrationPolicySummarySms::class)->handle($outcome);
+    expect(FeedbackDeliveryRecord::query()->count())->toBe(2);
+    Queue::assertPushed(DeliverQueuedFeedbackSmsJob::class, 2);
+    Queue::assertPushed(DeliverQueuedFeedbackSmsJob::class, fn ($job): bool => str_contains($job->message, 'PHP 50.00')
+        && str_contains($job->message, 'no membership or healthcare coverage'));
+    Queue::assertPushed(DeliverQueuedFeedbackSmsJob::class, fn ($job): bool => str_contains($job->message, 'Demo Benefit Summary')
+        && str_contains($job->message, 'not membership'));
 
     Http::assertNothingSent();
 });

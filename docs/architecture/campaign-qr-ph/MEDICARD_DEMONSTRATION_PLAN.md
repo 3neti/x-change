@@ -194,7 +194,7 @@ Disposition: [Gate M4 Cockpit Presentation](reports/MEDICARD_GATE_M4_COCKPIT_PRE
 
 ### Gate M5 — Automated lifecycle acceptance
 
-Status: **Next gate**
+Status: **Complete; synthetic exactly-once journey and both SMS intents are green**
 
 - Use fake NetBank and SMS transports.
 - Prove exactly one recognition, demo-benefit record, envelope, Pay Code, claim
@@ -203,9 +203,11 @@ Status: **Next gate**
 - Run focused backend, frontend, browser, asset-drift, and production-build
   verification.
 
+Disposition: [Gate M5 Automated Lifecycle Acceptance](reports/MEDICARD_GATE_M5_AUTOMATED_LIFECYCLE_ACCEPTANCE.md).
+
 ### Gate M6 — Immutable release and disabled testing adoption
 
-Status: **Not started**
+Status: **Next separately authorized release/adoption gate**
 
 - Publish an immutable x-change release and adopt it in the testing host.
 - Apply required migrations, if any, with campaign and global schedules false.

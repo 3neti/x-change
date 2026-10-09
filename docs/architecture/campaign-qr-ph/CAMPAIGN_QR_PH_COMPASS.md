@@ -256,9 +256,16 @@ immutable campaign driver: AUI shows demo policies ready and Medicard shows
 demo benefits ready. The Campaigns page reuses its compact card, QR dialog, and
 monitoring controls; no second dashboard or product mutation path was added.
 
-The next gate is **M5 — Automated lifecycle acceptance**. It runs the combined
-fake-payment, fake-SMS, replay, redaction, and fail-closed verification before
-any release or host adoption.
+Gate M5 is complete. The combined synthetic acceptance proves exactly one
+payment recognition, demo-benefit record, settlement envelope, completion Pay
+Code, claim projection, completion request, `benefit_ready_demo` outcome, and
+each of the two queued SMS delivery records. Immediate completion replay is
+mutation-free and no external HTTP or live provider activity occurred.
+
+The next gate is **M6 — Immutable release and disabled testing adoption**. It
+requires a separately chosen immutable version and host deployment authority.
+Both Standing Funding schedules must remain false, and adoption must create no
+campaign, payment, SMS, or provider activity.
 
 Detailed sequence:
 [Medicard Campaign Demonstration Plan](MEDICARD_DEMONSTRATION_PLAN.md).
