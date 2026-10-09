@@ -238,13 +238,31 @@ address `4`, and no undelivered runtime outbox evidence.
 
 ### Slice 7 — Fresh live acceptance
 
-Status: **Not started; campaign polling is commissioned, but financial authorization is still required**
+Status: **Complete in testing**
 
 - Under separate financial authorization, pay one fresh PHP 50 AUI premium.
 - Require exactly one recognition, one provisional coverage, one settlement
   envelope, one completion Pay Code, the expected two SMS interactions, and one
   demonstration policy outcome.
 - Require the immediate replay to be mutation-free.
+
+The separately authorized acceptance completed on 2026-10-09 against campaign
+`01M3CBP94CANQD2JRANFXHQZSE`, binding `3`, and Standing Funding Address `6`.
+The PHP 50 payment produced recognition `01M4EYFGT7PYDN6RSR5ERZXNHH`, coverage
+`01M4EYFHNT93Z45FVJY71JMSMH`, settlement envelope `42`, and completion Pay Code
+`AUI-MUSW`. The claimant completed the personal-details journey, creating one
+claim-evidence projection, one successful policy-completion request, and one
+successful `policy_issued_demo` outcome.
+
+The feedback path contains exactly two provider-accepted SMS records: the
+completion/claim invitation and the demonstration-policy summary. The exact
+payment has one recognition, one coverage, one issuance, one claim projection,
+one policy request, and one policy outcome. Three later generation-12 sync runs
+completed successfully without changing the binding totals from `5/5/5/5` for
+recognitions, coverages, envelopes, and completion Pay Codes. Database and
+failed-job queues were empty at the final snapshot. The global Standing Funding
+schedule remained disabled; campaign-only monitoring remained scoped to the
+explicit live binding.
 
 ## Stop Conditions
 

@@ -414,10 +414,13 @@ changes, and any later live provider operation require explicit authorization.
 
 ## Next action
 
-Keep the commissioned campaign-only runtime under observation. The next
-separate gate is one fresh PHP 50 AUI payment acceptance against campaign
-`01M3CBP94CANQD2JRANFXHQZSE`, requiring exactly one recognition, provisional
-coverage, settlement envelope, completion Pay Code, the expected SMS journey,
-and a mutation-free replay. Keep the global schedule false, address `5` paused,
-and address `4` quarantined. Stop on any backlog, failure, overlap, quarantine
-growth, ambiguity, duplicate, or database pressure.
+The fresh PHP 50 AUI acceptance is complete. Campaign-only polling recognized
+one payment and created one coverage, envelope, completion Pay Code, claim
+projection, demonstration policy outcome, and the expected two SMS records.
+Repeated generation-12 runs were mutation-free, with zero queued or failed
+jobs. The global schedule remained false, address `5` remained paused, and
+address `4` remained quarantined.
+
+Keep the commissioned campaign-only runtime under observation. Any production
+rollout, additional live campaign, global Standing Funding schedule, address-4
+remediation, or infrastructure change remains a separate gate.

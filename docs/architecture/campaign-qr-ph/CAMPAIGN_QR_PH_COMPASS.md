@@ -179,6 +179,31 @@ fully delivered. Address `5` was not checked and remains paused by absent
 control. Address `4` remains quarantined. No payment or financial mutation
 occurred. Next separate gate: one fresh PHP 50 AUI payment acceptance.
 
+### Fresh PHP 50 AUI acceptance — 2026-10-09
+
+The commissioned campaign-only path completed its live acceptance against
+campaign `01M3CBP94CANQD2JRANFXHQZSE`, binding `3`, and address `6`:
+
+- one PHP 50 payment created recognition `01M4EYFGT7PYDN6RSR5ERZXNHH`;
+- it created coverage `01M4EYFHNT93Z45FVJY71JMSMH`, envelope `42`, and Pay
+  Code `AUI-MUSW` exactly once;
+- the first completion SMS was accepted by the configured provider;
+- the claimant completed the personal-details journey;
+- exactly one claim projection, policy request, and successful
+  `policy_issued_demo` outcome were persisted;
+- the demonstration-policy summary SMS was accepted by the provider;
+- repeated generation-12 polling runs remained successful and mutation-free;
+- final binding totals were five recognitions, five coverages, five envelopes,
+  and five completion Pay Codes, exactly one above the pre-payment baseline;
+- database and failed-job queues were empty; and
+- no global Standing Funding schedule, unrelated address, or additional
+  financial operation was enabled.
+
+Gate 7 is complete in testing. Provider acceptance records prove submission to
+the SMS provider, while the operator's handset interaction supplied the human
+acceptance evidence. Production rollout, Medicard-specific workflow design,
+and broader polling remain separate decisions.
+
 ### Payment activity local host acceptance — 2026-09-25
 
 Commit `5c4cc459` passed isolated host adoption from sandbox commit `3873d386`.
