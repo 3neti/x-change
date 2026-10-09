@@ -14,6 +14,10 @@ use LBHurtado\XChange\Models\PolicyCompletionRequest;
 
 final class DemonstrationPolicySummary
 {
+    public function __construct(
+        private readonly AutomaticDemonstrationPolicy $automaticDemonstration,
+    ) {}
+
     public function eligible(PolicyCompletionOutcome $outcome): bool
     {
         if (! config('x-change.settlement.policy_completion.demonstration_summary.enabled', false)) {
@@ -27,7 +31,7 @@ final class DemonstrationPolicySummary
         return $request !== null && $coverage !== null
             && $outcome->status === PolicyCompletionOutcomeStatus::Succeeded
             && $request->status === PolicyCompletionRequestStatus::Succeeded
-            && ((new AutomaticDemonstrationPolicy)->matches($request) || $this->independentlyApproved($request))
+            && ($this->automaticDemonstration->matches($request) || $this->independentlyApproved($request))
             && $request->driver_id === AuiPersonalAccidentPolicyCompletionDriver::DRIVER_ID
             && $request->driver_version === AuiPersonalAccidentPolicyCompletionDriver::DRIVER_VERSION
             && $coverage->driver_id === $request->driver_id

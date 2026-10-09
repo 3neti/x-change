@@ -9,7 +9,6 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\XChange\Contracts\CampaignPolicyCompletionAuthorityContract;
-use LBHurtado\XChange\Data\Settlement\AuiDemonstrationPolicyResponseData;
 use LBHurtado\XChange\Data\Settlement\PolicyCompletionOutcomeData;
 use LBHurtado\XChange\Enums\PolicyCompletionRequestStatus;
 use LBHurtado\XChange\Events\PolicyCompletionOutcomeRecorded;
@@ -22,6 +21,7 @@ final readonly class RecordCampaignPolicyCompletionOutcome
     public function __construct(
         private PrepareCampaignPolicyCompletion $prepare,
         private CampaignPolicyCompletionAuthorityContract $authority,
+        private AutomaticDemonstrationPolicy $automaticDemonstration,
     ) {}
 
     public function handle(
@@ -36,11 +36,12 @@ final readonly class RecordCampaignPolicyCompletionOutcome
         return $this->record($request, $recorder, $data);
     }
 
-    public function handleAutomaticDemonstration(PolicyCompletionRequest $request, AuiDemonstrationPolicyResponseData $response): PolicyCompletionOutcome
-    {
-        $policy = new AutomaticDemonstrationPolicy;
-        $policy->assertEnabled($request->projection);
-        if (! $policy->matches($request)) {
+    public function handleAutomaticDemonstration(
+        PolicyCompletionRequest $request,
+        PolicyCompletionOutcomeData $outcome,
+    ): PolicyCompletionOutcome {
+        $this->automaticDemonstration->assertEnabled($request->projection);
+        if (! $this->automaticDemonstration->matches($request)) {
             throw new DomainException('Automatic demonstration request provenance is required.');
         }
         $owner = $request->projection->issuance->coverage->recognition->ownerRecord();
@@ -49,7 +50,7 @@ final readonly class RecordCampaignPolicyCompletionOutcome
             throw new DomainException('Automatic demonstration owner attribution does not match.');
         }
 
-        return $this->record($request, $owner, $response->outcome());
+        return $this->record($request, $owner, $outcome);
     }
 
     private function record(PolicyCompletionRequest $request, Model $recorder, PolicyCompletionOutcomeData $data): PolicyCompletionOutcome

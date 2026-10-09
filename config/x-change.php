@@ -2950,6 +2950,9 @@ return [
         'campaign_policy_completion_drivers' => [
             // Additional host-defined CampaignPolicyCompletionDriverContract implementations.
         ],
+        'campaign_automatic_demonstration_responders' => [
+            // Additional host-defined CampaignAutomaticDemonstrationResponderContract implementations.
+        ],
         'policy_completion' => [
             'automatic_demo' => [
                 'enabled' => (bool) env('XCHANGE_AUTOMATIC_DEMO_POLICY_ENABLED', false),

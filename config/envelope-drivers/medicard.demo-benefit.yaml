@@ -1,0 +1,81 @@
+driver:
+  id: "medicard.demo-benefit"
+  version: "1.0.0"
+  title: "MediCard Demo Benefit Pass"
+  description: "Demonstration-only healthcare-access journey. It does not create membership, coverage, treatment authorization, or reimbursement rights."
+  domain: "campaign-settlement"
+
+workflow:
+  service: medicard-demo
+  title: Complete a MediCard demonstration benefit journey
+  entry_methods: [payment_qr]
+  connection: medicard-demo
+  requires_review: false
+  plans:
+    - code: MEDICARD_DEMO_DAY
+      version: '1'
+      title: One-day healthcare-access journey demonstration
+      currency: PHP
+      premium_minor: 5000
+      benefit_minor: null
+      coverage:
+        basis: day
+        duration_days: 1
+        description: "Demonstration only; no healthcare value or treatment entitlement."
+  notifications:
+    - event: payment_recognized
+      sms: 'We received your PHP 50.00 MediCard demonstration payment. Complete your details: {claim_url}. DEMONSTRATION ONLY—no membership or healthcare coverage is created.'
+      placeholders: [claim_url]
+      allow_override: false
+    - event: demonstration_completed
+      sms: 'Your MediCard Demo Benefit Summary is ready: {result_url}. DEMONSTRATION ONLY—not membership, coverage, treatment authorization, or reimbursement.'
+      placeholders: [result_url]
+      allow_override: false
+
+payload:
+  schema:
+    id: "x-change.medicard-demo-benefit-envelope.v1"
+    format: "json_schema"
+    inline:
+      type: "object"
+      properties:
+        schema:
+          type: "string"
+          const: "x-change.campaign-provisional-coverage-envelope.v1"
+        campaign:
+          type: "object"
+        payment:
+          type: "object"
+        coverage:
+          type: "object"
+        authorization:
+          type: "object"
+        applicant:
+          type: "object"
+      required: ["schema", "campaign", "payment", "coverage", "authorization"]
+  storage:
+    mode: "versioned"
+    patch_strategy: "merge"
+
+documents:
+  registry: []
+
+checklist:
+  template: []
+
+signals:
+  definitions: []
+
+gates:
+  definitions: []
+
+audit:
+  enabled: true
+  capture: ["payload_patch", "status_change"]
+
+manifest:
+  enabled: true
+  includes:
+    payload_hash: true
+    attachments_hashes: true
+    envelope_fingerprint: true

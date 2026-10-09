@@ -12,13 +12,19 @@ final class AutomaticDemonstrationPolicy
 {
     public const MODE = 'automatic_demo';
 
+    public function __construct(
+        private readonly CampaignAutomaticDemonstrationResponderRegistry $responders,
+    ) {}
+
     public function enabledFor(CompletionClaimEvidenceProjection $projection): bool
     {
         $projection->loadMissing('issuance.coverage.campaign');
 
         return (bool) config('x-change.settlement.policy_completion.automatic_demo.enabled', false)
-            && $projection->issuance->driver_id === AuiPersonalAccidentPolicyCompletionDriver::DRIVER_ID
-            && $projection->issuance->driver_version === AuiPersonalAccidentPolicyCompletionDriver::DRIVER_VERSION
+            && $this->responders->supports(
+                (string) $projection->issuance->driver_id,
+                (string) $projection->issuance->driver_version,
+            )
             && filled($projection->issuance->coverage->campaign?->reference)
             && in_array($projection->issuance->coverage->campaign?->reference,
                 (array) config('x-change.settlement.policy_completion.automatic_demo.campaign_references', []), true);

@@ -8,9 +8,9 @@ use LBHurtado\XChange\Contracts\CampaignPolicyCompletionDriverContract;
 use LBHurtado\XChange\Data\Settlement\PolicyCompletionPreparationData;
 use LBHurtado\XChange\Models\CompletionClaimEvidenceProjection;
 
-final readonly class AuiPersonalAccidentPolicyCompletionDriver implements CampaignPolicyCompletionDriverContract
+final readonly class MedicardDemoBenefitPolicyCompletionDriver implements CampaignPolicyCompletionDriverContract
 {
-    public const DRIVER_ID = 'aui.personal-accident.provisional-cover';
+    public const DRIVER_ID = 'medicard.demo-benefit';
 
     public const DRIVER_VERSION = '1.0.0';
 
@@ -35,8 +35,8 @@ final readonly class AuiPersonalAccidentPolicyCompletionDriver implements Campai
             projection: $projection,
             driverId: self::DRIVER_ID,
             driverVersion: self::DRIVER_VERSION,
-            productLabel: 'AUI policy',
-            idempotencyPrefix: 'aui-policy-completion:',
+            productLabel: 'Medicard demo benefit',
+            idempotencyPrefix: 'medicard-demo-benefit:',
         );
     }
 }

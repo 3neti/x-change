@@ -12,14 +12,14 @@ use LBHurtado\XChange\Models\CompletionClaimEvidenceProjection;
 use LBHurtado\XChange\Models\PolicyCompletionOutcome;
 use LBHurtado\XChange\Models\PolicyCompletionRequest;
 use LBHurtado\XChange\Services\Settlement\AutomaticDemonstrationPolicy;
-use LBHurtado\XChange\Services\Settlement\DispatchAuiDemonstrationPolicyViaPipedream;
+use LBHurtado\XChange\Services\Settlement\CampaignAutomaticDemonstrationResponderRegistry;
 
 final readonly class CompleteAutomaticDemonstrationPolicy
 {
     public function __construct(
         private AutomaticDemonstrationPolicy $policy,
         private PrepareCampaignPolicyCompletion $prepare,
-        private DispatchAuiDemonstrationPolicyViaPipedream $transport,
+        private CampaignAutomaticDemonstrationResponderRegistry $responders,
         private RecordCampaignPolicyCompletionOutcome $record,
     ) {}
 
@@ -72,8 +72,10 @@ final readonly class CompleteAutomaticDemonstrationPolicy
             return $request->outcome;
         }
 
-        $response = $this->transport->handle($prepared);
+        $outcome = $this->responders
+            ->for($prepared->driverId, $prepared->driverVersion)
+            ->complete($prepared);
 
-        return $this->record->handleAutomaticDemonstration($request, $response);
+        return $this->record->handleAutomaticDemonstration($request, $outcome);
     }
 }

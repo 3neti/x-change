@@ -159,7 +159,7 @@ Disposition: [Gate M1 Multi-Product Completion Characterization](reports/MEDICAR
 
 ### Gate M2 — Medicard demonstration contract and driver
 
-Status: **Next gate**
+Status: **Complete; exact-version local driver and replay-safe responder are green**
 
 - Add the versioned Medicard demo input and sanitized result contract.
 - Add `medicard.demo-benefit@1.0.0` as a deterministic mocked completion driver.
@@ -167,9 +167,11 @@ Status: **Next gate**
 - Prove one request and one outcome under retries and concurrent execution.
 - Do not integrate with a real Medicard endpoint.
 
+Disposition: [Gate M2 Contract and Driver](reports/MEDICARD_GATE_M2_CONTRACT_AND_DRIVER.md).
+
 ### Gate M3 — Messaging and customer UI
 
-Status: **Not started**
+Status: **Next gate**
 
 - Add distinct Medicard first-SMS and summary-SMS templates.
 - Add the Medicard claim presentation and private Demo Benefit Summary.

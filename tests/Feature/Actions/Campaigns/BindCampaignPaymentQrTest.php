@@ -111,6 +111,8 @@ use LBHurtado\XChange\Services\Settlement\CampaignWorkflowPublicationSnapshot;
 use LBHurtado\XChange\Services\Settlement\DemonstrationPolicySummary;
 use LBHurtado\XChange\Services\Settlement\DispatchAuiDemonstrationPolicyViaPipedream;
 use LBHurtado\XChange\Services\Settlement\GenerateAuiDemonstrationPolicyResponse;
+use LBHurtado\XChange\Services\Settlement\MedicardDemoBenefitCampaignCoverageDriver;
+use LBHurtado\XChange\Services\Settlement\MedicardDemoBenefitPolicyCompletionDriver;
 use LBHurtado\XChange\Services\XRay\VoucherXRayProjectionBuilder;
 use LBHurtado\XChange\Support\Claim\CompletionClaimReceipt;
 use LBHurtado\XChange\Support\Claim\FormFlowClaimPayloadNormalizer;
@@ -121,6 +123,12 @@ use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
 use LBHurtado\XFeedback\Contracts\FeedbackDeliveryAttemptRecorderContract;
 use LBHurtado\XFeedback\Models\FeedbackDeliveryRecord;
 use Symfony\Component\Yaml\Yaml;
+
+beforeEach(function (): void {
+    config()->set('settlement-envelope.driver_host_overrides', [
+        AuiPersonalAccidentPolicyCompletionDriver::DRIVER_ID.'@'.AuiPersonalAccidentPolicyCompletionDriver::DRIVER_VERSION,
+    ]);
+});
 
 it('grants a bounded policy link only to the browser that successfully submitted completion details', function (): void {
     config()->set('settlement-envelope.driver_host_overrides', ['aui.personal-accident.provisional-cover@1.0.0']);
@@ -2588,6 +2596,86 @@ it('automatically completes an opted in demo claim without a checker and queues 
     Queue::assertPushed(DeliverQueuedFeedbackSmsJob::class, 1);
     expect(fn () => app(RequestCampaignPolicyCompletion::class)->handle($projection, $owner, 'not-authorized'))
         ->toThrow(AuthorizationException::class);
+});
+
+it('completes a Medicard demonstration outcome once without changing AUI semantics', function (): void {
+    Queue::fake();
+    configureCampaignCoverageTestDriver();
+    [$recognition, $binding] = recognizedCampaignPayment(5000);
+    expect(app(DriverService::class)->list())->toContain([
+        'id' => MedicardDemoBenefitCampaignCoverageDriver::DRIVER_ID,
+        'version' => MedicardDemoBenefitCampaignCoverageDriver::DRIVER_VERSION,
+        'path' => 'medicard.demo-benefit.yaml',
+        'source' => 'host',
+    ]);
+    $campaign = $recognition->campaignRecord();
+    $settings = (array) $campaign->settings;
+    data_set($settings, 'scenario_run', [
+        'reference' => 'medicard-demo-scenario',
+        'scenario' => 'medicard_demo_benefit',
+        'envelope_driver_id' => MedicardDemoBenefitCampaignCoverageDriver::DRIVER_ID,
+        'envelope_driver_version' => MedicardDemoBenefitCampaignCoverageDriver::DRIVER_VERSION,
+        'product' => [
+            'code' => 'MEDICARD_DEMO_DAY',
+            'currency' => 'PHP',
+            'price_minor' => 5000,
+        ],
+    ]);
+    $campaign->forceFill(['settings' => $settings])->save();
+    $recognition->unsetRelation('binding');
+
+    $decision = app(MedicardDemoBenefitCampaignCoverageDriver::class)
+        ->decide($recognition->fresh());
+
+    expect($decision->eligible)->toBeTrue()
+        ->and($decision->terms?->coverageAmountMinor)->toBeNull()
+        ->and(data_get($decision->terms?->terms, 'membership_created'))->toBeFalse()
+        ->and(data_get($decision->terms?->terms, 'healthcare_coverage_created'))->toBeFalse();
+
+    $bound = app(BindProvisionalCoverage::class)->handle(
+        $recognition->fresh(),
+        $decision->terms,
+    );
+    $issued = app(IssueCompletionPayCode::class)->handle(
+        $bound->coverage,
+        $binding->standingFundingAddress->owner,
+        new CompletionPayCodeInstructionsData([
+            'name',
+            'mobile',
+            'email',
+            'address',
+            'birth_date',
+        ]),
+    );
+    app(SubmitPayCodeClaim::class)->handle($issued->voucher, [
+        'mobile' => '09173011987',
+        'inputs' => [
+            'name' => 'Medicard Demo Participant',
+            'mobile' => '09173011987',
+            'email' => 'participant@example.test',
+            'address' => 'Sanitized demonstration address',
+            'birth_date' => '1990-01-01',
+        ],
+    ]);
+    $projection = CompletionClaimEvidenceProjection::query()->sole();
+    config()->set('x-change.settlement.policy_completion.automatic_demo', [
+        'enabled' => true,
+        'campaign_references' => [$campaign->reference],
+    ]);
+
+    $complete = app(CompleteAutomaticDemonstrationPolicy::class);
+    $outcome = $complete->handle($projection);
+    $replay = $complete->handle($projection->fresh());
+
+    expect($outcome->is($replay))->toBeTrue()
+        ->and($outcome->result_code)->toBe('benefit_ready_demo')
+        ->and($outcome->provider_reference)->toStartWith('MEDICARD-DEMO-')
+        ->and(data_get($outcome->safe_result, 'decision'))->toBe('ready_demo')
+        ->and($outcome->request->driver_id)->toBe(MedicardDemoBenefitPolicyCompletionDriver::DRIVER_ID)
+        ->and(PolicyCompletionRequest::query()->count())->toBe(1)
+        ->and(PolicyCompletionOutcome::query()->count())->toBe(1);
+
+    Http::assertNothingSent();
 });
 
 it('does not automatically complete disabled or unlisted campaigns', function (bool $enabled): void {

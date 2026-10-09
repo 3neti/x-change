@@ -1,0 +1,33 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.3neti.com/x-change/medicard-demo-benefit-response-v1.schema.json",
+    "title": "MediCard Demo Benefit Response",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "schema",
+        "status",
+        "result_code",
+        "demo_reference",
+        "product_code",
+        "effective_at",
+        "expires_at",
+        "demonstration_only",
+        "membership_created",
+        "healthcare_coverage_created",
+        "treatment_authorized"
+    ],
+    "properties": {
+        "schema": { "const": "x-change.medicard-demo-benefit-response.v1" },
+        "status": { "const": "ready_demo" },
+        "result_code": { "const": "benefit_ready_demo" },
+        "demo_reference": { "type": "string", "pattern": "^MEDICARD-DEMO-[A-F0-9]{16}$" },
+        "product_code": { "const": "MEDICARD_DEMO_DAY" },
+        "effective_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": ["string", "null"], "format": "date-time" },
+        "demonstration_only": { "const": true },
+        "membership_created": { "const": false },
+        "healthcare_coverage_created": { "const": false },
+        "treatment_authorized": { "const": false }
+    }
+}

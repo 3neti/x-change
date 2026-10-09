@@ -237,11 +237,17 @@ the bounded M2/M3 extension seams. Existing `PolicyCompletion*` persistence is
 accepted as internal legacy vocabulary for this demonstration and will not be
 renamed in this wave.
 
-The next gate is **M2 — Medicard demonstration contract and driver**. It adds an
-exact Medicard coverage/preparation pair and a product-aware, fail-closed local
-demo responder while preserving the existing request/outcome persistence and
-AUI behavior. No live campaign, Medicard API call, payment, SMS, or monitoring
-transition is authorized.
+Gate M2 is complete. The exact `medicard.demo-benefit@1.0.0` envelope,
+coverage/preparation pair, sanitized result contract, and fail-closed local
+responder are green. One focused lifecycle test proves a single deterministic
+`benefit_ready_demo` outcome and mutation-free replay, while the AUI transport
+and automatic-completion regressions remain green. No live campaign, Medicard
+API call, payment, SMS, or monitoring transition occurred.
+
+The next gate is **M3 — Messaging and customer UI**. It makes the first SMS,
+summary SMS, claim presentation, and private result page product-aware while
+retaining the existing claim-token, feedback, evidence, and redaction
+boundaries.
 
 Detailed sequence:
 [Medicard Campaign Demonstration Plan](MEDICARD_DEMONSTRATION_PLAN.md).

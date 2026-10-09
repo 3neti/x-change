@@ -7,6 +7,7 @@ use LBHurtado\XChange\Data\Settlement\PolicyCompletionPreparationData;
 use LBHurtado\XChange\Exceptions\CampaignPolicyCompletionDriverUnavailable;
 use LBHurtado\XChange\Models\CompletionClaimEvidenceProjection;
 use LBHurtado\XChange\Services\Settlement\CampaignPolicyCompletionDriverRegistry;
+use LBHurtado\XChange\Services\Settlement\MedicardDemoBenefitPolicyCompletionDriver;
 
 function completionDriver(string $id, string $version): CampaignPolicyCompletionDriverContract
 {
@@ -69,3 +70,12 @@ it('rejects blank driver identities', function (string $id, string $version): vo
     'blank driver ID' => ['', '1.0.0'],
     'blank driver version' => ['medicard.demo-benefit', ''],
 ]);
+
+it('registers the built-in Medicard completion driver in the package container', function (): void {
+    $driver = app(CampaignPolicyCompletionDriverRegistry::class)->for(
+        MedicardDemoBenefitPolicyCompletionDriver::DRIVER_ID,
+        MedicardDemoBenefitPolicyCompletionDriver::DRIVER_VERSION,
+    );
+
+    expect($driver)->toBeInstanceOf(MedicardDemoBenefitPolicyCompletionDriver::class);
+});

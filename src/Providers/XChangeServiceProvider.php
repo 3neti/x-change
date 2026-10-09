@@ -203,6 +203,7 @@ use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\AccountProvisioningContract;
 use LBHurtado\XChange\Contracts\AppendableEventStoreContract;
 use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
+use LBHurtado\XChange\Contracts\CampaignAutomaticDemonstrationResponderContract;
 use LBHurtado\XChange\Contracts\CampaignBankTransferDispatcherContract;
 use LBHurtado\XChange\Contracts\CampaignBankTransferStatusCheckerContract;
 use LBHurtado\XChange\Contracts\CampaignCoverageDriverContract;
@@ -536,12 +537,17 @@ use LBHurtado\XChange\Services\ProvisioningAwareOnboardingService;
 use LBHurtado\XChange\Services\Publication\CorePublicationContributor;
 use LBHurtado\XChange\Services\Publication\PublicationCatalog;
 use LBHurtado\XChange\Services\ReconciliationLifecycleService;
+use LBHurtado\XChange\Services\Settlement\AuiAutomaticDemonstrationResponder;
 use LBHurtado\XChange\Services\Settlement\AuiPersonalAccidentCampaignCoverageDriver;
 use LBHurtado\XChange\Services\Settlement\AuiPersonalAccidentPolicyCompletionDriver;
+use LBHurtado\XChange\Services\Settlement\CampaignAutomaticDemonstrationResponderRegistry;
 use LBHurtado\XChange\Services\Settlement\CampaignCoverageDriverRegistry;
 use LBHurtado\XChange\Services\Settlement\CampaignPolicyCompletionDriverRegistry;
 use LBHurtado\XChange\Services\Settlement\ConfigCampaignPolicyCompletionAuthority;
 use LBHurtado\XChange\Services\Settlement\ConfigCampaignPolicyCompletionTransportReadiness;
+use LBHurtado\XChange\Services\Settlement\MedicardDemoBenefitCampaignCoverageDriver;
+use LBHurtado\XChange\Services\Settlement\MedicardDemoBenefitPolicyCompletionDriver;
+use LBHurtado\XChange\Services\Settlement\MedicardDemoBenefitResponder;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\SettlementEnvelopeReadinessService;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
@@ -813,8 +819,12 @@ class XChangeServiceProvider extends ServiceProvider
             ),
         );
         $this->app->singleton(AuiPersonalAccidentCampaignCoverageDriver::class);
+        $this->app->singleton(MedicardDemoBenefitCampaignCoverageDriver::class);
         $this->app->tag(
-            AuiPersonalAccidentCampaignCoverageDriver::class,
+            [
+                AuiPersonalAccidentCampaignCoverageDriver::class,
+                MedicardDemoBenefitCampaignCoverageDriver::class,
+            ],
             'x-change.campaign-coverage-drivers',
         );
         $campaignCoverageDrivers = config(
@@ -846,8 +856,12 @@ class XChangeServiceProvider extends ServiceProvider
             ),
         );
         $this->app->singleton(AuiPersonalAccidentPolicyCompletionDriver::class);
+        $this->app->singleton(MedicardDemoBenefitPolicyCompletionDriver::class);
         $this->app->tag(
-            AuiPersonalAccidentPolicyCompletionDriver::class,
+            [
+                AuiPersonalAccidentPolicyCompletionDriver::class,
+                MedicardDemoBenefitPolicyCompletionDriver::class,
+            ],
             'x-change.campaign-policy-completion-drivers',
         );
         $campaignPolicyCompletionDrivers = config(
@@ -879,6 +893,46 @@ class XChangeServiceProvider extends ServiceProvider
             CampaignPolicyCompletionDriverRegistry::class,
             fn ($app): CampaignPolicyCompletionDriverRegistry => new CampaignPolicyCompletionDriverRegistry(
                 $app->tagged('x-change.campaign-policy-completion-drivers'),
+            ),
+        );
+        $this->app->singleton(AuiAutomaticDemonstrationResponder::class);
+        $this->app->singleton(MedicardDemoBenefitResponder::class);
+        $this->app->tag(
+            [
+                AuiAutomaticDemonstrationResponder::class,
+                MedicardDemoBenefitResponder::class,
+            ],
+            'x-change.campaign-automatic-demonstration-responders',
+        );
+        $campaignAutomaticDemonstrationResponders = config(
+            'x-change.settlement.campaign_automatic_demonstration_responders',
+            [],
+        );
+
+        if (! is_array($campaignAutomaticDemonstrationResponders)) {
+            throw new InvalidArgumentException(
+                'Campaign automatic demonstration responder configuration must be an array.',
+            );
+        }
+
+        foreach ($campaignAutomaticDemonstrationResponders as $responder) {
+            if (! is_string($responder)
+                || ! is_a($responder, CampaignAutomaticDemonstrationResponderContract::class, true)) {
+                throw new InvalidArgumentException(
+                    'Campaign automatic demonstration responders must implement '.CampaignAutomaticDemonstrationResponderContract::class.'.',
+                );
+            }
+
+            $this->app->singleton($responder);
+            $this->app->tag(
+                $responder,
+                'x-change.campaign-automatic-demonstration-responders',
+            );
+        }
+        $this->app->singleton(
+            CampaignAutomaticDemonstrationResponderRegistry::class,
+            fn ($app): CampaignAutomaticDemonstrationResponderRegistry => new CampaignAutomaticDemonstrationResponderRegistry(
+                $app->tagged('x-change.campaign-automatic-demonstration-responders'),
             ),
         );
         $this->app->singleton(
