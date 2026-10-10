@@ -16,6 +16,7 @@ use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegis
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceDiscoveryService;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceInput;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceOrderAccess;
+use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceTurnstileVerifier;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
 
 final class PublicAutoGeneratePageController extends Controller
@@ -29,6 +30,7 @@ final class PublicAutoGeneratePageController extends Controller
         private readonly OnDemandIssuanceFundingOrderPresenter $fundingOrderPresenter,
         private readonly PublicIssuanceInput $publicIssuanceInput,
         private readonly PublicIssuanceDiscoveryService $publicIssuanceDiscovery,
+        private readonly PublicIssuanceTurnstileVerifier $turnstile,
     ) {}
 
     public function __invoke(Request $request): Response
@@ -99,6 +101,10 @@ final class PublicAutoGeneratePageController extends Controller
             'invitation_preset' => ['enabled' => false, 'source' => 'public'],
             'startup_mode' => 'blank',
             'public_prefill' => $prefill,
+            'turnstile' => [
+                'enabled' => $this->turnstile->enabled(),
+                'site_key' => $this->turnstile->siteKey(),
+            ],
             'service_discovery' => [
                 'canonical_url' => $discovery->canonical_url,
                 'description' => 'Create, fund, and share a Pay Code without opening an account.',

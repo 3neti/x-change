@@ -437,6 +437,32 @@ final class CoreDeploymentEnvironmentContributor implements DeploymentEnvironmen
                 safeExample: 'false',
             ),
             new EnvironmentVariableData(
+                key: 'XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_ENABLED',
+                description: 'Require Cloudflare Turnstile before creating a public issuance order.',
+                category: 'Public Issuance',
+                configPath: 'x-change.public_auto_generate.turnstile.enabled',
+                safeExample: 'false',
+            ),
+            new EnvironmentVariableData(
+                key: 'XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_SITE_KEY',
+                description: 'Public Turnstile widget site key for the public issuance form.',
+                category: 'Public Issuance',
+                configPath: 'x-change.public_auto_generate.turnstile.site_key',
+            ),
+            new EnvironmentVariableData(
+                key: 'XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_SECRET_KEY',
+                description: 'Private Turnstile key used only for server-side token verification.',
+                category: 'Public Issuance',
+                configPath: 'x-change.public_auto_generate.turnstile.secret_key',
+                secret: true,
+            ),
+            new EnvironmentVariableData(
+                key: 'XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_HOSTNAME',
+                description: 'Expected hostname returned by Turnstile for public issuance.',
+                category: 'Public Issuance',
+                configPath: 'x-change.public_auto_generate.turnstile.hostname',
+            ),
+            new EnvironmentVariableData(
                 key: 'XCHANGE_FUNDING_LIQUIDITY_SCHEDULED_REFRESH_ENABLED',
                 description: 'Refresh the cached provider-liquidity guard every five minutes.',
                 category: 'Runtime',

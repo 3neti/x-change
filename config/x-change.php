@@ -1194,6 +1194,12 @@ return [
 
     'public_auto_generate' => [
         'enabled' => (bool) env('XCHANGE_PUBLIC_AUTO_GENERATE_ENABLED', true),
+        'turnstile' => [
+            'enabled' => (bool) env('XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_ENABLED', false),
+            'site_key' => env('XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_SITE_KEY'),
+            'secret_key' => env('XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_SECRET_KEY'),
+            'hostname' => env('XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_HOSTNAME'),
+        ],
         'minimum_principal_minor' => max(1, (int) env('XCHANGE_PUBLIC_AUTO_GENERATE_MINIMUM_PRINCIPAL_MINOR', 100)),
         'maximum_principal_minor' => max(100, (int) env('XCHANGE_PUBLIC_AUTO_GENERATE_MAXIMUM_PRINCIPAL_MINOR', 100_000)),
         'currencies' => array_values(array_filter(array_map(

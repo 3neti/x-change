@@ -1812,6 +1812,7 @@ export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
     amount: string;
     currency: string;
   } | null;
+  turnstile?: { enabled: boolean; site_key: string | null };
   service_discovery?: {
     canonical_url: string;
     description: string;

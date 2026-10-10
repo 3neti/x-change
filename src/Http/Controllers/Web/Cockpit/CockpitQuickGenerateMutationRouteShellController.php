@@ -35,6 +35,7 @@ use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingRequirement;
 use LBHurtado\XChange\Services\IdempotencyService;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceInstructionPolicy;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceOrderAccess;
+use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceTurnstileVerifier;
 use LBHurtado\XChange\Services\QrArtifactFactory;
 use Throwable;
 
@@ -65,6 +66,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         RememberRiderLibraryUsage $rememberRiderLibraryUsage,
         PublicIssuanceOrderAccess $publicOrderAccess,
         PublicIssuanceInstructionPolicy $publicIssuancePolicy,
+        PublicIssuanceTurnstileVerifier $turnstile,
     ): JsonResponse {
         $publicAutoGenerate = $request->attributes->get('x_change_public_auto_generate') === true;
 
@@ -77,6 +79,9 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 ),
                 202,
             );
+        }
+        if ($publicAutoGenerate) {
+            $turnstile->verify($request);
         }
         $payload = $this->posSaleReferences->sanitizeBrowserPayload($request->validated());
         $payload = $this->normalizePayloadForIssuance($payload);
