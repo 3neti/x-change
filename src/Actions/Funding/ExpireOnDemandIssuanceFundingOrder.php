@@ -24,13 +24,15 @@ final readonly class ExpireOnDemandIssuanceFundingOrder
                 ->lockForUpdate()
                 ->findOrFail($order->getKey());
 
-            if ($locked->expires_at->isFuture() || ! in_array($locked->status, [
-                PayCodeIssuanceFundingOrderStatus::AwaitingPayment,
-                PayCodeIssuanceFundingOrderStatus::PayerAcknowledged,
-                PayCodeIssuanceFundingOrderStatus::Underfunded,
-                PayCodeIssuanceFundingOrderStatus::PaymentAmbiguous,
-                PayCodeIssuanceFundingOrderStatus::IssuanceAttention,
-            ], true)) {
+            if ($locked->expires_at->isFuture()
+                || $locked->funded_at !== null
+                || ! in_array($locked->status, [
+                    PayCodeIssuanceFundingOrderStatus::AwaitingPayment,
+                    PayCodeIssuanceFundingOrderStatus::PayerAcknowledged,
+                    PayCodeIssuanceFundingOrderStatus::Underfunded,
+                    PayCodeIssuanceFundingOrderStatus::PaymentAmbiguous,
+                    PayCodeIssuanceFundingOrderStatus::IssuanceAttention,
+                ], true)) {
                 return $locked->refresh()->load(['fundingIntent', 'events']);
             }
 

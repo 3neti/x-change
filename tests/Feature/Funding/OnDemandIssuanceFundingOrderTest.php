@@ -24,6 +24,7 @@ use LBHurtado\XChange\Actions\Funding\ClaimFundingEvidence;
 use LBHurtado\XChange\Actions\Funding\ClassifyOnDemandIssuanceFundingMismatch;
 use LBHurtado\XChange\Actions\Funding\ExpireOnDemandIssuanceFundingOrder;
 use LBHurtado\XChange\Actions\Funding\OpenFundingSuspenseCase;
+use LBHurtado\XChange\Actions\Funding\PrepareOnDemandPayCodeIssuance;
 use LBHurtado\XChange\Actions\Funding\RequestFundingReconciliation;
 use LBHurtado\XChange\Actions\Funding\ReserveOnDemandIssuanceAmountLease;
 use LBHurtado\XChange\Actions\Funding\ReverseSettledFundingIntent;
@@ -45,6 +46,7 @@ use LBHurtado\XChange\Enums\FundingVerificationTrigger;
 use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Exceptions\FundingEvidenceAlreadyClaimed;
+use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingIntentJob;
 use LBHurtado\XChange\Models\FundingEvidenceClaim;
@@ -99,6 +101,26 @@ it('calculates full amount and shortfall funding from the authoritative balance'
         ->and($shortfall->requiredAmountMinor)->toBe(5_000)
         ->and($shortfall->reservedClientFundsMinor)->toBe(3_000)
         ->and($shortfall->externalAmountMinor)->toBe(2_000);
+});
+
+it('blocks a charged on-demand order before presenting payment instructions when charging is unauthorized', function (): void {
+    config()->set('x-change.deployment.runtime_tier', 'production');
+    config()->set('x-change.commercial.beta_customer_charging_exception.enabled', false);
+    $user = actingAsTestUser(0);
+
+    expect(fn () => app(PrepareOnDemandPayCodeIssuance::class)->handle(
+        issuer: $user,
+        instructions: [],
+        pricing: new PricingEstimateData(
+            currency: 'PHP',
+            pay_code_value: 37,
+            account_debit: 52,
+            customer_charge_minor: 1_500,
+        ),
+        idempotencyKey: 'unauthorized-charged-order',
+    ))->toThrow(PayCodeIssuanceFailed::class);
+
+    expect(PayCodeIssuanceFundingOrder::query()->count())->toBe(0);
 });
 
 it('keeps bank transfer primary and fails fixed QR and Pay Code methods closed', function (): void {
@@ -1159,6 +1181,13 @@ it('resumes an expired issuance-attention order whose provider payment was alrea
         'attention_at' => now(),
         'expires_at' => now()->subMinute(),
     ])->saveQuietly();
+
+    $afterExpiryCheck = app(ExpireOnDemandIssuanceFundingOrder::class)->handle($order);
+    expect($afterExpiryCheck->status)->toBe(PayCodeIssuanceFundingOrderStatus::IssuanceAttention)
+        ->and($afterExpiryCheck->expired_at)->toBeNull()
+        ->and(TreasuryAllocation::query()
+            ->where('allocation_reference', $order->treasury_hold_reference)
+            ->sole()->balance_minor)->toBe(5_000);
 
     $voucher = Voucher::query()->create([
         'code' => 'ODIF-4242',

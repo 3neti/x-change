@@ -22,6 +22,7 @@ use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Exceptions\FundingIntentConflict;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
+use LBHurtado\XChange\Services\Commercial\CommercialCustomerChargingGuard;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingRequirement;
 use RuntimeException;
 use Throwable;
@@ -38,6 +39,7 @@ final readonly class PrepareOnDemandPayCodeIssuance
         private TreasuryHoldOperationContract $holds,
         private TransitionPayCodeIssuanceFundingOrder $transition,
         private ReserveOnDemandIssuanceAmountLease $amountLeases,
+        private CommercialCustomerChargingGuard $customerCharging,
     ) {}
 
     /**
@@ -100,6 +102,8 @@ final readonly class PrepareOnDemandPayCodeIssuance
 
             return $existing->load(['fundingIntent', 'events']);
         }
+
+        $this->customerCharging->ensureAuthorized($pricing->customer_charge_minor);
 
         $order = DB::transaction(function () use (
             $issuer,
