@@ -3818,6 +3818,80 @@ describe('Cockpit Quick Generate foundation', () => {
         vi.unstubAllGlobals();
     });
 
+    it('explains a paused public issuance page before submission', () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                publicMode: true,
+                templates: cockpitQuickGenerateTemplates,
+                mutationContract: {
+                    runtime_enabled: false,
+                    route: 'x-change.public-auto-generate.store',
+                    route_url: null,
+                    allowed_methods: ['GET', 'POST'],
+                },
+            },
+        });
+
+        expect(wrapper.get('[data-testid="cockpit-quick-generate-public-paused"]').text())
+            .toContain('New Pay Code orders are temporarily paused');
+        expect(wrapper.get('[data-testid="cockpit-quick-generate-submit-button"]').attributes('disabled'))
+            .toBeDefined();
+    });
+
+    it('explains a pause to a stale public tab and prevents another submission', async () => {
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: false,
+            json: vi.fn().mockResolvedValue({
+                success: false,
+                code: 'PUBLIC_ISSUANCE_PAUSED',
+                message: 'New Pay Code orders are temporarily paused. No payment was requested.',
+            }),
+        });
+
+        vi.stubGlobal('fetch', fetchMock);
+        vi.stubGlobal('crypto', {
+            randomUUID: () => 'public-issuance-paused',
+        });
+
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                publicMode: true,
+                templates: cockpitQuickGenerateTemplates,
+                draftContract: {
+                    template_key: 'money-changer',
+                    amount: '25',
+                    currency: 'PHP',
+                    recipient_reference: '',
+                    purpose: '',
+                },
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.public-auto-generate.store',
+                    route_url: '/x/auto-generate',
+                    allowed_methods: ['GET', 'POST'],
+                },
+            },
+        });
+
+        await wrapper.get('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
+        await flushPromises();
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(wrapper.get('[data-testid="cockpit-quick-generate-submission-errors"]').text())
+            .toContain('New orders are temporarily paused');
+        expect(wrapper.get('[data-testid="cockpit-quick-generate-submission-errors"]').text())
+            .toContain('No payment was requested');
+        expect(wrapper.get('[data-testid="cockpit-quick-generate-public-paused"]').exists())
+            .toBe(true);
+        expect(wrapper.get('[data-testid="cockpit-quick-generate-submit-button"]').attributes('disabled'))
+            .toBeDefined();
+
+        await wrapper.get('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+
+        vi.unstubAllGlobals();
+    });
+
     it('keeps one instruction hierarchy with a secondary engineering preview', () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {

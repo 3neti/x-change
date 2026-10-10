@@ -105,7 +105,14 @@ it('can be disabled with the public issuance kill switch', function (): void {
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.runtime_enabled', false)
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.route_url', null);
 
-    $this->postJson(route('x-change.public-auto-generate.store'), [])->assertNotFound();
+    $this->postJson(route('x-change.public-auto-generate.store'), [])
+        ->assertServiceUnavailable()
+        ->assertJsonPath('code', 'PUBLIC_ISSUANCE_PAUSED')
+        ->assertJsonPath('message', 'New Pay Code orders are temporarily paused. No payment was requested.');
+
+    $this->post(route('x-change.public-auto-generate.store'), [])->assertNotFound();
+
+    expect(PayCodeIssuanceFundingOrder::query()->count())->toBe(0);
 });
 
 it('fails closed when the commissioned commercial principal is unavailable', function (): void {

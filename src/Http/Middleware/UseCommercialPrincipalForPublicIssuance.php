@@ -20,6 +20,14 @@ final readonly class UseCommercialPrincipalForPublicIssuance
         $enabled = (bool) config('x-change.public_auto_generate.enabled', true);
 
         if (! $enabled && $request->route()?->getName() === 'x-change.public-auto-generate.store') {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'code' => 'PUBLIC_ISSUANCE_PAUSED',
+                    'message' => 'New Pay Code orders are temporarily paused. No payment was requested.',
+                ], 503);
+            }
+
             abort(404);
         }
 

@@ -858,6 +858,7 @@ const activeSavedTemplate = ref<CockpitSavedPayCodeTemplate | null>(null);
 const applyingStartingPoint = ref(false);
 const submissionErrors = ref<Array<{ field: string; message: string }>>([]);
 const submissionErrorHeading = ref("Fix these fields before issuing");
+const publicIssuancePaused = ref(false);
 
 const collectionDestinationError = computed<string | null>(() => {
   return (
@@ -2149,6 +2150,7 @@ const canSubmit = computed<boolean>(() => {
 
   return (
     props.mutationContract?.runtime_enabled === true &&
+    !publicIssuancePaused.value &&
     routeUrl.value !== null &&
     (!props.turnstile?.enabled || turnstileToken.value !== "") &&
     allowedMethods.value.includes("POST") &&
@@ -4628,16 +4630,27 @@ async function submit(): Promise<void> {
       const normalizedErrors = normalizeSubmissionErrors(body);
       const issuanceIsBusy =
         stringValue(body.code) === "PAY_CODE_ISSUANCE_BUSY";
+      const issuanceIsPaused =
+        props.publicMode && stringValue(body.code) === "PUBLIC_ISSUANCE_PAUSED";
+
+      if (issuanceIsPaused) {
+        publicIssuancePaused.value = true;
+      }
 
       lastStatus.value = "failed";
-      lastMessage.value = issuanceIsBusy
-        ? "No Pay Code was issued or charged. Please try again."
-        : normalizedErrors.length > 0
-          ? "Your Pay Code needs a few corrections before it can be issued."
-          : (stringValue(body.message) ?? "The Pay Code could not be issued.");
-      submissionErrorHeading.value = issuanceIsBusy
-        ? "Issuance is temporarily busy"
-        : "Fix these fields before issuing";
+      if (issuanceIsPaused) {
+        lastMessage.value = "No payment was requested. Your Pay Code order was not created.";
+        submissionErrorHeading.value = "New orders are temporarily paused";
+      } else {
+        lastMessage.value = issuanceIsBusy
+          ? "No Pay Code was issued or charged. Please try again."
+          : normalizedErrors.length > 0
+            ? "Your Pay Code needs a few corrections before it can be issued."
+            : (stringValue(body.message) ?? "The Pay Code could not be issued.");
+        submissionErrorHeading.value = issuanceIsBusy
+          ? "Issuance is temporarily busy"
+          : "Fix these fields before issuing";
+      }
       submissionErrors.value =
         normalizedErrors.length > 0
           ? normalizedErrors
@@ -6342,6 +6355,14 @@ function instructionRecord(
                 :tooltip="amountFieldHelp"
               />
             </label>
+            <p
+              v-if="publicMode && (mutationContract?.runtime_enabled !== true || publicIssuancePaused)"
+              class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-200"
+              data-testid="cockpit-quick-generate-public-paused"
+              role="status"
+            >
+              New Pay Code orders are temporarily paused. No payment is needed.
+            </p>
             <div
               class="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-start justify-start gap-x-2 gap-y-1.5 sm:grid-cols-[minmax(0,18rem)_minmax(0,18rem)]"
               data-testid="cockpit-quick-generate-amount-action-row"
