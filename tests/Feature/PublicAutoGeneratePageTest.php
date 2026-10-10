@@ -7,6 +7,8 @@ use Illuminate\Session\ArraySessionHandler;
 use Illuminate\Session\Store;
 use Illuminate\Support\Facades\URL;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Actions\Funding\TransitionPayCodeIssuanceFundingOrder;
+use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitOnDemandIssuanceFundingOrderController;
 use LBHurtado\XChange\Models\CommercialPrincipal;
@@ -14,6 +16,7 @@ use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Commercial\ConfiguredCommercialPrincipalResolver;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceOrderAccess;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 beforeEach(function (): void {
@@ -138,6 +141,18 @@ it('binds public funding orders to both a browser session and possession token',
 
     expect(fn () => $access->authorize($order->refresh(), $request))
         ->toThrow(NotFoundHttpException::class);
+});
+
+it('refuses an issuance retry without the order possession token', function (): void {
+    provisionPublicAutoGeneratePrincipal();
+    $order = makePublicAutoGenerateFundingOrder();
+
+    $this->postJson(route('x-change.public-auto-generate.funding-orders.retry-issuance', [
+        'order' => $order->reference,
+    ]))->assertNotFound();
+
+    expect($order->refresh()->events()->where('event_type', 'manual_issuance_retry_requested')->exists())
+        ->toBeFalse();
 });
 
 it('authorizes funding-order access for the non-login commercial principal', function (): void {
@@ -354,6 +369,45 @@ it('renders a signed redacted public issuance receipt', function (): void {
         ->assertJsonPath('props.receipt.order_reference', $order->reference)
         ->assertJsonPath('props.receipt.redactions.payer_identity', true)
         ->assertJsonMissingPath('props.receipt.provider_transaction_id');
+});
+
+it('does not offer cancellation once a public order is funded or needs issuance recovery', function (): void {
+    $principal = provisionPublicAutoGeneratePrincipal();
+    $order = makePublicAutoGenerateFundingOrder((string) $principal->getKey());
+    $order->forceFill([
+        'status' => 'issuance_attention',
+        'funded_at' => now(),
+    ])->saveQuietly();
+
+    $projection = app(OnDemandIssuanceFundingOrderPresenter::class)->present($order->refresh(), null, true);
+
+    expect(data_get($projection, 'order.can_cancel'))->toBeFalse();
+
+    $request = Request::create('/x/auto-generate/funding-orders/'.$order->reference, 'DELETE');
+    $request->setUserResolver(static fn () => $principal);
+
+    expect(fn () => app()->call([
+        app(CockpitOnDemandIssuanceFundingOrderController::class),
+        'cancel',
+    ], ['request' => $request, 'order' => $order]))->toThrow(ConflictHttpException::class)
+        ->and($order->refresh()->status->value)->toBe('issuance_attention');
+
+    expect(fn () => app(TransitionPayCodeIssuanceFundingOrder::class)->handle(
+        order: $order,
+        status: PayCodeIssuanceFundingOrderStatus::Cancelled,
+        eventType: 'cancelled',
+        actorType: 'test',
+        actorId: 'test',
+    ))->toThrow(RuntimeException::class, 'governed recovery or refund');
+});
+
+it('keeps prepayment instruction failures cancellable', function (): void {
+    $order = makePublicAutoGenerateFundingOrder();
+    $order->forceFill(['status' => 'issuance_attention'])->saveQuietly();
+
+    $projection = app(OnDemandIssuanceFundingOrderPresenter::class)->present($order->refresh(), null, true);
+
+    expect(data_get($projection, 'order.can_cancel'))->toBeTrue();
 });
 
 function makePublicAutoGenerateFundingOrder(string $issuerId = '1'): PayCodeIssuanceFundingOrder

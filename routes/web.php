@@ -231,6 +231,9 @@ Route::prefix('x/auto-generate')->middleware([
             Route::post('verification', [CockpitOnDemandIssuanceFundingOrderController::class, 'verifyAutomatically'])
                 ->middleware('throttle:15,1,public-auto-generate-monitor:')
                 ->name('x-change.public-auto-generate.funding-orders.verification');
+            Route::post('retry-issuance', [CockpitOnDemandIssuanceFundingOrderController::class, 'retryIssuance'])
+                ->middleware('throttle:6,1,public-auto-generate-retry:')
+                ->name('x-change.public-auto-generate.funding-orders.retry-issuance');
             Route::delete('/', [CockpitOnDemandIssuanceFundingOrderController::class, 'cancel'])
                 ->middleware('throttle:6,1,public-auto-generate-cancel:')
                 ->name('x-change.public-auto-generate.funding-orders.cancel');
@@ -734,6 +737,11 @@ Route::prefix('x')->middleware([
             [CockpitOnDemandIssuanceFundingOrderController::class, 'verifyAutomatically'],
         )->middleware('throttle:15,1,quick-generate-funding-order-monitor:')
             ->name('x-change.cockpit.quick-generate.funding-orders.verification');
+        Route::post(
+            'quick-generate/funding-orders/{order:reference}/retry-issuance',
+            [CockpitOnDemandIssuanceFundingOrderController::class, 'retryIssuance'],
+        )->middleware('throttle:6,1,quick-generate-funding-order-retry:')
+            ->name('x-change.cockpit.quick-generate.funding-orders.retry-issuance');
         Route::delete(
             'quick-generate/funding-orders/{order:reference}',
             [CockpitOnDemandIssuanceFundingOrderController::class, 'cancel'],

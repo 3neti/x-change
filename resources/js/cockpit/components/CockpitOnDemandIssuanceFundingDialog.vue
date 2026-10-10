@@ -32,6 +32,8 @@ const current = ref<CockpitOnDemandIssuanceFundingProjection | null>(
 const selectedMode = ref<CockpitPrimaryFundingWorkspaceMode>("bank_transfer");
 const checking = ref(false);
 const monitoring = ref(false);
+const refreshing = ref(false);
+const retrying = ref(false);
 const cancelling = ref(false);
 const error = ref<string | null>(null);
 const monitorMessage = ref<string | null>(null);
@@ -183,12 +185,13 @@ function schedulePoll(): void {
 }
 
 async function refresh(): Promise<void> {
-  if (current.value === null || checking.value) {
+  if (current.value === null || checking.value || refreshing.value) {
     schedulePoll();
 
     return;
   }
 
+  refreshing.value = true;
   try {
     const response = await fetch(current.value.actions.show, {
       credentials: "same-origin",
@@ -217,14 +220,58 @@ async function refresh(): Promise<void> {
         await requestVerification(true);
       }
     } else {
-      monitorMessage.value =
-        "Automatic checking will retry shortly. You do not need to pay again.";
+      error.value =
+        "Status could not be refreshed. Try again shortly. Do not pay again.";
     }
   } catch {
-    monitorMessage.value =
-      "Automatic checking will retry shortly. You do not need to pay again.";
+    error.value =
+      "Status could not be refreshed. Try again shortly. Do not pay again.";
   } finally {
+    refreshing.value = false;
     schedulePoll();
+  }
+}
+
+async function retryIssuance(): Promise<void> {
+  if (
+    current.value === null ||
+    !current.value.retry.eligible ||
+    retrying.value
+  ) {
+    return;
+  }
+
+  retrying.value = true;
+  error.value = null;
+
+  try {
+    const response = await fetch(current.value.actions.retry_issuance, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+        ...csrfHeader(),
+        ...guestAccessHeader(),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        "Retry is unavailable. Refresh the order status or contact support. Do not pay again.",
+      );
+    }
+
+    current.value =
+      (await response.json()) as CockpitOnDemandIssuanceFundingProjection;
+    monitorMessage.value = "Issuance retry requested. Do not pay again.";
+  } catch (exception) {
+    error.value =
+      exception instanceof Error
+        ? exception.message
+        : "Retry could not be requested.";
+  } finally {
+    retrying.value = false;
   }
 }
 
@@ -541,8 +588,9 @@ function text(value: unknown): string | null {
         >
           <p class="font-bold">Your payment is protected</p>
           <p class="mt-1 leading-6">
-            No Pay Code was issued. An operator can retry issuance after the
-            blocker is resolved. Do not pay again.
+            No Pay Code was issued. You can request a retry when it is
+            available; otherwise an operator will review this order. Do not pay
+            again.
           </p>
         </div>
 
@@ -659,6 +707,67 @@ function text(value: unknown): string | null {
           v-if="current.status !== 'issued'"
           class="mt-6 grid gap-3 sm:grid-cols-[1fr_auto]"
         >
+          <button
+            v-if="
+              ['funded', 'issuing', 'issuance_attention'].includes(
+                current.status,
+              )
+            "
+            type="button"
+            class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200"
+            :disabled="refreshing"
+            data-testid="on-demand-status-refresh"
+            @click="refresh"
+          >
+            <LoaderCircle
+              v-if="refreshing"
+              class="size-4 animate-spin"
+              aria-hidden="true"
+            />
+            <RefreshCw v-else class="size-4" aria-hidden="true" />
+            Refresh status
+          </button>
+          <button
+            v-if="needsAttention && current.retry.eligible"
+            type="button"
+            class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+            :disabled="retrying"
+            data-testid="on-demand-issuance-retry"
+            @click="retryIssuance"
+          >
+            <LoaderCircle
+              v-if="retrying"
+              class="size-4 animate-spin"
+              aria-hidden="true"
+            />
+            Try issuing again
+          </button>
+          <p
+            v-if="needsAttention && current.retry.pending"
+            class="text-sm text-slate-600 dark:text-slate-300"
+          >
+            Retry requested. Refresh status shortly. Do not pay again.
+          </p>
+          <p
+            v-else-if="needsAttention && current.retry.attempts_remaining === 0"
+            class="text-sm text-slate-600 dark:text-slate-300"
+          >
+            This order needs operator review. Do not pay again.
+          </p>
+          <p
+            v-else-if="
+              needsAttention &&
+              current.retry.next_available_at &&
+              !current.retry.eligible
+            "
+            class="text-sm text-slate-600 dark:text-slate-300"
+          >
+            You can refresh status after
+            {{
+              new Date(current.retry.next_available_at).toLocaleTimeString()
+            }}
+            to check whether another retry is available.
+          </p>
           <button
             v-if="paymentOpen && !needsAttention"
             type="button"

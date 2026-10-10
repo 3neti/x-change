@@ -36,6 +36,11 @@ final class TransitionPayCodeIssuanceFundingOrder
             $locked = PayCodeIssuanceFundingOrder::query()
                 ->lockForUpdate()
                 ->findOrFail($order->getKey());
+
+            if ($status === PayCodeIssuanceFundingOrderStatus::Cancelled && $locked->funded_at !== null) {
+                throw new RuntimeException('A funded issuance order requires governed recovery or refund.');
+            }
+
             $allowed = $this->allowed($locked->status);
 
             if (! in_array($status, $allowed, true)) {
@@ -107,6 +112,7 @@ final class TransitionPayCodeIssuanceFundingOrder
                 PayCodeIssuanceFundingOrderStatus::Expired,
             ],
             PayCodeIssuanceFundingOrderStatus::IssuanceAttention => [
+                PayCodeIssuanceFundingOrderStatus::IssuanceAttention,
                 PayCodeIssuanceFundingOrderStatus::Issuing,
                 PayCodeIssuanceFundingOrderStatus::Cancelled,
                 PayCodeIssuanceFundingOrderStatus::Expired,

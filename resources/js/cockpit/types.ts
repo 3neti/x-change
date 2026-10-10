@@ -913,7 +913,14 @@ export type CockpitOnDemandIssuanceFundingProjection = {
     show: string;
     acknowledge: string;
     verify: string;
+    retry_issuance: string;
     cancel: string;
+  };
+  retry: {
+    eligible: boolean;
+    pending: boolean;
+    attempts_remaining: number;
+    next_available_at: string | null;
   };
   monitor: {
     enabled: boolean;

@@ -123,6 +123,7 @@ use LBHurtado\XChange\Console\Commands\Funding\ApproveFundingRequestCommand;
 use LBHurtado\XChange\Console\Commands\Funding\ApproveStandingFundingAddressBindingMigrationCommand;
 use LBHurtado\XChange\Console\Commands\Funding\AttestAccountFundingPayCodeJournalIntegrityCommand;
 use LBHurtado\XChange\Console\Commands\Funding\BackfillAccountFundingPayCodeJournalCommand;
+use LBHurtado\XChange\Console\Commands\Funding\DispatchPendingOnDemandIssuanceRetriesCommand;
 use LBHurtado\XChange\Console\Commands\Funding\DrainStandingFundingRuntimeCommand;
 use LBHurtado\XChange\Console\Commands\Funding\ExpireOnDemandIssuanceFundingOrdersCommand;
 use LBHurtado\XChange\Console\Commands\Funding\IssueSystemAccountFundingPayCodeCommand;
@@ -1701,6 +1702,13 @@ class XChangeServiceProvider extends ServiceProvider
         $this->bootCommercialSettlementRateLimiter();
         $this->bootPartnerApiRateLimiter();
         $this->bootFundingVerificationSchedule();
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            $schedule
+                ->command('xchange:funding:dispatch-issuance-retries --limit=100')
+                ->everyMinute()
+                ->onOneServer()
+                ->withoutOverlapping(5);
+        });
         if (config('x-change.partner_api.payment_events.enabled', false)) {
             $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
                 $schedule->command('x-change:partner-payment-events:deliver --limit=20')->everyMinute()->withoutOverlapping(5);
@@ -1748,6 +1756,7 @@ class XChangeServiceProvider extends ServiceProvider
                 RepairStandingFundingAddressBindingEffectiveAtCommand::class,
                 BackfillAccountFundingPayCodeJournalCommand::class,
                 ExpireOnDemandIssuanceFundingOrdersCommand::class,
+                DispatchPendingOnDemandIssuanceRetriesCommand::class,
                 IssueSystemAccountFundingPayCodeCommand::class,
                 MigrateStandingFundingAddressBindingCommand::class,
                 VerifyFundingRequestBackingCommand::class,

@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Services\Cockpit;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Actions\Funding\RequestOnDemandPayCodeIssuanceRetry;
 use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
@@ -21,6 +22,7 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
         private FundingMethodSelectorCockpitReadModel $selectors,
         private QrArtifactFactory $qrArtifacts,
         private ClaimShareCardUrlResolverContract $shareCardUrls,
+        private RequestOnDemandPayCodeIssuanceRetry $retry,
     ) {}
 
     /**
@@ -58,6 +60,7 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
                 'show' => route('x-change.public-auto-generate.funding-orders.show', ['order' => $order->reference], false),
                 'acknowledge' => route('x-change.public-auto-generate.funding-orders.acknowledge', ['order' => $order->reference], false),
                 'verify' => route('x-change.public-auto-generate.funding-orders.verification', ['order' => $order->reference], false),
+                'retry_issuance' => route('x-change.public-auto-generate.funding-orders.retry-issuance', ['order' => $order->reference], false),
                 'cancel' => route('x-change.public-auto-generate.funding-orders.cancel', ['order' => $order->reference], false),
             ] : [
                 'show' => route(
@@ -72,6 +75,11 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
                 ),
                 'verify' => route(
                     'x-change.cockpit.quick-generate.funding-orders.verification',
+                    ['order' => $order->reference],
+                    false,
+                ),
+                'retry_issuance' => route(
+                    'x-change.cockpit.quick-generate.funding-orders.retry-issuance',
                     ['order' => $order->reference],
                     false,
                 ),
@@ -95,10 +103,9 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
                 'can_cancel' => in_array($order->status->value, [
                     'awaiting_payment',
                     'payer_acknowledged',
-                ], true) || (
-                    $order->status === PayCodeIssuanceFundingOrderStatus::IssuanceAttention
-                    && data_get($order->metadata, 'provider_reversal') === null
-                ),
+                    'issuance_attention',
+                ], true) && $order->funded_at === null
+                    && data_get($order->metadata, 'provider_reversal') === null,
                 'late_payment_disposition' => $order->late_payment_disposition,
                 'late_payment_detected_at' => $order->late_payment_detected_at?->toIso8601String(),
                 'voucher' => ! $order->voucher instanceof Voucher
@@ -107,6 +114,7 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
                 'receipt' => $this->receipt($order),
             ],
             'monitor' => $this->monitor($order),
+            'retry' => $this->retry->availability($order),
             'funding_selector' => $this->selectors->forOnDemandIssuance(
                 orderReference: $order->reference,
                 amountMinor: $order->expected_payment_minor,

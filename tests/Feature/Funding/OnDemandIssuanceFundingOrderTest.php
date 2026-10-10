@@ -26,6 +26,7 @@ use LBHurtado\XChange\Actions\Funding\ExpireOnDemandIssuanceFundingOrder;
 use LBHurtado\XChange\Actions\Funding\OpenFundingSuspenseCase;
 use LBHurtado\XChange\Actions\Funding\PrepareOnDemandPayCodeIssuance;
 use LBHurtado\XChange\Actions\Funding\RequestFundingReconciliation;
+use LBHurtado\XChange\Actions\Funding\RequestOnDemandPayCodeIssuanceRetry;
 use LBHurtado\XChange\Actions\Funding\ReserveOnDemandIssuanceAmountLease;
 use LBHurtado\XChange\Actions\Funding\ReverseSettledFundingIntent;
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
@@ -64,6 +65,11 @@ use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingRequirement;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 use LBHurtado\XChange\Tests\Fakes\User;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
+
+beforeEach(function (): void {
+    config()->set('x-change.legal.eula.enabled', false);
+});
 
 it('is disabled by default and validates the configured application-wide basis', function (): void {
     $policy = app(OnDemandIssuanceFundingPolicy::class);
@@ -1140,6 +1146,70 @@ it('does not use corporate account fallback outside on-demand issuance', functio
         ->and($adapter->fundingVerifications)->toHaveCount(1)
         ->and($adapter->fundingVerifications[0]->fundingAddress)
         ->toBe('915008422914050308952');
+});
+
+it('admits one durable payer retry after terminal issuance failure and enforces the retry budget', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->sole();
+    $observation = onDemandFundingObservation(5_000);
+    $intent = onDemandFundingIntent($wallet->uuid, $observation, 5_000);
+    $order = app(ReserveOnDemandIssuanceAmountLease::class)->handle(issuanceFundingOrder($user));
+    $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();
+    app(SettleVerifiedFundingIntent::class)->handle($intent);
+    $order->refresh();
+    $job = new ResumeOnDemandPayCodeIssuanceJob($order->getKey());
+
+    $order->refresh()->forceFill(['metadata' => ['provider_reversal' => ['detected' => true]]])->saveQuietly();
+    expect(fn () => app()->call([$job, 'handle']))->toThrow(RuntimeException::class, 'provider reversal');
+    expect($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::Funded);
+    $order->forceFill(['metadata' => []])->saveQuietly();
+    $job->failed(new RuntimeException('Automatic issuance attempts exhausted'));
+    expect($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::IssuanceAttention);
+    $retry = app(RequestOnDemandPayCodeIssuanceRetry::class);
+    $hold = TreasuryAllocation::query()
+        ->where('allocation_reference', $order->treasury_hold_reference)
+        ->sole();
+    $hold->update(['balance_minor' => 0]);
+    expect($retry->availability($order->refresh())['eligible'])->toBeFalse();
+    $hold->update(['balance_minor' => $order->required_amount_minor]);
+
+    $blockedMetadata = (array) $order->metadata;
+    $blockedMetadata['provider_reversal'] = ['detected' => true];
+    $order->forceFill(['metadata' => $blockedMetadata])->saveQuietly();
+    expect($retry->availability($order->refresh())['eligible'])->toBeFalse();
+    $order->forceFill(['metadata' => []])->saveQuietly();
+
+    $first = $retry->handle($order, 'public-issuance-guest', 'session-1');
+
+    expect($retry->availability($first)['eligible'])->toBeFalse()
+        ->and($retry->availability($first)['pending'])->toBeTrue()
+        ->and(data_get($first->metadata, 'issuance_retry.count'))->toBe(1)
+        ->and($first->events()->where('event_type', 'manual_issuance_retry_requested')->count())->toBe(1);
+
+    expect(fn () => $retry->handle($first, 'public-issuance-guest', 'session-1'))
+        ->toThrow(ConflictHttpException::class);
+
+    $this->artisan('xchange:funding:dispatch-issuance-retries')->assertSuccessful();
+    Queue::assertPushed(ResumeOnDemandPayCodeIssuanceJob::class);
+
+    $job->failed(new RuntimeException('Temporary issuance failure'));
+    $afterFailure = $order->refresh();
+    expect(data_get($afterFailure->metadata, 'issuance_retry.pending'))->toBeFalse()
+        ->and($afterFailure->status)->toBe(PayCodeIssuanceFundingOrderStatus::IssuanceAttention)
+        ->and($retry->availability($afterFailure)['eligible'])->toBeFalse();
+
+    $this->travel(61)->seconds();
+    $second = $retry->handle($afterFailure, 'public-issuance-guest', 'session-1');
+    expect(data_get($second->metadata, 'issuance_retry.count'))->toBe(2)
+        ->and($retry->availability($second)['attempts_remaining'])->toBe(0);
+
+    $job->failed(new RuntimeException('Persistent issuance failure'));
+    expect($retry->availability($order->refresh())['eligible'])->toBeFalse();
+    $this->travel(61)->seconds();
+    expect(fn () => $retry->handle($order->refresh(), 'public-issuance-guest', 'session-1'))
+        ->toThrow(ConflictHttpException::class);
 });
 
 it('resumes an expired issuance-attention order whose provider payment was already held', function (): void {
