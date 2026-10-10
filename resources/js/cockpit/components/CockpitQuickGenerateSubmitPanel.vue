@@ -6361,7 +6361,7 @@ function instructionRecord(
               data-testid="cockpit-quick-generate-public-paused"
               role="status"
             >
-              New Pay Code orders are temporarily paused. No payment is needed.
+              New Pay Code orders are temporarily paused.
             </p>
             <div
               class="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-start justify-start gap-x-2 gap-y-1.5 sm:grid-cols-[minmax(0,18rem)_minmax(0,18rem)]"

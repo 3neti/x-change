@@ -3833,7 +3833,7 @@ describe('Cockpit Quick Generate foundation', () => {
         });
 
         expect(wrapper.get('[data-testid="cockpit-quick-generate-public-paused"]').text())
-            .toContain('New Pay Code orders are temporarily paused');
+            .toBe('New Pay Code orders are temporarily paused.');
         expect(wrapper.get('[data-testid="cockpit-quick-generate-submit-button"]').attributes('disabled'))
             .toBeDefined();
     });
