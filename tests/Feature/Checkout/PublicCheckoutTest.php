@@ -11,9 +11,11 @@ use LBHurtado\EmiCore\Data\Funding\ProviderPayerIdentityData;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\PaymentGateway\Funding\NetbankFundingProviderAdapter;
 use LBHurtado\PaymentGateway\Funding\NetbankIncomingPaymentData;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Payment\RunSettledPaymentPipeline;
 use LBHurtado\XChange\Jobs\Feedback\DeliverQueuedFeedbackSmsJob;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
+use LBHurtado\XChange\Jobs\Payment\QueueIssuedPayCodeSmsJob;
 use LBHurtado\XChange\Models\Checkout;
 use LBHurtado\XChange\Models\CheckoutRefundCase;
 use LBHurtado\XChange\Models\CheckoutViewerLink;
@@ -249,9 +251,30 @@ it('recovers a missing QR payer Contact only from the same settled provider tran
 
     app(RunSettledPaymentPipeline::class)->handle($process->getKey());
 
+    expect($process->fresh()->sms_status)->toBe('awaiting_pay_code')
+        ->and(FeedbackDeliveryRecord::query()->where('intent_key', 'payment.settled')->count())->toBe(0);
+
+    $voucher = Voucher::query()->create(['code' => 'READY-123']);
+    $order->forceFill([
+        'status' => 'issued',
+        'voucher_id' => $voucher->getKey(),
+        'issued_at' => now(),
+    ])->saveQuietly();
+    $issuedSms = new QueueIssuedPayCodeSmsJob($order->getKey());
+    $checkout->forceFill(['selected_method' => 'bank_transfer'])->save();
+    app()->call([$issuedSms, 'handle']);
+    expect($process->fresh()->sms_status)->toBe('skipped')
+        ->and(FeedbackDeliveryRecord::query()->count())->toBe(0);
+
+    $checkout->forceFill(['selected_method' => 'qr_ph'])->save();
+    app()->call([$issuedSms, 'handle']);
+    app()->call([$issuedSms, 'handle']);
+
     expect($process->fresh()->sms_status)->toBe('queued')
         ->and(FeedbackDeliveryRecord::query()->where('intent_key', 'payment.settled')->count())->toBe(1);
     Queue::assertPushed(DeliverQueuedFeedbackSmsJob::class, 1);
+    Queue::assertPushed(DeliverQueuedFeedbackSmsJob::class, fn (DeliverQueuedFeedbackSmsJob $job): bool => str_contains($job->message, '₱25.00 Pay Code READY-123')
+        && str_contains($job->message, '/x/claim/READY-123'));
 });
 
 it('requires a separate owner password and does not treat a commercial principal as a console actor', function (): void {

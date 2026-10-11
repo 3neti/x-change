@@ -2426,7 +2426,7 @@ it('keeps campaign payment SMS off by default after the completion link is ready
     Queue::assertNotPushed(DeliverQueuedFeedbackSmsJob::class);
 });
 
-it('queues a generic settled payment SMS only for a wallet source account', function (): void {
+it('queues a top-up payment SMS only for a wallet source account', function (): void {
     Queue::fake();
     [$recognition] = auiRecognizedPaymentForContinuation([
         'payer_institution_ciphertext' => 'PAPHPHM1XXX',
@@ -2446,7 +2446,7 @@ it('queues a generic settled payment SMS only for a wallet source account', func
     expect($process->fresh()->contact_id)->not->toBeNull()
         ->and(FeedbackDeliveryRecord::query()->where('intent_key', 'payment.settled')->count())->toBe(1);
     Queue::assertPushed(DeliverQueuedFeedbackSmsJob::class,
-        fn ($sms): bool => str_contains($sms->message, 'You paid ₱50.00'));
+        fn ($sms): bool => str_contains($sms->message, 'Top-up payment of ₱50.00 received.'));
 });
 
 it('does not route completion SMS to unsupported or invalid source accounts', function (string $institution, string $account): void {

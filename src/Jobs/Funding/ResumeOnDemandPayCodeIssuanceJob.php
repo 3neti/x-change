@@ -20,6 +20,7 @@ use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
+use LBHurtado\XChange\Jobs\Payment\QueueIssuedPayCodeSmsJob;
 use LBHurtado\XChange\Models\Checkout;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
@@ -180,6 +181,11 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
             );
             Checkout::query()->where('funding_order_id', $order->getKey())
                 ->update(['status' => 'issued', 'updated_at' => now()]);
+            if (data_get($order->metadata, 'source') === 'public.auto-generate') {
+                DB::afterCommit(static function () use ($order): void {
+                    QueueIssuedPayCodeSmsJob::dispatch($order->getKey());
+                });
+            }
         }, attempts: 5);
     }
 

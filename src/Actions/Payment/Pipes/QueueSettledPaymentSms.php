@@ -8,8 +8,10 @@ use Closure;
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\XChange\Actions\Feedback\DeliverAndJournalFeedback;
+use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Models\Checkout;
 use LBHurtado\XChange\Models\FundingSettlement;
+use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Models\SettledPaymentProcess;
 use LBHurtado\XChange\Services\Settlement\CampaignWalletPayerMobile;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
@@ -43,18 +45,26 @@ final readonly class QueueSettledPaymentSms
             return $next($process);
         }
 
-        $observation = ProviderFundingObservation::query()->findOrFail($process->observation_id);
-        if ($this->walletPayerMobile->fromObservation($observation) === null
-            && ! $this->hasReconciledProviderPayer($process)) {
-            $process->forceFill(['sms_status' => 'skipped'])->save();
+        $order = $this->publicIssuanceOrder($process);
+        if ($process->flow === 'public_auto_generate'
+            && ($order === null || $order->status !== PayCodeIssuanceFundingOrderStatus::Issued)) {
+            $process->forceFill(['sms_status' => 'awaiting_pay_code'])->save();
 
             return $next($process);
         }
 
+        if (in_array($process->sms_status, ['queued', 'sent', 'delivered'], true)) {
+            return $next($process);
+        }
+
+        $observation = ProviderFundingObservation::query()->findOrFail($process->observation_id);
         $contact = Contact::query()->findOrFail($process->contact_id);
         $mobile = MobileNumber::normalize((string) $contact->mobile);
 
-        if ($mobile === null) {
+        if ($mobile === null
+            || ($process->flow === 'public_auto_generate'
+                ? ! $this->hasTrustedPublicQrPayer($process, $observation, $mobile)
+                : $this->walletPayerMobile->fromObservation($observation) === null)) {
             $process->forceFill(['sms_status' => 'skipped'])->save();
 
             return $next($process);
@@ -66,8 +76,17 @@ final readonly class QueueSettledPaymentSms
                 key: 'payment.settled',
                 eventType: 'payment.settled',
                 message: new FeedbackMessageData(
-                    title: 'Payment received',
-                    body: $this->content->generic((int) $process->gross_amount_minor),
+                    title: $order === null ? 'Payment received' : 'Pay Code ready',
+                    body: $order === null
+                        ? ($process->flow === 'top_up'
+                            ? $this->content->topUp((int) $process->gross_amount_minor)
+                            : $this->content->generic((int) $process->gross_amount_minor))
+                        : $this->content->payCodeIssued(
+                            (int) $process->gross_amount_minor,
+                            (int) round((float) data_get($order->instructions_ciphertext, 'cash.amount') * 100),
+                            (string) $order->voucher->code,
+                            route('x-change.claim.show', ['code' => $order->voucher->code]),
+                        ),
                 ),
                 recipients: [new FeedbackRecipientData(type: 'payment_payer', id: (string) $process->getKey(), phone: $mobile)],
                 channels: [new FeedbackChannelData(key: 'sms')],
@@ -86,9 +105,12 @@ final readonly class QueueSettledPaymentSms
         return $next($process);
     }
 
-    private function hasReconciledProviderPayer(SettledPaymentProcess $process): bool
-    {
-        if ($process->flow !== 'public_auto_generate' || $process->payment_type !== 'funding_settlement') {
+    private function hasTrustedPublicQrPayer(
+        SettledPaymentProcess $process,
+        ProviderFundingObservation $observation,
+        string $mobile,
+    ): bool {
+        if ($process->payment_type !== 'funding_settlement') {
             return false;
         }
 
@@ -97,10 +119,27 @@ final readonly class QueueSettledPaymentSms
             ->whereHas('fundingOrder', fn ($query) => $query->where('funding_intent_id', $settlement->funding_intent_id))
             ->first();
 
+        $providerMobile = $this->walletPayerMobile->fromObservation($observation);
+
         return $checkout !== null
             && $checkout->selected_method === 'qr_ph'
             && (int) $checkout->contact_id === (int) $process->contact_id
             && in_array($checkout->contact_source, ['provider_reported', 'provider_verified'], true)
-            && $checkout->events()->where('event_type', 'contact_association_reconciled')->exists();
+            && ($checkout->events()->where('event_type', 'contact_association_reconciled')->exists()
+                || ($providerMobile !== null && MobileNumber::normalize($providerMobile) === $mobile));
+    }
+
+    private function publicIssuanceOrder(SettledPaymentProcess $process): ?PayCodeIssuanceFundingOrder
+    {
+        if ($process->flow !== 'public_auto_generate' || $process->payment_type !== 'funding_settlement') {
+            return null;
+        }
+
+        $settlement = FundingSettlement::query()->find($process->payment_id);
+
+        return $settlement === null ? null : PayCodeIssuanceFundingOrder::query()
+            ->with('voucher')
+            ->where('funding_intent_id', $settlement->funding_intent_id)
+            ->first();
     }
 }
