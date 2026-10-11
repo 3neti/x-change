@@ -51,7 +51,7 @@ final readonly class PrepareOnDemandPayCodeIssuance
         PricingEstimateData $pricing,
         string $idempotencyKey,
         ?OnDemandIssuanceFundingBasis $fundingBasis = null,
-        bool $requirePayerIdentityMatch = true,
+        bool $requirePayerIdentityMatch = false,
     ): PayCodeIssuanceFundingOrder {
         $requirement = $fundingBasis === null
             ? $this->requirements->for($issuer, $pricing)

@@ -171,7 +171,6 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                     fundingBasis: $publicAutoGenerate
                         ? OnDemandIssuanceFundingBasis::FullAmount
                         : null,
-                    requirePayerIdentityMatch: ! $publicAutoGenerate,
                 );
 
                 if ($publicAutoGenerate) {

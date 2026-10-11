@@ -86,6 +86,63 @@ it('is disabled by default and validates the configured application-wide basis',
         ->and($policy->basis())->toBe(OnDemandIssuanceFundingBasis::Shortfall);
 });
 
+it('does not require the issuer mobile for an externally paid on-demand order', function (): void {
+    config()->set('x-change.funding.providers.netbank.enabled', true);
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    $issuer = actingAsTestUser(0);
+    $issuer->forceFill([
+        'mobile' => '639171234567',
+        'mobile_verified_at' => now(),
+    ])->save();
+    $adapter = new FakeFundingProviderAdapter;
+    $this->app->instance(FakeFundingProviderAdapter::class, $adapter);
+    $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
+    $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
+
+    $order = app(PrepareOnDemandPayCodeIssuance::class)->handle(
+        issuer: $issuer,
+        instructions: ['cash' => ['amount' => 50, 'currency' => 'PHP']],
+        pricing: new PricingEstimateData(
+            currency: 'PHP',
+            pay_code_value: 50,
+            account_debit: 50,
+        ),
+        idempotencyKey: 'external-payer-without-mobile',
+    );
+    $intent = $order->fundingIntent;
+
+    expect(data_get($intent->metadata, 'payer_identity_match_required'))->toBeFalse();
+
+    $adapter->fundingObservation = new ProviderFundingObservationData(
+        provider: 'netbank',
+        providerTransactionId: 'EXTERNAL-NO-MOBILE',
+        grossAmountMinor: $intent->expected_amount_minor,
+        feeAmountMinor: 0,
+        netAmountMinor: $intent->expected_amount_minor,
+        currency: 'PHP',
+        providerStatus: 'settled',
+        verificationSource: 'netbank-test',
+        payloadHash: hash('sha256', 'external-no-mobile'),
+        fundingAddress: 'sha256:'.hash('sha256', (string) $intent->funding_address_ciphertext),
+        providerAccountReference: 'sha256:'.hash('sha256', (string) $intent->funding_address_ciphertext),
+        occurredAt: now()->toDateTimeImmutable(),
+        settledAt: now()->toDateTimeImmutable(),
+        metadata: ['destination_verified' => true],
+    );
+
+    $verified = app(VerifyFundingIntent::class)->handle(
+        $intent,
+        new FundingIntentVerificationData(
+            trigger: FundingVerificationTrigger::Operator,
+            actorId: (string) $issuer->getKey(),
+        ),
+    );
+
+    expect($verified->status)->toBe(FundingIntentStatus::Verified)
+        ->and($verified->suspenseCases()->exists())->toBeFalse();
+});
+
 it('calculates full amount and shortfall funding from the authoritative balance', function (): void {
     $user = actingAsTestUser(3_000);
     $pricing = new PricingEstimateData(
