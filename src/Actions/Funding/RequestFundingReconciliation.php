@@ -43,9 +43,16 @@ class RequestFundingReconciliation
                 throw new InvalidArgumentException('The funding suspense case is not open for reconciliation.');
             }
 
-            if ($action === FundingReconciliationAction::RecoverPaidOnDemandIssuance
-                && ! $this->recovery->eligible($lockedCase)) {
-                throw new InvalidArgumentException('This payment is not eligible for Pay Code recovery.');
+            if ($action === FundingReconciliationAction::RecoverPaidOnDemandIssuance) {
+                if (! $this->recovery->eligible($lockedCase)) {
+                    throw new InvalidArgumentException('This payment is not eligible for Pay Code recovery.');
+                }
+
+                $order = $this->recovery->order($lockedCase);
+
+                if ($order?->issuer_type !== $actorType || (string) $order->issuer_id !== $actorId) {
+                    throw new InvalidArgumentException('Only the Pay Code issuer can recover this payment.');
+                }
             }
 
             $observationId = $providerObservationId ?? $lockedCase->provider_funding_observation_id;

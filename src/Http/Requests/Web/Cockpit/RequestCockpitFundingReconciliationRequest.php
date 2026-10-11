@@ -24,18 +24,17 @@ class RequestCockpitFundingReconciliationRequest extends FormRequest
             return false;
         }
 
-        if ($access->canManageTreasuryReconciliation($actor)) {
-            return true;
-        }
-
         $case = $this->route('case');
         $intent = $case instanceof FundingSuspenseCase ? $case->fundingIntent : null;
 
-        return $this->input('action') === FundingReconciliationAction::RecoverPaidOnDemandIssuance->value
-            && $intent !== null
-            && $intent->created_by_type === $actor::class
-            && (string) $intent->created_by_id === (string) $actor->getAuthIdentifier()
-            && $recovery->eligible($case);
+        if ($this->input('action') === FundingReconciliationAction::RecoverPaidOnDemandIssuance->value) {
+            return $intent !== null
+                && $intent->created_by_type === $actor::class
+                && (string) $intent->created_by_id === (string) $actor->getAuthIdentifier()
+                && $recovery->eligible($case);
+        }
+
+        return $access->canManageTreasuryReconciliation($actor);
     }
 
     protected function prepareForValidation(): void

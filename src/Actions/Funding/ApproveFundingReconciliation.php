@@ -53,13 +53,20 @@ class ApproveFundingReconciliation
                 throw new InvalidArgumentException('The reconciliation request is not pending approval.');
             }
 
-            if ($locked->requested_by_type === $actorType && $locked->requested_by_id === $actorId) {
-                throw new InvalidArgumentException('The reconciliation requester cannot approve their own request.');
-            }
-
             $case = FundingSuspenseCase::query()
                 ->lockForUpdate()
                 ->findOrFail($locked->funding_suspense_case_id);
+
+            if ($locked->action === FundingReconciliationAction::RecoverPaidOnDemandIssuance) {
+                $order = $this->issuanceRecovery->order($case);
+
+                if ($order?->issuer_type !== $actorType || (string) $order->issuer_id !== $actorId) {
+                    throw new InvalidArgumentException('Only the Pay Code issuer can recover this payment.');
+                }
+            } elseif ($locked->requested_by_type === $actorType && $locked->requested_by_id === $actorId) {
+                throw new InvalidArgumentException('The reconciliation requester cannot approve their own request.');
+            }
+
             $intent = $case->funding_intent_id === null
                 ? null
                 : FundingIntent::query()->lockForUpdate()->findOrFail($case->funding_intent_id);

@@ -9,6 +9,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use LBHurtado\XChange\Actions\Funding\ApproveFundingReconciliation;
+use LBHurtado\XChange\Enums\FundingReconciliationAction;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\ApproveCockpitFundingReconciliationRequest;
 use LBHurtado\XChange\Models\FundingReconciliationRequest;
 
@@ -35,6 +36,8 @@ class CockpitFundingReconciliationApprovalController extends Controller
 
         return redirect()
             ->route('x-change.cockpit.funding.index')
-            ->with('funding_notice', 'Reconciliation approved and executed.');
+            ->with('funding_notice', $reconciliationRequest->action === FundingReconciliationAction::RecoverPaidOnDemandIssuance
+                ? 'Payment recovered. Pay Code issuance is underway.'
+                : 'Reconciliation approved and executed.');
     }
 }

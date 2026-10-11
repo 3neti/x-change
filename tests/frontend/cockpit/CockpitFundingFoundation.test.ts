@@ -1079,11 +1079,43 @@ describe('Cockpit Funding foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Request Pay Code recovery');
+        expect(wrapper.text()).toContain('Recover paid Pay Code');
         expect(wrapper.text()).toContain('01M4MCB3HVBXP77T3TQMXW8PJF');
         expect(wrapper.text()).toContain('₱521.00');
         expect(wrapper.text()).toContain('Do not pay again.');
         expect(wrapper.text()).not.toContain('Approve and execute');
+    });
+
+    it('offers the issuer a way to finish a recovery request already awaiting approval', () => {
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: {
+                    ...fundingReadModel,
+                    suspense_cases: [{
+                        ...fundingReadModel.suspense_cases[0],
+                        reason: 'on_demand_issuance_provider_evidence_mismatch',
+                        order_reference: '01M4MCB3HVBXP77T3TQMXW8PJF',
+                        payment_minor: 52_100,
+                        currency: 'PHP',
+                        pending_approval: true,
+                        pending_action: 'recover_paid_on_demand_issuance',
+                        pending_request_reference: '01M4MMY4TEBG5JV8PGSNXVC8ET',
+                        allowed_actions: [],
+                    }],
+                    approval_queue: [],
+                    controls: {
+                        ...fundingReadModel.controls,
+                        can_manage_treasury_reconciliation: false,
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Complete Pay Code recovery');
+        expect(wrapper.text()).not.toContain('independent approval');
+        const completeRecovery = wrapper.findAll('button')
+            .find((button) => button.text().includes('Complete Pay Code recovery'));
+        expect(completeRecovery).toBeDefined();
     });
 
     it('explains when stale provider liquidity pauses issuance capacity', () => {

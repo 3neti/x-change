@@ -13,6 +13,7 @@ use LBHurtado\XChange\Actions\Funding\AssessPaidOnDemandIssuanceRecovery;
 use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitFundingReadModelData;
 use LBHurtado\XChange\Enums\AccountFundingReceiptStatus;
+use LBHurtado\XChange\Enums\FundingReconciliationAction;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\FundingAccountHold;
 use LBHurtado\XChange\Models\FundingDestinationPreference;
@@ -315,6 +316,8 @@ class FundingCockpitReadModelProvider
                     'opened_at' => $case->opened_at?->toIso8601String(),
                     'pending_approval' => $pendingRequest !== null,
                     'pending_action' => $pendingRequest?->action->value,
+                    'pending_request_reference' => $pendingRequest?->action === FundingReconciliationAction::RecoverPaidOnDemandIssuance
+                        && $recoverable ? $pendingRequest->reference : null,
                     'order_reference' => $order?->reference,
                     'payment_minor' => $order?->expected_payment_minor,
                     'currency' => $order?->currency,
@@ -337,6 +340,7 @@ class FundingCockpitReadModelProvider
     {
         return FundingReconciliationRequest::query()
             ->where('status', 'pending_approval')
+            ->where('action', '!=', FundingReconciliationAction::RecoverPaidOnDemandIssuance->value)
             ->whereHas(
                 'suspenseCase',
                 fn (Builder $query): Builder => $query

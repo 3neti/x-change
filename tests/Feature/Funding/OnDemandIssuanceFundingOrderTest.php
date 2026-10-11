@@ -909,35 +909,39 @@ it('recovers a paid on-demand order after expiry through independent approval ex
     ])->assertForbidden();
     $this->actingAs($owner);
 
-    $this->post(route('x-change.cockpit.funding.suspense.reconciliation-requests.store', [
-        'case' => $case->reference,
-    ]), [
-        'action' => FundingReconciliationAction::RecoverPaidOnDemandIssuance->value,
-    ])->assertRedirect(route('x-change.cockpit.funding.index'));
-    $this->post(route('x-change.cockpit.funding.suspense.reconciliation-requests.store', [
-        'case' => $case->reference,
-    ]), [
-        'action' => FundingReconciliationAction::RecoverPaidOnDemandIssuance->value,
-    ])->assertRedirect(route('x-change.cockpit.funding.index'));
-    $request = $case->reconciliationRequests()->sole();
+    $request = app(RequestFundingReconciliation::class)->handle(
+        case: $case,
+        action: FundingReconciliationAction::RecoverPaidOnDemandIssuance,
+        actorType: $owner::class,
+        actorId: (string) $owner->getKey(),
+    );
+    $pendingCard = collect(app(FundingCockpitReadModelProvider::class)->forOperator($owner)->suspense_cases)
+        ->firstWhere('reference', $case->reference);
+    expect($pendingCard['pending_request_reference'])->toBe($request->reference);
     expect(fn () => app(ApproveFundingReconciliation::class)->handle(
         $request,
-        $owner::class,
-        (string) $owner->getKey(),
-    ))->toThrow(InvalidArgumentException::class, 'cannot approve their own request');
-    $approved = app(ApproveFundingReconciliation::class)->handle(
-        $request,
         'operator',
         'checker-2',
-    );
+    ))->toThrow(InvalidArgumentException::class, 'Only the Pay Code issuer');
+    actingAsTestUser(0);
+    $this->post(route('x-change.cockpit.funding.reconciliations.approve', [
+        'reconciliationRequest' => $request->reference,
+    ]))->assertForbidden();
+    $this->actingAs($owner);
+    $this->post(route('x-change.cockpit.funding.reconciliations.approve', [
+        'reconciliationRequest' => $request->reference,
+    ]))->assertRedirect(route('x-change.cockpit.funding.index'));
+    $request = $case->reconciliationRequests()->sole();
+    $approved = $request->refresh();
     $replayed = app(ApproveFundingReconciliation::class)->handle(
         $approved,
-        'operator',
-        'checker-2',
+        $owner::class,
+        (string) $owner->getKey(),
     );
 
     expect($replayed->is($approved))->toBeTrue()
         ->and($approved->result['outcome'])->toBe('pay_code_recovery_queued')
+        ->and($approved->status)->toBe('executed')
         ->and($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::Funded)
         ->and($order->funded_at)->not->toBeNull()
         ->and($order->voucher_id)->toBeNull()
@@ -946,6 +950,45 @@ it('recovers a paid on-demand order after expiry through independent approval ex
         ->and(FundingSettlement::query()->where('funding_intent_id', $intent->getKey())->count())->toBe(1)
         ->and(FundingEvidenceClaim::query()->where('funding_intent_id', $intent->getKey())->count())->toBe(1);
 
+    Queue::assertPushed(ResumeOnDemandPayCodeIssuanceJob::class, 1);
+});
+
+it('lets the issuer complete an eligible paid order recovery in one request', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    $owner = actingAsTestUser(0);
+    $wallet = $owner->wallet()->where('slug', 'platform')->sole();
+    $order = issuanceFundingOrder($owner, 'paid-recovery-one-request');
+
+    $this->travel(2)->minutes();
+    $observation = onDemandFundingObservation(5_000);
+    $intent = onDemandFundingIntent($wallet->uuid, $observation, 5_000);
+    $intent->forceFill([
+        'status' => FundingIntentStatus::Suspense,
+        'created_by_type' => $owner::class,
+        'created_by_id' => (string) $owner->getKey(),
+    ])->saveQuietly();
+    $order->forceFill([
+        'funding_intent_id' => $intent->getKey(),
+        'status' => PayCodeIssuanceFundingOrderStatus::PaymentAmbiguous,
+    ])->saveQuietly();
+    $case = app(OpenFundingSuspenseCase::class)->handle(
+        provider: 'netbank',
+        reasonCode: 'on_demand_issuance_provider_evidence_mismatch',
+        intent: $intent,
+        observation: $observation,
+    );
+
+    $this->post(route('x-change.cockpit.funding.suspense.reconciliation-requests.store', [
+        'case' => $case->reference,
+    ]), [
+        'action' => FundingReconciliationAction::RecoverPaidOnDemandIssuance->value,
+    ])->assertRedirect(route('x-change.cockpit.funding.index'));
+
+    expect($case->reconciliationRequests()->sole()->status)->toBe('executed')
+        ->and($case->refresh()->status)->toBe('resolved')
+        ->and($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
+        ->and($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::Funded);
     Queue::assertPushed(ResumeOnDemandPayCodeIssuanceJob::class, 1);
 });
 
@@ -1009,14 +1052,14 @@ it('keeps a recovery in suspense when another intent already claimed its provide
     $request = app(RequestFundingReconciliation::class)->handle(
         case: $case,
         action: FundingReconciliationAction::RecoverPaidOnDemandIssuance,
-        actorType: 'operator',
-        actorId: 'maker-1',
+        actorType: $owner::class,
+        actorId: (string) $owner->getKey(),
     );
 
     expect(fn () => app(ApproveFundingReconciliation::class)->handle(
         $request,
-        'operator',
-        'checker-2',
+        $owner::class,
+        (string) $owner->getKey(),
     ))->toThrow(InvalidArgumentException::class, 'already belongs to another funding order')
         ->and($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::PaymentAmbiguous)
         ->and($intent->refresh()->status)->toBe(FundingIntentStatus::Suspense)
