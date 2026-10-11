@@ -20,6 +20,7 @@ Commercial Principal remains non-interactive. Pay Code funding and automatic
 refund execution remain disabled. The testing deployment, migration, backfill,
 commissioning, and browser owner-console checks passed on 2026-10-11. A paid
 expired order found during acceptance is now visible for manual refund review.
+The read-only viewer link was opened and revoked successfully on testing.
 Paid QR Ph and Bank Transfer journeys and real refund reconciliation remain
 open gates before x-PayOut beta adoption.
 

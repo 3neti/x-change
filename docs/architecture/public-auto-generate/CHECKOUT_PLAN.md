@@ -117,8 +117,8 @@ Transfer journeys, and manual refund acceptance remain release gates.
 ## Testing-instance gate record — 2026-10-11
 
 The `x-change-testing/testing` Laravel Cloud environment deployed host commit
-`0eefeca4` (`feat/checkout-testing`) with x-change package commit `3de807df`
-(`feat/checkout`). The Cloud deployment `depl-a2f3c5fb-3a93-4518-9229-dfcc7105b725`
+`7eadbc45` (`feat/checkout-testing`) with x-change package commit `38f3d650`
+(`feat/checkout`). The Cloud deployment `depl-a2f3c8ac-e538-4ff1-810e-d9b846cf7178`
 succeeded. The Checkout migration ran, and the dry run counted eight existing
 public orders before the idempotent backfill inspected all eight. The guarded
 commissioning adoption renewed the stale installation manifest, and the strict
@@ -133,8 +133,11 @@ refund case through external-return recording and Treasury reconciliation, and
 reject a refund case without settlement. The browser shows the real case as
 eligible; no external refund has been claimed or recorded for it.
 The first live viewer-link command exposed an omitted owner scope on insert;
-the command now writes the commissioned owner type and ID explicitly. Its
-creation and revocation remain to be repeated against the testing instance.
+the command now writes the commissioned owner type and ID explicitly. A
+one-day testing link opened the same eight-row monitor in read-only mode,
+offered no retry or refund action, and returned HTTP 404 after revocation.
+The generated URL used HTTPS. Neither console nor public editor showed recent
+browser JavaScript errors.
 
 Testing has public issuance and fixed QR Ph enabled, Turnstile disabled, one
 configured database queue worker for funding and issuance, and the scheduler
