@@ -7,17 +7,35 @@ namespace LBHurtado\XChange\Http\Requests\Web\Cockpit;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use LBHurtado\XChange\Actions\Funding\AssessPaidOnDemandIssuanceRecovery;
 use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
 use LBHurtado\XChange\Enums\FundingReconciliationAction;
+use LBHurtado\XChange\Models\FundingSuspenseCase;
 
 class RequestCockpitFundingReconciliationRequest extends FormRequest
 {
-    public function authorize(CockpitTreasuryAccessContract $access): bool
-    {
+    public function authorize(
+        CockpitTreasuryAccessContract $access,
+        AssessPaidOnDemandIssuanceRecovery $recovery,
+    ): bool {
         $actor = $this->user();
 
-        return $actor !== null
-            && $access->canManageTreasuryReconciliation($actor);
+        if ($actor === null) {
+            return false;
+        }
+
+        if ($access->canManageTreasuryReconciliation($actor)) {
+            return true;
+        }
+
+        $case = $this->route('case');
+        $intent = $case instanceof FundingSuspenseCase ? $case->fundingIntent : null;
+
+        return $this->input('action') === FundingReconciliationAction::RecoverPaidOnDemandIssuance->value
+            && $intent !== null
+            && $intent->created_by_type === $actor::class
+            && (string) $intent->created_by_id === (string) $actor->getAuthIdentifier()
+            && $recovery->eligible($case);
     }
 
     protected function prepareForValidation(): void

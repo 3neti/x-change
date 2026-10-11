@@ -557,6 +557,9 @@ export type CockpitFundingSuspenseCase = {
   opened_at?: string | null;
   pending_approval: boolean;
   pending_action?: string | null;
+  order_reference?: string | null;
+  payment_minor?: number | null;
+  currency?: string | null;
   allowed_actions: string[];
 };
 

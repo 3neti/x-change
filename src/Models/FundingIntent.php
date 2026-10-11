@@ -106,6 +106,11 @@ class FundingIntent extends Model
         return $this->hasOne(FundingSettlement::class);
     }
 
+    public function issuanceFundingOrder(): HasOne
+    {
+        return $this->hasOne(PayCodeIssuanceFundingOrder::class);
+    }
+
     public function suspenseCases(): HasMany
     {
         return $this->hasMany(FundingSuspenseCase::class);

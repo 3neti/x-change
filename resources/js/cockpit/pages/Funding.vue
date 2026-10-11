@@ -939,7 +939,10 @@ function claimPayCodeFunding(): void {
 }
 
 function requestReconciliation(caseReference: string, action: string): void {
-    if (!canManageTreasuryReconciliation.value) {
+    if (
+        !canManageTreasuryReconciliation.value &&
+        action !== 'recover_paid_on_demand_issuance'
+    ) {
         return;
     }
 
@@ -1018,9 +1021,17 @@ function reconciliationActionLabel(action: string): string {
         {
             retry_verification: 'Request verification retry',
             match_verified_observation: 'Request exact evidence match',
+            recover_paid_on_demand_issuance: 'Request Pay Code recovery',
             compensate_verified_posting: 'Request verified posting',
         }[action] ?? displayLabel(action)
     );
+}
+
+function suspensePaymentAmount(amountMinor: number, currency: string): string {
+    return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency,
+    }).format(amountMinor / 100);
 }
 
 async function runQrPhFundingSimulation(
@@ -3550,9 +3561,25 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                     >
                                         {{
                                             item.pending_approval
-                                                ? 'Maker request pending independent approval.'
-                                                : 'Awaiting a controlled reconciliation request.'
+                                                ? item.pending_action === 'recover_paid_on_demand_issuance'
+                                                    ? 'Pay Code recovery awaits independent approval. Do not pay again.'
+                                                    : 'Maker request pending independent approval.'
+                                                : item.order_reference
+                                                  ? 'A payment was found for this order. Request recovery for independent review. Do not pay again.'
+                                                  : 'Awaiting a controlled reconciliation request.'
                                         }}
+                                    </p>
+                                    <p
+                                        v-if="item.order_reference"
+                                        class="mt-2 text-xs text-slate-700 dark:text-slate-300"
+                                    >
+                                        Order {{ item.order_reference }}
+                                        <span
+                                            v-if="item.payment_minor != null && item.currency"
+                                        >
+                                            · Payment
+                                            {{ suspensePaymentAmount(item.payment_minor, item.currency) }}
+                                        </span>
                                     </p>
                                     <div
                                         v-if="item.allowed_actions.length"
