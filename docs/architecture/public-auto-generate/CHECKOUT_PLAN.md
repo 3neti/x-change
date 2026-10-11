@@ -132,6 +132,7 @@ manual refund case without an issuance retry. Focused PHP tests cover the
 refund case through external-return recording and Treasury reconciliation, and
 reject a refund case without settlement. The browser shows the real case as
 eligible; no external refund has been claimed or recorded for it.
+
 The first live viewer-link command exposed an omitted owner scope on insert;
 the command now writes the commissioned owner type and ID explicitly. A
 one-day testing link opened the same eight-row monitor in read-only mode,
@@ -146,3 +147,8 @@ The public editor quoted PHP 40.00 total for a PHP 25.00 Pay Code. Paid QR Ph
 and Bank Transfer journeys, live worker processing, and a real external refund
 with Treasury reconciliation remain open gates. x-PayOut production has not
 adopted this package branch.
+
+An isolated x-PayOut beta.81 worktree loaded the current Checkout package,
+registered all eight `/x/checkout` routes, published the package build assets,
+and completed a production Vite build under a local deployment profile. This
+is a compatibility preflight, not a production release or paid-journey proof.
