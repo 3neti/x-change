@@ -23,7 +23,7 @@ final readonly class CheckoutConsoleReadModel
             'awaiting_payment' => $this->countOrderStatus($base, ['awaiting_payment', 'payer_acknowledged', 'verifying']),
             'settled' => (clone $base)->whereHas('fundingOrder.fundingIntent.settlement')->count(),
             'issued' => $this->countOrderStatus($base, ['issued']),
-            'attention' => $this->countOrderStatus($base, ['issuance_attention', 'underfunded', 'payment_ambiguous']),
+            'attention' => $this->unresolvedAttention($base)->count(),
             'refund_open' => (clone $base)->whereHas('refundCase', static fn (Builder $query): Builder => $query->where('status', 'open'))->count(),
         ];
         $query = clone $base;
@@ -33,7 +33,7 @@ final readonly class CheckoutConsoleReadModel
                 'awaiting_payment' => $query->whereHas('fundingOrder', static fn (Builder $q): Builder => $q->whereIn('status', ['awaiting_payment', 'payer_acknowledged', 'verifying'])),
                 'settled' => $query->whereHas('fundingOrder.fundingIntent.settlement'),
                 'issued' => $query->whereHas('fundingOrder', static fn (Builder $q): Builder => $q->where('status', 'issued')),
-                'attention' => $query->whereHas('fundingOrder', static fn (Builder $q): Builder => $q->whereIn('status', ['issuance_attention', 'underfunded', 'payment_ambiguous'])),
+                'attention' => $this->unresolvedAttention($query),
                 'refund_open' => $query->whereHas('refundCase', static fn (Builder $q): Builder => $q->where('status', 'open')),
                 default => null,
             };
@@ -66,7 +66,12 @@ final readonly class CheckoutConsoleReadModel
                     'settled_minor' => $settlement?->gross_amount_minor,
                     'currency' => $order?->currency,
                     'refund_status' => $checkout->refundCase?->status,
-                    'attention_reason' => $order?->events->last()?->event_type,
+                    'refund_eligible' => $settlement !== null
+                        && $order?->voucher_id === null
+                        && in_array($order?->status->value, ['issuance_attention', 'expired', 'cancelled'], true),
+                    'attention_reason' => $settlement !== null && in_array($order?->status->value, ['expired', 'cancelled'], true)
+                        ? 'payment_after_'.$order->status->value
+                        : $order?->events->last()?->event_type,
                     'last_activity_at' => $order?->updated_at?->toIso8601String() ?? $checkout->updated_at?->toIso8601String(),
                     'timeline' => collect($order?->events ?? [])
                         ->concat($checkout->events)
@@ -89,5 +94,20 @@ final readonly class CheckoutConsoleReadModel
     private function countOrderStatus(Builder $base, array $statuses): int
     {
         return (clone $base)->whereHas('fundingOrder', static fn (Builder $query): Builder => $query->whereIn('status', $statuses))->count();
+    }
+
+    /** @param Builder<Checkout> $base */
+    private function unresolvedAttention(Builder $base): Builder
+    {
+        return $base
+            ->whereDoesntHave('refundCase', static fn (Builder $query): Builder => $query->where('status', 'reconciled'))
+            ->where(static function (Builder $query): void {
+                $query->whereHas('fundingOrder', static fn (Builder $order): Builder => $order->whereIn('status', [
+                    'issuance_attention', 'underfunded', 'payment_ambiguous',
+                ]))->orWhereHas('fundingOrder', static fn (Builder $order): Builder => $order
+                    ->whereIn('status', ['expired', 'cancelled'])
+                    ->whereNull('voucher_id')
+                    ->whereHas('fundingIntent.settlement'));
+            });
     }
 }

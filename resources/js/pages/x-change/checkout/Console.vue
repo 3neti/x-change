@@ -17,6 +17,7 @@ type CheckoutRow = {
   settled_minor: number | null;
   currency: string | null;
   refund_status: string | null;
+  refund_eligible: boolean;
   attention_reason: string | null;
   last_activity_at: string | null;
   timeline: Array<{ type: string; at: string | null }>;
@@ -123,7 +124,7 @@ function reconcileRefund(row: CheckoutRow): void {
               <template v-for="row in monitor.rows" :key="row.reference">
                 <tr class="border-b border-slate-100 align-top">
                   <td class="p-4 font-mono text-xs">{{ row.reference }}<span class="mt-1 block text-slate-500">{{ row.order_reference }}</span></td>
-                  <td class="p-4 font-semibold">{{ row.status.replaceAll('_', ' ') }}<span v-if="row.refund_status" class="mt-1 block text-amber-700">Refund: {{ row.refund_status.replaceAll('_', ' ') }}</span><span v-if="row.status === 'issuance_attention' && row.attention_reason" class="mt-1 block text-xs font-normal text-slate-500">{{ row.attention_reason.replaceAll('_', ' ') }}</span></td>
+                  <td class="p-4 font-semibold">{{ row.status.replaceAll('_', ' ') }}<span v-if="row.refund_status" class="mt-1 block text-amber-700">Refund: {{ row.refund_status.replaceAll('_', ' ') }}</span><span v-if="row.refund_eligible && !row.refund_status" class="mt-1 block text-xs font-normal text-amber-700">Paid without a Pay Code · refund review needed</span><span v-if="row.status === 'issuance_attention' && row.attention_reason" class="mt-1 block text-xs font-normal text-slate-500">{{ row.attention_reason.replaceAll('_', ' ') }}</span></td>
                   <td class="p-4">{{ row.method.replaceAll('_', ' ') }}</td>
                   <td class="p-4">{{ row.contact ?? '—' }}<span class="mt-1 block text-xs text-slate-500">{{ row.contact_source }}</span></td>
                   <td class="p-4">{{ money(row.expected_minor, row.currency) }}</td>
@@ -134,10 +135,10 @@ function reconcileRefund(row: CheckoutRow): void {
                 <tr v-if="expanded === row.reference"><td colspan="8" class="bg-slate-50 p-5">
                   <h2 class="font-semibold">Timeline</h2>
                   <ol class="mt-2 space-y-1 text-sm text-slate-600"><li v-for="event in row.timeline" :key="`${event.type}-${event.at}`">{{ event.at ? new Date(event.at).toLocaleString() : '—' }} · {{ event.type.replaceAll('_', ' ') }}</li></ol>
-                  <div v-if="role === 'owner' && row.status === 'issuance_attention'" class="mt-5 grid gap-4 lg:grid-cols-2">
+                  <div v-if="role === 'owner' && (row.refund_eligible || row.refund_status)" class="mt-5 grid gap-4 lg:grid-cols-2">
                     <div v-if="!row.refund_status" class="rounded-xl border bg-white p-4">
-                      <h3 class="font-semibold">Issuance retry</h3>
-                      <button type="button" class="mt-3 rounded-lg bg-sky-700 px-3 py-2 text-sm font-semibold text-white" @click="router.post(retry(row.reference).url)">Request guarded retry</button>
+                      <template v-if="row.status === 'issuance_attention'"><h3 class="font-semibold">Issuance retry</h3>
+                      <button type="button" class="mt-3 rounded-lg bg-sky-700 px-3 py-2 text-sm font-semibold text-white" @click="router.post(retry(row.reference).url)">Request guarded retry</button></template>
                       <h3 class="mt-5 font-semibold">Open manual refund case</h3>
                       <textarea v-model="reason" rows="2" placeholder="Reason for manual refund" class="mt-2 w-full rounded-lg border p-2" />
                       <button type="button" class="mt-2 rounded-lg border px-3 py-2 text-sm font-semibold" @click="openRefund(row)">Open case</button>

@@ -3839,7 +3839,10 @@ describe('Cockpit Quick Generate foundation', () => {
     });
 
     it('explains a pause to a stale public tab and prevents another submission', async () => {
-        const fetchMock = vi.fn().mockResolvedValue({
+        const fetchMock = vi.fn().mockResolvedValueOnce({
+            ok: true,
+            json: vi.fn().mockResolvedValue({ guest_token: 'saved-draft-token' }),
+        }).mockResolvedValueOnce({
             ok: false,
             json: vi.fn().mockResolvedValue({
                 success: false,
@@ -3876,7 +3879,7 @@ describe('Cockpit Quick Generate foundation', () => {
         await wrapper.get('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
         await flushPromises();
 
-        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
         expect(wrapper.get('[data-testid="cockpit-quick-generate-submission-errors"]').text())
             .toContain('New orders are temporarily paused');
         expect(wrapper.get('[data-testid="cockpit-quick-generate-submission-errors"]').text())
@@ -3887,7 +3890,7 @@ describe('Cockpit Quick Generate foundation', () => {
             .toBeDefined();
 
         await wrapper.get('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
-        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
 
         vi.unstubAllGlobals();
     });

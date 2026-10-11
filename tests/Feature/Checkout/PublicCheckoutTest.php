@@ -15,6 +15,7 @@ use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Services\Checkout\CheckoutConsoleAccess;
+use LBHurtado\XChange\Services\Checkout\CheckoutConsoleReadModel;
 use LBHurtado\XChange\Services\Checkout\CheckoutLifecycle;
 use LBHurtado\XChange\Services\Checkout\PublicCheckoutDraftAccess;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
@@ -234,6 +235,86 @@ it('backfills existing public orders without duplicating checkout history', func
     $this->artisan('x-change:checkout:backfill-public')->assertSuccessful();
     expect(Checkout::query()->count())->toBe(1)
         ->and($checkout->events()->count())->toBe(1);
+});
+
+it('flags a paid expired order for manual refund review without offering issuance retry', function (): void {
+    $principal = checkoutTestPrincipal();
+    $order = checkoutTestOrder($principal);
+    $intent = FundingIntent::query()->create([
+        'account_reference' => $order->account_reference,
+        'provider_code' => 'netbank',
+        'purpose' => 'on_demand_issuance',
+        'expected_amount_minor' => 2500,
+        'currency' => 'PHP',
+        'status' => 'settled',
+        'idempotency_key_hash' => hash('sha256', 'late-payment-intent'),
+        'idempotency_fingerprint' => str_repeat('e', 64),
+        'created_by_type' => $principal::class,
+        'created_by_id' => (string) $principal->getKey(),
+        'expires_at' => now()->subMinute(),
+    ]);
+    $observation = ProviderFundingObservation::query()->create([
+        'observation_key' => hash('sha256', 'late-payment-observation'),
+        'provider_code' => 'netbank',
+        'provider_transaction_id' => 'NB-LATE-PAYMENT',
+        'gross_amount_minor' => 2500,
+        'net_amount_minor' => 2500,
+        'currency' => 'PHP',
+        'provider_status' => 'settled',
+        'settled_at' => now(),
+        'verification_source' => 'transaction_history',
+        'payload_hash' => hash('sha256', 'late-payment-payload'),
+    ]);
+    FundingSettlement::query()->create([
+        'funding_intent_id' => $intent->getKey(),
+        'provider_funding_observation_id' => $observation->getKey(),
+        'provider_code' => 'netbank',
+        'account_reference' => $order->account_reference,
+        'gross_amount_minor' => 2500,
+        'net_amount_minor' => 2500,
+        'currency' => 'PHP',
+        'treasury_inventory_reference' => 'late-payment-inventory',
+        'treasury_operation_reference' => 'late-payment-operation',
+        'wallet_transaction_id' => 123456,
+        'wallet_transaction_uuid' => '12345678-1234-1234-1234-123456789012',
+        'settled_at' => now(),
+    ]);
+    $order->forceFill(['funding_intent_id' => $intent->getKey(), 'status' => 'expired'])->saveQuietly();
+    $checkout = app(CheckoutLifecycle::class)->place($order);
+
+    $monitor = app(CheckoutConsoleReadModel::class)->forOwner($principal, 'attention');
+    expect($monitor['counts']['attention'])->toBe(1)
+        ->and($monitor['rows'][0]['reference'])->toBe($checkout->reference)
+        ->and($monitor['rows'][0]['refund_eligible'])->toBeTrue();
+
+    $this->post(route('x-change.checkout.unlock'), ['password' => 'password'])->assertRedirect();
+    $this->post(route('x-change.checkout.refund.open', ['checkout' => $checkout->reference]), [
+        'reason' => 'Verified payment arrived after order expiry.',
+    ])->assertRedirect();
+    expect($checkout->refundCase()->firstOrFail()->status)->toBe('open');
+
+    $this->post(route('x-change.checkout.refund.record', ['checkout' => $checkout->reference]), [
+        'password' => 'password',
+        'external_reference' => 'TEST-EXTERNAL-RETURN',
+    ])->assertRedirect();
+    $this->post(route('x-change.checkout.refund.reconcile', ['checkout' => $checkout->reference]), [
+        'password' => 'password',
+        'treasury_reference' => 'TEST-TREASURY-RECONCILIATION',
+    ])->assertRedirect();
+    expect($checkout->refundCase()->firstOrFail()->status)->toBe('reconciled')
+        ->and(app(CheckoutConsoleReadModel::class)->forOwner($principal, 'attention')['counts']['attention'])->toBe(0);
+});
+
+it('rejects a manual refund case for an expired order without settlement', function (): void {
+    $order = checkoutTestOrder(checkoutTestPrincipal());
+    $order->forceFill(['status' => 'expired'])->saveQuietly();
+    $checkout = app(CheckoutLifecycle::class)->place($order);
+
+    $this->post(route('x-change.checkout.unlock'), ['password' => 'password'])->assertRedirect();
+    $this->post(route('x-change.checkout.refund.open', ['checkout' => $checkout->reference]), [
+        'reason' => 'This order has no verified settlement.',
+    ])->assertStatus(409);
+    expect($checkout->refundCase()->exists())->toBeFalse();
 });
 
 it('blocks issuance when a refund case exists for the same checkout', function (): void {

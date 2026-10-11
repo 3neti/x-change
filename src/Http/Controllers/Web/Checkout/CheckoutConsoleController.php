@@ -108,7 +108,7 @@ final class CheckoutConsoleController extends Controller
             $locked = Checkout::query()->lockForUpdate()->findOrFail($checkout->getKey());
             $settlement = $order->fundingIntent?->settlement;
 
-            if ($order->status->value !== 'issuance_attention'
+            if (! in_array($order->status->value, ['issuance_attention', 'expired', 'cancelled'], true)
                 || $order->voucher_id !== null
                 || $settlement === null
                 || $locked->refundCase()->exists()

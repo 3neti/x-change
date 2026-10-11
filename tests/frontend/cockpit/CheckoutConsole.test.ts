@@ -13,7 +13,7 @@ const monitor = {
   rows: [{
     reference: "01CHECKOUT", order_reference: "01ORDER", status: "issuance_attention",
     method: "qr_ph", contact: "••••4567", contact_source: "provider_reported",
-    expected_minor: 5000, settled_minor: 5000, currency: "PHP", refund_status: null, attention_reason: "issuance_attention_required",
+    expected_minor: 5000, settled_minor: 5000, currency: "PHP", refund_status: null, refund_eligible: true, attention_reason: "issuance_attention_required",
     last_activity_at: "2026-10-11T00:00:00Z", timeline: [{ type: "payment_settled", at: "2026-10-11T00:00:00Z" }],
   }],
   pagination: { current_page: 1, last_page: 1, total: 1 },
@@ -31,6 +31,18 @@ describe("Checkout console", () => {
     expect(wrapper.text()).toContain("Read only");
     await wrapper.get("button").trigger("click");
     expect(wrapper.text()).toContain("payment settled");
+    expect(wrapper.text()).not.toContain("Request guarded retry");
+  });
+
+  it("offers manual refund review for a paid expired order without offering issuance retry", async () => {
+    const expiredMonitor = {
+      ...monitor,
+      rows: [{ ...monitor.rows[0], status: "expired", attention_reason: "payment_after_expired" }],
+    };
+    const wrapper = mount(Console, { props: { role: "owner", monitor: expiredMonitor }, global: { stubs: { Head: true } } });
+    await wrapper.findAll('button').find((button) => button.text() === 'Inspect')?.trigger('click');
+    expect(wrapper.text()).toContain("Paid without a Pay Code · refund review needed");
+    expect(wrapper.text()).toContain("Open manual refund case");
     expect(wrapper.text()).not.toContain("Request guarded retry");
   });
 });
