@@ -165,14 +165,16 @@ final readonly class CheckoutLifecycle
                     ->where('payment_id', $settlement->getKey())->first();
 
                 if ($process !== null && $process->contact_id === null) {
+                    $shouldReplay = $process->status === 'completed'
+                        && $process->sms_enabled_snapshot
+                        && $process->sms_status === 'skipped';
                     $process->forceFill([
                         'contact_id' => $checkout->contact_id,
                         'contact_source' => $checkout->contact_source,
-                        'status' => $process->sms_enabled_snapshot && $process->sms_status === 'skipped'
-                            ? 'pending' : $process->status,
+                        'status' => $shouldReplay ? 'pending' : $process->status,
                     ])->save();
 
-                    if ($process->status === 'pending') {
+                    if ($shouldReplay) {
                         PaymentSettled::dispatch((int) $process->getKey());
                     }
                 }

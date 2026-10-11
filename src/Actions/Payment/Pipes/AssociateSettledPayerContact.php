@@ -12,12 +12,16 @@ use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Models\SettledPaymentProcess;
 use LBHurtado\XChange\Services\Checkout\CheckoutLifecycle;
+use LBHurtado\XChange\Services\Checkout\ReverifyCheckoutQrPayer;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use Propaganistas\LaravelPhone\PhoneNumber;
 
 final readonly class AssociateSettledPayerContact
 {
-    public function __construct(private CheckoutLifecycle $checkouts) {}
+    public function __construct(
+        private CheckoutLifecycle $checkouts,
+        private ReverifyCheckoutQrPayer $reverifyQrPayer,
+    ) {}
 
     public function handle(SettledPaymentProcess $process, Closure $next): mixed
     {
@@ -35,6 +39,11 @@ final readonly class AssociateSettledPayerContact
             if ($order !== null) {
                 $this->checkouts->settled($order, $observation);
                 $checkout = Checkout::query()->where('funding_order_id', $order->getKey())->first();
+
+                if ($checkout?->contact_id === null && $checkout?->selected_method === 'qr_ph') {
+                    $this->reverifyQrPayer->handle($order, $observation);
+                    $checkout->refresh();
+                }
 
                 if ($checkout?->contact_id !== null) {
                     $process->forceFill([

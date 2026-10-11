@@ -8,6 +8,8 @@ use Closure;
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\XChange\Actions\Feedback\DeliverAndJournalFeedback;
+use LBHurtado\XChange\Models\Checkout;
+use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\SettledPaymentProcess;
 use LBHurtado\XChange\Services\Settlement\CampaignWalletPayerMobile;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
@@ -42,7 +44,8 @@ final readonly class QueueSettledPaymentSms
         }
 
         $observation = ProviderFundingObservation::query()->findOrFail($process->observation_id);
-        if ($this->walletPayerMobile->fromObservation($observation) === null) {
+        if ($this->walletPayerMobile->fromObservation($observation) === null
+            && ! $this->hasReconciledProviderPayer($process)) {
             $process->forceFill(['sms_status' => 'skipped'])->save();
 
             return $next($process);
@@ -81,5 +84,23 @@ final readonly class QueueSettledPaymentSms
         $process->forceFill(['sms_status' => $result->status])->save();
 
         return $next($process);
+    }
+
+    private function hasReconciledProviderPayer(SettledPaymentProcess $process): bool
+    {
+        if ($process->flow !== 'public_auto_generate' || $process->payment_type !== 'funding_settlement') {
+            return false;
+        }
+
+        $settlement = FundingSettlement::query()->find($process->payment_id);
+        $checkout = $settlement === null ? null : Checkout::query()
+            ->whereHas('fundingOrder', fn ($query) => $query->where('funding_intent_id', $settlement->funding_intent_id))
+            ->first();
+
+        return $checkout !== null
+            && $checkout->selected_method === 'qr_ph'
+            && (int) $checkout->contact_id === (int) $process->contact_id
+            && in_array($checkout->contact_source, ['provider_reported', 'provider_verified'], true)
+            && $checkout->events()->where('event_type', 'contact_association_reconciled')->exists();
     }
 }

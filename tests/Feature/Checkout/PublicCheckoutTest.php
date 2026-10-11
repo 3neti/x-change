@@ -3,11 +3,16 @@
 declare(strict_types=1);
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\EmiCore\Data\Funding\ProviderPayerIdentityData;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
+use LBHurtado\PaymentGateway\Funding\NetbankFundingProviderAdapter;
+use LBHurtado\PaymentGateway\Funding\NetbankIncomingPaymentData;
+use LBHurtado\XChange\Actions\Payment\RunSettledPaymentPipeline;
+use LBHurtado\XChange\Jobs\Feedback\DeliverQueuedFeedbackSmsJob;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
 use LBHurtado\XChange\Models\Checkout;
 use LBHurtado\XChange\Models\CheckoutRefundCase;
@@ -16,12 +21,15 @@ use LBHurtado\XChange\Models\CommercialPrincipal;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
+use LBHurtado\XChange\Models\SettledPaymentProcess;
 use LBHurtado\XChange\Services\Checkout\CheckoutConsoleAccess;
 use LBHurtado\XChange\Services\Checkout\CheckoutConsoleReadModel;
 use LBHurtado\XChange\Services\Checkout\CheckoutLifecycle;
 use LBHurtado\XChange\Services\Checkout\PublicCheckoutDraftAccess;
+use LBHurtado\XChange\Services\Checkout\ReverifyCheckoutQrPayer;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Commercial\ConfiguredCommercialPrincipalResolver;
+use LBHurtado\XFeedback\Models\FeedbackDeliveryRecord;
 
 beforeEach(function (): void {
     config()->set('x-change.public_auto_generate.enabled', true);
@@ -120,6 +128,7 @@ it('links a QR Ph wallet payer Contact only after confirmed payment evidence', f
 });
 
 it('recovers a missing QR payer Contact only from the same settled provider transaction', function (): void {
+    Queue::fake();
     $principal = checkoutTestPrincipal();
     $order = checkoutTestOrder($principal);
     $checkout = app(CheckoutLifecycle::class)->place($order);
@@ -149,9 +158,10 @@ it('recovers a missing QR payer Contact only from the same settled provider tran
         'created_by_type' => $principal::class,
         'created_by_id' => (string) $principal->getKey(),
         'matched_observation_id' => $observation->getKey(),
+        'funding_address_ciphertext' => 'reconcile-funding-address',
         'expires_at' => now()->addMinutes(30),
     ]);
-    FundingSettlement::query()->create([
+    $settlement = FundingSettlement::query()->create([
         'funding_intent_id' => $intent->getKey(),
         'provider_funding_observation_id' => $observation->getKey(),
         'provider_code' => 'netbank',
@@ -166,6 +176,16 @@ it('recovers a missing QR payer Contact only from the same settled provider tran
         'settled_at' => now(),
     ]);
     $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();
+    $process = SettledPaymentProcess::query()->create([
+        'payment_type' => 'funding_settlement',
+        'payment_id' => $settlement->getKey(),
+        'observation_id' => $observation->getKey(),
+        'flow' => 'public_auto_generate',
+        'gross_amount_minor' => 2500,
+        'sms_enabled_snapshot' => true,
+        'status' => 'completed',
+        'sms_status' => 'skipped',
+    ]);
     app(CheckoutLifecycle::class)->settled($order, $observation);
     $checkout->refresh()->forceFill(['status' => 'issued'])->save();
 
@@ -194,12 +214,44 @@ it('recovers a missing QR payer Contact only from the same settled provider tran
         ->and($checkout->refresh()->contact_id)->toBeNull();
     $reverified->fundingAddress = $observation->funding_address;
 
-    expect($lifecycle->reconcileConfirmedQrContact($order, $reverified))->toBeTrue()
+    $wrongTransaction = clone $reverified;
+    $wrongTransaction->providerTransactionId = 'OTHER-TRANSACTION';
+    $provider = Mockery::mock(NetbankFundingProviderAdapter::class);
+    $provider->shouldReceive('verifyFunding')->twice()->andReturn($wrongTransaction, $reverified);
+    $provider->shouldReceive('incomingPayments')->once()->andReturn([
+        new NetbankIncomingPaymentData(
+            transactionId: $observation->provider_transaction_id,
+            amountMinor: 2500,
+            currency: 'PHP',
+            status: 'settled',
+            occurredAt: null,
+            settledAt: null,
+            referenceId: null,
+            settlementRail: 'INSTAPAY',
+            payerName: 'Wallet Payer',
+            payerAccountNumber: '09171234567',
+            payerInstitutionCode: 'GXCHPHM2XXX',
+            payerMobile: null,
+        ),
+    ]);
+    app()->instance(NetbankFundingProviderAdapter::class, $provider);
+
+    $recheck = app(ReverifyCheckoutQrPayer::class);
+
+    expect($recheck->handle($order, $observation))->toBeFalse()
+        ->and($checkout->refresh()->contact_id)->toBeNull()
+        ->and($recheck->handle($order, $observation))->toBeTrue()
         ->and($lifecycle->reconcileConfirmedQrContact($order, $reverified))->toBeFalse()
         ->and($checkout->refresh()->status)->toBe('issued')
         ->and($checkout->contact_source)->toBe('provider_reported')
         ->and(Contact::query()->findOrFail($checkout->contact_id)->name)->toBe('Wallet Payer')
         ->and($checkout->events()->where('event_type', 'contact_association_reconciled')->count())->toBe(1);
+
+    app(RunSettledPaymentPipeline::class)->handle($process->getKey());
+
+    expect($process->fresh()->sms_status)->toBe('queued')
+        ->and(FeedbackDeliveryRecord::query()->where('intent_key', 'payment.settled')->count())->toBe(1);
+    Queue::assertPushed(DeliverQueuedFeedbackSmsJob::class, 1);
 });
 
 it('requires a separate owner password and does not treat a commercial principal as a console actor', function (): void {
