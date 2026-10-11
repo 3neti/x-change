@@ -192,6 +192,22 @@ it('gates the monitor and keeps expiring viewer links read only', function (): v
     $this->get(route('x-change.checkout.viewer', ['token' => $token]))->assertNotFound();
 });
 
+it('keeps all owner rows visible after computing attention totals', function (): void {
+    $principal = checkoutTestPrincipal();
+    $first = app(CheckoutLifecycle::class)->place(checkoutTestOrder($principal));
+    $second = app(CheckoutLifecycle::class)->place(checkoutTestOrder($principal));
+
+    $monitor = app(CheckoutConsoleReadModel::class)->forOwner($principal);
+
+    expect($monitor['counts']['all'])->toBe(2)
+        ->and($monitor['counts']['attention'])->toBe(0)
+        ->and($monitor['pagination']['total'])->toBe(2)
+        ->and(array_column($monitor['rows'], 'reference'))->toEqualCanonicalizing([
+            $first->reference,
+            $second->reference,
+        ]);
+});
+
 it('creates and revokes a viewer link scoped to the commissioned owner', function (): void {
     $principal = checkoutTestPrincipal();
 

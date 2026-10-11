@@ -23,7 +23,7 @@ final readonly class CheckoutConsoleReadModel
             'awaiting_payment' => $this->countOrderStatus($base, ['awaiting_payment', 'payer_acknowledged', 'verifying']),
             'settled' => (clone $base)->whereHas('fundingOrder.fundingIntent.settlement')->count(),
             'issued' => $this->countOrderStatus($base, ['issued']),
-            'attention' => $this->unresolvedAttention($base)->count(),
+            'attention' => $this->unresolvedAttention(clone $base)->count(),
             'refund_open' => (clone $base)->whereHas('refundCase', static fn (Builder $query): Builder => $query->where('status', 'open'))->count(),
         ];
         $query = clone $base;
