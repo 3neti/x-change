@@ -111,8 +111,9 @@ Package feature tests, the existing public and on-demand funding suites,
 frontend component tests, and an isolated host Vite build passed locally.
 Host-wide TypeScript checking still reports existing errors in unrelated
 published components; the new Checkout console has no reported type error.
-Deployment, migration/backfill against an instance, paid QR Ph and Bank
-Transfer journeys, and manual refund acceptance remain release gates.
+The testing deployment, migration/backfill, and paid QR Ph and Bank Transfer
+journeys passed. A real external refund with Treasury reconciliation remains
+the release gate before x-PayOut beta adoption.
 
 ## Testing-instance gate record — 2026-10-11
 
@@ -144,11 +145,40 @@ Testing has public issuance and fixed QR Ph enabled, Turnstile disabled, one
 configured database queue worker for funding and issuance, and the scheduler
 enabled. At the read-only checkpoint there were zero queued or failed jobs.
 The public editor quoted PHP 40.00 total for a PHP 25.00 Pay Code. Paid QR Ph
-and Bank Transfer journeys, live worker processing, and a real external refund
-with Treasury reconciliation remain open gates. x-PayOut production has not
-adopted this package branch.
+and Bank Transfer journeys later passed. A real external refund with Treasury
+reconciliation remains open. x-PayOut production has not adopted this package
+branch.
 
 An isolated x-PayOut beta.81 worktree loaded the current Checkout package,
 registered all eight `/x/checkout` routes, published the package build assets,
 and completed a production Vite build under a local deployment profile. This
 is a compatibility preflight, not a production release or paid-journey proof.
+
+## Paid testing acceptance — 2026-10-11
+
+QR Ph order `01M4M71N44WZAPT2P1SSNDTWW5` settled the exact PHP 40.01
+and issued Pay Code `ASM3` once. Bank Transfer order
+`01M4M74NDSCHZR1XRSNDC10212` required a valid visitor mobile before showing
+the NetBank instructions, settled the exact PHP 42.00, and issued Pay Code
+`GYAG` once. Each order has one Settlement and one Checkout. Both Checkouts
+link to the same Contact; the QR Ph association is provider reported and the
+Bank Transfer association is visitor supplied. The owner console shows the
+Bank Transfer method, masked Contact, expected and settled amount, and issued
+status. The Pay Code stamp and console were verified in Chrome.
+
+The first QR Ph settlement exposed a NetBank adapter gap: exact-payment
+verification omitted sender identity even though the provider returned a
+sender name, wallet source account, and institution. emi-netbank commit
+`5e21f3a` preserves those fields; x-change commit `3a739d68` fixes an owner
+console query mutation and permits guarded Contact recovery against the same
+settled provider transaction, funding address, amount, and currency. NetBank
+had changed the transaction payload hash after settlement, so the recovery
+guard uses stable provider fields. The QR Checkout was reverified and linked
+to the Contact without changing its issued Pay Code. Focused tests passed:
+47 emi-netbank tests and 15 Checkout tests. Testing host commit `bf953041`
+pins both package fixes, and Laravel Cloud deployment
+`depl-a2f3d285-a1cb-4f18-a6e7-c288ffd6cb68` succeeded.
+
+The real manual-refund return and Treasury reconciliation gate remains open.
+x-PayOut production still has the prior package release and paused new public
+issuance.

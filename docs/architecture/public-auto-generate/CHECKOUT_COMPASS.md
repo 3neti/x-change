@@ -21,8 +21,11 @@ refund execution remain disabled. The testing deployment, migration, backfill,
 commissioning, and browser owner-console checks passed on 2026-10-11. A paid
 expired order found during acceptance is now visible for manual refund review.
 The read-only viewer link was opened and revoked successfully on testing.
-Paid QR Ph and Bank Transfer journeys and real refund reconciliation remain
-open gates before x-PayOut beta adoption.
+Paid QR Ph and Bank Transfer journeys passed on testing, including exactly one
+Settlement and one Pay Code for each order and the same Contact linked to both.
+The QR payer identity mapping and owner console table bugs found during those
+journeys were fixed and deployed to testing. A real external refund with
+Treasury reconciliation remains open before x-PayOut beta adoption.
 
 ## Settled decisions
 
@@ -76,6 +79,10 @@ manually reconciled refund case. Record the deployed password policy and
 viewer-link revocation check without exposing secret values. Do not treat a
 healthy Horizon snapshot or an observed incoming transfer as proof of
 successful issuance.
+
+The paid testing journeys are recorded in the companion plan. The unresolved
+refund case remains an acceptance gate. Production still uses the prior
+package release with new public issuance paused.
 
 ## Stop conditions and future migration
 
