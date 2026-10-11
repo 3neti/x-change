@@ -16,6 +16,7 @@ type CheckoutRow = {
   expected_minor: number | null;
   settled_minor: number | null;
   currency: string | null;
+  pay_code: { masked_code: string; value_minor: number | null; currency: string; code?: string } | null;
   refund_status: string | null;
   refund_eligible: boolean;
   attention_reason: string | null;
@@ -40,6 +41,8 @@ const reason = ref("");
 const externalReference = ref("");
 const treasuryReference = ref("");
 const expanded = ref<string | null>(null);
+const copiedCode = ref<string | null>(null);
+const copyError = ref<string | null>(null);
 
 const filters = ["all", "awaiting_payment", "settled", "issued", "attention", "refund_open"];
 const title = computed(() => props.role === "viewer" ? "Checkout payments · viewer" : "Checkout payments");
@@ -78,6 +81,22 @@ function reconcileRefund(row: CheckoutRow): void {
   router.post(reconcile(row.reference).url, {
     password: actionPassword.value, treasury_reference: treasuryReference.value,
   }, { onSuccess: () => { actionPassword.value = ""; treasuryReference.value = ""; } });
+}
+
+async function copyPayCode(row: CheckoutRow): Promise<void> {
+  if (props.role !== "owner" || !row.pay_code?.code) {
+    return;
+  }
+
+  copiedCode.value = null;
+  copyError.value = null;
+
+  try {
+    await navigator.clipboard.writeText(row.pay_code.code);
+    copiedCode.value = row.reference;
+  } catch {
+    copyError.value = row.reference;
+  }
 }
 </script>
 
@@ -118,21 +137,36 @@ function reconcileRefund(row: CheckoutRow): void {
         <div class="mt-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
           <table class="min-w-full text-left text-sm">
             <thead class="border-b bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-              <tr><th class="p-4">Checkout</th><th class="p-4">Status</th><th class="p-4">Selected method</th><th class="p-4">Contact</th><th class="p-4">Expected</th><th class="p-4">Settled</th><th class="p-4">Last activity</th><th class="p-4">Details</th></tr>
+              <tr><th class="p-4">References</th><th class="p-4">Status</th><th class="p-4">Selected method</th><th class="p-4">Contact</th><th class="p-4">Payment due</th><th class="p-4">Payment received</th><th class="p-4">Pay Code value</th><th class="p-4">Last activity</th><th class="p-4">Details</th></tr>
             </thead>
             <tbody>
               <template v-for="row in monitor.rows" :key="row.reference">
                 <tr class="border-b border-slate-100 align-top">
-                  <td class="p-4 font-mono text-xs">{{ row.reference }}<span class="mt-1 block text-slate-500">{{ row.order_reference }}</span></td>
+                  <td class="p-4 text-xs"><span class="block text-slate-500">Checkout ID</span><span class="font-mono">{{ row.reference }}</span><span v-if="row.order_reference" class="mt-2 block text-slate-500">Funding order ID</span><span v-if="row.order_reference" class="block font-mono">{{ row.order_reference }}</span></td>
                   <td class="p-4 font-semibold">{{ row.status.replaceAll('_', ' ') }}<span v-if="row.refund_status" class="mt-1 block text-amber-700">Refund: {{ row.refund_status.replaceAll('_', ' ') }}</span><span v-if="row.refund_eligible && !row.refund_status" class="mt-1 block text-xs font-normal text-amber-700">Paid without a Pay Code · refund review needed</span><span v-if="row.status === 'issuance_attention' && row.attention_reason" class="mt-1 block text-xs font-normal text-slate-500">{{ row.attention_reason.replaceAll('_', ' ') }}</span></td>
                   <td class="p-4">{{ row.method.replaceAll('_', ' ') }}</td>
                   <td class="p-4">{{ row.contact ?? '—' }}<span class="mt-1 block text-xs text-slate-500">{{ row.contact_source }}</span></td>
                   <td class="p-4">{{ money(row.expected_minor, row.currency) }}</td>
                   <td class="p-4">{{ money(row.settled_minor, row.currency) }}</td>
+                  <td class="p-4"><template v-if="row.pay_code">{{ money(row.pay_code.value_minor, row.pay_code.currency) }}<span class="mt-1 block font-mono text-xs text-slate-500">{{ row.pay_code.masked_code }}</span></template><span v-else>—</span></td>
                   <td class="p-4">{{ row.last_activity_at ? new Date(row.last_activity_at).toLocaleString() : '—' }}</td>
                   <td class="p-4"><button type="button" class="font-semibold text-sky-700" @click="expanded = expanded === row.reference ? null : row.reference">{{ expanded === row.reference ? 'Hide' : 'Inspect' }}</button></td>
                 </tr>
-                <tr v-if="expanded === row.reference"><td colspan="8" class="bg-slate-50 p-5">
+                <tr v-if="expanded === row.reference"><td colspan="9" class="bg-slate-50 p-5">
+                  <div class="mb-5 grid gap-3 text-sm sm:grid-cols-2">
+                    <p><strong>Checkout ID</strong> tracks this attempt, its payment method, contact, and activity.</p>
+                    <p><strong>Funding order ID</strong> tracks payment verification and Pay Code issuance.</p>
+                  </div>
+                  <div v-if="row.pay_code" class="mb-5 rounded-xl border border-slate-200 bg-white p-4">
+                    <h2 class="font-semibold">Issued Pay Code</h2>
+                    <p class="mt-1 text-sm">Value: {{ money(row.pay_code.value_minor, row.pay_code.currency) }}</p>
+                    <div class="mt-3 flex flex-wrap items-center gap-3">
+                      <span class="font-mono text-sm">{{ role === 'owner' && row.pay_code.code ? row.pay_code.code : row.pay_code.masked_code }}</span>
+                      <button v-if="role === 'owner' && row.pay_code.code" type="button" class="rounded-lg border border-slate-300 px-3 py-1 text-sm font-semibold" @click="copyPayCode(row)">Copy Pay Code</button>
+                      <span v-if="copiedCode === row.reference" role="status" class="text-sm text-emerald-700">Copied</span>
+                      <span v-if="copyError === row.reference" role="alert" class="text-sm text-red-700">Copy failed. Select the code to copy it.</span>
+                    </div>
+                  </div>
                   <h2 class="font-semibold">Timeline</h2>
                   <ol class="mt-2 space-y-1 text-sm text-slate-600"><li v-for="event in row.timeline" :key="`${event.type}-${event.at}`">{{ event.at ? new Date(event.at).toLocaleString() : '—' }} · {{ event.type.replaceAll('_', ' ') }}</li></ol>
                   <div v-if="role === 'owner' && (row.refund_eligible || row.refund_status)" class="mt-5 grid gap-4 lg:grid-cols-2">
@@ -158,7 +192,7 @@ function reconcileRefund(row: CheckoutRow): void {
                   </div>
                 </td></tr>
               </template>
-              <tr v-if="monitor.rows.length === 0"><td colspan="8" class="p-8 text-center text-slate-500">No checkouts match this filter.</td></tr>
+              <tr v-if="monitor.rows.length === 0"><td colspan="9" class="p-8 text-center text-slate-500">No checkouts match this filter.</td></tr>
             </tbody>
           </table>
         </div>

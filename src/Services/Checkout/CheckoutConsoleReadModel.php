@@ -12,7 +12,7 @@ use LBHurtado\XChange\Models\CommercialPrincipal;
 final readonly class CheckoutConsoleReadModel
 {
     /** @return array<string, mixed> */
-    public function forOwner(CommercialPrincipal $principal, ?string $status = null): array
+    public function forOwner(CommercialPrincipal $principal, ?string $status = null, bool $includeFullPayCodes = false): array
     {
         $base = Checkout::query()
             ->where('source', 'public.auto-generate')
@@ -43,16 +43,20 @@ final readonly class CheckoutConsoleReadModel
         $page = $query->with([
             'contact', 'refundCase', 'events',
             'fundingOrder.events',
+            'fundingOrder.voucher',
             'fundingOrder.fundingIntent.settlement',
         ])->latest('id')->paginate(25);
 
         return [
             'counts' => $counts,
             'filter' => $status ?? 'all',
-            'rows' => $page->getCollection()->map(function (Checkout $checkout): array {
+            'rows' => $page->getCollection()->map(function (Checkout $checkout) use ($includeFullPayCodes): array {
                 $order = $checkout->fundingOrder;
                 $settlement = $order?->fundingIntent?->settlement;
                 $mobile = $checkout->contact?->mobile ?? $checkout->visitor_mobile_ciphertext;
+                $voucher = $order?->voucher;
+                $payCodeAmount = $voucher === null ? null : data_get($order->instructions_ciphertext, 'cash.amount');
+                $payCodeCurrency = $voucher === null ? null : data_get($order->instructions_ciphertext, 'cash.currency');
 
                 return [
                     'reference' => $checkout->reference,
@@ -65,6 +69,12 @@ final readonly class CheckoutConsoleReadModel
                     'expected_minor' => $order?->expected_payment_minor,
                     'settled_minor' => $settlement?->gross_amount_minor,
                     'currency' => $order?->currency,
+                    'pay_code' => $voucher === null ? null : [
+                        'masked_code' => '••••'.mb_substr((string) $voucher->code, -4),
+                        'value_minor' => is_numeric($payCodeAmount) ? (int) round((float) $payCodeAmount * 100) : null,
+                        'currency' => is_string($payCodeCurrency) && $payCodeCurrency !== '' ? $payCodeCurrency : $order->currency,
+                        ...($includeFullPayCodes ? ['code' => (string) $voucher->code] : []),
+                    ],
                     'refund_status' => $checkout->refundCase?->status,
                     'refund_eligible' => $settlement !== null
                         && $order?->voucher_id === null

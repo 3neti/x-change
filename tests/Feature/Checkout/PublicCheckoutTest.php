@@ -368,6 +368,57 @@ it('keeps all owner rows visible after computing attention totals', function ():
         ]);
 });
 
+it('shows an issued Pay Code value separately from its payment and reveals the full code only to the owner', function (): void {
+    $principal = checkoutTestPrincipal();
+    $order = checkoutTestOrder($principal);
+    $checkout = app(CheckoutLifecycle::class)->place($order);
+    $voucher = Voucher::query()->create(['code' => 'READY-XYZ123']);
+    $order->forceFill([
+        'status' => 'issued',
+        'voucher_id' => $voucher->getKey(),
+        'instructions_ciphertext' => ['cash' => ['amount' => 75, 'currency' => 'PHP']],
+        'expected_payment_minor' => 9000,
+        'issued_at' => now(),
+    ])->saveQuietly();
+
+    $headers = ['X-Inertia' => 'true', 'Accept' => 'text/html, application/xhtml+xml'];
+    $this->withHeaders($headers)->get(route('x-change.checkout.show'))
+        ->assertOk()
+        ->assertJsonPath('props.role', 'locked')
+        ->assertJsonPath('props.monitor', null);
+
+    $token = str_repeat('B', 64);
+    CheckoutViewerLink::query()->create([
+        'token_hash' => hash('sha256', $token),
+        'owner_type' => $principal::class,
+        'owner_id' => (string) $principal->getKey(),
+        'label' => 'Beta stakeholder',
+        'expires_at' => now()->addHour(),
+    ]);
+    $this->withHeaders($headers)->get(route('x-change.checkout.viewer', ['token' => $token]))
+        ->assertOk()
+        ->assertJsonPath('props.monitor.rows.0.reference', $checkout->reference)
+        ->assertJsonPath('props.monitor.rows.0.order_reference', $order->reference)
+        ->assertJsonPath('props.monitor.rows.0.expected_minor', 9000)
+        ->assertJsonPath('props.monitor.rows.0.pay_code.value_minor', 7500)
+        ->assertJsonPath('props.monitor.rows.0.pay_code.masked_code', '••••Z123')
+        ->assertDontSee('READY-XYZ123');
+
+    $this->post(route('x-change.checkout.unlock'), ['password' => 'password'])->assertRedirect();
+    $this->withHeaders($headers)->get(route('x-change.checkout.show'))
+        ->assertOk()
+        ->assertJsonPath('props.monitor.rows.0.pay_code.code', 'READY-XYZ123');
+});
+
+it('leaves Pay Code details empty while checkout issuance is pending', function (): void {
+    $principal = checkoutTestPrincipal();
+    app(CheckoutLifecycle::class)->place(checkoutTestOrder($principal));
+
+    $monitor = app(CheckoutConsoleReadModel::class)->forOwner($principal);
+
+    expect($monitor['rows'][0]['pay_code'])->toBeNull();
+});
+
 it('creates and revokes a viewer link scoped to the commissioned owner', function (): void {
     $principal = checkoutTestPrincipal();
 

@@ -31,7 +31,7 @@ final class CheckoutConsoleController extends Controller
 
         return Inertia::render('x-change/checkout/Console', [
             'role' => $owner ? 'owner' : 'locked',
-            'monitor' => $owner ? $read->forOwner($principal, is_string($status) ? $status : null) : null,
+            'monitor' => $owner ? $read->forOwner($principal, is_string($status) ? $status : null, includeFullPayCodes: true) : null,
         ])->toResponse($request)->withHeaders($this->responseHeaders());
     }
 
