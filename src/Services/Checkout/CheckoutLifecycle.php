@@ -10,8 +10,11 @@ use LBHurtado\Contact\Models\Contact;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\EmiCore\Data\Funding\ProviderPayerIdentityData;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
+use LBHurtado\XChange\Events\PaymentSettled;
 use LBHurtado\XChange\Models\Checkout;
+use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
+use LBHurtado\XChange\Models\SettledPaymentProcess;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use Propaganistas\LaravelPhone\PhoneNumber;
 
@@ -153,6 +156,27 @@ final readonly class CheckoutLifecycle
             }
 
             $this->associateConfirmedContact($checkout, $observation, $reverified->payerIdentity, 'contact_association_reconciled');
+
+            if ($checkout->contact_id !== null) {
+                $settlement = FundingSettlement::query()
+                    ->where('funding_intent_id', $intent->getKey())->first();
+                $process = $settlement === null ? null : SettledPaymentProcess::query()
+                    ->where('payment_type', 'funding_settlement')
+                    ->where('payment_id', $settlement->getKey())->first();
+
+                if ($process !== null && $process->contact_id === null) {
+                    $process->forceFill([
+                        'contact_id' => $checkout->contact_id,
+                        'contact_source' => $checkout->contact_source,
+                        'status' => $process->sms_enabled_snapshot && $process->sms_status === 'skipped'
+                            ? 'pending' : $process->status,
+                    ])->save();
+
+                    if ($process->status === 'pending') {
+                        PaymentSettled::dispatch((int) $process->getKey());
+                    }
+                }
+            }
 
             return $checkout->contact_id !== null;
         });

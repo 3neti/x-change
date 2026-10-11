@@ -23,6 +23,7 @@ final readonly class RecognizeSettlementVoucherCollection
     public function __construct(
         private ReduceProviderFundingTransactionEvidence $reduce,
         private AuditLoggerContract $audit,
+        private RecordSettledPayment $settledPayments,
     ) {}
 
     public function handle(VoucherCollection $collection): CampaignPaymentRecognition
@@ -118,6 +119,14 @@ final readonly class RecognizeSettlementVoucherCollection
                 'rule_snapshot' => ['source_kind' => $source->source_kind],
                 'recognized_at' => now(),
             ]);
+
+            $this->settledPayments->handle(
+                'campaign_payment_recognition',
+                (int) $recognition->getKey(),
+                (int) $canonical->canonicalObservationId,
+                'campaign_other',
+                (int) $canonical->grossAmountMinor,
+            );
 
             return ['recognition' => $recognition, 'created' => true, 'campaign' => $campaign, 'source' => $source];
         }, attempts: 5);

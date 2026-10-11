@@ -40,6 +40,7 @@ use LBHurtado\XChange\Actions\Claim\SubmitCompiledFormClaim;
 use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
 use LBHurtado\XChange\Actions\Payment\InspectCampaignPaymentEvidence;
 use LBHurtado\XChange\Actions\Payment\RecognizeQualifyingCampaignPayment;
+use LBHurtado\XChange\Actions\Payment\RunSettledPaymentPipeline;
 use LBHurtado\XChange\Actions\Redemption\PrepareVoucherClaimEvidence;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Actions\Settlement\ApproveCampaignPolicyCompletion;
@@ -93,6 +94,7 @@ use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Models\PolicyCompletionOutcome;
 use LBHurtado\XChange\Models\PolicyCompletionRequest;
 use LBHurtado\XChange\Models\ProvisionalCoverage;
+use LBHurtado\XChange\Models\SettledPaymentProcess;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Models\StandingFundingQrArtifact;
 use LBHurtado\XChange\Services\Claim\ClaimExperienceCompiler;
@@ -2334,6 +2336,8 @@ it('reports missing and reversed payment timing as unknown', function (): void {
 
 it('queues one durable completion SMS for wallet source accounts across lifecycle replays', function (string $institution, string $account): void {
     Queue::fake();
+    config()->set('x-change.payment_feedback.sms.enabled', true);
+    config()->set('x-change.payment_feedback.sms.flows.campaign_qr_ph', true);
     config()->set('x-feedback.transports.sms.driver', 'engagespark');
     [$recognition] = auiRecognizedPaymentForContinuation([
         'payer_institution_ciphertext' => $institution,
@@ -2363,6 +2367,8 @@ it('queues one durable completion SMS for wallet source accounts across lifecycl
 
 it('sends the campaign completion link through the feedback worker once after provider acceptance', function (): void {
     Queue::fake();
+    config()->set('x-change.payment_feedback.sms.enabled', true);
+    config()->set('x-change.payment_feedback.sms.flows.campaign_qr_ph', true);
     [$recognition] = auiRecognizedPaymentForContinuation([
         'payer_institution_ciphertext' => 'GXCHPHM2XXX',
         'payer_account_ciphertext' => '09173011987',
@@ -2386,8 +2392,67 @@ it('sends the campaign completion link through the feedback worker once after pr
     Queue::assertPushed(DeliverQueuedFeedbackSmsJob::class, 1);
 });
 
+it('associates a wallet payer contact through the settled payment pipeline', function (): void {
+    Queue::fake();
+    config()->set('x-change.payment_feedback.sms.enabled', true);
+    config()->set('x-change.payment_feedback.sms.flows.campaign_qr_ph', true);
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_institution_ciphertext' => 'GXCHPHM2XXX',
+        'payer_account_ciphertext' => '09173011987',
+        'payer_name_ciphertext' => 'Sample Payer',
+    ]);
+    $process = SettledPaymentProcess::query()
+        ->where('payment_type', 'campaign_payment_recognition')
+        ->where('payment_id', $recognition->getKey())->sole();
+
+    app(RunSettledPaymentPipeline::class)->handle($process->getKey());
+
+    expect($process->fresh()->contact_id)->not->toBeNull()
+        ->and($process->fresh()->sms_status)->toBe('awaiting_completion_link')
+        ->and(Contact::query()->findOrFail($process->fresh()->contact_id)->mobile)
+        ->toBe('09173011987');
+});
+
+it('keeps campaign payment SMS off by default after the completion link is ready', function (): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_institution_ciphertext' => 'GXCHPHM2XXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]);
+
+    app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']);
+
+    expect(FeedbackDeliveryRecord::query()->count())->toBe(0);
+    Queue::assertNotPushed(DeliverQueuedFeedbackSmsJob::class);
+});
+
+it('queues a generic settled payment SMS only for a wallet source account', function (): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_institution_ciphertext' => 'PAPHPHM1XXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]);
+    $process = SettledPaymentProcess::query()->create([
+        'payment_type' => 'funding_settlement',
+        'payment_id' => 98123,
+        'observation_id' => $recognition->canonical_provider_funding_observation_id,
+        'flow' => 'top_up',
+        'gross_amount_minor' => 5000,
+        'sms_enabled_snapshot' => true,
+    ]);
+
+    app(RunSettledPaymentPipeline::class)->handle($process->getKey());
+
+    expect($process->fresh()->contact_id)->not->toBeNull()
+        ->and(FeedbackDeliveryRecord::query()->where('intent_key', 'payment.settled')->count())->toBe(1);
+    Queue::assertPushed(DeliverQueuedFeedbackSmsJob::class,
+        fn ($sms): bool => str_contains($sms->message, 'You paid ₱50.00'));
+});
+
 it('does not route completion SMS to unsupported or invalid source accounts', function (string $institution, string $account): void {
     Queue::fake();
+    config()->set('x-change.payment_feedback.sms.enabled', true);
+    config()->set('x-change.payment_feedback.sms.flows.campaign_qr_ph', true);
     [$recognition] = auiRecognizedPaymentForContinuation([
         'payer_institution_ciphertext' => $institution,
         'payer_account_ciphertext' => $account,
@@ -2406,6 +2471,8 @@ it('does not route completion SMS to unsupported or invalid source accounts', fu
 
 it('refuses an inline SMS driver for campaign completion delivery', function (): void {
     Queue::fake();
+    config()->set('x-change.payment_feedback.sms.enabled', true);
+    config()->set('x-change.payment_feedback.sms.flows.campaign_qr_ph', true);
     [$recognition] = auiRecognizedPaymentForContinuation([
         'payer_institution_ciphertext' => 'PAPHPHM1XXX',
         'payer_account_ciphertext' => '09173011987',

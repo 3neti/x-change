@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Actions\Campaigns;
 use Illuminate\Support\Facades\Log;
 use LBHurtado\XChange\Actions\Feedback\DeliverAndJournalFeedback;
 use LBHurtado\XChange\Models\ProvisionalCoverage;
+use LBHurtado\XChange\Models\SettledPaymentProcess;
 use LBHurtado\XChange\Services\Feedback\QueuedEngageSparkSmsFeedbackChannelDriver;
 use LBHurtado\XChange\Services\Settlement\CampaignDemonstrationProductPresentation;
 use LBHurtado\XChange\Services\Settlement\CampaignWalletPayerMobile;
@@ -15,6 +16,7 @@ use LBHurtado\XFeedback\Data\FeedbackChannelData;
 use LBHurtado\XFeedback\Data\FeedbackIntentData;
 use LBHurtado\XFeedback\Data\FeedbackMessageData;
 use LBHurtado\XFeedback\Data\FeedbackRecipientData;
+use LBHurtado\XFeedback\Services\PaymentSmsContent;
 use RuntimeException;
 
 final readonly class SendCampaignPaymentCompletionSms
@@ -24,12 +26,22 @@ final readonly class SendCampaignPaymentCompletionSms
         private FeedbackChannelRegistryContract $channels,
         private CampaignWalletPayerMobile $payerMobile,
         private CampaignDemonstrationProductPresentation $presentations,
+        private PaymentSmsContent $content,
     ) {}
 
     public function handle(ProvisionalCoverage $coverage): void
     {
         $coverage->loadMissing(['recognition.canonicalObservation', 'completionPayCodeIssuance.voucher']);
         $recognition = $coverage->recognition;
+        $process = SettledPaymentProcess::query()
+            ->where('payment_type', 'campaign_payment_recognition')
+            ->where('payment_id', $recognition->getKey())
+            ->first();
+
+        if ($process === null || ! $process->sms_enabled_snapshot) {
+            return;
+        }
+
         $mobile = $this->payerMobile->resolve($recognition);
 
         if ($mobile === null) {
@@ -62,7 +74,10 @@ final readonly class SendCampaignPaymentCompletionSms
                 eventType: 'campaign.payment.completion.ready',
                 message: new FeedbackMessageData(
                     title: $presentation['first_sms_title'],
-                    body: str_replace(':url', $url, $presentation['first_sms_body']),
+                    body: $this->content->campaign(
+                        (int) $recognition->gross_amount_minor,
+                        str_replace(':url', $url, $presentation['first_sms_body']),
+                    ),
                 ),
                 recipients: [new FeedbackRecipientData(
                     type: 'campaign_payer',
@@ -89,5 +104,7 @@ final readonly class SendCampaignPaymentCompletionSms
         if (! in_array($result->status, ['queued', 'sent', 'delivered'], true)) {
             throw new RuntimeException('Campaign completion SMS delivery was not accepted.');
         }
+
+        $process->forceFill(['sms_status' => $result->status])->save();
     }
 }

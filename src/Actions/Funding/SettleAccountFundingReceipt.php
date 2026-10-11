@@ -10,6 +10,7 @@ use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
+use LBHurtado\XChange\Actions\Payment\RecordSettledPayment;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Enums\AccountFundingReceiptStatus;
@@ -31,6 +32,7 @@ final class SettleAccountFundingReceipt
         private readonly VerifiedTreasuryFundingAllocationContract $allocations,
         private readonly AuditLoggerContract $audit,
         private readonly StandingFundingRecognitionPolicy $recognitionPolicy,
+        private readonly RecordSettledPayment $settledPayments,
     ) {}
 
     public function handle(AccountFundingReceipt $receipt): AccountFundingReceipt
@@ -121,6 +123,14 @@ final class SettleAccountFundingReceipt
                 'treasury_position_transfer_uuid' => $allocation->transferUuid,
             ]);
             $locked->saveQuietly();
+
+            $this->settledPayments->handle(
+                'account_funding_receipt',
+                (int) $locked->getKey(),
+                (int) $observation->getKey(),
+                'top_up',
+                (int) $observation->gross_amount_minor,
+            );
 
             return [$locked->refresh(), true];
         }, attempts: 5);

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use LBHurtado\Instruction\Models\InstructionItem;
 use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
+use LBHurtado\XChange\Actions\Payment\Pipes\AssociateSettledPayerContact;
+use LBHurtado\XChange\Actions\Payment\Pipes\QueueSettledPaymentSms;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
 use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
@@ -174,6 +176,20 @@ $defaultDeploymentRuntimeTier = match ((string) env('APP_ENV', 'production')) {
 };
 
 return [
+    'payment_feedback' => [
+        'pipes' => [
+            AssociateSettledPayerContact::class,
+            QueueSettledPaymentSms::class,
+        ],
+        'sms' => [
+            'enabled' => (bool) env('XCHANGE_PAYMENT_SMS_ENABLED', false),
+            'flows' => [
+                'top_up' => (bool) env('XCHANGE_PAYMENT_SMS_TOP_UP_ENABLED', false),
+                'public_auto_generate' => (bool) env('XCHANGE_PAYMENT_SMS_AUTO_GENERATE_ENABLED', false),
+                'campaign_qr_ph' => (bool) env('XCHANGE_PAYMENT_SMS_CAMPAIGN_ENABLED', false),
+            ],
+        ],
+    ],
     'legal' => [
         'eula' => [
             // The installer creates this host-owned file once and never overwrites it by default.

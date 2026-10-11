@@ -9,6 +9,7 @@ use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
+use LBHurtado\XChange\Actions\Payment\RecordSettledPayment;
 use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Contracts\TreasuryPositionLedgerResolverContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
@@ -17,7 +18,6 @@ use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Exceptions\FundingEvidenceAlreadyClaimed;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
-use LBHurtado\XChange\Jobs\Checkout\LinkSettledCheckoutContactJob;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingSettlement;
@@ -38,6 +38,7 @@ class SettleVerifiedFundingIntent
         private readonly RecordLateOnDemandIssuancePayment $lateOnDemandPayment,
         private readonly ClaimFundingEvidence $claimEvidence,
         private readonly CheckoutLifecycle $checkouts,
+        private readonly RecordSettledPayment $settledPayments,
     ) {}
 
     public function handle(FundingIntent $intent): FundingSettlement
@@ -164,9 +165,6 @@ class SettleVerifiedFundingIntent
                     ?? $this->onDemandIssuanceHold->handle($locked, $observation->net_amount_minor);
                 if ($fundingOrder !== null && data_get($fundingOrder->metadata, 'source') === 'public.auto-generate') {
                     $this->checkouts->markSettled($fundingOrder, $observation);
-                    DB::afterCommit(static function () use ($fundingOrder, $observation): void {
-                        LinkSettledCheckoutContactJob::dispatch($fundingOrder->getKey(), $observation->getKey());
-                    });
                 }
             }
 
@@ -192,6 +190,18 @@ class SettleVerifiedFundingIntent
                     ResumeOnDemandPayCodeIssuanceJob::dispatch($fundingOrder->getKey());
                 });
             }
+
+            $flow = $locked->purpose === FundingIntentPurpose::OnDemandIssuance
+                ? (data_get($fundingOrder?->metadata, 'source') === 'public.auto-generate'
+                    ? 'public_auto_generate' : 'authenticated_issuance')
+                : 'top_up';
+            $this->settledPayments->handle(
+                'funding_settlement',
+                (int) $settlement->getKey(),
+                (int) $observation->getKey(),
+                $flow,
+                (int) $observation->gross_amount_minor,
+            );
 
             return $settlement;
         }, attempts: 5);

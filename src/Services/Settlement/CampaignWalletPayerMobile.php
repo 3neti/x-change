@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Settlement;
 
+use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Models\CampaignPaymentRecognition;
 use LBHurtado\XChange\Models\CompletionPayCodeIssuance;
@@ -29,7 +30,12 @@ final class CampaignWalletPayerMobile
     public function resolve(CampaignPaymentRecognition $recognition): ?string
     {
         $recognition->loadMissing('canonicalObservation');
-        $observation = $recognition->canonicalObservation;
+
+        return $this->fromObservation($recognition->canonicalObservation);
+    }
+
+    public function fromObservation(?ProviderFundingObservation $observation): ?string
+    {
         $institution = strtoupper(trim((string) $observation?->payer_institution_ciphertext));
         $account = trim((string) $observation?->payer_account_ciphertext);
         $mobile = MobileNumber::normalize($account);

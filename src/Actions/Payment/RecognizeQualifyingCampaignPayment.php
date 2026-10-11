@@ -25,6 +25,7 @@ final readonly class RecognizeQualifyingCampaignPayment
         private ReduceProviderFundingTransactionEvidence $reduce,
         private QuarantineCampaignPaymentEvidence $quarantine,
         private AuditLoggerContract $audit,
+        private RecordSettledPayment $settledPayments,
     ) {}
 
     public function handle(
@@ -105,6 +106,14 @@ final readonly class RecognizeQualifyingCampaignPayment
                 'rule_snapshot' => $lockedBinding->permitted_payment_rules ?? [],
                 'recognized_at' => $recognizedAt,
             ]);
+
+            $this->settledPayments->handle(
+                'campaign_payment_recognition',
+                (int) $recognition->getKey(),
+                (int) $canonical->canonicalObservationId,
+                'campaign_qr_ph',
+                (int) $canonical->grossAmountMinor,
+            );
 
             return ['state' => 'recognized', 'recognition' => $recognition, 'created' => true];
         }, attempts: 5);

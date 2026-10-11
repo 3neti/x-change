@@ -166,6 +166,7 @@ use LBHurtado\XChange\Console\Commands\PayCode\EstimatePayCodeCostCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\GeneratePayCodeCommand;
 use LBHurtado\XChange\Console\Commands\Payment\DeliverPartnerPaymentEventsCommand;
 use LBHurtado\XChange\Console\Commands\Payment\MonitorOpenPaymentAttemptsCommand;
+use LBHurtado\XChange\Console\Commands\Payment\ReplaySettledPaymentPipelineCommand;
 use LBHurtado\XChange\Console\Commands\Payment\ResumeVerifiedPaymentAttemptsCommand;
 use LBHurtado\XChange\Console\Commands\Payment\VerifyOpenPaymentAttemptsCommand;
 use LBHurtado\XChange\Console\Commands\PreviewCommissioningManifestCommand;
@@ -342,6 +343,7 @@ use LBHurtado\XChange\Events\CampaignPaymentRecognized;
 use LBHurtado\XChange\Events\CompletionClaimEvidenceProjected;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Events\DisbursementRejected;
+use LBHurtado\XChange\Events\PaymentSettled;
 use LBHurtado\XChange\Events\PolicyCompletionOutcomeRecorded;
 use LBHurtado\XChange\Exceptions\CommercialPricingChanged;
 use LBHurtado\XChange\Exceptions\ExternalReferenceConflict;
@@ -374,6 +376,7 @@ use LBHurtado\XChange\Listeners\HandleRejectedDisbursement;
 use LBHurtado\XChange\Listeners\QueueAutomaticDemonstrationPolicy;
 use LBHurtado\XChange\Listeners\QueueCampaignPaymentLifecycle;
 use LBHurtado\XChange\Listeners\QueueDemonstrationPolicySummary;
+use LBHurtado\XChange\Listeners\QueueSettledPaymentPipeline;
 use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
 use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Models\LeadCampaign;
@@ -1779,6 +1782,7 @@ class XChangeServiceProvider extends ServiceProvider
                 ReleaseStandingFundingStaleLeaseCommand::class,
                 ReconcileAmbiguousStandingFundingCommand::class,
                 RetryStandingFundingAddressCommand::class,
+                ReplaySettledPaymentPipelineCommand::class,
                 ProcessStandingFundingRuntimeOutboxCommand::class,
                 ReconcilePendingDisbursementsCommand::class,
                 TestFeedbackEmailCommand::class,
@@ -1861,6 +1865,7 @@ class XChangeServiceProvider extends ServiceProvider
         }
 
         Event::listen(CampaignPaymentRecognized::class, QueueCampaignPaymentLifecycle::class);
+        Event::listen(PaymentSettled::class, QueueSettledPaymentPipeline::class);
         Event::listen(PolicyCompletionOutcomeRecorded::class, QueueDemonstrationPolicySummary::class);
         Event::listen(CompletionClaimEvidenceProjected::class, QueueAutomaticDemonstrationPolicy::class);
 

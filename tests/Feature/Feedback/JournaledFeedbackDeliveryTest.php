@@ -18,6 +18,33 @@ use LBHurtado\XFeedback\Mail\FeedbackEmailMessage;
 use LBHurtado\XFeedback\Models\FeedbackDeliveryRecord;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
+it('skips a payment SMS provider call after the daily cap', function () {
+    Bus::fake([DeliverQueuedFeedbackSmsJob::class]);
+    config()->set('x-feedback.payment_sms.daily_attempt_cap', 0);
+
+    $queued = app(SendTestFeedback::class)->handle(
+        channel: 'sms',
+        route: '09173011987',
+        message: 'Payment received',
+        runReference: 'payment-sms-cap-test',
+        send: true,
+    );
+    FeedbackDeliveryRecord::query()->where('delivery_id', $queued->deliveryId)->update([
+        'intent_key' => 'payment.settled',
+    ]);
+    $provider = Mockery::mock(EngageSpark::class);
+    $provider->shouldNotReceive('send');
+    app()->instance(EngageSpark::class, $provider);
+
+    app(CompleteQueuedFeedbackSmsDelivery::class)->handle(
+        deliveryId: $queued->deliveryId,
+        message: 'Payment received',
+        sender: 'XCHANGE',
+    );
+
+    expect(FeedbackDeliveryRecord::query()->where('delivery_id', $queued->deliveryId)->value('status'))
+        ->toBe('cancelled');
+});
 it('previews direct feedback without sending or writing delivery evidence', function () {
     Mail::fake();
 

@@ -16,6 +16,7 @@ use LBHurtado\XFeedback\Data\FeedbackDeliveryRecordData;
 use LBHurtado\XFeedback\Data\FeedbackProviderReceiptData;
 use LBHurtado\XFeedback\Data\FeedbackRecipientData;
 use LBHurtado\XFeedback\Models\FeedbackDeliveryRecord;
+use LBHurtado\XFeedback\Services\PaymentSmsDailyBudget;
 use RuntimeException;
 use Throwable;
 
@@ -25,6 +26,7 @@ final readonly class CompleteQueuedFeedbackSmsDelivery
         private EngageSpark $engageSpark,
         private FeedbackDeliveryAttemptRecorderContract $recorder,
         private FeedbackDeliveryJournalWriterContract $journal,
+        private PaymentSmsDailyBudget $paymentSmsBudget,
     ) {}
 
     public function handle(
@@ -39,6 +41,19 @@ final readonly class CompleteQueuedFeedbackSmsDelivery
         }
 
         $recipient = $this->recipient($record);
+        if (in_array($record->intent_key, ['payment.settled', 'campaign.payment.completion'], true)
+            && ! $this->paymentSmsBudget->reserveAttempt()) {
+            return $this->recordOutcome(
+                record: $record,
+                recipient: $recipient,
+                status: FeedbackDeliveryData::StatusCancelled,
+                providerMessageId: null,
+                providerStatus: 'DAILY_CAP_REACHED',
+                providerPayload: ['accepted' => false],
+                meta: ['reason' => 'payment_sms_daily_cap'],
+            );
+        }
+
         $response = $this->engageSpark->send(
             (new SendHttpApiParams(
                 service: $this->engageSpark,
