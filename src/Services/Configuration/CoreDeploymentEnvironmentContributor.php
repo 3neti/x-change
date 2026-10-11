@@ -498,6 +498,13 @@ final class CoreDeploymentEnvironmentContributor implements DeploymentEnvironmen
                 safeExample: 'XCHANGE',
             ),
             new EnvironmentVariableData(
+                key: 'XCHANGE_PAYMENT_SMS_AUTHENTICATED_ISSUANCE_ENABLED',
+                description: 'Send a payment receipt to the wallet payer for authenticated Pay Code issuance.',
+                category: 'Delivery',
+                configPath: 'x-change.payment_feedback.sms.flows.authenticated_issuance',
+                safeExample: 'false',
+            ),
+            new EnvironmentVariableData(
                 key: 'XCHANGE_CAMPAIGNS_SMS_DELIVERY_ENABLED',
                 description: 'Permit explicit campaign SMS delivery actions.',
                 category: 'Delivery',

@@ -64,7 +64,7 @@ final readonly class QueueSettledPaymentSms
         if ($mobile === null
             || ($process->flow === 'public_auto_generate'
                 ? ! $this->hasTrustedPublicQrPayer($process, $observation, $mobile)
-                : $this->walletPayerMobile->fromObservation($observation) === null)) {
+                : $this->walletPayerMobile->fromObservation($observation) !== $mobile)) {
             $process->forceFill(['sms_status' => 'skipped'])->save();
 
             return $next($process);
@@ -78,15 +78,17 @@ final readonly class QueueSettledPaymentSms
                 message: new FeedbackMessageData(
                     title: $order === null ? 'Payment received' : 'Pay Code ready',
                     body: $order === null
-                        ? ($process->flow === 'top_up'
-                            ? $this->content->topUp((int) $process->gross_amount_minor)
-                            : $this->content->generic((int) $process->gross_amount_minor))
-                        : $this->content->payCodeIssued(
-                            (int) $process->gross_amount_minor,
-                            (int) round((float) data_get($order->instructions_ciphertext, 'cash.amount') * 100),
-                            (string) $order->voucher->code,
-                            route('x-change.claim.show', ['code' => $order->voucher->code]),
-                        ),
+                        ? match ($process->flow) {
+                            'top_up' => $this->content->topUp((int) $process->gross_amount_minor),
+                            'authenticated_issuance' => $this->content->authenticatedIssuance((int) $process->gross_amount_minor),
+                            default => $this->content->generic((int) $process->gross_amount_minor),
+                        }
+                    : $this->content->payCodeIssued(
+                        (int) $process->gross_amount_minor,
+                        (int) round((float) data_get($order->instructions_ciphertext, 'cash.amount') * 100),
+                        (string) $order->voucher->code,
+                        route('x-change.claim.show', ['code' => $order->voucher->code]),
+                    ),
                 ),
                 recipients: [new FeedbackRecipientData(type: 'payment_payer', id: (string) $process->getKey(), phone: $mobile)],
                 channels: [new FeedbackChannelData(key: 'sms')],

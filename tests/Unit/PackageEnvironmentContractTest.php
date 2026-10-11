@@ -38,6 +38,19 @@ it('ships the shared UI primitives required by published form-flow pages', funct
         ->toBeFile();
 });
 
+it('declares the authenticated issuance SMS switch as a default-off delivery setting', function (): void {
+    $variable = collect((new CoreDeploymentEnvironmentContributor)->environmentVariables())
+        ->firstWhere('key', 'XCHANGE_PAYMENT_SMS_AUTHENTICATED_ISSUANCE_ENABLED');
+
+    expect($variable)->not->toBeNull()
+        ->and($variable->configPath)->toBe('x-change.payment_feedback.sms.flows.authenticated_issuance')
+        ->and($variable->safeExample)->toBe('false')
+        ->and(file_get_contents(dirname(__DIR__, 2).'/.env.example'))
+        ->toContain('XCHANGE_PAYMENT_SMS_AUTHENTICATED_ISSUANCE_ENABLED=false')
+        ->and(file_get_contents(dirname(__DIR__, 2).'/stubs/environment/x-change.env.example.stub'))
+        ->toContain('XCHANGE_PAYMENT_SMS_AUTHENTICATED_ISSUANCE_ENABLED=false');
+});
+
 it('keeps known secret examples empty', function (): void {
     $contents = file_get_contents(dirname(__DIR__, 2).'/.env.example');
     $variables = (new CoreDeploymentEnvironmentContributor)->environmentVariables();

@@ -24,6 +24,19 @@ it('records a settled payment once and snapshots the SMS policy', function () {
     Queue::assertPushed(ProcessSettledPaymentJob::class, 1);
 });
 
+it('snapshots authenticated issuance SMS independently of other payment flows', function () {
+    Queue::fake();
+    config()->set('x-change.payment_feedback.sms.enabled', true);
+    config()->set('x-change.payment_feedback.sms.flows.authenticated_issuance', true);
+
+    $process = app(RecordSettledPayment::class)->handle(
+        'funding_settlement', 914, 429, 'authenticated_issuance', 5201,
+    );
+
+    expect($process->sms_enabled_snapshot)->toBeTrue();
+    Queue::assertPushed(ProcessSettledPaymentJob::class, 1);
+});
+
 it('runs configured settled payment pipes once', function () {
     $process = SettledPaymentProcess::query()->create([
         'payment_type' => 'funding_settlement',

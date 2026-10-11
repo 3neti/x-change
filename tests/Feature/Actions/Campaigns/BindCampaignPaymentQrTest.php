@@ -2449,6 +2449,54 @@ it('queues a top-up payment SMS only for a wallet source account', function (): 
         fn ($sms): bool => str_contains($sms->message, 'Top-up payment of ₱50.00 received.'));
 });
 
+it('queues an authenticated issuance receipt to the wallet payer without a Pay Code', function (): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_institution_ciphertext' => 'GXCHPHM2XXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]);
+    $process = SettledPaymentProcess::query()->create([
+        'payment_type' => 'funding_settlement',
+        'payment_id' => 98124,
+        'observation_id' => $recognition->canonical_provider_funding_observation_id,
+        'flow' => 'authenticated_issuance',
+        'gross_amount_minor' => 5201,
+        'sms_enabled_snapshot' => true,
+    ]);
+
+    app(RunSettledPaymentPipeline::class)->handle($process->getKey());
+    app(RunSettledPaymentPipeline::class)->handle($process->getKey());
+
+    expect($process->fresh()->contact_id)->not->toBeNull()
+        ->and(FeedbackDeliveryRecord::query()->where('intent_key', 'payment.settled')->count())->toBe(1);
+    Queue::assertPushed(DeliverQueuedFeedbackSmsJob::class,
+        fn ($sms): bool => $sms->message === 'We received your ₱52.01 payment for Pay Code issuance. Thank you.');
+});
+
+it('skips authenticated issuance SMS when the linked Contact differs from the wallet payer', function (): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_institution_ciphertext' => 'PAPHPHM1XXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]);
+    $otherContact = Contact::fromPhoneNumber(phone('09175180722', 'PH'));
+    $process = SettledPaymentProcess::query()->create([
+        'payment_type' => 'funding_settlement',
+        'payment_id' => 98125,
+        'observation_id' => $recognition->canonical_provider_funding_observation_id,
+        'flow' => 'authenticated_issuance',
+        'gross_amount_minor' => 5201,
+        'sms_enabled_snapshot' => true,
+        'contact_id' => $otherContact->getKey(),
+    ]);
+
+    app(RunSettledPaymentPipeline::class)->handle($process->getKey());
+
+    expect($process->fresh()->sms_status)->toBe('skipped')
+        ->and(FeedbackDeliveryRecord::query()->where('intent_key', 'payment.settled')->count())->toBe(0);
+    Queue::assertNotPushed(DeliverQueuedFeedbackSmsJob::class);
+});
+
 it('does not route completion SMS to unsupported or invalid source accounts', function (string $institution, string $account): void {
     Queue::fake();
     config()->set('x-change.payment_feedback.sms.enabled', true);

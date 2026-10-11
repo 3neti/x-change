@@ -185,6 +185,7 @@ return [
             'enabled' => (bool) env('XCHANGE_PAYMENT_SMS_ENABLED', false),
             'flows' => [
                 'top_up' => (bool) env('XCHANGE_PAYMENT_SMS_TOP_UP_ENABLED', false),
+                'authenticated_issuance' => (bool) env('XCHANGE_PAYMENT_SMS_AUTHENTICATED_ISSUANCE_ENABLED', false),
                 'public_auto_generate' => (bool) env('XCHANGE_PAYMENT_SMS_AUTO_GENERATE_ENABLED', false),
                 'campaign_qr_ph' => (bool) env('XCHANGE_PAYMENT_SMS_CAMPAIGN_ENABLED', false),
             ],
