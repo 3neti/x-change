@@ -139,11 +139,16 @@ final readonly class CheckoutLifecycle
                 || ! in_array($checkout->status, ['settled', 'issued'], true)
                 || $checkout->contact_id !== null
                 || $intent->settlement === null
+                || $intent->settlement->provider_funding_observation_id !== $observation->getKey()
                 || $observation->provider_code !== $reverified->provider
                 || $observation->provider_transaction_id !== $reverified->providerTransactionId
-                || ! hash_equals($observation->payload_hash, $reverified->payloadHash)
+                || ! is_string($observation->funding_address)
+                || $observation->funding_address === ''
+                || $observation->funding_address !== $reverified->fundingAddress
                 || $observation->gross_amount_minor !== $reverified->grossAmountMinor
-                || $observation->currency !== $reverified->currency) {
+                || $observation->currency !== $reverified->currency
+                || $observation->provider_status !== 'settled'
+                || $reverified->providerStatus !== 'settled') {
                 return false;
             }
 

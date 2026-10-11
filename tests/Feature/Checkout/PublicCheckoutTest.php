@@ -134,6 +134,7 @@ it('recovers a missing QR payer Contact only from the same settled provider tran
         'provider_status' => 'settled',
         'settled_at' => now(),
         'verification_source' => 'netbank-vca-transaction-history',
+        'funding_address' => 'sha256:'.hash('sha256', 'reconcile-funding-address'),
         'payload_hash' => hash('sha256', 'checkout-reconcile-payload'),
     ]);
     $intent = FundingIntent::query()->create([
@@ -177,7 +178,8 @@ it('recovers a missing QR payer Contact only from the same settled provider tran
         currency: 'PHP',
         providerStatus: 'settled',
         verificationSource: 'netbank-vca-transaction-history',
-        payloadHash: $observation->payload_hash,
+        payloadHash: hash('sha256', 'updated-provider-payload'),
+        fundingAddress: $observation->funding_address,
         payerIdentity: new ProviderPayerIdentityData(
             name: 'Wallet Payer',
             accountNumber: '09171234567',
@@ -187,10 +189,10 @@ it('recovers a missing QR payer Contact only from the same settled provider tran
     );
     $lifecycle = app(CheckoutLifecycle::class);
 
-    $reverified->payloadHash = hash('sha256', 'different-provider-transaction');
+    $reverified->fundingAddress = 'sha256:'.hash('sha256', 'different-funding-address');
     expect($lifecycle->reconcileConfirmedQrContact($order, $reverified))->toBeFalse()
         ->and($checkout->refresh()->contact_id)->toBeNull();
-    $reverified->payloadHash = $observation->payload_hash;
+    $reverified->fundingAddress = $observation->funding_address;
 
     expect($lifecycle->reconcileConfirmedQrContact($order, $reverified))->toBeTrue()
         ->and($lifecycle->reconcileConfirmedQrContact($order, $reverified))->toBeFalse()
