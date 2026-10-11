@@ -7,6 +7,8 @@ namespace LBHurtado\XChange\Services\Checkout;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\Contact\Models\Contact;
+use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
+use LBHurtado\EmiCore\Data\Funding\ProviderPayerIdentityData;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\XChange\Models\Checkout;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
@@ -122,6 +124,35 @@ final readonly class CheckoutLifecycle
         });
     }
 
+    public function reconcileConfirmedQrContact(PayCodeIssuanceFundingOrder $order, ProviderFundingObservationData $reverified): bool
+    {
+        if ($reverified->payerIdentity === null) {
+            return false;
+        }
+
+        return DB::transaction(function () use ($order, $reverified): bool {
+            $checkout = Checkout::query()->where('funding_order_id', $order->getKey())->lockForUpdate()->firstOrFail();
+            $intent = $order->fundingIntent()->with('settlement')->firstOrFail();
+            $observation = ProviderFundingObservation::query()->findOrFail($intent->matched_observation_id);
+
+            if ($checkout->selected_method !== 'qr_ph'
+                || ! in_array($checkout->status, ['settled', 'issued'], true)
+                || $checkout->contact_id !== null
+                || $intent->settlement === null
+                || $observation->provider_code !== $reverified->provider
+                || $observation->provider_transaction_id !== $reverified->providerTransactionId
+                || ! hash_equals($observation->payload_hash, $reverified->payloadHash)
+                || $observation->gross_amount_minor !== $reverified->grossAmountMinor
+                || $observation->currency !== $reverified->currency) {
+                return false;
+            }
+
+            $this->associateConfirmedContact($checkout, $observation, $reverified->payerIdentity, 'contact_association_reconciled');
+
+            return $checkout->contact_id !== null;
+        });
+    }
+
     public function markSettled(PayCodeIssuanceFundingOrder $order, ProviderFundingObservation $observation): Checkout
     {
         $checkout = $this->place($order);
@@ -142,14 +173,18 @@ final readonly class CheckoutLifecycle
         });
     }
 
-    private function associateConfirmedContact(Checkout $checkout, ProviderFundingObservation $observation): void
-    {
-        $providerMobile = MobileNumber::normalize($observation->payer_mobile_ciphertext);
+    private function associateConfirmedContact(
+        Checkout $checkout,
+        ProviderFundingObservation $observation,
+        ?ProviderPayerIdentityData $reverifiedIdentity = null,
+        string $eventType = 'contact_association_completed',
+    ): void {
+        $providerMobile = MobileNumber::normalize($reverifiedIdentity?->mobile ?? $observation->payer_mobile_ciphertext);
         $providerMobile = is_string($providerMobile) && preg_match('/^639[0-9]{9}$/', $providerMobile) === 1
             ? $providerMobile : null;
         if ($providerMobile === null && $checkout->selected_method === 'qr_ph') {
-            $institution = strtoupper(trim((string) $observation->payer_institution_ciphertext));
-            $account = trim((string) $observation->payer_account_ciphertext);
+            $institution = strtoupper(trim((string) ($reverifiedIdentity?->institutionCode ?? $observation->payer_institution_ciphertext)));
+            $account = trim((string) ($reverifiedIdentity?->accountNumber ?? $observation->payer_account_ciphertext));
             $walletMobile = MobileNumber::normalize($account);
 
             if (in_array($institution, ['GXCHPHM2XXX', 'PAPHPHM1XXX', 'GCASH', 'MAYA', 'PAYMAYA'], true)
@@ -163,13 +198,13 @@ final readonly class CheckoutLifecycle
         $mobile = $providerMobile ?? $visitorMobile;
         $source = $providerMobile === null
             ? 'visitor_supplied'
-            : ($observation->payer_identity_provider_verified === true ? 'provider_verified' : 'provider_reported');
+            : (($reverifiedIdentity?->providerVerified ?? $observation->payer_identity_provider_verified) === true ? 'provider_verified' : 'provider_reported');
 
         if (is_string($mobile) && preg_match('/^639[0-9]{9}$/', $mobile) === 1) {
             $contact = Contact::fromPhoneNumber(new PhoneNumber($mobile, 'PH'));
 
             if ($contact instanceof Contact) {
-                $providerName = trim((string) $observation->payer_name_ciphertext);
+                $providerName = trim((string) ($reverifiedIdentity?->name ?? $observation->payer_name_ciphertext));
 
                 if ($providerMobile !== null && $providerName !== '' && trim((string) $contact->name) === '') {
                     $contact->name = $providerName;
@@ -190,7 +225,7 @@ final readonly class CheckoutLifecycle
             $checkout->status = 'settled';
         }
         $checkout->save();
-        $this->event($checkout, 'contact_association_completed', self::class, null, [
+        $this->event($checkout, $eventType, self::class, null, [
             'observation_id' => $observation->getKey(),
             'contact_source' => $checkout->contact_source,
         ]);

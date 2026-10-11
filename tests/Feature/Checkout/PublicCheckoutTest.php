@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\Contact\Models\Contact;
+use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
+use LBHurtado\EmiCore\Data\Funding\ProviderPayerIdentityData;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
 use LBHurtado\XChange\Models\Checkout;
@@ -115,6 +117,87 @@ it('links a QR Ph wallet payer Contact only after confirmed payment evidence', f
         ->and($checkout->events()->where('event_type', 'payment_settled')->count())->toBe(1)
         ->and($checkout->events()->where('event_type', 'contact_association_completed')->count())->toBe(1)
         ->and(Contact::query()->findOrFail($checkout->contact_id)->mobile)->toBe('09171234567');
+});
+
+it('recovers a missing QR payer Contact only from the same settled provider transaction', function (): void {
+    $principal = checkoutTestPrincipal();
+    $order = checkoutTestOrder($principal);
+    $checkout = app(CheckoutLifecycle::class)->place($order);
+    $observation = ProviderFundingObservation::query()->create([
+        'observation_key' => hash('sha256', 'checkout-reconcile-observation'),
+        'provider_code' => 'netbank',
+        'provider_transaction_id' => 'NB-CHECKOUT-RECONCILE',
+        'gross_amount_minor' => 2500,
+        'fee_amount_minor' => 0,
+        'net_amount_minor' => 2500,
+        'currency' => 'PHP',
+        'provider_status' => 'settled',
+        'settled_at' => now(),
+        'verification_source' => 'netbank-vca-transaction-history',
+        'payload_hash' => hash('sha256', 'checkout-reconcile-payload'),
+    ]);
+    $intent = FundingIntent::query()->create([
+        'account_reference' => $order->account_reference,
+        'provider_code' => 'netbank',
+        'purpose' => 'on_demand_issuance',
+        'expected_amount_minor' => 2500,
+        'currency' => 'PHP',
+        'status' => 'settled',
+        'idempotency_key_hash' => hash('sha256', 'checkout-reconcile-intent'),
+        'idempotency_fingerprint' => str_repeat('e', 64),
+        'created_by_type' => $principal::class,
+        'created_by_id' => (string) $principal->getKey(),
+        'matched_observation_id' => $observation->getKey(),
+        'expires_at' => now()->addMinutes(30),
+    ]);
+    FundingSettlement::query()->create([
+        'funding_intent_id' => $intent->getKey(),
+        'provider_funding_observation_id' => $observation->getKey(),
+        'provider_code' => 'netbank',
+        'account_reference' => $order->account_reference,
+        'gross_amount_minor' => 2500,
+        'net_amount_minor' => 2500,
+        'currency' => 'PHP',
+        'treasury_inventory_reference' => 'reconcile-inventory',
+        'treasury_operation_reference' => 'reconcile-operation',
+        'wallet_transaction_id' => 123456,
+        'wallet_transaction_uuid' => '12345678-1234-1234-1234-123456789012',
+        'settled_at' => now(),
+    ]);
+    $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();
+    app(CheckoutLifecycle::class)->settled($order, $observation);
+    $checkout->refresh()->forceFill(['status' => 'issued'])->save();
+
+    $reverified = new ProviderFundingObservationData(
+        provider: 'netbank',
+        providerTransactionId: $observation->provider_transaction_id,
+        grossAmountMinor: 2500,
+        feeAmountMinor: 0,
+        netAmountMinor: 2500,
+        currency: 'PHP',
+        providerStatus: 'settled',
+        verificationSource: 'netbank-vca-transaction-history',
+        payloadHash: $observation->payload_hash,
+        payerIdentity: new ProviderPayerIdentityData(
+            name: 'Wallet Payer',
+            accountNumber: '09171234567',
+            institutionCode: 'GXCHPHM2XXX',
+            providerVerified: false,
+        ),
+    );
+    $lifecycle = app(CheckoutLifecycle::class);
+
+    $reverified->payloadHash = hash('sha256', 'different-provider-transaction');
+    expect($lifecycle->reconcileConfirmedQrContact($order, $reverified))->toBeFalse()
+        ->and($checkout->refresh()->contact_id)->toBeNull();
+    $reverified->payloadHash = $observation->payload_hash;
+
+    expect($lifecycle->reconcileConfirmedQrContact($order, $reverified))->toBeTrue()
+        ->and($lifecycle->reconcileConfirmedQrContact($order, $reverified))->toBeFalse()
+        ->and($checkout->refresh()->status)->toBe('issued')
+        ->and($checkout->contact_source)->toBe('provider_reported')
+        ->and(Contact::query()->findOrFail($checkout->contact_id)->name)->toBe('Wallet Payer')
+        ->and($checkout->events()->where('event_type', 'contact_association_reconciled')->count())->toBe(1);
 });
 
 it('requires a separate owner password and does not treat a commercial principal as a console actor', function (): void {
