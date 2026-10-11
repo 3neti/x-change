@@ -17,9 +17,11 @@ use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Exceptions\FundingEvidenceAlreadyClaimed;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
+use LBHurtado\XChange\Jobs\Checkout\LinkSettledCheckoutContactJob;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingSettlement;
+use LBHurtado\XChange\Services\Checkout\CheckoutLifecycle;
 use LBHurtado\XChange\Services\Treasury\TreasuryInventoryRegistrationService;
 
 class SettleVerifiedFundingIntent
@@ -35,6 +37,7 @@ class SettleVerifiedFundingIntent
         private readonly PlaceSettledOnDemandIssuanceHold $onDemandIssuanceHold,
         private readonly RecordLateOnDemandIssuancePayment $lateOnDemandPayment,
         private readonly ClaimFundingEvidence $claimEvidence,
+        private readonly CheckoutLifecycle $checkouts,
     ) {}
 
     public function handle(FundingIntent $intent): FundingSettlement
@@ -159,6 +162,12 @@ class SettleVerifiedFundingIntent
             if ($locked->purpose === FundingIntentPurpose::OnDemandIssuance) {
                 $fundingOrder = $this->lateOnDemandPayment->handle($locked, $observation)
                     ?? $this->onDemandIssuanceHold->handle($locked, $observation->net_amount_minor);
+                if ($fundingOrder !== null && data_get($fundingOrder->metadata, 'source') === 'public.auto-generate') {
+                    $this->checkouts->markSettled($fundingOrder, $observation);
+                    DB::afterCommit(static function () use ($fundingOrder, $observation): void {
+                        LinkSettledCheckoutContactJob::dispatch($fundingOrder->getKey(), $observation->getKey());
+                    });
+                }
             }
 
             $this->transition->handle($locked, new FundingIntentTransitionData(

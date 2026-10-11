@@ -11,6 +11,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\XChange\Contracts\CommercialPrincipalResolverContract;
 use LBHurtado\XChange\Contracts\SettlementRailCapabilityRegistryContract;
+use LBHurtado\XChange\Services\Checkout\PublicCheckoutDraftAccess;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegistry;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceDiscoveryService;
@@ -31,6 +32,7 @@ final class PublicAutoGeneratePageController extends Controller
         private readonly PublicIssuanceInput $publicIssuanceInput,
         private readonly PublicIssuanceDiscoveryService $publicIssuanceDiscovery,
         private readonly PublicIssuanceTurnstileVerifier $turnstile,
+        private readonly PublicCheckoutDraftAccess $checkoutDrafts,
     ) {}
 
     public function __invoke(Request $request): Response
@@ -62,11 +64,17 @@ final class PublicAutoGeneratePageController extends Controller
             $request->query('currency'),
         );
         $discovery = $this->publicIssuanceDiscovery->describe();
+        $draft = $this->checkoutDrafts->active($request, $principal);
 
         return Inertia::render('x-change/public/AutoGenerate', [
             ...$props,
             'display_campaigns' => [],
             'display_session' => null,
+            'checkout_draft' => $draft === null ? null : [
+                'reference' => $draft['checkout']->reference,
+                'guest_token' => $draft['token'],
+                'instructions' => $draft['checkout']->instructions_ciphertext,
+            ],
             'surface_profile' => [
                 'kind' => 'public_auto_generate',
                 'show_funding_navigation' => false,

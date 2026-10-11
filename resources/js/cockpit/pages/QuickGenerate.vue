@@ -1221,6 +1221,7 @@ function stringValue(value: unknown): string | null {
           :on-demand-issuance-policy="props.on_demand_issuance_policy"
           :public-mode="publicAutoGenerate"
           :public-prefill="props.public_prefill"
+          :checkout-draft="props.checkout_draft"
           :turnstile="props.turnstile"
           :public-account-url="props.public_navigation?.register_url ?? null"
           :show-engineering-preview="

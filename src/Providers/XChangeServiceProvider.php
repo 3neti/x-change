@@ -79,6 +79,8 @@ use LBHurtado\XChange\Console\Commands\BootstrapXChangeFromManifestCommand;
 use LBHurtado\XChange\Console\Commands\Campaigns\ProcessCampaignBatchFulfillmentOutboxCommand;
 use LBHurtado\XChange\Console\Commands\Campaigns\ShowCampaignPayoutRecoveryDeliveriesCommand;
 use LBHurtado\XChange\Console\Commands\Campaigns\SyncCampaignPaymentAddressesCommand;
+use LBHurtado\XChange\Console\Commands\Checkout\BackfillPublicCheckoutsCommand;
+use LBHurtado\XChange\Console\Commands\Checkout\ManageCheckoutViewerLinkCommand;
 use LBHurtado\XChange\Console\Commands\Claim\ClaimWalkthroughCommand;
 use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionContextCommand;
 use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
@@ -1799,6 +1801,8 @@ class XChangeServiceProvider extends ServiceProvider
 
                 EvaluateSettlementEnvelopeCommand::class,
                 ResumeCampaignPaymentLifecycleCommand::class,
+                BackfillPublicCheckoutsCommand::class,
+                ManageCheckoutViewerLinkCommand::class,
                 RunLifecycleScenarioGroupCommand::class,
                 BackfillDisbursementSettlementJournalCommand::class,
                 AttestCommercialAccountingCommand::class,

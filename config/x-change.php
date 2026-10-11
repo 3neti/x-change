@@ -1210,6 +1210,10 @@ return [
         'receipt_link_ttl_days' => (int) env('XCHANGE_PUBLIC_AUTO_GENERATE_RECEIPT_TTL_DAYS', 30),
     ],
 
+    'checkout_console' => [
+        'owner_password' => env('XCHANGE_CHECKOUT_OWNER_PASSWORD', env('APP_ENV') === 'production' ? null : 'password'),
+    ],
+
     'funding' => [
         'provider_balance_max_age_seconds' => (int) env('XCHANGE_PROVIDER_BALANCE_MAX_AGE_SECONDS', 300),
         'api_middleware' => ['auth'],

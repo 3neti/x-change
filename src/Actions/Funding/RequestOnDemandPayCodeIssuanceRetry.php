@@ -10,6 +10,7 @@ use LBHurtado\Wallet\Treasury\Models\TreasuryAllocation;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
+use LBHurtado\XChange\Models\Checkout;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
@@ -44,6 +45,9 @@ final readonly class RequestOnDemandPayCodeIssuanceRetry
             && $order->fundingIntent?->status === FundingIntentStatus::Settled
             && $order->fundingIntent?->settlement !== null
             && data_get($order->metadata, 'provider_reversal') === null;
+        $safe = $safe && ! Checkout::query()
+            ->where('funding_order_id', $order->getKey())
+            ->whereHas('refundCase')->exists();
 
         return [
             'eligible' => $safe

@@ -11,6 +11,7 @@ use LBHurtado\XChange\Actions\Funding\RequestOnDemandPayCodeIssuanceRetry;
 use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
+use LBHurtado\XChange\Models\Checkout;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Services\QrArtifactFactory;
 use Throwable;
@@ -37,6 +38,25 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
         $instructions = $order->fundingIntent === null
             ? []
             : $this->instructions->forIntent($order->fundingIntent);
+        $checkout = $public ? Checkout::query()->where('funding_order_id', $order->getKey())->first() : null;
+        $bankUnlocked = $checkout instanceof Checkout
+            && $checkout->selected_method === 'bank_transfer'
+            && $checkout->visitor_mobile_hash !== null;
+        $selector = $this->selectors->forOnDemandIssuance(
+            orderReference: $order->reference,
+            amountMinor: $order->expected_payment_minor,
+            currency: $order->currency,
+            status: $order->status->value,
+            expiresAt: $order->expires_at?->toIso8601String(),
+            fundingInstructions: $instructions,
+        );
+
+        if ($public) {
+            $selector['default_mode'] = $bankUnlocked ? 'bank_transfer' : 'self_top_up';
+            if (! $bankUnlocked) {
+                $selector['bank_transfer']['instructions'] = [];
+            }
+        }
 
         return [
             'schema' => 'x-change.cockpit.on-demand-issuance-funding.v1',
@@ -61,6 +81,7 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
                 'acknowledge' => route('x-change.public-auto-generate.funding-orders.acknowledge', ['order' => $order->reference], false),
                 'verify' => route('x-change.public-auto-generate.funding-orders.verification', ['order' => $order->reference], false),
                 'retry_issuance' => route('x-change.public-auto-generate.funding-orders.retry-issuance', ['order' => $order->reference], false),
+                'funding_method' => route('x-change.public-auto-generate.funding-orders.funding-method', ['order' => $order->reference], false),
                 'cancel' => route('x-change.public-auto-generate.funding-orders.cancel', ['order' => $order->reference], false),
             ] : [
                 'show' => route(
@@ -115,14 +136,12 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
             ],
             'monitor' => $this->monitor($order),
             'retry' => $this->retry->availability($order),
-            'funding_selector' => $this->selectors->forOnDemandIssuance(
-                orderReference: $order->reference,
-                amountMinor: $order->expected_payment_minor,
-                currency: $order->currency,
-                status: $order->status->value,
-                expiresAt: $order->expires_at?->toIso8601String(),
-                fundingInstructions: $instructions,
-            ),
+            'checkout' => $public ? [
+                'reference' => $checkout?->reference,
+                'selected_method' => $checkout?->selected_method ?? 'qr_ph',
+                'bank_transfer_unlocked' => $bankUnlocked,
+            ] : null,
+            'funding_selector' => $selector,
         ];
     }
 

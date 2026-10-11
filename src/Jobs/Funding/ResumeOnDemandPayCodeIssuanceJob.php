@@ -20,6 +20,7 @@ use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
+use LBHurtado\XChange\Models\Checkout;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
 use RuntimeException;
@@ -77,6 +78,11 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
                 throw new RuntimeException(
                     'The issuance funding order is blocked by a provider reversal.',
                 );
+            }
+
+            if (Checkout::query()->where('funding_order_id', $order->getKey())
+                ->whereHas('refundCase')->exists()) {
+                throw new RuntimeException('The issuance funding order has a refund case.');
             }
 
             if (! in_array($order->status, [
@@ -172,6 +178,8 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
                 ],
                 metadata: ['pay_code' => $result->code],
             );
+            Checkout::query()->where('funding_order_id', $order->getKey())
+                ->update(['status' => 'issued', 'updated_at' => now()]);
         }, attempts: 5);
     }
 

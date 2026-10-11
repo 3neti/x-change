@@ -1,0 +1,115 @@
+# Checkout and Owner Payments Console Plan
+
+Last updated: 2026-10-11
+
+## Objective and sequence
+
+Introduce a durable Checkout in x-change for purchase-style Pay Code issuance.
+Integrate public issuance first. Keep the buyer's composer and payment recovery
+under `/x/auto-generate`; reserve `/x/checkout` for the temporary owner payments
+console. Implement in the x-change package, test there, publish its assets to
+the host, and verify a pinned deployment before enabling new public orders.
+
+This document is the implementation contract. The companion
+[`CHECKOUT_COMPASS.md`](CHECKOUT_COMPASS.md) records authority, invariants,
+decisions, evidence, and open gates. Preserve the release history in the
+existing Public Auto-Generate plan and compass.
+
+## Checkout and payment model
+
+- Persist an editable checkout draft with a stable reference, hashed guest
+  possession token, session binding, owner reference, encrypted instruction
+  and price snapshots, selected funding method, and encrypted visitor mobile.
+  A draft has no payment obligation. Place it once by linking one existing
+  On-Demand Issuance Funding Order; that order and its Funding Intent and
+  Settlement remain the financial source of truth.
+- The public GET remains read-only. Existing Turnstile, server-owned Commercial
+  Principal, amount limits, instruction allowlist, and idempotency protect
+  placement. Pause blocks new placement, while existing checkout, payment,
+  issuance, retry, and refund recovery remain accessible.
+- Require a valid Philippine mobile before **the server returns** bank-transfer
+  instructions. Save it as visitor supplied, not verified identity. QR Ph may
+  proceed without typed mobile; valid payer details from confirmed provider
+  evidence may enrich Contact. An unpaid order may switch between QR Ph and
+  bank transfer without creating another funding obligation. A switch to bank
+  transfer still requires the mobile gate. Pay Code funding remains visible
+  but unavailable until cycle and settlement safeguards have their own proof.
+- After confirmed settlement, link or create a Contact using normalized mobile
+  and explicit provenance. Keep visitor mobile, provider sender/account, and
+  eventual claimant as separate roles. Never merge an existing profile or
+  reveal saved KYC data merely because a visitor typed its mobile.
+- The existing funded-order resume job calls `GeneratePayCode`. Its guarded
+  issued transition attaches the voucher to the Checkout. The voucher package
+  post-generation and post-redemption pipelines retain their current roles;
+  a long-lived payment wait is a persisted Checkout state, not a synchronous
+  pipeline step.
+- A paid issuance failure retains the same order. Guarded retry and a manual
+  refund case are mutually exclusive paths to disposition. Refund cases
+  reference settled evidence, amount, reason, external return evidence, and
+  operator action. The console records a refund performed outside x-change;
+  it never initiates a bank return in this phase.
+
+## Buyer and console interfaces
+
+- Continue `/x/auto-generate` for composition. Add guest checkout detail and
+  method/mobile mutations under its existing access boundary. All customer
+  mutations require the session-bound possession token. Retain existing
+  funding-order and signed recovery URLs during adoption.
+- `/x/checkout` is the owner console. An expiring, revocable stakeholder
+  capability grants read-only counts, filters, transaction rows, and event
+  timelines. An owner console session can also request a guarded issuance
+  retry and open or dispose a manual refund case. The public-request
+  Commercial Principal user resolver does not authenticate a console actor.
+- The beta owner session uses a shared password from deployment secrets.
+  Production fails closed if it is missing or equals `password`; that literal
+  value is permitted only in local/test. Throttle unlock attempts, bind the
+  session to the commissioned owner, require password reconfirmation for
+  refund disposition, and audit action time, session, and request context.
+  Replace shared access with named administrator identity when the cockpit
+  exists. Stakeholder links never authorize mutations.
+- Console status comes from Checkout, funding order, Settlement, refund case,
+  and append-only events. Show masked Contact, method, expected/settled
+  amount, last activity, status, attention reason, and timeline. Use database
+  truth for payment state; Horizon is a worker-health diagnostic only.
+- Backfill existing public funding orders idempotently into Checkout records
+  without replaying payment, issuing another voucher, or changing guest access.
+
+## Verification and rollout
+
+Test server-side instruction disclosure, mobile normalization and Contact
+association, method switching, duplicate evidence, pause and resumption,
+exactly-one issuance, and retry/refund exclusion. Test anonymous denial,
+viewer read-only scope and expiry, owner password policy, principal scoping,
+audit records, and totals against settled evidence. Verify the browser flow
+and a pinned host deployment before enabling new public orders or sharing the
+owner console. Authenticated cockpit checkout and Pay Code funding are later
+phases.
+
+## Local implementation and operator commands
+
+The package implementation now has a session-bound, seven-day editable draft,
+one placed Checkout per funding order, a server-side bank mobile gate, an
+asynchronous Contact association after confirmed settlement, guarded refund
+case tracking, and the scoped owner/viewer console. The console reads database
+payment evidence; a typed mobile never authorizes an existing Contact profile.
+
+Set `XCHANGE_CHECKOUT_OWNER_PASSWORD` as a deployment secret. In production,
+the console refuses a missing password, `password`, or a password shorter than
+16 characters. Local/test uses `password` by default. `GET /x/checkout` shows
+only the password gate until unlocked. Owner actions are session-bound and
+audited. A viewer URL grants only read access and expires after at most 30 days.
+
+After migrating, run `php artisan x-change:checkout:backfill-public --dry-run`
+then `php artisan x-change:checkout:backfill-public`. The command links existing
+public orders idempotently; it does not replay funding or issuance. Create a
+viewer link with `php artisan x-change:checkout:viewer-link "Stakeholder name"
+--days=7`; list IDs with `--list`, and revoke with `--revoke=ID`. Treat the
+printed link as a secret. The owner console records an external refund and a
+separate Treasury reconciliation reference; it does not send money.
+
+Package feature tests, the existing public and on-demand funding suites,
+frontend component tests, and an isolated host Vite build passed locally.
+Host-wide TypeScript checking still reports existing errors in unrelated
+published components; the new Checkout console has no reported type error.
+Deployment, migration/backfill against an instance, paid QR Ph and Bank
+Transfer journeys, and manual refund acceptance remain release gates.

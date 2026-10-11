@@ -6,6 +6,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Http\Controllers\PublicIssuance\PublicIssuanceDiscoveryController;
 use LBHurtado\XChange\Http\Controllers\Web\BalancePageController;
+use LBHurtado\XChange\Http\Controllers\Web\Checkout\CheckoutConsoleController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimApprovalOtpController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimApprovalPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimAuthorizationRequiredController;
@@ -151,6 +152,8 @@ use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentVerificationCheckContr
 use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationAcceptanceController;
 use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationPageController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicAutoGeneratePageController;
+use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicCheckoutDraftController;
+use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicCheckoutFundingMethodController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuanceReceiptController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuanceRecoveryController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicPricingPageController;
@@ -201,6 +204,23 @@ Route::middleware(['web', ShareXChangeBranding::class])->group(function (): void
         ->name('x-change.provisioning.claim.accept');
 });
 
+Route::prefix('x/checkout')->middleware(['web', ShareXChangeBranding::class])->group(function (): void {
+    Route::get('/', [CheckoutConsoleController::class, 'show'])->name('x-change.checkout.show');
+    Route::post('unlock', [CheckoutConsoleController::class, 'unlock'])
+        ->middleware('throttle:5,1,checkout-console-unlock:')->name('x-change.checkout.unlock');
+    Route::post('lock', [CheckoutConsoleController::class, 'lock'])->name('x-change.checkout.lock');
+    Route::get('view/{token}', [CheckoutConsoleController::class, 'viewer'])
+        ->middleware('throttle:60,1,checkout-console-viewer:')->name('x-change.checkout.viewer');
+    Route::post('{checkout:reference}/retry', [CheckoutConsoleController::class, 'retry'])
+        ->middleware('throttle:3,1,checkout-console-retry:')->name('x-change.checkout.retry');
+    Route::post('{checkout:reference}/refund', [CheckoutConsoleController::class, 'openRefund'])
+        ->middleware('throttle:3,1,checkout-console-refund:')->name('x-change.checkout.refund.open');
+    Route::post('{checkout:reference}/refund/record', [CheckoutConsoleController::class, 'recordRefund'])
+        ->middleware('throttle:3,1,checkout-console-refund-record:')->name('x-change.checkout.refund.record');
+    Route::post('{checkout:reference}/refund/reconcile', [CheckoutConsoleController::class, 'reconcileRefund'])
+        ->middleware('throttle:3,1,checkout-console-refund-reconcile:')->name('x-change.checkout.refund.reconcile');
+});
+
 Route::prefix('x/auto-generate')->middleware([
     'web',
     ShareXChangeBranding::class,
@@ -212,6 +232,12 @@ Route::prefix('x/auto-generate')->middleware([
     Route::post('/', CockpitQuickGenerateMutationRouteShellController::class)
         ->middleware('throttle:6,1,public-auto-generate-issue:')
         ->name('x-change.public-auto-generate.store');
+    Route::post('checkouts', [PublicCheckoutDraftController::class, 'store'])
+        ->middleware('throttle:10,1,public-checkout-draft:')
+        ->name('x-change.public-auto-generate.checkouts.store');
+    Route::get('checkouts/draft', [PublicCheckoutDraftController::class, 'show'])
+        ->middleware('throttle:30,1,public-checkout-draft-read:')
+        ->name('x-change.public-auto-generate.checkouts.show');
     Route::get('recover/{order:reference}', PublicIssuanceRecoveryController::class)
         ->middleware('throttle:6,1,public-auto-generate-recover:')
         ->name('x-change.public-auto-generate.recover');
@@ -225,6 +251,9 @@ Route::prefix('x/auto-generate')->middleware([
             Route::get('/', [CockpitOnDemandIssuanceFundingOrderController::class, 'show'])
                 ->middleware('throttle:60,1,public-auto-generate-read:')
                 ->name('x-change.public-auto-generate.funding-orders.show');
+            Route::post('funding-method', PublicCheckoutFundingMethodController::class)
+                ->middleware('throttle:6,1,public-auto-generate-method:')
+                ->name('x-change.public-auto-generate.funding-orders.funding-method');
             Route::post('acknowledge', [CockpitOnDemandIssuanceFundingOrderController::class, 'acknowledge'])
                 ->middleware('throttle:6,1,public-auto-generate-check:')
                 ->name('x-change.public-auto-generate.funding-orders.acknowledge');

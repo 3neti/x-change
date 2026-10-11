@@ -1,5 +1,8 @@
 # Public Auto-Generate Compass
 
+The follow-on Checkout decisions and acceptance evidence are tracked in
+[`CHECKOUT_COMPASS.md`](CHECKOUT_COMPASS.md).
+
 Last updated: 2026-10-08
 
 ## North Star

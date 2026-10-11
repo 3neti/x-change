@@ -25,6 +25,8 @@ use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
 use LBHurtado\XChange\Http\Requests\GeneratePayCodeRequest;
 use LBHurtado\XChange\Services\BuildBalanceOverview;
+use LBHurtado\XChange\Services\Checkout\CheckoutLifecycle;
+use LBHurtado\XChange\Services\Checkout\PublicCheckoutDraftAccess;
 use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityHandoffPipeline;
 use LBHurtado\XChange\Services\Cockpit\CockpitPosSaleReferenceService;
 use LBHurtado\XChange\Services\Cockpit\CompileCockpitQuickGenerateClaimPolicy;
@@ -67,6 +69,8 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         PublicIssuanceOrderAccess $publicOrderAccess,
         PublicIssuanceInstructionPolicy $publicIssuancePolicy,
         PublicIssuanceTurnstileVerifier $turnstile,
+        CheckoutLifecycle $checkouts,
+        PublicCheckoutDraftAccess $checkoutDrafts,
     ): JsonResponse {
         $publicAutoGenerate = $request->attributes->get('x_change_public_auto_generate') === true;
 
@@ -171,6 +175,9 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 );
 
                 if ($publicAutoGenerate) {
+                    $draft = $checkoutDrafts->active($request, $operator);
+                    $checkouts->place($order, $draft['checkout'] ?? null);
+                    $checkoutDrafts->clear($request);
                     $token = $publicOrderAccess->bind($order, $request);
 
                     return response()->json(

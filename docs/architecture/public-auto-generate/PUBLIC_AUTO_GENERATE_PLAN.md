@@ -1,5 +1,8 @@
 # Public Auto-Generate Plan
 
+The follow-on Checkout and owner payments console work is specified in
+[`CHECKOUT_PLAN.md`](CHECKOUT_PLAN.md) and governed by its companion compass.
+
 Last updated: 2026-09-30
 
 ## Objective

@@ -35,6 +35,8 @@ const monitoring = ref(false);
 const refreshing = ref(false);
 const retrying = ref(false);
 const cancelling = ref(false);
+const selectingFundingMethod = ref(false);
+const bankMobile = ref("");
 const error = ref<string | null>(null);
 const monitorMessage = ref<string | null>(null);
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
@@ -150,6 +152,13 @@ watch(
   () => schedulePoll(),
 );
 
+watch(selectedMode, (mode) => {
+  if (mode === "self_top_up" && current.value?.actions.funding_method
+    && current.value.checkout?.selected_method !== "qr_ph") {
+    void selectFundingMethod("qr_ph");
+  }
+});
+
 onBeforeUnmount(clearPoll);
 
 function csrfHeader(): Record<string, string> {
@@ -164,6 +173,45 @@ function clearPoll(): void {
   if (pollTimer !== null) {
     clearTimeout(pollTimer);
     pollTimer = null;
+  }
+}
+
+async function selectFundingMethod(method: "qr_ph" | "bank_transfer"): Promise<void> {
+  const action = current.value?.actions.funding_method;
+
+  if (!action || selectingFundingMethod.value) {
+    return;
+  }
+
+  selectingFundingMethod.value = true;
+  error.value = null;
+
+  try {
+    const response = await fetch(action, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+        ...csrfHeader(),
+        ...guestAccessHeader(),
+      },
+      body: JSON.stringify({ method, mobile: method === "bank_transfer" ? bankMobile.value : undefined }),
+    });
+
+    if (!response.ok) {
+      error.value = response.status === 422
+        ? "Enter a valid Philippine mobile number to view bank transfer instructions."
+        : "The funding method could not be updated. Refresh and try again.";
+      return;
+    }
+
+    current.value = (await response.json()) as CockpitOnDemandIssuanceFundingProjection;
+  } catch {
+    error.value = "The funding method could not be updated. Refresh and try again.";
+  } finally {
+    selectingFundingMethod.value = false;
   }
 }
 
@@ -611,6 +659,15 @@ function text(value: unknown): string | null {
           class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900"
           data-testid="on-demand-bank-transfer-instructions"
         >
+          <div v-if="current.actions.funding_method && !current.checkout?.bank_transfer_unlocked" class="mb-4 rounded-xl border border-amber-200 bg-white p-4 dark:border-amber-900 dark:bg-slate-950">
+            <label for="checkout-bank-mobile" class="block text-sm font-semibold text-slate-900 dark:text-white">Your mobile number</label>
+            <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">Enter a Philippine mobile number before viewing transfer details. We will associate it with a confirmed payment.</p>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <input id="checkout-bank-mobile" v-model="bankMobile" type="tel" inputmode="tel" autocomplete="tel" placeholder="09xxxxxxxxx" class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900" />
+              <button type="button" :disabled="selectingFundingMethod" class="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-950" @click="selectFundingMethod('bank_transfer')">Show instructions</button>
+            </div>
+          </div>
+          <template v-else>
           <p class="text-xs font-bold uppercase tracking-wider text-slate-500">
             Exact transfer amount
           </p>
@@ -650,6 +707,7 @@ function text(value: unknown): string | null {
               </dd>
             </div>
           </dl>
+          </template>
         </div>
 
         <div

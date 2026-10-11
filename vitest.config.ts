@@ -6,6 +6,18 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
+      "@/routes/x-change/public-auto-generate/checkouts": path.resolve(
+        import.meta.dirname,
+        "tests/frontend/stubs/public-checkout-draft-route.ts",
+      ),
+      "@/routes/x-change/checkout/refund": path.resolve(
+        import.meta.dirname,
+        "tests/frontend/stubs/checkout-refund-route.ts",
+      ),
+      "@/routes/x-change/checkout": path.resolve(
+        import.meta.dirname,
+        "tests/frontend/stubs/checkout-console-route.ts",
+      ),
       "@/routes/x-change/cockpit/display-sessions": path.resolve(
         import.meta.dirname,
         "tests/frontend/stubs/display-session-routes.ts",
