@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ca594905368b309263efd995ac326c8d",
+    "content-hash": "eac741c754b9f790a99a86baed692db1",
     "packages": [
         {
             "name": "3neti/cash",
@@ -1738,11 +1738,11 @@
         },
         {
             "name": "3neti/x-feedback",
-            "version": "v1.1.0",
+            "version": "v1.1.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/x-feedback.git",
-                "reference": "3c048615c004de90e6a7096aefcf64bb19ed6b1b"
+                "reference": "5ea8d1ac81d034bcd49b3e59b7d7a3684928399b"
             },
             "require": {
                 "illuminate/mail": "^12.0||^13.0",
@@ -1764,6 +1764,9 @@
                     "providers": [
                         "LBHurtado\\XFeedback\\XFeedbackServiceProvider"
                     ]
+                },
+                "settlement-os": {
+                    "queue-manifest": "resources/settlement-os/queues.php"
                 },
                 "branch-alias": {
                     "dev-main": "1.x-dev"
@@ -1800,7 +1803,7 @@
                 }
             ],
             "description": "Feedback, notification, and communication infrastructure package for the x-change Settlement Operating System",
-            "time": "2026-08-10T01:43:13+00:00"
+            "time": "2026-10-11T07:13:28+00:00"
         },
         {
             "name": "3neti/x-journal",
