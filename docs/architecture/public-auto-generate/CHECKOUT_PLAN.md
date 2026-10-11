@@ -113,3 +113,33 @@ Host-wide TypeScript checking still reports existing errors in unrelated
 published components; the new Checkout console has no reported type error.
 Deployment, migration/backfill against an instance, paid QR Ph and Bank
 Transfer journeys, and manual refund acceptance remain release gates.
+
+## Testing-instance gate record — 2026-10-11
+
+The `x-change-testing/testing` Laravel Cloud environment deployed host commit
+`0eefeca4` (`feat/checkout-testing`) with x-change package commit `3de807df`
+(`feat/checkout`). The Cloud deployment `depl-a2f3c5fb-3a93-4518-9229-dfcc7105b725`
+succeeded. The Checkout migration ran, and the dry run counted eight existing
+public orders before the idempotent backfill inspected all eight. The guarded
+commissioning adoption renewed the stale installation manifest, and the strict
+doctor passed. The testing-only owner password is a strong Laravel Cloud secret.
+
+Browser acceptance confirmed the locked console reveals no monitor data, the
+owner password unlocks it, and the monitor lists eight backfilled Checkouts.
+It exposed one expired order with a verified late PHP 40.01 payment and no Pay
+Code. The corrected monitor now counts this as attention and offers an auditable
+manual refund case without an issuance retry. Focused PHP tests cover the
+refund case through external-return recording and Treasury reconciliation, and
+reject a refund case without settlement. The browser shows the real case as
+eligible; no external refund has been claimed or recorded for it.
+The first live viewer-link command exposed an omitted owner scope on insert;
+the command now writes the commissioned owner type and ID explicitly. Its
+creation and revocation remain to be repeated against the testing instance.
+
+Testing has public issuance and fixed QR Ph enabled, Turnstile disabled, one
+configured database queue worker for funding and issuance, and the scheduler
+enabled. At the read-only checkpoint there were zero queued or failed jobs.
+The public editor quoted PHP 40.00 total for a PHP 25.00 Pay Code. Paid QR Ph
+and Bank Transfer journeys, live worker processing, and a real external refund
+with Treasury reconciliation remain open gates. x-PayOut production has not
+adopted this package branch.

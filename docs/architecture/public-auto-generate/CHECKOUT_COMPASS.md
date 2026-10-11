@@ -17,8 +17,11 @@ on a valid visitor mobile, links a Contact after settled provider evidence,
 and exposes a password-gated owner console with revocable read-only viewer
 links. A paid issuance failure may enter a manual external-refund case. The
 Commercial Principal remains non-interactive. Pay Code funding and automatic
-refund execution remain disabled. This implementation is local and has not
-passed the paid-journey or deployment gates below.
+refund execution remain disabled. The testing deployment, migration, backfill,
+commissioning, and browser owner-console checks passed on 2026-10-11. A paid
+expired order found during acceptance is now visible for manual refund review.
+Paid QR Ph and Bank Transfer journeys and real refund reconciliation remain
+open gates before x-PayOut beta adoption.
 
 ## Settled decisions
 

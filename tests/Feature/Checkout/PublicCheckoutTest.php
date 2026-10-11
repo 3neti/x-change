@@ -192,6 +192,21 @@ it('gates the monitor and keeps expiring viewer links read only', function (): v
     $this->get(route('x-change.checkout.viewer', ['token' => $token]))->assertNotFound();
 });
 
+it('creates and revokes a viewer link scoped to the commissioned owner', function (): void {
+    $principal = checkoutTestPrincipal();
+
+    $this->artisan('x-change:checkout:viewer-link', ['label' => 'Acceptance viewer', '--days' => 1])
+        ->assertSuccessful();
+    $link = CheckoutViewerLink::query()->firstOrFail();
+    expect($link->owner_type)->toBe($principal::class)
+        ->and($link->owner_id)->toBe((string) $principal->getKey())
+        ->and($link->revoked_at)->toBeNull();
+
+    $this->artisan('x-change:checkout:viewer-link', ['--revoke' => $link->getKey()])
+        ->assertSuccessful();
+    expect($link->refresh()->revoked_at)->not->toBeNull();
+});
+
 it('saves an editable checkout draft while new placement is paused and requires its possession token', function (): void {
     checkoutTestPrincipal();
     config()->set('x-change.public_auto_generate.enabled', false);

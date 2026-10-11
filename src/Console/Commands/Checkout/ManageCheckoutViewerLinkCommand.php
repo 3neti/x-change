@@ -61,6 +61,8 @@ final class ManageCheckoutViewerLinkCommand extends Command
         $token = Str::random(64);
         $link = $links->create([
             'token_hash' => hash('sha256', $token),
+            'owner_type' => $principal::class,
+            'owner_id' => (string) $principal->getKey(),
             'label' => $label,
             'expires_at' => now()->addDays($days),
         ]);
