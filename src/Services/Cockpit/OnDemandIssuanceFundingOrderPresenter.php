@@ -10,6 +10,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Funding\RequestOnDemandPayCodeIssuanceRetry;
 use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
+use LBHurtado\XChange\Enums\IssuanceBatchStatus;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Models\Checkout;
 use LBHurtado\XChange\Models\IssuanceBatch;
@@ -124,6 +125,11 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
                     ['batch' => $batch->reference],
                     false,
                 ),
+                'workspace_url' => route(
+                    'x-change.public-auto-generate.batches.pay-codes',
+                    ['batch' => $batch->reference],
+                    false,
+                ),
             ],
             'pricing' => [
                 'pay_code_value' => (float) data_get($order->pricing_snapshot_ciphertext, 'pay_code_value', 0),
@@ -208,7 +214,7 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
      */
     private function lifecycle(PayCodeIssuanceFundingOrder $order, ?IssuanceBatch $batch = null): array
     {
-        $current = $batch !== null && $batch->status !== \LBHurtado\XChange\Enums\IssuanceBatchStatus::Issued
+        $current = $batch !== null && $batch->status !== IssuanceBatchStatus::Issued
             && $order->status->value === 'issued'
             ? 'attention'
             : match ($order->status->value) {

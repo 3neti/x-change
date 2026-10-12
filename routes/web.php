@@ -155,6 +155,7 @@ use LBHurtado\XChange\Http\Controllers\Web\PublicAutoGeneratePageController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicCheckoutDraftController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicCheckoutFundingMethodController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceBatchController;
+use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceBatchPayCodesPageController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuanceReceiptController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuanceRecoveryController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicPricingPageController;
@@ -233,6 +234,9 @@ Route::prefix('x/auto-generate')->middleware([
     Route::post('batches', [PublicIssuanceBatchController::class, 'store'])
         ->middleware('throttle:3,1,public-auto-generate-batch-create:')
         ->name('x-change.public-auto-generate.batches.store');
+    Route::get('batches/{batch:reference}/pay-codes', PublicIssuanceBatchPayCodesPageController::class)
+        ->middleware('throttle:30,1,public-auto-generate-batch-page:')
+        ->name('x-change.public-auto-generate.batches.pay-codes');
     Route::get('batches/{batch:reference}', [PublicIssuanceBatchController::class, 'show'])
         ->middleware('throttle:30,1,public-auto-generate-batch-read:')
         ->name('x-change.public-auto-generate.batches.show');

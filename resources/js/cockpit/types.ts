@@ -952,6 +952,7 @@ export type CockpitOnDemandIssuanceFundingProjection = {
     total_minor: number;
     issued_item_count: number;
     download_url: string;
+    workspace_url: string;
   } | null;
   order: {
     reference: string;
@@ -2055,6 +2056,8 @@ export type CockpitPayCodeExplorerRecord = {
   };
   owner: string;
   lastActivity: string;
+  copyable?: boolean;
+  claimUrl?: string | null;
   attention?: {
     key: string;
     label: string;

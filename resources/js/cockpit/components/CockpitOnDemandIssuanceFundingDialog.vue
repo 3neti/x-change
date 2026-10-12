@@ -655,6 +655,13 @@ function text(value: unknown): string | null {
           >
             Download {{ current.batch.issued_item_count }} Pay Codes
           </button>
+          <a
+            v-if="current.batch?.workspace_url && current.batch.issued_item_count > 0"
+            :href="current.batch.workspace_url"
+            class="mt-4 ml-2 inline-flex min-h-10 items-center justify-center rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-bold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-slate-900 dark:text-emerald-200"
+          >
+            Open Pay Codes
+          </a>
           <p v-if="latePaymentCredited" class="mt-2 leading-6">
             Start a new issuance when you are ready. Under shortfall funding,
             your Client Funds will be applied first.

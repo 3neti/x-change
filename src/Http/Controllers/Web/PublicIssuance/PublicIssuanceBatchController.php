@@ -11,9 +11,9 @@ use Illuminate\Support\Str;
 use LBHurtado\XChange\Actions\IssuanceBatch\CreateIssuanceBatch;
 use LBHurtado\XChange\Actions\IssuanceBatch\PrepareIssuanceBatchFunding;
 use LBHurtado\XChange\Models\IssuanceBatch;
+use LBHurtado\XChange\Services\Checkout\CheckoutLifecycle;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Commercial\ConfiguredCommercialPrincipalResolver;
-use LBHurtado\XChange\Services\Checkout\CheckoutLifecycle;
 use LBHurtado\XChange\Services\IssuanceBatch\IssuanceBatchImportNormalizer;
 use LBHurtado\XChange\Services\IssuanceBatch\IssuanceBatchTabularReader;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceOrderAccess;
@@ -59,7 +59,31 @@ final class PublicIssuanceBatchController extends Controller
     {
         $this->authorizeToken($request, $batch);
 
-        return response()->json($batch->load('items'));
+        $batch->load('items');
+
+        return response()->json([
+            'reference' => $batch->reference,
+            'status' => $batch->status,
+            'item_count' => $batch->item_count,
+            'valid_item_count' => $batch->valid_item_count,
+            'total_minor' => $batch->total_minor,
+            'expires_at' => $batch->expires_at?->toIso8601String(),
+            'funded_at' => $batch->funded_at?->toIso8601String(),
+            'issued_at' => $batch->issued_at?->toIso8601String(),
+            'items' => $batch->items->map(fn ($item): array => [
+                'ordinal' => $item->ordinal,
+                'source_row' => $item->source_row,
+                'name' => data_get($item->payload, 'name'),
+                'mobile' => data_get($item->payload, 'mobile'),
+                'email' => data_get($item->payload, 'email'),
+                'amount_minor' => $item->amount_minor,
+                'pay_code' => $item->pay_code,
+                'claim_url' => $item->claim_url,
+                'status' => $item->status,
+                'issued_at' => $item->issued_at?->toIso8601String(),
+                'failure_message' => $item->failure_message,
+            ])->values()->all(),
+        ]);
     }
 
     public function fund(Request $request, IssuanceBatch $batch, ConfiguredCommercialPrincipalResolver $resolver, PrepareIssuanceBatchFunding $funding, CheckoutLifecycle $checkouts, PublicIssuanceOrderAccess $orders, OnDemandIssuanceFundingOrderPresenter $presenter): JsonResponse
@@ -84,9 +108,9 @@ final class PublicIssuanceBatchController extends Controller
 
         return response()->streamDownload(function () use ($batch): void {
             $handle = fopen('php://output', 'wb');
-            fputcsv($handle, ['Row', 'Name', 'Mobile', 'Email', 'Amount', 'Pay Code', 'Status']);
+            fputcsv($handle, ['Row', 'Name', 'Mobile', 'Email', 'Amount', 'Pay Code', 'Status', 'Claim URL']);
             foreach ($batch->items as $item) {
-                fputcsv($handle, [$item->source_row, data_get($item->payload, 'name'), data_get($item->payload, 'mobile'), data_get($item->payload, 'email'), number_format($item->amount_minor / 100, 2, '.', ''), $item->pay_code, $item->status]);
+                fputcsv($handle, [$item->source_row, data_get($item->payload, 'name'), data_get($item->payload, 'mobile'), data_get($item->payload, 'email'), number_format($item->amount_minor / 100, 2, '.', ''), $item->pay_code, $item->status, $item->claim_url]);
             }
             fclose($handle);
         }, $batch->reference.'.csv', ['Content-Type' => 'text/csv']);
