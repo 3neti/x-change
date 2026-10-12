@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\EmiCore\Data\Funding\ProviderPayerIdentityData;
 use LBHurtado\XChange\Actions\Funding\CreateFundingIntent;
@@ -30,12 +31,42 @@ it('matches only the complete provider-verified mobile of a verified Funding Int
         payerObservation('0917 123 4567'),
     );
 
-    expect($observation->payerIdentity)->toBeNull()
+    expect($observation->payerIdentity?->mobile)->toBe('0917 123 4567')
         ->and($observation->metadata['payer_identity_required'])->toBeTrue()
         ->and($observation->metadata['payer_identity_matched'])->toBeTrue()
         ->and($observation->metadata['payer_mobile_masked'])->toBe('63••••••4567')
         ->and($observation->metadata['payer_mobile_hash'])->toHaveLength(64)
         ->and(json_encode($observation->metadata))->not->toContain('639171234567');
+});
+
+it('persists the provider wallet identity after payer matching without exposing it in metadata', function () {
+    config()->set('x-change.funding.providers.qrph_simulator.enabled', true);
+    $owner = actingAsTestUser();
+    $intent = app(CreateFundingIntent::class)->handle(new CreateFundingIntentData(
+        accountReference: 'wallet:provider-payer',
+        provider: 'qrph_simulator',
+        expectedAmountMinor: 2_500,
+        currency: 'PHP',
+        idempotencyKey: 'provider-payer-persistence',
+        actorType: $owner::class,
+        actorId: (string) $owner->getKey(),
+        metadata: ['payer_identity_match_required' => false],
+    ));
+    $providerObservation = payerObservation('0917 123 4567');
+    $providerObservation->payerIdentity = new ProviderPayerIdentityData(
+        name: 'Maya Payer',
+        accountNumber: '09171234567',
+        institutionCode: 'PAPHPHM1XXX',
+        providerVerified: false,
+    );
+    $matched = app(MatchFundingPayerIdentity::class)->handle($intent, $providerObservation);
+    $stored = app(RecordProviderFundingObservation::class)->handle($matched);
+
+    expect($stored->payer_name_ciphertext)->toBe('Maya Payer')
+        ->and($stored->payer_account_ciphertext)->toBe('09171234567')
+        ->and($stored->payer_institution_ciphertext)->toBe('PAPHPHM1XXX')
+        ->and($stored->getRawOriginal('payer_account_ciphertext'))->not->toContain('09171234567')
+        ->and(json_encode($stored->metadata))->not->toContain('09171234567');
 });
 
 it('fails closed for a mismatched or unverified owner mobile', function (?string $ownerVerifiedAt) {

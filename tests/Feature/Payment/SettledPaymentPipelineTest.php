@@ -155,7 +155,9 @@ it('resumes SMS without another provider read after contact association was save
     config()->set('x-feedback.transports.sms.driver', 'engagespark');
     $original = settledPaymentObservationWithoutPayer();
     $process = settledPaymentProcessForRecovery($original);
-    $enriched = app(RecordProviderFundingObservation::class)->handle(recoveredPayerObservation($original));
+    $enrichedData = recoveredPayerObservation($original);
+    $enrichedData->metadata['normalization_version'] = 'netbank-incoming-credit-v2-payer-recovery-v1';
+    $enriched = app(RecordProviderFundingObservation::class)->handle($enrichedData);
     $contact = Contact::fromPhoneNumber(phone('09171234567', 'PH'));
     $process->forceFill([
         'observation_id' => $enriched->getKey(),
@@ -175,21 +177,20 @@ it('resumes SMS without another provider read after contact association was save
 
 function settledPaymentObservationWithoutPayer(): ProviderFundingObservation
 {
-    return ProviderFundingObservation::query()->create([
-        'observation_key' => hash('sha256', 'late-payer-original'),
-        'provider_code' => 'netbank',
-        'provider_transaction_id' => 'late-payer-transaction',
-        'funding_address' => 'sha256:'.hash('sha256', 'late-payer-vca'),
-        'gross_amount_minor' => 52100,
-        'fee_amount_minor' => 0,
-        'net_amount_minor' => 52100,
-        'currency' => 'PHP',
-        'provider_status' => 'settled',
-        'settled_at' => now(),
-        'verification_source' => 'netbank-vca-transaction-history',
-        'payload_hash' => hash('sha256', 'late-payer-original-payload'),
-        'metadata' => ['destination_verified' => true],
-    ]);
+    return app(RecordProviderFundingObservation::class)->handle(new ProviderFundingObservationData(
+        provider: 'netbank',
+        providerTransactionId: 'late-payer-transaction',
+        grossAmountMinor: 52100,
+        feeAmountMinor: 0,
+        netAmountMinor: 52100,
+        currency: 'PHP',
+        providerStatus: 'settled',
+        verificationSource: 'netbank-vca-transaction-history',
+        payloadHash: hash('sha256', 'late-payer-enriched-payload'),
+        fundingAddress: 'sha256:'.hash('sha256', 'late-payer-vca'),
+        settledAt: now()->toDateTimeImmutable(),
+        metadata: ['destination_verified' => true, 'normalization_version' => 'netbank-incoming-credit-v2'],
+    ));
 }
 
 function settledPaymentProcessForRecovery(ProviderFundingObservation $observation): SettledPaymentProcess

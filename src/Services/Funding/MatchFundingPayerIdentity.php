@@ -71,6 +71,7 @@ class MatchFundingPayerIdentity
                 'payer_identity_provider_verified' => $identity->providerVerified,
                 'payer_owner_mobile_verified' => $ownerVerified,
             ],
+            payerIdentity: $identity,
         );
     }
 

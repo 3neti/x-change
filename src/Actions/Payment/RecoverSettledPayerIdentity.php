@@ -99,6 +99,10 @@ final readonly class RecoverSettledPayerIdentity
             return false;
         }
 
+        $fresh->metadata = [
+            ...$fresh->metadata,
+            'normalization_version' => 'netbank-incoming-credit-v2-payer-recovery-v1',
+        ];
         $observation = $this->observations->handle($fresh);
         if ($this->walletPayerMobile->fromObservation($observation) === null) {
             return false;
