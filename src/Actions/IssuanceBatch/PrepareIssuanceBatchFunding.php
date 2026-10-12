@@ -21,6 +21,10 @@ final readonly class PrepareIssuanceBatchFunding
 
     public function handle(Model $issuer, IssuanceBatch $batch, string $idempotencyKey): PayCodeIssuanceFundingOrder
     {
+        if ($batch->funding_order_id !== null) {
+            return $batch->fundingOrder()->firstOrFail();
+        }
+
         $items = $batch->items()->where('status', 'pending')->get();
         $pricing = $items->map(fn ($item): PricingEstimateData => $this->estimate->handle([
             'cash' => ['amount' => $item->amount_minor / 100],
