@@ -67,6 +67,11 @@ const latePaymentCredited = computed(
     current.value?.status === "expired" &&
     current.value.order.late_payment_disposition === "client_funds",
 );
+const batchCount = computed(() => current.value?.batch?.item_count ?? 0);
+const isBatch = computed(() => batchCount.value > 0);
+const issuanceLabel = computed(() =>
+  isBatch.value ? `${batchCount.value} Pay Codes` : "this Pay Code",
+);
 const amount = computed(() => {
   const order = current.value?.order;
 
@@ -106,7 +111,7 @@ const dialogTitle = computed(() => {
     return "Payment received";
   }
 
-  return `Pay ${amount.value} to issue this Pay Code`;
+  return `Pay ${amount.value} to issue ${issuanceLabel.value}`;
 });
 const dialogDescription = computed(() => {
   if (needsAttention.value) {
@@ -122,7 +127,7 @@ const dialogDescription = computed(() => {
   }
 
   if (["funded", "issuing"].includes(current.value?.status ?? "")) {
-    return "Your payment is verified. Keep this window open while we finish issuing the Pay Code.";
+    return `Your payment is verified. Keep this window open while we finish issuing ${issuanceLabel.value.toLowerCase()}.`;
   }
 
   return "Choose Bank Transfer or QR Ph, pay the exact amount once, and keep this window open. We will check the payment automatically.";
@@ -553,6 +558,9 @@ function text(value: unknown): string | null {
                 : "No expiry"
             }}</span>
           </div>
+          <p v-if="current.pricing && current.pricing.customer_charge > 0" class="text-xs text-slate-500 dark:text-slate-400">
+            {{ new Intl.NumberFormat("en-PH", { style: "currency", currency: current.pricing.currency }).format(current.pricing.pay_code_value) }} Pay Code value + {{ new Intl.NumberFormat("en-PH", { style: "currency", currency: current.pricing.currency }).format(current.pricing.customer_charge) }} issuance fee
+          </p>
           <p
             class="border-t border-slate-200 pt-2 text-slate-600 dark:border-slate-800 dark:text-slate-300"
             role="status"

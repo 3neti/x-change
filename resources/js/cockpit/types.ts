@@ -938,6 +938,20 @@ export type CockpitOnDemandIssuanceFundingProjection = {
     interval_milliseconds: number;
     last_checked_at: string | null;
   };
+  pricing?: {
+    pay_code_value: number;
+    customer_charge: number;
+    total: number;
+    currency: string;
+  } | null;
+  batch?: {
+    reference: string;
+    status: string;
+    item_count: number;
+    valid_item_count: number;
+    total_minor: number;
+    issued_item_count: number;
+  } | null;
   order: {
     reference: string;
     funding_basis: "full_amount" | "shortfall";

@@ -31,8 +31,8 @@ final readonly class PrepareIssuanceBatchFunding
         $pricing = $items->map(fn ($item): PricingEstimateData => $this->estimate->handle([
             ...$defaults,
             'cash' => ['amount' => $item->amount_minor / 100, 'currency' => 'PHP'],
-            'voucher_type' => 'payable',
-            'metadata' => ['flow_type' => 'distribution'],
+            'voucher_type' => 'redeemable',
+            'metadata' => ['flow_type' => 'disbursable'],
         ]));
         $totalValue = $items->sum(fn ($item): float => $item->amount_minor / 100);
         $totalFee = $pricing->sum(fn (PricingEstimateData $quote): float => $quote->total);
@@ -48,8 +48,8 @@ final readonly class PrepareIssuanceBatchFunding
         $instructions = [
             ...$defaults,
             'cash' => ['amount' => $totalValue, 'currency' => 'PHP'],
-            'voucher_type' => 'payable',
-            'metadata' => ['flow_type' => 'distribution', 'issuance_batch_reference' => $batch->reference],
+            'voucher_type' => 'redeemable',
+            'metadata' => ['flow_type' => 'disbursable', 'issuance_batch_reference' => $batch->reference],
             '_meta' => ['source' => 'public.auto-generate.batch', 'issuance_batch_reference' => $batch->reference],
         ];
         $order = $this->prepare->handle(

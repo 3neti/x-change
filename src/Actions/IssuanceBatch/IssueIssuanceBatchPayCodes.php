@@ -33,8 +33,8 @@ final readonly class IssueIssuanceBatchPayCodes
                 if (! is_array($payload['rider'] ?? null)) {
                     $payload['rider'] = ['message' => null, 'url' => null];
                 }
-                $payload['voucher_type'] = 'payable';
-                $payload['metadata'] = [...(array) ($payload['metadata'] ?? []), 'flow_type' => 'distribution'];
+                $payload['voucher_type'] = 'redeemable';
+                $payload['metadata'] = [...(array) ($payload['metadata'] ?? []), 'flow_type' => 'disbursable'];
                 $payload['_meta'] = [
                     'source' => 'public.auto-generate.batch',
                     'issuance_batch_reference' => $batch->reference,

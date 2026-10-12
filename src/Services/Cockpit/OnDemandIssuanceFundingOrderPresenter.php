@@ -12,6 +12,7 @@ use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Models\Checkout;
+use LBHurtado\XChange\Models\IssuanceBatch;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Services\QrArtifactFactory;
 use Throwable;
@@ -35,6 +36,7 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
         bool $public = false,
     ): array {
         $order->loadMissing(['fundingIntent.settlement', 'fundingIntent.events', 'voucher', 'events']);
+        $batch = IssuanceBatch::query()->where('funding_order_id', $order->getKey())->first();
         $instructions = $order->fundingIntent === null
             ? []
             : $this->instructions->forIntent($order->fundingIntent);
@@ -62,7 +64,7 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
             'schema' => 'x-change.cockpit.on-demand-issuance-funding.v1',
             'status' => $order->status->value,
             'funding_required' => $order->on_demand_amount_minor > 0,
-            'lifecycle' => $this->lifecycle($order),
+            'lifecycle' => $this->lifecycle($order, $batch),
             'guest_access_token' => $public ? $guestAccessToken : null,
             'public_links' => $public ? [
                 'recovery' => URL::temporarySignedRoute(
@@ -109,6 +111,20 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
                     ['order' => $order->reference],
                     false,
                 ),
+            ],
+            'batch' => $batch === null ? null : [
+                'reference' => $batch->reference,
+                'status' => $batch->status->value,
+                'item_count' => $batch->item_count,
+                'valid_item_count' => $batch->valid_item_count,
+                'total_minor' => $batch->total_minor,
+                'issued_item_count' => $batch->items()->where('status', 'issued')->count(),
+            ],
+            'pricing' => [
+                'pay_code_value' => (float) data_get($order->pricing_snapshot_ciphertext, 'pay_code_value', 0),
+                'customer_charge' => (float) data_get($order->pricing_snapshot_ciphertext, 'customer_charge', 0),
+                'total' => (float) data_get($order->pricing_snapshot_ciphertext, 'account_debit', $order->expected_payment_minor / 100),
+                'currency' => $order->currency,
             ],
             'order' => [
                 'reference' => $order->reference,
@@ -185,20 +201,23 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
     /**
      * @return array<string, mixed>
      */
-    private function lifecycle(PayCodeIssuanceFundingOrder $order): array
+    private function lifecycle(PayCodeIssuanceFundingOrder $order, ?IssuanceBatch $batch = null): array
     {
-        $current = match ($order->status->value) {
-            'payer_acknowledged', 'verifying' => 'checking_payment',
-            'underfunded' => 'underfunded',
-            'payment_ambiguous' => 'payment_ambiguous',
-            'funded' => 'payment_verified',
-            'issuing' => 'issuing_pay_code',
-            'issued' => 'pay_code_ready',
-            'cancelled' => 'cancelled',
-            'expired' => 'expired',
-            'issuance_attention' => 'attention',
-            default => 'awaiting_payment',
-        };
+        $current = $batch !== null && $batch->status !== \LBHurtado\XChange\Enums\IssuanceBatchStatus::Issued
+            && $order->status->value === 'issued'
+            ? 'attention'
+            : match ($order->status->value) {
+                'payer_acknowledged', 'verifying' => 'checking_payment',
+                'underfunded' => 'underfunded',
+                'payment_ambiguous' => 'payment_ambiguous',
+                'funded' => 'payment_verified',
+                'issuing' => 'issuing_pay_code',
+                'issued' => 'pay_code_ready',
+                'cancelled' => 'cancelled',
+                'expired' => 'expired',
+                'issuance_attention' => 'attention',
+                default => 'awaiting_payment',
+            };
         $latestIntentEvent = $order->fundingIntent?->events->last()?->event_type;
         $verificationUnavailable = $latestIntentEvent === 'provider_verification_unavailable';
 
@@ -216,7 +235,9 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
                     'payment_ambiguous' => 'A payment was found, but it cannot be applied automatically. Do not pay again; this order needs review.',
                     'payment_verified' => 'Payment verified. Your frozen instruction is ready for issuance.',
                     'issuing_pay_code' => 'Payment verified. Your Pay Code is being issued.',
-                    'pay_code_ready' => 'Payment verified and Pay Code issued.',
+                    'pay_code_ready' => $batch === null
+                        ? 'Payment verified and Pay Code issued.'
+                        : sprintf('Payment verified and %d Pay Codes issued.', $batch->item_count),
                     'cancelled' => 'Funding was cancelled safely. No Pay Code was issued.',
                     'expired' => $latePaymentCredited
                         ? 'Your payment arrived after this order expired and was added to Client Funds. No Pay Code was issued.'
