@@ -20,6 +20,7 @@ use LBHurtado\XChange\Actions\IssuanceBatch\IssueIssuanceBatchPayCodes;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
+use LBHurtado\XChange\Enums\IssuanceBatchStatus;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Jobs\Payment\QueueIssuedPayCodeSmsJob;
 use LBHurtado\XChange\Models\Checkout;
@@ -170,17 +171,24 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
             if (is_string($batchReference) && $batchReference !== '') {
                 $batch = IssuanceBatch::query()->where('reference', $batchReference)->lockForUpdate()->firstOrFail();
                 $issueBatch->handle($batch, $issuer, $order->reference);
+                $batch->refresh();
+                $batchIssued = $batch->status === IssuanceBatchStatus::Issued;
                 $transition->handle(
                     order: $order,
-                    status: PayCodeIssuanceFundingOrderStatus::Issued,
-                    eventType: 'issuance_batch_issued',
+                    status: $batchIssued
+                        ? PayCodeIssuanceFundingOrderStatus::Issued
+                        : PayCodeIssuanceFundingOrderStatus::IssuanceAttention,
+                    eventType: $batchIssued ? 'issuance_batch_issued' : 'issuance_batch_attention',
                     actorType: self::class,
                     actorId: (string) $this->fundingOrderId,
-                    attributes: ['issued_at' => now()],
-                    metadata: ['batch_reference' => $batch->reference],
+                    attributes: $batchIssued ? ['issued_at' => now()] : ['attention_at' => now()],
+                    metadata: [
+                        'batch_reference' => $batch->reference,
+                        'batch_status' => $batch->status->value,
+                    ],
                 );
                 Checkout::query()->where('funding_order_id', $order->getKey())
-                    ->update(['status' => 'issued', 'updated_at' => now()]);
+                    ->update(['status' => $batchIssued ? 'issued' : 'attention', 'updated_at' => now()]);
 
                 return;
             }
