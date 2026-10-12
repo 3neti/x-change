@@ -13,6 +13,7 @@ use LBHurtado\XChange\Actions\IssuanceBatch\PrepareIssuanceBatchFunding;
 use LBHurtado\XChange\Models\IssuanceBatch;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Commercial\ConfiguredCommercialPrincipalResolver;
+use LBHurtado\XChange\Services\Checkout\CheckoutLifecycle;
 use LBHurtado\XChange\Services\IssuanceBatch\IssuanceBatchImportNormalizer;
 use LBHurtado\XChange\Services\IssuanceBatch\IssuanceBatchTabularReader;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceOrderAccess;
@@ -61,11 +62,12 @@ final class PublicIssuanceBatchController extends Controller
         return response()->json($batch->load('items'));
     }
 
-    public function fund(Request $request, IssuanceBatch $batch, ConfiguredCommercialPrincipalResolver $resolver, PrepareIssuanceBatchFunding $funding, PublicIssuanceOrderAccess $orders, OnDemandIssuanceFundingOrderPresenter $presenter): JsonResponse
+    public function fund(Request $request, IssuanceBatch $batch, ConfiguredCommercialPrincipalResolver $resolver, PrepareIssuanceBatchFunding $funding, CheckoutLifecycle $checkouts, PublicIssuanceOrderAccess $orders, OnDemandIssuanceFundingOrderPresenter $presenter): JsonResponse
     {
         $this->authorizeToken($request, $batch);
         $validated = $request->validate(['idempotency_key' => ['required', 'string', 'max:191']]);
         $order = $funding->handle($resolver->resolve(), $batch, $validated['idempotency_key']);
+        $checkouts->place($order);
         $token = $orders->bind($order, $request);
 
         return response()->json([
