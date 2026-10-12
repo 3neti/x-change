@@ -9,6 +9,7 @@ use LBHurtado\Contact\Models\Contact;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\XChange\Actions\Feedback\DeliverAndJournalFeedback;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
+use LBHurtado\XChange\Jobs\Payment\RecoverSettledPayerIdentityJob;
 use LBHurtado\XChange\Models\Checkout;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
@@ -41,6 +42,17 @@ final readonly class QueueSettledPaymentSms
 
         if (! $process->sms_enabled_snapshot || $process->contact_id === null) {
             $process->forceFill(['sms_status' => 'skipped'])->save();
+
+            if ($process->sms_enabled_snapshot && $process->contact_id === null
+                && $process->payment_type === 'funding_settlement'
+                && ProviderFundingObservation::query()->whereKey($process->observation_id)
+                    ->where('provider_code', 'netbank')
+                    ->whereNull('payer_account_ciphertext')
+                    ->whereNull('payer_institution_ciphertext')
+                    ->exists()) {
+                RecoverSettledPayerIdentityJob::dispatch((int) $process->getKey())
+                    ->delay(now()->addSeconds(30));
+            }
 
             return $next($process);
         }
