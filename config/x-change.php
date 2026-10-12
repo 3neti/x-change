@@ -777,6 +777,14 @@ return [
         ],
     ],
 
+    'issuance_batches' => [
+        'maximum_rows' => (int) env('XCHANGE_ISSUANCE_BATCH_MAXIMUM_ROWS', 10_000),
+        'maximum_columns' => (int) env('XCHANGE_ISSUANCE_BATCH_MAXIMUM_COLUMNS', 30),
+        'maximum_cell_characters' => (int) env('XCHANGE_ISSUANCE_BATCH_MAXIMUM_CELL_CHARACTERS', 2_000),
+        'maximum_upload_bytes' => (int) env('XCHANGE_ISSUANCE_BATCH_MAXIMUM_UPLOAD_BYTES', 10 * 1024 * 1024),
+        'download_ttl_seconds' => (int) env('XCHANGE_ISSUANCE_BATCH_DOWNLOAD_TTL_SECONDS', 86_400),
+    ],
+
     'terminology' => [
         'voucher' => env('XCHANGE_TERM_VOUCHER', 'Pay Code'),
         'voucher_code' => env('XCHANGE_TERM_VOUCHER_CODE', 'Pay Code'),

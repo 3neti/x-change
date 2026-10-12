@@ -226,6 +226,18 @@ Route::prefix('x/auto-generate')->middleware([
     ShareXChangeBranding::class,
     UseCommercialPrincipalForPublicIssuance::class,
 ])->group(function (): void {
+    Route::post('batches/preview', [\LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceBatchController::class, 'preview'])
+        ->middleware('throttle:6,1,public-auto-generate-batch-preview:')
+        ->name('x-change.public-auto-generate.batches.preview');
+    Route::post('batches', [\LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceBatchController::class, 'store'])
+        ->middleware('throttle:3,1,public-auto-generate-batch-create:')
+        ->name('x-change.public-auto-generate.batches.store');
+    Route::get('batches/{batch:reference}', [\LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceBatchController::class, 'show'])
+        ->middleware('throttle:30,1,public-auto-generate-batch-read:')
+        ->name('x-change.public-auto-generate.batches.show');
+    Route::get('batches/{batch:reference}/download', [\LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceBatchController::class, 'download'])
+        ->middleware('throttle:10,1,public-auto-generate-batch-download:')
+        ->name('x-change.public-auto-generate.batches.download');
     Route::get('/', PublicAutoGeneratePageController::class)
         ->middleware('throttle:60,1,public-auto-generate-page:')
         ->name('x-change.public-auto-generate.show');
