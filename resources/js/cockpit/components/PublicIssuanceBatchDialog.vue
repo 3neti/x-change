@@ -66,6 +66,7 @@ async function continueToPayment(): Promise<void> {
     });
     const funded = await fundResponse.json();
     if (!fundResponse.ok) throw new Error(funded.message ?? "The batch could not be prepared for payment.");
+    sessionStorage.setItem(`x-change.batch-token:${created.reference}`, created.access_token);
     window.location.reload();
   } catch (exception) {
     error.value = exception instanceof Error ? exception.message : "The batch could not be prepared for payment.";

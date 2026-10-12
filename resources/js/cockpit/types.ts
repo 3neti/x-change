@@ -951,6 +951,7 @@ export type CockpitOnDemandIssuanceFundingProjection = {
     valid_item_count: number;
     total_minor: number;
     issued_item_count: number;
+    download_url: string;
   } | null;
   order: {
     reference: string;

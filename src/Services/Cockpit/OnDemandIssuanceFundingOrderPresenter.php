@@ -119,6 +119,11 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
                 'valid_item_count' => $batch->valid_item_count,
                 'total_minor' => $batch->total_minor,
                 'issued_item_count' => $batch->items()->where('status', 'issued')->count(),
+                'download_url' => route(
+                    'x-change.public-auto-generate.batches.download',
+                    ['batch' => $batch->reference],
+                    false,
+                ),
             ],
             'pricing' => [
                 'pay_code_value' => (float) data_get($order->pricing_snapshot_ciphertext, 'pay_code_value', 0),

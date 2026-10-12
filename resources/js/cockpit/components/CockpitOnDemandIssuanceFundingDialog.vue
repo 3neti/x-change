@@ -42,6 +42,28 @@ const monitorMessage = ref<string | null>(null);
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let emittedIssuedReference: string | null = null;
 
+async function downloadBatch(): Promise<void> {
+  const batch = current.value?.batch;
+  if (batch?.download_url === undefined) return;
+
+  const token = sessionStorage.getItem(`x-change.batch-token:${batch.reference}`);
+  if (token === null) return;
+
+  const response = await fetch(batch.download_url, {
+    credentials: "same-origin",
+    headers: { Accept: "text/csv", "X-Issuance-Batch-Token": token },
+  });
+  if (!response.ok) return;
+
+  const blob = await response.blob();
+  const href = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = href;
+  anchor.download = `${batch.reference}.csv`;
+  anchor.click();
+  URL.revokeObjectURL(href);
+}
+
 function guestAccessHeader(): Record<string, string> {
   const token = current.value?.guest_access_token?.trim();
 
@@ -625,6 +647,14 @@ function text(value: unknown): string | null {
           <p class="mt-1 leading-6">
             {{ current.lifecycle.message }}
           </p>
+          <button
+            v-if="current.batch?.download_url && current.batch.issued_item_count > 0"
+            class="mt-4 inline-flex min-h-10 items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-700"
+            type="button"
+            @click="downloadBatch"
+          >
+            Download {{ current.batch.issued_item_count }} Pay Codes
+          </button>
           <p v-if="latePaymentCredited" class="mt-2 leading-6">
             Start a new issuance when you are ready. Under shortfall funding,
             your Client Funds will be applied first.

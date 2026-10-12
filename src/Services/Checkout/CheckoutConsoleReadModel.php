@@ -55,6 +55,11 @@ final readonly class CheckoutConsoleReadModel
                 $settlement = $order?->fundingIntent?->settlement;
                 $mobile = $checkout->contact?->mobile ?? $checkout->visitor_mobile_ciphertext;
                 $voucher = $order?->voucher;
+                $batch = $order === null
+                    ? null
+                    : \LBHurtado\XChange\Models\IssuanceBatch::query()
+                        ->where('funding_order_id', $order->getKey())
+                        ->first();
                 $payCodeAmount = $voucher === null ? null : data_get($order->instructions_ciphertext, 'cash.amount');
                 $payCodeCurrency = $voucher === null ? null : data_get($order->instructions_ciphertext, 'cash.currency');
 
@@ -69,12 +74,16 @@ final readonly class CheckoutConsoleReadModel
                     'expected_minor' => $order?->expected_payment_minor,
                     'settled_minor' => $settlement?->gross_amount_minor,
                     'currency' => $order?->currency,
-                    'pay_code' => $voucher === null ? null : [
+                    'pay_code' => $batch !== null ? [
+                        'masked_code' => sprintf('batch:%d', $batch->item_count),
+                        'value_minor' => $batch->total_minor,
+                        'currency' => $batch->currency,
+                    ] : ($voucher === null ? null : [
                         'masked_code' => '••••'.mb_substr((string) $voucher->code, -4),
                         'value_minor' => is_numeric($payCodeAmount) ? (int) round((float) $payCodeAmount * 100) : null,
                         'currency' => is_string($payCodeCurrency) && $payCodeCurrency !== '' ? $payCodeCurrency : $order->currency,
                         ...($includeFullPayCodes ? ['code' => (string) $voucher->code] : []),
-                    ],
+                    ]),
                     'refund_status' => $checkout->refundCase?->status,
                     'refund_eligible' => $settlement !== null
                         && $order?->voucher_id === null
