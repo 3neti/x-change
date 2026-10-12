@@ -93,6 +93,11 @@ final class PublicAutoGeneratePageController extends Controller
                 'login_url' => Route::has('login') ? route('login', [], false) : null,
                 'register_url' => Route::has('register') ? route('register', [], false) : null,
             ],
+            'batch_endpoints' => [
+                'preview' => route('x-change.public-auto-generate.batches.preview', [], false),
+                'create' => route('x-change.public-auto-generate.batches.store', [], false),
+                'fund' => route('x-change.public-auto-generate.batches.fund', ['batch' => '__REFERENCE__'], false),
+            ],
             'commercial_principal' => [
                 'reference' => $principal->reference,
                 'display_name' => $principal->legal_name,

@@ -19,6 +19,7 @@ final class IssuanceBatchItem extends Model
             'source_row' => 'integer',
             'ordinal' => 'integer',
             'amount_minor' => 'integer',
+            'voucher_id' => 'string',
             'payload' => 'encrypted:array',
             'issued_at' => 'immutable_datetime',
         ];

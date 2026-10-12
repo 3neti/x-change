@@ -64,6 +64,7 @@ const pageLayoutProps = computed(() =>
   publicAutoGenerate.value
     ? {
         navigation: props.public_navigation,
+        batch_endpoints: props.batch_endpoints,
       }
     : {
         activeNavigation: "quick-generate",

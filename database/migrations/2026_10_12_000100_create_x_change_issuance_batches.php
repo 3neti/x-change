@@ -41,6 +41,7 @@ return new class extends Migration
             $table->unsignedBigInteger('amount_minor');
             $table->char('row_fingerprint', 64);
             $table->string('pay_code', 191)->nullable();
+            $table->string('voucher_id', 191)->nullable();
             $table->string('claim_url', 2048)->nullable();
             $table->text('failure_message')->nullable();
             $table->longText('payload')->nullable();

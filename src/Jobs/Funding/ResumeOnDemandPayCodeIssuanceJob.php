@@ -16,12 +16,14 @@ use LBHurtado\Wallet\Treasury\Contracts\TreasuryHoldOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryHoldConsumptionData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\XChange\Actions\Funding\TransitionPayCodeIssuanceFundingOrder;
+use LBHurtado\XChange\Actions\IssuanceBatch\IssueIssuanceBatchPayCodes;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Jobs\Payment\QueueIssuedPayCodeSmsJob;
 use LBHurtado\XChange\Models\Checkout;
+use LBHurtado\XChange\Models\IssuanceBatch;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
 use RuntimeException;
@@ -65,8 +67,9 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
         AccountBalanceReadModelContract $accountBalances,
         TransitionPayCodeIssuanceFundingOrder $transition,
         GeneratePayCode $generatePayCode,
+        IssueIssuanceBatchPayCodes $issueBatch,
     ): void {
-        DB::transaction(function () use ($holds, $portfolios, $accountBalances, $transition, $generatePayCode): void {
+        DB::transaction(function () use ($holds, $portfolios, $accountBalances, $transition, $generatePayCode, $issueBatch): void {
             $order = PayCodeIssuanceFundingOrder::query()
                 ->lockForUpdate()
                 ->findOrFail($this->fundingOrderId);
@@ -160,6 +163,26 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
                     $availableMinor === null ? 'unavailable' : (string) $availableMinor,
                     $order->required_amount_minor,
                 ));
+            }
+
+            $batchReference = data_get($order->metadata, 'issuance_batch_reference')
+                ?? data_get($instructions, 'metadata.issuance_batch_reference');
+            if (is_string($batchReference) && $batchReference !== '') {
+                $batch = IssuanceBatch::query()->where('reference', $batchReference)->lockForUpdate()->firstOrFail();
+                $issueBatch->handle($batch, $issuer, $order->reference);
+                $transition->handle(
+                    order: $order,
+                    status: PayCodeIssuanceFundingOrderStatus::Issued,
+                    eventType: 'issuance_batch_issued',
+                    actorType: self::class,
+                    actorId: (string) $this->fundingOrderId,
+                    attributes: ['issued_at' => now()],
+                    metadata: ['batch_reference' => $batch->reference],
+                );
+                Checkout::query()->where('funding_order_id', $order->getKey())
+                    ->update(['status' => 'issued', 'updated_at' => now()]);
+
+                return;
             }
 
             data_set($instructions, 'metadata.issuer_id', (string) $issuer->getKey());

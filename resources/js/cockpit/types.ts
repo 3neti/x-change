@@ -1825,6 +1825,7 @@ export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
     login_url: string | null;
     register_url: string | null;
   };
+  batch_endpoints?: { preview: string; create: string; fund: string };
   public_prefill?: {
     amount: string;
     currency: string;
