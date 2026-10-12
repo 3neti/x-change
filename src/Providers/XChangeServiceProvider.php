@@ -175,6 +175,7 @@ use LBHurtado\XChange\Console\Commands\Provisioning\ExpireProvisioningOffersComm
 use LBHurtado\XChange\Console\Commands\Provisioning\ProvisionCommissioningSeatsCommand;
 use LBHurtado\XChange\Console\Commands\PublishXChangeCommand;
 use LBHurtado\XChange\Console\Commands\ReconcilePendingDisbursementsCommand;
+use LBHurtado\XChange\Console\Commands\RefreshCommissioningReleaseCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\CollectRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\ShowPendingRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Settlement\EvaluateSettlementEnvelopeCommand;
@@ -1858,6 +1859,7 @@ class XChangeServiceProvider extends ServiceProvider
                 DoctorXChangeCommand::class,
                 CommissioningStatusCommand::class,
                 AdoptCommissioningManifestCommand::class,
+                RefreshCommissioningReleaseCommand::class,
                 SeedCockpitDiagnosticActivityCommand::class,
                 ShowCockpitOperatorActivityRuntimeProfileCommand::class,
                 ValidateLinkPreviewDriversCommand::class,

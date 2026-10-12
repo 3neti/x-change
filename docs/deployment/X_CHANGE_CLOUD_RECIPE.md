@@ -236,11 +236,12 @@ package adds a declared build resource.
 
 ### 4. Deploy and monitor
 
-The deploy command performs runtime database changes only:
+The deploy command performs guarded runtime database changes:
 
 ```bash
 php artisan migrate --force
 php artisan x-change:commercial:provision-baselines --no-interaction
+php artisan x-change:commissioning:refresh-release --no-interaction
 ```
 
 The second command is an idempotent upgrade bridge. Fresh installations
@@ -248,6 +249,9 @@ already provision the same immutable baselines during `x-change:install`;
 existing commissioned installations use this command after the additive
 migration so they never enter a state with governed profiles but no active
 offering.
+
+The third command refreshes package metadata only when commissioning identity
+and operational readiness still match. It refuses drift without adopting it.
 
 Configuration and route optimization belong in the build phase once their
 compatibility is proven. The ship command initiates the deployment and monitors
@@ -312,11 +316,20 @@ First deployment:
 plan -> apply -> deploy -> monitor -> commission -> accept
 
 Ordinary release:
-push -> build -> migrate -> deploy -> health verification
+push -> build -> migrate -> guarded release refresh -> deploy -> health verification
 
 Topology or provider change:
 plan -> review diff -> apply -> deploy -> recommission -> accept
 ```
+
+`php artisan x-change:commissioning:refresh-release --no-interaction` updates only
+package metadata when the commissioned identity still matches. It upgrades a
+version 2 manifest only when the original fingerprint still matches. On a new
+installation it leaves commissioning for the explicit first-install gate. A
+failed refresh stops deployment; review a changed profile, active provider
+connection, System or Treasury identity, or commercial governance before
+guarded adoption. SMS, mail, Turnstile, queue, and credential changes remain
+subject to their separate readiness checks and do not require recommissioning.
 
 ## Checkpoints and recovery
 

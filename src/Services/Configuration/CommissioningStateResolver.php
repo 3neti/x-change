@@ -14,7 +14,7 @@ final readonly class CommissioningStateResolver
 {
     public const ManifestKey = 'primary';
 
-    public const ManifestVersion = 2;
+    public const ManifestVersion = 3;
 
     public function __construct(
         private PreInstallReadinessInspector $readiness,

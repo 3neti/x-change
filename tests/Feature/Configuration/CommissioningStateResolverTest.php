@@ -3,10 +3,15 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Schema;
+use LBHurtado\PaymentGateway\PaymentGatewayServiceProvider;
 use LBHurtado\XChange\Enums\CommissioningState;
 use LBHurtado\XChange\Models\XChangeInstallationManifest;
 use LBHurtado\XChange\Services\Configuration\CommissioningConfigurationFingerprint;
 use LBHurtado\XChange\Services\Configuration\CommissioningStateResolver;
+use LBHurtado\XChange\Services\Configuration\DeploymentConfigurationInspector;
+use LBHurtado\XChange\Services\Configuration\DeploymentConnectionCatalog;
+use LBHurtado\XChange\Services\Configuration\DeploymentEnvironmentCatalog;
+use LBHurtado\XChange\Services\Configuration\DeploymentProfileCatalog;
 use LBHurtado\XChange\Services\Treasury\SystemPrincipalProvisioningService;
 use LBHurtado\XChange\Tests\Fakes\User;
 
@@ -47,6 +52,71 @@ it('becomes operational only with a matching installation manifest', function ()
 
     expect(app(CommissioningStateResolver::class)->resolve()->state)
         ->toBe(CommissioningState::InstallationIncomplete);
+});
+
+it('keeps commissioning stable across runtime delivery changes', function (): void {
+    $fingerprint = app(CommissioningConfigurationFingerprint::class);
+    $original = $fingerprint->current();
+
+    foreach ([
+        'x-change.payment_feedback.sms.flows.authenticated_issuance',
+        'x-change.public_auto_generate.turnstile.enabled',
+        'x-change.campaigns.delivery.email.enabled',
+        'queue.default',
+        'services.resend.key',
+        'engagespark.api_key',
+    ] as $path) {
+        $before = config($path);
+        config()->set($path, $before === 'changed-for-test' ? 'another-test-value' : 'changed-for-test');
+
+        expect($fingerprint->current())->toBe($original);
+
+        config()->set($path, $before);
+    }
+});
+
+it('changes commissioning fingerprint for trust identity changes', function (): void {
+    $fingerprint = app(CommissioningConfigurationFingerprint::class);
+    $original = $fingerprint->current();
+
+    foreach ([
+        'x-change.instance.id',
+        'x-change.payout.system_user_id',
+        'x-change.treasury.legal_entity_reference',
+        'x-change.commercial.offerings.governance_mode',
+    ] as $path) {
+        $before = config($path);
+        config()->set($path, 'changed-for-test');
+
+        expect($fingerprint->current())->not->toBe($original);
+
+        config()->set($path, $before);
+    }
+});
+
+it('tracks active settlement accounts without tracking provider credentials', function (): void {
+    $this->app->register(PaymentGatewayServiceProvider::class);
+
+    foreach ([
+        DeploymentConnectionCatalog::class,
+        DeploymentEnvironmentCatalog::class,
+        DeploymentProfileCatalog::class,
+        DeploymentConfigurationInspector::class,
+        CommissioningConfigurationFingerprint::class,
+    ] as $service) {
+        $this->app->forgetInstance($service);
+    }
+
+    config()->set('x-change.deployment.profile', 'netbank');
+
+    $fingerprint = app(CommissioningConfigurationFingerprint::class);
+    $original = $fingerprint->current();
+
+    config()->set('disbursement.client.secret', 'rotated-credential');
+    expect($fingerprint->current())->toBe($original);
+
+    config()->set('disbursement.source.account_number', 'different-settlement-account');
+    expect($fingerprint->current())->not->toBe($original);
 });
 
 it('fails closed for a manifest recorded by the interrupted commissioning contract', function (): void {
