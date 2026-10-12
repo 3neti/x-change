@@ -4,17 +4,20 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\CancelPartnerPayCodeController;
+use LBHurtado\XChange\Http\Controllers\PartnerApi\CreatePartnerFundedOrderController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\CreatePartnerPayCodePaymentAttemptController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\CreateStoredValueSpendChallengeController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\EstimatePartnerPayCodeController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\IssuePartnerPayCodeController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\ListStoredValueInstrumentTransactionsController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\ShowPartnerCapabilitiesController;
+use LBHurtado\XChange\Http\Controllers\PartnerApi\ShowPartnerFundedOrderController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\ShowPartnerPayCodeByReferenceController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\ShowPartnerPayCodeController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\SpendStoredValueInstrumentController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\VerifyStoredValueSpendChallengeController;
 use LBHurtado\XChange\Http\Middleware\EnsurePartnerApiClient;
+use LBHurtado\XChange\Http\Middleware\EnsurePartnerFundedOrderCreationEnabled;
 
 $prefix = trim((string) config('x-change.partner_api.prefix', 'api/partner/v1'), '/');
 
@@ -22,6 +25,16 @@ Route::prefix($prefix)
     ->as('x-change.partner-api.')
     ->middleware('throttle:x-change-partner-api')
     ->group(function (): void {
+        Route::middleware(EnsurePartnerApiClient::using('funded-orders:create'))
+            ->post('/funded-orders', CreatePartnerFundedOrderController::class)
+            ->middleware(EnsurePartnerFundedOrderCreationEnabled::class)
+            ->name('funded-orders.store');
+
+        Route::middleware(EnsurePartnerApiClient::using('funded-orders:read'))
+            ->get('/funded-orders/{reference}', ShowPartnerFundedOrderController::class)
+            ->whereUlid('reference')
+            ->name('funded-orders.show');
+
         Route::middleware(EnsurePartnerApiClient::using('capabilities:read'))
             ->get('/capabilities', ShowPartnerCapabilitiesController::class)
             ->name('capabilities.show');

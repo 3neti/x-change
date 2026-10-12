@@ -17,7 +17,7 @@ final class Checkout extends Model
 
     protected $guarded = [];
 
-    protected $hidden = ['visitor_mobile_ciphertext', 'visitor_mobile_hash', 'instructions_ciphertext', 'pricing_snapshot_ciphertext', 'guest_token_hash', 'session_hash'];
+    protected $hidden = ['visitor_mobile_ciphertext', 'visitor_mobile_hash', 'instructions_ciphertext', 'pricing_snapshot_ciphertext', 'guest_token_hash', 'session_hash', 'api_idempotency_key_hash', 'api_request_fingerprint'];
 
     protected static function booted(): void
     {
@@ -40,6 +40,11 @@ final class Checkout extends Model
     public function fundingOrder(): BelongsTo
     {
         return $this->belongsTo(PayCodeIssuanceFundingOrder::class, 'funding_order_id');
+    }
+
+    public function partnerApiClient(): BelongsTo
+    {
+        return $this->belongsTo(PartnerApiClient::class);
     }
 
     public function contact(): BelongsTo

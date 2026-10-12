@@ -17,6 +17,8 @@ A valid token is necessary but not sufficient. Every request is also constrained
 
 The caller cannot submit `issuer_id`, issuer email, or issuer mobile. X-Change derives the issuer from the authenticated client. Pay Codes belonging to another Account return the same not-found response as an unknown code.
 
+Customer-funded orders have separate `funded-orders:create` and `funded-orders:read` scopes. The client identifies the approved application; the commissioned Commercial Principal is the issuer of record. This flow requires verified payment before issuance and never uses the client's Account funds.
+
 ## Activation
 
 Public discovery is safe to expose before financial operations are enabled:
@@ -44,6 +46,14 @@ php artisan migrate --force
 ```
 
 The doctor fails closed if Partner operations are enabled without OAuth signing keys.
+
+New customer-funded orders also require `XCHANGE_PARTNER_FUNDED_ORDERS_ENABLED=true`. Its default is false. Existing client-owned orders remain readable when new placement is paused. The default unpaid-order limit is three per client, configurable with `XCHANGE_PARTNER_FUNDED_ORDERS_MAXIMUM_OPEN`.
+
+## Customer-funded orders
+
+An approved client with `funded-orders:create` posts one redeemable Pay Code instruction set to `/api/partner/v1/funded-orders`, adding `funding_method` (`qr_ph` or `bank_transfer`) and an `Idempotency-Key` header. Bank transfer also requires `payer_mobile` before instructions are returned. The response contains the order reference, exact amount, expiry, and selected payment instructions. The payer makes one exact payment; the scheduled funding verifier and issuance pipeline handle the rest. The client polls `/api/partner/v1/funded-orders/{reference}` with `funded-orders:read` until `pay_code.claim_url` is present or the order needs review. A paid order needing review must not be paid again.
+
+The published OpenAPI artifact is generated from live Partner routes and the curated prefunded contract. In the package development environment, run `XCHANGE_PARTNER_API_ENABLED=true php vendor/bin/testbench x-change:partner-api:export-openapi`; add `--check` in CI to detect drift. Scramble is a development dependency, so production serves the generated artifact without running the generator.
 
 ## Provision a client
 

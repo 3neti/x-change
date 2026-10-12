@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use Dedoc\Scramble\ScrambleServiceProvider;
 
 it('publishes safe standards-based discovery even before runtime activation', function () {
     config()->set('x-change.partner_api.enabled', false);
@@ -35,7 +36,7 @@ it('serves a valid curated OpenAPI contract without unsafe lifecycle operations'
         ->and(data_get($document, 'info.title'))->toBe('X-Change Partner API')
         ->and(data_get($document, 'components.securitySchemes.partnerOAuth.flows.clientCredentials.tokenUrl'))
         ->toBe('/oauth/token')
-        ->and(array_keys((array) data_get($document, 'paths')))->toBe([
+        ->and(array_keys((array) data_get($document, 'paths')))->toContain(
             '/capabilities',
             '/pay-code-estimates',
             '/pay-codes',
@@ -47,7 +48,13 @@ it('serves a valid curated OpenAPI contract without unsafe lifecycle operations'
             '/stored-value-instruments/{instrument}/spend-challenges/{challenge}/verification',
             '/stored-value-instruments/{instrument}/spends',
             '/stored-value-instruments/{instrument}/transactions',
-        ])
+            '/funded-orders',
+            '/funded-orders/{reference}',
+        )
+        ->and(data_get($document, 'paths./funded-orders.post.security.0.partnerOAuth'))
+        ->toBe(['funded-orders:create'])
+        ->and(data_get($document, 'paths./funded-orders/{reference}.get.security.0.partnerOAuth'))
+        ->toBe(['funded-orders:read'])
         ->and(collect(data_get($document, 'paths./pay-codes/{code}/cancellation.post.parameters'))
             ->firstWhere('name', 'Idempotency-Key'))
         ->toMatchArray(['in' => 'header', 'required' => true])
@@ -65,4 +72,11 @@ it('serves a valid curated OpenAPI contract without unsafe lifecycle operations'
         ->toBe('^[0-9A-HJKMNP-TV-Z]{26}$')
         ->and($response->getContent())->not->toContain('/api/x/v1')
         ->not->toContain('issuer_id');
+});
+
+it('keeps the generated Partner OpenAPI artifact current', function (): void {
+    $this->app->register(ScrambleServiceProvider::class);
+
+    $this->artisan('x-change:partner-api:export-openapi', ['--check' => true])
+        ->assertSuccessful();
 });

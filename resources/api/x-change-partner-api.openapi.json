@@ -1,322 +1,1563 @@
 {
-  "openapi": "3.1.0",
-  "info": {
-    "title": "X-Change Partner API",
-    "version": "1.4.0",
-    "description": "Governed server-to-server Pay Code issuance. OAuth identity is bound to one issuer Account; server-side mandates, Account funds, Treasury controls, and idempotency remain authoritative."
-  },
-  "servers": [{"url": "/api/partner/v1"}],
-  "security": [{"partnerOAuth": []}],
-  "paths": {
-    "/capabilities": {
-      "get": {
-        "operationId": "showPartnerCapabilities",
-        "summary": "Inspect the authenticated client mandate",
-        "security": [{"partnerOAuth": ["capabilities:read"]}],
-        "responses": {"200": {"description": "Safe client capabilities", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}}}
-      }
+    "openapi": "3.1.0",
+    "info": {
+        "title": "X-Change Partner API",
+        "version": "1.5.0",
+        "description": "Approved Partner API for prefunded issuance and customer-funded Pay Code orders. Funded orders use the commissioned Commercial Principal and require provider-verified payment before issuance."
     },
-    "/pay-code-estimates": {
-      "post": {
-        "operationId": "estimatePartnerPayCode",
-        "summary": "Estimate a Pay Code without reserving funds",
-        "security": [{"partnerOAuth": ["pay-codes:estimate"]}],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PayCodeInstructions"}}}},
-        "responses": {
-          "200": {"description": "Pricing estimate", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},
-          "401": {"$ref": "#/components/responses/Unauthorized"},
-          "403": {"$ref": "#/components/responses/Forbidden"},
-          "422": {"$ref": "#/components/responses/ValidationError"}
+    "servers": [
+        {
+            "url": "/api/partner/v1"
         }
-      }
-    },
-    "/pay-codes": {
-      "post": {
-        "operationId": "issuePartnerPayCode",
-        "summary": "Issue a Pay Code from the token-bound Account",
-        "security": [{"partnerOAuth": ["pay-codes:issue"]}],
-        "parameters": [
-          {"name": "Idempotency-Key", "in": "header", "required": true, "schema": {"type": "string", "maxLength": 160}},
-          {"name": "X-Correlation-ID", "in": "header", "required": false, "schema": {"type": "string", "maxLength": 160}}
-        ],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PayCodeIssuanceRequest"}}}},
-        "responses": {
-          "201": {"description": "Pay Code issued once", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PayCodeIssuanceSuccessEnvelope"}}}},
-          "200": {"description": "Idempotent replay of the original result", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PayCodeIssuanceSuccessEnvelope"}}}},
-          "401": {"$ref": "#/components/responses/Unauthorized"},
-          "403": {"$ref": "#/components/responses/Forbidden"},
-          "409": {"description": "Idempotency key reused with changed input"},
-          "422": {"$ref": "#/components/responses/ValidationError"}
+    ],
+    "security": [
+        {
+            "partnerOAuth": []
         }
-      }
-    },
-    "/pay-codes/by-reference/{externalReference}": {
-      "get": {
-        "operationId": "showPartnerPayCodeByReference",
-        "summary": "Inspect a sanitized Pay Code by the caller's business reference",
-        "security": [{"partnerOAuth": ["pay-codes:read"]}],
-        "parameters": [{"$ref": "#/components/parameters/ExternalReference"}],
-        "responses": {
-          "200": {"description": "Owned Pay Code status", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PartnerPayCodeSuccessEnvelope"}}}},
-          "404": {"description": "Unknown or not owned by this client"}
-        }
-      }
-    },
-    "/pay-codes/{code}": {
-      "get": {
-        "operationId": "showPartnerPayCode",
-        "summary": "Inspect a sanitized Pay Code status",
-        "security": [{"partnerOAuth": ["pay-codes:read"]}],
-        "parameters": [{"$ref": "#/components/parameters/PayCode"}],
-        "responses": {
-          "200": {"description": "Owned Pay Code status", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PartnerPayCodeSuccessEnvelope"}}}},
-          "404": {"description": "Unknown or not owned by this client"}
-        }
-      }
-    },
-    "/pay-codes/{code}/payment-attempts": {
-      "post": {
-        "operationId": "createPartnerPayCodePaymentAttempt",
-        "summary": "Create provider payment instructions for an owned payable Pay Code",
-        "security": [{"partnerOAuth": ["pay-codes:pay"]}],
-        "parameters": [
-          {"$ref": "#/components/parameters/PayCode"},
-          {"name": "Idempotency-Key", "in": "header", "required": true, "schema": {"type": "string", "maxLength": 160}},
-          {"name": "X-Correlation-ID", "in": "header", "required": false, "schema": {"type": "string", "maxLength": 160}}
-        ],
-        "requestBody": {"required": false, "content": {"application/json": {"schema": {"type": "object", "additionalProperties": false, "properties": {"provider": {"type": ["string", "null"], "maxLength": 64}}}}}},
-        "responses": {
-          "201": {"description": "Payment attempt and QR instructions created once", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PaymentAttemptSuccessEnvelope"}}}},
-          "200": {"description": "Durable idempotent replay", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PaymentAttemptSuccessEnvelope"}}}},
-          "401": {"$ref": "#/components/responses/Unauthorized"},
-          "403": {"$ref": "#/components/responses/Forbidden"},
-          "404": {"description": "Unknown or not owned by this client"},
-          "409": {"description": "Idempotency key reused with changed input"},
-          "422": {"$ref": "#/components/responses/ValidationError"},
-          "503": {"description": "Provider payment instructions are temporarily unavailable", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorEnvelope"}}}}
-        }
-      }
-    },
-    "/pay-codes/{code}/cancellation": {
-      "post": {
-        "operationId": "cancelPartnerPayCode",
-        "summary": "Cancel an eligible unclaimed Pay Code and release reserved principal",
-        "security": [{"partnerOAuth": ["pay-codes:cancel"]}],
-        "parameters": [
-          {"$ref": "#/components/parameters/PayCode"},
-          {"name": "Idempotency-Key", "in": "header", "required": true, "schema": {"type": "string", "maxLength": 160}},
-          {"name": "X-Correlation-ID", "in": "header", "required": false, "schema": {"type": "string", "maxLength": 160}}
-        ],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["reason"], "properties": {"reason": {"type": "string", "maxLength": 255}}}}}},
-        "responses": {
-          "200": {"description": "Treasury-safe terminal release result", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},
-          "404": {"description": "Unknown or not owned by this client"},
-          "422": {"$ref": "#/components/responses/ValidationError"}
-        }
-      }
-    },
-    "/stored-value-instruments/{instrument}/spend-challenges": {
-      "post": {
-        "operationId": "createStoredValueSpendChallenge",
-        "summary": "Request a holder OTP bound to one exact above-threshold spend",
-        "security": [{"partnerOAuth": ["stored-value:spend"]}],
-        "parameters": [
-          {"$ref": "#/components/parameters/StoredValueInstrument"},
-          {"name": "Idempotency-Key", "in": "header", "required": true, "schema": {"type": "string", "maxLength": 160}},
-          {"name": "X-Correlation-ID", "in": "header", "required": false, "schema": {"type": "string", "maxLength": 160}}
-        ],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "additionalProperties": false, "required": ["amount_minor", "currency"], "properties": {"amount_minor": {"type": "integer", "minimum": 1}, "currency": {"type": "string", "minLength": 3, "maxLength": 3}}}}}},
-        "responses": {
-          "201": {"description": "OTP challenge requested once", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},
-          "200": {"description": "Exact idempotent challenge replay", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},
-          "404": {"description": "Unknown or unavailable instrument"},
-          "422": {"$ref": "#/components/responses/ValidationError"},
-          "429": {"description": "OTP challenge rate limit exceeded"}
-        }
-      }
-    },
-    "/stored-value-instruments/{instrument}/spend-challenges/{challenge}/verification": {
-      "post": {
-        "operationId": "verifyStoredValueSpendChallenge",
-        "summary": "Verify the holder OTP without moving money",
-        "security": [{"partnerOAuth": ["stored-value:spend"]}],
-        "parameters": [
-          {"$ref": "#/components/parameters/StoredValueInstrument"},
-          {"$ref": "#/components/parameters/StoredValueSpendChallenge"}
-        ],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "additionalProperties": false, "required": ["code"], "properties": {"code": {"type": "string", "pattern": "^\\d{6}$"}}}}}},
-        "responses": {
-          "200": {"description": "Challenge verified; no money moved", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},
-          "404": {"description": "Unknown client, instrument, or challenge"},
-          "422": {"$ref": "#/components/responses/ValidationError"},
-          "429": {"description": "OTP verification rate limit exceeded"}
-        }
-      }
-    },
-    "/stored-value-instruments/{instrument}/spends": {
-      "post": {
-        "operationId": "spendStoredValueInstrument",
-        "summary": "Debit a presented reusable balance into the token-bound merchant Account",
-        "security": [{"partnerOAuth": ["stored-value:spend"]}],
-        "parameters": [
-          {"$ref": "#/components/parameters/StoredValueInstrument"},
-          {"name": "Idempotency-Key", "in": "header", "required": true, "schema": {"type": "string", "maxLength": 160}},
-          {"name": "X-Correlation-ID", "in": "header", "required": false, "schema": {"type": "string", "maxLength": 160}}
-        ],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "additionalProperties": false, "required": ["amount_minor", "currency"], "properties": {"amount_minor": {"type": "integer", "minimum": 1}, "currency": {"type": "string", "minLength": 3, "maxLength": 3}, "otp_challenge_reference": {"type": ["string", "null"], "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$", "description": "Required only when the instrument's governed OTP threshold is exceeded."}}}}}},
-        "responses": {
-          "201": {"description": "Spend committed once", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},
-          "200": {"description": "Exact idempotent replay", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},
-          "404": {"description": "Unknown or unavailable instrument"},
-          "422": {"$ref": "#/components/responses/ValidationError"}
-        }
-      }
-    },
-    "/stored-value-instruments/{instrument}/transactions": {
-      "get": {
-        "operationId": "listStoredValueInstrumentTransactions",
-        "summary": "Read sanitized client-scoped reusable-balance transactions",
-        "security": [{"partnerOAuth": ["stored-value:read"]}],
-        "parameters": [
-          {"$ref": "#/components/parameters/StoredValueInstrument"},
-          {"name": "limit", "in": "query", "required": false, "schema": {"type": "integer", "minimum": 1, "maximum": 100, "default": 50}}
-        ],
-        "responses": {
-          "200": {"description": "Sanitized instrument balance and this client’s transactions", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessEnvelope"}}}},
-          "404": {"description": "Unknown or unavailable instrument"}
-        }
-      }
-    }
-  },
-  "components": {
-    "securitySchemes": {
-      "partnerOAuth": {
-        "type": "oauth2",
-        "flows": {
-          "clientCredentials": {
-            "tokenUrl": "/oauth/token",
-            "scopes": {
-              "capabilities:read": "Inspect the authenticated Partner API mandate",
-              "pay-codes:estimate": "Estimate a Pay Code",
-              "pay-codes:issue": "Issue a Pay Code",
-              "pay-codes:read": "Inspect owned Pay Codes",
-              "pay-codes:pay": "Create payer instructions for owned payable Pay Codes",
-              "pay-codes:cancel": "Cancel eligible owned Pay Codes",
-              "stored-value:read": "Read sanitized reusable-balance transactions",
-              "stored-value:spend": "Debit a presented reusable balance"
+    ],
+    "paths": {
+        "/capabilities": {
+            "get": {
+                "operationId": "showPartnerCapabilities",
+                "summary": "Inspect the authenticated client mandate",
+                "security": [
+                    {
+                        "partnerOAuth": [
+                            "capabilities:read"
+                        ]
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Safe client capabilities",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessEnvelope"
+                                }
+                            }
+                        }
+                    }
+                }
             }
-          }
-        }
-      }
-    },
-    "parameters": {
-      "PayCode": {"name": "code", "in": "path", "required": true, "schema": {"type": "string", "maxLength": 80}},
-      "ExternalReference": {"name": "externalReference", "in": "path", "required": true, "schema": {"type": "string", "minLength": 1, "maxLength": 190, "pattern": "^[A-Za-z0-9_.:-]+$"}},
-      "StoredValueInstrument": {"name": "instrument", "in": "path", "required": true, "description": "Opaque ULID presented by an activated holder. Short Pay Codes and internal ledger references are not accepted.", "schema": {"type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"}},
-      "StoredValueSpendChallenge": {"name": "challenge", "in": "path", "required": true, "description": "Opaque ULID for an OTP challenge bound to the authenticated client and exact spend facts.", "schema": {"type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"}}
-    },
-    "schemas": {
-      "PayCodeInstructions": {
-        "type": "object",
-        "required": ["cash", "inputs", "feedback", "rider"],
-        "properties": {
-          "cash": {
-            "type": "object",
-            "required": ["amount", "currency"],
-            "properties": {
-              "amount": {"type": "number", "exclusiveMinimum": 0, "example": 100.00},
-              "currency": {"type": "string", "example": "PHP"},
-              "settlement_rail": {"type": ["string", "null"], "enum": ["INSTAPAY", "PESONET", null]},
-              "validation": {"type": ["object", "null"], "properties": {"mobile": {"type": ["string", "null"]}, "payable": {"type": ["string", "null"]}, "secret": {"type": ["string", "null"]}}}
-            }
-          },
-          "inputs": {"type": "object", "required": ["fields"], "properties": {"fields": {"type": "array", "items": {"type": "string"}}}},
-          "feedback": {"type": "object", "properties": {"email": {"type": ["string", "null"], "format": "email"}, "mobile": {"type": ["string", "null"]}, "webhook": {"type": ["string", "null"], "format": "uri"}}},
-          "rider": {"type": "object", "properties": {"message": {"type": ["string", "null"]}, "url": {"type": ["string", "null"], "format": "uri"}, "splash": {"type": ["string", "null"]}}},
-          "count": {"type": "integer", "minimum": 1, "default": 1},
-          "ttl": {"type": ["integer", "string", "null"]}
         },
-        "additionalProperties": true
-      },
-      "PayCodeIssuanceRequest": {
-        "allOf": [
-          {"$ref": "#/components/schemas/PayCodeInstructions"},
-          {"type": "object", "required": ["external_reference"], "properties": {"external_reference": {"type": "string", "minLength": 1, "maxLength": 190, "pattern": "^[A-Za-z0-9_.:-]+$"}}}
-        ]
-      },
-      "PayCodeLinks": {
-        "type": "object",
-        "required": ["pay", "pay_path"],
-        "properties": {
-          "redeem": {"type": ["string", "null"]},
-          "redeem_path": {"type": ["string", "null"]},
-          "pay": {"type": ["string", "null"], "format": "uri"},
-          "pay_path": {"type": ["string", "null"]}
+        "/pay-code-estimates": {
+            "post": {
+                "operationId": "estimatePartnerPayCode",
+                "summary": "Estimate a Pay Code without reserving funds",
+                "security": [
+                    {
+                        "partnerOAuth": [
+                            "pay-codes:estimate"
+                        ]
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PayCodeInstructions"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Pricing estimate",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                }
+            }
+        },
+        "/pay-codes": {
+            "post": {
+                "operationId": "issuePartnerPayCode",
+                "summary": "Issue a Pay Code from the token-bound Account",
+                "security": [
+                    {
+                        "partnerOAuth": [
+                            "pay-codes:issue"
+                        ]
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "Idempotency-Key",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 160
+                        }
+                    },
+                    {
+                        "name": "X-Correlation-ID",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 160
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PayCodeIssuanceRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Pay Code issued once",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PayCodeIssuanceSuccessEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "Idempotent replay of the original result",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PayCodeIssuanceSuccessEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "409": {
+                        "description": "Idempotency key reused with changed input"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                }
+            }
+        },
+        "/pay-codes/by-reference/{externalReference}": {
+            "get": {
+                "operationId": "showPartnerPayCodeByReference",
+                "summary": "Inspect a sanitized Pay Code by the caller's business reference",
+                "security": [
+                    {
+                        "partnerOAuth": [
+                            "pay-codes:read"
+                        ]
+                    }
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/ExternalReference"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Owned Pay Code status",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PartnerPayCodeSuccessEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Unknown or not owned by this client"
+                    }
+                }
+            }
+        },
+        "/pay-codes/{code}": {
+            "get": {
+                "operationId": "showPartnerPayCode",
+                "summary": "Inspect a sanitized Pay Code status",
+                "security": [
+                    {
+                        "partnerOAuth": [
+                            "pay-codes:read"
+                        ]
+                    }
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/PayCode"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Owned Pay Code status",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PartnerPayCodeSuccessEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Unknown or not owned by this client"
+                    }
+                }
+            }
+        },
+        "/pay-codes/{code}/payment-attempts": {
+            "post": {
+                "operationId": "createPartnerPayCodePaymentAttempt",
+                "summary": "Create provider payment instructions for an owned payable Pay Code",
+                "security": [
+                    {
+                        "partnerOAuth": [
+                            "pay-codes:pay"
+                        ]
+                    }
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/PayCode"
+                    },
+                    {
+                        "name": "Idempotency-Key",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 160
+                        }
+                    },
+                    {
+                        "name": "X-Correlation-ID",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 160
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                    "provider": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 64
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Payment attempt and QR instructions created once",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaymentAttemptSuccessEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "Durable idempotent replay",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaymentAttemptSuccessEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "description": "Unknown or not owned by this client"
+                    },
+                    "409": {
+                        "description": "Idempotency key reused with changed input"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "503": {
+                        "description": "Provider payment instructions are temporarily unavailable",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/pay-codes/{code}/cancellation": {
+            "post": {
+                "operationId": "cancelPartnerPayCode",
+                "summary": "Cancel an eligible unclaimed Pay Code and release reserved principal",
+                "security": [
+                    {
+                        "partnerOAuth": [
+                            "pay-codes:cancel"
+                        ]
+                    }
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/PayCode"
+                    },
+                    {
+                        "name": "Idempotency-Key",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 160
+                        }
+                    },
+                    {
+                        "name": "X-Correlation-ID",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 160
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "reason"
+                                ],
+                                "properties": {
+                                    "reason": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Treasury-safe terminal release result",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Unknown or not owned by this client"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                }
+            }
+        },
+        "/stored-value-instruments/{instrument}/spend-challenges": {
+            "post": {
+                "operationId": "createStoredValueSpendChallenge",
+                "summary": "Request a holder OTP bound to one exact above-threshold spend",
+                "security": [
+                    {
+                        "partnerOAuth": [
+                            "stored-value:spend"
+                        ]
+                    }
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/StoredValueInstrument"
+                    },
+                    {
+                        "name": "Idempotency-Key",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 160
+                        }
+                    },
+                    {
+                        "name": "X-Correlation-ID",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 160
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                    "amount_minor",
+                                    "currency"
+                                ],
+                                "properties": {
+                                    "amount_minor": {
+                                        "type": "integer",
+                                        "minimum": 1
+                                    },
+                                    "currency": {
+                                        "type": "string",
+                                        "minLength": 3,
+                                        "maxLength": 3
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "OTP challenge requested once",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "Exact idempotent challenge replay",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Unknown or unavailable instrument"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "description": "OTP challenge rate limit exceeded"
+                    }
+                }
+            }
+        },
+        "/stored-value-instruments/{instrument}/spend-challenges/{challenge}/verification": {
+            "post": {
+                "operationId": "verifyStoredValueSpendChallenge",
+                "summary": "Verify the holder OTP without moving money",
+                "security": [
+                    {
+                        "partnerOAuth": [
+                            "stored-value:spend"
+                        ]
+                    }
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/StoredValueInstrument"
+                    },
+                    {
+                        "$ref": "#/components/parameters/StoredValueSpendChallenge"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                    "code"
+                                ],
+                                "properties": {
+                                    "code": {
+                                        "type": "string",
+                                        "pattern": "^\\d{6}$"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Challenge verified; no money moved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Unknown client, instrument, or challenge"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "description": "OTP verification rate limit exceeded"
+                    }
+                }
+            }
+        },
+        "/stored-value-instruments/{instrument}/spends": {
+            "post": {
+                "operationId": "spendStoredValueInstrument",
+                "summary": "Debit a presented reusable balance into the token-bound merchant Account",
+                "security": [
+                    {
+                        "partnerOAuth": [
+                            "stored-value:spend"
+                        ]
+                    }
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/StoredValueInstrument"
+                    },
+                    {
+                        "name": "Idempotency-Key",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 160
+                        }
+                    },
+                    {
+                        "name": "X-Correlation-ID",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 160
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                    "amount_minor",
+                                    "currency"
+                                ],
+                                "properties": {
+                                    "amount_minor": {
+                                        "type": "integer",
+                                        "minimum": 1
+                                    },
+                                    "currency": {
+                                        "type": "string",
+                                        "minLength": 3,
+                                        "maxLength": 3
+                                    },
+                                    "otp_challenge_reference": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+                                        "description": "Required only when the instrument's governed OTP threshold is exceeded."
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Spend committed once",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "Exact idempotent replay",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Unknown or unavailable instrument"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                }
+            }
+        },
+        "/stored-value-instruments/{instrument}/transactions": {
+            "get": {
+                "operationId": "listStoredValueInstrumentTransactions",
+                "summary": "Read sanitized client-scoped reusable-balance transactions",
+                "security": [
+                    {
+                        "partnerOAuth": [
+                            "stored-value:read"
+                        ]
+                    }
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/StoredValueInstrument"
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100,
+                            "default": 50
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Sanitized instrument balance and this client\u2019s transactions",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Unknown or unavailable instrument"
+                    }
+                }
+            }
+        },
+        "/funded-orders": {
+            "post": {
+                "operationId": "createPartnerFundedOrder",
+                "summary": "Create a customer-funded Pay Code order",
+                "description": "A single Pay Code is issued after exact provider-verified payment. Public issuance policy applies; Pay Code funding is unavailable.",
+                "security": [
+                    {
+                        "partnerOAuth": [
+                            "funded-orders:create"
+                        ]
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "Idempotency-Key",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 160
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FundedOrderRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Funding order created with payment instructions",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FundedOrderSuccessEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "Idempotent replay of the same order",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FundedOrderSuccessEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "409": {
+                        "description": "Idempotency key is bound to different terms"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "description": "Rate or unpaid-order limit reached"
+                    },
+                    "503": {
+                        "description": "New funded orders are paused"
+                    }
+                }
+            }
+        },
+        "/funded-orders/{reference}": {
+            "get": {
+                "operationId": "showPartnerFundedOrder",
+                "summary": "Poll a client-owned funded order",
+                "security": [
+                    {
+                        "partnerOAuth": [
+                            "funded-orders:read"
+                        ]
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "reference",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Current order state; claim URL appears after issuance",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FundedOrderSuccessEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "description": "Unknown order or owned by another client"
+                    }
+                }
+            }
         }
-      },
-      "CollectionProgress": {
-        "type": ["object", "null"],
-        "properties": {
-          "currency": {"type": "string"},
-          "target_amount_minor": {"type": "integer"},
-          "collected_total_minor": {"type": "integer"},
-          "remaining_to_collect_minor": {"type": "integer"},
-          "is_fully_collected": {"type": "boolean"},
-          "is_overpaid": {"type": "boolean"},
-          "overpaid_amount_minor": {"type": "integer"}
-        }
-      },
-      "PaymentReceipt": {
-        "type": ["object", "null"],
-        "properties": {
-          "pay_code": {"type": "string"},
-          "amount_paid_minor": {"type": "integer"},
-          "currency": {"type": "string"},
-          "completed_at": {"type": ["string", "null"], "format": "date-time"},
-          "payments": {"type": "array", "items": {"type": "object", "properties": {"collection_number": {"type": "integer"}, "amount_paid_minor": {"type": "integer"}, "provider": {"type": "string"}, "receipt_reference": {"type": "string"}, "completed_at": {"type": ["string", "null"], "format": "date-time"}}}}
-        }
-      },
-      "PaymentAttempt": {
-        "type": "object",
-        "required": ["reference", "status", "provider", "amount_minor", "currency", "can_check"],
-        "properties": {
-          "reference": {"type": "string"},
-          "status": {"type": "string"},
-          "provider": {"type": "string"},
-          "amount_minor": {"type": "integer"},
-          "currency": {"type": "string"},
-          "expires_at": {"type": ["string", "null"], "format": "date-time"},
-          "last_checked_at": {"type": ["string", "null"], "format": "date-time"},
-          "can_check": {"type": "boolean"},
-          "qr_code": {"type": ["object", "null"], "properties": {"mime_type": {"type": ["string", "null"]}, "base64_payload": {"type": ["string", "null"]}, "qr_mode": {"type": ["string", "null"]}, "transaction_type": {"type": ["string", "null"]}, "embedded_amount": {"type": "boolean"}}}
-        }
-      },
-      "PayCodeIssuanceSuccessEnvelope": {
-        "allOf": [
-          {"$ref": "#/components/schemas/SuccessEnvelope"},
-          {"type": "object", "properties": {"data": {"type": "object", "required": ["external_reference", "consumer_status"], "properties": {"external_reference": {"type": "string"}, "consumer_status": {"$ref": "#/components/schemas/ConsumerStatus"}, "links": {"$ref": "#/components/schemas/PayCodeLinks"}}}}}
-        ]
-      },
-      "PartnerPayCodeSuccessEnvelope": {
-        "allOf": [
-          {"$ref": "#/components/schemas/SuccessEnvelope"},
-          {"type": "object", "properties": {"data": {"type": "object", "required": ["external_reference", "consumer_status"], "properties": {"external_reference": {"type": ["string", "null"]}, "consumer_status": {"$ref": "#/components/schemas/ConsumerStatus"}, "links": {"$ref": "#/components/schemas/PayCodeLinks"}, "collection": {"$ref": "#/components/schemas/CollectionProgress"}, "receipt": {"$ref": "#/components/schemas/PaymentReceipt"}}}}}
-        ]
-      },
-      "PaymentAttemptSuccessEnvelope": {
-        "allOf": [
-          {"$ref": "#/components/schemas/SuccessEnvelope"},
-          {"type": "object", "properties": {"data": {"type": "object", "required": ["schema", "code", "external_reference", "consumer_status", "pay_url", "attempt"], "properties": {"schema": {"const": "x-change.partner-payment-attempt.v1"}, "code": {"type": "string"}, "external_reference": {"type": ["string", "null"]}, "consumer_status": {"$ref": "#/components/schemas/ConsumerStatus"}, "pay_url": {"type": ["string", "null"], "format": "uri"}, "attempt": {"$ref": "#/components/schemas/PaymentAttempt"}}}}}
-        ]
-      },
-      "ConsumerStatus": {"type": "string", "enum": ["pending", "payable", "processing", "paid", "expired", "cancelled", "failed"]},
-      "SuccessEnvelope": {"type": "object", "required": ["success", "data", "meta"], "properties": {"success": {"const": true}, "data": {}, "meta": {"type": "object"}}},
-      "ErrorEnvelope": {"type": "object", "required": ["success", "message", "code", "errors"], "properties": {"success": {"const": false}, "message": {"type": "string"}, "code": {"type": "string"}, "errors": {"type": ["object", "array"]}}}
     },
-    "responses": {
-      "Unauthorized": {"description": "Missing, expired, revoked, or invalid bearer token"},
-      "Forbidden": {"description": "Token lacks the required scope or client mandate"},
-      "ValidationError": {"description": "Invalid request or mandate violation", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorEnvelope"}}}}
+    "components": {
+        "securitySchemes": {
+            "partnerOAuth": {
+                "type": "oauth2",
+                "flows": {
+                    "clientCredentials": {
+                        "tokenUrl": "/oauth/token",
+                        "scopes": {
+                            "capabilities:read": "Inspect the authenticated Partner API mandate",
+                            "pay-codes:estimate": "Estimate a Pay Code",
+                            "pay-codes:issue": "Issue a Pay Code",
+                            "pay-codes:read": "Inspect owned Pay Codes",
+                            "pay-codes:pay": "Create payer instructions for owned payable Pay Codes",
+                            "pay-codes:cancel": "Cancel eligible owned Pay Codes",
+                            "stored-value:read": "Read sanitized reusable-balance transactions",
+                            "stored-value:spend": "Debit a presented reusable balance",
+                            "funded-orders:create": "Create a customer-funded Pay Code checkout.",
+                            "funded-orders:read": "Read customer-funded checkouts created by this client."
+                        }
+                    }
+                }
+            }
+        },
+        "parameters": {
+            "PayCode": {
+                "name": "code",
+                "in": "path",
+                "required": true,
+                "schema": {
+                    "type": "string",
+                    "maxLength": 80
+                }
+            },
+            "ExternalReference": {
+                "name": "externalReference",
+                "in": "path",
+                "required": true,
+                "schema": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 190,
+                    "pattern": "^[A-Za-z0-9_.:-]+$"
+                }
+            },
+            "StoredValueInstrument": {
+                "name": "instrument",
+                "in": "path",
+                "required": true,
+                "description": "Opaque ULID presented by an activated holder. Short Pay Codes and internal ledger references are not accepted.",
+                "schema": {
+                    "type": "string",
+                    "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+                }
+            },
+            "StoredValueSpendChallenge": {
+                "name": "challenge",
+                "in": "path",
+                "required": true,
+                "description": "Opaque ULID for an OTP challenge bound to the authenticated client and exact spend facts.",
+                "schema": {
+                    "type": "string",
+                    "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+                }
+            }
+        },
+        "schemas": {
+            "PayCodeInstructions": {
+                "type": "object",
+                "required": [
+                    "cash",
+                    "inputs",
+                    "feedback",
+                    "rider"
+                ],
+                "properties": {
+                    "cash": {
+                        "type": "object",
+                        "required": [
+                            "amount",
+                            "currency"
+                        ],
+                        "properties": {
+                            "amount": {
+                                "type": "number",
+                                "exclusiveMinimum": 0,
+                                "example": 100
+                            },
+                            "currency": {
+                                "type": "string",
+                                "example": "PHP"
+                            },
+                            "settlement_rail": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "enum": [
+                                    "INSTAPAY",
+                                    "PESONET",
+                                    null
+                                ]
+                            },
+                            "validation": {
+                                "type": [
+                                    "object",
+                                    "null"
+                                ],
+                                "properties": {
+                                    "mobile": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "payable": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "secret": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "inputs": {
+                        "type": "object",
+                        "required": [
+                            "fields"
+                        ],
+                        "properties": {
+                            "fields": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "feedback": {
+                        "type": "object",
+                        "properties": {
+                            "email": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "email"
+                            },
+                            "mobile": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "webhook": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "uri"
+                            }
+                        }
+                    },
+                    "rider": {
+                        "type": "object",
+                        "properties": {
+                            "message": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "url": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "uri"
+                            },
+                            "splash": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        }
+                    },
+                    "count": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "default": 1
+                    },
+                    "ttl": {
+                        "type": [
+                            "integer",
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "additionalProperties": true
+            },
+            "PayCodeIssuanceRequest": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/PayCodeInstructions"
+                    },
+                    {
+                        "type": "object",
+                        "required": [
+                            "external_reference"
+                        ],
+                        "properties": {
+                            "external_reference": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 190,
+                                "pattern": "^[A-Za-z0-9_.:-]+$"
+                            }
+                        }
+                    }
+                ]
+            },
+            "PayCodeLinks": {
+                "type": "object",
+                "required": [
+                    "pay",
+                    "pay_path"
+                ],
+                "properties": {
+                    "redeem": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "redeem_path": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "pay": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uri"
+                    },
+                    "pay_path": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                }
+            },
+            "CollectionProgress": {
+                "type": [
+                    "object",
+                    "null"
+                ],
+                "properties": {
+                    "currency": {
+                        "type": "string"
+                    },
+                    "target_amount_minor": {
+                        "type": "integer"
+                    },
+                    "collected_total_minor": {
+                        "type": "integer"
+                    },
+                    "remaining_to_collect_minor": {
+                        "type": "integer"
+                    },
+                    "is_fully_collected": {
+                        "type": "boolean"
+                    },
+                    "is_overpaid": {
+                        "type": "boolean"
+                    },
+                    "overpaid_amount_minor": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "PaymentReceipt": {
+                "type": [
+                    "object",
+                    "null"
+                ],
+                "properties": {
+                    "pay_code": {
+                        "type": "string"
+                    },
+                    "amount_paid_minor": {
+                        "type": "integer"
+                    },
+                    "currency": {
+                        "type": "string"
+                    },
+                    "completed_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "payments": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "collection_number": {
+                                    "type": "integer"
+                                },
+                                "amount_paid_minor": {
+                                    "type": "integer"
+                                },
+                                "provider": {
+                                    "type": "string"
+                                },
+                                "receipt_reference": {
+                                    "type": "string"
+                                },
+                                "completed_at": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "format": "date-time"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "PaymentAttempt": {
+                "type": "object",
+                "required": [
+                    "reference",
+                    "status",
+                    "provider",
+                    "amount_minor",
+                    "currency",
+                    "can_check"
+                ],
+                "properties": {
+                    "reference": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "provider": {
+                        "type": "string"
+                    },
+                    "amount_minor": {
+                        "type": "integer"
+                    },
+                    "currency": {
+                        "type": "string"
+                    },
+                    "expires_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "last_checked_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "can_check": {
+                        "type": "boolean"
+                    },
+                    "qr_code": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "mime_type": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "base64_payload": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "qr_mode": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "transaction_type": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "embedded_amount": {
+                                "type": "boolean"
+                            }
+                        }
+                    }
+                }
+            },
+            "PayCodeIssuanceSuccessEnvelope": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "data": {
+                                "type": "object",
+                                "required": [
+                                    "external_reference",
+                                    "consumer_status"
+                                ],
+                                "properties": {
+                                    "external_reference": {
+                                        "type": "string"
+                                    },
+                                    "consumer_status": {
+                                        "$ref": "#/components/schemas/ConsumerStatus"
+                                    },
+                                    "links": {
+                                        "$ref": "#/components/schemas/PayCodeLinks"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            },
+            "PartnerPayCodeSuccessEnvelope": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "data": {
+                                "type": "object",
+                                "required": [
+                                    "external_reference",
+                                    "consumer_status"
+                                ],
+                                "properties": {
+                                    "external_reference": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "consumer_status": {
+                                        "$ref": "#/components/schemas/ConsumerStatus"
+                                    },
+                                    "links": {
+                                        "$ref": "#/components/schemas/PayCodeLinks"
+                                    },
+                                    "collection": {
+                                        "$ref": "#/components/schemas/CollectionProgress"
+                                    },
+                                    "receipt": {
+                                        "$ref": "#/components/schemas/PaymentReceipt"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            },
+            "PaymentAttemptSuccessEnvelope": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "data": {
+                                "type": "object",
+                                "required": [
+                                    "schema",
+                                    "code",
+                                    "external_reference",
+                                    "consumer_status",
+                                    "pay_url",
+                                    "attempt"
+                                ],
+                                "properties": {
+                                    "schema": {
+                                        "const": "x-change.partner-payment-attempt.v1"
+                                    },
+                                    "code": {
+                                        "type": "string"
+                                    },
+                                    "external_reference": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "consumer_status": {
+                                        "$ref": "#/components/schemas/ConsumerStatus"
+                                    },
+                                    "pay_url": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "format": "uri"
+                                    },
+                                    "attempt": {
+                                        "$ref": "#/components/schemas/PaymentAttempt"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            },
+            "ConsumerStatus": {
+                "type": "string",
+                "enum": [
+                    "pending",
+                    "payable",
+                    "processing",
+                    "paid",
+                    "expired",
+                    "cancelled",
+                    "failed"
+                ]
+            },
+            "SuccessEnvelope": {
+                "type": "object",
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "properties": {
+                    "success": {
+                        "const": true
+                    },
+                    "data": [],
+                    "meta": {
+                        "type": "object"
+                    }
+                }
+            },
+            "ErrorEnvelope": {
+                "type": "object",
+                "required": [
+                    "success",
+                    "message",
+                    "code",
+                    "errors"
+                ],
+                "properties": {
+                    "success": {
+                        "const": false
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "code": {
+                        "type": "string"
+                    },
+                    "errors": {
+                        "type": [
+                            "object",
+                            "array"
+                        ]
+                    }
+                }
+            },
+            "FundedOrderRequest": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/PayCodeInstructions"
+                    },
+                    {
+                        "type": "object",
+                        "required": [
+                            "funding_method"
+                        ],
+                        "properties": {
+                            "funding_method": {
+                                "type": "string",
+                                "enum": [
+                                    "qr_ph",
+                                    "bank_transfer"
+                                ]
+                            },
+                            "payer_mobile": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "description": "Required for bank transfer; a Philippine mobile number."
+                            }
+                        }
+                    }
+                ]
+            },
+            "FundedOrder": {
+                "type": "object",
+                "required": [
+                    "reference",
+                    "checkout_reference",
+                    "status",
+                    "funding_method",
+                    "amount_minor",
+                    "currency",
+                    "payment_required",
+                    "funding",
+                    "needs_review"
+                ],
+                "properties": {
+                    "reference": {
+                        "type": "string",
+                        "description": "Order ULID used for polling."
+                    },
+                    "checkout_reference": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "funding_method": {
+                        "type": "string",
+                        "enum": [
+                            "qr_ph",
+                            "bank_transfer"
+                        ]
+                    },
+                    "amount_minor": {
+                        "type": "integer"
+                    },
+                    "currency": {
+                        "type": "string"
+                    },
+                    "expires_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "payment_required": {
+                        "type": "boolean",
+                        "description": "Only true while this order still accepts one exact payment."
+                    },
+                    "funding": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "description": "Selected payment instructions while payment is still accepted."
+                    },
+                    "pay_code": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "description": "Code and claim_url are present only after issuance."
+                    },
+                    "needs_review": {
+                        "type": "boolean"
+                    },
+                    "refund_status": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                }
+            },
+            "FundedOrderSuccessEnvelope": {
+                "type": "object",
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "properties": {
+                    "success": {
+                        "const": true
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/FundedOrder"
+                    },
+                    "meta": {
+                        "type": "object"
+                    }
+                }
+            }
+        },
+        "responses": {
+            "Unauthorized": {
+                "description": "Missing, expired, revoked, or invalid bearer token"
+            },
+            "Forbidden": {
+                "description": "Token lacks the required scope or client mandate"
+            },
+            "ValidationError": {
+                "description": "Invalid request or mandate violation",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ErrorEnvelope"
+                        }
+                    }
+                }
+            }
+        }
     }
-  }
 }

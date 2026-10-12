@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Providers;
 
 use Composer\InstalledVersions;
 use DateInterval;
+use Dedoc\Scramble\Scramble;
 use FrittenKeeZ\Vouchers\Models\Voucher;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -161,6 +162,7 @@ use LBHurtado\XChange\Console\Commands\Onboarding\OpenIssuerWalletCommand;
 use LBHurtado\XChange\Console\Commands\Onboarding\VerifyTestMobileCommand;
 use LBHurtado\XChange\Console\Commands\PartnerApi\AuthorizePartnerApiOperatorCommand;
 use LBHurtado\XChange\Console\Commands\PartnerApi\CreatePartnerApiClientCommand;
+use LBHurtado\XChange\Console\Commands\PartnerApi\ExportPartnerOpenApiCommand;
 use LBHurtado\XChange\Console\Commands\PartnerApi\RunPartnerApiLifecycleCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\EstimatePayCodeCostCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\GeneratePayCodeCommand;
@@ -528,6 +530,7 @@ use LBHurtado\XChange\Services\Onboarding\XChangeContactUserProvisioner;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiOperatorAuthority;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiRequestContext;
+use LBHurtado\XChange\Services\PartnerApi\PartnerOpenApiConfiguration;
 use LBHurtado\XChange\Services\Payment\AccountFundingCollectionPosting;
 use LBHurtado\XChange\Services\Payment\ProviderFundingCollectionPosting;
 use LBHurtado\XChange\Services\Payment\ProviderWalletCollectionPosting;
@@ -1701,6 +1704,7 @@ class XChangeServiceProvider extends ServiceProvider
         $this->prependExecutionAwarePostRedemptionGate();
         $this->bootConfig();
         $this->bootPartnerApiOAuth();
+        $this->bootPartnerOpenApiGenerator();
         $this->loadViewsFrom($this->packagePath('resources/views'), 'x-change');
         $this->bootLeadCampaignEndpointRateLimiter();
         $this->bootFundingVerificationRateLimiter();
@@ -1790,6 +1794,7 @@ class XChangeServiceProvider extends ServiceProvider
                 TestFeedbackSmsCommand::class,
                 ShowFeedbackHistoryCommand::class,
                 CreatePartnerApiClientCommand::class,
+                ExportPartnerOpenApiCommand::class,
                 AuthorizePartnerApiOperatorCommand::class,
                 RunPartnerApiLifecycleCommand::class,
                 ProvisionCommissioningSeatsCommand::class,
@@ -2742,6 +2747,15 @@ class XChangeServiceProvider extends ServiceProvider
 
         $minutes = max(1, (int) config('x-change.partner_api.token_ttl_minutes', 15));
         Passport::clientCredentialsTokensExpireIn(new DateInterval(sprintf('PT%dM', $minutes)));
+    }
+
+    protected function bootPartnerOpenApiGenerator(): void
+    {
+        if (! class_exists(Scramble::class)) {
+            return;
+        }
+
+        PartnerOpenApiConfiguration::register();
     }
 
     protected function bootPartnerApiRateLimiter(): void

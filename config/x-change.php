@@ -856,6 +856,10 @@ return [
         'prefix' => env('XCHANGE_PARTNER_API_PREFIX', 'api/partner/v1'),
         'token_ttl_minutes' => (int) env('XCHANGE_PARTNER_API_TOKEN_TTL_MINUTES', 15),
         'rate_limit_per_minute' => (int) env('XCHANGE_PARTNER_API_RATE_LIMIT_PER_MINUTE', 60),
+        'funded_orders' => [
+            'enabled' => (bool) env('XCHANGE_PARTNER_FUNDED_ORDERS_ENABLED', false),
+            'maximum_open_per_client' => max(1, (int) env('XCHANGE_PARTNER_FUNDED_ORDERS_MAXIMUM_OPEN', 3)),
+        ],
         'stored_value_otp_challenge_rate_limit_per_minute' => (int) env(
             'XCHANGE_PARTNER_API_STORED_VALUE_OTP_CHALLENGE_RATE_LIMIT_PER_MINUTE',
             3,
@@ -871,6 +875,8 @@ return [
             'pay-codes:read' => 'Inspect Pay Codes owned by the bound Account.',
             'pay-codes:pay' => 'Create payer instructions for payable Pay Codes owned by the bound Account.',
             'pay-codes:cancel' => 'Cancel an eligible Pay Code owned by the bound Account.',
+            'funded-orders:create' => 'Create a customer-funded Pay Code checkout under the commissioned Commercial Principal.',
+            'funded-orders:read' => 'Read customer-funded checkouts created by this client.',
             'stored-value:read' => 'Read sanitized reusable-balance transactions presented to the client.',
             'stored-value:spend' => 'Debit a presented reusable balance into the bound merchant Account.',
         ],

@@ -30,7 +30,7 @@ it('returns only the authenticated client mandate and safe identity', function (
     $this->getJson('/api/partner/v1/capabilities')
         ->assertSuccessful()
         ->assertJsonPath('data.schema', 'x-change.partner-capabilities.v1')
-        ->assertJsonPath('data.contract.version', '1.4.0')
+        ->assertJsonPath('data.contract.version', '1.5.0')
         ->assertJsonPath('data.contract.sha256', hash_file('sha256', $contractPath))
         ->assertJsonPath('data.client.reference', $credential->reference)
         ->assertJsonPath('data.client.name', 'Saras AI Sandbox')

@@ -61,6 +61,14 @@ class ShowPartnerApiDiscoveryController extends Controller
                 'idempotency' => 'required_for_issuance',
                 'legacy_lifecycle_api' => 'not_for_partner_use',
             ],
+            'funded_orders' => [
+                'available' => (bool) config('x-change.partner_api.funded_orders.enabled', false),
+                'create_scope' => 'funded-orders:create',
+                'read_scope' => 'funded-orders:read',
+                'issuer' => 'commissioned_commercial_principal',
+                'funding_methods' => ['qr_ph', 'bank_transfer'],
+                'payment_required_before_issuance' => true,
+            ],
         ]);
     }
 
@@ -78,6 +86,7 @@ class ShowPartnerApiDiscoveryController extends Controller
             '- Do not use legacy /api/x/v1 lifecycle endpoints.',
             '- Obtain credentials through the operator-managed access process.',
             '- Issuance always remains subject to OAuth scopes, Account funds, Treasury controls, and the server-side mandate.',
+            '- Customer-funded orders use funded-orders:create and funded-orders:read; the commissioned Commercial Principal issues only after verified payment.',
         ];
 
         return response(implode("\n", $lines)."\n", 200, [
