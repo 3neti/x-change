@@ -15,7 +15,7 @@ final readonly class CheckoutConsoleReadModel
     public function forOwner(CommercialPrincipal $principal, ?string $status = null, bool $includeFullPayCodes = false): array
     {
         $base = Checkout::query()
-            ->whereIn('source', ['public.auto-generate', 'partner.funded-order'])
+            ->whereIn('source', ['public.auto-generate', 'public.auto-generate.batch', 'partner.funded-order'])
             ->where('owner_type', $principal::class)
             ->where('owner_id', (string) $principal->getKey());
         $counts = [
