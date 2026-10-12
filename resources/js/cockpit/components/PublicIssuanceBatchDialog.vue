@@ -81,22 +81,34 @@ async function continueToPayment(): Promise<void> {
       Create many now
     </button>
 
-    <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4" role="dialog" aria-modal="true" @click.self="open = false">
-      <section class="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900">
-        <div class="flex items-start justify-between gap-4">
-          <div><h2 class="text-xl font-bold">Create many Pay Codes</h2><p class="mt-1 text-sm text-slate-500 dark:text-slate-300">Upload a payroll or ayuda list, review the total, then pay once.</p></div>
-          <button type="button" class="text-sm text-slate-500" @click="open = false">Close</button>
-        </div>
-        <label class="mt-5 block text-sm font-semibold">CSV, XLS, or XLSX file<input class="mt-2 block w-full rounded-lg border border-slate-300 p-2 text-sm dark:border-slate-700 dark:bg-slate-950" type="file" accept=".csv,.xls,.xlsx" @change="chooseFile" /></label>
-        <button type="button" class="mt-3 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-900" :disabled="!file || busy" @click="inspect">{{ busy ? 'Reviewing…' : 'Review file' }}</button>
-        <p v-if="error" class="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{{ error }}</p>
-        <div v-if="preview" class="mt-5 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-          <p class="font-semibold">{{ validItems.length }} valid rows · ₱{{ (preview.total_minor / 100).toFixed(2) }}</p>
-          <p v-if="preview.errors.length" class="mt-2 text-sm text-rose-700">{{ preview.errors.join(' ') }}</p>
-          <label class="mt-4 block text-sm font-semibold">Your mobile number for batch updates<input v-model="mobile" inputmode="tel" class="mt-2 block w-full rounded-lg border border-slate-300 p-2 dark:border-slate-700 dark:bg-slate-950" placeholder="09…" /></label>
-          <button type="button" class="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" :disabled="!preview.can_create || mobile.trim() === '' || busy" @click="continueToPayment">Continue to payment</button>
-        </div>
-      </section>
-    </div>
+    <Teleport to="body">
+      <div v-if="open" class="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-slate-950/70 p-4 pt-[max(1rem,8vh)] backdrop-blur-sm sm:p-6 sm:pt-[10vh]" role="dialog" aria-modal="true" @click.self="open = false">
+        <section class="relative w-full max-w-2xl overflow-hidden rounded-3xl border border-white/20 bg-white shadow-[0_32px_100px_-24px_rgba(15,23,42,0.65)] dark:border-slate-700 dark:bg-slate-900">
+          <div class="border-b border-slate-200 bg-slate-50/80 px-6 py-5 dark:border-slate-800 dark:bg-slate-950/50">
+            <div class="flex items-start justify-between gap-4">
+              <div><p class="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">Batch issuance</p><h2 class="mt-1 text-xl font-bold">Create many Pay Codes</h2><p class="mt-1 text-sm text-slate-500 dark:text-slate-300">Upload a payroll or ayuda list, review the total, then pay once.</p></div>
+              <button type="button" class="rounded-full px-3 py-1.5 text-sm font-semibold text-slate-500 transition hover:bg-white hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white" @click="open = false">Close</button>
+            </div>
+          </div>
+          <div class="space-y-4 px-6 py-6">
+            <label class="block text-sm font-semibold">
+              CSV, XLS, or XLSX file
+              <input class="mt-2 block w-full rounded-lg border border-slate-300 p-2 text-sm dark:border-slate-700 dark:bg-slate-950" type="file" accept=".csv,.xls,.xlsx" @change="chooseFile" />
+            </label>
+            <button type="button" class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-900" :disabled="!file || busy" @click="inspect">{{ busy ? 'Reviewing…' : 'Review file' }}</button>
+            <p v-if="error" class="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{{ error }}</p>
+            <div v-if="preview" class="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+              <p class="font-semibold">{{ validItems.length }} valid rows · ₱{{ (preview.total_minor / 100).toFixed(2) }}</p>
+              <p v-if="preview.errors.length" class="mt-2 text-sm text-rose-700">{{ preview.errors.join(' ') }}</p>
+              <label class="mt-4 block text-sm font-semibold">
+                Your mobile number for batch updates
+                <input v-model="mobile" inputmode="tel" class="mt-2 block w-full rounded-lg border border-slate-300 p-2 dark:border-slate-700 dark:bg-slate-950" placeholder="09…" />
+              </label>
+              <button type="button" class="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" :disabled="!preview.can_create || mobile.trim() === '' || busy" @click="continueToPayment">Continue to payment</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </Teleport>
   </div>
 </template>
