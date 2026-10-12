@@ -58,7 +58,11 @@ async function continueToPayment(): Promise<void> {
     const fundResponse = await fetch(props.endpoints.fund.replace("__REFERENCE__", created.reference), {
       method: "POST",
       body: JSON.stringify({ idempotency_key: `batch-${created.reference}` }),
-      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "X-Issuance-Batch-Token": created.access_token,
+      },
     });
     const funded = await fundResponse.json();
     if (!fundResponse.ok) throw new Error(funded.message ?? "The batch could not be prepared for payment.");

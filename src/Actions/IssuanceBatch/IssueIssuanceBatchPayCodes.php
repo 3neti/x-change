@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Actions\IssuanceBatch;
 
 use Illuminate\Database\Eloquent\Model;
+use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Enums\IssuanceBatchStatus;
 use LBHurtado\XChange\Models\IssuanceBatch;
@@ -18,8 +19,20 @@ final readonly class IssueIssuanceBatchPayCodes
         $batch->forceFill(['status' => IssuanceBatchStatus::Issuing])->save();
         foreach ($batch->items()->where('status', 'pending')->lockForUpdate()->get() as $item) {
             try {
-                $payload = (array) $item->payload;
-                $payload['cash'] = ['amount' => $item->amount_minor / 100];
+                $payload = [
+                    ...VoucherInstructionsData::generateFromScratch()->toArray(),
+                    ...(array) $item->payload,
+                ];
+                $payload['cash'] = ['amount' => $item->amount_minor / 100, 'currency' => 'PHP'];
+                if (! is_array($payload['inputs'] ?? null)) {
+                    $payload['inputs'] = ['fields' => ['name', 'mobile']];
+                }
+                if (! is_array($payload['feedback'] ?? null)) {
+                    $payload['feedback'] = ['mobile' => data_get($payload, 'mobile'), 'email' => null, 'webhook' => null];
+                }
+                if (! is_array($payload['rider'] ?? null)) {
+                    $payload['rider'] = ['message' => null, 'url' => null];
+                }
                 $payload['voucher_type'] = 'payable';
                 $payload['metadata'] = [...(array) ($payload['metadata'] ?? []), 'flow_type' => 'distribution'];
                 $payload['_meta'] = [

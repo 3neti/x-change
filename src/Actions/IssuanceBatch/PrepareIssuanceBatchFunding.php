@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Actions\IssuanceBatch;
 
 use Illuminate\Database\Eloquent\Model;
+use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\XChange\Actions\Funding\PrepareOnDemandPayCodeIssuance;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Models\IssuanceBatch;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
-use LBHurtado\XChangeData\PricingEstimateData;
-use LBHurtado\XChangeEnums\OnDemandIssuanceFundingBasis;
+use LBHurtado\XChange\Data\PricingEstimateData;
+use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
 
 final readonly class PrepareIssuanceBatchFunding
 {
@@ -26,8 +27,10 @@ final readonly class PrepareIssuanceBatchFunding
         }
 
         $items = $batch->items()->where('status', 'pending')->get();
+        $defaults = VoucherInstructionsData::generateFromScratch()->toArray();
         $pricing = $items->map(fn ($item): PricingEstimateData => $this->estimate->handle([
-            'cash' => ['amount' => $item->amount_minor / 100],
+            ...$defaults,
+            'cash' => ['amount' => $item->amount_minor / 100, 'currency' => 'PHP'],
             'voucher_type' => 'payable',
             'metadata' => ['flow_type' => 'distribution'],
         ]));
@@ -43,7 +46,8 @@ final readonly class PrepareIssuanceBatchFunding
             billing_mode: $pricing->first()?->billing_mode ?? 'informational',
         );
         $instructions = [
-            'cash' => ['amount' => $totalValue],
+            ...$defaults,
+            'cash' => ['amount' => $totalValue, 'currency' => 'PHP'],
             'voucher_type' => 'payable',
             'metadata' => ['flow_type' => 'distribution', 'issuance_batch_reference' => $batch->reference],
             '_meta' => ['source' => 'public.auto-generate.batch', 'issuance_batch_reference' => $batch->reference],
