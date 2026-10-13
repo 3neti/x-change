@@ -6081,17 +6081,20 @@ function instructionRecord(
     data-testid="cockpit-quick-generate-submit-panel"
     @submit.prevent="submit"
   >
-    <div v-if="publicMode && turnstile?.enabled" class="mb-4">
-      <PublicIssuanceTurnstile
-        v-if="turnstile.site_key"
-        ref="turnstileWidget"
-        :site-key="turnstile.site_key"
-        @verified="turnstileToken = $event"
-      />
-      <p v-else class="text-sm text-rose-700" role="alert">
-        Verification is unavailable. Please try again later.
-      </p>
-    </div>
+    <Teleport v-if="publicMode && turnstile?.enabled" to="#public-issuance-verification">
+      <div class="rounded-2xl border border-slate-200 bg-white/80 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+        <p class="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Security check</p>
+        <PublicIssuanceTurnstile
+          v-if="turnstile.site_key"
+          ref="turnstileWidget"
+          :site-key="turnstile.site_key"
+          @verified="turnstileToken = $event"
+        />
+        <p v-else class="text-sm text-rose-700" role="alert">
+          Verification is unavailable. Please try again later.
+        </p>
+      </div>
+    </Teleport>
     <div
       v-if="templatePickerOpen"
       class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
