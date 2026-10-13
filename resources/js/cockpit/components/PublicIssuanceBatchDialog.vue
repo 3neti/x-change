@@ -19,15 +19,30 @@ const preview = ref<{ headers: string[]; mapping: Record<string, string>; items:
 const batch = ref<{ reference: string; access_token: string } | null>(null);
 const busy = ref(false);
 const error = ref<string | null>(null);
+const mappingFields = ["name", "mobile", "email", "amount"] as const;
 
 const validItems = computed(() => preview.value?.items.filter((item) => item.status === "valid") ?? []);
+const invalidItems = computed(() => preview.value?.items.filter((item) => item.status !== "valid") ?? []);
+const sourceReady = computed(() => file.value !== null || pastedRows.value !== null);
+const sourceLabel = computed(() => file.value?.name ?? `${pastedRows.value?.length ?? 0} pasted rows`);
+const mappingIssues = computed(() => {
+  if (!preview.value) return [];
+  return ["name", "mobile", "amount"].filter((field) => !preview.value?.mapping[field]);
+});
+const showMapping = ref(false);
 
-function chooseFile(event: Event): void {
-  file.value = (event.target as HTMLInputElement).files?.[0] ?? null;
+function resetSource(): void {
+  file.value = null;
   pastedRows.value = null;
   pastedHeaders.value = null;
   preview.value = null;
   error.value = null;
+  showMapping.value = false;
+}
+
+function chooseFile(event: Event): void {
+  resetSource();
+  file.value = (event.target as HTMLInputElement).files?.[0] ?? null;
 }
 
 function parsePastedRows(text: string): void {
@@ -41,6 +56,7 @@ function parsePastedRows(text: string): void {
   file.value = null;
   preview.value = null;
   error.value = null;
+  showMapping.value = false;
 }
 
 function pasteRows(event: ClipboardEvent): void {
@@ -51,17 +67,15 @@ function dropInput(event: DragEvent): void {
   isDragging.value = false;
   const droppedFile = event.dataTransfer?.files?.[0];
   if (droppedFile) {
+    resetSource();
     file.value = droppedFile;
-    pastedRows.value = null;
-    pastedHeaders.value = null;
-    preview.value = null;
     return;
   }
   parsePastedRows(event.dataTransfer?.getData("text/plain") ?? "");
 }
 
 async function inspect(): Promise<void> {
-  if (!file.value) return;
+  if (!sourceReady.value) return;
   busy.value = true;
   error.value = null;
   const form = new FormData();
@@ -74,6 +88,7 @@ async function inspect(): Promise<void> {
     const data = await response.json();
     if (!response.ok) throw new Error(data.message ?? "The file could not be reviewed.");
     preview.value = data;
+    showMapping.value = mappingIssues.value.length > 0;
   } catch (exception) {
     error.value = exception instanceof Error ? exception.message : "The file could not be reviewed.";
   } finally {
@@ -132,35 +147,39 @@ async function continueToPayment(): Promise<void> {
               <button type="button" class="rounded-full px-3 py-1.5 text-sm font-semibold text-slate-500 transition hover:bg-white hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white" @click="open = false">Close</button>
             </div>
           </div>
-          <div class="space-y-4 px-6 py-6">
-            <div class="flex min-h-36 flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-5 text-center transition" :class="isDragging ? 'border-emerald-500 bg-emerald-50' : 'border-slate-300 bg-slate-50/70 dark:border-slate-700 dark:bg-slate-950/60'" tabindex="0" @dragenter.prevent="isDragging = true" @dragover.prevent @dragleave.prevent="isDragging = false" @drop.prevent="dropInput" @paste.stop.prevent="pasteRows">
-              <p class="text-sm font-semibold">{{ isDragging ? 'Drop to review' : 'Choose a file or paste rows' }}</p>
-              <p class="mt-1 text-xs text-slate-500">CSV · XLS · XLSX · copied spreadsheet rows</p>
-              <label class="mt-3 inline-flex cursor-pointer rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white dark:bg-white dark:text-slate-900">
-                Choose File
-                <input class="sr-only" type="file" accept=".csv,.xls,.xlsx" @change="chooseFile" />
-              </label>
+          <div class="space-y-5 px-6 py-6">
+            <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-400"><span class="rounded-full bg-emerald-600 px-2 py-1 text-white">1</span> Add list <span class="h-px flex-1 bg-slate-200 dark:bg-slate-700" /><span class="rounded-full bg-slate-200 px-2 py-1 text-slate-600 dark:bg-slate-700 dark:text-slate-200">2</span> Review <span class="h-px flex-1 bg-slate-200 dark:bg-slate-700" /><span class="rounded-full bg-slate-200 px-2 py-1 text-slate-600 dark:bg-slate-700 dark:text-slate-200">3</span> Pay</div>
+
+            <div v-if="!sourceReady" class="flex min-h-40 flex-col items-center justify-center rounded-2xl border-2 border-dashed px-5 py-6 text-center transition" :class="isDragging ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30' : 'border-slate-300 bg-slate-50/70 dark:border-slate-700 dark:bg-slate-950/60'" tabindex="0" @dragenter.prevent="isDragging = true" @dragover.prevent @dragleave.prevent="isDragging = false" @drop.prevent="dropInput" @paste.stop.prevent="pasteRows">
+              <div class="flex size-12 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm dark:bg-slate-900"><span class="text-xl">▦</span></div>
+              <p class="mt-3 text-sm font-bold">{{ isDragging ? 'Drop to review' : 'Drop your recipient list here' }}</p>
+              <p class="mt-1 text-xs text-slate-500">CSV · XLS · XLSX · or copied spreadsheet rows</p>
+              <label class="mt-4 inline-flex cursor-pointer rounded-full bg-slate-900 px-4 py-2 text-sm font-bold text-white dark:bg-white dark:text-slate-900">Choose file<input class="sr-only" type="file" accept=".csv,.xls,.xlsx" @change="chooseFile" /></label>
             </div>
-            <button type="button" class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-900" :disabled="(!file && !pastedRows) || busy" @click="inspect">{{ busy ? 'Reviewing…' : 'Review rows' }}</button>
-            <p v-if="error" class="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{{ error }}</p>
-            <div v-if="preview" class="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-              <p class="font-semibold">{{ validItems.length }} valid rows · ₱{{ (preview.total_minor / 100).toFixed(2) }}</p>
-              <p v-if="preview.errors.length" class="mt-2 text-sm text-rose-700">{{ preview.errors.join(' ') }}</p>
-              <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                <label v-for="field in ['name', 'mobile', 'email', 'amount']" :key="field" class="text-xs font-semibold capitalize">
-                  {{ field }}
-                  <select v-model="preview.mapping[field]" class="mt-1 block w-full rounded-lg border border-slate-300 p-2 text-sm dark:border-slate-700 dark:bg-slate-950" @change="preview.can_create = false">
-                    <option value="">Unmapped</option>
-                    <option v-for="header in preview.headers" :key="header" :value="header">{{ header }}</option>
-                  </select>
-                </label>
+
+            <div v-else class="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900 dark:bg-emerald-950/20">
+              <div class="flex size-12 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm dark:bg-slate-900">▦</div>
+              <div class="min-w-0 flex-1"><p class="truncate text-sm font-bold">{{ sourceLabel }}</p><p class="text-xs text-slate-600 dark:text-slate-300">Ready to review</p></div>
+              <button type="button" class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold dark:border-slate-700 dark:bg-slate-900" @click="resetSource">Replace</button>
+            </div>
+
+            <button v-if="!preview" type="button" class="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white disabled:opacity-50 dark:bg-white dark:text-slate-900" :disabled="!sourceReady || busy" @click="inspect">{{ busy ? 'Reading list…' : 'Review recipients' }}</button>
+            <p v-if="error" class="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-200">{{ error }}</p>
+
+            <div v-if="preview" class="space-y-4">
+              <div class="grid gap-3 sm:grid-cols-3">
+                <div class="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900"><p class="text-xs text-slate-500">Recipients</p><p class="mt-1 text-lg font-black">{{ preview.items.length }}</p></div>
+                <div class="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900"><p class="text-xs text-slate-500">Ready</p><p class="mt-1 text-lg font-black text-emerald-600">{{ validItems.length }}</p></div>
+                <div class="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900"><p class="text-xs text-slate-500">Pay Code value</p><p class="mt-1 text-lg font-black">₱{{ (preview.total_minor / 100).toFixed(2) }}</p></div>
               </div>
-              <button type="button" class="mt-3 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold dark:border-slate-700" :disabled="busy" @click="inspect">Recheck mapping</button>
-              <label class="mt-4 block text-sm font-semibold">
-                Your mobile number for batch updates
-                <input v-model="mobile" inputmode="tel" class="mt-2 block w-full rounded-lg border border-slate-300 p-2 dark:border-slate-700 dark:bg-slate-950" placeholder="09…" />
-              </label>
-              <button type="button" class="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" :disabled="!preview.can_create || mobile.trim() === '' || busy" @click="continueToPayment">Continue to payment</button>
+              <div class="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">
+                <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700"><p class="text-sm font-bold">Recipient preview</p><p class="text-xs text-slate-500">Showing {{ Math.min(preview.items.length, 10) }} of {{ preview.items.length }}</p></div>
+                <div class="overflow-x-auto"><table class="w-full text-left text-xs"><thead class="bg-slate-50 text-slate-500 dark:bg-slate-950"><tr><th class="px-4 py-2 font-semibold">Name</th><th class="px-4 py-2 font-semibold">Mobile</th><th class="px-4 py-2 text-right font-semibold">Amount</th><th class="px-4 py-2 font-semibold">Status</th></tr></thead><tbody><tr v-for="item in preview.items.slice(0, 10)" :key="item.source_row" class="border-t border-slate-100 dark:border-slate-800"><td class="px-4 py-2 font-semibold">{{ item.payload.name || '—' }}</td><td class="px-4 py-2">{{ item.payload.mobile || '—' }}</td><td class="px-4 py-2 text-right">₱{{ (item.amount_minor / 100).toFixed(2) }}</td><td class="px-4 py-2" :class="item.status === 'valid' ? 'text-emerald-600' : 'text-rose-600'">{{ item.status === 'valid' ? 'Ready' : 'Needs attention' }}</td></tr></tbody></table></div>
+              </div>
+              <p v-if="invalidItems.length" class="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-200">{{ invalidItems.length }} row(s) need attention. Fix the source file before continuing.</p>
+              <details class="rounded-xl border border-slate-200 dark:border-slate-700" :open="showMapping || mappingIssues.length > 0"><summary class="cursor-pointer px-4 py-3 text-sm font-semibold">{{ mappingIssues.length ? 'Column mapping needs attention' : 'Column mapping detected automatically' }}</summary><div class="grid gap-3 border-t border-slate-200 p-4 sm:grid-cols-2 dark:border-slate-700"><label v-for="field in mappingFields" :key="field" class="text-xs font-semibold capitalize">{{ field }}<select v-model="preview.mapping[field]" class="mt-1 block w-full rounded-lg border border-slate-300 p-2 text-sm dark:border-slate-700 dark:bg-slate-950" @change="preview.can_create = false"><option value="">Unmapped</option><option v-for="header in preview.headers" :key="header" :value="header">{{ header }}</option></select></label><button type="button" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold dark:border-slate-700" :disabled="busy" @click="inspect">Recheck mapping</button></div></details>
+              <label class="block rounded-2xl border border-slate-200 p-4 text-sm font-semibold dark:border-slate-700">Your mobile number for batch recovery<p class="mt-1 text-xs font-normal text-slate-500">We’ll use it to recover this workspace if you leave the browser.</p><input v-model="mobile" inputmode="tel" class="mt-3 block w-full rounded-lg border border-slate-300 p-2 dark:border-slate-700 dark:bg-slate-950" placeholder="09…" /></label>
+              <div class="rounded-2xl bg-slate-900 p-4 text-white dark:bg-slate-950"><div class="flex items-center justify-between"><span class="text-sm font-semibold">Pay Code value</span><span class="text-xl font-black">₱{{ (preview.total_minor / 100).toFixed(2) }}</span></div><button type="button" class="mt-4 w-full rounded-xl bg-emerald-500 px-4 py-3 text-sm font-black text-white disabled:opacity-50" :disabled="!preview.can_create || mobile.trim() === '' || busy" @click="continueToPayment">Continue to payment</button></div>
             </div>
           </div>
         </section>

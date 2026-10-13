@@ -44,8 +44,8 @@ describe("PublicIssuanceBatchDialog", () => {
     });
 
     await wrapper.get('[data-testid="public-auto-generate-batch-action"]').trigger("click");
-    expect(document.body.textContent).toContain("Choose a file or paste rows");
-    expect(document.body.textContent).toContain("CSV · XLS · XLSX · copied spreadsheet rows");
+    expect(document.body.textContent).toContain("Drop your recipient list here");
+    expect(document.body.textContent).toContain("CSV · XLS · XLSX · or copied spreadsheet rows");
   });
 
   it("loads only the token-authorized batch rows into the shared Pay Code table", async () => {
