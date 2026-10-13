@@ -125,4 +125,40 @@ describe('usePayCodeCostEstimate', () => {
             'Pricing is temporarily unavailable.',
         );
     });
+
+    it('retries transient edge failures before showing an error', async () => {
+        const fetchMock = vi
+            .fn()
+            .mockResolvedValueOnce({
+                ok: false,
+                status: 403,
+                headers: new Headers({
+                    'cf-mitigated': 'challenge',
+                    'content-type': 'text/html',
+                }),
+                json: async () => ({}),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    success: true,
+                    data: { currency: 'PHP', total: 115 },
+                }),
+            });
+        vi.stubGlobal('fetch', fetchMock);
+        const wrapper = mount(EstimateHarness);
+
+        await wrapper.find('[data-testid="amount"]').trigger('click');
+        await vi.advanceTimersByTimeAsync(500);
+        await nextTick();
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(wrapper.get('[data-testid="loading"]').text()).toBe('true');
+
+        await vi.advanceTimersByTimeAsync(1000);
+        await nextTick();
+
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        expect(wrapper.get('[data-testid="total"]').text()).toBe('115');
+        expect(wrapper.get('[data-testid="error"]').text()).toBe('');
+    });
 });
