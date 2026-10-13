@@ -197,6 +197,59 @@ describe("PublicIssuanceBatchDialog", () => {
     );
   });
 
+  it("renders batch-scoped claim evidence links in the shared detail view", async () => {
+    sessionStorage.setItem("x-change.batch-token:BATCH-1", "token-1");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        context: { code: "PC-1" },
+        read_model: {
+          code: "PC-1",
+          voucher: {
+            summary: { code: "PC-1", status: "redeemed" },
+            claims: {
+              records: [],
+              evidence: [{
+                id: 61,
+                label: "Selfie",
+                group: "media",
+                kind: "image",
+                status: "verified",
+                value: "Selfie captured",
+                artifact_status: "available",
+                revealable: true,
+                reveal_href: "/x/auto-generate/batches/BATCH-1/pay-codes/PC-1/evidence/claim/61",
+              }],
+            },
+          },
+        },
+      }),
+    }));
+
+    const wrapper = mount(BatchPayCodeDetail, {
+      props: {
+        batch_reference: "BATCH-1",
+        code: "PC-1",
+        detail_endpoint: "/x/auto-generate/batches/BATCH-1/pay-codes/PC-1/data",
+        batch_pay_codes_url: "/x/auto-generate/batches/BATCH-1/pay-codes",
+      },
+    });
+
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    const claimTab = wrapper.findAll('button[role="tab"]')
+      .find((button) => button.text().includes('Claim & Evidence'));
+    await claimTab?.trigger('click');
+    await wrapper.get('[data-testid="pay-code-evidence-panel"] button').trigger("click");
+
+    expect(wrapper.get('[data-testid="pay-code-evidence-panel"] img').attributes("src")).toBe(
+      "/x/auto-generate/batches/BATCH-1/pay-codes/PC-1/evidence/claim/61",
+    );
+    await wrapper.get('[data-testid="pay-code-evidence-panel"] img').trigger("error");
+    expect(wrapper.get('[data-testid="pay-code-evidence-unavailable-61"]').text()).toContain(
+      "Evidence unavailable",
+    );
+  });
+
   it("explains when a direct detail link needs workspace recovery", async () => {
     sessionStorage.setItem("x-change.batch-token:BATCH-1", "expired-token");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({

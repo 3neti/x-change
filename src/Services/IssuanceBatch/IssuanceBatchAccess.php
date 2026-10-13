@@ -18,6 +18,10 @@ final class IssuanceBatchAccess
             (string) data_get($batch->metadata, 'access_token_hash'),
             hash('sha256', $token),
         )) {
+            // Establish the short-lived server session used by subsequent
+            // image requests, which cannot carry the custom token header.
+            $this->grantSession($request, $batch);
+
             return;
         }
 

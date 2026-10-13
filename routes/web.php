@@ -251,6 +251,10 @@ Route::prefix('x/auto-generate')->middleware([
     Route::get('batches/{batch:reference}/pay-codes/{code}/data', [PublicIssuanceBatchPayCodeDetailController::class, 'data'])
         ->middleware('throttle:30,1,public-auto-generate-batch-detail-read:')
         ->name('x-change.public-auto-generate.batches.pay-codes.data');
+    Route::get('batches/{batch:reference}/pay-codes/{code}/evidence/{source}/{evidence}', [PublicIssuanceBatchPayCodeDetailController::class, 'evidence'])
+        ->whereNumber('evidence')
+        ->middleware('throttle:30,1,public-auto-generate-batch-evidence:')
+        ->name('x-change.public-auto-generate.batches.pay-codes.evidence');
     Route::get('batches/{batch:reference}', [PublicIssuanceBatchController::class, 'show'])
         ->middleware('throttle:30,1,public-auto-generate-batch-read:')
         ->name('x-change.public-auto-generate.batches.show');

@@ -78,6 +78,7 @@ const initialTarget = workspaceTarget();
 const activeTab = ref<WorkspaceTab>(initialTarget.tab);
 const focusedClaimId = ref<number | null>(initialTarget.claimId);
 const revealedEvidence = ref<Set<number>>(new Set());
+const evidenceLoadErrors = ref<Set<number>>(new Set());
 const correctedBankCode = ref("");
 const correctedAccountNumber = ref("");
 const engineeringPreview = ref<Record<string, unknown> | null>(null);
@@ -452,6 +453,10 @@ const envelopeProgress = computed(() => {
 
 function revealEvidence(id: number): void {
   revealedEvidence.value = new Set([...revealedEvidence.value, id]);
+}
+
+function markEvidenceUnavailable(id: number): void {
+  evidenceLoadErrors.value = new Set([...evidenceLoadErrors.value, id]);
 }
 
 function instructionIcon(key: unknown) {
@@ -1781,11 +1786,26 @@ function number(value: unknown): number {
                       class="aspect-[16/10] bg-slate-100 dark:bg-slate-950"
                     >
                       <img
-                        v-if="revealedEvidence.has(number(item.id))"
+                        v-if="
+                          revealedEvidence.has(number(item.id)) &&
+                          !evidenceLoadErrors.has(number(item.id))
+                        "
                         :src="text(item.reveal_href)"
                         :alt="text(item.label)"
                         class="h-full w-full object-contain"
+                        @error="markEvidenceUnavailable(number(item.id))"
                       />
+                      <div
+                        v-if="
+                          revealedEvidence.has(number(item.id)) &&
+                          evidenceLoadErrors.has(number(item.id))
+                        "
+                        class="flex h-full items-center justify-center px-5 text-center text-xs leading-5 text-slate-500 dark:text-slate-400"
+                        :data-testid="`pay-code-evidence-unavailable-${number(item.id)}`"
+                      >
+                        Evidence unavailable. Its captured record remains
+                        retained.
+                      </div>
                       <button
                         v-else
                         type="button"
