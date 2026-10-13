@@ -55,6 +55,7 @@ const recoveryBusy = ref(false);
 const recoveryMessage = ref<string | null>(null);
 const recoveryError = ref<string | null>(null);
 const recoveryOpen = ref(false);
+const pageStartedAt = performance.now();
 
 const tokenKey = computed(() => `x-change.batch-token:${props.batch_reference}`);
 const token = () => window.sessionStorage.getItem(tokenKey.value);
@@ -93,6 +94,22 @@ function money(minor: number): string {
         currency: 'PHP',
         minimumFractionDigits: 2,
     }).format(minor / 100);
+}
+
+function clientTelemetry(): Record<string, number | string> {
+    const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+    const connection = (navigator as Navigator & {
+        connection?: { effectiveType?: string };
+    }).connection;
+
+    return {
+        ...(typeof deviceMemory === 'number' ? { device_memory_gb: deviceMemory } : {}),
+        ...(typeof navigator.hardwareConcurrency === 'number' ? { hardware_concurrency: navigator.hardwareConcurrency } : {}),
+        viewport_width: window.innerWidth,
+        viewport_height: window.innerHeight,
+        ...(connection?.effectiveType ? { connection_type: connection.effectiveType } : {}),
+        page_load_ms: Math.round(performance.now() - pageStartedAt),
+    };
 }
 
 function batchRecord(item: BatchItem): CockpitPayCodeExplorerRecord {
@@ -213,7 +230,7 @@ async function requestRecoveryCode(): Promise<void> {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-            body: JSON.stringify({ mobile: recoveryMobile.value }),
+            body: JSON.stringify({ mobile: recoveryMobile.value, telemetry: clientTelemetry() }),
         });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.message ?? 'Recovery could not be started.');
@@ -235,7 +252,11 @@ async function verifyRecoveryCode(): Promise<void> {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-            body: JSON.stringify({ challenge_reference: recoveryChallenge.value, code: recoveryCode.value }),
+            body: JSON.stringify({
+                challenge_reference: recoveryChallenge.value,
+                code: recoveryCode.value,
+                telemetry: clientTelemetry(),
+            }),
         });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.message ?? 'The recovery code could not be verified.');
