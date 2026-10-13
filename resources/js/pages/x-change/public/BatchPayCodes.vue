@@ -54,6 +54,7 @@ const recoveryChallenge = ref<string | null>(null);
 const recoveryBusy = ref(false);
 const recoveryMessage = ref<string | null>(null);
 const recoveryError = ref<string | null>(null);
+const recoveryOpen = ref(false);
 
 const tokenKey = computed(() => `x-change.batch-token:${props.batch_reference}`);
 const token = () => window.sessionStorage.getItem(tokenKey.value);
@@ -80,6 +81,7 @@ async function loadBatch(): Promise<void> {
         error.value = exception instanceof Error
             ? exception.message
             : 'The batch could not be loaded.';
+        recoveryOpen.value = true;
     } finally {
         loading.value = false;
     }
@@ -265,23 +267,31 @@ onMounted(loadBatch);
                 </div>
             </header>
 
-            <div v-if="loading" class="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">Loading this batch…</div>
-            <div v-else-if="error" class="space-y-5 rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200">
-                <p>{{ error }}</p>
-                <section class="max-w-md rounded-xl border border-rose-200 bg-white/70 p-4 dark:border-rose-800 dark:bg-slate-950/40" data-testid="batch-workspace-recovery">
-                    <h2 class="font-bold">Recover workspace</h2>
-                    <p class="mt-1 text-xs leading-5">Enter the mobile number used when this batch was created. We will send a one-time recovery code only after you submit it.</p>
-                    <form v-if="!recoveryChallenge" class="mt-3 space-y-2" @submit.prevent="requestRecoveryCode">
+            <section class="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm dark:border-amber-900 dark:bg-amber-950/20" data-testid="batch-workspace-recovery">
+                <button type="button" class="flex w-full items-center justify-between gap-3 text-left" data-testid="batch-workspace-recovery-toggle" @click="recoveryOpen = !recoveryOpen">
+                    <span>
+                        <span class="block text-sm font-bold text-amber-950 dark:text-amber-100">Need to recover this workspace?</span>
+                        <span class="mt-1 block text-xs text-amber-900/80 dark:text-amber-200/80">Use the mobile number recorded when this batch was created. We will send a one-time recovery code only after you request it.</span>
+                    </span>
+                    <span class="shrink-0 text-xs font-bold text-amber-800 dark:text-amber-200">{{ recoveryOpen ? 'Hide' : 'Recover' }}</span>
+                </button>
+                <div v-if="recoveryOpen" class="mt-4 max-w-md">
+                    <form v-if="!recoveryChallenge" class="space-y-2" @submit.prevent="requestRecoveryCode">
                         <input v-model="recoveryMobile" type="tel" inputmode="tel" autocomplete="tel" required placeholder="09XXXXXXXXX" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950" />
                         <button type="submit" :disabled="recoveryBusy" class="rounded-full bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{{ recoveryBusy ? 'Sending…' : 'Send recovery code' }}</button>
                     </form>
-                    <form v-else class="mt-3 space-y-2" @submit.prevent="verifyRecoveryCode">
-                        <p class="text-xs">{{ recoveryMessage }}</p>
+                    <form v-else class="space-y-2" @submit.prevent="verifyRecoveryCode">
+                        <p class="text-xs text-amber-950 dark:text-amber-100">{{ recoveryMessage }}</p>
                         <input v-model="recoveryCode" type="text" inputmode="numeric" autocomplete="one-time-code" required placeholder="Recovery code" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950" />
                         <button type="submit" :disabled="recoveryBusy" class="rounded-full bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{{ recoveryBusy ? 'Checking…' : 'Recover workspace' }}</button>
                     </form>
                     <p v-if="recoveryError" class="mt-2 text-xs font-semibold text-rose-700">{{ recoveryError }}</p>
-                </section>
+                </div>
+            </section>
+
+            <div v-if="loading" class="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">Loading this batch…</div>
+            <div v-else-if="error" class="space-y-5 rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200">
+                <p>{{ error }}</p>
             </div>
             <template v-else-if="batch">
                 <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

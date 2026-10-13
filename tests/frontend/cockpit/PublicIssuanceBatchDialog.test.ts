@@ -91,6 +91,11 @@ describe("PublicIssuanceBatchDialog", () => {
     expect(wrapper.text()).toContain("Disbursement");
     expect(wrapper.text()).toContain("Redeemable");
     expect(wrapper.text()).toContain("1 / 1");
+    expect(wrapper.get('[data-testid="batch-workspace-recovery-toggle"]').text()).toContain(
+      "Need to recover this workspace?",
+    );
+    await wrapper.get('[data-testid="batch-workspace-recovery-toggle"]').trigger("click");
+    expect(wrapper.get('input[placeholder="09XXXXXXXXX"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="cockpit-pay-code-row-action-link"]').attributes("href")).toBe(
       "/x/auto-generate/batches/BATCH-1/pay-codes/PC-1",
     );
