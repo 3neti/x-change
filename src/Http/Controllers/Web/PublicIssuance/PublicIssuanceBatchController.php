@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Str;
 use LBHurtado\XChange\Actions\IssuanceBatch\CreateIssuanceBatch;
+use LBHurtado\XChange\Actions\IssuanceBatch\EstimateIssuanceBatchPricing;
 use LBHurtado\XChange\Actions\IssuanceBatch\PrepareIssuanceBatchFunding;
 use LBHurtado\XChange\Models\IssuanceBatch;
 use LBHurtado\XChange\Services\Checkout\CheckoutLifecycle;
@@ -22,7 +23,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class PublicIssuanceBatchController extends Controller
 {
-    public function preview(Request $request, IssuanceBatchTabularReader $reader, IssuanceBatchImportNormalizer $normalizer): JsonResponse
+    public function preview(Request $request, IssuanceBatchTabularReader $reader, IssuanceBatchImportNormalizer $normalizer, EstimateIssuanceBatchPricing $pricing): JsonResponse
     {
         $this->decodeJsonInput($request);
         $validated = $request->validate([
@@ -34,12 +35,20 @@ final class PublicIssuanceBatchController extends Controller
         $table = $this->readInput($request, $reader, $validated['headers'] ?? null, $validated['rows'] ?? null);
         $mapping = $this->mapping($validated['mapping'] ?? null, $table['headers'], $normalizer);
         $normalized = $normalizer->normalize($table['rows'], $mapping);
+        $validItems = collect($normalized['items'])
+            ->filter(static fn (array $item): bool => $item['status'] === 'valid')
+            ->map(static fn (array $item): object => (object) ['amount_minor' => $item['amount_minor']]);
+        $quote = $pricing->handle($validItems);
 
         return response()->json([
             'sheet' => $table['sheet'],
             'headers' => $table['headers'],
             'items' => $normalized['items'],
             'total_minor' => $normalized['total_minor'],
+            'pay_code_value_minor' => (int) round(($quote->pay_code_value ?? 0) * 100),
+            'issuance_fee_minor' => $quote->customer_charge_minor,
+            'total_due_minor' => (int) round(($quote->account_debit ?? 0) * 100),
+            'currency' => $quote->currency,
             'errors' => $normalized['errors'],
             'mapping' => $mapping,
             'can_create' => $normalized['errors'] === [] && $normalized['items'] !== [],

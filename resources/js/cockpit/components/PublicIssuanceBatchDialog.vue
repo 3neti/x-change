@@ -15,7 +15,7 @@ const pastedRows = ref<string[][] | null>(null);
 const pastedHeaders = ref<string[] | null>(null);
 const isDragging = ref(false);
 const mobile = ref("");
-const preview = ref<{ headers: string[]; mapping: Record<string, string>; items: Array<{ source_row: number; status: string; amount_minor: number; payload: Record<string, string> }>; total_minor: number; errors: string[]; can_create: boolean } | null>(null);
+const preview = ref<{ headers: string[]; mapping: Record<string, string>; items: Array<{ source_row: number; status: string; amount_minor: number; payload: Record<string, string> }>; total_minor: number; pay_code_value_minor?: number; issuance_fee_minor?: number; total_due_minor?: number; currency?: string; errors: string[]; can_create: boolean } | null>(null);
 const batch = ref<{ reference: string; access_token: string } | null>(null);
 const busy = ref(false);
 const error = ref<string | null>(null);
@@ -30,6 +30,14 @@ const mappingIssues = computed(() => {
   return ["name", "mobile", "amount"].filter((field) => !preview.value?.mapping[field]);
 });
 const showMapping = ref(false);
+const payCodeValueMinor = computed(() => preview.value?.pay_code_value_minor ?? preview.value?.total_minor ?? 0);
+const issuanceFeeMinor = computed(() => preview.value?.issuance_fee_minor ?? 0);
+const totalDueMinor = computed(() => preview.value?.total_due_minor ?? payCodeValueMinor.value + issuanceFeeMinor.value);
+const currency = computed(() => preview.value?.currency ?? "PHP");
+
+function formatMoney(minor: number): string {
+  return new Intl.NumberFormat("en-PH", { style: "currency", currency: currency.value }).format(minor / 100);
+}
 
 function resetSource(): void {
   file.value = null;
@@ -150,7 +158,7 @@ async function continueToPayment(): Promise<void> {
           <div class="space-y-5 px-6 py-6">
             <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-400"><span class="rounded-full bg-emerald-600 px-2 py-1 text-white">1</span> Add list <span class="h-px flex-1 bg-slate-200 dark:bg-slate-700" /><span class="rounded-full bg-slate-200 px-2 py-1 text-slate-600 dark:bg-slate-700 dark:text-slate-200">2</span> Review <span class="h-px flex-1 bg-slate-200 dark:bg-slate-700" /><span class="rounded-full bg-slate-200 px-2 py-1 text-slate-600 dark:bg-slate-700 dark:text-slate-200">3</span> Pay</div>
 
-            <div v-if="!sourceReady" class="flex min-h-40 flex-col items-center justify-center rounded-2xl border-2 border-dashed px-5 py-6 text-center transition" :class="isDragging ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30' : 'border-slate-300 bg-slate-50/70 dark:border-slate-700 dark:bg-slate-950/60'" tabindex="0" @dragenter.prevent="isDragging = true" @dragover.prevent @dragleave.prevent="isDragging = false" @drop.prevent="dropInput" @paste.stop.prevent="pasteRows">
+            <div v-if="!sourceReady" data-testid="batch-source-dropzone" class="flex min-h-40 flex-col items-center justify-center rounded-2xl border-2 border-dashed px-5 py-6 text-center transition" :class="isDragging ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30' : 'border-slate-300 bg-slate-50/70 dark:border-slate-700 dark:bg-slate-950/60'" tabindex="0" @dragenter.prevent="isDragging = true" @dragover.prevent @dragleave.prevent="isDragging = false" @drop.prevent="dropInput" @paste.stop.prevent="pasteRows">
               <div class="flex size-12 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm dark:bg-slate-900"><span class="text-xl">▦</span></div>
               <p class="mt-3 text-sm font-bold">{{ isDragging ? 'Drop to review' : 'Drop your recipient list here' }}</p>
               <p class="mt-1 text-xs text-slate-500">CSV · XLS · XLSX · or copied spreadsheet rows</p>
@@ -163,14 +171,14 @@ async function continueToPayment(): Promise<void> {
               <button type="button" class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold dark:border-slate-700 dark:bg-slate-900" @click="resetSource">Replace</button>
             </div>
 
-            <button v-if="!preview" type="button" class="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white disabled:opacity-50 dark:bg-white dark:text-slate-900" :disabled="!sourceReady || busy" @click="inspect">{{ busy ? 'Reading list…' : 'Review recipients' }}</button>
+            <button v-if="!preview" data-testid="batch-review-button" type="button" class="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white disabled:opacity-50 dark:bg-white dark:text-slate-900" :disabled="!sourceReady || busy" @click="inspect">{{ busy ? 'Reading list…' : 'Review recipients' }}</button>
             <p v-if="error" class="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-200">{{ error }}</p>
 
             <div v-if="preview" class="space-y-4">
               <div class="grid gap-3 sm:grid-cols-3">
                 <div class="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900"><p class="text-xs text-slate-500">Recipients</p><p class="mt-1 text-lg font-black">{{ preview.items.length }}</p></div>
                 <div class="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900"><p class="text-xs text-slate-500">Ready</p><p class="mt-1 text-lg font-black text-emerald-600">{{ validItems.length }}</p></div>
-                <div class="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900"><p class="text-xs text-slate-500">Pay Code value</p><p class="mt-1 text-lg font-black">₱{{ (preview.total_minor / 100).toFixed(2) }}</p></div>
+                <div class="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900"><p class="text-xs text-slate-500">Pay Code value</p><p class="mt-1 text-lg font-black">{{ formatMoney(payCodeValueMinor) }}</p></div>
               </div>
               <div class="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">
                 <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700"><p class="text-sm font-bold">Recipient preview</p><p class="text-xs text-slate-500">Showing {{ Math.min(preview.items.length, 10) }} of {{ preview.items.length }}</p></div>
@@ -179,7 +187,7 @@ async function continueToPayment(): Promise<void> {
               <p v-if="invalidItems.length" class="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-200">{{ invalidItems.length }} row(s) need attention. Fix the source file before continuing.</p>
               <details class="rounded-xl border border-slate-200 dark:border-slate-700" :open="showMapping || mappingIssues.length > 0"><summary class="cursor-pointer px-4 py-3 text-sm font-semibold">{{ mappingIssues.length ? 'Column mapping needs attention' : 'Column mapping detected automatically' }}</summary><div class="grid gap-3 border-t border-slate-200 p-4 sm:grid-cols-2 dark:border-slate-700"><label v-for="field in mappingFields" :key="field" class="text-xs font-semibold capitalize">{{ field }}<select v-model="preview.mapping[field]" class="mt-1 block w-full rounded-lg border border-slate-300 p-2 text-sm dark:border-slate-700 dark:bg-slate-950" @change="preview.can_create = false"><option value="">Unmapped</option><option v-for="header in preview.headers" :key="header" :value="header">{{ header }}</option></select></label><button type="button" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold dark:border-slate-700" :disabled="busy" @click="inspect">Recheck mapping</button></div></details>
               <label class="block rounded-2xl border border-slate-200 p-4 text-sm font-semibold dark:border-slate-700">Your mobile number for batch recovery<p class="mt-1 text-xs font-normal text-slate-500">We’ll use it to recover this workspace if you leave the browser.</p><input v-model="mobile" inputmode="tel" class="mt-3 block w-full rounded-lg border border-slate-300 p-2 dark:border-slate-700 dark:bg-slate-950" placeholder="09…" /></label>
-              <div class="rounded-2xl bg-slate-900 p-4 text-white dark:bg-slate-950"><div class="flex items-center justify-between"><span class="text-sm font-semibold">Pay Code value</span><span class="text-xl font-black">₱{{ (preview.total_minor / 100).toFixed(2) }}</span></div><button type="button" class="mt-4 w-full rounded-xl bg-emerald-500 px-4 py-3 text-sm font-black text-white disabled:opacity-50" :disabled="!preview.can_create || mobile.trim() === '' || busy" @click="continueToPayment">Continue to payment</button></div>
+              <div class="rounded-2xl bg-slate-900 p-4 text-white dark:bg-slate-950"><div class="space-y-2 text-sm"><div class="flex items-center justify-between"><span class="text-slate-300">Pay Code value</span><span class="font-semibold">{{ formatMoney(payCodeValueMinor) }}</span></div><div class="flex items-center justify-between"><span class="text-slate-300">Issuance fee</span><span class="font-semibold">{{ formatMoney(issuanceFeeMinor) }}</span></div><div class="flex items-center justify-between border-t border-white/15 pt-3 text-base"><span class="font-bold">Total to pay</span><span class="text-xl font-black">{{ formatMoney(totalDueMinor) }}</span></div></div><p class="mt-2 text-xs text-slate-400">The total includes the Pay Code value and the batch issuance fee.</p><button type="button" class="mt-4 w-full rounded-xl bg-emerald-500 px-4 py-3 text-sm font-black text-white disabled:opacity-50" :disabled="!preview.can_create || mobile.trim() === '' || busy" @click="continueToPayment">Continue to payment</button></div>
             </div>
           </div>
         </section>

@@ -48,6 +48,48 @@ describe("PublicIssuanceBatchDialog", () => {
     expect(document.body.textContent).toContain("CSV · XLS · XLSX · or copied spreadsheet rows");
   });
 
+  it("shows the Pay Code value, issuance fee, and total due after review", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        headers: ["name", "mobile", "amount"],
+        mapping: { name: "name", mobile: "mobile", amount: "amount" },
+        items: [{ source_row: 2, status: "valid", amount_minor: 2500, payload: { name: "Lester", mobile: "09173011987" } }],
+        total_minor: 2500,
+        pay_code_value_minor: 2500,
+        issuance_fee_minor: 500,
+        total_due_minor: 3000,
+        currency: "PHP",
+        errors: [],
+        can_create: true,
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const wrapper = mount(PublicIssuanceBatchDialog, {
+      props: {
+        endpoints: {
+          preview: "/x/auto-generate/batches/preview",
+          create: "/x/auto-generate/batches",
+          fund: "/x/auto-generate/batches/__REFERENCE__/fund",
+        },
+      },
+    });
+
+    await wrapper.get('[data-testid="public-auto-generate-batch-action"]').trigger("click");
+    const dropzone = document.body.querySelector('[data-testid="batch-source-dropzone"]');
+    const pasteEvent = new Event("paste", { bubbles: true });
+    Object.defineProperty(pasteEvent, "clipboardData", { value: { getData: () => "name,mobile,amount\nLester,09173011987,25" } });
+    dropzone?.dispatchEvent(pasteEvent);
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    document.body.querySelector('[data-testid="batch-review-button"]')?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+
+    expect(document.body.textContent).toContain("Issuance fee");
+    expect(document.body.textContent).toContain("₱5.00");
+    expect(document.body.textContent).toContain("Total to pay");
+    expect(document.body.textContent).toContain("₱30.00");
+  });
+
   it("loads only the token-authorized batch rows into the shared Pay Code table", async () => {
     sessionStorage.setItem("x-change.batch-token:BATCH-1", "token-1");
     const fetchMock = vi.fn().mockResolvedValue({
