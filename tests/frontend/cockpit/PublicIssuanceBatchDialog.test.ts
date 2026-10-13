@@ -32,6 +32,22 @@ describe("PublicIssuanceBatchDialog", () => {
     ).toContain("Create many now");
   });
 
+  it("exposes file, drag-and-drop, and pasted-row intake controls", async () => {
+    const wrapper = mount(PublicIssuanceBatchDialog, {
+      props: {
+        endpoints: {
+          preview: "/x/auto-generate/batches/preview",
+          create: "/x/auto-generate/batches",
+          fund: "/x/auto-generate/batches/__REFERENCE__/fund",
+        },
+      },
+    });
+
+    await wrapper.get('[data-testid="public-auto-generate-batch-action"]').trigger("click");
+    expect(document.body.textContent).toContain("Choose a file or paste rows");
+    expect(document.body.textContent).toContain("CSV · XLS · XLSX · copied spreadsheet rows");
+  });
+
   it("loads only the token-authorized batch rows into the shared Pay Code table", async () => {
     sessionStorage.setItem("x-change.batch-token:BATCH-1", "token-1");
     const fetchMock = vi.fn().mockResolvedValue({

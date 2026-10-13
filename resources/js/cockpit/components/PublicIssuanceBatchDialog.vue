@@ -11,8 +11,11 @@ const props = defineProps<{
 
 const open = ref(false);
 const file = ref<File | null>(null);
+const pastedRows = ref<string[][] | null>(null);
+const pastedHeaders = ref<string[] | null>(null);
+const isDragging = ref(false);
 const mobile = ref("");
-const preview = ref<{ items: Array<{ source_row: number; status: string; amount_minor: number; payload: Record<string, string> }>; total_minor: number; errors: string[]; can_create: boolean } | null>(null);
+const preview = ref<{ headers: string[]; mapping: Record<string, string>; items: Array<{ source_row: number; status: string; amount_minor: number; payload: Record<string, string> }>; total_minor: number; errors: string[]; can_create: boolean } | null>(null);
 const batch = ref<{ reference: string; access_token: string } | null>(null);
 const busy = ref(false);
 const error = ref<string | null>(null);
@@ -21,8 +24,40 @@ const validItems = computed(() => preview.value?.items.filter((item) => item.sta
 
 function chooseFile(event: Event): void {
   file.value = (event.target as HTMLInputElement).files?.[0] ?? null;
+  pastedRows.value = null;
+  pastedHeaders.value = null;
   preview.value = null;
   error.value = null;
+}
+
+function parsePastedRows(text: string): void {
+  const lines = text.trim().split(/\r?\n/).filter((line) => line.trim() !== "");
+  if (lines.length < 1) return;
+  const delimiter = lines[0].includes("\t") ? "\t" : ",";
+  const values = lines.map((line) => line.split(delimiter).map((value) => value.trim()));
+  const knownHeaders = /name|mobile|phone|email|amount|value/i.test(lines[0]);
+  pastedHeaders.value = knownHeaders ? values.shift() ?? null : null;
+  pastedRows.value = values.length > 0 ? values : null;
+  file.value = null;
+  preview.value = null;
+  error.value = null;
+}
+
+function pasteRows(event: ClipboardEvent): void {
+  parsePastedRows(event.clipboardData?.getData("text/plain") ?? "");
+}
+
+function dropInput(event: DragEvent): void {
+  isDragging.value = false;
+  const droppedFile = event.dataTransfer?.files?.[0];
+  if (droppedFile) {
+    file.value = droppedFile;
+    pastedRows.value = null;
+    pastedHeaders.value = null;
+    preview.value = null;
+    return;
+  }
+  parsePastedRows(event.dataTransfer?.getData("text/plain") ?? "");
 }
 
 async function inspect(): Promise<void> {
@@ -30,7 +65,10 @@ async function inspect(): Promise<void> {
   busy.value = true;
   error.value = null;
   const form = new FormData();
-  form.append("file", file.value);
+  if (file.value) form.append("file", file.value);
+  if (pastedHeaders.value) form.append("headers", JSON.stringify(pastedHeaders.value));
+  if (pastedRows.value) form.append("rows", JSON.stringify(pastedRows.value));
+  if (preview.value?.mapping) form.append("mapping", JSON.stringify(preview.value.mapping));
   try {
     const response = await fetch(props.endpoints.preview, { method: "POST", body: form, headers: { Accept: "application/json" } });
     const data = await response.json();
@@ -44,11 +82,14 @@ async function inspect(): Promise<void> {
 }
 
 async function continueToPayment(): Promise<void> {
-  if (!file.value || !preview.value?.can_create || mobile.value.trim() === "") return;
+  if ((!file.value && !pastedRows.value) || !preview.value?.can_create || mobile.value.trim() === "") return;
   busy.value = true;
   error.value = null;
   const form = new FormData();
-  form.append("file", file.value);
+  if (file.value) form.append("file", file.value);
+  if (pastedHeaders.value) form.append("headers", JSON.stringify(pastedHeaders.value));
+  if (pastedRows.value) form.append("rows", JSON.stringify(pastedRows.value));
+  form.append("mapping", JSON.stringify(preview.value.mapping));
   form.append("mobile", mobile.value.trim());
   try {
     const createResponse = await fetch(props.endpoints.create, { method: "POST", body: form, headers: { Accept: "application/json" } });
@@ -92,15 +133,29 @@ async function continueToPayment(): Promise<void> {
             </div>
           </div>
           <div class="space-y-4 px-6 py-6">
-            <label class="block text-sm font-semibold">
-              CSV, XLS, or XLSX file
-              <input class="mt-2 block w-full rounded-lg border border-slate-300 p-2 text-sm dark:border-slate-700 dark:bg-slate-950" type="file" accept=".csv,.xls,.xlsx" @change="chooseFile" />
-            </label>
-            <button type="button" class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-900" :disabled="!file || busy" @click="inspect">{{ busy ? 'Reviewing…' : 'Review file' }}</button>
+            <div class="flex min-h-36 flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-5 text-center transition" :class="isDragging ? 'border-emerald-500 bg-emerald-50' : 'border-slate-300 bg-slate-50/70 dark:border-slate-700 dark:bg-slate-950/60'" tabindex="0" @dragenter.prevent="isDragging = true" @dragover.prevent @dragleave.prevent="isDragging = false" @drop.prevent="dropInput" @paste.stop.prevent="pasteRows">
+              <p class="text-sm font-semibold">{{ isDragging ? 'Drop to review' : 'Choose a file or paste rows' }}</p>
+              <p class="mt-1 text-xs text-slate-500">CSV · XLS · XLSX · copied spreadsheet rows</p>
+              <label class="mt-3 inline-flex cursor-pointer rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white dark:bg-white dark:text-slate-900">
+                Choose File
+                <input class="sr-only" type="file" accept=".csv,.xls,.xlsx" @change="chooseFile" />
+              </label>
+            </div>
+            <button type="button" class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-900" :disabled="(!file && !pastedRows) || busy" @click="inspect">{{ busy ? 'Reviewing…' : 'Review rows' }}</button>
             <p v-if="error" class="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{{ error }}</p>
             <div v-if="preview" class="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
               <p class="font-semibold">{{ validItems.length }} valid rows · ₱{{ (preview.total_minor / 100).toFixed(2) }}</p>
               <p v-if="preview.errors.length" class="mt-2 text-sm text-rose-700">{{ preview.errors.join(' ') }}</p>
+              <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                <label v-for="field in ['name', 'mobile', 'email', 'amount']" :key="field" class="text-xs font-semibold capitalize">
+                  {{ field }}
+                  <select v-model="preview.mapping[field]" class="mt-1 block w-full rounded-lg border border-slate-300 p-2 text-sm dark:border-slate-700 dark:bg-slate-950" @change="preview.can_create = false">
+                    <option value="">Unmapped</option>
+                    <option v-for="header in preview.headers" :key="header" :value="header">{{ header }}</option>
+                  </select>
+                </label>
+              </div>
+              <button type="button" class="mt-3 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold dark:border-slate-700" :disabled="busy" @click="inspect">Recheck mapping</button>
               <label class="mt-4 block text-sm font-semibold">
                 Your mobile number for batch updates
                 <input v-model="mobile" inputmode="tel" class="mt-2 block w-full rounded-lg border border-slate-300 p-2 dark:border-slate-700 dark:bg-slate-950" placeholder="09…" />
