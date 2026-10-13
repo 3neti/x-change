@@ -4502,7 +4502,6 @@ const canEstimateLivePricing = computed<boolean>(() => {
   const normalizedCount = Number(count.value);
 
   return (
-    (!props.publicMode || !props.turnstile?.enabled || props.turnstileToken !== "") &&
     Number.isFinite(normalizedAmount) &&
     normalizedAmount > 0 &&
     Number.isFinite(normalizedCount) &&
