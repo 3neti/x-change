@@ -953,6 +953,7 @@ export type CockpitOnDemandIssuanceFundingProjection = {
     issued_item_count: number;
     download_url: string;
     workspace_url: string;
+    detail_url?: string | null;
   } | null;
   order: {
     reference: string;

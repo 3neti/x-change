@@ -12,6 +12,8 @@ use Illuminate\Validation\ValidationException;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Cockpit\RememberRiderLibraryUsage;
 use LBHurtado\XChange\Actions\Funding\PrepareOnDemandPayCodeIssuance;
+use LBHurtado\XChange\Actions\IssuanceBatch\CreateIssuanceBatch;
+use LBHurtado\XChange\Actions\IssuanceBatch\PrepareIssuanceBatchFunding;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
@@ -24,6 +26,7 @@ use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
 use LBHurtado\XChange\Http\Requests\GeneratePayCodeRequest;
+use LBHurtado\XChange\Models\IssuanceBatch;
 use LBHurtado\XChange\Services\BuildBalanceOverview;
 use LBHurtado\XChange\Services\Checkout\CheckoutLifecycle;
 use LBHurtado\XChange\Services\Checkout\PublicCheckoutDraftAccess;
@@ -62,6 +65,8 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         OnDemandIssuanceFundingPolicy $onDemandFunding,
         OnDemandIssuanceFundingRequirement $onDemandFundingRequirement,
         PrepareOnDemandPayCodeIssuance $prepareOnDemandIssuance,
+        CreateIssuanceBatch $createIssuanceBatch,
+        PrepareIssuanceBatchFunding $prepareIssuanceBatchFunding,
         OnDemandIssuanceFundingOrderPresenter $onDemandFundingPresenter,
         CompileCockpitQuickGenerateClaimPolicy $claimPolicy,
         QuickGenerateLastInstructionsStore $lastInstructions,
@@ -163,21 +168,48 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 : $onDemandFundingRequirement->for($operator, $pricing);
 
             if ($requirement->externalAmountMinor > 0) {
-                $order = $prepareOnDemandIssuance->handle(
-                    issuer: $operator,
-                    instructions: $payload,
-                    pricing: $pricing,
-                    idempotencyKey: $key,
-                    fundingBasis: $publicAutoGenerate
-                        ? OnDemandIssuanceFundingBasis::FullAmount
-                        : null,
-                );
+                $batch = null;
+                $order = $publicAutoGenerate
+                    ? $prepareIssuanceBatchFunding->handle(
+                        issuer: $operator,
+                        batch: $batch = $createIssuanceBatch->handle(
+                            issuer: $operator,
+                            items: [[
+                                'source_row' => 1,
+                                'status' => 'valid',
+                                'amount_minor' => (int) round((float) data_get($payload, 'cash.amount', 0) * 100),
+                                'currency' => (string) data_get($payload, 'cash.currency', 'PHP'),
+                                'payload' => $payload,
+                            ]],
+                            source: 'public.auto-generate.single',
+                            uploaderMobile: is_scalar(data_get($payload, 'mobile'))
+                                ? (string) data_get($payload, 'mobile')
+                                : null,
+                        ),
+                        idempotencyKey: $key,
+                    )
+                    : $prepareOnDemandIssuance->handle(
+                        issuer: $operator,
+                        instructions: $payload,
+                        pricing: $pricing,
+                        idempotencyKey: $key,
+                        fundingBasis: null,
+                    );
 
                 if ($publicAutoGenerate) {
                     $draft = $checkoutDrafts->active($request, $operator);
                     $checkouts->place($order, $draft['checkout'] ?? null);
                     $checkoutDrafts->clear($request);
                     $token = $publicOrderAccess->bind($order, $request);
+
+                    if ($batch instanceof IssuanceBatch) {
+                        $batch->forceFill([
+                            'metadata' => [
+                                ...(array) $batch->metadata,
+                                'access_token_hash' => hash('sha256', $token),
+                            ],
+                        ])->save();
+                    }
 
                     return response()->json(
                         $onDemandFundingPresenter->present($order, $token, true),

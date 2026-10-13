@@ -162,10 +162,20 @@ const lastCheckedLabel = computed(() => {
     : `Last checked ${new Date(checkedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" })}`;
 });
 
+function rememberBatchToken(projection: CockpitOnDemandIssuanceFundingProjection | null): void {
+  const batch = projection?.batch;
+  const token = projection?.guest_access_token?.trim();
+
+  if (batch && token) {
+    sessionStorage.setItem(`x-change.batch-token:${batch.reference}`, token);
+  }
+}
+
 watch(
   () => props.projection,
   (projection) => {
     current.value = projection;
+    rememberBatchToken(projection);
     selectedMode.value =
       projection?.funding_selector.default_mode ?? "bank_transfer";
     monitorMessage.value = null;
@@ -648,7 +658,7 @@ function text(value: unknown): string | null {
             {{ current.lifecycle.message }}
           </p>
           <button
-            v-if="current.batch?.download_url && current.batch.issued_item_count > 0"
+            v-if="current.batch?.download_url && current.batch.item_count > 1 && current.batch.issued_item_count > 0"
             class="mt-4 inline-flex min-h-10 items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-700"
             type="button"
             @click="downloadBatch"
@@ -656,7 +666,14 @@ function text(value: unknown): string | null {
             Download {{ current.batch.issued_item_count }} Pay Codes
           </button>
           <a
-            v-if="current.batch?.workspace_url && current.batch.issued_item_count > 0"
+            v-if="current.batch?.detail_url && current.batch.issued_item_count > 0"
+            :href="current.batch.detail_url"
+            class="mt-4 inline-flex min-h-10 items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-700"
+          >
+            View Pay Code
+          </a>
+          <a
+            v-else-if="current.batch?.workspace_url && current.batch.issued_item_count > 0"
             :href="current.batch.workspace_url"
             class="mt-4 ml-2 inline-flex min-h-10 items-center justify-center rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-bold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-slate-900 dark:text-emerald-200"
           >

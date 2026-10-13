@@ -38,6 +38,7 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
     ): array {
         $order->loadMissing(['fundingIntent.settlement', 'fundingIntent.events', 'voucher', 'events']);
         $batch = IssuanceBatch::query()->where('funding_order_id', $order->getKey())->first();
+        $issuedBatchItem = $batch?->items()->where('status', 'issued')->first();
         $instructions = $order->fundingIntent === null
             ? []
             : $this->instructions->forIntent($order->fundingIntent);
@@ -130,6 +131,13 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
                     ['batch' => $batch->reference],
                     false,
                 ),
+                'detail_url' => $batch->item_count === 1 && is_string($issuedBatchItem?->pay_code)
+                    ? route(
+                        'x-change.public-auto-generate.batches.pay-codes.detail',
+                        ['batch' => $batch->reference, 'code' => $issuedBatchItem->pay_code],
+                        false,
+                    )
+                    : null,
             ],
             'pricing' => [
                 'pay_code_value' => (float) data_get($order->pricing_snapshot_ciphertext, 'pay_code_value', 0),
