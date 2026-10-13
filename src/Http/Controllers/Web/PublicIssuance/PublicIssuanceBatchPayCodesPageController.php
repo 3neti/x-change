@@ -26,6 +26,11 @@ final class PublicIssuanceBatchPayCodesPageController extends Controller
                 ['batch' => $batch->reference],
                 false,
             ),
+            'detail_url_template' => route(
+                'x-change.public-auto-generate.batches.pay-codes.detail',
+                ['batch' => $batch->reference, 'code' => '__CODE__'],
+                false,
+            ),
             'auto_generate_url' => route('x-change.public-auto-generate.show', [], false),
         ]);
     }

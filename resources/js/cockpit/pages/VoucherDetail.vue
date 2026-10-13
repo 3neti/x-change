@@ -54,9 +54,15 @@ const redemption = computed<Record<string, unknown> | null>(() =>
   objectValue(summary.value.redemption),
 );
 const distributionWorkspaceHref = computed(
-  () => `/x/cockpit/pay-codes/${encodeURIComponent(code.value)}/distribution`,
+  () =>
+    props.distribution_url === null
+      ? null
+      : (props.distribution_url ??
+        `/x/cockpit/pay-codes/${encodeURIComponent(code.value)}/distribution`),
 );
-const explorerHref = computed(() => "/x/cockpit/pay-codes");
+const explorerHref = computed(
+  () => props.explorer_url ?? "/x/cockpit/pay-codes",
+);
 
 const campaignNavigationContext =
   computed<CockpitCampaignNavigationContext | null>(() => {

@@ -13,6 +13,7 @@ const props = defineProps<{
     batch_reference: string;
     batch_endpoint: string;
     download_endpoint: string;
+    detail_url_template: string;
     auto_generate_url: string;
 }>();
 
@@ -91,9 +92,14 @@ function money(minor: number): string {
 
 function batchRecord(item: BatchItem): CockpitPayCodeExplorerRecord {
     const issued = item.pay_code !== null;
-    const claimAction: CockpitPayCodeRowAction[] = item.claim_url === null
+    const detailAction: CockpitPayCodeRowAction[] = item.pay_code === null
         ? []
-        : [{ key: 'claim-url', label: 'Open claim URL', href: item.claim_url, enabled: true }];
+        : [{
+            key: 'detail',
+            label: 'View details',
+            href: props.detail_url_template.replace('__CODE__', encodeURIComponent(item.pay_code)),
+            enabled: true,
+        }];
 
     return {
         code: item.pay_code ?? `row-${item.ordinal}`,
@@ -162,7 +168,7 @@ function batchRecord(item: BatchItem): CockpitPayCodeExplorerRecord {
         attention: item.failure_message === null
             ? null
             : { key: 'batch-item-failed', label: 'Needs attention', message: item.failure_message, tone: 'warning' },
-        actions: claimAction,
+        actions: detailAction,
         copyable: issued,
         claimUrl: item.claim_url,
     };

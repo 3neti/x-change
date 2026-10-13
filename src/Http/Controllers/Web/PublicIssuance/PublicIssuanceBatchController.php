@@ -15,6 +15,7 @@ use LBHurtado\XChange\Services\Checkout\CheckoutLifecycle;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Commercial\ConfiguredCommercialPrincipalResolver;
 use LBHurtado\XChange\Services\IssuanceBatch\IssuanceBatchImportNormalizer;
+use LBHurtado\XChange\Services\IssuanceBatch\IssuanceBatchAccess;
 use LBHurtado\XChange\Services\IssuanceBatch\IssuanceBatchTabularReader;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceOrderAccess;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -55,9 +56,9 @@ final class PublicIssuanceBatchController extends Controller
         return response()->json(['reference' => $batch->reference, 'access_token' => $token, 'item_count' => $batch->valid_item_count, 'total_minor' => $batch->total_minor], 201);
     }
 
-    public function show(Request $request, IssuanceBatch $batch): JsonResponse
+    public function show(Request $request, IssuanceBatch $batch, IssuanceBatchAccess $batches): JsonResponse
     {
-        $this->authorizeToken($request, $batch);
+        $batches->authorizeToken($request, $batch);
 
         $batch->load('items');
 
@@ -86,9 +87,9 @@ final class PublicIssuanceBatchController extends Controller
         ]);
     }
 
-    public function fund(Request $request, IssuanceBatch $batch, ConfiguredCommercialPrincipalResolver $resolver, PrepareIssuanceBatchFunding $funding, CheckoutLifecycle $checkouts, PublicIssuanceOrderAccess $orders, OnDemandIssuanceFundingOrderPresenter $presenter): JsonResponse
+    public function fund(Request $request, IssuanceBatch $batch, ConfiguredCommercialPrincipalResolver $resolver, PrepareIssuanceBatchFunding $funding, CheckoutLifecycle $checkouts, PublicIssuanceOrderAccess $orders, OnDemandIssuanceFundingOrderPresenter $presenter, IssuanceBatchAccess $batches): JsonResponse
     {
-        $this->authorizeToken($request, $batch);
+        $batches->authorizeToken($request, $batch);
         $validated = $request->validate(['idempotency_key' => ['required', 'string', 'max:191']]);
         $order = $funding->handle($resolver->resolve(), $batch, $validated['idempotency_key']);
         $checkouts->place($order);
@@ -102,9 +103,9 @@ final class PublicIssuanceBatchController extends Controller
         ], 202);
     }
 
-    public function download(Request $request, IssuanceBatch $batch): StreamedResponse
+    public function download(Request $request, IssuanceBatch $batch, IssuanceBatchAccess $batches): StreamedResponse
     {
-        $this->authorizeToken($request, $batch);
+        $batches->authorizeToken($request, $batch);
 
         return response()->streamDownload(function () use ($batch): void {
             $handle = fopen('php://output', 'wb');
@@ -114,11 +115,5 @@ final class PublicIssuanceBatchController extends Controller
             }
             fclose($handle);
         }, $batch->reference.'.csv', ['Content-Type' => 'text/csv']);
-    }
-
-    private function authorizeToken(Request $request, IssuanceBatch $batch): void
-    {
-        $token = trim((string) $request->header('X-Issuance-Batch-Token'));
-        abort_unless($token !== '' && hash_equals((string) data_get($batch->metadata, 'access_token_hash'), hash('sha256', $token)), 404);
     }
 }

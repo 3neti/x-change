@@ -2257,6 +2257,8 @@ export type CockpitVoucherDetailPageProps = CockpitHeaderPageProps & {
   read_model?: CockpitReadModelBundle;
   payout_institutions?: CockpitMoneyIssuerOption[];
   terminal_control?: CockpitPayCodeTerminalControl;
+  explorer_url?: string | null;
+  distribution_url?: string | null;
 };
 
 export type CockpitPayCodeTerminalControl = {
