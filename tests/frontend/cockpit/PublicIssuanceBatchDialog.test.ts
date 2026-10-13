@@ -196,4 +196,31 @@ describe("PublicIssuanceBatchDialog", () => {
       }),
     );
   });
+
+  it("explains when a direct detail link needs workspace recovery", async () => {
+    sessionStorage.setItem("x-change.batch-token:BATCH-1", "expired-token");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({}),
+    }));
+
+    const wrapper = mount(BatchPayCodeDetail, {
+      props: {
+        batch_reference: "BATCH-1",
+        code: "BRHL",
+        detail_endpoint: "/x/auto-generate/batches/BATCH-1/pay-codes/BRHL/data",
+        batch_pay_codes_url: "/x/auto-generate/batches/BATCH-1/pay-codes",
+      },
+    });
+
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+
+    expect(wrapper.get('[data-testid="batch-pay-code-detail-access-error"]').text()).toContain(
+      "workspace has expired",
+    );
+    expect(wrapper.get('a[href="/x/auto-generate/batches/BATCH-1/pay-codes"]').text()).toContain(
+      "Open batch workspace",
+    );
+  });
 });

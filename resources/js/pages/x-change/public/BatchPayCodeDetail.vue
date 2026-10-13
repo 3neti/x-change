@@ -28,7 +28,9 @@ onMounted(async () => {
         const payload = await response.json();
 
         if (!response.ok) {
-            throw new Error(payload.message ?? 'The Pay Code details could not be loaded.');
+            throw new Error(response.status === 404
+                ? 'This distribution workspace has expired or is not available in this browser. Open the batch workspace to recover access, then view this Pay Code again.'
+                : (payload.message ?? 'The Pay Code details could not be loaded.'));
         }
 
         detail.value = {
@@ -52,12 +54,17 @@ onMounted(async () => {
             Loading Pay Code details…
         </div>
         <div v-else-if="error" class="mx-auto max-w-2xl p-6" data-testid="batch-pay-code-detail-error">
-            <div class="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800">
+            <div class="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800" data-testid="batch-pay-code-detail-access-error">
                 {{ error }}
             </div>
-            <a :href="batch_pay_codes_url" class="mt-4 inline-flex text-sm font-semibold text-indigo-700">
-                Back to batch Pay Codes
-            </a>
+            <div class="mt-4 flex flex-wrap gap-3">
+                <a :href="batch_pay_codes_url" class="inline-flex rounded-full bg-indigo-700 px-4 py-2 text-sm font-semibold text-white">
+                    Open batch workspace
+                </a>
+                <a :href="batch_pay_codes_url" class="inline-flex items-center rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">
+                    Back to batch Pay Codes
+                </a>
+            </div>
         </div>
         <VoucherDetail v-else-if="detail" v-bind="detail" />
     </div>
