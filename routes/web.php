@@ -155,8 +155,9 @@ use LBHurtado\XChange\Http\Controllers\Web\PublicAutoGeneratePageController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicCheckoutDraftController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicCheckoutFundingMethodController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceBatchController;
-use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceBatchPayCodesPageController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceBatchPayCodeDetailController;
+use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceBatchPayCodesPageController;
+use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceBatchRecoveryController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuanceReceiptController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuanceRecoveryController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicPricingPageController;
@@ -238,6 +239,12 @@ Route::prefix('x/auto-generate')->middleware([
     Route::get('batches/{batch:reference}/pay-codes', PublicIssuanceBatchPayCodesPageController::class)
         ->middleware('throttle:30,1,public-auto-generate-batch-page:')
         ->name('x-change.public-auto-generate.batches.pay-codes');
+    Route::post('batches/{batch:reference}/recover', [PublicIssuanceBatchRecoveryController::class, 'request'])
+        ->middleware('throttle:3,10,public-auto-generate-batch-recovery-request:')
+        ->name('x-change.public-auto-generate.batches.recovery.request');
+    Route::post('batches/{batch:reference}/recover/verify', [PublicIssuanceBatchRecoveryController::class, 'verify'])
+        ->middleware('throttle:5,10,public-auto-generate-batch-recovery-verify:')
+        ->name('x-change.public-auto-generate.batches.recovery.verify');
     Route::get('batches/{batch:reference}/pay-codes/{code}', [PublicIssuanceBatchPayCodeDetailController::class, 'page'])
         ->middleware('throttle:30,1,public-auto-generate-batch-detail-page:')
         ->name('x-change.public-auto-generate.batches.pay-codes.detail');

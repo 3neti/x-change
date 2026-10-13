@@ -70,6 +70,8 @@ describe("PublicIssuanceBatchDialog", () => {
         batch_endpoint: "/x/auto-generate/batches/BATCH-1",
         download_endpoint: "/x/auto-generate/batches/BATCH-1/download",
         detail_url_template: "/x/auto-generate/batches/BATCH-1/pay-codes/__CODE__",
+        recovery_request_endpoint: "/x/auto-generate/batches/BATCH-1/recover",
+        recovery_verify_endpoint: "/x/auto-generate/batches/BATCH-1/recover/verify",
         auto_generate_url: "/x/auto-generate",
       },
     });

@@ -17,17 +17,12 @@ const error = ref<string | null>(null);
 onMounted(async () => {
     const token = window.sessionStorage.getItem(`x-change.batch-token:${props.batch_reference}`);
 
-    if (!token) {
-        error.value = 'This batch workspace is no longer available in this browser session.';
-        loading.value = false;
-        return;
-    }
-
     try {
         const response = await fetch(props.detail_endpoint, {
+            credentials: 'same-origin',
             headers: {
                 Accept: 'application/json',
-                'X-Issuance-Batch-Token': token,
+                ...(token ? { 'X-Issuance-Batch-Token': token } : {}),
             },
         });
         const payload = await response.json();

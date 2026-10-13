@@ -126,10 +126,10 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
                     ['batch' => $batch->reference],
                     false,
                 ),
-                'workspace_url' => route(
+                'workspace_url' => URL::temporarySignedRoute(
                     'x-change.public-auto-generate.batches.pay-codes',
+                    now()->addDays(max(1, (int) config('x-change.public_auto_generate.receipt_link_ttl_days', 30))),
                     ['batch' => $batch->reference],
-                    false,
                 ),
                 'detail_url' => $batch->item_count === 1 && is_string($issuedBatchItem?->pay_code)
                     ? route(

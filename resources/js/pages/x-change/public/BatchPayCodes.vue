@@ -14,6 +14,8 @@ const props = defineProps<{
     batch_endpoint: string;
     download_endpoint: string;
     detail_url_template: string;
+    recovery_request_endpoint: string;
+    recovery_verify_endpoint: string;
     auto_generate_url: string;
 }>();
 
@@ -46,6 +48,12 @@ type BatchPayload = {
 const batch = ref<BatchPayload | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
+const recoveryMobile = ref('');
+const recoveryCode = ref('');
+const recoveryChallenge = ref<string | null>(null);
+const recoveryBusy = ref(false);
+const recoveryMessage = ref<string | null>(null);
+const recoveryError = ref<string | null>(null);
 
 const tokenKey = computed(() => `x-change.batch-token:${props.batch_reference}`);
 const token = () => window.sessionStorage.getItem(tokenKey.value);
@@ -53,17 +61,12 @@ const token = () => window.sessionStorage.getItem(tokenKey.value);
 async function loadBatch(): Promise<void> {
     const accessToken = token();
 
-    if (!accessToken) {
-        error.value = 'This batch workspace is no longer available in this browser session.';
-        loading.value = false;
-        return;
-    }
-
     try {
         const response = await fetch(props.batch_endpoint, {
+            credentials: 'same-origin',
             headers: {
                 Accept: 'application/json',
-                'X-Issuance-Batch-Token': accessToken,
+                ...(accessToken ? { 'X-Issuance-Batch-Token': accessToken } : {}),
             },
         });
         const payload = await response.json();
@@ -180,15 +183,11 @@ const issuedCount = computed(() => batch.value?.items.filter((item) => item.pay_
 async function download(): Promise<void> {
     const accessToken = token();
 
-    if (!accessToken) {
-        error.value = 'This batch workspace is no longer available in this browser session.';
-        return;
-    }
-
     const response = await fetch(props.download_endpoint, {
+        credentials: 'same-origin',
         headers: {
             Accept: 'text/csv',
-            'X-Issuance-Batch-Token': accessToken,
+            ...(accessToken ? { 'X-Issuance-Batch-Token': accessToken } : {}),
         },
     });
 
@@ -202,6 +201,48 @@ async function download(): Promise<void> {
     link.download = `${props.batch_reference}.csv`;
     link.click();
     URL.revokeObjectURL(link.href);
+}
+
+async function requestRecoveryCode(): Promise<void> {
+    recoveryBusy.value = true;
+    recoveryError.value = null;
+    try {
+        const response = await fetch(props.recovery_request_endpoint, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ mobile: recoveryMobile.value }),
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.message ?? 'Recovery could not be started.');
+        recoveryChallenge.value = payload.challenge_reference;
+        recoveryMessage.value = payload.message ?? 'Enter the recovery code sent by SMS.';
+    } catch (exception) {
+        recoveryError.value = exception instanceof Error ? exception.message : 'Recovery could not be started.';
+    } finally {
+        recoveryBusy.value = false;
+    }
+}
+
+async function verifyRecoveryCode(): Promise<void> {
+    if (!recoveryChallenge.value) return;
+    recoveryBusy.value = true;
+    recoveryError.value = null;
+    try {
+        const response = await fetch(props.recovery_verify_endpoint, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ challenge_reference: recoveryChallenge.value, code: recoveryCode.value }),
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.message ?? 'The recovery code could not be verified.');
+        window.location.href = payload.workspace_url;
+    } catch (exception) {
+        recoveryError.value = exception instanceof Error ? exception.message : 'The recovery code could not be verified.';
+    } finally {
+        recoveryBusy.value = false;
+    }
 }
 
 onMounted(loadBatch);
@@ -225,7 +266,23 @@ onMounted(loadBatch);
             </header>
 
             <div v-if="loading" class="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">Loading this batch…</div>
-            <div v-else-if="error" class="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200">{{ error }}</div>
+            <div v-else-if="error" class="space-y-5 rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200">
+                <p>{{ error }}</p>
+                <section class="max-w-md rounded-xl border border-rose-200 bg-white/70 p-4 dark:border-rose-800 dark:bg-slate-950/40" data-testid="batch-workspace-recovery">
+                    <h2 class="font-bold">Recover workspace</h2>
+                    <p class="mt-1 text-xs leading-5">Enter the mobile number used when this batch was created. We will send a one-time recovery code only after you submit it.</p>
+                    <form v-if="!recoveryChallenge" class="mt-3 space-y-2" @submit.prevent="requestRecoveryCode">
+                        <input v-model="recoveryMobile" type="tel" inputmode="tel" autocomplete="tel" required placeholder="09XXXXXXXXX" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950" />
+                        <button type="submit" :disabled="recoveryBusy" class="rounded-full bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{{ recoveryBusy ? 'Sending…' : 'Send recovery code' }}</button>
+                    </form>
+                    <form v-else class="mt-3 space-y-2" @submit.prevent="verifyRecoveryCode">
+                        <p class="text-xs">{{ recoveryMessage }}</p>
+                        <input v-model="recoveryCode" type="text" inputmode="numeric" autocomplete="one-time-code" required placeholder="Recovery code" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950" />
+                        <button type="submit" :disabled="recoveryBusy" class="rounded-full bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{{ recoveryBusy ? 'Checking…' : 'Recover workspace' }}</button>
+                    </form>
+                    <p v-if="recoveryError" class="mt-2 text-xs font-semibold text-rose-700">{{ recoveryError }}</p>
+                </section>
+            </div>
             <template v-else-if="batch">
                 <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</p><p class="mt-1 text-lg font-bold">{{ batch.status }}</p></div>

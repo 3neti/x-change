@@ -14,8 +14,8 @@ use LBHurtado\XChange\Models\IssuanceBatch;
 use LBHurtado\XChange\Services\Checkout\CheckoutLifecycle;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Commercial\ConfiguredCommercialPrincipalResolver;
-use LBHurtado\XChange\Services\IssuanceBatch\IssuanceBatchImportNormalizer;
 use LBHurtado\XChange\Services\IssuanceBatch\IssuanceBatchAccess;
+use LBHurtado\XChange\Services\IssuanceBatch\IssuanceBatchImportNormalizer;
 use LBHurtado\XChange\Services\IssuanceBatch\IssuanceBatchTabularReader;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceOrderAccess;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -58,7 +58,7 @@ final class PublicIssuanceBatchController extends Controller
 
     public function show(Request $request, IssuanceBatch $batch, IssuanceBatchAccess $batches): JsonResponse
     {
-        $batches->authorizeToken($request, $batch);
+        $batches->authorize($request, $batch);
 
         $batch->load('items');
 
@@ -89,7 +89,7 @@ final class PublicIssuanceBatchController extends Controller
 
     public function fund(Request $request, IssuanceBatch $batch, ConfiguredCommercialPrincipalResolver $resolver, PrepareIssuanceBatchFunding $funding, CheckoutLifecycle $checkouts, PublicIssuanceOrderAccess $orders, OnDemandIssuanceFundingOrderPresenter $presenter, IssuanceBatchAccess $batches): JsonResponse
     {
-        $batches->authorizeToken($request, $batch);
+        $batches->authorize($request, $batch);
         $validated = $request->validate(['idempotency_key' => ['required', 'string', 'max:191']]);
         $order = $funding->handle($resolver->resolve(), $batch, $validated['idempotency_key']);
         $checkouts->place($order);
@@ -105,7 +105,7 @@ final class PublicIssuanceBatchController extends Controller
 
     public function download(Request $request, IssuanceBatch $batch, IssuanceBatchAccess $batches): StreamedResponse
     {
-        $batches->authorizeToken($request, $batch);
+        $batches->authorize($request, $batch);
 
         return response()->streamDownload(function () use ($batch): void {
             $handle = fopen('php://output', 'wb');
