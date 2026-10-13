@@ -4502,6 +4502,7 @@ const canEstimateLivePricing = computed<boolean>(() => {
   const normalizedCount = Number(count.value);
 
   return (
+    (!props.publicMode || !props.turnstile?.enabled || props.turnstileToken !== "") &&
     Number.isFinite(normalizedAmount) &&
     normalizedAmount > 0 &&
     Number.isFinite(normalizedCount) &&
@@ -4512,6 +4513,7 @@ const {
   estimate: livePricingEstimate,
   estimating: livePricingEstimating,
   estimateError: livePricingEstimateError,
+  refreshEstimate: refreshLivePricingEstimate,
 } = usePayCodeCostEstimate(livePricingPayload, canEstimateLivePricing);
 const liveAccountDebit = computed<number | null>(() =>
   optionalMoney(livePricingEstimate.value?.account_debit),
@@ -7127,6 +7129,7 @@ function instructionRecord(
           :cost-estimate="livePricingEstimate"
           :cost-loading="livePricingEstimating"
           :cost-error="livePricingEstimateError"
+          :cost-retry="refreshLivePricingEstimate"
           :quantity="count"
         >
           <template #design>

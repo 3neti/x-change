@@ -43,6 +43,7 @@ const props = withDefaults(
         costEstimate?: PayCodeCostEstimate | null;
         costLoading?: boolean;
         costError?: string | null;
+        costRetry?: (() => void) | null;
         quantity?: string | number;
     }>(),
     {
@@ -61,6 +62,7 @@ const props = withDefaults(
         costEstimate: null,
         costLoading: false,
         costError: null,
+        costRetry: null,
         quantity: 1,
     },
 );
@@ -984,11 +986,20 @@ function stringValue(value: unknown): string | null {
                         class="rounded-xl border border-white/10 bg-white/5 px-3 py-4 text-sm text-slate-300"
                         data-testid="cockpit-pay-code-cost-unavailable"
                     >
-                        {{
+                        <span>{{
                             costError
                                 ? 'Estimate unavailable'
                                 : 'Enter an amount to see the issue cost.'
-                        }}
+                        }}</span>
+                        <button
+                            v-if="costError && costRetry"
+                            type="button"
+                            class="mt-3 inline-flex rounded-lg border border-white/20 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-emerald-300 hover:text-emerald-200"
+                            data-testid="cockpit-pay-code-cost-retry"
+                            @click="costRetry()"
+                        >
+                            Try again
+                        </button>
                     </p>
 
                     <div
