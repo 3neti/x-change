@@ -84,6 +84,8 @@ describe("PublicIssuanceBatchDialog", () => {
     );
     expect(wrapper.text()).toContain("Lester Hurtado");
     expect(wrapper.text()).toContain("PC-1");
+    expect(wrapper.text()).toContain("Disbursement");
+    expect(wrapper.text()).toContain("Redeemable");
     expect(wrapper.text()).toContain("1 / 1");
   });
 });

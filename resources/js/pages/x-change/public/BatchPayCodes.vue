@@ -100,9 +100,9 @@ function batchRecord(item: BatchItem): CockpitPayCodeExplorerRecord {
         template: 'Batch Pay Code',
         purpose: item.failure_message,
         capability: {
-            key: 'collection',
-            label: 'Collection',
-            voucherTypeLabel: 'Disbursable',
+            key: 'disbursement',
+            label: 'Disbursement',
+            voucherTypeLabel: 'Redeemable',
         },
         instructionBadges: [],
         amount: money(item.amount_minor),
