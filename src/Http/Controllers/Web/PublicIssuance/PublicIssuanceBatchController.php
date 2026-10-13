@@ -8,10 +8,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Str;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\IssuanceBatch\CreateIssuanceBatch;
 use LBHurtado\XChange\Actions\IssuanceBatch\EstimateIssuanceBatchPricing;
 use LBHurtado\XChange\Actions\IssuanceBatch\PrepareIssuanceBatchFunding;
 use LBHurtado\XChange\Models\IssuanceBatch;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Checkout\CheckoutLifecycle;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Commercial\ConfiguredCommercialPrincipalResolver;
@@ -129,6 +131,14 @@ final class PublicIssuanceBatchController extends Controller
         $batches->authorize($request, $batch);
 
         $batch->load('items');
+        $voucherIds = $batch->items->pluck('voucher_id')->filter()->values();
+        $vouchers = Voucher::query()->whereKey($voucherIds->all())->get()->keyBy(fn (Voucher $voucher): string => (string) $voucher->getKey());
+        $claims = VoucherClaim::query()
+            ->whereIn('voucher_id', $voucherIds->all())
+            ->latest('id')
+            ->get()
+            ->unique('voucher_id')
+            ->keyBy(fn (VoucherClaim $claim): string => (string) $claim->voucher_id);
 
         return response()->json([
             'reference' => $batch->reference,
@@ -139,20 +149,56 @@ final class PublicIssuanceBatchController extends Controller
             'expires_at' => $batch->expires_at?->toIso8601String(),
             'funded_at' => $batch->funded_at?->toIso8601String(),
             'issued_at' => $batch->issued_at?->toIso8601String(),
-            'items' => $batch->items->map(fn ($item): array => [
-                'ordinal' => $item->ordinal,
-                'source_row' => $item->source_row,
-                'name' => data_get($item->payload, 'name'),
-                'mobile' => data_get($item->payload, 'mobile'),
-                'email' => data_get($item->payload, 'email'),
-                'amount_minor' => $item->amount_minor,
-                'pay_code' => $item->pay_code,
-                'claim_url' => $item->claim_url,
-                'status' => $item->status,
-                'issued_at' => $item->issued_at?->toIso8601String(),
-                'failure_message' => $item->failure_message,
-            ])->values()->all(),
+            'items' => $batch->items->map(function ($item) use ($vouchers, $claims): array {
+                $voucher = $vouchers->get((string) $item->voucher_id);
+                $claim = $claims->get((string) $item->voucher_id);
+                $lifecycle = $this->batchItemLifecycle($voucher, $claim, (string) $item->status);
+
+                return [
+                    'ordinal' => $item->ordinal,
+                    'source_row' => $item->source_row,
+                    'name' => data_get($item->payload, 'name'),
+                    'mobile' => data_get($item->payload, 'mobile'),
+                    'email' => data_get($item->payload, 'email'),
+                    'amount_minor' => $item->amount_minor,
+                    'pay_code' => $item->pay_code,
+                    'claim_url' => $item->claim_url,
+                    'status' => $item->status,
+                    'lifecycle_status' => $lifecycle['status'],
+                    'redeemed_at' => $voucher?->redeemed_at?->toIso8601String(),
+                    'claim_summary' => $lifecycle['claim_summary'],
+                    'issued_at' => $item->issued_at?->toIso8601String(),
+                    'failure_message' => $item->failure_message,
+                ];
+            })->values()->all(),
         ]);
+    }
+
+    /** @return array{status: string, claim_summary: array<string, mixed>} */
+    private function batchItemLifecycle(?Voucher $voucher, ?VoucherClaim $claim, string $fallback): array
+    {
+        $claimStatus = strtolower((string) ($claim?->status ?? ''));
+        $status = match (true) {
+            in_array($claimStatus, ['pending', 'processing', 'queued'], true) => 'payout_pending',
+            in_array($claimStatus, ['failed', 'rejected', 'payout_rejected'], true) => 'payout_rejected',
+            in_array($claimStatus, ['paid', 'succeeded', 'withdrawn'], true) => 'paid',
+            $voucher?->redeemed_at !== null || $voucher?->closed_at !== null => 'redeemed',
+            $claim !== null && ($claim->remaining_balance_minor === null || (int) $claim->remaining_balance_minor <= 0) => 'redeemed',
+            $claim !== null => 'partially_claimed',
+            $voucher?->state?->value === 'cancelled' => 'cancelled',
+            $voucher?->state?->value === 'expired' || $voucher?->isExpired() === true => 'expired',
+            default => $fallback,
+        };
+
+        return [
+            'status' => $status,
+            'claim_summary' => $claim === null ? [] : [
+                'status' => $claimStatus !== '' ? $claimStatus : 'redeemed',
+                'claimed_at' => ($claim->completed_at ?? $claim->attempted_at ?? $claim->created_at)?->toIso8601String(),
+                'amount_minor' => $claim->disbursed_amount_minor ?? $claim->requested_amount_minor,
+                'currency' => $claim->currency ?? 'PHP',
+            ],
+        ];
     }
 
     public function fund(Request $request, IssuanceBatch $batch, ConfiguredCommercialPrincipalResolver $resolver, PrepareIssuanceBatchFunding $funding, CheckoutLifecycle $checkouts, PublicIssuanceOrderAccess $orders, OnDemandIssuanceFundingOrderPresenter $presenter, IssuanceBatchAccess $batches): JsonResponse

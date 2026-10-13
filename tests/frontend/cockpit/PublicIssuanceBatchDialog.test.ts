@@ -114,6 +114,14 @@ describe("PublicIssuanceBatchDialog", () => {
             pay_code: "PC-1",
             claim_url: "/x/claim/PC-1",
             status: "issued",
+            lifecycle_status: "redeemed",
+            redeemed_at: "2026-10-13T01:00:00+08:00",
+            claim_summary: {
+              status: "succeeded",
+              claimed_at: "2026-10-13T01:00:00+08:00",
+              amount_minor: 2500,
+              currency: "PHP",
+            },
             issued_at: "2026-10-13T00:00:00+08:00",
             failure_message: null,
           },
@@ -149,6 +157,7 @@ describe("PublicIssuanceBatchDialog", () => {
     expect(wrapper.text()).toContain("Disbursement");
     expect(wrapper.text()).toContain("Redeemable");
     expect(wrapper.text()).toContain("1 / 1");
+    expect(wrapper.text()).toContain("redeemed");
     expect(wrapper.get('[data-testid="batch-workspace-recovery-toggle"]').text()).toContain(
       "Need to recover this workspace?",
     );

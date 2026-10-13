@@ -29,6 +29,14 @@ type BatchItem = {
     pay_code: string | null;
     claim_url: string | null;
     status: string;
+    lifecycle_status?: string | null;
+    redeemed_at?: string | null;
+    claim_summary?: {
+        status?: string | null;
+        claimed_at?: string | null;
+        amount_minor?: number | null;
+        currency?: string | null;
+    };
     issued_at: string | null;
     failure_message: string | null;
 };
@@ -114,6 +122,7 @@ function clientTelemetry(): Record<string, number | string> {
 
 function batchRecord(item: BatchItem): CockpitPayCodeExplorerRecord {
     const issued = item.pay_code !== null;
+    const lifecycleStatus = item.lifecycle_status ?? item.status;
     const detailAction: CockpitPayCodeRowAction[] = item.pay_code === null
         ? []
         : [{
@@ -142,27 +151,27 @@ function batchRecord(item: BatchItem): CockpitPayCodeExplorerRecord {
             amount: money(item.amount_minor),
             targetAmount: null,
         },
-        status: item.status,
+        status: lifecycleStatus,
         consumerStatus: null,
         collection: {},
         claimSummary: {
-            claimed_at: null,
+            claimed_at: item.claim_summary?.claimed_at ?? item.redeemed_at ?? null,
             claimed_by_label: null,
             claimed_mobile_masked: null,
-            amount_minor: null,
-            currency: 'PHP',
+            amount_minor: item.claim_summary?.amount_minor ?? null,
+            currency: item.claim_summary?.currency ?? 'PHP',
             location_label: null,
         },
-        voucherStatus: item.status,
+        voucherStatus: lifecycleStatus,
         operationalStatus: {
-            key: item.status,
-            label: item.status,
-            tone: issued ? 'healthy' : 'warning',
-            availabilityKey: issued ? 'available' : 'pending',
-            availabilityLabel: issued ? 'Available' : 'Pending',
-            settlementOutcome: issued ? 'issued' : 'pending',
-            isTerminal: false,
-            canClaim: issued,
+            key: lifecycleStatus,
+            label: lifecycleStatus,
+            tone: lifecycleStatus === 'payout_rejected' ? 'critical' : lifecycleStatus === 'issued' ? 'healthy' : 'positive',
+            availabilityKey: lifecycleStatus === 'issued' ? 'available' : 'closed',
+            availabilityLabel: lifecycleStatus === 'issued' ? 'Available' : 'Closed',
+            settlementOutcome: lifecycleStatus === 'issued' ? 'issued' : lifecycleStatus,
+            isTerminal: lifecycleStatus !== 'issued' && lifecycleStatus !== 'partially_claimed',
+            canClaim: lifecycleStatus === 'issued' || lifecycleStatus === 'partially_claimed',
             canRetryPayout: false,
         },
         party: {
@@ -176,8 +185,8 @@ function batchRecord(item: BatchItem): CockpitPayCodeExplorerRecord {
             createdAt: null,
             startsAt: null,
             expiresAt: null,
-            redeemedAt: null,
-            terminalAt: item.issued_at,
+            redeemedAt: item.redeemed_at ?? item.claim_summary?.claimed_at ?? null,
+            terminalAt: item.redeemed_at ?? item.claim_summary?.claimed_at ?? item.issued_at,
         },
         terminalControl: {
             canExpire: false,
@@ -186,7 +195,7 @@ function batchRecord(item: BatchItem): CockpitPayCodeExplorerRecord {
             status: item.status,
         },
         owner: 'This issuance batch',
-        lastActivity: item.issued_at ?? 'Not issued',
+        lastActivity: item.redeemed_at ?? item.claim_summary?.claimed_at ?? item.issued_at ?? 'Not issued',
         attention: item.failure_message === null
             ? null
             : { key: 'batch-item-failed', label: 'Needs attention', message: item.failure_message, tone: 'warning' },
