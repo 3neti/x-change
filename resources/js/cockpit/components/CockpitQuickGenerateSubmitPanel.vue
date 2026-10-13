@@ -112,7 +112,6 @@ import CockpitRiderMessageEditor from "./CockpitRiderMessageEditor.vue";
 import CockpitRiderLibrary from "./CockpitRiderLibrary.vue";
 import CockpitRiderPreviewFrame from "./CockpitRiderPreviewFrame.vue";
 import CockpitQuickGenerateSurfaceSwitch from "./CockpitQuickGenerateSurfaceSwitch.vue";
-import PublicIssuanceTurnstile from "./PublicIssuanceTurnstile.vue";
 import type { CockpitQuickGenerateSurface } from "./CockpitQuickGenerateSurfaceSwitch.vue";
 import type { CockpitScheduledPortion } from "./CockpitScheduledPortionsEditor.vue";
 import CockpitValueUseControl from "./CockpitValueUseControl.vue";
@@ -153,6 +152,7 @@ const props = withDefaults(
     } | null;
     publicAccountUrl?: string | null;
     turnstile?: { enabled: boolean; site_key: string | null };
+    turnstileToken?: string;
     showEngineeringPreview?: boolean;
     showWorkspaceSwitcher?: boolean;
     allowTemplateManagement?: boolean;
@@ -174,10 +174,6 @@ const props = withDefaults(
 );
 
 const { currentTheme } = useTheme();
-const turnstileToken = ref("");
-const turnstileWidget = ref<InstanceType<
-  typeof PublicIssuanceTurnstile
-> | null>(null);
 
 function capabilityReadiness(
   key: string,
@@ -222,6 +218,7 @@ const emit = defineEmits<{
   submitStart: [payload: Record<string, unknown>];
   submitSuccess: [response: Record<string, unknown>];
   submitError: [error: Record<string, unknown>];
+  resetTurnstile: [];
 }>();
 
 type VoucherInputFieldOption = {
@@ -2164,7 +2161,7 @@ const canSubmit = computed<boolean>(() => {
     props.mutationContract?.runtime_enabled === true &&
     !publicIssuancePaused.value &&
     routeUrl.value !== null &&
-    (!props.turnstile?.enabled || turnstileToken.value !== "") &&
+    (!props.turnstile?.enabled || props.turnstileToken !== "") &&
     allowedMethods.value.includes("POST") &&
     selectedUnavailableCapabilities.value.length === 0 &&
     payeePolicy.value.issuable &&
@@ -4633,7 +4630,7 @@ async function submit(): Promise<void> {
         "Idempotency-Key": idempotencyKey,
         "X-Requested-With": "XMLHttpRequest",
         ...(props.publicMode && props.turnstile?.enabled
-          ? { "X-Turnstile-Token": turnstileToken.value }
+          ? { "X-Turnstile-Token": props.turnstileToken ?? "" }
           : {}),
         ...csrfHeader(),
       },
@@ -4729,7 +4726,7 @@ async function submit(): Promise<void> {
   } finally {
     processing.value = false;
     if (props.publicMode && props.turnstile?.enabled) {
-      turnstileWidget.value?.reset();
+      emit("resetTurnstile");
     }
   }
 }
@@ -6081,20 +6078,6 @@ function instructionRecord(
     data-testid="cockpit-quick-generate-submit-panel"
     @submit.prevent="submit"
   >
-    <Teleport v-if="publicMode && turnstile?.enabled" to="#public-issuance-verification">
-      <div class="rounded-2xl border border-slate-200 bg-white/80 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-        <p class="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Security check</p>
-        <PublicIssuanceTurnstile
-          v-if="turnstile.site_key"
-          ref="turnstileWidget"
-          :site-key="turnstile.site_key"
-          @verified="turnstileToken = $event"
-        />
-        <p v-else class="text-sm text-rose-700" role="alert">
-          Verification is unavailable. Please try again later.
-        </p>
-      </div>
-    </Teleport>
     <div
       v-if="templatePickerOpen"
       class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"

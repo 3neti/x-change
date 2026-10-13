@@ -156,7 +156,9 @@ const painPoints = [
             id="public-issuance-verification"
             class="mt-6 min-h-16"
             data-testid="public-issuance-verification"
-          />
+          >
+            <slot name="verification" />
+          </div>
         </header>
 
         <div
