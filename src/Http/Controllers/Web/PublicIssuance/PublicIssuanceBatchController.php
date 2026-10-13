@@ -99,7 +99,7 @@ final class PublicIssuanceBatchController extends Controller
     {
         $mapping ??= $normalizer->detectMapping($headers);
 
-        return array_filter($mapping, static fn (mixed $header, mixed $canonical): bool => is_string($canonical) && is_string($header) && in_array($header, $headers, true));
+        return array_filter($mapping, static fn (mixed $header, mixed $canonical): bool => is_string($canonical) && is_string($header) && in_array($header, $headers, true), ARRAY_FILTER_USE_BOTH);
     }
 
     private function decodeJsonInput(Request $request): void
