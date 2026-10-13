@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use LBHurtado\Contact\Models\Contact;
 use LBHurtado\Voucher\Data\VoucherOperationalSummaryData;
 use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Models\Voucher;
@@ -28,6 +29,7 @@ use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Models\VoucherClaimEvidence;
 use LBHurtado\XChange\Models\VoucherSliceExecution;
 use LBHurtado\XChange\Services\Claim\ClaimEvidenceRequirements;
+use LBHurtado\XChange\Services\Claim\ContactKycEvidenceResolver;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 use RuntimeException;
 use Throwable;
@@ -43,6 +45,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         protected ?VoucherFlowCapabilityResolverContract $flowCapabilities = null,
         protected ?VoucherCollectionProgressService $collectionProgress = null,
         protected ?VoucherConsumerStatusResolver $consumerStatuses = null,
+        protected ?ContactKycEvidenceResolver $contactKycEvidence = null,
     ) {}
 
     public function list(array $filters = []): array
@@ -1050,7 +1053,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             ->get();
 
         if ($evidence->isNotEmpty()) {
-            return $evidence->map(function (VoucherClaimEvidence $item) use ($voucher): array {
+            return $this->appendContactKycEvidence($voucher, $evidence->map(function (VoucherClaimEvidence $item) use ($voucher): array {
                 $artifactStatus = $this->claimEvidenceArtifactStatus($item);
                 $revealable = $artifactStatus === 'available';
 
@@ -1077,11 +1080,12 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
                             ])
                             : null,
                     'legacy' => false,
+                    'source' => 'claim',
                 ];
-            })->values()->all();
+            })->values()->all());
         }
 
-        return $voucher->inputs()
+        return $this->appendContactKycEvidence($voucher, $voucher->inputs()
             ->oldest('id')
             ->get()
             ->map(function (Model $input) use ($voucher): array {
@@ -1123,10 +1127,56 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
                             ])
                             : null,
                     'legacy' => true,
+                    'source' => 'input',
                 ];
             })
             ->values()
-            ->all();
+            ->all());
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $evidence
+     * @return array<int, array<string, mixed>>
+     */
+    protected function appendContactKycEvidence(Voucher $voucher, array $evidence): array
+    {
+        $contact = $voucher->contact;
+
+        if (! $contact instanceof Contact || ! $contact->isKycApproved() || $this->contactKycEvidence === null) {
+            return $evidence;
+        }
+
+        foreach ($this->contactKycEvidence->resolve($contact) as $artifact) {
+            $evidence[] = [
+                'id' => (int) $artifact->mediaId,
+                'claim_id' => null,
+                'claim_number' => null,
+                'key' => $artifact->type === 'selfie' ? 'kyc_selfie' : 'kyc_government_id',
+                'label' => $artifact->type === 'selfie' ? 'KYC Selfie' : 'Government ID',
+                'group' => 'verification',
+                'kind' => 'image',
+                'status' => 'captured',
+                'value' => $artifact->variant,
+                'captured_at' => null,
+                'verified_at' => null,
+                'artifact_status' => 'available',
+                'revealable' => true,
+                'reveal_href' => Route::has('x-change.cockpit.pay-codes.evidence.show')
+                    ? route('x-change.cockpit.pay-codes.evidence.show', [
+                        'code' => $voucher->code,
+                        'source' => 'kyc',
+                        'evidence' => $artifact->mediaId,
+                    ])
+                    : null,
+                'legacy' => false,
+                'source' => 'kyc',
+                'transaction_id' => $artifact->transactionId,
+                'mime_type' => $artifact->mimeType,
+                'size' => $artifact->size,
+            ];
+        }
+
+        return $evidence;
     }
 
     protected function claimEvidenceArtifactStatus(VoucherClaimEvidence $evidence): string

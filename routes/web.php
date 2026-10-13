@@ -252,7 +252,6 @@ Route::prefix('x/auto-generate')->middleware([
         ->middleware('throttle:30,1,public-auto-generate-batch-detail-read:')
         ->name('x-change.public-auto-generate.batches.pay-codes.data');
     Route::get('batches/{batch:reference}/pay-codes/{code}/evidence/{source}/{evidence}', [PublicIssuanceBatchPayCodeDetailController::class, 'evidence'])
-        ->whereNumber('evidence')
         ->middleware('throttle:30,1,public-auto-generate-batch-evidence:')
         ->name('x-change.public-auto-generate.batches.pay-codes.evidence');
     Route::get('batches/{batch:reference}', [PublicIssuanceBatchController::class, 'show'])
@@ -872,8 +871,7 @@ Route::prefix('x')->middleware([
             Route::get(
                 '{code}/evidence/{source}/{evidence}',
                 CockpitPayCodeEvidenceController::class,
-            )->whereIn('source', ['claim', 'input', 'envelope'])
-                ->whereNumber('evidence')
+            )->whereIn('source', ['claim', 'input', 'envelope', 'kyc'])
                 ->middleware('throttle:30,1')
                 ->name('x-change.cockpit.pay-codes.evidence.show');
             Route::get(

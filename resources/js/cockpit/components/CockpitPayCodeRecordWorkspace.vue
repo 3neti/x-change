@@ -77,8 +77,8 @@ const props = defineProps<{
 const initialTarget = workspaceTarget();
 const activeTab = ref<WorkspaceTab>(initialTarget.tab);
 const focusedClaimId = ref<number | null>(initialTarget.claimId);
-const revealedEvidence = ref<Set<number>>(new Set());
-const evidenceLoadErrors = ref<Set<number>>(new Set());
+const revealedEvidence = ref<Set<string>>(new Set());
+const evidenceLoadErrors = ref<Set<string>>(new Set());
 const correctedBankCode = ref("");
 const correctedAccountNumber = ref("");
 const engineeringPreview = ref<Record<string, unknown> | null>(null);
@@ -451,11 +451,15 @@ const envelopeProgress = computed(() => {
   return total > 0 ? Math.round((complete / total) * 100) : 0;
 });
 
-function revealEvidence(id: number): void {
+function evidenceKey(item: Record<string, unknown>): string {
+  return `${text(item.source) || "claim"}:${text(item.id)}`;
+}
+
+function revealEvidence(id: string): void {
   revealedEvidence.value = new Set([...revealedEvidence.value, id]);
 }
 
-function markEvidenceUnavailable(id: number): void {
+function markEvidenceUnavailable(id: string): void {
   evidenceLoadErrors.value = new Set([...evidenceLoadErrors.value, id]);
 }
 
@@ -1778,7 +1782,7 @@ function number(value: unknown): number {
                 <div class="grid gap-3 sm:grid-cols-2">
                   <article
                     v-for="item in group.items"
-                    :key="number(item.id)"
+                    :key="evidenceKey(item)"
                     class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/70"
                   >
                     <div
@@ -1787,18 +1791,18 @@ function number(value: unknown): number {
                     >
                       <img
                         v-if="
-                          revealedEvidence.has(number(item.id)) &&
-                          !evidenceLoadErrors.has(number(item.id))
+                          revealedEvidence.has(evidenceKey(item)) &&
+                          !evidenceLoadErrors.has(evidenceKey(item))
                         "
                         :src="text(item.reveal_href)"
                         :alt="text(item.label)"
                         class="h-full w-full object-contain"
-                        @error="markEvidenceUnavailable(number(item.id))"
+                        @error="markEvidenceUnavailable(evidenceKey(item))"
                       />
                       <div
                         v-if="
-                          revealedEvidence.has(number(item.id)) &&
-                          evidenceLoadErrors.has(number(item.id))
+                          revealedEvidence.has(evidenceKey(item)) &&
+                          evidenceLoadErrors.has(evidenceKey(item))
                         "
                         class="flex h-full items-center justify-center px-5 text-center text-xs leading-5 text-slate-500 dark:text-slate-400"
                         :data-testid="`pay-code-evidence-unavailable-${number(item.id)}`"
@@ -1810,7 +1814,7 @@ function number(value: unknown): number {
                         v-else
                         type="button"
                         class="flex h-full w-full flex-col items-center justify-center gap-2 text-slate-500 transition hover:bg-slate-200/60 dark:hover:bg-slate-800"
-                        @click="revealEvidence(number(item.id))"
+                        @click="revealEvidence(evidenceKey(item))"
                       >
                         <Eye class="h-6 w-6" />
                         <span class="text-xs font-semibold"

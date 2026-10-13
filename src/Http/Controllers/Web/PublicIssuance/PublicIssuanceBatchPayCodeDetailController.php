@@ -10,11 +10,13 @@ use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
+use LBHurtado\Contact\Models\Contact;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Models\IssuanceBatch;
 use LBHurtado\XChange\Models\VoucherClaimEvidence;
 use LBHurtado\XChange\Services\Claim\ClaimEvidenceArtifactReader;
+use LBHurtado\XChange\Services\Claim\ContactKycEvidenceResolver;
 use LBHurtado\XChange\Services\IssuanceBatch\IssuanceBatchAccess;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
 use Symfony\Component\HttpFoundation\HeaderUtils;
@@ -26,6 +28,7 @@ final class PublicIssuanceBatchPayCodeDetailController extends Controller
         private readonly CockpitReadOnlyPageProps $props,
         private readonly VoucherAccessContract $vouchers,
         private readonly IssuanceBatchAccess $batches,
+        private readonly ContactKycEvidenceResolver $contactKycEvidence,
     ) {}
 
     public function page(IssuanceBatch $batch, string $code): Response
@@ -79,6 +82,8 @@ final class PublicIssuanceBatchPayCodeDetailController extends Controller
             data_set($props, 'read_model.voucher.claims.evidence', $evidence);
         }
 
+        $this->appendContactKycEvidence($voucher, $props, $batch, $code);
+
         return response()->json($props);
     }
 
@@ -87,7 +92,7 @@ final class PublicIssuanceBatchPayCodeDetailController extends Controller
         IssuanceBatch $batch,
         string $code,
         string $source,
-        int $evidence,
+        string $evidence,
         ClaimEvidenceArtifactReader $artifactReader,
     ): HttpResponse {
         $this->batches->authorizeToken($request, $batch);
@@ -97,8 +102,9 @@ final class PublicIssuanceBatchPayCodeDetailController extends Controller
         abort_unless($voucher instanceof Voucher && (string) $item->voucher_id === (string) $voucher->getKey(), 404);
 
         [$contents, $mimeType, $filename] = match ($source) {
-            'claim' => $this->claimEvidence($voucher, $evidence, $artifactReader),
-            'input' => $this->inputEvidence($voucher, $evidence, $artifactReader),
+            'claim' => $this->claimEvidence($voucher, (int) $evidence, $artifactReader),
+            'input' => $this->inputEvidence($voucher, (int) $evidence, $artifactReader),
+            'kyc' => $this->contactKycEvidence($voucher, $evidence),
             default => abort(404),
         };
 
@@ -159,6 +165,62 @@ final class PublicIssuanceBatchPayCodeDetailController extends Controller
             $artifact['contents'],
             $artifact['mime_type'],
             $name.'.'.$artifact['extension'],
+        ];
+    }
+
+    /** @param array<string, mixed> $props */
+    private function appendContactKycEvidence(Voucher $voucher, array &$props, IssuanceBatch $batch, string $code): void
+    {
+        $contact = $voucher->contact;
+
+        if (! $contact instanceof Contact) {
+            return;
+        }
+
+        $evidence = (array) data_get($props, 'read_model.voucher.claims.evidence', []);
+
+        foreach ($this->contactKycEvidence->resolve($contact) as $artifact) {
+            $evidence[] = [
+                'id' => (int) $artifact->mediaId,
+                'kind' => 'image',
+                'requirement_key' => $artifact->type === 'selfie' ? 'kyc_selfie' : 'kyc_government_id',
+                'label' => $artifact->type === 'selfie' ? 'KYC Selfie' : 'Government ID',
+                'summary' => $artifact->variant === null ? 'Contact KYC evidence' : ucfirst($artifact->variant).' contact KYC evidence',
+                'revealable' => true,
+                'source' => 'kyc',
+                'reveal_href' => route(
+                    'x-change.public-auto-generate.batches.pay-codes.evidence',
+                    [
+                        'batch' => $batch->reference,
+                        'code' => $code,
+                        'source' => 'kyc',
+                        'evidence' => $artifact->mediaId,
+                    ],
+                    false,
+                ),
+            ];
+        }
+
+        data_set($props, 'read_model.voucher.claims.evidence', $evidence);
+    }
+
+    /** @return array{string, string, string} */
+    private function contactKycEvidence(Voucher $voucher, string $mediaId): array
+    {
+        $contact = $voucher->contact;
+
+        abort_unless($contact instanceof Contact && $contact->isKycApproved(), 404);
+
+        try {
+            $artifact = $this->contactKycEvidence->read($contact, $mediaId);
+        } catch (Throwable) {
+            abort(404);
+        }
+
+        return [
+            $artifact['contents'],
+            $artifact['mime_type'],
+            'contact-kyc.'.$artifact['extension'],
         ];
     }
 }

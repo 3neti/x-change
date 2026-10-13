@@ -9,10 +9,12 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
+use LBHurtado\Contact\Models\Contact;
 use LBHurtado\SettlementEnvelope\Models\EnvelopeAttachment;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Models\VoucherClaimEvidence;
 use LBHurtado\XChange\Services\Claim\ClaimEvidenceArtifactReader;
+use LBHurtado\XChange\Services\Claim\ContactKycEvidenceResolver;
 use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeDetailAccess;
 use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeEvidenceAccessJournal;
 use Symfony\Component\HttpFoundation\HeaderUtils;
@@ -25,13 +27,14 @@ final class CockpitPayCodeEvidenceController extends Controller
         private readonly CockpitPayCodeDetailAccess $access,
         private readonly CockpitPayCodeEvidenceAccessJournal $journal,
         private readonly ClaimEvidenceArtifactReader $artifactReader,
+        private readonly ContactKycEvidenceResolver $contactKycEvidence,
     ) {}
 
     public function __invoke(
         Request $request,
         string $code,
         string $source,
-        int $evidence,
+        string $evidence,
     ): Response {
         $voucher = $this->vouchers->findByCodeOrFail($code);
         $actor = $request->user();
@@ -45,6 +48,7 @@ final class CockpitPayCodeEvidenceController extends Controller
             'input' => $this->inputEvidence($voucher, $evidence),
             'claim' => $this->claimEvidence($voucher, $evidence),
             'envelope' => $this->envelopeEvidence($voucher, $evidence),
+            'kyc' => $this->kycEvidence($voucher, $evidence),
             default => abort(404),
         };
 
@@ -52,7 +56,7 @@ final class CockpitPayCodeEvidenceController extends Controller
             voucher: $voucher,
             actor: $actor,
             source: $source,
-            evidenceId: $evidence,
+            evidenceId: (int) $evidence,
             evidenceType: $evidenceType,
         );
 
@@ -70,11 +74,11 @@ final class CockpitPayCodeEvidenceController extends Controller
     }
 
     /** @return array{string, string, string, string} */
-    private function claimEvidence(mixed $voucher, int $evidence): array
+    private function claimEvidence(mixed $voucher, string $evidence): array
     {
         $item = VoucherClaimEvidence::query()
             ->where('voucher_id', $voucher->getKey())
-            ->findOrFail($evidence);
+            ->findOrFail((int) $evidence);
 
         try {
             $artifact = $this->artifactReader->stored($item);
@@ -91,9 +95,9 @@ final class CockpitPayCodeEvidenceController extends Controller
     }
 
     /** @return array{string, string, string, string} */
-    private function inputEvidence(mixed $voucher, int $evidence): array
+    private function inputEvidence(mixed $voucher, string $evidence): array
     {
-        $input = $voucher->inputs()->findOrFail($evidence);
+        $input = $voucher->inputs()->findOrFail((int) $evidence);
         $name = (string) $input->getAttribute('name');
 
         abort_unless(in_array($name, [
@@ -121,12 +125,12 @@ final class CockpitPayCodeEvidenceController extends Controller
     }
 
     /** @return array{string, string, string, string} */
-    private function envelopeEvidence(mixed $voucher, int $evidence): array
+    private function envelopeEvidence(mixed $voucher, string $evidence): array
     {
         $envelope = $voucher->envelope()->firstOrFail();
         $attachment = EnvelopeAttachment::query()
             ->whereBelongsTo($envelope, 'envelope')
-            ->findOrFail($evidence);
+            ->findOrFail((int) $evidence);
         $mimeType = (string) $attachment->mime_type;
 
         abort_unless(in_array($mimeType, [
@@ -149,6 +153,27 @@ final class CockpitPayCodeEvidenceController extends Controller
             $mimeType,
             basename((string) $attachment->original_filename),
             (string) $attachment->doc_type,
+        ];
+    }
+
+    /** @return array{string, string, string, string} */
+    private function kycEvidence(mixed $voucher, string $evidence): array
+    {
+        $contact = $voucher->contact;
+
+        abort_unless($contact instanceof Contact && $contact->isKycApproved(), 404);
+
+        try {
+            $artifact = $this->contactKycEvidence->read($contact, $evidence);
+        } catch (Throwable) {
+            abort(404);
+        }
+
+        return [
+            $artifact['contents'],
+            $artifact['mime_type'],
+            'kyc-'.$evidence.'.'.$artifact['extension'],
+            'kyc',
         ];
     }
 }
