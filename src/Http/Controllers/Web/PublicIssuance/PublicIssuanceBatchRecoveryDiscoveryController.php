@@ -80,7 +80,7 @@ final class PublicIssuanceBatchRecoveryDiscoveryController extends Controller
         ], 202);
     }
 
-    public function verify(Request $request, IssuanceBatchRecoveryJournal $journal): JsonResponse
+    public function verify(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'challenge_reference' => ['required', 'string', 'max:32'],
