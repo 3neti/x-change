@@ -70,7 +70,11 @@ const painPoints = [
     <div
       class="relative z-10 mx-auto w-full max-w-[90rem] px-4 sm:px-6 lg:px-8"
     >
-      <PublicNavigation :navigation="navigation" active="create" />
+      <PublicNavigation
+        :navigation="navigation"
+        :batch-recovery-endpoints="batch_recovery_endpoints"
+        active="create"
+      />
 
       <section
         class="grid items-start gap-8 py-9 lg:grid-cols-[minmax(0,0.82fr)_minmax(36rem,1.18fr)] lg:gap-12 lg:py-14"
@@ -129,7 +133,6 @@ const painPoints = [
               <ArrowRight class="size-4" aria-hidden="true" />
             </button>
             <PublicIssuanceBatchDialog v-if="batch_endpoints" :endpoints="batch_endpoints" />
-            <PublicIssuanceBatchRecovery v-if="batch_recovery_endpoints" :endpoints="batch_recovery_endpoints" />
             <a
               href="#public-how-it-works"
               class="inline-flex rounded-full px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-white hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white"

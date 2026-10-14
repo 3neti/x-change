@@ -133,6 +133,11 @@ describe("Public Auto Generate surface", () => {
           login_url: "/login",
           register_url: "/register",
         },
+        batch_recovery_endpoints: {
+          request: "/discover",
+          verify: "/verify",
+          select: "/select",
+        },
       },
       slots: {
         default: '<div data-testid="public-composer-slot">Composer</div>',
@@ -140,6 +145,11 @@ describe("Public Auto Generate surface", () => {
     });
 
     expect(wrapper.text()).toContain("Create a Pay Code in seconds");
+    expect(
+      wrapper
+        .get('[data-testid="public-navigation"] [data-testid="public-batch-recovery-launcher"]')
+        .exists(),
+    ).toBe(true);
     expect(wrapper.text()).toContain("Live public utility");
     expect(wrapper.text()).toContain("No asking for someone’s mobile number");
     expect(wrapper.text()).toContain(

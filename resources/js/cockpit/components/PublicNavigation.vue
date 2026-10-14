@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from "@inertiajs/vue3";
 import PayCodeLogo from "../../components/x-change/PayCodeLogo.vue";
+import PublicIssuanceBatchRecovery from "./PublicIssuanceBatchRecovery.vue";
 
 withDefaults(
   defineProps<{
@@ -12,6 +13,7 @@ withDefaults(
       register_url: string | null;
     };
     active?: "create" | "pricing" | null;
+    batchRecoveryEndpoints?: { request: string; verify: string; select: string };
   }>(),
   {
     navigation: () => ({
@@ -22,6 +24,7 @@ withDefaults(
       register_url: null,
     }),
     active: null,
+    batchRecoveryEndpoints: undefined,
   },
 );
 </script>
@@ -67,6 +70,10 @@ withDefaults(
       >
         Claim a Pay Code
       </Link>
+      <PublicIssuanceBatchRecovery
+        v-if="batchRecoveryEndpoints"
+        :endpoints="batchRecoveryEndpoints"
+      />
       <Link
         v-if="active !== 'create' && navigation.create_url"
         :href="navigation.create_url"
