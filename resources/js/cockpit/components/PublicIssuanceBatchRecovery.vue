@@ -128,9 +128,10 @@ async function selectBatch(batch: Batch): Promise<void> {
       Recover a previous batch
     </button>
 
-    <div v-if="open" class="fixed inset-0 z-50 overflow-y-auto p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="public-batch-recovery-title" data-testid="public-batch-recovery-modal" @keydown.esc="handleKeydown">
-      <button type="button" class="fixed inset-0 size-full cursor-default bg-slate-950/45 backdrop-blur-[2px]" aria-label="Close recovery dialog" data-testid="public-batch-recovery-backdrop" @click="close" />
-      <div class="relative mx-auto mt-8 w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:mt-16 sm:p-6" tabindex="-1">
+    <Teleport to="body">
+      <div v-if="open" class="fixed inset-0 z-[200] overflow-y-auto p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="public-batch-recovery-title" data-testid="public-batch-recovery-modal" @keydown.esc="handleKeydown">
+        <button type="button" class="fixed inset-0 size-full cursor-default bg-slate-950/45 backdrop-blur-[2px]" aria-label="Close recovery dialog" data-testid="public-batch-recovery-backdrop" @click="close" />
+        <div class="relative mx-auto mt-8 w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:mt-16 sm:p-6" tabindex="-1">
         <div class="flex items-start justify-between gap-4">
           <div>
             <h2 id="public-batch-recovery-title" class="text-lg font-bold tracking-tight">Recover a previous batch</h2>
@@ -166,7 +167,8 @@ async function selectBatch(batch: Batch): Promise<void> {
           <p v-if="error" class="text-xs font-semibold text-rose-700 dark:text-rose-300">{{ error }}</p>
           <button v-if="challenge && batches.length === 0 && error" type="button" class="text-xs font-bold text-emerald-700 underline dark:text-emerald-300" @click="requestNewCode">Request a new code</button>
         </div>
+        </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>

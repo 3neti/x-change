@@ -19,6 +19,7 @@ import BatchPayCodeDetail from "../../../resources/js/pages/x-change/public/Batc
 describe("PublicIssuanceBatchDialog", () => {
   it("offers mobile-based batch recovery in a compact modal", async () => {
     const wrapper = mount(PublicIssuanceBatchRecovery, {
+      global: { stubs: { Teleport: true } },
       props: {
         endpoints: { request: "/discover", verify: "/verify", select: "/select" },
       },
@@ -31,6 +32,7 @@ describe("PublicIssuanceBatchDialog", () => {
     await wrapper.get('[data-testid="public-batch-recovery-launcher"]').trigger("click");
 
     expect(wrapper.get('[data-testid="public-batch-recovery-modal"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="public-batch-recovery-modal"]').classes()).toContain("z-[200]");
     expect(wrapper.get('[data-testid="public-batch-recovery-modal"] h2').text()).toBe(
       "Recover a previous batch",
     );
@@ -62,6 +64,7 @@ describe("PublicIssuanceBatchDialog", () => {
       });
     vi.stubGlobal("fetch", fetchMock);
     const wrapper = mount(PublicIssuanceBatchRecovery, {
+      global: { stubs: { Teleport: true } },
       props: { endpoints: { request: "/discover", verify: "/verify", select: "/select" } },
     });
 
