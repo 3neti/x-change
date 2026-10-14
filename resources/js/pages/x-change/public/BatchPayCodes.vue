@@ -36,6 +36,15 @@ type BatchItem = {
         claimed_at?: string | null;
         amount_minor?: number | null;
         currency?: string | null;
+        claimer_name?: string | null;
+        claimer_mobile_masked?: string | null;
+        settlement_mode?: string | null;
+        settlement_rail?: string | null;
+        provider?: string | null;
+        bank_code?: string | null;
+        account_number_masked?: string | null;
+        provider_transaction_id?: string | null;
+        payout_status?: string | null;
     };
     issued_at: string | null;
     failure_message: string | null;
@@ -156,11 +165,11 @@ function batchRecord(item: BatchItem): CockpitPayCodeExplorerRecord {
         collection: {},
         claimSummary: {
             claimed_at: item.claim_summary?.claimed_at ?? item.redeemed_at ?? null,
-            claimed_by_label: null,
-            claimed_mobile_masked: null,
+            claimed_by_label: item.claim_summary?.claimer_name ?? item.claim_summary?.claimer_mobile_masked ?? null,
+            claimed_mobile_masked: item.claim_summary?.claimer_mobile_masked ?? null,
             amount_minor: item.claim_summary?.amount_minor ?? null,
             currency: item.claim_summary?.currency ?? 'PHP',
-            location_label: null,
+            location_label: item.claim_summary?.settlement_rail ?? item.claim_summary?.provider ?? item.claim_summary?.bank_code ?? null,
         },
         voucherStatus: lifecycleStatus,
         operationalStatus: {

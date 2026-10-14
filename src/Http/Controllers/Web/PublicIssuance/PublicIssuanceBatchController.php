@@ -13,6 +13,7 @@ use LBHurtado\XChange\Actions\IssuanceBatch\CreateIssuanceBatch;
 use LBHurtado\XChange\Actions\IssuanceBatch\EstimateIssuanceBatchPricing;
 use LBHurtado\XChange\Actions\IssuanceBatch\PrepareIssuanceBatchFunding;
 use LBHurtado\XChange\Models\IssuanceBatch;
+use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Checkout\CheckoutLifecycle;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
@@ -131,14 +132,7 @@ final class PublicIssuanceBatchController extends Controller
         $batches->authorize($request, $batch);
 
         $batch->load('items');
-        $voucherIds = $batch->items->pluck('voucher_id')->filter()->values();
-        $vouchers = Voucher::query()->whereKey($voucherIds->all())->get()->keyBy(fn (Voucher $voucher): string => (string) $voucher->getKey());
-        $claims = VoucherClaim::query()
-            ->whereIn('voucher_id', $voucherIds->all())
-            ->latest('id')
-            ->get()
-            ->unique('voucher_id')
-            ->keyBy(fn (VoucherClaim $claim): string => (string) $claim->voucher_id);
+        $items = $this->reportItems($batch);
 
         return response()->json([
             'reference' => $batch->reference,
@@ -149,35 +143,47 @@ final class PublicIssuanceBatchController extends Controller
             'expires_at' => $batch->expires_at?->toIso8601String(),
             'funded_at' => $batch->funded_at?->toIso8601String(),
             'issued_at' => $batch->issued_at?->toIso8601String(),
-            'items' => $batch->items->map(function ($item) use ($vouchers, $claims): array {
-                $voucher = $vouchers->get((string) $item->voucher_id);
-                $claim = $claims->get((string) $item->voucher_id);
-                $lifecycle = $this->batchItemLifecycle($voucher, $claim, (string) $item->status);
-
-                return [
-                    'ordinal' => $item->ordinal,
-                    'source_row' => $item->source_row,
-                    'name' => data_get($item->payload, 'name'),
-                    'mobile' => data_get($item->payload, 'mobile'),
-                    'email' => data_get($item->payload, 'email'),
-                    'amount_minor' => $item->amount_minor,
-                    'pay_code' => $item->pay_code,
-                    'claim_url' => $item->claim_url,
-                    'status' => $item->status,
-                    'lifecycle_status' => $lifecycle['status'],
-                    'redeemed_at' => $voucher?->redeemed_at?->toIso8601String(),
-                    'claim_summary' => $lifecycle['claim_summary'],
-                    'issued_at' => $item->issued_at?->toIso8601String(),
-                    'failure_message' => $item->failure_message,
-                ];
-            })->values()->all(),
+            'items' => $items->values()->all(),
         ]);
     }
 
-    /** @return array{status: string, claim_summary: array<string, mixed>} */
-    private function batchItemLifecycle(?Voucher $voucher, ?VoucherClaim $claim, string $fallback): array
+    /** @return \Illuminate\Support\Collection<int, array<string, mixed>> */
+    private function reportItems(IssuanceBatch $batch): \Illuminate\Support\Collection
     {
-        $claimStatus = strtolower((string) ($claim?->status ?? ''));
+        $voucherIds = $batch->items->pluck('voucher_id')->filter()->values();
+        $vouchers = Voucher::query()->whereKey($voucherIds->all())->get()->keyBy(fn (Voucher $voucher): string => (string) $voucher->getKey());
+        $claims = VoucherClaim::query()->whereIn('voucher_id', $voucherIds->all())->latest('id')->get()->unique('voucher_id')->keyBy(fn (VoucherClaim $claim): string => (string) $claim->voucher_id);
+        $reconciliations = DisbursementReconciliation::query()->whereIn('voucher_id', $voucherIds->all())->latest('id')->get()->unique('voucher_id')->keyBy(fn (DisbursementReconciliation $reconciliation): string => (string) $reconciliation->voucher_id);
+
+        return $batch->items->map(function ($item) use ($vouchers, $claims, $reconciliations): array {
+            $voucher = $vouchers->get((string) $item->voucher_id);
+            $claim = $claims->get((string) $item->voucher_id);
+            $reconciliation = $reconciliations->get((string) $item->voucher_id);
+            $lifecycle = $this->batchItemLifecycle($voucher, $claim, $reconciliation, (string) $item->status);
+
+            return [
+                'ordinal' => $item->ordinal,
+                'source_row' => $item->source_row,
+                'name' => data_get($item->payload, 'name'),
+                'mobile' => data_get($item->payload, 'mobile'),
+                'email' => data_get($item->payload, 'email'),
+                'amount_minor' => $item->amount_minor,
+                'pay_code' => $item->pay_code,
+                'claim_url' => $item->claim_url,
+                'status' => $item->status,
+                'lifecycle_status' => $lifecycle['status'],
+                'redeemed_at' => $voucher?->redeemed_at?->toIso8601String(),
+                'claim_summary' => $lifecycle['claim_summary'],
+                'issued_at' => $item->issued_at?->toIso8601String(),
+                'failure_message' => $item->failure_message,
+            ];
+        });
+    }
+
+    /** @return array{status: string, claim_summary: array<string, mixed>} */
+    private function batchItemLifecycle(?Voucher $voucher, ?VoucherClaim $claim, ?DisbursementReconciliation $reconciliation, string $fallback): array
+    {
+        $claimStatus = strtolower((string) ($claim?->status ?? $reconciliation?->status ?? ''));
         $status = match (true) {
             in_array($claimStatus, ['pending', 'processing', 'queued'], true) => 'payout_pending',
             in_array($claimStatus, ['failed', 'rejected', 'payout_rejected'], true) => 'payout_rejected',
@@ -192,13 +198,30 @@ final class PublicIssuanceBatchController extends Controller
 
         return [
             'status' => $status,
-            'claim_summary' => $claim === null ? [] : [
+            'claim_summary' => $claim === null && $reconciliation === null ? [] : [
                 'status' => $claimStatus !== '' ? $claimStatus : 'redeemed',
-                'claimed_at' => ($claim->completed_at ?? $claim->attempted_at ?? $claim->created_at)?->toIso8601String(),
-                'amount_minor' => $claim->disbursed_amount_minor ?? $claim->requested_amount_minor,
-                'currency' => $claim->currency ?? 'PHP',
+                'claimed_at' => ($reconciliation?->completed_at ?? $claim?->completed_at ?? $claim?->attempted_at ?? $claim?->created_at)?->toIso8601String(),
+                'amount_minor' => $reconciliation?->amount !== null ? (int) round((float) $reconciliation->amount * 100) : ($claim?->disbursed_amount_minor ?? $claim?->requested_amount_minor),
+                'currency' => $reconciliation?->currency ?? $claim?->currency ?? 'PHP',
+                'claimer_name' => data_get($claim?->meta, 'inputs.name') ?? data_get($claim?->meta, 'name'),
+                'claimer_mobile_masked' => $this->maskedMobile($claim?->claimer_mobile),
+                'settlement_mode' => $claim?->settlement_mode,
+                'settlement_rail' => $reconciliation?->settlement_rail,
+                'provider' => $reconciliation?->provider,
+                'bank_code' => $reconciliation?->bank_code ?? $claim->bank_code,
+                'account_number_masked' => $reconciliation?->account_number_masked ?? $claim->account_number_masked,
+                'provider_transaction_id' => $reconciliation?->provider_transaction_id,
+                'payout_status' => $reconciliation?->status,
+                'completed_at' => $reconciliation?->completed_at?->toIso8601String() ?? $claim->completed_at?->toIso8601String(),
             ],
         ];
+    }
+
+    private function maskedMobile(?string $mobile): ?string
+    {
+        $mobile = trim((string) $mobile);
+
+        return $mobile === '' ? null : (strlen($mobile) <= 4 ? str_repeat('•', strlen($mobile)) : str_repeat('•', strlen($mobile) - 4).substr($mobile, -4));
     }
 
     public function fund(Request $request, IssuanceBatch $batch, ConfiguredCommercialPrincipalResolver $resolver, PrepareIssuanceBatchFunding $funding, CheckoutLifecycle $checkouts, PublicIssuanceOrderAccess $orders, OnDemandIssuanceFundingOrderPresenter $presenter, IssuanceBatchAccess $batches): JsonResponse
@@ -223,9 +246,10 @@ final class PublicIssuanceBatchController extends Controller
 
         return response()->streamDownload(function () use ($batch): void {
             $handle = fopen('php://output', 'wb');
-            fputcsv($handle, ['Row', 'Name', 'Mobile', 'Email', 'Amount', 'Pay Code', 'Status', 'Claim URL']);
-            foreach ($batch->items as $item) {
-                fputcsv($handle, [$item->source_row, data_get($item->payload, 'name'), data_get($item->payload, 'mobile'), data_get($item->payload, 'email'), number_format($item->amount_minor / 100, 2, '.', ''), $item->pay_code, $item->status, $item->claim_url]);
+            fputcsv($handle, ['Row', 'Name', 'Mobile', 'Email', 'Amount', 'Pay Code', 'Status', 'Claim URL', 'Redemption Status', 'Claimed At', 'Claimer Name', 'Claimer Mobile', 'Settlement Mode', 'Settlement Rail', 'Provider', 'Bank/Wallet Code', 'Account Number', 'Redeemed Amount', 'Payout Status', 'Provider Transaction']);
+            foreach ($this->reportItems($batch) as $item) {
+                $claim = (array) ($item['claim_summary'] ?? []);
+                fputcsv($handle, [$item['source_row'], $item['name'], $item['mobile'], $item['email'], number_format($item['amount_minor'] / 100, 2, '.', ''), $item['pay_code'], $item['status'], $item['claim_url'], $item['lifecycle_status'], $claim['claimed_at'] ?? '', $claim['claimer_name'] ?? $item['name'], $claim['claimer_mobile_masked'] ?? '', $claim['settlement_mode'] ?? '', $claim['settlement_rail'] ?? '', $claim['provider'] ?? '', $claim['bank_code'] ?? '', $claim['account_number_masked'] ?? '', isset($claim['amount_minor']) ? number_format(((int) $claim['amount_minor']) / 100, 2, '.', '') : '', $claim['payout_status'] ?? '', $claim['provider_transaction_id'] ?? '']);
             }
             fclose($handle);
         }, $batch->reference.'.csv', ['Content-Type' => 'text/csv']);
