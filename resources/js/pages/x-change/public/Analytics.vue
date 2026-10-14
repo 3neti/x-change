@@ -62,7 +62,7 @@ function shortDate(value: string): string { return new Date(`${value}T00:00:00`)
         <article class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900" data-testid="analytics-activity-chart">
           <div class="flex items-center justify-between"><div><p class="text-lg font-bold">Issuance momentum</p><p class="text-sm text-slate-500 dark:text-slate-400">Issued and claimed Pay Codes over time</p></div><BarChart3 class="size-5 text-slate-400" /></div>
           <div class="mt-8 flex h-56 items-end gap-1 border-b border-slate-200 pb-0 dark:border-slate-700 sm:gap-2">
-            <div v-for="day in analytics.activity" :key="day.date" class="group flex min-w-0 flex-1 items-end justify-center gap-0.5" :title="`${day.date}: ${day.issued} issued, ${day.claimed} claimed`">
+            <div v-for="day in analytics.activity" :key="day.date" class="group flex h-full min-w-0 flex-1 items-end justify-center gap-0.5" :title="`${day.date}: ${day.issued} issued, ${day.claimed} claimed`">
               <div class="w-1/2 rounded-t bg-emerald-500 transition group-hover:bg-emerald-400" :style="{ height: `${Math.max(day.issued ? 4 : 0, (day.issued / maxActivity) * 100)}%` }" />
               <div class="w-1/2 rounded-t bg-sky-400 transition group-hover:bg-sky-300" :style="{ height: `${Math.max(day.claimed ? 4 : 0, (day.claimed / maxActivity) * 100)}%` }" />
             </div>

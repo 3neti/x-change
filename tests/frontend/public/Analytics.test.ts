@@ -46,6 +46,7 @@ describe("Public analytics", () => {
     expect(wrapper.get('[data-testid="public-analytics-page"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="analytics-kpis"]').text()).toContain("62.5%");
     expect(wrapper.get('[data-testid="analytics-activity-chart"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="analytics-activity-chart"] .group').classes()).toContain("h-full");
     expect(wrapper.get('[data-testid="analytics-funding-chart"]').text()).toContain("Qr Ph");
     expect(wrapper.get('[data-testid="analytics-periods"] a').attributes("href")).toContain("period=today");
   });
