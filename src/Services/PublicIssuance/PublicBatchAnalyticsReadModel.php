@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\PublicIssuance;
 
+use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -105,7 +106,7 @@ final class PublicBatchAnalyticsReadModel
     }
 
     /** @param Collection<int, array<string, mixed>> $items */
-    private function activity(Collection $items, ?Carbon $since): array
+    private function activity(Collection $items, ?CarbonInterface $since): array
     {
         $firstIssuedAt = $items->pluck('issued_at')->filter()->sort()->first();
         $start = $since?->copy()->startOfDay()
