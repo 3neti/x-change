@@ -2983,6 +2983,20 @@ return [
         ],
     ],
 
+    'public_auto_register' => [
+        'enabled' => (bool) env('XCHANGE_PUBLIC_AUTO_REGISTER_ENABLED', true),
+        'amount_minor' => (int) env('XCHANGE_PUBLIC_AUTO_REGISTER_AMOUNT_MINOR', 10000),
+        'currency' => env('XCHANGE_PUBLIC_AUTO_REGISTER_CURRENCY', 'PHP'),
+        'provider' => env('XCHANGE_PUBLIC_AUTO_REGISTER_PROVIDER', 'netbank'),
+        'ttl_seconds' => (int) env('XCHANGE_PUBLIC_AUTO_REGISTER_TTL_SECONDS', 1800),
+        'turnstile' => [
+            'enabled' => (bool) env('XCHANGE_PUBLIC_AUTO_REGISTER_TURNSTILE_ENABLED', env('XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_ENABLED', false)),
+            'site_key' => env('XCHANGE_PUBLIC_AUTO_REGISTER_TURNSTILE_SITE_KEY', env('XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_SITE_KEY')),
+            'secret_key' => env('XCHANGE_PUBLIC_AUTO_REGISTER_TURNSTILE_SECRET_KEY', env('XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_SECRET_KEY')),
+            'hostname' => env('XCHANGE_PUBLIC_AUTO_REGISTER_TURNSTILE_HOSTNAME', env('XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_HOSTNAME')),
+        ],
+    ],
+
     'execution' => [
         'stored_value' => [
             'issuance_enabled' => (bool) env(

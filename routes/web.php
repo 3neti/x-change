@@ -138,6 +138,8 @@ use LBHurtado\XChange\Http\Controllers\Web\Legal\AgreementPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Legal\DeclineAgreementController;
 use LBHurtado\XChange\Http\Controllers\Web\LinkPaynamicsWalletController;
 use LBHurtado\XChange\Http\Controllers\Web\Onboarding\InitialPinSetupController;
+use LBHurtado\XChange\Http\Controllers\Web\PublicOnboarding\AutoRegisterMutationController;
+use LBHurtado\XChange\Http\Controllers\Web\PublicOnboarding\AutoRegisterPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Onboarding\MobileVerificationChallengeController;
 use LBHurtado\XChange\Http\Controllers\Web\Onboarding\MobileVerificationPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Onboarding\MobileVerificationSubmissionController;
@@ -199,6 +201,13 @@ Route::middleware(['web', ShareXChangeBranding::class])->group(function (): void
         ->middleware(['auth', 'throttle:6,1'])
         ->where('token', '[A-Za-z0-9]{64}')
         ->name('x-change.provisioning.claim.accept');
+});
+
+Route::prefix('x/auto-register')->middleware(['web', ShareXChangeBranding::class, UseCommercialPrincipalForPublicIssuance::class])->group(function (): void {
+    Route::get('/', AutoRegisterPageController::class)->name('x-change.public-auto-register.show');
+    Route::post('start', [AutoRegisterMutationController::class, 'start'])->middleware('throttle:3,1,public-auto-register-start:')->name('x-change.public-auto-register.start');
+    Route::get('{registration:reference}', [AutoRegisterMutationController::class, 'status'])->middleware('throttle:30,1,public-auto-register-status:')->name('x-change.public-auto-register.status');
+    Route::post('{registration:reference}/complete', [AutoRegisterMutationController::class, 'complete'])->middleware('throttle:6,1,public-auto-register-complete:')->name('x-change.public-auto-register.complete');
 });
 
 Route::prefix('x/auto-generate')->middleware([
