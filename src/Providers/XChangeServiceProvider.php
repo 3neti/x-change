@@ -41,6 +41,7 @@ use LBHurtado\FormHandlerOtp\Contracts\OtpChallengeGateway;
 use LBHurtado\FormHandlerOtp\Services\TxtcmdrOtpChallengeGateway;
 use LBHurtado\FormHandlerOtp\Services\UnavailableOtpChallengeGateway;
 use LBHurtado\Onboarding\Contracts\ContactUserProvisionerContract;
+use LBHurtado\Onboarding\Support\OnboardingGuard;
 use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
 use LBHurtado\PaymentGateway\Contracts\WalletProxy;
 use LBHurtado\PaymentGateway\Funding\NetbankReusableFundingAddressProvider;
@@ -604,6 +605,10 @@ class XChangeServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        if (class_exists(OnboardingGuard::class) && ! $this->app->bound(OnboardingGuard::class)) {
+            $this->app->singleton(OnboardingGuard::class);
+        }
+
         $this->app->when(SubmitPayCodeClaim::class)
             ->needs(ProjectCompletionClaimEvidence::class)
             ->give(ProjectCompletionClaimEvidence::class);
