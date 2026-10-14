@@ -17,7 +17,7 @@ import BatchPayCodes from "../../../resources/js/pages/x-change/public/BatchPayC
 import BatchPayCodeDetail from "../../../resources/js/pages/x-change/public/BatchPayCodeDetail.vue";
 
 describe("PublicIssuanceBatchDialog", () => {
-  it("offers mobile-based batch recovery", () => {
+  it("offers mobile-based batch recovery in a compact modal", async () => {
     const wrapper = mount(PublicIssuanceBatchRecovery, {
       props: {
         endpoints: { request: "/discover", verify: "/verify", select: "/select" },
@@ -25,6 +25,57 @@ describe("PublicIssuanceBatchDialog", () => {
     });
 
     expect(wrapper.text()).toContain("Recover a previous batch");
+    expect(wrapper.get('[data-testid="public-batch-recovery-launcher"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="public-batch-recovery-modal"]').exists()).toBe(false);
+
+    await wrapper.get('[data-testid="public-batch-recovery-launcher"]').trigger("click");
+
+    expect(wrapper.get('[data-testid="public-batch-recovery-modal"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="public-batch-recovery-modal"] h2').text()).toBe(
+      "Recover a previous batch",
+    );
+
+    await wrapper.get('[data-testid="public-batch-recovery-close"]').trigger("click");
+    expect(wrapper.find('[data-testid="public-batch-recovery-modal"]').exists()).toBe(false);
+  });
+
+  it("makes the batch date and time primary over the batch reference", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ challenge_reference: "challenge-1", message: "Code sent." }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          batches: [{
+            reference: "01M4S7A3PV7TMQZ52WHWNCHEPT",
+            created_at: "2026-10-14T12:34:56+08:00",
+            status: "issued",
+            item_count: 2,
+            total_minor: 7500,
+            currency: "PHP",
+            issued_at: null,
+            expires_at: null,
+          }],
+        }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+    const wrapper = mount(PublicIssuanceBatchRecovery, {
+      props: { endpoints: { request: "/discover", verify: "/verify", select: "/select" } },
+    });
+
+    await wrapper.get('[data-testid="public-batch-recovery-launcher"]').trigger("click");
+    await wrapper.get('input[placeholder="09XXXXXXXXX"]').setValue("09173011987");
+    await wrapper.get("form").trigger("submit");
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    await wrapper.get('input[placeholder="Recovery code"]').setValue("123456");
+    await wrapper.get("form").trigger("submit");
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+
+    const batchButton = wrapper.get('[data-testid="public-batch-recovery-batch"]');
+    expect(batchButton.find(".text-base").text()).toContain("10/14/2026");
+    expect(batchButton.find(".font-mono").text()).toContain("01M4S7A3…HEPT");
   });
 
   it("exposes the batch creation action when package endpoints are supplied", () => {
