@@ -43,11 +43,12 @@ final class PublicIssuanceBatchRecoveryDiscoveryController extends Controller
 
         $reference = (string) Str::ulid();
         $normalized = MobileNumber::normalize($validated['mobile']);
-        $challenge = DB::transaction(function () use ($reference, $normalized): MobileVerificationChallenge {
+        $matchingHashes = $batches->pluck('uploader_mobile_hash')->filter()->unique()->values()->all();
+        $challenge = DB::transaction(function () use ($reference, $normalized, $matchingHashes): MobileVerificationChallenge {
             return MobileVerificationChallenge::query()->create([
                 'reference' => $reference,
                 'user_type' => self::class,
-                'user_id' => hash('sha256', (string) $normalized),
+                'user_id' => json_encode($matchingHashes, JSON_THROW_ON_ERROR),
                 'mobile_hash' => hash('sha256', (string) $normalized),
                 'provider' => (string) config('x-change.onboarding.identity_otp.driver', 'unavailable'),
                 'purpose' => 'public.batch-recovery-discovery',
@@ -100,7 +101,7 @@ final class PublicIssuanceBatchRecoveryDiscoveryController extends Controller
             ->block(5, fn () => $this->verifyChallenge($challenge, $validated['code']));
 
         $batches = IssuanceBatch::query()
-            ->where('uploader_mobile_hash', $challenge->mobile_hash)
+            ->whereIn('uploader_mobile_hash', $this->challengeHashes($challenge))
             ->latest('created_at')
             ->limit(25)
             ->get()
@@ -132,7 +133,7 @@ final class PublicIssuanceBatchRecoveryDiscoveryController extends Controller
         $batch = IssuanceBatch::query()->where('reference', $validated['batch_reference'])->first();
 
         abort_unless($challenge !== null && $challenge->expires_at?->isFuture() && $batch !== null, 404);
-        abort_unless(hash_equals((string) $batch->uploader_mobile_hash, (string) $challenge->mobile_hash), 404);
+        abort_unless(in_array((string) $batch->uploader_mobile_hash, $this->challengeHashes($challenge), true), 404);
 
         $access->grantSession($request, $batch);
 
@@ -159,5 +160,13 @@ final class PublicIssuanceBatchRecoveryDiscoveryController extends Controller
             throw ValidationException::withMessages(['code' => 'The recovery code is invalid or expired.']);
         }
         $challenge->forceFill(['status' => 'verified', 'verified_at' => now(), 'provider_verified_at' => now()])->save();
+    }
+
+    /** @return array<int, string> */
+    private function challengeHashes(MobileVerificationChallenge $challenge): array
+    {
+        $hashes = json_decode((string) $challenge->user_id, true);
+
+        return is_array($hashes) ? array_values(array_filter($hashes, 'is_string')) : [(string) $challenge->mobile_hash];
     }
 }
