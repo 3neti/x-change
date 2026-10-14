@@ -20,6 +20,7 @@ withDefaults(
   defineProps<{
     navigation?: {
       pricing_url: string | null;
+      analytics_url: string | null;
       claim_url: string | null;
       create_url: string | null;
       login_url: string | null;
@@ -31,6 +32,7 @@ withDefaults(
   {
     navigation: () => ({
       pricing_url: null,
+      analytics_url: null,
       claim_url: null,
       create_url: null,
       login_url: null,

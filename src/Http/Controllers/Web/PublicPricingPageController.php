@@ -17,6 +17,9 @@ final class PublicPricingPageController extends Controller
         return Inertia::render('x-change/public/Pricing', [
             'pricing' => $pricing->present(),
             'public_navigation' => [
+                'analytics_url' => Route::has('x-change.analytics.show')
+                    ? route('x-change.analytics.show', [], false)
+                    : null,
                 'pricing_url' => route('x-change.pricing.show', [], false),
                 'claim_url' => Route::has('x-change.claim.start')
                     ? route('x-change.claim.start', [], false)

@@ -83,6 +83,9 @@ final class PublicAutoGeneratePageController extends Controller
                 'allow_template_management' => false,
             ],
             'public_navigation' => [
+                'analytics_url' => Route::has('x-change.analytics.show')
+                    ? route('x-change.analytics.show', [], false)
+                    : null,
                 'pricing_url' => Route::has('x-change.pricing.show')
                     ? route('x-change.pricing.show', [], false)
                     : null,

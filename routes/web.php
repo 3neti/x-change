@@ -151,6 +151,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentQrCodeDownloadControll
 use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentVerificationCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationAcceptanceController;
 use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationPageController;
+use LBHurtado\XChange\Http\Controllers\Web\PublicAnalyticsPageController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicAutoGeneratePageController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicCheckoutDraftController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicCheckoutFundingMethodController;
@@ -198,6 +199,10 @@ Route::middleware(['web', ShareXChangeBranding::class])->group(function (): void
     Route::get('x/pricing', PublicPricingPageController::class)
         ->middleware('throttle:60,1,public-pricing-page:')
         ->name('x-change.pricing.show');
+
+    Route::get('x/analytics', PublicAnalyticsPageController::class)
+        ->middleware('throttle:60,1,public-analytics-page:')
+        ->name('x-change.analytics.show');
 
     Route::get('x/provisioning/{token}', ProvisioningInvitationPageController::class)
         ->middleware('throttle:30,1')

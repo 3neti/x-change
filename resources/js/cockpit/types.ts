@@ -1837,6 +1837,7 @@ export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
   };
   public_navigation?: {
     pricing_url: string | null;
+    analytics_url: string | null;
     claim_url: string | null;
     create_url: string | null;
     login_url: string | null;

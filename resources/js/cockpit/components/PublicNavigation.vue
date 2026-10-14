@@ -7,17 +7,19 @@ withDefaults(
   defineProps<{
     navigation?: {
       pricing_url: string | null;
+      analytics_url: string | null;
       claim_url: string | null;
       create_url: string | null;
       login_url: string | null;
       register_url: string | null;
     };
-    active?: "create" | "pricing" | null;
+    active?: "create" | "pricing" | "analytics" | null;
     batchRecoveryEndpoints?: { request: string; verify: string; select: string };
   }>(),
   {
     navigation: () => ({
       pricing_url: null,
+      analytics_url: null,
       claim_url: null,
       create_url: null,
       login_url: null,
@@ -62,6 +64,14 @@ withDefaults(
         data-testid="public-navigation-pricing"
       >
         Pricing
+      </Link>
+      <Link
+        v-if="navigation.analytics_url"
+        :href="navigation.analytics_url"
+        class="hidden rounded-full px-3 py-2 text-slate-600 transition hover:bg-white hover:text-slate-950 sm:inline-flex dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white"
+        data-testid="public-navigation-analytics"
+      >
+        Activity
       </Link>
       <Link
         v-if="navigation.claim_url"
