@@ -113,7 +113,7 @@ final class PublicBatchAnalyticsReadModel
             ?? ($firstIssuedAt === null ? now()->startOfDay() : Carbon::parse($firstIssuedAt)->startOfDay());
         $end = now()->startOfDay();
         $days = [];
-        for ($cursor = $start->copy(); $cursor->lessThanOrEqualTo($end); $cursor->addDay()) {
+        for ($cursor = $start->copy(); $cursor->lessThanOrEqualTo($end); $cursor = $cursor->addDay()) {
             $key = $cursor->toDateString();
             $days[$key] = ['date' => $key, 'issued' => 0, 'claimed' => 0];
         }
