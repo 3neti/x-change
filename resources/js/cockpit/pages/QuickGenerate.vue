@@ -66,6 +66,7 @@ const pageLayoutProps = computed(() =>
     ? {
         navigation: props.public_navigation,
         batch_endpoints: props.batch_endpoints,
+      batch_recovery_endpoints: props.batch_recovery_endpoints,
       }
     : {
         activeNavigation: "quick-generate",

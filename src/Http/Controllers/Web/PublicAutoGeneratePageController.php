@@ -98,6 +98,11 @@ final class PublicAutoGeneratePageController extends Controller
                 'create' => route('x-change.public-auto-generate.batches.store', [], false),
                 'fund' => route('x-change.public-auto-generate.batches.fund', ['batch' => '__REFERENCE__'], false),
             ],
+            'batch_recovery_endpoints' => [
+                'request' => route('x-change.public-auto-generate.batches.recovery.discovery.request', [], false),
+                'verify' => route('x-change.public-auto-generate.batches.recovery.discovery.verify', [], false),
+                'select' => route('x-change.public-auto-generate.batches.recovery.discovery.select', [], false),
+            ],
             'commercial_principal' => [
                 'reference' => $principal->reference,
                 'display_name' => $principal->legal_name,

@@ -2,6 +2,7 @@
 import { Head, Link } from "@inertiajs/vue3";
 import PublicNavigation from "../components/PublicNavigation.vue";
 import PublicIssuanceBatchDialog from "../components/PublicIssuanceBatchDialog.vue";
+import PublicIssuanceBatchRecovery from "../components/PublicIssuanceBatchRecovery.vue";
 import {
   ArrowRight,
   BadgeCheck,
@@ -25,6 +26,7 @@ withDefaults(
       register_url: string | null;
     };
     batch_endpoints?: { preview: string; create: string; fund: string };
+    batch_recovery_endpoints?: { request: string; verify: string; select: string };
   }>(),
   {
     navigation: () => ({
@@ -35,6 +37,7 @@ withDefaults(
       register_url: null,
     }),
     batch_endpoints: undefined,
+    batch_recovery_endpoints: undefined,
   },
 );
 
@@ -126,6 +129,7 @@ const painPoints = [
               <ArrowRight class="size-4" aria-hidden="true" />
             </button>
             <PublicIssuanceBatchDialog v-if="batch_endpoints" :endpoints="batch_endpoints" />
+            <PublicIssuanceBatchRecovery v-if="batch_recovery_endpoints" :endpoints="batch_recovery_endpoints" />
             <a
               href="#public-how-it-works"
               class="inline-flex rounded-full px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-white hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white"

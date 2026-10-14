@@ -12,10 +12,21 @@ vi.mock("@inertiajs/vue3", async () => {
 });
 
 import PublicIssuanceBatchDialog from "../../../resources/js/cockpit/components/PublicIssuanceBatchDialog.vue";
+import PublicIssuanceBatchRecovery from "../../../resources/js/cockpit/components/PublicIssuanceBatchRecovery.vue";
 import BatchPayCodes from "../../../resources/js/pages/x-change/public/BatchPayCodes.vue";
 import BatchPayCodeDetail from "../../../resources/js/pages/x-change/public/BatchPayCodeDetail.vue";
 
 describe("PublicIssuanceBatchDialog", () => {
+  it("offers mobile-based batch recovery", () => {
+    const wrapper = mount(PublicIssuanceBatchRecovery, {
+      props: {
+        endpoints: { request: "/discover", verify: "/verify", select: "/select" },
+      },
+    });
+
+    expect(wrapper.text()).toContain("Recover a previous batch");
+  });
+
   it("exposes the batch creation action when package endpoints are supplied", () => {
     const wrapper = mount(PublicIssuanceBatchDialog, {
       props: {

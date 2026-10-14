@@ -158,6 +158,7 @@ use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceBatchCon
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceBatchPayCodeDetailController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceBatchPayCodesPageController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceBatchRecoveryController;
+use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceBatchRecoveryDiscoveryController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuanceReceiptController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuanceRecoveryController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicPricingPageController;
@@ -230,6 +231,15 @@ Route::prefix('x/auto-generate')->middleware([
     ShareXChangeBranding::class,
     UseCommercialPrincipalForPublicIssuance::class,
 ])->group(function (): void {
+    Route::post('batches/recovery/discover', [PublicIssuanceBatchRecoveryDiscoveryController::class, 'request'])
+        ->middleware('throttle:3,10,public-auto-generate-batch-discovery-request:')
+        ->name('x-change.public-auto-generate.batches.recovery.discovery.request');
+    Route::post('batches/recovery/discover/verify', [PublicIssuanceBatchRecoveryDiscoveryController::class, 'verify'])
+        ->middleware('throttle:5,10,public-auto-generate-batch-discovery-verify:')
+        ->name('x-change.public-auto-generate.batches.recovery.discovery.verify');
+    Route::post('batches/recovery/discover/select', [PublicIssuanceBatchRecoveryDiscoveryController::class, 'select'])
+        ->middleware('throttle:10,10,public-auto-generate-batch-discovery-select:')
+        ->name('x-change.public-auto-generate.batches.recovery.discovery.select');
     Route::post('batches/preview', [PublicIssuanceBatchController::class, 'preview'])
         ->middleware('throttle:6,1,public-auto-generate-batch-preview:')
         ->name('x-change.public-auto-generate.batches.preview');
