@@ -115,14 +115,14 @@ async function selectBatch(batch: Batch): Promise<void> {
         <button type="submit" :disabled="busy" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{{ busy ? 'Sending…' : 'Send recovery code' }}</button>
       </form>
       <p v-if="message && !challenge" class="text-xs text-slate-600 dark:text-slate-300">{{ message }}</p>
-      <form v-else-if="batches.length === 0" class="space-y-2" @submit.prevent="verifyCode">
+      <form v-if="challenge && batches.length === 0" class="space-y-2" @submit.prevent="verifyCode">
         <p class="text-xs text-slate-600 dark:text-slate-300">{{ message }}</p>
         <div class="flex flex-col gap-2 sm:flex-row">
           <input v-model="code" required type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="Recovery code" class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" />
           <button type="submit" :disabled="busy" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{{ busy ? 'Checking…' : 'Verify code' }}</button>
         </div>
       </form>
-      <div v-else class="space-y-2">
+      <div v-if="challenge && batches.length > 0" class="space-y-2">
         <p class="text-xs text-slate-600 dark:text-slate-300">{{ message }}</p>
         <button v-for="batch in batches" :key="batch.reference" type="button" :disabled="busy" class="flex w-full items-center justify-between gap-4 rounded-xl border border-slate-200 p-3 text-left transition hover:border-emerald-500 disabled:opacity-50 dark:border-slate-700" @click="selectBatch(batch)">
           <span><span class="block text-sm font-bold">{{ shortReference(batch.reference) }}</span><span class="mt-1 block text-xs text-slate-500">{{ date(batch.created_at) }} · {{ batch.item_count }} entries · {{ batch.status }}</span></span>
