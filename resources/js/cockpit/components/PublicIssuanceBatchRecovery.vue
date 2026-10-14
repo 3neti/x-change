@@ -23,6 +23,10 @@ const busy = ref(false);
 const error = ref<string | null>(null);
 const message = ref<string | null>(null);
 
+function apiError(payload: { message?: string; errors?: Record<string, string[]> }): string {
+  return payload.errors?.code?.[0] ?? payload.message ?? "The recovery code could not be verified.";
+}
+
 function money(minor: number, currency: string): string {
   return new Intl.NumberFormat("en-PH", { style: "currency", currency }).format(minor / 100);
 }
@@ -68,7 +72,7 @@ async function verifyCode(): Promise<void> {
       body: JSON.stringify({ challenge_reference: challenge.value, code: code.value }),
     });
     const payload = await response.json();
-    if (!response.ok) throw new Error(payload.message ?? "The recovery code could not be verified.");
+    if (!response.ok) throw new Error(apiError(payload));
     batches.value = payload.batches ?? [];
     message.value = batches.value.length ? "Choose a workspace to continue." : "No matching workspaces were found.";
   } catch (exception) {
@@ -76,6 +80,14 @@ async function verifyCode(): Promise<void> {
   } finally {
     busy.value = false;
   }
+}
+
+function requestNewCode(): void {
+  challenge.value = null;
+  code.value = "";
+  batches.value = [];
+  message.value = null;
+  error.value = null;
 }
 
 async function selectBatch(batch: Batch): Promise<void> {
@@ -130,6 +142,7 @@ async function selectBatch(batch: Batch): Promise<void> {
         </button>
       </div>
       <p v-if="error" class="text-xs font-semibold text-rose-700 dark:text-rose-300">{{ error }}</p>
+      <button v-if="challenge && batches.length === 0 && error" type="button" class="text-xs font-bold text-emerald-700 underline dark:text-emerald-300" @click="requestNewCode">Request a new code</button>
     </div>
   </section>
 </template>
