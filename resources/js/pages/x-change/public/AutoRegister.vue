@@ -20,12 +20,22 @@ const qrSource = computed(() => {
     return `data:${qr.mime_type ?? 'image/png'};base64,${qr.base64_payload}`;
 });
 
+function csrfToken(): string {
+    const token = document.cookie
+        .split('; ')
+        .find((cookie) => cookie.startsWith('XSRF-TOKEN='))
+        ?.split('=').slice(1).join('=');
+
+    return token ? decodeURIComponent(token) : '';
+}
+
 async function start() {
     loading.value = true; error.value = '';
     try {
-        const response = await fetch(props.endpoints.start, { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '', 'Accept': 'application/json', 'Content-Type': 'application/json', ...(turnstileToken.value ? { 'X-Turnstile-Token': turnstileToken.value } : {}) }, body: JSON.stringify({ idempotency_key: crypto.randomUUID() }) });
-        if (!response.ok) throw new Error((await response.json()).message ?? 'Unable to start registration.');
-        registration.value = await response.json();
+        const response = await fetch(props.endpoints.start, { method: 'POST', headers: { 'X-XSRF-TOKEN': csrfToken(), 'Accept': 'application/json', 'Content-Type': 'application/json', ...(turnstileToken.value ? { 'X-Turnstile-Token': turnstileToken.value } : {}) }, body: JSON.stringify({ idempotency_key: crypto.randomUUID() }) });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body.message ?? 'Unable to start registration.');
+        registration.value = body;
     } catch (e: any) { error.value = e.message; } finally { loading.value = false; }
 }
 async function complete() {
@@ -33,7 +43,7 @@ async function complete() {
     loading.value = true; error.value = '';
     const url = props.endpoints.complete.replace('__REFERENCE__', registration.value.reference);
     try {
-        const response = await fetch(url, { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '', 'Accept': 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: pin.value }) });
+        const response = await fetch(url, { method: 'POST', headers: { 'X-XSRF-TOKEN': csrfToken(), 'Accept': 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: pin.value }) });
         const body = await response.json(); if (!response.ok) throw new Error(body.message ?? 'Unable to finish registration.'); registration.value = body;
     } catch (e: any) { error.value = e.message; } finally { loading.value = false; }
 }
