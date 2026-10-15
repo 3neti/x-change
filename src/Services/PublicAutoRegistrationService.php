@@ -9,12 +9,17 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
+use LBHurtado\Wallet\Treasury\Data\TreasuryPositionAllocationData;
+use LBHurtado\Wallet\Treasury\Data\TreasuryPositionData;
+use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\EmiCore\Data\Funding\ProviderPayerIdentityData;
 use LBHurtado\XChange\Actions\Auth\CreateNewMobileFirstUser;
 use LBHurtado\XChange\Actions\Funding\CreateFundingIntent;
 use LBHurtado\XChange\Actions\Funding\IssueFundingInstructions;
 use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
+use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\Funding\CreateFundingIntentData;
 use LBHurtado\XChange\Enums\FundingIntentPurpose;
@@ -23,6 +28,7 @@ use LBHurtado\XChange\Enums\PublicAutoRegistrationStatus;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\PublicAutoRegistration;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceTurnstileVerifier;
+use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use Propaganistas\LaravelPhone\PhoneNumber;
 use RuntimeException;
@@ -36,6 +42,9 @@ final readonly class PublicAutoRegistrationService
         private IssueFundingInstructions $issueFundingInstructions,
         private CreateNewMobileFirstUser $users,
         private PublicIssuanceTurnstileVerifier $turnstile,
+        private TreasuryProviderConnectionCatalog $connections,
+        private TreasuryAccountPortfolioProvisioningContract $portfolios,
+        private TreasuryPositionOperationContract $operations,
     ) {}
 
     public function start(Model|Authenticatable $operator, string $idempotencyKey, ?\Illuminate\Http\Request $request = null): PublicAutoRegistration
@@ -92,6 +101,8 @@ final readonly class PublicAutoRegistrationService
                 throw ValidationException::withMessages(['payment' => 'Payment has not been verified yet.']);
             }
             if ($locked->status === PublicAutoRegistrationStatus::Active) {
+                $this->allocateInitialClientFunds($locked, $intent);
+
                 return $locked;
             }
 
@@ -116,6 +127,8 @@ final readonly class PublicAutoRegistrationService
                 'password_confirmation' => $pin,
             ]);
 
+            $fundingOperation = $this->allocateInitialClientFunds($locked, $intent, $user);
+
             $locked->forceFill([
                 'contact_type' => $contact::class,
                 'contact_id' => (string) $contact->getKey(),
@@ -124,7 +137,15 @@ final readonly class PublicAutoRegistrationService
                 'status' => PublicAutoRegistrationStatus::Active,
                 'paid_at' => $intent->settled_at ?? now(),
                 'activated_at' => now(),
-                'metadata' => [...(array) $locked->metadata, 'payer_mobile' => $mobile],
+                'metadata' => [
+                    ...(array) $locked->metadata,
+                    'payer_mobile' => $mobile,
+                    'initial_client_funding' => [
+                        'amount_minor' => $intent->expected_amount_minor,
+                        'currency' => $intent->currency,
+                        'operation_reference' => $fundingOperation,
+                    ],
+                ],
             ])->save();
 
             return $locked->fresh(['fundingIntent']);
@@ -162,5 +183,109 @@ final readonly class PublicAutoRegistrationService
             return 'wallet:'.$wallet->getKey();
         }
         throw new RuntimeException('Funding account reference could not be resolved.');
+    }
+
+    private function allocateInitialClientFunds(
+        PublicAutoRegistration $registration,
+        FundingIntent $intent,
+        ?Model $recipient = null,
+    ): ?string {
+        $existingReference = data_get($registration->metadata, 'initial_client_funding.operation_reference');
+
+        if (is_string($existingReference) && trim($existingReference) !== '') {
+            return $existingReference;
+        }
+
+        if (! $recipient instanceof Model) {
+            $modelClass = (string) $registration->user_type;
+            $recipient = class_exists($modelClass) && is_a($modelClass, Model::class, true)
+                ? $modelClass::query()->find($registration->user_id)
+                : null;
+        }
+
+        if (! $recipient instanceof Model) {
+            throw new RuntimeException('The public registration account is unavailable for initial funding.');
+        }
+
+        $operator = $this->resolveOperator($intent);
+        $connection = $this->connection($intent);
+        $source = $this->position(
+            $this->portfolios->provision($operator, [$connection->reference])->positions,
+            TreasuryPositionPurpose::ClientFunds,
+        );
+        $destination = $this->position(
+            $this->portfolios->provision($recipient, [$connection->reference])->positions,
+            TreasuryPositionPurpose::ClientFunds,
+        );
+        $scope = hash('sha256', implode('|', [
+            'public-auto-registration-initial-funding',
+            $registration->reference,
+            $intent->reference,
+            $recipient->getMorphClass(),
+            (string) $recipient->getKey(),
+        ]));
+        $allocation = $this->operations->allocate(new TreasuryPositionAllocationData(
+            operationReference: 'public-auto-registration-funding:'.$scope,
+            sourcePositionReference: $source->positionReference,
+            destinationPositionReference: $destination->positionReference,
+            amountMinor: (int) $intent->expected_amount_minor,
+            currency: (string) $intent->currency,
+            idempotencyKey: 'public-auto-registration-funding-key:'.$scope,
+            externalReference: $intent->reference,
+            metadata: [
+                'source' => 'x_change_public_auto_registration',
+                'registration_reference' => $registration->reference,
+                'funding_intent_reference' => $intent->reference,
+                'provider_calls' => false,
+                'provider_inventory_changed' => false,
+            ],
+        ));
+
+        return $allocation->operationReference;
+    }
+
+    private function resolveOperator(FundingIntent $intent): Model
+    {
+        $class = (string) $intent->created_by_type;
+        $operator = class_exists($class) && is_a($class, Model::class, true)
+            ? $class::query()->find($intent->created_by_id)
+            : null;
+
+        if (! $operator instanceof Model) {
+            throw new RuntimeException('The public registration funding operator is unavailable.');
+        }
+
+        return $operator;
+    }
+
+    private function connection(FundingIntent $intent): \LBHurtado\XChange\Data\Treasury\TreasuryProviderConnectionData
+    {
+        $matches = array_values(array_filter(
+            $this->connections->active(),
+            static fn ($connection): bool => $connection->provider === mb_strtolower((string) $intent->provider_code)
+                && $connection->currency === mb_strtoupper((string) $intent->currency),
+        ));
+
+        if (count($matches) !== 1) {
+            throw new RuntimeException('Exactly one active Treasury connection is required for initial funding.');
+        }
+
+        return $matches[0];
+    }
+
+    /** @param list<TreasuryPositionData> $positions */
+    private function position(array $positions, TreasuryPositionPurpose $purpose): TreasuryPositionData
+    {
+        $matches = array_values(array_filter(
+            $positions,
+            static fn (TreasuryPositionData $position): bool => $position->purpose === $purpose
+                && $position->status === 'active',
+        ));
+
+        if (count($matches) !== 1) {
+            throw new RuntimeException("Exactly one active {$purpose->value} Treasury Position is required.");
+        }
+
+        return $matches[0];
     }
 }
