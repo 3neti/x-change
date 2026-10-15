@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services\Legal;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use LBHurtado\XChange\Data\Legal\AgreementDocumentData;
 use LBHurtado\XChange\Models\AgreementAcceptance;
@@ -40,9 +41,7 @@ final class CurrentAgreementService
             key: $key,
             version: $version,
             title: trim((string) ($metadata['title'] ?? 'End User Agreement')),
-            effectiveAt: filled($metadata['effective_at'] ?? null)
-                ? (string) $metadata['effective_at']
-                : null,
+            effectiveAt: $this->formatEffectiveAt($metadata['effective_at'] ?? null),
             sha256: hash('sha256', $contents),
             markdown: $markdown,
             html: Str::markdown($markdown, [
@@ -138,5 +137,22 @@ final class CurrentAgreementService
         $key = (string) config('x-change.legal.eula.evidence_key', config('app.key'));
 
         return hash_hmac('sha256', $value, $key);
+    }
+
+    private function formatEffectiveAt(mixed $value): ?string
+    {
+        if (! filled($value)) {
+            return null;
+        }
+
+        if (is_int($value) || (is_string($value) && ctype_digit($value))) {
+            return Carbon::createFromTimestampUTC((int) $value)->format('F j, Y');
+        }
+
+        $date = Carbon::createFromFormat('!Y-m-d', (string) $value);
+
+        return $date !== false
+            ? $date->format('F j, Y')
+            : (string) $value;
     }
 }

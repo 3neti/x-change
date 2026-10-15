@@ -45,6 +45,7 @@ it('blocks authenticated access until the current agreement is accepted', functi
     $page = $this->get(route('x-change.legal.eula.show'));
     $page->assertOk()
         ->assertSee('Beta End User Agreement')
+        ->assertSee('Effective September 27, 2026')
         ->assertSee('Client Funds remain attributable to the Principal.');
 
     $sha256 = hash('sha256', file_get_contents($this->agreementPath));
