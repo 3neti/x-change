@@ -8,6 +8,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
+use LBHurtado\XChange\Enums\FundingIntentStatus;
+use LBHurtado\XChange\Enums\FundingVerificationTrigger;
+use LBHurtado\XChange\Jobs\Funding\VerifyFundingIntentJob;
 use LBHurtado\XChange\Models\PublicAutoRegistration;
 use LBHurtado\XChange\Services\PublicAutoRegistrationService;
 
@@ -25,7 +29,23 @@ final class AutoRegisterMutationController extends Controller
 
     public function status(PublicAutoRegistration $registration, PublicAutoRegistrationService $registrations): JsonResponse
     {
-        return response()->json($registrations->present($registration->load('fundingIntent.settlement.providerFundingObservation')));
+        $registration->load('fundingIntent.settlement.providerFundingObservation');
+        $intent = $registration->fundingIntent;
+
+        if ($intent !== null && in_array($intent->status, [FundingIntentStatus::AwaitingFunds, FundingIntentStatus::EvidenceReceived, FundingIntentStatus::Verifying], true)) {
+            $dispatchKey = 'x-change:public-auto-register:verify:'.$intent->getKey();
+
+            if (Cache::add($dispatchKey, true, now()->addSeconds(5))) {
+                VerifyFundingIntentJob::dispatch(
+                    fundingIntentId: $intent->getKey(),
+                    providerCode: $intent->provider_code,
+                    trigger: FundingVerificationTrigger::Schedule,
+                    actorId: 'public-auto-register-monitor',
+                )->afterCommit();
+            }
+        }
+
+        return response()->json($registrations->present($registration->fresh(['fundingIntent.settlement.providerFundingObservation'])));
     }
 
     public function complete(Request $request, PublicAutoRegistration $registration, PublicAutoRegistrationService $registrations): JsonResponse
