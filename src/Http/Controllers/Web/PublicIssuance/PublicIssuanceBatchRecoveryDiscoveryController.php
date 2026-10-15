@@ -118,17 +118,7 @@ final class PublicIssuanceBatchRecoveryDiscoveryController extends Controller
             ->whereIn('uploader_mobile_hash', $this->challengeHashes($challenge))
             ->latest('created_at')
             ->limit(25)
-            ->get()
-            ->map(fn (IssuanceBatch $batch): array => [
-                'reference' => $batch->reference,
-                'created_at' => $batch->created_at?->toIso8601String(),
-                'status' => (string) $batch->status->value,
-                'item_count' => $batch->item_count,
-                'total_minor' => $batch->total_minor,
-                'currency' => $batch->currency,
-                'issued_at' => $batch->issued_at?->toIso8601String(),
-                'expires_at' => $batch->expires_at?->toIso8601String(),
-            ])->values();
+            ->get();
 
         $checkouts = Checkout::query()
             ->with('fundingOrder.voucher')
