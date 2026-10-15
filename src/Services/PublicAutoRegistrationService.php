@@ -102,9 +102,22 @@ final readonly class PublicAutoRegistrationService
                 throw ValidationException::withMessages(['payment' => 'Payment has not been verified yet.']);
             }
             if ($locked->status === PublicAutoRegistrationStatus::Active) {
-                $this->allocateInitialClientFunds($locked, $intent);
+                $fundingOperation = $this->allocateInitialClientFunds($locked, $intent);
 
-                return $locked;
+                if ($fundingOperation !== null && data_get($locked->metadata, 'initial_client_funding.operation_reference') !== $fundingOperation) {
+                    $locked->forceFill([
+                        'metadata' => [
+                            ...(array) $locked->metadata,
+                            'initial_client_funding' => [
+                                'amount_minor' => $intent->expected_amount_minor,
+                                'currency' => $intent->currency,
+                                'operation_reference' => $fundingOperation,
+                            ],
+                        ],
+                    ])->save();
+                }
+
+                return $locked->fresh(['fundingIntent']);
             }
 
             $observation = $intent->settlement?->providerFundingObservation;
