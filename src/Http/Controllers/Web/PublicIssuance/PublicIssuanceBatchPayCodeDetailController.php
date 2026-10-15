@@ -31,6 +31,7 @@ final class PublicIssuanceBatchPayCodeDetailController extends Controller
         private readonly IssuanceBatchAccess $batches,
         private readonly ContactKycEvidenceResolver $contactKycEvidence,
         private readonly PublicIssuanceVoucherActions $actions,
+        private readonly PublicIssuanceVoucherActionPolicy $actionPolicy,
     ) {}
 
     public function page(IssuanceBatch $batch, string $code): Response
@@ -86,10 +87,7 @@ final class PublicIssuanceBatchPayCodeDetailController extends Controller
 
         data_set($props, 'public_actions', [
             'url' => route('x-change.public-auto-generate.batches.pay-codes.action', ['batch' => $batch->reference, 'code' => $code], false),
-            'can_extend' => $voucher->state?->value === 'active' && $voucher->redeemed_at === null && $voucher->closed_at === null && $voucher->expires_at?->isFuture() === true,
-            'can_cancel' => $voucher->state?->value === 'active' && $voucher->redeemed_at === null && $voucher->closed_at === null,
-            'can_expire' => $voucher->state?->value === 'active' && $voucher->redeemed_at === null && $voucher->closed_at === null,
-            'can_request_refund' => in_array($voucher->state?->value, ['expired', 'cancelled'], true) && $voucher->redeemed_at === null,
+            ...$this->actionPolicy->permissions($voucher),
         ]);
 
         $this->appendContactKycEvidence($voucher, $props, $batch, $code);

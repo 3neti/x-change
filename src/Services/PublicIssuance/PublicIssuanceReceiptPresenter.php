@@ -9,6 +9,8 @@ use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 
 final readonly class PublicIssuanceReceiptPresenter
 {
+    public function __construct(private PublicIssuanceVoucherActionPolicy $actionPolicy) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -35,18 +37,7 @@ final readonly class PublicIssuanceReceiptPresenter
             ] : null,
             ...($canManage && $order->voucher instanceof Voucher ? ['actions' => [
                 'url' => route('x-change.public-auto-generate.issuances.action', ['order' => $order->reference], false),
-                'can_extend' => $order->voucher->state?->value === 'active'
-                    && $order->voucher->redeemed_at === null
-                    && $order->voucher->closed_at === null
-                    && $order->voucher->expires_at?->isFuture() === true,
-                'can_cancel' => $order->voucher->state?->value === 'active'
-                    && $order->voucher->redeemed_at === null
-                    && $order->voucher->closed_at === null,
-                'can_expire' => $order->voucher->state?->value === 'active'
-                    && $order->voucher->redeemed_at === null
-                    && $order->voucher->closed_at === null,
-                'can_request_refund' => in_array($order->voucher->state?->value, ['expired', 'cancelled'], true)
-                    && $order->voucher->redeemed_at === null,
+                ...$this->actionPolicy->permissions($order->voucher),
             ]] : []),
             'activity' => $order->events->map(static fn ($event): array => [
                 'sequence' => $event->sequence,
