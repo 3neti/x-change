@@ -3838,6 +3838,32 @@ describe('Cockpit Quick Generate foundation', () => {
             .toBeDefined();
     });
 
+    it('offers a human-readable public expiration and normalizes it for instructions', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                publicMode: true,
+                templates: cockpitQuickGenerateTemplates,
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.public-auto-generate.store',
+                    route_url: '/x/auto-generate',
+                    allowed_methods: ['GET', 'POST'],
+                },
+            },
+        });
+
+        const expiration = wrapper.get<HTMLInputElement>(
+            '[data-testid="public-auto-generate-expiration-input"]',
+        );
+
+        await expiration.setValue('30 minutes');
+
+        expect(
+            wrapper.find('[data-testid="public-auto-generate-expiration-error"]').exists(),
+        ).toBe(false);
+        expect(quickGenerateEngineeringPreview(wrapper).ttl).toBe('PT30M');
+    });
+
     it('explains a pause to a stale public tab and prevents another submission', async () => {
         const fetchMock = vi.fn().mockResolvedValueOnce({
             ok: true,

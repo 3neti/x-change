@@ -2166,6 +2166,7 @@ const canSubmit = computed<boolean>(() => {
     selectedUnavailableCapabilities.value.length === 0 &&
     payeePolicy.value.issuable &&
     feedbackValid.value &&
+    expirationValidationError.value === null &&
     namedClaimSliceValidationMessage.value === null &&
     storedValuePolicyError.value === null &&
     claimRecipientError.value === null &&
@@ -2187,6 +2188,7 @@ const canGenerateClaimPreview = computed<boolean>(() => {
     normalizedAmount > 0 &&
     payeePolicy.value.issuable &&
     feedbackValid.value &&
+    expirationValidationError.value === null &&
     namedClaimSliceValidationMessage.value === null &&
     storedValuePolicyError.value === null &&
     claimRecipientError.value === null &&
@@ -3085,7 +3087,7 @@ const effectiveTtl = computed<string>(() => {
   const advancedTtl = ttl.value.trim();
 
   if (advancedTtl !== "") {
-    return advancedTtl;
+    return normalizeDurationInput(advancedTtl) ?? advancedTtl;
   }
 
   if (expiryPreset.value === "custom") {
@@ -3097,6 +3099,59 @@ const effectiveTtl = computed<string>(() => {
   }
 
   return expiryPreset.value === "none" ? "" : expiryPreset.value;
+});
+
+function normalizeDurationInput(value: string): string | null {
+  const trimmed = value.trim();
+
+  if (trimmed === "") {
+    return "";
+  }
+
+  if (
+    /^P(?:\d+(?:\.\d+)?[DWMY]|T\d+(?:\.\d+)?[HMS])(?:\d+(?:\.\d+)?[DWMY])?(?:T\d+(?:\.\d+)?[HMS])?$/i.test(
+      trimmed,
+    )
+  ) {
+    return trimmed.toUpperCase();
+  }
+
+  const match = trimmed.match(
+    /^(\d+(?:\.\d+)?)\s*(minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|w)$/i,
+  );
+
+  if (match === null) {
+    return null;
+  }
+
+  const amount = Number(match[1]);
+  const unit = match[2].toLowerCase();
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return null;
+  }
+
+  if (["minutes", "minute", "mins", "min", "m"].includes(unit)) {
+    return `PT${amount}M`;
+  }
+
+  if (["hours", "hour", "hrs", "hr", "h"].includes(unit)) {
+    return `PT${amount}H`;
+  }
+
+  if (["weeks", "week", "w"].includes(unit)) {
+    return `P${amount}W`;
+  }
+
+  return `P${amount}D`;
+}
+
+const expirationValidationError = computed<string | null>(() => {
+  const value = ttl.value.trim();
+
+  return value === "" || normalizeDurationInput(value) !== null
+    ? null
+    : "Use a duration such as 30 minutes, 2 hours, 1 day, or 1 week.";
 });
 
 const effectiveExpiry = computed<EffectiveExpiry>(() => {
@@ -3118,7 +3173,7 @@ const effectiveExpiry = computed<EffectiveExpiry>(() => {
 
   if (advancedTtl !== "") {
     const payload: Record<string, string> = {
-      ttl: advancedTtl,
+      ttl: normalizeDurationInput(advancedTtl) ?? advancedTtl,
     };
 
     return {
@@ -6883,6 +6938,42 @@ function instructionRecord(
                 @validation="feedbackTokenErrors = $event"
               />
             </div>
+
+            <label
+              v-if="publicMode"
+              class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+              data-testid="public-auto-generate-expiration"
+            >
+              <span class="flex min-w-0 items-center gap-1">
+                <span class="min-w-0 truncate">Expiration</span>
+                <CockpitFieldHelp
+                  label="About Expiration"
+                  tooltip="Choose how long the Pay Code can be claimed."
+                />
+              </span>
+              <input
+                v-model="ttl"
+                type="text"
+                inputmode="text"
+                autocomplete="off"
+                placeholder="1 day"
+                class="h-11 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 shadow-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50 dark:focus:border-emerald-600 dark:focus:ring-emerald-950"
+                data-testid="public-auto-generate-expiration-input"
+                :aria-invalid="expirationValidationError !== null"
+                :disabled="processing"
+              />
+              <span class="text-[11px] font-normal leading-5 text-slate-500 dark:text-slate-400">
+                Try “30 minutes”, “2 hours”, “1 day”, or “1 week”. Leave blank
+                for no expiration.
+              </span>
+              <span
+                v-if="expirationValidationError"
+                class="text-[11px] font-medium text-rose-600 dark:text-rose-300"
+                data-testid="public-auto-generate-expiration-error"
+              >
+                {{ expirationValidationError }}
+              </span>
+            </label>
 
             <label
               v-if="publicMode"
