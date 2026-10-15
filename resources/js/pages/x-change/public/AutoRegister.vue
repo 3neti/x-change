@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import PublicIssuanceTurnstile from '../../../cockpit/components/PublicIssuanceTurnstile.vue';
 
 type Props = { amount_minor: number; currency: string; endpoints: Record<string, string>; turnstile: { enabled: boolean; site_key?: string } };
@@ -9,6 +9,7 @@ const pin = ref('');
 const loading = ref(false);
 const error = ref('');
 const turnstileToken = ref('');
+let statusTimer: ReturnType<typeof setInterval> | null = null;
 const amount = computed(() => `${props.currency} ${(props.amount_minor / 100).toFixed(2)}`);
 const qrSource = computed(() => {
     const qr = registration.value?.instructions?.qr_code;
@@ -29,6 +30,48 @@ function csrfToken(): string {
     return token ? decodeURIComponent(token) : '';
 }
 
+function statusUrl(reference: string): string {
+    return props.endpoints.status.replace('__REFERENCE__', reference);
+}
+
+function isTerminal(status: string | undefined): boolean {
+    return status === 'active' || status === 'expired' || status === 'cancelled';
+}
+
+async function refreshStatus(): Promise<void> {
+    const reference = registration.value?.reference;
+
+    if (!reference) {
+        return;
+    }
+
+    try {
+        const response = await fetch(statusUrl(reference), { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+        const body = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(body.message ?? 'Unable to check payment status.');
+        }
+
+        registration.value = body;
+
+        if (isTerminal(body.status) && statusTimer !== null) {
+            clearInterval(statusTimer);
+            statusTimer = null;
+        }
+    } catch (e: any) {
+        error.value = e.message;
+    }
+}
+
+function beginStatusPolling(): void {
+    if (statusTimer !== null) {
+        clearInterval(statusTimer);
+    }
+
+    statusTimer = setInterval(() => void refreshStatus(), 3000);
+}
+
 async function start() {
     loading.value = true; error.value = '';
     try {
@@ -36,8 +79,30 @@ async function start() {
         const body = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(body.message ?? 'Unable to start registration.');
         registration.value = body;
+        sessionStorage.setItem('x-change.public-auto-register.reference', body.reference);
+        beginStatusPolling();
     } catch (e: any) { error.value = e.message; } finally { loading.value = false; }
 }
+
+onMounted(async () => {
+    const reference = sessionStorage.getItem('x-change.public-auto-register.reference');
+
+    if (!reference) {
+        return;
+    }
+
+    registration.value = { reference, status: 'checking_payment' };
+    await refreshStatus();
+    if (!isTerminal(registration.value?.status)) {
+        beginStatusPolling();
+    }
+});
+
+onBeforeUnmount(() => {
+    if (statusTimer !== null) {
+        clearInterval(statusTimer);
+    }
+});
 async function complete() {
     if (!registration.value) return;
     loading.value = true; error.value = '';
@@ -56,7 +121,11 @@ async function complete() {
             <p class="mt-3 text-slate-600">Pay {{ amount }} through QR Ph. Your verified payer name and mobile are used to create your account. KYC is completed later when a protected operation requires it.</p>
             <PublicIssuanceTurnstile v-if="props.turnstile.enabled && props.turnstile.site_key && !registration" :site-key="props.turnstile.site_key" action="public_auto_register" @verified="turnstileToken = $event" />
             <button v-if="!registration" :disabled="loading" class="mt-6 rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white disabled:opacity-50" @click="start">Are you ready?</button>
-            <p v-if="registration" class="mt-5 rounded-xl bg-slate-50 p-4 text-sm">{{ registration.status === 'awaiting_payment' ? 'Scan the QR Ph payment instructions below. This page will be ready for your PIN after payment is verified.' : registration.status === 'payment_settled' ? 'Payment verified. Choose a PIN to finish creating your account.' : registration.status === 'active' ? 'Your account is ready. A cockpit link will be sent by SMS.' : 'Registration is being processed.' }}</p>
+            <div v-if="registration" class="mt-5 rounded-xl bg-slate-50 p-4 text-sm">
+                <p>{{ registration.status === 'awaiting_payment' ? 'Scan the QR Ph payment instructions below. We will check for payment automatically.' : registration.status === 'payment_settled' ? 'Payment verified. Choose a PIN to finish creating your account.' : registration.status === 'active' ? 'Your account is ready. A cockpit link will be sent by SMS.' : 'Checking payment status.' }}</p>
+                <p class="mt-2 text-xs text-slate-500">Registration reference: {{ registration.reference }}</p>
+                <button v-if="registration.status === 'awaiting_payment' || registration.status === 'checking_payment'" type="button" class="mt-3 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700" :disabled="loading" @click="refreshStatus">Check payment</button>
+            </div>
             <div v-if="registration?.instructions" class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-center">
                 <p class="text-sm font-semibold text-slate-900">Scan to pay {{ amount }}</p>
                 <img v-if="qrSource" :src="qrSource" alt="QR Ph payment code" class="mx-auto mt-4 h-72 w-72 rounded-xl bg-white p-3 shadow-sm" />
