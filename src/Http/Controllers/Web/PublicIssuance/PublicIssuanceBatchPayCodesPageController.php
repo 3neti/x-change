@@ -21,6 +21,7 @@ final class PublicIssuanceBatchPayCodesPageController extends Controller
 
         return Inertia::render('x-change/public/BatchPayCodes', [
             'batch_reference' => $batch->reference,
+            'recovery_available' => filled($batch->uploader_mobile_hash),
             'batch_endpoint' => route(
                 'x-change.public-auto-generate.batches.show',
                 ['batch' => $batch->reference],

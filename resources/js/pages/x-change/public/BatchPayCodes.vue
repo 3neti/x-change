@@ -11,6 +11,7 @@ defineOptions({ layout: null });
 
 const props = defineProps<{
     batch_reference: string;
+    recovery_available: boolean;
     batch_endpoint: string;
     download_endpoint: string;
     detail_url_template: string;
@@ -306,7 +307,7 @@ onMounted(loadBatch);
                 </div>
             </header>
 
-            <section class="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm dark:border-amber-900 dark:bg-amber-950/20" data-testid="batch-workspace-recovery">
+            <section v-if="props.recovery_available" class="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm dark:border-amber-900 dark:bg-amber-950/20" data-testid="batch-workspace-recovery">
                 <button type="button" class="flex w-full items-center justify-between gap-3 text-left" data-testid="batch-workspace-recovery-toggle" @click="recoveryOpen = !recoveryOpen">
                     <span>
                         <span class="block text-sm font-bold text-amber-950 dark:text-amber-100">Need to recover this workspace?</span>

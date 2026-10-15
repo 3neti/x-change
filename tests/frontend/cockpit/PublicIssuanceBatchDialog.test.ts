@@ -198,6 +198,7 @@ describe("PublicIssuanceBatchDialog", () => {
     const wrapper = mount(BatchPayCodes, {
       props: {
         batch_reference: "BATCH-1",
+        recovery_available: true,
         batch_endpoint: "/x/auto-generate/batches/BATCH-1",
         download_endpoint: "/x/auto-generate/batches/BATCH-1/download",
         detail_url_template: "/x/auto-generate/batches/BATCH-1/pay-codes/__CODE__",
