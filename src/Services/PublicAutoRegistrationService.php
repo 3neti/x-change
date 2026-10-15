@@ -64,7 +64,7 @@ final readonly class PublicAutoRegistrationService
             expiresAt: new DateTimeImmutable(now()->addSeconds((int) config('x-change.public_auto_register.ttl_seconds', 1800))->toIso8601String()),
             metadata: ['source' => 'public.auto-register'],
             destination: $this->destinations->resolve($operator, $provider, $accountReference),
-            purpose: FundingIntentPurpose::OnDemandIssuance,
+            purpose: FundingIntentPurpose::AccountFunding,
         ));
         $intent = $this->issueFundingInstructions->handle($intent, $operator::class, (string) $operator->getAuthIdentifier());
 
