@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Http\Controllers\Web\PublicIssuance;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -45,7 +46,13 @@ final class PublicIssuanceBatchRecoveryDiscoveryController extends Controller
         )));
         $checkouts = Checkout::query()
             ->whereNotNull('funding_order_id')
-            ->whereIn('visitor_mobile_hash', $checkoutHashes)
+            ->where(function (Builder $query) use ($checkoutHashes, $candidates): void {
+                $query
+                    ->whereIn('visitor_mobile_hash', $checkoutHashes)
+                    ->orWhereHas('contact', function (Builder $contactQuery) use ($candidates): void {
+                        $contactQuery->whereIn('mobile', $candidates);
+                    });
+            })
             ->get();
 
         if ($batches->isEmpty() && $checkouts->isEmpty()) {
