@@ -66,6 +66,18 @@ it('blocks authenticated access until the current agreement is accepted', functi
         ->and($acceptance->evidence_sha256)->toHaveLength(64);
 });
 
+it('forces a full browser navigation for inertia requests', function () {
+    actingAsTestUser();
+
+    $this->withHeaders([
+        'X-Inertia' => 'true',
+        'X-Requested-With' => 'XMLHttpRequest',
+        'X-Inertia-Version' => 'test-version',
+    ])->get('/agreement-protected')
+        ->assertStatus(409)
+        ->assertHeader('X-Inertia-Location', route('x-change.legal.eula.show'));
+});
+
 it('requires renewed acceptance when the document changes', function () {
     actingAsTestUser();
     $sha256 = hash('sha256', file_get_contents($this->agreementPath));
