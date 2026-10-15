@@ -14,6 +14,7 @@ use LBHurtado\EmiCore\Data\Funding\ProviderPayerIdentityData;
 use LBHurtado\XChange\Actions\Auth\CreateNewMobileFirstUser;
 use LBHurtado\XChange\Actions\Funding\CreateFundingIntent;
 use LBHurtado\XChange\Actions\Funding\IssueFundingInstructions;
+use LBHurtado\XChange\Jobs\Onboarding\SendPublicAutoRegistrationSmsJob;
 use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\Funding\CreateFundingIntentData;
@@ -85,7 +86,8 @@ final readonly class PublicAutoRegistrationService
             throw ValidationException::withMessages(['pin' => 'PIN must contain 4 to 8 digits.']);
         }
 
-        return DB::transaction(function () use ($registration, $pin): PublicAutoRegistration {
+        $activated = false;
+        $completed = DB::transaction(function () use ($registration, $pin, &$activated): PublicAutoRegistration {
             $locked = PublicAutoRegistration::query()->with('fundingIntent.settlement')->lockForUpdate()->findOrFail($registration->getKey());
             $intent = $locked->fundingIntent;
             if (! $intent instanceof FundingIntent || $intent->status !== FundingIntentStatus::Settled) {
@@ -127,8 +129,16 @@ final readonly class PublicAutoRegistrationService
                 'metadata' => [...(array) $locked->metadata, 'payer_mobile' => $mobile],
             ])->save();
 
+            $activated = true;
+
             return $locked->fresh(['fundingIntent']);
         });
+
+        if ($activated) {
+            SendPublicAutoRegistrationSmsJob::dispatch($completed->reference)->afterCommit();
+        }
+
+        return $completed;
     }
 
     /** @return array<string, mixed> */
