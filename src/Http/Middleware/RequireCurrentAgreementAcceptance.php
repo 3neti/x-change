@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Http\Middleware;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 use LBHurtado\XChange\Services\Legal\CurrentAgreementService;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -39,6 +40,15 @@ final readonly class RequireCurrentAgreementAcceptance
             ], 428);
         }
 
-        return redirect()->guest(route('x-change.legal.eula.show'));
+        $agreementUrl = route('x-change.legal.eula.show');
+
+        // The agreement is a server-rendered legal document. An Inertia visit
+        // cannot render that response in place, so force a real browser
+        // navigation when authentication lands on the agreement gate.
+        if ($request->header('X-Inertia') !== null) {
+            return Inertia::location($agreementUrl);
+        }
+
+        return redirect()->guest($agreementUrl);
     }
 }
