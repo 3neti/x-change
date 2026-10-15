@@ -18,6 +18,7 @@ use LBHurtado\XChange\Models\VoucherClaimEvidence;
 use LBHurtado\XChange\Services\Claim\ClaimEvidenceArtifactReader;
 use LBHurtado\XChange\Services\Claim\ContactKycEvidenceResolver;
 use LBHurtado\XChange\Services\IssuanceBatch\IssuanceBatchAccess;
+use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceVoucherActionPolicy;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceVoucherActions;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
 use Symfony\Component\HttpFoundation\HeaderUtils;
