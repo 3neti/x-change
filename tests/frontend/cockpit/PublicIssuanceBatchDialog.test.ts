@@ -262,6 +262,88 @@ describe("PublicIssuanceBatchDialog", () => {
     );
   });
 
+  it("renders authorized lifecycle actions and submits the selected extension", async () => {
+    sessionStorage.setItem("x-change.batch-token:BATCH-1", "token-1");
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          context: { code: "PC-1" },
+          read_model: { code: "PC-1", voucher: { summary: { code: "PC-1", status: "issued" } } },
+          public_actions: {
+            url: "/x/auto-generate/batches/BATCH-1/pay-codes/PC-1/action",
+            can_extend: true,
+            can_cancel: true,
+            can_expire: true,
+            can_request_refund: false,
+          },
+        }),
+      })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ message: "Pay Code expiration extended successfully." }) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const wrapper = mount(BatchPayCodeDetail, {
+      props: {
+        batch_reference: "BATCH-1",
+        code: "PC-1",
+        detail_endpoint: "/x/auto-generate/batches/BATCH-1/pay-codes/PC-1/data",
+        batch_pay_codes_url: "/x/auto-generate/batches/BATCH-1/pay-codes",
+      },
+    });
+
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    expect(wrapper.get('[data-testid="batch-pay-code-extend"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="batch-pay-code-cancel"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="batch-pay-code-expire"]').exists()).toBe(true);
+
+    await wrapper.get('select').setValue("168");
+    await wrapper.get('[data-testid="batch-pay-code-extend"]').trigger("click");
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/x/auto-generate/batches/BATCH-1/pay-codes/PC-1/action",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ action: "extend", extension_hours: 168, reason: "Public batch recovery" }),
+      }),
+    );
+  });
+
+  it("hides lifecycle actions for a redeemed Pay Code", async () => {
+    sessionStorage.setItem("x-change.batch-token:BATCH-1", "token-1");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        context: { code: "PC-1" },
+        read_model: { code: "PC-1", voucher: { summary: { code: "PC-1", status: "redeemed" } } },
+        public_actions: {
+          url: "/action",
+          can_extend: false,
+          can_cancel: false,
+          can_expire: false,
+          can_request_refund: false,
+        },
+      }),
+    }));
+
+    const wrapper = mount(BatchPayCodeDetail, {
+      props: {
+        batch_reference: "BATCH-1",
+        code: "PC-1",
+        detail_endpoint: "/detail",
+        batch_pay_codes_url: "/batch",
+      },
+    });
+
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    expect(wrapper.text()).not.toContain("Recovery actions");
+    expect(wrapper.find('[data-testid="batch-pay-code-extend"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="batch-pay-code-cancel"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="batch-pay-code-expire"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="batch-pay-code-refund"]').exists()).toBe(false);
+  });
+
   it("renders batch-scoped claim evidence links in the shared detail view", async () => {
     sessionStorage.setItem("x-change.batch-token:BATCH-1", "token-1");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
