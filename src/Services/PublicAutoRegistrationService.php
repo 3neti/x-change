@@ -10,7 +10,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
-use LBHurtado\Wallet\Treasury\Data\TreasuryPositionAllocationData;
+use LBHurtado\Wallet\Treasury\Data\TreasuryPositionReleaseData;
+use LBHurtado\Wallet\Treasury\Data\TreasuryPositionReservationData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Contact\Models\Contact;
@@ -213,6 +214,10 @@ final readonly class PublicAutoRegistrationService
             $this->portfolios->provision($operator, [$connection->reference])->positions,
             TreasuryPositionPurpose::ClientFunds,
         );
+        $reserve = $this->position(
+            $this->portfolios->provision($operator, [$connection->reference])->positions,
+            TreasuryPositionPurpose::PayCodeReserve,
+        );
         $destination = $this->position(
             $this->portfolios->provision($recipient, [$connection->reference])->positions,
             TreasuryPositionPurpose::ClientFunds,
@@ -224,9 +229,26 @@ final readonly class PublicAutoRegistrationService
             $recipient->getMorphClass(),
             (string) $recipient->getKey(),
         ]));
-        $allocation = $this->operations->allocate(new TreasuryPositionAllocationData(
-            operationReference: 'public-auto-registration-funding:'.$scope,
+        $this->operations->reserve(new TreasuryPositionReservationData(
+            operationReference: 'public-auto-registration-funding-reserve:'.$scope,
             sourcePositionReference: $source->positionReference,
+            destinationPositionReference: $reserve->positionReference,
+            amountMinor: (int) $intent->expected_amount_minor,
+            currency: (string) $intent->currency,
+            idempotencyKey: 'public-auto-registration-funding-reserve-key:'.$scope,
+            externalReference: $intent->reference,
+            metadata: [
+                'source' => 'x_change_public_auto_registration',
+                'registration_reference' => $registration->reference,
+                'funding_intent_reference' => $intent->reference,
+                'provider_calls' => false,
+                'provider_inventory_changed' => false,
+            ],
+        ));
+
+        $allocation = $this->operations->release(new TreasuryPositionReleaseData(
+            operationReference: 'public-auto-registration-funding:'.$scope,
+            sourcePositionReference: $reserve->positionReference,
             destinationPositionReference: $destination->positionReference,
             amountMinor: (int) $intent->expected_amount_minor,
             currency: (string) $intent->currency,
