@@ -20,7 +20,13 @@ type Receipt = {
   created_at: string | null;
   verified_at: string | null;
   issued_at: string | null;
-  pay_code: { code: string; claim_url: string; state?: string | null; expires_at?: string | null } | null;
+  pay_code: {
+    code: string;
+    claim_url: string;
+    detail_url?: string | null;
+    state?: string | null;
+    expires_at?: string | null;
+  } | null;
   activity: Array<{
     sequence: number;
     status: string;
@@ -154,6 +160,14 @@ async function applyAction(action: "extend" | "cancel" | "expire" | "request_ref
           class="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-emerald-600 px-4 text-sm font-bold text-white hover:bg-emerald-700"
         >
           Open Pay Code
+          <ExternalLink class="size-4" aria-hidden="true" />
+        </Link>
+        <Link
+          v-if="receipt.pay_code.detail_url"
+          :href="receipt.pay_code.detail_url"
+          class="mt-3 inline-flex min-h-10 items-center gap-2 rounded-full border border-emerald-300 px-4 text-sm font-bold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-950"
+        >
+          View Pay Code details
           <ExternalLink class="size-4" aria-hidden="true" />
         </Link>
       </section>
