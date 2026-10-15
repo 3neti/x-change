@@ -158,6 +158,7 @@ class QrPhSimulatorFundingProviderAdapter implements FundingProviderAdapter
                 mobile: $transaction->payer_mobile_ciphertext,
                 verificationSource: 'qrph-simulated-payer-profile',
                 providerVerified: true,
+                name: $transaction->payer_name_ciphertext,
             ),
         );
     }

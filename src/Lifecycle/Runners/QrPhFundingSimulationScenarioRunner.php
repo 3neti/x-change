@@ -23,6 +23,7 @@ use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingWebhookReceiptJob;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Services\Funding\QrPhSimulatorFundingProviderAdapter;
+use LBHurtado\XChange\Services\Funding\StandingFundingSyncAdmission;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use Throwable;
 
@@ -51,6 +52,7 @@ final class QrPhFundingSimulationScenarioRunner implements ScenarioRunnerContrac
         private readonly VerifyFundingWebhookReceipt $verifyReceipt,
         private readonly SettleVerifiedFundingIntent $settleIntent,
         private readonly FinalizeFundingSuspenseMonitoring $finalizeMonitoring,
+        private readonly StandingFundingSyncAdmission $standingFundingAdmission,
     ) {}
 
     public function run(ScenarioRunContext $context): ScenarioRunResult
@@ -283,6 +285,7 @@ final class QrPhFundingSimulationScenarioRunner implements ScenarioRunnerContrac
             $this->verifyReceipt,
             $this->settleIntent,
             $this->finalizeMonitoring,
+            $this->standingFundingAdmission,
         );
     }
 

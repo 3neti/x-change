@@ -19,6 +19,7 @@ class SimulatedFundingTransaction extends Model
         'funding_address',
         'payer_mobile_ciphertext',
         'payer_mobile_hash',
+        'payer_name_ciphertext',
         'gross_amount_minor',
         'fee_amount_minor',
         'currency',
@@ -31,6 +32,7 @@ class SimulatedFundingTransaction extends Model
     protected $hidden = [
         'payer_mobile_ciphertext',
         'payer_mobile_hash',
+        'payer_name_ciphertext',
     ];
 
     protected $attributes = [
@@ -57,6 +59,7 @@ class SimulatedFundingTransaction extends Model
     {
         return [
             'payer_mobile_ciphertext' => 'encrypted',
+            'payer_name_ciphertext' => 'encrypted',
             'gross_amount_minor' => 'integer',
             'fee_amount_minor' => 'integer',
             'occurred_at' => 'immutable_datetime',

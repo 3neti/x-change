@@ -110,6 +110,13 @@ return [
         ),
     ],
 
+    'public_auto_register' => [
+        'enabled' => (bool) env(
+            'XCHANGE_LIFECYCLE_PUBLIC_AUTO_REGISTER_ENABLED',
+            env('APP_ENV') !== 'production',
+        ),
+    ],
+
     'treasury_account_grant_simulation' => [
         'enabled' => (bool) env(
             'XCHANGE_LIFECYCLE_TREASURY_ACCOUNT_GRANT_SIMULATION_ENABLED',
@@ -556,6 +563,16 @@ return [
             'mobile' => env('XCHANGE_LIFECYCLE_QRPH_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
             'amount_minor' => 2_500,
             'api_executable' => false,
+        ],
+
+        'public_auto_register_demo' => [
+            'label' => 'Public QR Ph Auto-Registration',
+            'description' => 'Runs public QR Ph registration through provider verification, settlement, account creation, Treasury funding, and an idempotent completion replay.',
+            'category' => 'public-onboarding',
+            'tags' => ['public', 'qr-ph', 'onboarding', 'treasury', 'rollback'],
+            'mode' => 'public_auto_register',
+            'payer_name' => 'Lifecycle QR Ph Payer',
+            'api_executable' => true,
         ],
 
         /*

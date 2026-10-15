@@ -21,7 +21,7 @@ class SimulateQrPhPayment
         private readonly QrPhFundingSimulatorGuard $guard,
     ) {}
 
-    public function handle(FundingIntent $intent, string $payerMobile): SimulatedQrPhPaymentData
+    public function handle(FundingIntent $intent, string $payerMobile, ?string $payerName = null): SimulatedQrPhPaymentData
     {
         $this->guard->assertAvailable();
         $intent = FundingIntent::query()->findOrFail($intent->getKey());
@@ -38,6 +38,8 @@ class SimulateQrPhPayment
             throw new InvalidArgumentException('A valid payer mobile number is required.');
         }
 
+        $name = trim((string) $payerName);
+
         $attributes = [
             'provider_request_id' => $intent->provider_request_id,
             'provider_transaction_id' => 'QRSIM-TXN-'.Str::upper((string) Str::ulid()),
@@ -45,6 +47,7 @@ class SimulateQrPhPayment
             'funding_address' => $intent->funding_address_ciphertext,
             'payer_mobile_ciphertext' => $mobile,
             'payer_mobile_hash' => $this->mobileHash($mobile),
+            'payer_name_ciphertext' => $name !== '' ? $name : null,
             'gross_amount_minor' => $intent->expected_amount_minor,
             'fee_amount_minor' => 0,
             'currency' => $intent->currency,
@@ -94,6 +97,7 @@ class SimulateQrPhPayment
             'provider_request_id' => $attributes['provider_request_id'],
             'funding_address' => $attributes['funding_address'],
             'payer_mobile_hash' => $attributes['payer_mobile_hash'],
+            'payer_name_ciphertext' => $attributes['payer_name_ciphertext'],
             'gross_amount_minor' => $attributes['gross_amount_minor'],
             'fee_amount_minor' => $attributes['fee_amount_minor'],
             'currency' => $attributes['currency'],
