@@ -13,7 +13,10 @@ declare global {
   }
 }
 
-const props = defineProps<{ siteKey: string }>();
+const props = withDefaults(
+  defineProps<{ siteKey: string; action?: string }>(),
+  { action: "public_auto_generate" },
+);
 const emit = defineEmits<{ verified: [token: string] }>();
 const container = ref<HTMLElement | null>(null);
 const unavailable = ref(false);
@@ -27,7 +30,7 @@ function renderWidget(): void {
 
   widgetId = window.turnstile.render(container.value, {
     sitekey: props.siteKey,
-    action: "public_auto_generate",
+    action: props.action,
     callback: (token: string) => emit("verified", token),
     "expired-callback": () => emit("verified", ""),
     "error-callback": () => emit("verified", ""),

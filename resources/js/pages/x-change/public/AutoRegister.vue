@@ -35,7 +35,7 @@ async function complete() {
             <p class="text-sm font-semibold uppercase tracking-wide text-indigo-600">QR Ph self-registration</p>
             <h1 class="mt-2 text-3xl font-semibold">Open your x-change account</h1>
             <p class="mt-3 text-slate-600">Pay {{ amount }} through QR Ph. Your verified payer name and mobile are used to create your account. KYC is completed later when a protected operation requires it.</p>
-            <PublicIssuanceTurnstile v-if="props.turnstile.enabled && props.turnstile.site_key && !registration" :site-key="props.turnstile.site_key" @verified="turnstileToken = $event" />
+            <PublicIssuanceTurnstile v-if="props.turnstile.enabled && props.turnstile.site_key && !registration" :site-key="props.turnstile.site_key" action="public_auto_register" @verified="turnstileToken = $event" />
             <button v-if="!registration" :disabled="loading" class="mt-6 rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white disabled:opacity-50" @click="start">Are you ready?</button>
             <p v-if="registration" class="mt-5 rounded-xl bg-slate-50 p-4 text-sm">{{ registration.status === 'awaiting_payment' ? 'Scan the QR Ph payment instructions below. This page will be ready for your PIN after payment is verified.' : registration.status === 'payment_settled' ? 'Payment verified. Choose a PIN to finish creating your account.' : registration.status === 'active' ? 'Your account is ready. A cockpit link will be sent by SMS.' : 'Registration is being processed.' }}</p>
             <pre v-if="registration?.instructions" class="mt-4 overflow-auto rounded-xl bg-slate-900 p-4 text-xs text-white">{{ JSON.stringify(registration.instructions, null, 2) }}</pre>
