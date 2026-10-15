@@ -18,6 +18,7 @@ use LBHurtado\XChange\Models\VoucherClaimEvidence;
 use LBHurtado\XChange\Services\Claim\ClaimEvidenceArtifactReader;
 use LBHurtado\XChange\Services\Claim\ContactKycEvidenceResolver;
 use LBHurtado\XChange\Services\IssuanceBatch\IssuanceBatchAccess;
+use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceVoucherActions;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Throwable;
@@ -29,6 +30,7 @@ final class PublicIssuanceBatchPayCodeDetailController extends Controller
         private readonly VoucherAccessContract $vouchers,
         private readonly IssuanceBatchAccess $batches,
         private readonly ContactKycEvidenceResolver $contactKycEvidence,
+        private readonly PublicIssuanceVoucherActions $actions,
     ) {}
 
     public function page(IssuanceBatch $batch, string $code): Response
@@ -82,9 +84,42 @@ final class PublicIssuanceBatchPayCodeDetailController extends Controller
             data_set($props, 'read_model.voucher.claims.evidence', $evidence);
         }
 
+        data_set($props, 'public_actions', [
+            'url' => route('x-change.public-auto-generate.batches.pay-codes.action', ['batch' => $batch->reference, 'code' => $code], false),
+            'can_extend' => $voucher->state?->value === 'active' && $voucher->redeemed_at === null && $voucher->closed_at === null && $voucher->expires_at?->isFuture() === true,
+            'can_cancel' => $voucher->state?->value === 'active' && $voucher->redeemed_at === null && $voucher->closed_at === null,
+            'can_expire' => $voucher->state?->value === 'active' && $voucher->redeemed_at === null && $voucher->closed_at === null,
+            'can_request_refund' => in_array($voucher->state?->value, ['expired', 'cancelled'], true) && $voucher->redeemed_at === null,
+        ]);
+
         $this->appendContactKycEvidence($voucher, $props, $batch, $code);
 
         return response()->json($props);
+    }
+
+    public function action(Request $request, IssuanceBatch $batch, string $code): JsonResponse
+    {
+        $this->batches->authorizeToken($request, $batch);
+        $item = $this->batches->itemForCode($batch, $code);
+        $voucher = $this->vouchers->findByCode($code);
+        abort_unless($voucher instanceof Voucher && (string) $item->voucher_id === (string) $voucher->getKey(), 404);
+        $validated = $request->validate([
+            'action' => ['required', 'in:extend,cancel,expire,request_refund'],
+            'extension_hours' => ['nullable', 'integer', 'in:24,168'],
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $result = $this->actions->handle(
+            $voucher,
+            $validated['action'],
+            isset($validated['extension_hours']) ? (int) $validated['extension_hours'] : null,
+            (string) ($validated['reason'] ?? 'Public batch recovery'),
+        );
+
+        return response()->json([
+            'message' => data_get($result, 'messages.0', 'Pay Code lifecycle updated.'),
+            'result' => $result,
+        ]);
     }
 
     public function evidence(

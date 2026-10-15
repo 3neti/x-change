@@ -67,6 +67,13 @@ final readonly class PublicIssuanceOrderAccess
     public function authorize(PayCodeIssuanceFundingOrder $order, Request $request): string
     {
         $token = trim((string) $request->header(self::TokenHeader));
+        if ($token === '') {
+            $sessionReference = $request->session()->get('x-change.public-auto-generate.active-order.reference');
+            $sessionToken = $request->session()->get('x-change.public-auto-generate.active-order.token');
+            if ($sessionReference === $order->reference && is_string($sessionToken)) {
+                $token = $sessionToken;
+            }
+        }
         $tokenHash = data_get($order->metadata, 'public_auto_generate.token_hash');
         $sessionHash = data_get($order->metadata, 'public_auto_generate.session_hash');
 

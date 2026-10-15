@@ -25,7 +25,7 @@ describe("PublicIssuanceBatchDialog", () => {
       },
     });
 
-    expect(wrapper.text()).toContain("Recover a previous batch");
+    expect(wrapper.text()).toContain("Recover a previous issuance");
     expect(wrapper.get('[data-testid="public-batch-recovery-launcher"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="public-batch-recovery-modal"]').exists()).toBe(false);
 
@@ -34,7 +34,7 @@ describe("PublicIssuanceBatchDialog", () => {
     expect(wrapper.get('[data-testid="public-batch-recovery-modal"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="public-batch-recovery-modal"]').classes()).toContain("z-[200]");
     expect(wrapper.get('[data-testid="public-batch-recovery-modal"] h2').text()).toBe(
-      "Recover a previous batch",
+      "Recover a previous issuance",
     );
 
     await wrapper.get('[data-testid="public-batch-recovery-close"]').trigger("click");

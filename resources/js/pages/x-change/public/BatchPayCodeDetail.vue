@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import VoucherDetail from '../../../cockpit/pages/VoucherDetail.vue';
 import type { CockpitVoucherDetailPageProps } from '../../../cockpit/types';
 
@@ -13,6 +13,11 @@ const props = defineProps<{
 const detail = ref<CockpitVoucherDetailPageProps | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
+const actionBusy = ref(false);
+const actionMessage = ref<string | null>(null);
+const actionError = ref<string | null>(null);
+const publicActions = computed(() => (detail.value as any)?.public_actions ?? null);
+const hasPublicActions = computed(() => publicActions.value !== null && Object.values(publicActions.value).some((value) => value === true));
 
 onMounted(async () => {
     const token = window.sessionStorage.getItem(`x-change.batch-token:${props.batch_reference}`);
@@ -46,6 +51,30 @@ onMounted(async () => {
         loading.value = false;
     }
 });
+
+async function applyAction(action: 'extend' | 'cancel' | 'expire' | 'request_refund'): Promise<void> {
+    const actions = (detail.value as any)?.public_actions;
+    if (!actions || actionBusy.value) return;
+    actionBusy.value = true;
+    actionError.value = null;
+    try {
+        const token = window.sessionStorage.getItem(`x-change.batch-token:${props.batch_reference}`);
+        const response = await fetch(actions.url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...(token ? { 'X-Issuance-Batch-Token': token } : {}) },
+            body: JSON.stringify({ action, ...(action === 'extend' ? { extension_hours: 24 } : {}), reason: 'Public batch recovery' }),
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.message ?? 'The Pay Code action could not be completed.');
+        actionMessage.value = payload.message ?? 'Pay Code updated.';
+        window.setTimeout(() => window.location.reload(), 500);
+    } catch (exception) {
+        actionError.value = exception instanceof Error ? exception.message : 'The Pay Code action could not be completed.';
+    } finally {
+        actionBusy.value = false;
+    }
+}
 </script>
 
 <template>
@@ -66,6 +95,19 @@ onMounted(async () => {
                 </a>
             </div>
         </div>
-        <VoucherDetail v-else-if="detail" v-bind="detail" />
+        <template v-else-if="detail">
+            <section v-if="hasPublicActions" class="mx-auto max-w-2xl border-b border-amber-200 bg-amber-50 p-5 dark:border-amber-900 dark:bg-amber-950/30">
+                <p class="text-sm font-bold text-amber-900 dark:text-amber-100">Recovery actions</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    <button v-if="publicActions.can_extend" type="button" :disabled="actionBusy" class="rounded-full bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" @click="applyAction('extend')">Extend 24 hours</button>
+                    <button v-if="publicActions.can_cancel" type="button" :disabled="actionBusy" class="rounded-full border border-amber-300 px-4 py-2 text-sm font-bold text-amber-900 disabled:opacity-50" @click="applyAction('cancel')">Cancel and request refund</button>
+                    <button v-if="publicActions.can_expire" type="button" :disabled="actionBusy" class="rounded-full border border-amber-300 px-4 py-2 text-sm font-bold text-amber-900 disabled:opacity-50" @click="applyAction('expire')">Expire Pay Code</button>
+                    <button v-if="publicActions.can_request_refund" type="button" :disabled="actionBusy" class="rounded-full bg-amber-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" @click="applyAction('request_refund')">Request refund</button>
+                </div>
+                <p v-if="actionMessage" class="mt-3 text-sm font-semibold text-emerald-800">{{ actionMessage }}</p>
+                <p v-if="actionError" class="mt-3 text-sm font-semibold text-rose-700">{{ actionError }}</p>
+            </section>
+            <VoucherDetail v-bind="detail" />
+        </template>
     </div>
 </template>

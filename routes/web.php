@@ -162,6 +162,7 @@ use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceBatchPay
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceBatchPayCodesPageController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceBatchRecoveryController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceBatchRecoveryDiscoveryController;
+use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceVoucherActionController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuanceReceiptController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuanceRecoveryController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicPricingPageController;
@@ -275,6 +276,9 @@ Route::prefix('x/auto-generate')->middleware([
     Route::get('batches/{batch:reference}/pay-codes/{code}/data', [PublicIssuanceBatchPayCodeDetailController::class, 'data'])
         ->middleware('throttle:30,1,public-auto-generate-batch-detail-read:')
         ->name('x-change.public-auto-generate.batches.pay-codes.data');
+    Route::post('batches/{batch:reference}/pay-codes/{code}/action', [PublicIssuanceBatchPayCodeDetailController::class, 'action'])
+        ->middleware('throttle:6,10,public-auto-generate-batch-action:')
+        ->name('x-change.public-auto-generate.batches.pay-codes.action');
     Route::get('batches/{batch:reference}/pay-codes/{code}/evidence/{source}/{evidence}', [PublicIssuanceBatchPayCodeDetailController::class, 'evidence'])
         ->middleware('throttle:30,1,public-auto-generate-batch-evidence:')
         ->name('x-change.public-auto-generate.batches.pay-codes.evidence');
@@ -305,6 +309,12 @@ Route::prefix('x/auto-generate')->middleware([
     Route::get('receipts/{order:reference}', PublicIssuanceReceiptController::class)
         ->middleware('throttle:30,1,public-auto-generate-receipt:')
         ->name('x-change.public-auto-generate.receipt');
+    Route::post('issuances/{order:reference}/action', PublicIssuanceVoucherActionController::class)
+        ->middleware([
+            AuthorizePublicIssuanceOrderAccess::class,
+            'throttle:6,10,public-auto-generate-voucher-action:',
+        ])
+        ->name('x-change.public-auto-generate.issuances.action');
 
     Route::prefix('funding-orders/{order:reference}')
         ->middleware(AuthorizePublicIssuanceOrderAccess::class)

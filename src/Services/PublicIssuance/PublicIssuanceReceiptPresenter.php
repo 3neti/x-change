@@ -12,7 +12,7 @@ final readonly class PublicIssuanceReceiptPresenter
     /**
      * @return array<string, mixed>
      */
-    public function present(PayCodeIssuanceFundingOrder $order): array
+    public function present(PayCodeIssuanceFundingOrder $order, bool $canManage = false): array
     {
         $order->loadMissing(['voucher', 'events']);
 
@@ -30,7 +30,24 @@ final readonly class PublicIssuanceReceiptPresenter
                 'claim_url' => route('x-change.claim.show', [
                     'code' => $order->voucher->code,
                 ]),
+                'state' => $order->voucher->state?->value,
+                'expires_at' => $order->voucher->expires_at?->toIso8601String(),
             ] : null,
+            ...($canManage && $order->voucher instanceof Voucher ? ['actions' => [
+                'url' => route('x-change.public-auto-generate.issuances.action', ['order' => $order->reference], false),
+                'can_extend' => $order->voucher->state?->value === 'active'
+                    && $order->voucher->redeemed_at === null
+                    && $order->voucher->closed_at === null
+                    && $order->voucher->expires_at?->isFuture() === true,
+                'can_cancel' => $order->voucher->state?->value === 'active'
+                    && $order->voucher->redeemed_at === null
+                    && $order->voucher->closed_at === null,
+                'can_expire' => $order->voucher->state?->value === 'active'
+                    && $order->voucher->redeemed_at === null
+                    && $order->voucher->closed_at === null,
+                'can_request_refund' => in_array($order->voucher->state?->value, ['expired', 'cancelled'], true)
+                    && $order->voucher->redeemed_at === null,
+            ]] : []),
             'activity' => $order->events->map(static fn ($event): array => [
                 'sequence' => $event->sequence,
                 'status' => $event->to_status->value,

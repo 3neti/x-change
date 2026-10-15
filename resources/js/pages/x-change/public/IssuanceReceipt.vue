@@ -7,6 +7,7 @@ import {
   ReceiptText,
   ShieldCheck,
 } from "lucide-vue-next";
+import { ref } from "vue";
 
 defineOptions({ layout: null });
 
@@ -19,15 +20,25 @@ type Receipt = {
   created_at: string | null;
   verified_at: string | null;
   issued_at: string | null;
-  pay_code: { code: string; claim_url: string } | null;
+  pay_code: { code: string; claim_url: string; state?: string | null; expires_at?: string | null } | null;
   activity: Array<{
     sequence: number;
     status: string;
     occurred_at: string | null;
   }>;
+  actions?: {
+    url: string;
+    can_extend: boolean;
+    can_cancel: boolean;
+    can_expire: boolean;
+    can_request_refund: boolean;
+  } | null;
 };
 
 const props = defineProps<{ receipt: Receipt }>();
+const actionBusy = ref(false);
+const actionMessage = ref<string | null>(null);
+const actionError = ref<string | null>(null);
 
 function money(amountMinor: number, currency: string): string {
   return new Intl.NumberFormat("en-PH", {
@@ -38,6 +49,33 @@ function money(amountMinor: number, currency: string): string {
 
 function dateTime(value: string | null): string {
   return value === null ? "Not recorded" : new Date(value).toLocaleString();
+}
+
+async function applyAction(action: "extend" | "cancel" | "expire" | "request_refund"): Promise<void> {
+  if (!props.receipt.actions || actionBusy.value) return;
+  actionBusy.value = true;
+  actionMessage.value = null;
+  actionError.value = null;
+  try {
+    const response = await fetch(props.receipt.actions.url, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        action,
+        ...(action === "extend" ? { extension_hours: 24 } : {}),
+        reason: "Public issuance recovery",
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.message ?? "The Pay Code action could not be completed.");
+    actionMessage.value = payload.message ?? "Pay Code updated.";
+    window.setTimeout(() => window.location.reload(), 500);
+  } catch (exception) {
+    actionError.value = exception instanceof Error ? exception.message : "The Pay Code action could not be completed.";
+  } finally {
+    actionBusy.value = false;
+  }
 }
 </script>
 
@@ -118,6 +156,23 @@ function dateTime(value: string | null): string {
           Open Pay Code
           <ExternalLink class="size-4" aria-hidden="true" />
         </Link>
+      </section>
+
+      <section
+        v-if="receipt.actions && (receipt.actions.can_extend || receipt.actions.can_cancel || receipt.actions.can_expire || receipt.actions.can_request_refund)"
+        class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-900 dark:bg-amber-950/30"
+        data-testid="public-issuance-recovery-actions"
+      >
+        <p class="text-xs font-bold uppercase tracking-[0.14em] text-amber-800 dark:text-amber-200">Recovery actions</p>
+        <p class="mt-2 text-sm leading-6 text-amber-900 dark:text-amber-100">Manage this unclaimed Pay Code from the verified recovery session.</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button v-if="receipt.actions.can_extend" type="button" :disabled="actionBusy" class="rounded-full bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" @click="applyAction('extend')">Extend 24 hours</button>
+          <button v-if="receipt.actions.can_cancel" type="button" :disabled="actionBusy" class="rounded-full border border-amber-300 px-4 py-2 text-sm font-bold text-amber-900 disabled:opacity-50 dark:border-amber-700 dark:text-amber-100" @click="applyAction('cancel')">Cancel and request refund</button>
+          <button v-if="receipt.actions.can_expire" type="button" :disabled="actionBusy" class="rounded-full border border-amber-300 px-4 py-2 text-sm font-bold text-amber-900 disabled:opacity-50 dark:border-amber-700 dark:text-amber-100" @click="applyAction('expire')">Expire Pay Code</button>
+          <button v-if="receipt.actions.can_request_refund" type="button" :disabled="actionBusy" class="rounded-full bg-amber-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" @click="applyAction('request_refund')">Request refund</button>
+        </div>
+        <p v-if="actionMessage" class="mt-3 text-sm font-semibold text-emerald-800 dark:text-emerald-200">{{ actionMessage }}</p>
+        <p v-if="actionError" class="mt-3 text-sm font-semibold text-rose-700 dark:text-rose-300">{{ actionError }}</p>
       </section>
 
       <section class="mt-7" aria-labelledby="receipt-activity-title">
