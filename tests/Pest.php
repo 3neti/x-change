@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Bavix\Wallet\Interfaces\Wallet;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use LBHurtado\Contact\Models\Contact;
@@ -43,6 +44,10 @@ use LBHurtado\XChange\Tests\TestCase;
 use Propaganistas\LaravelPhone\PhoneNumber;
 
 uses(TestCase::class)->in('Unit', 'Feature');
+
+if (! interface_exists(\Laravel\Fortify\Contracts\CreatesNewUsers::class)) {
+    eval('namespace Laravel\\Fortify\\Contracts; interface CreatesNewUsers {}');
+}
 
 $embeddedHostArchitectureTests = array_values(array_filter(
     glob(__DIR__.'/Unit/Architecture/*.php') ?: [],
@@ -220,10 +225,6 @@ function enableNetbankTreasuryForTests(): User
     config()->set('x-change.payout.system_user_column', 'email');
     config()->set('x-change.payout.system_user_id', $system->email);
     config()->set('x-change.payout.system_wallet_slug', 'platform');
-    app(SystemPrincipalProvisioningService::class)->provision(
-        'test:netbank-treasury-system-principal',
-    );
-    $system->refresh();
     $provider = new class implements SettlementProvider
     {
         public function manifest(): ProviderCapabilityManifestData
@@ -314,7 +315,55 @@ function enableNetbankTreasuryForTests(): User
         app()->forgetInstance($abstract);
     }
 
+    app(SystemPrincipalProvisioningService::class)->provision(
+        'test:netbank-treasury-system-principal',
+    );
+    $system->refresh();
+
     return $system;
+}
+
+function fundTestUserClientFunds(Model $user, int $amountMinor = 1_000_000): void
+{
+    $system = User::query()->where('email', config('x-change.payout.system_user_id'))->firstOrFail();
+    $connection = 'netbank-primary';
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision($user, [$connection]);
+    app(TreasuryProvisioningService::class)->provision([$connection]);
+    $systemPositions = TreasuryPosition::query()
+        ->whereMorphedTo('principal', $system)
+        ->where('connection_reference', $connection)
+        ->get()
+        ->keyBy('purpose');
+    $source = $systemPositions->get(TreasuryPositionPurpose::TreasuryClearing->value);
+    $destination = TreasuryPosition::query()
+        ->whereMorphedTo('principal', $user)
+        ->where('connection_reference', $connection)
+        ->where('purpose', TreasuryPositionPurpose::ClientFunds)
+        ->sole();
+
+    if (! $source instanceof TreasuryPosition) {
+        throw new RuntimeException('The test system Treasury Clearing position was not provisioned.');
+    }
+
+    $scope = Str::uuid()->toString();
+    $operations = app(TreasuryPositionOperationContract::class);
+    $recognition = $operations->recognize(new TreasuryPositionRecognitionData(
+        operationReference: 'test-user-funding-recognition:'.$scope,
+        destinationPositionReference: $source->position_reference,
+        amountMinor: $amountMinor,
+        currency: 'PHP',
+        idempotencyKey: 'test-user-funding-recognition-key:'.$scope,
+        externalReference: 'test-user-funding:'.$user->getKey(),
+    ));
+    $operations->allocate(new TreasuryPositionAllocationData(
+        operationReference: 'test-user-funding-allocation:'.$scope,
+        sourcePositionReference: $source->position_reference,
+        destinationPositionReference: $destination->position_reference,
+        amountMinor: $amountMinor,
+        currency: 'PHP',
+        idempotencyKey: 'test-user-funding-allocation-key:'.$scope,
+        externalReference: $recognition->operationReference,
+    ));
 }
 
 function fundTestSystemAccountFundingReserve(

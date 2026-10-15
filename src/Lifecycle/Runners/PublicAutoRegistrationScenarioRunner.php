@@ -32,12 +32,18 @@ final class PublicAutoRegistrationScenarioRunner implements ScenarioRunnerContra
         'x-change.public_auto_register.enabled' => true,
         'x-change.public_auto_register.provider' => 'qrph_simulator',
         'x-change.public_auto_register.amount_minor' => 10_000,
+        'x-change.public_auto_register.treasury_connection_reference' => 'netbank-primary',
         'x-change.lifecycle.qrph_funding_simulation.enabled' => true,
         'x-change.funding.simulator.enabled' => true,
         'x-change.funding.providers.qrph_simulator.enabled' => true,
         'x-change.funding.simulator.signing_key' => 'public-auto-register-lifecycle-signing-key',
         'x-change.funding.simulator.mobile_hash_key' => 'public-auto-register-lifecycle-mobile-key',
         'x-change.funding.payer_identity_hash_key' => 'public-auto-register-lifecycle-payer-key',
+        'x-change.funding.providers.qrph_simulator.treasury' => [
+            'inventory_reference' => 'inventory:qrph-simulator:vca-cash',
+            'settlement_resource_reference' => 'resource:qrph-simulator:corporate-vca',
+            'resource_type' => 'cash_at_bank',
+        ],
     ];
 
     public function __construct(

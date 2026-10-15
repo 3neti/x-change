@@ -72,7 +72,10 @@ final readonly class PublicAutoRegistrationService
             actorType: $operator::class,
             actorId: (string) $operator->getAuthIdentifier(),
             expiresAt: new DateTimeImmutable(now()->addSeconds((int) config('x-change.public_auto_register.ttl_seconds', 1800))->toIso8601String()),
-            metadata: ['source' => 'public.auto-register'],
+            metadata: [
+                'source' => 'public.auto-register',
+                'payer_identity_match_required' => false,
+            ],
             destination: $this->destinations->resolve($operator, $provider, $accountReference),
             purpose: FundingIntentPurpose::AccountFunding,
         ));
@@ -136,7 +139,7 @@ final readonly class PublicAutoRegistrationService
             $user = $this->users->create([
                 'name' => $name,
                 'mobile' => $mobile,
-                'email' => null,
+                'email' => $this->fallbackEmail($mobile),
                 'password' => $pin,
                 'password_confirmation' => $pin,
             ]);
@@ -197,6 +200,13 @@ final readonly class PublicAutoRegistrationService
             return 'wallet:'.$wallet->getKey();
         }
         throw new RuntimeException('Funding account reference could not be resolved.');
+    }
+
+    private function fallbackEmail(string $mobile): ?string
+    {
+        $domain = trim((string) config('x-change.onboarding.email_fallback_domain', ''));
+
+        return $domain === '' ? null : $mobile.'@'.$domain;
     }
 
     private function allocateInitialClientFunds(
@@ -295,6 +305,17 @@ final readonly class PublicAutoRegistrationService
 
     private function connection(FundingIntent $intent): \LBHurtado\XChange\Data\Treasury\TreasuryProviderConnectionData
     {
+        $configuredReference = trim((string) config('x-change.public_auto_register.treasury_connection_reference', ''));
+
+        if ($configuredReference !== '') {
+            $connection = collect($this->connections->active())
+                ->firstWhere('reference', $configuredReference);
+
+            if ($connection !== null && $connection->currency === mb_strtoupper((string) $intent->currency)) {
+                return $connection;
+            }
+        }
+
         $matches = array_values(array_filter(
             $this->connections->active(),
             static fn ($connection): bool => $connection->provider === mb_strtolower((string) $intent->provider_code)

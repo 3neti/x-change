@@ -17,18 +17,19 @@ use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 use LBHurtado\XChange\Services\Commercial\CommercialPrincipalProvisioningService;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 
-beforeEach(function (): void {
-    if (! \Illuminate\Support\Facades\DB::table('x_change_commercial_component_economics_activations')->whereNull('deactivated_at')->exists()) {
-        $this->markTestSkipped('The Testbench fixture is not commissioned for the commercial Treasury read model.');
-    }
-});
-
 it('reproduces public auto-registration through its HTTP endpoints and mocked provider boundary', function () {
     Http::preventStrayRequests();
     config()->set('x-change.public_auto_register.provider', 'qrph_simulator');
+    config()->set('x-change.onboarding.email_fallback_domain', 'example.test');
     config()->set('x-change.public_auto_register.amount_minor', 10_000);
     config()->set('x-change.funding.simulator.enabled', true);
     config()->set('x-change.funding.providers.qrph_simulator.enabled', true);
+    config()->set('x-change.public_auto_register.treasury_connection_reference', 'netbank-primary');
+    config()->set('x-change.funding.providers.qrph_simulator.treasury', [
+        'inventory_reference' => 'inventory:qrph-simulator:vca-cash',
+        'settlement_resource_reference' => 'resource:qrph-simulator:corporate-vca',
+        'resource_type' => 'cash_at_bank',
+    ]);
     config()->set('x-change.funding.simulator.signing_key', 'public-auto-register-http-signing-key');
     config()->set('x-change.funding.simulator.mobile_hash_key', 'public-auto-register-http-mobile-key');
     config()->set('x-change.funding.payer_identity_hash_key', 'public-auto-register-http-payer-key');
@@ -49,6 +50,8 @@ it('reproduces public auto-registration through its HTTP endpoints and mocked pr
         'mobile_verified_at' => now(),
     ]);
     fundTestUserWallet($operator);
+    fundTestUserClientFunds($operator, 10_000);
+    fundTestUserClientFunds(app(\LBHurtado\XChange\Contracts\CommercialPrincipalResolverContract::class)->resolve(), 10_000);
     $this->actingAs($operator);
 
     $start = $this->postJson(route('x-change.public-auto-register.start'), [

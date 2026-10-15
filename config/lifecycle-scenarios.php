@@ -571,6 +571,9 @@ return [
             'category' => 'public-onboarding',
             'tags' => ['public', 'qr-ph', 'onboarding', 'treasury', 'rollback'],
             'mode' => 'public_auto_register',
+            'lifecycle' => [
+                'funding_boundary' => 'isolated_compatibility_wallet',
+            ],
             'payer_name' => 'Lifecycle QR Ph Payer',
             'api_executable' => true,
         ],

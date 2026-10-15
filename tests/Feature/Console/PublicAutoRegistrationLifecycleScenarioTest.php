@@ -11,21 +11,22 @@ use LBHurtado\XChange\Services\Commercial\CommercialPrincipalProvisioningService
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 
-beforeEach(function (): void {
-    if (! DB::table('x_change_commercial_component_economics_activations')->whereNull('deactivated_at')->exists()) {
-        $this->markTestSkipped('The Testbench fixture is not commissioned for the commercial Treasury read model.');
-    }
-});
-
 function preparePublicAutoRegistrationLifecycle(): FakeLifecycleUser
 {
     config()->set('x-change.lifecycle.defaults.user_model', FakeLifecycleUser::class);
     config()->set('x-change.lifecycle.public_auto_register.enabled', true);
+    config()->set('x-change.onboarding.email_fallback_domain', 'example.test');
     config()->set('x-change.commercial.principal.reference', 'public-auto-register-commercial');
     config()->set('x-change.commercial.principal.legal_name', 'Public Auto-Register Commercial Principal');
     config()->set('x-change.commercial.principal.authorization_reference', 'commissioning:public-auto-register:test');
     config()->set('x-change.commercial.enabled', false);
     enableNetbankTreasuryForTests();
+    config()->set('x-change.public_auto_register.treasury_connection_reference', 'netbank-primary');
+    config()->set('x-change.funding.providers.qrph_simulator.treasury', [
+        'inventory_reference' => 'inventory:qrph-simulator:vca-cash',
+        'settlement_resource_reference' => 'resource:qrph-simulator:corporate-vca',
+        'resource_type' => 'cash_at_bank',
+    ]);
     config()->set('x-change.commercial.enabled', true);
     config()->set('x-change.commercial.billing.mode', 'billable');
     app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:public-auto-register-test');
@@ -40,6 +41,8 @@ function preparePublicAutoRegistrationLifecycle(): FakeLifecycleUser
     ]);
 
     fundTestUserWallet($issuer);
+    fundTestUserClientFunds($issuer, 10_000);
+    fundTestUserClientFunds(app(\LBHurtado\XChange\Contracts\CommercialPrincipalResolverContract::class)->resolve(), 10_000);
 
     return $issuer;
 }
