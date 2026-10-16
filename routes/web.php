@@ -246,6 +246,30 @@ Route::prefix('x/auto-generate')->middleware([
     ShareXChangeBranding::class,
     UseCommercialPrincipalForPublicIssuance::class,
 ])->group(function (): void {
+    Route::post(
+        'claim-previews',
+        CockpitQuickGenerateClaimPreviewController::class,
+    )->middleware('throttle:public-claim-preview-create')->name('x-change.public-auto-generate.claim-previews.store');
+    Route::get(
+        'claim-previews/{claimPreviewArtifact:reference}',
+        CockpitQuickGenerateClaimPreviewShowController::class,
+    )->middleware('throttle:public-claim-preview-read')->name('x-change.public-auto-generate.claim-previews.show');
+    Route::get(
+        'claim-previews/{claimPreviewArtifact:reference}/frames/{step}',
+        CockpitQuickGenerateClaimPreviewFrameController::class,
+    )->where('step', '[a-z0-9][a-z0-9-]*')
+        ->middleware('throttle:public-claim-preview-read')->name('x-change.public-auto-generate.claim-previews.frames.show');
+    Route::get(
+        'claim-previews/{claimPreviewArtifact:reference}/steps/{step}',
+        CockpitQuickGenerateClaimPreviewStepController::class,
+    )->where('step', '[a-z0-9][a-z0-9-]*')
+        ->middleware('throttle:public-claim-preview-read')->name('x-change.public-auto-generate.claim-previews.steps.show');
+    Route::get(
+        'claim-previews/{claimPreviewArtifact:reference}/exports/{format}',
+        CockpitQuickGenerateClaimPreviewExportController::class,
+    )->whereIn('format', ['pdf', 'html'])
+        ->middleware('throttle:public-claim-preview-read')->name('x-change.public-auto-generate.claim-previews.exports.show');
+
     Route::post('batches/recovery/discover', [PublicIssuanceBatchRecoveryDiscoveryController::class, 'request'])
         ->middleware('throttle:3,10,public-auto-generate-batch-discovery-request:')
         ->name('x-change.public-auto-generate.batches.recovery.discovery.request');

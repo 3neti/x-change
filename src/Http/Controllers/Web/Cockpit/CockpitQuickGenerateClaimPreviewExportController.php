@@ -18,7 +18,7 @@ final class CockpitQuickGenerateClaimPreviewExportController extends Controller
         string $format,
         ClaimPreviewArtifactAccess $access,
     ): BinaryFileResponse {
-        $access->assertReadable($claimPreviewArtifact, $request->user());
+        $access->assertReadableForRequest($claimPreviewArtifact, $request);
         $path = $access->exportPath($claimPreviewArtifact, $format);
         $filename = $format === 'pdf'
             ? 'claim-experience-preview.pdf'

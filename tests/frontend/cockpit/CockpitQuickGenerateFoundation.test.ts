@@ -5288,7 +5288,7 @@ describe('Cockpit Quick Generate foundation', () => {
         );
     });
 
-    it('walks through the protected claim experience inside the canvas', async () => {
+    it.each(['/x/cockpit/quick-generate', '/x/auto-generate'])('walks through the claim experience inside the shared canvas at %s', async (baseUrl) => {
         const fetchMock = vi.fn().mockResolvedValue(
             new Response(
                 JSON.stringify({
@@ -5339,9 +5339,9 @@ describe('Cockpit Quick Generate foundation', () => {
                                 render_kind: 'captured_frame',
                                 status: 'captured',
                                 preview_url:
-                                    '/x/cockpit/quick-generate/claim-previews/preview-01/steps/claim-entry',
+                                    `${baseUrl}/claim-previews/preview-01/steps/claim-entry`,
                                 frame: {
-                                    url: '/x/cockpit/quick-generate/claim-previews/preview-01/frames/claim-entry',
+                                    url: `${baseUrl}/claim-previews/preview-01/frames/claim-entry`,
                                     mime_type: 'image/png',
                                     sha256: 'frame-hash',
                                     width: 390,
@@ -5358,9 +5358,9 @@ describe('Cockpit Quick Generate foundation', () => {
                                 render_kind: 'captured_frame',
                                 status: 'captured',
                                 preview_url:
-                                    '/x/cockpit/quick-generate/claim-previews/preview-01/steps/xray-preview',
+                                    `${baseUrl}/claim-previews/preview-01/steps/xray-preview`,
                                 frame: {
-                                    url: '/x/cockpit/quick-generate/claim-previews/preview-01/frames/xray-preview',
+                                    url: `${baseUrl}/claim-previews/preview-01/frames/xray-preview`,
                                     mime_type: 'image/png',
                                     sha256: 'xray-frame-hash',
                                     width: 390,
@@ -5371,9 +5371,9 @@ describe('Cockpit Quick Generate foundation', () => {
                     },
                     exports: {
                         pdf_url:
-                            '/x/cockpit/quick-generate/claim-previews/preview-01/exports/pdf',
+                            `${baseUrl}/claim-previews/preview-01/exports/pdf`,
                         html_url:
-                            '/x/cockpit/quick-generate/claim-previews/preview-01/exports/html',
+                            `${baseUrl}/claim-previews/preview-01/exports/html`,
                     },
                 }),
                 {
@@ -5391,13 +5391,13 @@ describe('Cockpit Quick Generate foundation', () => {
                 mutationContract: {
                     runtime_enabled: true,
                     route: 'x-change.cockpit.quick-generate.store',
-                    route_url: '/x/cockpit/quick-generate',
+                    route_url: `${baseUrl}`,
                     allowed_methods: ['GET', 'POST'],
                 },
                 claimPreviewContract: {
                     status: 'registered',
                     route: 'x-change.cockpit.quick-generate.claim-previews.store',
-                    route_url: '/x/cockpit/quick-generate/claim-previews',
+                    route_url: `${baseUrl}/claim-previews`,
                     money_movement: false,
                     preview_cache: true,
                 },
@@ -5413,7 +5413,7 @@ describe('Cockpit Quick Generate foundation', () => {
         await flushPromises();
 
         const previewCall = fetchMock.mock.calls.find(
-            ([url]) => url === '/x/cockpit/quick-generate/claim-previews',
+            ([url]) => url === `${baseUrl}/claim-previews`,
         );
 
         if (!previewCall) {
@@ -5423,7 +5423,7 @@ describe('Cockpit Quick Generate foundation', () => {
         const [url, options] = previewCall;
         const payload = JSON.parse(options.body);
 
-        expect(url).toBe('/x/cockpit/quick-generate/claim-previews');
+        expect(url).toBe(`${baseUrl}/claim-previews`);
         expect(options.method).toBe('POST');
         expect(payload.cash.amount).toBe(25);
         expect(payload.preview_profile).toBe('issuer');
@@ -5459,7 +5459,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 .find('[data-testid="cockpit-claim-preview-iframe"]')
                 .attributes('src'),
         ).toBe(
-            '/x/cockpit/quick-generate/claim-previews/preview-01/steps/claim-entry',
+            `${baseUrl}/claim-previews/preview-01/steps/claim-entry`,
         );
 
         expect(
@@ -5481,4 +5481,28 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toBe(false);
         expect(wrapper.html()).not.toContain('file://');
     });
+    it('keeps the shared preview stale when instructions change while rendering', async () => {
+        let finishPreview!: (response: Response) => void;
+        const pending = new Promise<Response>((resolve) => { finishPreview = resolve; });
+        vi.stubGlobal('fetch', vi.fn((url) => url === '/preview' ? pending : Promise.resolve(new Response('{}'))));
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                claimPreviewContract: { status: 'registered', route_url: '/preview', money_movement: false, preview_cache: true },
+            },
+        });
+        await wrapper.get('[data-testid="cockpit-quick-generate-submit-amount"]').setValue('25');
+        await wrapper.get('[data-testid="cockpit-pay-code-canvas-claim-button"]').trigger('click');
+        await wrapper.get('[data-testid="cockpit-quick-generate-submit-amount"]').setValue('50');
+        finishPreview(new Response(JSON.stringify({
+            schema: 'x-change.claim-experience-preview.manifest.v1', status: 'ready', reference: 'pending-preview',
+            fingerprint: 'design-25', generated_at: '2026-10-16T00:00:00Z', cache_hit: false,
+            journey: { viewport: { profile: 'mobile_claim_v1', width: 360, height: 720 }, step_count: 0, steps: [] },
+            exports: {},
+        }), { status: 200 }));
+        await flushPromises();
+        expect(wrapper.get('[data-testid="cockpit-claim-experience-refresh"]').attributes('aria-label')).toBe('Update claim preview');
+        wrapper.unmount();
+    });
+
 });

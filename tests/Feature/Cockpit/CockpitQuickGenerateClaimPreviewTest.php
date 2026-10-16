@@ -17,6 +17,7 @@ use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 use LBHurtado\XChange\Models\ClaimPreviewArtifact;
 
 beforeEach(function (): void {
+    config()->set('x-change.legal.eula.enabled', false);
     config()->set('form-flow.handlers', [
         'splash' => SplashHandler::class,
         'kyc' => KYCHandler::class,
@@ -220,7 +221,7 @@ it('serves claim preview manifests and frames only to their owner', function ():
     );
     File::put($absoluteRoot.'/screenshots/01-claim-entry.png', $bytes);
     File::put($absoluteRoot.'/walkthrough-storyboard.pdf', '%PDF-1.4 test');
-    File::put($absoluteRoot.'/walkthrough-storyboard.html', '<!doctype html><title>Preview</title>');
+    File::put($absoluteRoot.'/claim-walkthrough-storyboard.html', '<!doctype html><title>Preview</title>');
 
     $artifact = ClaimPreviewArtifact::query()->create([
         'owner_type' => $owner->getMorphClass(),
@@ -354,4 +355,22 @@ it('rejects unknown claim preview frames and exports', function (): void {
         'x-change.cockpit.quick-generate.claim-previews.exports.show',
         [$artifact, 'format' => 'pdf'],
     ))->assertNotFound();
+});
+
+it('isolates artifact storage for identical designs owned by different cockpit issuers', function (): void {
+    actingAsTestUser(0);
+    $payload = [
+        'cash' => ['amount' => 25, 'currency' => 'PHP'],
+        'inputs' => ['fields' => []],
+        'feedback' => ['mobile' => null],
+        'rider' => ['message' => null, 'url' => null, 'splash' => null],
+        'dry_run' => true,
+    ];
+    $first = $this->postJson(route('x-change.cockpit.quick-generate.claim-previews.store'), $payload)->assertSuccessful();
+    actingAsTestUser(0);
+    $second = $this->postJson(route('x-change.cockpit.quick-generate.claim-previews.store'), $payload)->assertSuccessful();
+
+    expect($first->json('reference'))->not->toBe($second->json('reference'))
+        ->and(ClaimPreviewArtifact::query()->pluck('artifact_path')->unique())->toHaveCount(2);
+    $this->getJson(route('x-change.cockpit.quick-generate.claim-previews.show', $first->json('reference')))->assertNotFound();
 });

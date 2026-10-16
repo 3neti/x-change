@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewArtifactAccess;
+use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewRequestContext;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewWebManifestPresenter;
 use LBHurtado\XChange\Models\ClaimPreviewArtifact;
 use Symfony\Component\HttpFoundation\Response;
@@ -20,10 +21,11 @@ final class CockpitQuickGenerateClaimPreviewStepController extends Controller
         string $step,
         ClaimPreviewArtifactAccess $access,
         ClaimPreviewWebManifestPresenter $presenter,
+        ClaimPreviewRequestContext $context,
     ): Response {
-        $access->assertReadable($claimPreviewArtifact, $request->user());
+        $access->assertReadableForRequest($claimPreviewArtifact, $request);
         $access->step($claimPreviewArtifact, $step);
-        $manifest = $presenter->present($claimPreviewArtifact, true);
+        $manifest = $presenter->present($claimPreviewArtifact, true, $context->routeFamily($request));
         $presentedStep = collect(data_get($manifest, 'journey.steps', []))
             ->first(fn (mixed $candidate): bool => is_array($candidate)
                 && ($candidate['key'] ?? null) === $step);
@@ -31,7 +33,7 @@ final class CockpitQuickGenerateClaimPreviewStepController extends Controller
         $response = Inertia::render('x-change/claim/Preview', [
             'step' => $presentedStep,
             'viewport' => data_get($manifest, 'journey.viewport'),
-        ])->toResponse($request);
+        ])->rootView('x-change::claim-root')->toResponse($request);
 
         $response->headers->add([
             'Cache-Control' => 'no-store, no-cache, must-revalidate, private',

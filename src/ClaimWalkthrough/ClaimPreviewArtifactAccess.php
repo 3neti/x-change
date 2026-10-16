@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\ClaimWalkthrough;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Http\Request;
 use LBHurtado\XChange\Models\ClaimPreviewArtifact;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -13,6 +14,7 @@ final class ClaimPreviewArtifactAccess
 {
     public function __construct(
         private readonly Filesystem $files,
+        private readonly ClaimPreviewRequestContext $context,
     ) {}
 
     public function assertReadable(
@@ -20,11 +22,33 @@ final class ClaimPreviewArtifactAccess
         ?Authenticatable $owner,
     ): void {
         if (
-            $owner === null
+            data_get($artifact->metadata, 'access.surface') === 'public'
+            || $owner === null
             || ! $artifact->isOwnedBy($owner)
             || $artifact->status !== 'ready'
             || ($artifact->expires_at !== null && $artifact->expires_at->isPast())
         ) {
+            throw new NotFoundHttpException;
+        }
+    }
+
+    public function assertReadableForRequest(ClaimPreviewArtifact $artifact, Request $request): void
+    {
+        if (! $this->context->isPublic($request)) {
+            $this->assertReadable($artifact, $request->user());
+
+            return;
+        }
+
+        $scope = data_get($artifact->metadata, 'access.guest_scope');
+        if (data_get($artifact->metadata, 'access.surface') !== 'public'
+            || ! is_string($scope)
+            || ! hash_equals($scope, $this->context->guestScope($request))
+            || $request->user() === null
+            || ! $artifact->isOwnedBy($request->user())
+            || $artifact->status !== 'ready'
+            || $artifact->expires_at === null
+            || $artifact->expires_at->lessThanOrEqualTo(now())) {
             throw new NotFoundHttpException;
         }
     }
@@ -71,7 +95,7 @@ final class ClaimPreviewArtifactAccess
     ): string {
         $relativePath = match ($format) {
             'pdf' => 'walkthrough-storyboard.pdf',
-            'html' => 'walkthrough-storyboard.html',
+            'html' => 'claim-walkthrough-storyboard.html',
             default => throw new NotFoundHttpException,
         };
 

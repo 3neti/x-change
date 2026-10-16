@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewArtifactAccess;
+use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewRequestContext;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewWebManifestPresenter;
 use LBHurtado\XChange\Models\ClaimPreviewArtifact;
 
@@ -18,11 +19,12 @@ final class CockpitQuickGenerateClaimPreviewShowController extends Controller
         ClaimPreviewArtifact $claimPreviewArtifact,
         ClaimPreviewArtifactAccess $access,
         ClaimPreviewWebManifestPresenter $presenter,
+        ClaimPreviewRequestContext $context,
     ): JsonResponse {
-        $access->assertReadable($claimPreviewArtifact, $request->user());
+        $access->assertReadableForRequest($claimPreviewArtifact, $request);
 
         return response()
-            ->json($presenter->present($claimPreviewArtifact, true))
+            ->json($presenter->present($claimPreviewArtifact, true, $context->routeFamily($request)))
             ->withHeaders($this->headers());
     }
 

@@ -7,6 +7,32 @@ describe('Cockpit claim experience preview', () => {
         vi.useRealTimers();
     });
 
+    it('expires a guest preview and offers regeneration in the shared component', async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-10-16T00:00:00Z'));
+        const wrapper = mount(CockpitClaimExperiencePreview, {
+            props: {
+                status: 'ready', processing: false, message: 'Ready', canGenerate: true,
+                manifest: {
+                    schema: 'x-change.claim-experience-preview.manifest.v1', status: 'ready',
+                    reference: 'guest-preview', fingerprint: 'guest-design',
+                    generated_at: '2026-10-16T00:00:00Z', expires_at: '2026-10-16T00:30:00Z', cache_hit: false,
+                    safety: { preview_only: true, interactive: false, money_movement: false, provider_calls: false, claim_submission: false },
+                    journey: { viewport: { profile: 'mobile_claim_v1', width: 360, height: 720 }, step_count: 0, steps: [] },
+                    exports: { pdf_url: '/preview/pdf', html_url: '/preview/html' },
+                },
+            },
+        });
+        expect(wrapper.text()).not.toContain('Preview expired');
+        await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
+        expect(wrapper.text()).toContain('Preview expired');
+        await wrapper.get('[data-testid="cockpit-claim-experience-generate"]').trigger('click');
+        expect(wrapper.emitted('generate')).toHaveLength(1);
+        await wrapper.setProps({ manifest: { ...wrapper.props('manifest')!, expires_at: '2026-10-16T01:00:00Z' } });
+        expect(wrapper.text()).not.toContain('Preview expired');
+        wrapper.unmount();
+    });
+
     it('renders the claim journey inside its canonical isolated mobile viewport', async () => {
         const wrapper = mount(CockpitClaimExperiencePreview, {
             global: {
@@ -249,6 +275,10 @@ describe('Cockpit claim experience preview', () => {
                 .exists(),
         ).toBe(false);
 
+        await wrapper.get('[data-testid="cockpit-claim-experience-expand"]').trigger('click');
+        await wrapper.setProps({ manifest: { ...wrapper.props('manifest')!, expires_at: '2000-01-01T00:00:00Z' } });
+        expect(wrapper.find('[data-testid="cockpit-claim-experience-dialog"]').exists()).toBe(false);
+        expect(wrapper.text()).toContain('Preview expired');
         wrapper.unmount();
     });
 

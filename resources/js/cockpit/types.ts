@@ -1760,6 +1760,7 @@ export type CockpitClaimPreviewSimulation = {
 };
 
 export type CockpitClaimExperiencePreviewManifest = {
+  expires_at?: string | null;
   schema: string;
   status: "ready";
   reference: string;

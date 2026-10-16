@@ -19,11 +19,12 @@ final class ClaimPreviewWebManifestPresenter
     public function present(
         ClaimPreviewArtifact $artifact,
         bool $cacheHit = false,
+        string $routeFamily = 'x-change.cockpit.quick-generate.claim-previews',
     ): array {
         $steps = collect(data_get($artifact->metadata, 'journey.steps', []))
             ->filter(fn (mixed $step): bool => is_array($step))
             ->values()
-            ->map(fn (array $step): array => $this->step($artifact, $step))
+            ->map(fn (array $step): array => $this->step($artifact, $step, $routeFamily))
             ->all();
 
         return [
@@ -32,6 +33,7 @@ final class ClaimPreviewWebManifestPresenter
             'reference' => $artifact->reference,
             'fingerprint' => $artifact->artifact_fingerprint,
             'generated_at' => $artifact->generated_at?->toIso8601String(),
+            'expires_at' => $artifact->expires_at?->toIso8601String(),
             'cache_hit' => $cacheHit,
             'safety' => [
                 'preview_only' => true,
@@ -47,8 +49,8 @@ final class ClaimPreviewWebManifestPresenter
                 'simulation' => data_get($artifact->metadata, 'journey.simulation', []),
             ],
             'exports' => [
-                'pdf_url' => $this->exportUrl($artifact, 'pdf'),
-                'html_url' => $this->exportUrl($artifact, 'html'),
+                'pdf_url' => $this->exportUrl($artifact, 'pdf', $routeFamily),
+                'html_url' => $this->exportUrl($artifact, 'html', $routeFamily),
             ],
         ];
     }
@@ -60,6 +62,7 @@ final class ClaimPreviewWebManifestPresenter
     private function step(
         ClaimPreviewArtifact $artifact,
         array $step,
+        string $routeFamily,
     ): array {
         $key = (string) ($step['key'] ?? '');
         $frame = is_array($step['frame'] ?? null)
@@ -79,7 +82,7 @@ final class ClaimPreviewWebManifestPresenter
             'render_kind' => (string) ($step['render_kind'] ?? 'live_screen'),
             'status' => (string) ($step['status'] ?? 'rendered'),
             'preview_url' => $this->urls->route(
-                'x-change.cockpit.quick-generate.claim-previews.steps.show',
+                $routeFamily.'.steps.show',
                 [
                     'claimPreviewArtifact' => $artifact->reference,
                     'step' => $key,
@@ -89,7 +92,7 @@ final class ClaimPreviewWebManifestPresenter
             'screen' => $screen,
             'frame' => $frame === null ? null : [
                 'url' => $this->urls->route(
-                    'x-change.cockpit.quick-generate.claim-previews.frames.show',
+                    $routeFamily.'.frames.show',
                     [
                         'claimPreviewArtifact' => $artifact->reference,
                         'step' => $key,
@@ -127,9 +130,10 @@ final class ClaimPreviewWebManifestPresenter
     private function exportUrl(
         ClaimPreviewArtifact $artifact,
         string $format,
+        string $routeFamily,
     ): string {
         return $this->urls->route(
-            'x-change.cockpit.quick-generate.claim-previews.exports.show',
+            $routeFamily.'.exports.show',
             [
                 'claimPreviewArtifact' => $artifact->reference,
                 'format' => $format,

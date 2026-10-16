@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\ClaimWalkthrough;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
@@ -88,6 +89,8 @@ final class ClaimPreviewArtifactCache
         array $report,
         array $journey = [],
         ?Authenticatable $owner = null,
+        ?string $guestScope = null,
+        ?CarbonImmutable $expiresAt = null,
     ): ClaimPreviewArtifact {
         $ownerAttributes = $this->ownerAttributes($owner);
         $artifact = ClaimPreviewArtifact::query()->updateOrCreate(
@@ -103,6 +106,7 @@ final class ClaimPreviewArtifactCache
                 'artifact_disk' => 'local',
                 'artifact_path' => $relativePath,
                 'metadata' => [
+                    'access' => ['surface' => $guestScope === null ? 'cockpit' : 'public', 'guest_scope' => $guestScope],
                     'renderer' => [
                         'schema' => 'x-change.claim-preview.renderer.v1',
                         'dry_run' => (bool) data_get($payload, 'dry_run', false),
@@ -111,7 +115,7 @@ final class ClaimPreviewArtifactCache
                     'report' => $this->sanitizedReport($report),
                 ],
                 'generated_at' => now(),
-                'expires_at' => null,
+                'expires_at' => $expiresAt,
             ],
         );
 
@@ -156,7 +160,7 @@ final class ClaimPreviewArtifactCache
             return false;
         }
 
-        if ($artifact->expires_at !== null && $artifact->expires_at->isPast()) {
+        if ($artifact->expires_at !== null && $artifact->expires_at->lessThanOrEqualTo(now())) {
             return false;
         }
 

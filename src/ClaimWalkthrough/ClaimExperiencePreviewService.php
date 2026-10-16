@@ -45,6 +45,7 @@ final class ClaimExperiencePreviewService
         $scenario = $this->scenarios->fromInstructions($instructions);
         $captureAvailable = false;
         $context = $this->cache->context($scenario, [
+            'storage_scope' => $options->storageScope,
             'profile' => $options->profile,
             'dry_run' => $options->dryRun,
             'render_mode' => 'compiled_claim_screen_v2',
@@ -140,6 +141,8 @@ final class ClaimExperiencePreviewService
                 report: $report,
                 journey: $journey,
                 owner: $options->issuer,
+                guestScope: $options->guestScope,
+                expiresAt: $options->expiresAt,
             );
 
             data_set($report, 'cache.hit', false);

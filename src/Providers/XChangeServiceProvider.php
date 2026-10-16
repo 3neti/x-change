@@ -73,6 +73,7 @@ use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
 use LBHurtado\XChange\Actions\Leads\StartLeadCampaign;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Actions\Settlement\ProjectCompletionClaimEvidence;
+use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewRequestContext;
 use LBHurtado\XChange\Console\Commands\AdoptCommissioningManifestCommand;
 use LBHurtado\XChange\Console\Commands\AdoptHostCommand;
 use LBHurtado\XChange\Console\Commands\AdoptXChangeCommand;
@@ -1718,6 +1719,7 @@ class XChangeServiceProvider extends ServiceProvider
         $this->bootPartnerApiOAuth();
         $this->bootPartnerOpenApiGenerator();
         $this->loadViewsFrom($this->packagePath('resources/views'), 'x-change');
+        $this->bootClaimPreviewRateLimiters();
         $this->bootLeadCampaignEndpointRateLimiter();
         $this->bootFundingVerificationRateLimiter();
         $this->bootPaymentVerificationRateLimiter();
@@ -1933,6 +1935,17 @@ class XChangeServiceProvider extends ServiceProvider
         array_unshift($pipeline, ExecutionAwarePostRedemptionGate::class);
 
         config()->set('voucher-pipeline.post-redemption', $pipeline);
+    }
+
+    protected function bootClaimPreviewRateLimiters(): void
+    {
+        foreach (['public-claim-preview-create' => 6, 'public-claim-preview-read' => 60] as $name => $attempts) {
+            RateLimiter::for($name, function (Request $request) use ($attempts): Limit {
+                $scope = app(ClaimPreviewRequestContext::class)->guestScope($request);
+
+                return Limit::perMinute($attempts)->by($scope.':'.$request->ip());
+            });
+        }
     }
 
     protected function bootFundingVerificationRateLimiter(): void

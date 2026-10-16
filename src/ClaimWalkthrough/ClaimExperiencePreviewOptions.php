@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\ClaimWalkthrough;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Auth\Authenticatable;
 use LBHurtado\XChange\Enums\ClaimPreviewProgressState;
 
@@ -22,5 +23,8 @@ final class ClaimExperiencePreviewOptions
         public readonly string $accountNumber = '09173011987',
         public readonly bool $submitClaim = false,
         public readonly ClaimPreviewProgressState $progressState = ClaimPreviewProgressState::Current,
+        public readonly ?string $storageScope = null,
+        public readonly ?string $guestScope = null,
+        public readonly ?CarbonImmutable $expiresAt = null,
     ) {}
 }

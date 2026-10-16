@@ -18,6 +18,7 @@ final class ClaimPreviewArtifactFingerprint
             'scenario_key' => $scenario['key'] ?? null,
             'scenario_version' => $scenario['version'] ?? 1,
             'fixture' => $scenario['fixture'] ?? [],
+            ...isset($options['storage_scope']) ? ['storage_scope' => $options['storage_scope']] : [],
             'profile' => $options['profile'] ?? 'issuer',
             'dry_run' => (bool) ($options['dry_run'] ?? false),
             'submit_claim' => (bool) ($options['submit_claim'] ?? false),

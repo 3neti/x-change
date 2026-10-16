@@ -47,6 +47,29 @@ const emit = defineEmits<{
     simulationStateChange: [state: string];
 }>();
 
+const expired = ref(false);
+let expiryTimer: ReturnType<typeof setTimeout> | null = null;
+
+watch(
+    () => props.manifest?.expires_at,
+    (expiresAt) => {
+        if (expiryTimer !== null) {
+            clearTimeout(expiryTimer);
+            expiryTimer = null;
+        }
+        const remaining = expiresAt ? Date.parse(expiresAt) - Date.now() : null;
+        expired.value = remaining !== null && remaining <= 0;
+        if (remaining !== null && remaining > 0) {
+            expiryTimer = setTimeout(() => {
+                expired.value = true;
+                closeExpandedPreview();
+                clearAutoplay();
+            }, remaining);
+        }
+    },
+    { immediate: true },
+);
+
 const currentStepIndex = ref(0);
 const expanded = ref(false);
 const expandedDialog = ref<HTMLElement | null>(null);
@@ -131,6 +154,7 @@ function scheduleAutoplay(): void {
         window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     if (
+        expired.value ||
         !props.autoplay ||
         autoplayPaused.value ||
         reducedMotion ||
@@ -170,7 +194,12 @@ function closeExpandedPreview(): void {
 }
 
 onMounted(scheduleAutoplay);
-onBeforeUnmount(clearAutoplay);
+onBeforeUnmount(() => {
+    clearAutoplay();
+    if (expiryTimer !== null) {
+        clearTimeout(expiryTimer);
+    }
+});
 
 watch(
     () => [
@@ -194,7 +223,7 @@ watch(
         @focusout="resumeAutoplay"
     >
         <div
-            v-if="status !== 'ready' || manifest === null"
+            v-if="expired || status !== 'ready' || manifest === null"
             class="grid min-h-0 flex-1 place-items-center p-6 text-center"
         >
             <div class="max-w-sm">
@@ -212,13 +241,15 @@ watch(
                     {{
                         processing
                             ? 'Rendering the claim journey…'
-                            : status === 'failed'
-                              ? 'Preview unavailable'
-                              : 'See the claim before you issue'
+                            : expired
+                              ? 'Preview expired'
+                              : status === 'failed'
+                                ? 'Preview unavailable'
+                                : 'See the claim before you issue'
                     }}
                 </p>
                 <p class="mt-1 text-xs leading-5 text-slate-400">
-                    {{ message }}
+                    {{ expired ? 'Generate a new walkthrough from your current Pay Code design.' : message }}
                 </p>
                 <button
                     v-if="!processing"
@@ -230,9 +261,11 @@ watch(
                 >
                     <Route class="size-3.5" aria-hidden="true" />
                     {{
-                        status === 'failed'
-                            ? 'Try Again'
-                            : 'Generate Walkthrough'
+                        expired
+                            ? 'Generate New Preview'
+                            : status === 'failed'
+                              ? 'Try Again'
+                              : 'Generate Walkthrough'
                     }}
                 </button>
             </div>
@@ -383,7 +416,7 @@ watch(
             </div>
         </div>
 
-        <Teleport v-if="expanded && currentStep" to="body">
+        <Teleport v-if="expanded && currentStep && manifest && !expired" to="body">
             <div
                 class="fixed inset-0 z-[70] grid place-items-center bg-slate-950/80 backdrop-blur-sm sm:p-4"
                 data-testid="cockpit-claim-experience-dialog-backdrop"

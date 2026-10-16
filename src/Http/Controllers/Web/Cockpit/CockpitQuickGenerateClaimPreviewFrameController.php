@@ -18,7 +18,7 @@ final class CockpitQuickGenerateClaimPreviewFrameController extends Controller
         string $step,
         ClaimPreviewArtifactAccess $access,
     ): BinaryFileResponse {
-        $access->assertReadable($claimPreviewArtifact, $request->user());
+        $access->assertReadableForRequest($claimPreviewArtifact, $request);
         $path = $access->framePath($claimPreviewArtifact, $step);
 
         return response()->file($path, [

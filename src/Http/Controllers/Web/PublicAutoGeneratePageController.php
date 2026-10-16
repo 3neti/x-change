@@ -56,6 +56,10 @@ final class PublicAutoGeneratePageController extends Controller
         data_set($props, 'quick_generate_read_model.mutation_contract.runtime_enabled', $enabled);
         data_set($props, 'quick_generate_read_model.mutation_contract.allowed_methods', ['GET', 'POST']);
 
+        data_set($props, 'quick_generate_read_model.claim_preview_contract.route', 'x-change.public-auto-generate.claim-previews.store');
+        data_set($props, 'quick_generate_read_model.claim_preview_contract.route_url', route('x-change.public-auto-generate.claim-previews.store', [], false));
+        data_set($props, 'quick_generate_read_model.claim_preview_contract.authorization', 'guest-session');
+
         unset($props['cockpit_header_read_model'], $props['cockpit_entry_notice']);
 
         $activeOrder = $this->publicOrderAccess->active($request);
