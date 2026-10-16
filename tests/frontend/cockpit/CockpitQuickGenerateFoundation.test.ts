@@ -3865,16 +3865,18 @@ describe('Cockpit Quick Generate foundation', () => {
     });
 
     it('explains a pause to a stale public tab and prevents another submission', async () => {
-        const fetchMock = vi.fn().mockResolvedValueOnce({
-            ok: true,
-            json: vi.fn().mockResolvedValue({ guest_token: 'saved-draft-token' }),
-        }).mockResolvedValueOnce({
-            ok: false,
-            json: vi.fn().mockResolvedValue({
-                success: false,
-                code: 'PUBLIC_ISSUANCE_PAUSED',
-                message: 'New Pay Code orders are temporarily paused. No payment was requested.',
-            }),
+        const fetchMock = vi.fn(async (url: string) => {
+            if (url === '/x/auto-generate/checkouts') {
+                return new Response(JSON.stringify({ guest_token: 'saved-draft-token' }));
+            }
+            if (url === '/x/auto-generate') {
+                return new Response(JSON.stringify({
+                    success: false,
+                    code: 'PUBLIC_ISSUANCE_PAUSED',
+                    message: 'New Pay Code orders are temporarily paused. No payment was requested.',
+                }), { status: 503 });
+            }
+            return new Response('{}');
         });
 
         vi.stubGlobal('fetch', fetchMock);
@@ -3905,7 +3907,7 @@ describe('Cockpit Quick Generate foundation', () => {
         await wrapper.get('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
         await flushPromises();
 
-        expect(fetchMock).toHaveBeenCalledTimes(2);
+        expect(fetchMock.mock.calls.filter(([url]) => url === '/x/auto-generate')).toHaveLength(1);
         expect(wrapper.get('[data-testid="cockpit-quick-generate-submission-errors"]').text())
             .toContain('New orders are temporarily paused');
         expect(wrapper.get('[data-testid="cockpit-quick-generate-submission-errors"]').text())
@@ -3916,8 +3918,9 @@ describe('Cockpit Quick Generate foundation', () => {
             .toBeDefined();
 
         await wrapper.get('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
-        expect(fetchMock).toHaveBeenCalledTimes(2);
+        expect(fetchMock.mock.calls.filter(([url]) => url === '/x/auto-generate')).toHaveLength(1);
 
+        wrapper.unmount();
         vi.unstubAllGlobals();
     });
 

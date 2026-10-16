@@ -19,6 +19,7 @@ use LBHurtado\XChange\Models\StandingFundingSyncRun;
 use LBHurtado\XChange\Models\XChangeInstallationManifest;
 use LBHurtado\XChange\Services\Commercial\CommercialPrincipalProvisioningService;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
+use LBHurtado\XChange\Services\Commercial\PublicIssuanceEscrowPrincipalProvisioningService;
 use LBHurtado\XChange\Services\Configuration\CommissioningConfigurationFingerprint;
 use LBHurtado\XChange\Services\Configuration\CommissioningStateResolver;
 use LBHurtado\XChange\Services\Legal\CurrentAgreementService;
@@ -34,11 +35,16 @@ function preparePublicAutoGenerateLifecycle(): array
         'x-change.commercial.principal.authorization_reference',
         'commissioning:public-auto-generate:test',
     );
+    config()->set('x-change.public_issuance_escrow.enabled', true);
+    config()->set('x-change.public_issuance_escrow.principal.reference', 'public-auto-generate-escrow');
+    config()->set('x-change.public_issuance_escrow.principal.legal_name', 'Public Auto-Generate Escrow Principal');
+    config()->set('x-change.public_issuance_escrow.principal.authorization_reference', 'commissioning:public-auto-generate-escrow:test');
     enableNetbankTreasuryForTests();
     app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:public-auto-generate-test');
     app(CommercialPrincipalProvisioningService::class)->provision();
+    app(PublicIssuanceEscrowPrincipalProvisioningService::class)->provision();
     $principal = CommercialPrincipal::query()
-        ->where('reference', 'public-auto-generate-commercial')
+        ->where('reference', 'public-auto-generate-escrow')
         ->sole();
     $principal->getWallet('platform') ?? $principal->createWallet([
         'name' => 'Platform Wallet',
@@ -117,7 +123,7 @@ it('runs public Auto-Generate through exact simulated funding and rolls everythi
         ->and(data_get($result->payload, 'rollback_completed'))->toBeTrue()
         ->and(data_get($result->payload, 'simulation.provider_calls'))->toBe(0)
         ->and(data_get($result->payload, 'artifacts.commercial_principal_reference'))
-        ->toBe('public-auto-generate-commercial')
+        ->toBe('public-auto-generate-escrow')
         ->and(data_get($result->payload, 'artifacts.claim_qr_present'))->toBeTrue()
         ->and(data_get($result->payload, 'artifacts.share_result_present'))->toBeTrue()
         ->and(data_get($result->payload, 'artifacts.expected_payment_minor'))->toBe(4_300)
