@@ -6,8 +6,11 @@ namespace LBHurtado\XChange\Services\Checkout;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use LBHurtado\Contact\Models\Contact;
 use LBHurtado\XChange\Models\Checkout;
 use LBHurtado\XChange\Models\CommercialPrincipal;
+use LBHurtado\XChange\Models\IssuanceBatch;
+use LBHurtado\XChange\Models\SettledPaymentProcess;
 
 final readonly class CheckoutConsoleReadModel
 {
@@ -44,20 +47,39 @@ final readonly class CheckoutConsoleReadModel
             'contact', 'refundCase', 'events',
             'fundingOrder.events',
             'fundingOrder.voucher',
-            'fundingOrder.fundingIntent.settlement',
+            'fundingOrder.fundingIntent.settlement.providerFundingObservation',
         ])->latest('id')->paginate(25);
+
+        $settlementIds = $page->getCollection()
+            ->map(fn (Checkout $checkout): ?int => $checkout->fundingOrder?->fundingIntent?->settlement?->getKey())
+            ->filter()
+            ->values();
+        $paymentProcesses = SettledPaymentProcess::query()
+            ->where('payment_type', 'funding_settlement')
+            ->whereIn('payment_id', $settlementIds)
+            ->get()
+            ->keyBy('payment_id');
+        $processContacts = Contact::query()
+            ->whereIn('id', $paymentProcesses->pluck('contact_id')->filter()->values())
+            ->get()
+            ->keyBy('id');
 
         return [
             'counts' => $counts,
             'filter' => $status ?? 'all',
-            'rows' => $page->getCollection()->map(function (Checkout $checkout) use ($includeFullPayCodes): array {
+            'rows' => $page->getCollection()->map(function (Checkout $checkout) use ($includeFullPayCodes, $paymentProcesses, $processContacts): array {
                 $order = $checkout->fundingOrder;
                 $settlement = $order?->fundingIntent?->settlement;
-                $mobile = $checkout->contact?->mobile ?? $checkout->visitor_mobile_ciphertext;
+                $process = $settlement === null ? null : $paymentProcesses->get($settlement->getKey());
+                $contact = $checkout->contact
+                    ?? ($process?->contact_id === null ? null : $processContacts->get($process->contact_id));
+                $mobile = $contact?->mobile
+                    ?? $checkout->visitor_mobile_ciphertext
+                    ?? $settlement?->providerFundingObservation?->payer_account_ciphertext;
                 $voucher = $order?->voucher;
                 $batch = $order === null
                     ? null
-                    : \LBHurtado\XChange\Models\IssuanceBatch::query()
+                    : IssuanceBatch::query()
                         ->where('funding_order_id', $order->getKey())
                         ->first();
                 $payCodeAmount = $voucher === null ? null : data_get($order->instructions_ciphertext, 'cash.amount');
@@ -92,6 +114,10 @@ final readonly class CheckoutConsoleReadModel
                         ? 'payment_after_'.$order->status->value
                         : $order?->events->last()?->event_type,
                     'last_activity_at' => $order?->updated_at?->toIso8601String() ?? $checkout->updated_at?->toIso8601String(),
+                    'last_activity_type' => collect($order?->events ?? [])
+                        ->concat($checkout->events)
+                        ->sortBy('occurred_at')
+                        ->last()?->event_type,
                     'timeline' => collect($order?->events ?? [])
                         ->concat($checkout->events)
                         ->map(static fn ($event): array => [

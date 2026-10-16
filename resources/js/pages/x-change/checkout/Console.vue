@@ -21,6 +21,7 @@ type CheckoutRow = {
   refund_eligible: boolean;
   attention_reason: string | null;
   last_activity_at: string | null;
+  last_activity_type: string | null;
   timeline: Array<{ type: string; at: string | null }>;
 };
 
@@ -51,6 +52,24 @@ function money(minor: number | null, currency: string | null): string {
   return minor === null ? "—" : new Intl.NumberFormat("en-PH", {
     style: "currency", currency: currency || "PHP",
   }).format(minor / 100);
+}
+
+function activityLabel(type: string | null): string {
+  if (!type) {
+    return "Activity updated";
+  }
+
+  const labels: Record<string, string> = {
+    prepared: "Checkout prepared",
+    transfer_amount_leased: "Payment amount reserved",
+    funding_verified_and_held: "Payment verified and held",
+    issuance_started: "Pay Code issuance started",
+    issuance_batch_issued: "Pay Codes issued",
+    payment_settled: "Payment received",
+    contact_association_completed: "Payer contact recorded",
+  };
+
+  return labels[type] ?? type.replaceAll("_", " ").replace(/\\b\\w/g, (letter) => letter.toUpperCase());
 }
 
 function filterUrl(status: string, page = 1): string {
@@ -145,11 +164,11 @@ async function copyPayCode(row: CheckoutRow): Promise<void> {
                   <td class="p-4 text-xs"><span class="block text-slate-500">Checkout ID</span><span class="font-mono">{{ row.reference }}</span><span v-if="row.order_reference" class="mt-2 block text-slate-500">Funding order ID</span><span v-if="row.order_reference" class="block font-mono">{{ row.order_reference }}</span></td>
                   <td class="p-4 font-semibold">{{ row.status.replaceAll('_', ' ') }}<span v-if="row.refund_status" class="mt-1 block text-amber-700">Refund: {{ row.refund_status.replaceAll('_', ' ') }}</span><span v-if="row.refund_eligible && !row.refund_status" class="mt-1 block text-xs font-normal text-amber-700">Paid without a Pay Code · refund review needed</span><span v-if="row.status === 'issuance_attention' && row.attention_reason" class="mt-1 block text-xs font-normal text-slate-500">{{ row.attention_reason.replaceAll('_', ' ') }}</span></td>
                   <td class="p-4">{{ row.method.replaceAll('_', ' ') }}</td>
-                  <td class="p-4">{{ row.contact ?? '—' }}<span class="mt-1 block text-xs text-slate-500">{{ row.contact_source }}</span></td>
+                  <td class="p-4">{{ row.contact ?? '—' }}<span class="mt-1 block text-xs text-slate-500">{{ row.contact_source ? row.contact_source.replaceAll('_', ' ') : 'Payer contact pending' }}</span></td>
                   <td class="p-4">{{ money(row.expected_minor, row.currency) }}</td>
                   <td class="p-4">{{ money(row.settled_minor, row.currency) }}</td>
                   <td class="p-4"><template v-if="row.pay_code">{{ money(row.pay_code.value_minor, row.pay_code.currency) }}<span class="mt-1 block font-mono text-xs text-slate-500">{{ row.pay_code.masked_code }}</span></template><span v-else>—</span></td>
-                  <td class="p-4">{{ row.last_activity_at ? new Date(row.last_activity_at).toLocaleString() : '—' }}</td>
+                  <td class="p-4"><span class="font-medium">{{ activityLabel(row.last_activity_type) }}</span><span class="mt-1 block text-xs text-slate-500">{{ row.last_activity_at ? new Date(row.last_activity_at).toLocaleString() : '—' }}</span></td>
                   <td class="p-4"><button type="button" class="font-semibold text-sky-700" @click="expanded = expanded === row.reference ? null : row.reference">{{ expanded === row.reference ? 'Hide' : 'Inspect' }}</button></td>
                 </tr>
                 <tr v-if="expanded === row.reference"><td colspan="9" class="bg-slate-50 p-5">

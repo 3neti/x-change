@@ -129,6 +129,68 @@ it('links a QR Ph wallet payer Contact only after confirmed payment evidence', f
         ->and(Contact::query()->findOrFail($checkout->contact_id)->mobile)->toBe('09171234567');
 });
 
+it('projects the settled payer mobile when the checkout contact link is delayed', function (): void {
+    $principal = checkoutTestPrincipal();
+    $order = checkoutTestOrder($principal);
+    $checkout = app(CheckoutLifecycle::class)->place($order);
+    $observation = ProviderFundingObservation::query()->create([
+        'observation_key' => hash('sha256', 'checkout-read-model-observation'),
+        'provider_code' => 'netbank',
+        'provider_transaction_id' => 'NB-CHECKOUT-READ-MODEL',
+        'gross_amount_minor' => 2500,
+        'fee_amount_minor' => 0,
+        'net_amount_minor' => 2500,
+        'currency' => 'PHP',
+        'provider_status' => 'settled',
+        'occurred_at' => now(),
+        'settled_at' => now(),
+        'verification_source' => 'transaction_history',
+        'payload_hash' => hash('sha256', 'checkout-read-model-payload'),
+        'metadata' => ['destination_verified' => true],
+        'payer_name_ciphertext' => 'Read Model Payer',
+        'payer_account_ciphertext' => '09171234567',
+        'payer_institution_ciphertext' => 'GCASH',
+    ]);
+
+    $intent = FundingIntent::query()->create([
+        'account_reference' => $order->account_reference,
+        'provider_code' => 'netbank',
+        'purpose' => 'on_demand_issuance',
+        'expected_amount_minor' => 2500,
+        'currency' => 'PHP',
+        'status' => 'settled',
+        'version' => 1,
+        'idempotency_key_hash' => hash('sha256', 'checkout-read-model-intent'),
+        'idempotency_fingerprint' => str_repeat('e', 64),
+        'created_by_type' => $principal::class,
+        'created_by_id' => (string) $principal->getKey(),
+        'matched_observation_id' => $observation->getKey(),
+        'funding_address_ciphertext' => 'read-model-funding-address',
+        'expires_at' => now()->addMinutes(30),
+    ]);
+    FundingSettlement::query()->create([
+        'funding_intent_id' => $intent->getKey(),
+        'provider_funding_observation_id' => $observation->getKey(),
+        'provider_code' => 'netbank',
+        'account_reference' => $order->account_reference,
+        'gross_amount_minor' => 2500,
+        'net_amount_minor' => 2500,
+        'currency' => 'PHP',
+        'treasury_inventory_reference' => 'read-model-inventory',
+        'treasury_operation_reference' => 'read-model-operation',
+        'wallet_transaction_id' => 123456,
+        'wallet_transaction_uuid' => '12345678-1234-1234-1234-123456789012',
+        'settled_at' => now(),
+    ]);
+    $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();
+
+    app(CheckoutLifecycle::class)->settled($order, $observation);
+    $checkout->forceFill(['contact_id' => null])->saveQuietly();
+
+    expect(app(CheckoutConsoleReadModel::class)->forOwner($principal)['rows'][0]['contact'])
+        ->toBe('••••4567');
+});
+
 it('recovers a missing QR payer Contact only from the same settled provider transaction', function (): void {
     Queue::fake();
     $principal = checkoutTestPrincipal();
