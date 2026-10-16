@@ -131,7 +131,7 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
                 destinationPositionReference: $clientFunds->positionReference,
                 amountMinor: $order->required_amount_minor,
                 currency: $order->currency,
-                idempotencyKey: 'issuance-hold-consume-key:'.$order->reference,
+                idempotencyKey: 'issuance-hold-consume-key:'.$order->reference.':'.mb_strtolower((string) $order->treasury_hold_reference),
                 externalReference: 'issuance-funding-order:'.$order->reference,
             ));
 
