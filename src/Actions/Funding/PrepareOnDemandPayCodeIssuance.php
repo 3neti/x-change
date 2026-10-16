@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryHoldOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryHoldPlacementData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
@@ -19,6 +20,7 @@ use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
+use LBHurtado\XChange\Exceptions\FundingAmountLeaseUnavailable;
 use LBHurtado\XChange\Exceptions\FundingIntentConflict;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
@@ -51,7 +53,8 @@ final readonly class PrepareOnDemandPayCodeIssuance
         PricingEstimateData $pricing,
         string $idempotencyKey,
         ?OnDemandIssuanceFundingBasis $fundingBasis = null,
-        bool $requirePayerIdentityMatch = true,
+        bool $requirePayerIdentityMatch = false,
+        bool $allowAmountAdjustment = true,
     ): PayCodeIssuanceFundingOrder {
         $requirement = $fundingBasis === null
             ? $this->requirements->for($issuer, $pricing)
@@ -192,7 +195,7 @@ final readonly class PrepareOnDemandPayCodeIssuance
         }
 
         try {
-            $order = $this->amountLeases->handle($order);
+            $order = $this->amountLeases->handle($order, $allowAmountAdjustment ? null : 0);
             $intent = $this->createFundingIntent->handle(new CreateFundingIntentData(
                 accountReference: $accountReference,
                 provider: $provider,
@@ -217,6 +220,21 @@ final readonly class PrepareOnDemandPayCodeIssuance
                 (string) $issuer->getKey(),
             );
         } catch (Throwable $exception) {
+            if (! $allowAmountAdjustment && $exception instanceof FundingAmountLeaseUnavailable) {
+                $this->transition->handle(
+                    order: $order,
+                    status: PayCodeIssuanceFundingOrderStatus::Cancelled,
+                    eventType: 'public_amount_capacity_unavailable',
+                    actorType: self::class,
+                    actorId: $order->reference,
+                    attributes: ['cancelled_at' => now()],
+                );
+
+                throw ValidationException::withMessages([
+                    'submission' => ['This payment amount is temporarily unavailable. Please try again later.'],
+                ]);
+            }
+
             $this->transition->handle(
                 order: $order,
                 status: PayCodeIssuanceFundingOrderStatus::IssuanceAttention,

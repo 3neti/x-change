@@ -1,6 +1,142 @@
 # Public Auto-Generate Compass
 
-Last updated: 2026-10-08
+Last updated: 2026-10-10
+
+## 2026-10-10 — Paid-order recovery and wallet cache incident
+
+Production order `01M4K2QNHC0FJACPCW2DMKCHA8` settled and became funded
+for PHP 90.00, but issuance entered `issuance_attention`. The exact failed
+job raised `TreasuryInvariantViolation: Treasury Allocation source balance
+is insufficient` while drawing the order's hold into Client Funds, before
+Pay Code generation. Read-only checks found no voucher, one settled Funding
+Intent, and an active undrawn PHP 90.00 hold. The reserve wallet had a
+confirmed PHP 90.00 deposit before the failed attempts and a fresh
+persisted/computed PHP 140.00 balance.
+
+Production had `wallet.cache.driver=array` even though the application cache
+used Redis. The dedicated long-lived issuance worker started before the
+deposit. Bavix wallet uses the configured wallet cache for balance reads,
+so a process-local stale balance is the strongest explanation for the
+failed hold draw. The worker's past in-memory value was not directly
+observed; this is a code-and-timing inference. Shared Redis wallet cache
+and lock drivers were applied in x-PayOut and the exact beta.79 commit was
+redeployed. New public payable-order creation was paused.
+
+A final preflight confirmed settled evidence, no provider reversal, no
+voucher, the intact PHP 90.00 hold, sufficient fresh reserve balance, and
+an empty issuance queue. Only the recorded failed issuance job was retried.
+The order then reached `issued` with one voucher and one issuance event;
+its hold became depleted with zero remaining, and failed issuance jobs
+returned to zero. No second payment or replacement order was created.
+The funded order was not subject to automatic expiry, even after its
+displayed payment deadline.
+
+This incident adds an exact-deployment acceptance gate: wallet balance
+cache and wallet locks must be shared across web and financial workers, and
+a second paid order must succeed after the worker has been running long
+enough to have seen an earlier reserve balance. Verify the configured
+drivers, worker restart, hold consumption, exactly-one issuance, and
+mutation-free replay. Keep new public orders paused until the separate
+funded-order cancellation guard and remaining beta entry controls are
+accepted on a published release. Never use the beta.79 “Cancel safely”
+action on a funded attention order; it can release the hold without a
+governed payer refund.
+
+## 2026-10-10 — Production beta.79 and security review
+
+x-change `v1.0.120` contains the Turnstile-only release. x-PayOut
+`v1.0.0-beta.79` at `126cf8d` deploys it to production. Cloud runtime
+configuration has Turnstile enabled with a managed secret and the expected
+`payout.disburse.cash` hostname. The server validates the token with
+Cloudflare Siteverify and checks both hostname and action. The public page
+and challenge loaded in browser acceptance. After activation changed the
+commissioning fingerprint, guarded adoption of the existing installation
+restored operational status without replaying opening capitalization; the
+strict doctor then passed. The owner subsequently funded one on-demand Pay
+Code successfully. This is positive path evidence, not failure, concurrency,
+or load acceptance.
+
+The exact deployed release still allows unauthenticated payable-order
+creation without server-side invitations or participant ceilings. The
+public POST uses the general Quick Generate request and does not enforce the
+public PHP 1,000.00 principal ceiling or a narrow public instruction
+allowlist. Its route throttles resolve against the shared Commercial
+Principal. A paid order in `issuance_attention` can reach the deployed
+cancellation path, which releases its Treasury hold before any governed
+payer refund. The amount-lease path may collect identifying extra centavos;
+contained residual holds still have no final return disposition. These are
+release findings, not claims that the successful payment encountered them.
+
+The package worktree has unreleased fixes for the public POST ceiling and
+instruction policy, visitor and global rate limits, and funded-order
+cancellation. Those files must not be treated as beta.79 behavior. The
+production readiness decision remains: personally supervised low-value
+trials only; do not invite a wider audience until the invite-beta entry
+checklist is accepted on the exact deployment. Turnstile is one completed
+challenge control, not an invitation, value limit, payment proof, or
+capacity guarantee.
+
+Commissioning lessons: pin package and host commits to a deploy record;
+verify managed secrets by presence without printing values; check runtime
+config after activation; treat a changed commissioning fingerprint as a
+manifest reconciliation requiring guarded existing-installation adoption,
+not fresh bootstrap; run strict doctor afterward; verify the worker's actual
+`--queue=` command against its declared lanes; and retain separate evidence
+for browser, payment, issuance, replay, recovery, and load behavior. A
+healthy queue snapshot and one successful payment are point samples.
+
+Next gate: release and accept the local safety fixes, enforce invitations
+and aggregate monetary/order budgets, prove funded-order recovery and
+residual disposition, commission alerts and operator ownership, then run
+exact-release failure, duplicate-evidence, concurrent-order, worker-restart,
+provider-outage, and kill-switch acceptance. Record commercial, refund, tax,
+privacy, and support authority before audience expansion.
+
+## 2026-10-10 — Open-launch readiness gate
+
+The owner selected unrestricted public access as the target, a PHP 1,000.00
+principal ceiling, operator-led recovery after verified payment, and return
+of identifying extra centavos to the payer. **The route is not yet approved
+for unrestricted promotion.** The implementation contract and launch gates
+are in the Open-launch readiness section of the companion plan.
+
+Production beta.78 at x-PayOut commit `9e4ea6e` adopts x-change `v1.0.119`.
+Read-only acceptance found the HTTPS editor responding HTTP 200, an active
+issuance worker, successful recent issuance and claim, zero queued or failed
+jobs at the observation instant, and a configured scheduler. These are point
+samples, not a load or recovery proof.
+
+The review found three immediate blockers: the creation POST accepted amounts
+and instruction fields outside the public page policy; public throttles were
+keyed to the single shared commercial principal; and paid
+`issuance_attention` orders exposed cancellation that released their hold
+without a payer refund. The main Cloud worker's actual command also omitted
+`partner-payments` despite its declared queue metadata. A configured
+scheduler does not prove its tasks ran.
+
+Current local package work enforces the PHP 1,000.00 POST ceiling, canonical
+public instruction defaults, independent IP/session/order rate limits, a
+30-per-minute global order-creation limit, and no paid-order cancellation.
+The order transition itself also refuses a funded cancellation. A temporary
+public-only amount-lease policy rejects same-amount collisions instead of
+collecting extra centavos; accepted Cockpit behavior remains separate. The
+focused public page, rollback lifecycle, and funding cancellation/lease tests
+passed during this work.
+
+This is not a release closure. A provider-backed or controlled payer return
+for historical adjustment residuals, adequate same-amount capacity, an abuse
+challenge, provider-call budget, operator recovery and alerts, exact-release
+load acceptance, and commercial authority remain open. No package release or
+new public audience is authorized by these local edits.
+
+The owner explicitly approved Cloudflare Turnstile verification after the
+external data flow was explained. A free Managed widget was created for
+`payout.disburse.cash`. Local package code now adds an opt-in public creation
+challenge: a browser token is sent in a header, the server verifies it with
+Cloudflare Siteverify, and the returned hostname and action must match. The
+secret stays in environment configuration. Focused PHP and Vue tests pass.
+The challenge is disabled by package default; production beta.79 enables
+it through Cloud runtime configuration. It is not a public-launch approval.
 
 ## North Star
 
@@ -155,7 +291,7 @@ and promotion criteria are maintained in
 2. Define and test the final disposition policy for contained amount-lease
    residuals.
 3. Make the bounded public issuance policy commissionable.
-4. Add Turnstile or an equivalent order-creation abuse-control adapter.
+4. Keep Turnstile enabled and accept the remaining admission and abuse controls.
 5. Prove queue recovery, bounded load, operational monitoring, and commercial
    authority before audience expansion.
 

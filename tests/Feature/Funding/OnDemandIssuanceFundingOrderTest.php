@@ -20,12 +20,14 @@ use LBHurtado\Wallet\Treasury\Models\TreasuryAllocation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
 use LBHurtado\XChange\Actions\Funding\ApproveFundingReconciliation;
+use LBHurtado\XChange\Actions\Funding\AssessPaidOnDemandIssuanceRecovery;
 use LBHurtado\XChange\Actions\Funding\ClaimFundingEvidence;
 use LBHurtado\XChange\Actions\Funding\ClassifyOnDemandIssuanceFundingMismatch;
 use LBHurtado\XChange\Actions\Funding\ExpireOnDemandIssuanceFundingOrder;
 use LBHurtado\XChange\Actions\Funding\OpenFundingSuspenseCase;
 use LBHurtado\XChange\Actions\Funding\PrepareOnDemandPayCodeIssuance;
 use LBHurtado\XChange\Actions\Funding\RequestFundingReconciliation;
+use LBHurtado\XChange\Actions\Funding\RequestOnDemandPayCodeIssuanceRetry;
 use LBHurtado\XChange\Actions\Funding\ReserveOnDemandIssuanceAmountLease;
 use LBHurtado\XChange\Actions\Funding\ReverseSettledFundingIntent;
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
@@ -55,6 +57,7 @@ use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrderEvent;
+use LBHurtado\XChange\Services\Cockpit\FundingCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\FundingInstructionPresenter;
 use LBHurtado\XChange\Services\Cockpit\FundingMethodSelectorCockpitReadModel;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
@@ -64,6 +67,11 @@ use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingRequirement;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 use LBHurtado\XChange\Tests\Fakes\User;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
+
+beforeEach(function (): void {
+    config()->set('x-change.legal.eula.enabled', false);
+});
 
 it('is disabled by default and validates the configured application-wide basis', function (): void {
     $policy = app(OnDemandIssuanceFundingPolicy::class);
@@ -76,6 +84,63 @@ it('is disabled by default and validates the configured application-wide basis',
 
     expect($policy->enabled())->toBeTrue()
         ->and($policy->basis())->toBe(OnDemandIssuanceFundingBasis::Shortfall);
+});
+
+it('does not require the issuer mobile for an externally paid on-demand order', function (): void {
+    config()->set('x-change.funding.providers.netbank.enabled', true);
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    $issuer = actingAsTestUser(0);
+    $issuer->forceFill([
+        'mobile' => '639171234567',
+        'mobile_verified_at' => now(),
+    ])->save();
+    $adapter = new FakeFundingProviderAdapter;
+    $this->app->instance(FakeFundingProviderAdapter::class, $adapter);
+    $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
+    $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
+
+    $order = app(PrepareOnDemandPayCodeIssuance::class)->handle(
+        issuer: $issuer,
+        instructions: ['cash' => ['amount' => 50, 'currency' => 'PHP']],
+        pricing: new PricingEstimateData(
+            currency: 'PHP',
+            pay_code_value: 50,
+            account_debit: 50,
+        ),
+        idempotencyKey: 'external-payer-without-mobile',
+    );
+    $intent = $order->fundingIntent;
+
+    expect(data_get($intent->metadata, 'payer_identity_match_required'))->toBeFalse();
+
+    $adapter->fundingObservation = new ProviderFundingObservationData(
+        provider: 'netbank',
+        providerTransactionId: 'EXTERNAL-NO-MOBILE',
+        grossAmountMinor: $intent->expected_amount_minor,
+        feeAmountMinor: 0,
+        netAmountMinor: $intent->expected_amount_minor,
+        currency: 'PHP',
+        providerStatus: 'settled',
+        verificationSource: 'netbank-test',
+        payloadHash: hash('sha256', 'external-no-mobile'),
+        fundingAddress: 'sha256:'.hash('sha256', (string) $intent->funding_address_ciphertext),
+        providerAccountReference: 'sha256:'.hash('sha256', (string) $intent->funding_address_ciphertext),
+        occurredAt: now()->toDateTimeImmutable(),
+        settledAt: now()->toDateTimeImmutable(),
+        metadata: ['destination_verified' => true],
+    );
+
+    $verified = app(VerifyFundingIntent::class)->handle(
+        $intent,
+        new FundingIntentVerificationData(
+            trigger: FundingVerificationTrigger::Operator,
+            actorId: (string) $issuer->getKey(),
+        ),
+    );
+
+    expect($verified->status)->toBe(FundingIntentStatus::Verified)
+        ->and($verified->suspenseCases()->exists())->toBeFalse();
 });
 
 it('calculates full amount and shortfall funding from the authoritative balance', function (): void {
@@ -453,6 +518,17 @@ it('leases distinct identifying amounts for concurrent orders in the same provid
         ->and($first->amount_lease_active_key)->not->toBe($second->amount_lease_active_key)
         ->and($first->events->last()->event_type)->toBe('transfer_amount_leased')
         ->and($second->events->last()->event_type)->toBe('transfer_amount_leased');
+});
+
+it('can reject an amount collision without adding refundable centavos', function (): void {
+    $user = actingAsTestUser(0);
+    $leases = app(ReserveOnDemandIssuanceAmountLease::class);
+    $first = $leases->handle(issuanceFundingOrder($user, 'public-no-adjustment-first'), 0);
+    $second = issuanceFundingOrder($user, 'public-no-adjustment-second');
+
+    expect($first->reconciliation_adjustment_minor)->toBe(0)
+        ->and(fn () => $leases->handle($second, 0))
+        ->toThrow(RuntimeException::class, 'No collision-safe transfer amount');
 });
 
 it('enforces active amount ownership with a database uniqueness boundary', function (): void {
@@ -854,6 +930,168 @@ it('routes authoritative amount mismatches to explicit review states', function 
     ],
 ]);
 
+it('recovers a paid on-demand order after expiry through independent approval exactly once', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    $owner = actingAsTestUser(0);
+    $wallet = $owner->wallet()->where('slug', 'platform')->sole();
+    $order = issuanceFundingOrder($owner, 'paid-recovery-after-expiry');
+
+    $this->travel(2)->minutes();
+    $observation = onDemandFundingObservation(5_000);
+    $intent = onDemandFundingIntent($wallet->uuid, $observation, 5_000);
+    $intent->forceFill([
+        'status' => FundingIntentStatus::Suspense,
+        'created_by_type' => $owner::class,
+        'created_by_id' => (string) $owner->getKey(),
+    ])->saveQuietly();
+    $order->forceFill([
+        'funding_intent_id' => $intent->getKey(),
+        'funding_basis' => OnDemandIssuanceFundingBasis::Shortfall,
+        'status' => PayCodeIssuanceFundingOrderStatus::PaymentAmbiguous,
+        'attention_at' => now(),
+    ])->saveQuietly();
+    $case = app(OpenFundingSuspenseCase::class)->handle(
+        provider: 'netbank',
+        reasonCode: 'on_demand_issuance_provider_evidence_mismatch',
+        intent: $intent,
+        observation: $observation,
+    );
+
+    $this->travel(31)->minutes();
+    app(ExpireOnDemandIssuanceFundingOrder::class)->handle($order);
+
+    expect(app(AssessPaidOnDemandIssuanceRecovery::class)->eligible($case->refresh()))->toBeTrue();
+    $readModel = app(FundingCockpitReadModelProvider::class)->forOperator($owner);
+    expect(collect($readModel->suspense_cases)->firstWhere('reference', $case->reference))
+        ->toMatchArray([
+            'order_reference' => $order->reference,
+            'allowed_actions' => ['recover_paid_on_demand_issuance'],
+        ]);
+
+    actingAsTestUser(0);
+    $this->post(route('x-change.cockpit.funding.suspense.reconciliation-requests.store', [
+        'case' => $case->reference,
+    ]), [
+        'action' => FundingReconciliationAction::RecoverPaidOnDemandIssuance->value,
+    ])->assertForbidden();
+    $this->actingAs($owner);
+
+    $this->post(route('x-change.cockpit.funding.suspense.reconciliation-requests.store', [
+        'case' => $case->reference,
+    ]), [
+        'action' => FundingReconciliationAction::RecoverPaidOnDemandIssuance->value,
+    ])->assertRedirect(route('x-change.cockpit.funding.index'));
+    $this->post(route('x-change.cockpit.funding.suspense.reconciliation-requests.store', [
+        'case' => $case->reference,
+    ]), [
+        'action' => FundingReconciliationAction::RecoverPaidOnDemandIssuance->value,
+    ])->assertRedirect(route('x-change.cockpit.funding.index'));
+    $request = $case->reconciliationRequests()->sole();
+    expect(fn () => app(ApproveFundingReconciliation::class)->handle(
+        $request,
+        $owner::class,
+        (string) $owner->getKey(),
+    ))->toThrow(InvalidArgumentException::class, 'cannot approve their own request');
+    $approved = app(ApproveFundingReconciliation::class)->handle(
+        $request,
+        'operator',
+        'checker-2',
+    );
+    $replayed = app(ApproveFundingReconciliation::class)->handle(
+        $approved,
+        'operator',
+        'checker-2',
+    );
+
+    expect($replayed->is($approved))->toBeTrue()
+        ->and($approved->result['outcome'])->toBe('pay_code_recovery_queued')
+        ->and($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::Funded)
+        ->and($order->funded_at)->not->toBeNull()
+        ->and($order->voucher_id)->toBeNull()
+        ->and($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
+        ->and($case->refresh()->status)->toBe('resolved')
+        ->and(FundingSettlement::query()->where('funding_intent_id', $intent->getKey())->count())->toBe(1)
+        ->and(FundingEvidenceClaim::query()->where('funding_intent_id', $intent->getKey())->count())->toBe(1);
+
+    Queue::assertPushed(ResumeOnDemandPayCodeIssuanceJob::class, 1);
+});
+
+it('does not recover payment evidence that arrived after the order deadline', function (): void {
+    $owner = actingAsTestUser(0);
+    $wallet = $owner->wallet()->where('slug', 'platform')->sole();
+    $order = issuanceFundingOrder($owner, 'late-recovery-denied');
+    $order->forceFill(['expires_at' => now()->subMinutes(2)])->saveQuietly();
+    $observation = onDemandFundingObservation(5_000);
+    $intent = onDemandFundingIntent($wallet->uuid, $observation, 5_000);
+    $intent->forceFill([
+        'status' => FundingIntentStatus::Suspense,
+        'created_by_type' => $owner::class,
+        'created_by_id' => (string) $owner->getKey(),
+    ])->saveQuietly();
+    $order->forceFill([
+        'funding_intent_id' => $intent->getKey(),
+        'status' => PayCodeIssuanceFundingOrderStatus::PaymentAmbiguous,
+    ])->saveQuietly();
+    $case = app(OpenFundingSuspenseCase::class)->handle(
+        provider: 'netbank',
+        reasonCode: 'on_demand_issuance_provider_evidence_mismatch',
+        intent: $intent,
+        observation: $observation,
+    );
+
+    expect(app(AssessPaidOnDemandIssuanceRecovery::class)->eligible($case))->toBeFalse()
+        ->and(fn () => app(RequestFundingReconciliation::class)->handle(
+            case: $case,
+            action: FundingReconciliationAction::RecoverPaidOnDemandIssuance,
+            actorType: 'operator',
+            actorId: 'maker-1',
+        ))->toThrow(InvalidArgumentException::class, 'not eligible');
+});
+
+it('keeps a recovery in suspense when another intent already claimed its provider payment', function (): void {
+    enableNetbankTreasuryForTests();
+    $owner = actingAsTestUser(0);
+    $wallet = $owner->wallet()->where('slug', 'platform')->sole();
+    $order = issuanceFundingOrder($owner, 'claimed-recovery-denied');
+    $this->travel(2)->minutes();
+    $observation = onDemandFundingObservation(5_000);
+    $intent = onDemandFundingIntent($wallet->uuid, $observation, 5_000);
+    $intent->forceFill([
+        'status' => FundingIntentStatus::Suspense,
+        'created_by_type' => $owner::class,
+        'created_by_id' => (string) $owner->getKey(),
+    ])->saveQuietly();
+    $order->forceFill([
+        'funding_intent_id' => $intent->getKey(),
+        'status' => PayCodeIssuanceFundingOrderStatus::PaymentAmbiguous,
+    ])->saveQuietly();
+    $case = app(OpenFundingSuspenseCase::class)->handle(
+        provider: 'netbank',
+        reasonCode: 'on_demand_issuance_provider_evidence_mismatch',
+        intent: $intent,
+        observation: $observation,
+    );
+    $otherIntent = onDemandFundingIntent($wallet->uuid, $observation, 5_000);
+    app(ClaimFundingEvidence::class)->handle($otherIntent, $observation);
+    $request = app(RequestFundingReconciliation::class)->handle(
+        case: $case,
+        action: FundingReconciliationAction::RecoverPaidOnDemandIssuance,
+        actorType: 'operator',
+        actorId: 'maker-1',
+    );
+
+    expect(fn () => app(ApproveFundingReconciliation::class)->handle(
+        $request,
+        'operator',
+        'checker-2',
+    ))->toThrow(InvalidArgumentException::class, 'already belongs to another funding order')
+        ->and($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::PaymentAmbiguous)
+        ->and($intent->refresh()->status)->toBe(FundingIntentStatus::Suspense)
+        ->and($case->refresh()->status)->toBe('open')
+        ->and(FundingSettlement::query()->count())->toBe(0);
+});
+
 it('does not let an expired mismatched intent claim evidence for an exact replacement intent', function (): void {
     $user = actingAsTestUser(0);
     $expiredOrder = issuanceFundingOrder($user, 'expired-mismatched-intent');
@@ -1140,6 +1378,70 @@ it('does not use corporate account fallback outside on-demand issuance', functio
         ->and($adapter->fundingVerifications)->toHaveCount(1)
         ->and($adapter->fundingVerifications[0]->fundingAddress)
         ->toBe('915008422914050308952');
+});
+
+it('admits one durable payer retry after terminal issuance failure and enforces the retry budget', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->sole();
+    $observation = onDemandFundingObservation(5_000);
+    $intent = onDemandFundingIntent($wallet->uuid, $observation, 5_000);
+    $order = app(ReserveOnDemandIssuanceAmountLease::class)->handle(issuanceFundingOrder($user));
+    $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();
+    app(SettleVerifiedFundingIntent::class)->handle($intent);
+    $order->refresh();
+    $job = new ResumeOnDemandPayCodeIssuanceJob($order->getKey());
+
+    $order->refresh()->forceFill(['metadata' => ['provider_reversal' => ['detected' => true]]])->saveQuietly();
+    expect(fn () => app()->call([$job, 'handle']))->toThrow(RuntimeException::class, 'provider reversal');
+    expect($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::Funded);
+    $order->forceFill(['metadata' => []])->saveQuietly();
+    $job->failed(new RuntimeException('Automatic issuance attempts exhausted'));
+    expect($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::IssuanceAttention);
+    $retry = app(RequestOnDemandPayCodeIssuanceRetry::class);
+    $hold = TreasuryAllocation::query()
+        ->where('allocation_reference', $order->treasury_hold_reference)
+        ->sole();
+    $hold->update(['balance_minor' => 0]);
+    expect($retry->availability($order->refresh())['eligible'])->toBeFalse();
+    $hold->update(['balance_minor' => $order->required_amount_minor]);
+
+    $blockedMetadata = (array) $order->metadata;
+    $blockedMetadata['provider_reversal'] = ['detected' => true];
+    $order->forceFill(['metadata' => $blockedMetadata])->saveQuietly();
+    expect($retry->availability($order->refresh())['eligible'])->toBeFalse();
+    $order->forceFill(['metadata' => []])->saveQuietly();
+
+    $first = $retry->handle($order, 'public-issuance-guest', 'session-1');
+
+    expect($retry->availability($first)['eligible'])->toBeFalse()
+        ->and($retry->availability($first)['pending'])->toBeTrue()
+        ->and(data_get($first->metadata, 'issuance_retry.count'))->toBe(1)
+        ->and($first->events()->where('event_type', 'manual_issuance_retry_requested')->count())->toBe(1);
+
+    expect(fn () => $retry->handle($first, 'public-issuance-guest', 'session-1'))
+        ->toThrow(ConflictHttpException::class);
+
+    $this->artisan('xchange:funding:dispatch-issuance-retries')->assertSuccessful();
+    Queue::assertPushed(ResumeOnDemandPayCodeIssuanceJob::class);
+
+    $job->failed(new RuntimeException('Temporary issuance failure'));
+    $afterFailure = $order->refresh();
+    expect(data_get($afterFailure->metadata, 'issuance_retry.pending'))->toBeFalse()
+        ->and($afterFailure->status)->toBe(PayCodeIssuanceFundingOrderStatus::IssuanceAttention)
+        ->and($retry->availability($afterFailure)['eligible'])->toBeFalse();
+
+    $this->travel(61)->seconds();
+    $second = $retry->handle($afterFailure, 'public-issuance-guest', 'session-1');
+    expect(data_get($second->metadata, 'issuance_retry.count'))->toBe(2)
+        ->and($retry->availability($second)['attempts_remaining'])->toBe(0);
+
+    $job->failed(new RuntimeException('Persistent issuance failure'));
+    expect($retry->availability($order->refresh())['eligible'])->toBeFalse();
+    $this->travel(61)->seconds();
+    expect(fn () => $retry->handle($order->refresh(), 'public-issuance-guest', 'session-1'))
+        ->toThrow(ConflictHttpException::class);
 });
 
 it('resumes an expired issuance-attention order whose provider payment was already held', function (): void {

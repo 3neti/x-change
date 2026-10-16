@@ -6,12 +6,12 @@ namespace LBHurtado\XChange\Actions\Funding;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use LBHurtado\XChange\Exceptions\FundingAmountLeaseUnavailable;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
-use RuntimeException;
 
 final class ReserveOnDemandIssuanceAmountLease
 {
-    public function handle(PayCodeIssuanceFundingOrder $order): PayCodeIssuanceFundingOrder
+    public function handle(PayCodeIssuanceFundingOrder $order, ?int $maximumAdjustmentMinor = null): PayCodeIssuanceFundingOrder
     {
         $lockName = 'x-change:on-demand-amount-lease:'.hash('sha256', implode('|', [
             $order->provider,
@@ -24,13 +24,13 @@ final class ReserveOnDemandIssuanceAmountLease
         return Cache::lock($lockName, $lockSeconds)->block(
             $waitSeconds,
             fn (): PayCodeIssuanceFundingOrder => DB::transaction(
-                fn (): PayCodeIssuanceFundingOrder => $this->reserve($order),
+                fn (): PayCodeIssuanceFundingOrder => $this->reserve($order, $maximumAdjustmentMinor),
                 attempts: 5,
             ),
         );
     }
 
-    private function reserve(PayCodeIssuanceFundingOrder $order): PayCodeIssuanceFundingOrder
+    private function reserve(PayCodeIssuanceFundingOrder $order, ?int $maximumAdjustmentMinor): PayCodeIssuanceFundingOrder
     {
         $locked = PayCodeIssuanceFundingOrder::query()->lockForUpdate()->findOrFail($order->getKey());
 
@@ -38,10 +38,13 @@ final class ReserveOnDemandIssuanceAmountLease
             return $locked->refresh()->load(['fundingIntent', 'events']);
         }
 
-        $maximumAdjustmentMinor = (int) config(
+        $configuredMaximumAdjustmentMinor = (int) config(
             'x-change.issuance_funding.on_demand.amount_lease.maximum_adjustment_minor',
             99,
         );
+        $maximumAdjustmentMinor = $maximumAdjustmentMinor === null
+            ? $configuredMaximumAdjustmentMinor
+            : min($configuredMaximumAdjustmentMinor, max(0, $maximumAdjustmentMinor));
 
         for ($adjustmentMinor = 0; $adjustmentMinor <= $maximumAdjustmentMinor; $adjustmentMinor++) {
             $expectedPaymentMinor = $locked->on_demand_amount_minor + $adjustmentMinor;
@@ -84,7 +87,7 @@ final class ReserveOnDemandIssuanceAmountLease
             return $locked->refresh()->load(['fundingIntent', 'events']);
         }
 
-        throw new RuntimeException('No collision-safe transfer amount is currently available.');
+        throw new FundingAmountLeaseUnavailable('No collision-safe transfer amount is currently available.');
     }
 
     private function activeKey(PayCodeIssuanceFundingOrder $order, int $expectedPaymentMinor): string

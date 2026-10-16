@@ -40,6 +40,13 @@ The beta may admit only explicitly invited participants under these limits:
 Read-only discovery and estimates may remain public. An invitation is required
 for the first state-changing operation.
 
+## Production checkpoint — 2026-10-10
+
+Turnstile is enabled on x-PayOut beta.79 and the owner completed one funded
+Pay Code. This update closes the challenge item below; the other
+entry requirements remain unchecked. The production route has no server-side
+invitation gate, so possession of its URL is not an invite control.
+
 ## Entry checklist
 
 The beta is not operationally open until every item in this section is green
@@ -51,7 +58,7 @@ and linked to retained evidence.
   audit semantics for invitations without placing bearer secrets in logs.
 - [ ] Configure and test per-order, per-invite, daily-value, daily-count, and
   maximum-concurrent-unpaid-order ceilings.
-- [ ] Add Turnstile or an equivalent challenge at payable-order creation.
+- [x] Add Turnstile or an equivalent challenge at payable-order creation.
   Challenge success is abuse-control evidence only and never payment evidence.
 - [ ] Prove the public issuance kill switch blocks new orders while paid,
   frozen, and recovery-capable orders remain operable.

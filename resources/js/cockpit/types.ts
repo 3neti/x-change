@@ -557,6 +557,9 @@ export type CockpitFundingSuspenseCase = {
   opened_at?: string | null;
   pending_approval: boolean;
   pending_action?: string | null;
+  order_reference?: string | null;
+  payment_minor?: number | null;
+  currency?: string | null;
   allowed_actions: string[];
 };
 
@@ -805,9 +808,7 @@ export type CockpitFundingRequestReadModel = {
 export type CockpitFundingMethodKey = "qr_ph" | "bank_transfer" | "pay_code";
 
 export type CockpitPrimaryFundingWorkspaceMode =
-  | "self_top_up"
-  | "bank_transfer"
-  | "pay_code";
+  "self_top_up" | "bank_transfer" | "pay_code";
 
 export type CockpitFundingMethodSelectorReadModel = {
   schema: "x-change.cockpit.funding-method-selector.v1";
@@ -913,7 +914,14 @@ export type CockpitOnDemandIssuanceFundingProjection = {
     show: string;
     acknowledge: string;
     verify: string;
+    retry_issuance: string;
     cancel: string;
+  };
+  retry: {
+    eligible: boolean;
+    pending: boolean;
+    attempts_remaining: number;
+    next_available_at: string | null;
   };
   monitor: {
     enabled: boolean;
@@ -1034,10 +1042,7 @@ export type CockpitFundingPageProps = CockpitHeaderPageProps & {
   funding_notice?: string | null;
   funding_request_submitted_reference?: string | null;
   funding_workspace_mode?:
-    | "self_top_up"
-    | "bank_transfer"
-    | "pay_code"
-    | "reviewed_value";
+    "self_top_up" | "bank_transfer" | "pay_code" | "reviewed_value";
   funding_poll_interval?: number;
   funding_realtime?: {
     enabled: boolean;
@@ -1812,6 +1817,7 @@ export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
     amount: string;
     currency: string;
   } | null;
+  turnstile?: { enabled: boolean; site_key: string | null };
   service_discovery?: {
     canonical_url: string;
     description: string;

@@ -6,13 +6,13 @@ namespace LBHurtado\XChange\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use LBHurtado\XChange\Contracts\CommercialPrincipalResolverContract;
+use LBHurtado\XChange\Contracts\Commercial\PublicIssuanceEscrowPrincipalResolverContract;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class UseCommercialPrincipalForPublicIssuance
 {
     public function __construct(
-        private CommercialPrincipalResolverContract $principals,
+        private PublicIssuanceEscrowPrincipalResolverContract $principals,
     ) {}
 
     public function handle(Request $request, Closure $next): Response

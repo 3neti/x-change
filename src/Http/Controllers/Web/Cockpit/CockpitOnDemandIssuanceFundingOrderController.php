@@ -9,9 +9,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryHoldOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryHoldReleaseData;
 use LBHurtado\XChange\Actions\Funding\ExpireOnDemandIssuanceFundingOrder;
+use LBHurtado\XChange\Actions\Funding\RequestOnDemandPayCodeIssuanceRetry;
 use LBHurtado\XChange\Actions\Funding\TransitionPayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\FundingVerificationTrigger;
@@ -125,6 +127,25 @@ final class CockpitOnDemandIssuanceFundingOrderController extends Controller
         return response()->json($this->present($request, $order, $presenter), 202);
     }
 
+    public function retryIssuance(
+        Request $request,
+        PayCodeIssuanceFundingOrder $order,
+        RequestOnDemandPayCodeIssuanceRetry $retry,
+        OnDemandIssuanceFundingOrderPresenter $presenter,
+    ): JsonResponse {
+        $this->authorizeOwner($request, $order);
+
+        $order = $retry->handle(
+            order: $order,
+            actorType: $request->attributes->get('x_change_public_auto_generate') === true
+                ? 'public-issuance-guest'
+                : $request->user()::class,
+            actorId: $this->actorIdentifier($request->user()),
+        );
+
+        return response()->json($this->present($request, $order, $presenter), 202);
+    }
+
     public function cancel(
         Request $request,
         PayCodeIssuanceFundingOrder $order,
@@ -133,40 +154,43 @@ final class CockpitOnDemandIssuanceFundingOrderController extends Controller
         OnDemandIssuanceFundingOrderPresenter $presenter,
     ): JsonResponse {
         $this->authorizeOwner($request, $order);
+        $order = DB::transaction(function () use ($request, $order, $transition, $holds): PayCodeIssuanceFundingOrder {
+            $locked = PayCodeIssuanceFundingOrder::query()->lockForUpdate()->findOrFail($order->getKey());
 
-        if (! in_array($order->status, [
-            PayCodeIssuanceFundingOrderStatus::AwaitingPayment,
-            PayCodeIssuanceFundingOrderStatus::PayerAcknowledged,
-            PayCodeIssuanceFundingOrderStatus::IssuanceAttention,
-        ], true)) {
-            throw new ConflictHttpException('This funding order can no longer be cancelled.');
-        }
+            if ($locked->funded_at !== null || ! in_array($locked->status, [
+                PayCodeIssuanceFundingOrderStatus::AwaitingPayment,
+                PayCodeIssuanceFundingOrderStatus::PayerAcknowledged,
+                PayCodeIssuanceFundingOrderStatus::IssuanceAttention,
+            ], true)) {
+                throw new ConflictHttpException('This funding order can no longer be cancelled.');
+            }
 
-        if (data_get($order->metadata, 'provider_reversal') !== null) {
-            throw new ConflictHttpException(
-                'A provider reversal requires governed recovery and cannot be cancelled.',
+            if (data_get($locked->metadata, 'provider_reversal') !== null) {
+                throw new ConflictHttpException(
+                    'A provider reversal requires governed recovery and cannot be cancelled.',
+                );
+            }
+
+            if ($locked->treasury_hold_reference !== null) {
+                $holds->release(new TreasuryHoldReleaseData(
+                    operationReference: 'issuance-hold-release:'.$locked->reference,
+                    holdReference: $locked->treasury_hold_reference,
+                    currency: $locked->currency,
+                    idempotencyKey: 'issuance-hold-release-key:'.$locked->reference,
+                    externalReference: 'issuance-funding-order:'.$locked->reference,
+                    metadata: ['reason' => 'operator_cancelled'],
+                ));
+            }
+
+            return $transition->handle(
+                order: $locked,
+                status: PayCodeIssuanceFundingOrderStatus::Cancelled,
+                eventType: 'cancelled',
+                actorType: $request->user()::class,
+                actorId: $this->actorIdentifier($request->user()),
+                attributes: ['cancelled_at' => now()],
             );
-        }
-
-        if ($order->treasury_hold_reference !== null) {
-            $holds->release(new TreasuryHoldReleaseData(
-                operationReference: 'issuance-hold-release:'.$order->reference,
-                holdReference: $order->treasury_hold_reference,
-                currency: $order->currency,
-                idempotencyKey: 'issuance-hold-release-key:'.$order->reference,
-                externalReference: 'issuance-funding-order:'.$order->reference,
-                metadata: ['reason' => 'operator_cancelled'],
-            ));
-        }
-
-        $order = $transition->handle(
-            order: $order,
-            status: PayCodeIssuanceFundingOrderStatus::Cancelled,
-            eventType: 'cancelled',
-            actorType: $request->user()::class,
-            actorId: $this->actorIdentifier($request->user()),
-            attributes: ['cancelled_at' => now()],
-        );
+        }, attempts: 5);
 
         return response()->json($this->present($request, $order, $presenter));
     }

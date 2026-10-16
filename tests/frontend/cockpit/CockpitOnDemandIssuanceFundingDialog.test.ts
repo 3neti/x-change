@@ -51,7 +51,15 @@ const projection: CockpitOnDemandIssuanceFundingProjection = {
     show: "/x/cockpit/quick-generate/funding-orders/ORDER-1",
     acknowledge: "/x/cockpit/quick-generate/funding-orders/ORDER-1/acknowledge",
     verify: "/x/cockpit/quick-generate/funding-orders/ORDER-1/verification",
+    retry_issuance:
+      "/x/cockpit/quick-generate/funding-orders/ORDER-1/retry-issuance",
     cancel: "/x/cockpit/quick-generate/funding-orders/ORDER-1",
+  },
+  retry: {
+    eligible: false,
+    pending: false,
+    attempts_remaining: 2,
+    next_available_at: null,
   },
   monitor: {
     enabled: true,
@@ -264,7 +272,8 @@ describe("CockpitOnDemandIssuanceFundingDialog", () => {
     const attentionProjection = structuredClone(projection);
     attentionProjection.status = "issuance_attention";
     attentionProjection.order.status = "issuance_attention";
-    attentionProjection.order.can_cancel = true;
+    attentionProjection.order.can_cancel = false;
+    attentionProjection.retry.eligible = true;
     attentionProjection.lifecycle.current = "attention";
     const wrapper = mount(CockpitOnDemandIssuanceFundingDialog, {
       props: { open: true, projection: attentionProjection },
@@ -283,9 +292,81 @@ describe("CockpitOnDemandIssuanceFundingDialog", () => {
       "payment has not been accepted",
     );
     expect(document.body.textContent).not.toContain("I’ve made the transfer");
-    expect(document.body.textContent).toContain("Cancel safely");
+    expect(document.body.textContent).toContain("Refresh status");
+    expect(document.body.textContent).toContain("Try issuing again");
+    expect(document.body.textContent).not.toContain("Cancel safely");
 
     wrapper.unmount();
+  });
+
+  it("refreshes a paid order without repeating payment verification", async () => {
+    const paidProjection = structuredClone(projection);
+    paidProjection.status = "funded";
+    paidProjection.order.status = "funded";
+    paidProjection.order.can_cancel = false;
+    paidProjection.monitor.eligible = false;
+    paidProjection.lifecycle.current = "payment_verified";
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => structuredClone(paidProjection),
+    } as Response);
+    const wrapper = mount(CockpitOnDemandIssuanceFundingDialog, {
+      props: { open: true, projection: paidProjection },
+      attachTo: document.body,
+    });
+
+    document.body
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="on-demand-status-refresh"]',
+      )
+      ?.click();
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock).toHaveBeenCalledWith(
+      paidProjection.actions.show,
+      expect.objectContaining({ credentials: "same-origin" }),
+    );
+
+    wrapper.unmount();
+    fetchMock.mockRestore();
+  });
+
+  it("requests a single guarded issuance retry for an eligible paid order", async () => {
+    const attentionProjection = structuredClone(projection);
+    attentionProjection.status = "issuance_attention";
+    attentionProjection.order.status = "issuance_attention";
+    attentionProjection.order.can_cancel = false;
+    attentionProjection.retry.eligible = true;
+    attentionProjection.monitor.eligible = false;
+    const pendingProjection = structuredClone(attentionProjection);
+    pendingProjection.retry.eligible = false;
+    pendingProjection.retry.pending = true;
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => pendingProjection,
+    } as Response);
+    const wrapper = mount(CockpitOnDemandIssuanceFundingDialog, {
+      props: { open: true, projection: attentionProjection },
+      attachTo: document.body,
+    });
+
+    document.body
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="on-demand-issuance-retry"]',
+      )
+      ?.click();
+    await vi.waitFor(() =>
+      expect(document.body.textContent).toContain("Retry requested"),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      attentionProjection.actions.retry_issuance,
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(
+      document.body.querySelector('[data-testid="on-demand-issuance-retry"]'),
+    ).toBeNull();
+
+    wrapper.unmount();
+    fetchMock.mockRestore();
   });
 
   it("keeps an active verification workspace open until it reaches an outcome", () => {

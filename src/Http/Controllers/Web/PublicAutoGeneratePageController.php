@@ -9,26 +9,28 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
-use LBHurtado\XChange\Contracts\CommercialPrincipalResolverContract;
+use LBHurtado\XChange\Contracts\Commercial\PublicIssuanceEscrowPrincipalResolverContract;
 use LBHurtado\XChange\Contracts\SettlementRailCapabilityRegistryContract;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegistry;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceDiscoveryService;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceInput;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceOrderAccess;
+use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceTurnstileVerifier;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
 
 final class PublicAutoGeneratePageController extends Controller
 {
     public function __construct(
         private readonly CockpitReadOnlyPageProps $props,
-        private readonly CommercialPrincipalResolverContract $principals,
+        private readonly PublicIssuanceEscrowPrincipalResolverContract $principals,
         private readonly InstructionCapabilityReadinessRegistry $instructionCapabilities,
         private readonly SettlementRailCapabilityRegistryContract $settlementRails,
         private readonly PublicIssuanceOrderAccess $publicOrderAccess,
         private readonly OnDemandIssuanceFundingOrderPresenter $fundingOrderPresenter,
         private readonly PublicIssuanceInput $publicIssuanceInput,
         private readonly PublicIssuanceDiscoveryService $publicIssuanceDiscovery,
+        private readonly PublicIssuanceTurnstileVerifier $turnstile,
     ) {}
 
     public function __invoke(Request $request): Response
@@ -48,7 +50,7 @@ final class PublicAutoGeneratePageController extends Controller
             'quick_generate_read_model.mutation_contract.route_url',
             $enabled ? route('x-change.public-auto-generate.store', [], false) : null,
         );
-        data_set($props, 'quick_generate_read_model.mutation_contract.authorization', 'commercial-principal-server-bound');
+        data_set($props, 'quick_generate_read_model.mutation_contract.authorization', 'public-issuance-escrow-server-bound');
         data_set($props, 'quick_generate_read_model.mutation_contract.runtime_enabled', $enabled);
         data_set($props, 'quick_generate_read_model.mutation_contract.allowed_methods', ['GET', 'POST']);
 
@@ -99,6 +101,10 @@ final class PublicAutoGeneratePageController extends Controller
             'invitation_preset' => ['enabled' => false, 'source' => 'public'],
             'startup_mode' => 'blank',
             'public_prefill' => $prefill,
+            'turnstile' => [
+                'enabled' => $this->turnstile->enabled(),
+                'site_key' => $this->turnstile->siteKey(),
+            ],
             'service_discovery' => [
                 'canonical_url' => $discovery->canonical_url,
                 'description' => 'Create, fund, and share a Pay Code without opening an account.',

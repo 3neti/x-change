@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use LBHurtado\Instruction\Models\InstructionItem;
 use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
+use LBHurtado\XChange\Actions\Payment\Pipes\AssociateSettledPayerContact;
+use LBHurtado\XChange\Actions\Payment\Pipes\QueueSettledPaymentSms;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
 use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
@@ -174,6 +176,21 @@ $defaultDeploymentRuntimeTier = match ((string) env('APP_ENV', 'production')) {
 };
 
 return [
+    'payment_feedback' => [
+        'pipes' => [
+            AssociateSettledPayerContact::class,
+            QueueSettledPaymentSms::class,
+        ],
+        'sms' => [
+            'enabled' => (bool) env('XCHANGE_PAYMENT_SMS_ENABLED', false),
+            'flows' => [
+                'top_up' => (bool) env('XCHANGE_PAYMENT_SMS_TOP_UP_ENABLED', false),
+                'authenticated_issuance' => (bool) env('XCHANGE_PAYMENT_SMS_AUTHENTICATED_ISSUANCE_ENABLED', false),
+                'public_auto_generate' => (bool) env('XCHANGE_PAYMENT_SMS_AUTO_GENERATE_ENABLED', false),
+                'campaign_qr_ph' => (bool) env('XCHANGE_PAYMENT_SMS_CAMPAIGN_ENABLED', false),
+            ],
+        ],
+    ],
     'legal' => [
         'eula' => [
             // The installer creates this host-owned file once and never overwrites it by default.
@@ -760,6 +777,14 @@ return [
         ],
     ],
 
+    'issuance_batches' => [
+        'maximum_rows' => (int) env('XCHANGE_ISSUANCE_BATCH_MAXIMUM_ROWS', 10_000),
+        'maximum_columns' => (int) env('XCHANGE_ISSUANCE_BATCH_MAXIMUM_COLUMNS', 30),
+        'maximum_cell_characters' => (int) env('XCHANGE_ISSUANCE_BATCH_MAXIMUM_CELL_CHARACTERS', 2_000),
+        'maximum_upload_bytes' => (int) env('XCHANGE_ISSUANCE_BATCH_MAXIMUM_UPLOAD_BYTES', 10 * 1024 * 1024),
+        'download_ttl_seconds' => (int) env('XCHANGE_ISSUANCE_BATCH_DOWNLOAD_TTL_SECONDS', 86_400),
+    ],
+
     'terminology' => [
         'voucher' => env('XCHANGE_TERM_VOUCHER', 'Pay Code'),
         'voucher_code' => env('XCHANGE_TERM_VOUCHER_CODE', 'Pay Code'),
@@ -839,6 +864,10 @@ return [
         'prefix' => env('XCHANGE_PARTNER_API_PREFIX', 'api/partner/v1'),
         'token_ttl_minutes' => (int) env('XCHANGE_PARTNER_API_TOKEN_TTL_MINUTES', 15),
         'rate_limit_per_minute' => (int) env('XCHANGE_PARTNER_API_RATE_LIMIT_PER_MINUTE', 60),
+        'funded_orders' => [
+            'enabled' => (bool) env('XCHANGE_PARTNER_FUNDED_ORDERS_ENABLED', false),
+            'maximum_open_per_client' => max(1, (int) env('XCHANGE_PARTNER_FUNDED_ORDERS_MAXIMUM_OPEN', 3)),
+        ],
         'stored_value_otp_challenge_rate_limit_per_minute' => (int) env(
             'XCHANGE_PARTNER_API_STORED_VALUE_OTP_CHALLENGE_RATE_LIMIT_PER_MINUTE',
             3,
@@ -854,6 +883,8 @@ return [
             'pay-codes:read' => 'Inspect Pay Codes owned by the bound Account.',
             'pay-codes:pay' => 'Create payer instructions for payable Pay Codes owned by the bound Account.',
             'pay-codes:cancel' => 'Cancel an eligible Pay Code owned by the bound Account.',
+            'funded-orders:create' => 'Create a customer-funded Pay Code checkout under the commissioned Commercial Principal.',
+            'funded-orders:read' => 'Read customer-funded checkouts created by this client.',
             'stored-value:read' => 'Read sanitized reusable-balance transactions presented to the client.',
             'stored-value:spend' => 'Debit a presented reusable balance into the bound merchant Account.',
         ],
@@ -1194,6 +1225,12 @@ return [
 
     'public_auto_generate' => [
         'enabled' => (bool) env('XCHANGE_PUBLIC_AUTO_GENERATE_ENABLED', true),
+        'turnstile' => [
+            'enabled' => (bool) env('XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_ENABLED', false),
+            'site_key' => env('XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_SITE_KEY'),
+            'secret_key' => env('XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_SECRET_KEY'),
+            'hostname' => env('XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_HOSTNAME'),
+        ],
         'minimum_principal_minor' => max(1, (int) env('XCHANGE_PUBLIC_AUTO_GENERATE_MINIMUM_PRINCIPAL_MINOR', 100)),
         'maximum_principal_minor' => max(100, (int) env('XCHANGE_PUBLIC_AUTO_GENERATE_MAXIMUM_PRINCIPAL_MINOR', 100_000)),
         'currencies' => array_values(array_filter(array_map(
@@ -1202,6 +1239,24 @@ return [
         ))),
         'recovery_link_ttl_days' => (int) env('XCHANGE_PUBLIC_AUTO_GENERATE_RECOVERY_TTL_DAYS', 7),
         'receipt_link_ttl_days' => (int) env('XCHANGE_PUBLIC_AUTO_GENERATE_RECEIPT_TTL_DAYS', 30),
+    ],
+
+    'public_issuance_escrow' => [
+        'enabled' => (bool) env('XCHANGE_PUBLIC_ISSUANCE_ESCROW_ENABLED', false),
+        'principal' => [
+            'reference' => env('XCHANGE_PUBLIC_ISSUANCE_ESCROW_PRINCIPAL_REFERENCE', 'public-issuance-escrow'),
+            'legal_name' => env('XCHANGE_PUBLIC_ISSUANCE_ESCROW_PRINCIPAL_LEGAL_NAME', 'Public Issuance Escrow'),
+            'authorization_reference' => env('XCHANGE_PUBLIC_ISSUANCE_ESCROW_PRINCIPAL_AUTHORIZATION_REFERENCE', 'commissioning:public-issuance-escrow:v1'),
+        ],
+    ],
+
+    'checkout_console' => [
+        'owner_password' => env('XCHANGE_CHECKOUT_OWNER_PASSWORD', env('APP_ENV') === 'production' ? null : 'password'),
+    ],
+
+    'checkout_refunds' => [
+        'pay_code_hold_seconds' => max(60, (int) env('XCHANGE_CHECKOUT_REFUND_PAY_CODE_HOLD_SECONDS', 86400)),
+        'pay_code_issuer_enabled' => (bool) env('XCHANGE_CHECKOUT_REFUND_PAY_CODE_ISSUER_ENABLED', false),
     ],
 
     'funding' => [
@@ -2989,6 +3044,14 @@ return [
         'currency' => env('XCHANGE_PUBLIC_AUTO_REGISTER_CURRENCY', 'PHP'),
         'provider' => env('XCHANGE_PUBLIC_AUTO_REGISTER_PROVIDER', 'netbank'),
         'ttl_seconds' => (int) env('XCHANGE_PUBLIC_AUTO_REGISTER_TTL_SECONDS', 1800),
+        'sms' => [
+            'enabled' => (bool) env('XCHANGE_PUBLIC_AUTO_REGISTER_SMS_ENABLED', true),
+            'title' => env('XCHANGE_PUBLIC_AUTO_REGISTER_SMS_TITLE', 'Your x-change account is ready'),
+            'body' => env(
+                'XCHANGE_PUBLIC_AUTO_REGISTER_SMS_BODY',
+                'Your x-change account is ready. Sign in to your cockpit: :url',
+            ),
+        ],
         'turnstile' => [
             'enabled' => (bool) env('XCHANGE_PUBLIC_AUTO_REGISTER_TURNSTILE_ENABLED', env('XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_ENABLED', false)),
             'site_key' => env('XCHANGE_PUBLIC_AUTO_REGISTER_TURNSTILE_SITE_KEY', env('XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_SITE_KEY')),

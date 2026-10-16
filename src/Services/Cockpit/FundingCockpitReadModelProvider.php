@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Number;
+use LBHurtado\XChange\Actions\Funding\AssessPaidOnDemandIssuanceRecovery;
 use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitFundingReadModelData;
 use LBHurtado\XChange\Enums\AccountFundingReceiptStatus;
@@ -30,6 +31,7 @@ class FundingCockpitReadModelProvider
     public function __construct(
         private readonly FundingTreasuryPortfolioReadModel $treasury,
         private readonly CockpitTreasuryAccessContract $treasuryAccess,
+        private readonly AssessPaidOnDemandIssuanceRecovery $issuanceRecovery,
     ) {}
 
     public function forOperator(Authenticatable $operator): CockpitFundingReadModelData
@@ -70,7 +72,8 @@ class FundingCockpitReadModelProvider
         $openSuspenseCount = (clone $openSuspenseCasesQuery)->count();
         $openSuspenseCases = (clone $openSuspenseCasesQuery)
             ->with([
-                'fundingIntent',
+                'fundingIntent.issuanceFundingOrder',
+                'providerFundingObservation',
                 'reconciliationRequests' => fn ($query) => $query
                     ->where('status', 'pending_approval'),
             ])
@@ -301,6 +304,8 @@ class FundingCockpitReadModelProvider
             ->map(function (FundingSuspenseCase $case) use ($canManageTreasuryReconciliation): array {
                 $pendingRequest = $case->reconciliationRequests
                     ->firstWhere('status', 'pending_approval');
+                $recoverable = $this->issuanceRecovery->eligible($case);
+                $order = $recoverable ? $this->issuanceRecovery->order($case) : null;
 
                 return [
                     'reference' => $case->reference,
@@ -310,10 +315,16 @@ class FundingCockpitReadModelProvider
                     'opened_at' => $case->opened_at?->toIso8601String(),
                     'pending_approval' => $pendingRequest !== null,
                     'pending_action' => $pendingRequest?->action->value,
-                    'allowed_actions' => $canManageTreasuryReconciliation
-                        && $pendingRequest === null
-                        ? $this->allowedReconciliationActions($case)
-                        : [],
+                    'order_reference' => $order?->reference,
+                    'payment_minor' => $order?->expected_payment_minor,
+                    'currency' => $order?->currency,
+                    'allowed_actions' => $pendingRequest !== null
+                        ? []
+                        : ($recoverable
+                            ? ['recover_paid_on_demand_issuance']
+                            : ($canManageTreasuryReconciliation
+                                ? $this->allowedReconciliationActions($case)
+                                : [])),
                 ];
             })
             ->all();

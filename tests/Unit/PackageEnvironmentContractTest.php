@@ -51,6 +51,16 @@ it('keeps known secret examples empty', function (): void {
     }
 });
 
+it('describes the public Turnstile secret without a sample value', function (): void {
+    $variable = collect((new CoreDeploymentEnvironmentContributor)->environmentVariables())
+        ->firstWhere('key', 'XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_SECRET_KEY');
+
+    expect($variable)->not->toBeNull()
+        ->and($variable->secret)->toBeTrue()
+        ->and(file_get_contents(dirname(__DIR__, 2).'/.env.example'))
+        ->toContain("XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_SECRET_KEY=\n");
+});
+
 it('uses the standard section order', function (): void {
     $contents = file_get_contents(dirname(__DIR__, 2).'/.env.example');
     $sections = [

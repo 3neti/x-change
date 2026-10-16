@@ -95,6 +95,7 @@ use LBHurtado\XChange\Console\Commands\Commercial\AuthorizeCommercialOperatorCom
 use LBHurtado\XChange\Console\Commands\Commercial\CommercialGovernanceStatusCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ProvisionCommercialBaselinesCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ProvisionCommercialPrincipalCommand;
+use LBHurtado\XChange\Console\Commands\Commercial\ProvisionPublicIssuanceEscrowPrincipalCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ReconcilePartnerCommissionPayoutBatchCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ReconcilePendingPartnerCommissionPayoutsCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\RecordProviderCostBatchCommand;
@@ -124,6 +125,7 @@ use LBHurtado\XChange\Console\Commands\Funding\ApproveFundingRequestCommand;
 use LBHurtado\XChange\Console\Commands\Funding\ApproveStandingFundingAddressBindingMigrationCommand;
 use LBHurtado\XChange\Console\Commands\Funding\AttestAccountFundingPayCodeJournalIntegrityCommand;
 use LBHurtado\XChange\Console\Commands\Funding\BackfillAccountFundingPayCodeJournalCommand;
+use LBHurtado\XChange\Console\Commands\Funding\DispatchPendingOnDemandIssuanceRetriesCommand;
 use LBHurtado\XChange\Console\Commands\Funding\DrainStandingFundingRuntimeCommand;
 use LBHurtado\XChange\Console\Commands\Funding\ExpireOnDemandIssuanceFundingOrdersCommand;
 use LBHurtado\XChange\Console\Commands\Funding\IssueSystemAccountFundingPayCodeCommand;
@@ -247,6 +249,7 @@ use LBHurtado\XChange\Contracts\CockpitQuickGenerateDraftFactoryContract;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Contracts\CockpitRedactorContract;
 use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
+use LBHurtado\XChange\Contracts\Commercial\PublicIssuanceEscrowPrincipalResolverContract;
 use LBHurtado\XChange\Contracts\CommercialComponentEconomicsResolverContract;
 use LBHurtado\XChange\Contracts\CommercialLegalTraceResolverContract;
 use LBHurtado\XChange\Contracts\CommercialOfferingResolverContract;
@@ -375,6 +378,7 @@ use LBHurtado\XChange\Listeners\QueueDemonstrationPolicySummary;
 use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
 use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Models\LeadCampaign;
+use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Services\Affiliation\XJournalAffiliationEventSink;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\Base64PngClaimUrlQrRenderer;
@@ -422,6 +426,7 @@ use LBHurtado\XChange\Services\Cockpit\VoucherLifecycleCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\WalletCockpitHeaderReadModelProvider;
 use LBHurtado\XChange\Services\Commercial\ConfigCommercialPartnerResolver;
 use LBHurtado\XChange\Services\Commercial\ConfiguredCommercialPrincipalResolver;
+use LBHurtado\XChange\Services\Commercial\ConfiguredPublicIssuanceEscrowPrincipalResolver;
 use LBHurtado\XChange\Services\Commercial\DatabaseCommercialComponentEconomicsResolver;
 use LBHurtado\XChange\Services\Commercial\DatabaseCommercialOfferingResolver;
 use LBHurtado\XChange\Services\Commercial\DatabaseCommercialOperatorAuthority;
@@ -703,6 +708,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(
             CommercialPrincipalResolverContract::class,
             ConfiguredCommercialPrincipalResolver::class,
+        );
+        $this->app->singleton(
+            PublicIssuanceEscrowPrincipalResolverContract::class,
+            ConfiguredPublicIssuanceEscrowPrincipalResolver::class,
         );
         $this->app->scoped(
             SystemUserResolverContract::class,
@@ -1701,11 +1710,19 @@ class XChangeServiceProvider extends ServiceProvider
         $this->bootPartnerApiOAuth();
         $this->loadViewsFrom($this->packagePath('resources/views'), 'x-change');
         $this->bootLeadCampaignEndpointRateLimiter();
+        $this->bootPublicAutoGenerateRateLimiter();
         $this->bootFundingVerificationRateLimiter();
         $this->bootPaymentVerificationRateLimiter();
         $this->bootCommercialSettlementRateLimiter();
         $this->bootPartnerApiRateLimiter();
         $this->bootFundingVerificationSchedule();
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            $schedule
+                ->command('xchange:funding:dispatch-issuance-retries --limit=100')
+                ->everyMinute()
+                ->onOneServer()
+                ->withoutOverlapping(5);
+        });
         if (config('x-change.partner_api.payment_events.enabled', false)) {
             $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
                 $schedule->command('x-change:partner-payment-events:deliver --limit=20')->everyMinute()->withoutOverlapping(5);
@@ -1753,6 +1770,7 @@ class XChangeServiceProvider extends ServiceProvider
                 RepairStandingFundingAddressBindingEffectiveAtCommand::class,
                 BackfillAccountFundingPayCodeJournalCommand::class,
                 ExpireOnDemandIssuanceFundingOrdersCommand::class,
+                DispatchPendingOnDemandIssuanceRetriesCommand::class,
                 IssueSystemAccountFundingPayCodeCommand::class,
                 MigrateStandingFundingAddressBindingCommand::class,
                 VerifyFundingRequestBackingCommand::class,
@@ -1804,6 +1822,7 @@ class XChangeServiceProvider extends ServiceProvider
                 CommercialGovernanceStatusCommand::class,
                 ProvisionCommercialBaselinesCommand::class,
                 ProvisionCommercialPrincipalCommand::class,
+                ProvisionPublicIssuanceEscrowPrincipalCommand::class,
                 ReconcilePartnerCommissionPayoutBatchCommand::class,
                 ReconcilePendingPartnerCommissionPayoutsCommand::class,
                 RecordProviderCostBatchCommand::class,
@@ -1909,6 +1928,38 @@ class XChangeServiceProvider extends ServiceProvider
                 1,
                 (int) config('x-change.funding.verification_provider_rate_limit_per_minute', 30),
             ))->by((string) data_get($job, 'providerCode', 'unknown'));
+        });
+    }
+
+    protected function bootPublicAutoGenerateRateLimiter(): void
+    {
+        RateLimiter::for('x-change-public-auto-generate', function (Request $request): array {
+            $route = (string) $request->route()?->getName();
+            $ip = (string) ($request->ip() ?? 'unknown');
+            $session = hash('sha256', (string) $request->session()->getId());
+            $order = $request->route('order');
+            $orderReference = $order instanceof PayCodeIssuanceFundingOrder
+                ? $order->reference
+                : 'none';
+
+            return match ($route) {
+                'x-change.public-auto-generate.store' => [
+                    Limit::perMinute(30)->by('issue:global'),
+                    Limit::perMinute(30)->by('issue:ip:'.$ip),
+                    Limit::perMinute(6)->by('issue:session:'.$session),
+                ],
+                'x-change.public-auto-generate.funding-orders.verification' => [
+                    Limit::perMinute(120)->by('verify:ip:'.$ip),
+                    Limit::perMinute(15)->by('verify:order:'.$orderReference),
+                ],
+                'x-change.public-auto-generate.funding-orders.acknowledge',
+                'x-change.public-auto-generate.funding-orders.cancel',
+                'x-change.public-auto-generate.funding-orders.retry-issuance' => [
+                    Limit::perMinute(30)->by($route.':ip:'.$ip),
+                    Limit::perMinute(6)->by($route.':order:'.$orderReference),
+                ],
+                default => [Limit::perMinute(60)->by($route.':ip:'.$ip)],
+            };
         });
     }
 

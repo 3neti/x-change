@@ -5,15 +5,22 @@ declare(strict_types=1);
 use Illuminate\Http\Request;
 use Illuminate\Session\ArraySessionHandler;
 use Illuminate\Session\Store;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Validation\ValidationException;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Actions\Funding\TransitionPayCodeIssuanceFundingOrder;
+use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitOnDemandIssuanceFundingOrderController;
 use LBHurtado\XChange\Models\CommercialPrincipal;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Commercial\ConfiguredCommercialPrincipalResolver;
+use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceInstructionPolicy;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceOrderAccess;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 beforeEach(function (): void {
@@ -49,11 +56,12 @@ it('renders the public issuance surface without cockpit navigation', function ()
         ->assertJsonPath('props.startup_mode', 'blank')
         ->assertJsonCount(0, 'props.saved_templates')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.route', 'x-change.public-auto-generate.store')
-        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.authorization', 'commercial-principal-server-bound')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.authorization', 'public-issuance-escrow-server-bound')
         ->assertJsonPath('props.on_demand_issuance_policy.basis', 'full_amount')
         ->assertJsonPath('props.public_navigation.pricing_url', '/x/pricing')
         ->assertJsonPath('props.public_navigation.claim_url', '/x/claim')
         ->assertJsonPath('props.public_navigation.login_url', null)
+        ->assertJsonPath('props.turnstile.enabled', false)
         ->assertJsonPath('props.commercial_principal.reference', 'commercial-public');
 });
 
@@ -138,6 +146,18 @@ it('binds public funding orders to both a browser session and possession token',
 
     expect(fn () => $access->authorize($order->refresh(), $request))
         ->toThrow(NotFoundHttpException::class);
+});
+
+it('refuses an issuance retry without the order possession token', function (): void {
+    provisionPublicAutoGeneratePrincipal();
+    $order = makePublicAutoGenerateFundingOrder();
+
+    $this->postJson(route('x-change.public-auto-generate.funding-orders.retry-issuance', [
+        'order' => $order->reference,
+    ]))->assertNotFound();
+
+    expect($order->refresh()->events()->where('event_type', 'manual_issuance_retry_requested')->exists())
+        ->toBeFalse();
 });
 
 it('authorizes funding-order access for the non-login commercial principal', function (): void {
@@ -354,6 +374,118 @@ it('renders a signed redacted public issuance receipt', function (): void {
         ->assertJsonPath('props.receipt.order_reference', $order->reference)
         ->assertJsonPath('props.receipt.redactions.payer_identity', true)
         ->assertJsonMissingPath('props.receipt.provider_transaction_id');
+});
+
+it('enforces the published public principal and currency limits on issuance instructions', function (): void {
+    $policy = app(PublicIssuanceInstructionPolicy::class);
+
+    $policy->assertAllowed(['cash' => ['amount' => 1000, 'currency' => 'PHP']]);
+
+    foreach ([
+        ['cash' => ['amount' => 1000.01, 'currency' => 'PHP']],
+        ['cash' => ['amount' => 0.01, 'currency' => 'PHP']],
+        ['cash' => ['amount' => 25, 'currency' => 'USD']],
+        ['cash' => ['amount' => 25, 'currency' => 'PHP'], 'execution' => ['driver' => 'other']],
+        ['cash' => ['amount' => 25, 'currency' => 'PHP'], 'metadata' => ['issuer_id' => '99']],
+        ['cash' => ['amount' => 25, 'currency' => 'PHP'], 'claim' => ['outcomes' => [['key' => 'account_funding']]]],
+    ] as $instructions) {
+        expect(fn () => $policy->assertAllowed($instructions))
+            ->toThrow(ValidationException::class);
+    }
+});
+
+it('rejects an over-limit public creation post before opening a funding order', function (): void {
+    provisionPublicAutoGeneratePrincipal();
+
+    $this->postJson(route('x-change.public-auto-generate.store'), [
+        'cash' => ['amount' => 1000.01, 'currency' => 'PHP'],
+        'inputs' => ['fields' => []],
+        'feedback' => ['email' => null],
+        'rider' => ['message' => null],
+    ])->assertUnprocessable()->assertJsonValidationErrors('cash.amount');
+
+    expect(PayCodeIssuanceFundingOrder::query()->count())->toBe(0);
+});
+
+it('builds public instructions from a server-owned profile', function (): void {
+    $instructions = app(PublicIssuanceInstructionPolicy::class)->canonicalize([
+        'cash' => ['amount' => 25, 'currency' => 'PHP', 'fee_strategy' => 'add'],
+        'provider' => 'other',
+        'claim' => ['default_outcome' => 'account_funding'],
+        'metadata' => ['custom' => ['cockpit' => [
+            'template_key' => 'private-template',
+            'payee' => ['kind' => 'open'],
+            'contract_summary' => ['internal' => true],
+        ]]],
+    ]);
+
+    expect(data_get($instructions, 'provider'))->toBe('netbank')
+        ->and(data_get($instructions, 'cash.fee_strategy'))->toBe('absorb')
+        ->and(data_get($instructions, 'claim.default_outcome'))->toBe('provider_disbursement')
+        ->and(data_get($instructions, 'metadata.custom.cockpit.template_key'))->toBe('blank-pay-code')
+        ->and(data_get($instructions, 'metadata.custom.cockpit.contract_summary'))->toBeNull();
+});
+
+it('does not offer cancellation once a public order is funded or needs issuance recovery', function (): void {
+    $principal = provisionPublicAutoGeneratePrincipal();
+    $order = makePublicAutoGenerateFundingOrder((string) $principal->getKey());
+    $order->forceFill([
+        'status' => 'issuance_attention',
+        'funded_at' => now(),
+    ])->saveQuietly();
+
+    $projection = app(OnDemandIssuanceFundingOrderPresenter::class)->present($order->refresh(), null, true);
+
+    expect(data_get($projection, 'order.can_cancel'))->toBeFalse();
+
+    $request = Request::create('/x/auto-generate/funding-orders/'.$order->reference, 'DELETE');
+    $request->setUserResolver(static fn () => $principal);
+
+    expect(fn () => app()->call([
+        app(CockpitOnDemandIssuanceFundingOrderController::class),
+        'cancel',
+    ], ['request' => $request, 'order' => $order]))->toThrow(ConflictHttpException::class)
+        ->and($order->refresh()->status->value)->toBe('issuance_attention');
+
+    expect(fn () => app(TransitionPayCodeIssuanceFundingOrder::class)->handle(
+        order: $order,
+        status: PayCodeIssuanceFundingOrderStatus::Cancelled,
+        eventType: 'cancelled',
+        actorType: 'test',
+        actorId: 'test',
+    ))->toThrow(RuntimeException::class, 'governed recovery or refund');
+});
+
+it('keeps prepayment instruction failures cancellable', function (): void {
+    $order = makePublicAutoGenerateFundingOrder();
+    $order->forceFill(['status' => 'issuance_attention'])->saveQuietly();
+
+    $projection = app(OnDemandIssuanceFundingOrderPresenter::class)->present($order->refresh(), null, true);
+
+    expect(data_get($projection, 'order.can_cancel'))->toBeTrue();
+});
+
+it('uses separate public issuance rate limits for distinct browser sessions', function (): void {
+    $principal = provisionPublicAutoGeneratePrincipal();
+    $route = Route::getRoutes()->getByName('x-change.public-auto-generate.store');
+    $limiter = RateLimiter::limiter('x-change-public-auto-generate');
+    $keys = [];
+
+    foreach (['first-session', 'second-session'] as $sessionId) {
+        $request = Request::create('/x/auto-generate', 'POST', server: ['REMOTE_ADDR' => '203.0.113.10']);
+        $route->bind($request);
+        $request->setRouteResolver(static fn () => $route);
+        $request->setUserResolver(static fn () => $principal);
+        $request->setLaravelSession(new Store('public-test', new ArraySessionHandler(60), $sessionId));
+        $limits = $limiter($request);
+        $keys[] = $limits[2]->key;
+
+        expect($limits[0]->maxAttempts)->toBe(30)
+            ->and($limits[1]->maxAttempts)->toBe(30)
+            ->and($limits[2]->maxAttempts)->toBe(6);
+    }
+
+    expect($keys[0])->not->toBe($keys[1]);
 });
 
 function makePublicAutoGenerateFundingOrder(string $issuerId = '1'): PayCodeIssuanceFundingOrder

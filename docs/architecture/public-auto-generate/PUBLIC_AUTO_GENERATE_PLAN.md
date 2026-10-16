@@ -1,6 +1,58 @@
 # Public Auto-Generate Plan
 
-Last updated: 2026-09-30
+## Production release boundary — 2026-10-10
+
+Production x-PayOut beta.79 deploys x-change `v1.0.120` with server-side
+Turnstile verification enabled. One owner-funded on-demand Pay Code
+succeeded. The local public policy, rate-limit, cancellation, and amount
+lease changes described in the companion compass are not in that release.
+The seven open-launch gates below remain open. The invite-controlled beta
+entry checklist also remains open because server-side invitations, ceilings,
+operational alerts, recovery/load acceptance, and commercial authority have
+not been signed off on the exact deployment.
+
+## Open-launch readiness gate — 2026-10-10
+
+The next target is unrestricted use of `/x/auto-generate`, with a PHP 1.00 to
+PHP 1,000.00 Pay Code principal. Open launch is blocked until every item below
+is implemented and accepted on the exact production release. The prior
+invite-controlled beta decision remains the operating limit meanwhile.
+
+1. Enforce the public principal, PHP currency, and a server-owned allowlist of
+   issuance instructions on the creation POST. Reject Cockpit-only fields and
+   unknown public instructions before pricing or order creation; retain the
+   commissioned principal and `full_amount` basis on the server.
+2. Key public rate limits to visitor IP, browser session, and order as
+   appropriate. Add an overall admission and provider-call budget, then prove
+   concurrent visitors can create and monitor orders without sharing the
+   commercial principal's throttle bucket.
+3. Make cancellation unavailable once payment is verified. A funded order in
+   `issuance_attention` retains its hold for operator-led recovery. The
+   operator either issues exactly one Pay Code or completes an audited refund
+   to the original payer; a guest action cannot release that value.
+4. Refund identifying amount-lease adjustments to the payer through a proven
+   provider or controlled manual return path, with evidence and Treasury
+   reconciliation. If the return path cannot reliably return centavos,
+   disable positive public adjustments and keep open launch blocked until
+   same-amount concurrency is adequate.
+5. Add order-creation abuse verification, an admission circuit breaker,
+   worker/scheduler health and funded-order alerts, and a read-only operator
+   recovery view. Reconcile the production worker command with its declared
+   queue list, including `partner-payments`. Require shared wallet balance
+   cache and lock drivers across web and financial workers; accept a second
+   paid order after a long-lived worker has cached an earlier balance.
+6. Prove exact-release failure, retry, load, provider-delay, worker-restart,
+   duplicate-evidence, refund, and kill-switch acceptance. The kill switch
+   stops new orders while preserving paid-order recovery.
+7. Record the applicable commercial, tax, invoicing, refund, privacy, support,
+   and incident authority for unrestricted customer charging. The existing
+   production beta charging exception does not itself satisfy this gate.
+
+Implementation and test evidence is tracked in the companion compass. No
+new real-money transfer, package publication, host deployment, or broad
+promotion is authorized merely by this plan.
+
+Last updated: 2026-10-10
 
 ## Objective
 

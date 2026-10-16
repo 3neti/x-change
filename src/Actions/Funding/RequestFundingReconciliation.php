@@ -12,6 +12,10 @@ use LBHurtado\XChange\Models\FundingSuspenseCase;
 
 class RequestFundingReconciliation
 {
+    public function __construct(
+        private readonly AssessPaidOnDemandIssuanceRecovery $recovery,
+    ) {}
+
     public function handle(
         FundingSuspenseCase $case,
         FundingReconciliationAction $action,
@@ -37,6 +41,11 @@ class RequestFundingReconciliation
 
             if (! in_array($lockedCase->status, ['open', 'monitoring'], true)) {
                 throw new InvalidArgumentException('The funding suspense case is not open for reconciliation.');
+            }
+
+            if ($action === FundingReconciliationAction::RecoverPaidOnDemandIssuance
+                && ! $this->recovery->eligible($lockedCase)) {
+                throw new InvalidArgumentException('This payment is not eligible for Pay Code recovery.');
             }
 
             $observationId = $providerObservationId ?? $lockedCase->provider_funding_observation_id;

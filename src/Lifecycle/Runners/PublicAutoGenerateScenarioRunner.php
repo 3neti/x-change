@@ -18,7 +18,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Funding\PrepareOnDemandPayCodeIssuance;
 use LBHurtado\XChange\Actions\Funding\SimulateQrPhPayment;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
-use LBHurtado\XChange\Contracts\CommercialPrincipalResolverContract;
+use LBHurtado\XChange\Contracts\Commercial\PublicIssuanceEscrowPrincipalResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
@@ -28,6 +28,7 @@ use LBHurtado\XChange\Models\CommercialPrincipal;
 use LBHurtado\XChange\Services\Cockpit\CompileCockpitQuickGenerateClaimPolicy;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Funding\QrPhSimulatorFundingProviderAdapter;
+use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceInstructionPolicy;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceOrderAccess;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use LBHurtado\XChange\Support\Funding\QrPhFundingSimulatorGuard;
@@ -56,7 +57,7 @@ final class PublicAutoGenerateScenarioRunner implements ScenarioRunnerContract
 
     public function __construct(
         private readonly DatabaseManager $databases,
-        private readonly CommercialPrincipalResolverContract $principals,
+        private readonly PublicIssuanceEscrowPrincipalResolverContract $principals,
         private readonly WalletAccessContract $wallets,
         private readonly CompileCockpitQuickGenerateClaimPolicy $claimPolicy,
         private readonly EstimatePayCodeCost $estimate,
@@ -66,6 +67,7 @@ final class PublicAutoGenerateScenarioRunner implements ScenarioRunnerContract
         private readonly StoreProviderWebhookReceipt $storeReceipt,
         private readonly QrPhFundingSimulatorGuard $simulatorGuard,
         private readonly PublicIssuanceOrderAccess $orderAccess,
+        private readonly PublicIssuanceInstructionPolicy $publicIssuancePolicy,
         private readonly OnDemandIssuanceFundingOrderPresenter $presenter,
     ) {}
 
@@ -148,7 +150,10 @@ final class PublicAutoGenerateScenarioRunner implements ScenarioRunnerContract
         string $mobile,
     ): array {
         $amountMinor = (int) data_get($context->scenario, 'amount_minor', 2_500);
-        $instructions = $this->claimPolicy->handle($this->instructions($amountMinor));
+        $publicInput = $this->instructions($amountMinor);
+        $this->publicIssuancePolicy->assertAllowed($publicInput);
+        $instructions = $this->claimPolicy->handle($this->publicIssuancePolicy->canonicalize($publicInput));
+        data_set($instructions, '_meta.source', 'public.auto-generate');
         $pricing = $this->estimate->handle($instructions);
         $requiredAmountMinor = (int) round((float) $pricing->account_debit * 100);
         $voucherCountBefore = Voucher::query()->count();
@@ -159,6 +164,7 @@ final class PublicAutoGenerateScenarioRunner implements ScenarioRunnerContract
             idempotencyKey: $context->idempotencyKey,
             fundingBasis: OnDemandIssuanceFundingBasis::FullAmount,
             requirePayerIdentityMatch: false,
+            allowAmountAdjustment: false,
         );
         $replayed = $this->prepare->handle(
             issuer: $principal,
@@ -167,6 +173,7 @@ final class PublicAutoGenerateScenarioRunner implements ScenarioRunnerContract
             idempotencyKey: $context->idempotencyKey,
             fundingBasis: OnDemandIssuanceFundingBasis::FullAmount,
             requirePayerIdentityMatch: false,
+            allowAmountAdjustment: false,
         );
         $browser = $this->browserRequest('public-auto-generate-primary');
         $token = $this->orderAccess->bind($order, $browser);
@@ -311,8 +318,6 @@ final class PublicAutoGenerateScenarioRunner implements ScenarioRunnerContract
             ],
             'count' => 1,
             'provider' => 'netbank',
-            'prefix' => 'PUBLIC',
-            'mask' => '****',
             'voucher_type' => 'redeemable',
             'metadata' => ['authorization' => 'public_auto_generate'],
             '_meta' => ['source' => 'public.auto-generate'],

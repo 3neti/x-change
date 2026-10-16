@@ -23,6 +23,7 @@ final class TransitionPayCodeIssuanceFundingOrder
         string $actorId,
         array $attributes = [],
         array $metadata = [],
+        bool $approvedPreExpiryPaymentRecovery = false,
     ): PayCodeIssuanceFundingOrder {
         return DB::transaction(function () use (
             $order,
@@ -32,11 +33,24 @@ final class TransitionPayCodeIssuanceFundingOrder
             $actorId,
             $attributes,
             $metadata,
+            $approvedPreExpiryPaymentRecovery,
         ): PayCodeIssuanceFundingOrder {
             $locked = PayCodeIssuanceFundingOrder::query()
                 ->lockForUpdate()
                 ->findOrFail($order->getKey());
+
+            if ($status === PayCodeIssuanceFundingOrderStatus::Cancelled && $locked->funded_at !== null) {
+                throw new RuntimeException('A funded issuance order requires governed recovery or refund.');
+            }
+
             $allowed = $this->allowed($locked->status);
+
+            if ($approvedPreExpiryPaymentRecovery
+                && $locked->status === PayCodeIssuanceFundingOrderStatus::Expired
+                && $status === PayCodeIssuanceFundingOrderStatus::Verifying
+                && $eventType === 'reconciliation_paid_order_recovery_approved') {
+                $allowed[] = PayCodeIssuanceFundingOrderStatus::Verifying;
+            }
 
             if (! in_array($status, $allowed, true)) {
                 throw new RuntimeException(
@@ -107,6 +121,7 @@ final class TransitionPayCodeIssuanceFundingOrder
                 PayCodeIssuanceFundingOrderStatus::Expired,
             ],
             PayCodeIssuanceFundingOrderStatus::IssuanceAttention => [
+                PayCodeIssuanceFundingOrderStatus::IssuanceAttention,
                 PayCodeIssuanceFundingOrderStatus::Issuing,
                 PayCodeIssuanceFundingOrderStatus::Cancelled,
                 PayCodeIssuanceFundingOrderStatus::Expired,

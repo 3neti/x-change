@@ -1057,6 +1057,35 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.text()).toContain('Funding Activity');
     });
 
+    it('offers paid order recovery without exposing Treasury approval to the Account holder', () => {
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: {
+                    ...fundingReadModel,
+                    suspense_cases: [{
+                        ...fundingReadModel.suspense_cases[0],
+                        reason: 'on_demand_issuance_provider_evidence_mismatch',
+                        order_reference: '01M4MCB3HVBXP77T3TQMXW8PJF',
+                        payment_minor: 52_100,
+                        currency: 'PHP',
+                        allowed_actions: ['recover_paid_on_demand_issuance'],
+                    }],
+                    approval_queue: [],
+                    controls: {
+                        ...fundingReadModel.controls,
+                        can_manage_treasury_reconciliation: false,
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Request Pay Code recovery');
+        expect(wrapper.text()).toContain('01M4MCB3HVBXP77T3TQMXW8PJF');
+        expect(wrapper.text()).toContain('₱521.00');
+        expect(wrapper.text()).toContain('Do not pay again.');
+        expect(wrapper.text()).not.toContain('Approve and execute');
+    });
+
     it('explains when stale provider liquidity pauses issuance capacity', () => {
         const wrapper = mount(Funding, {
             props: {

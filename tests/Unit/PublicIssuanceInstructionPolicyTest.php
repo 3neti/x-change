@@ -8,6 +8,7 @@ use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceInstructionPolicy;
 it('accepts the public safe instruction subset', function (): void {
     app(PublicIssuanceInstructionPolicy::class)->assertAllowed([
         'count' => 1,
+        'cash' => ['amount' => 25, 'currency' => 'PHP'],
         'voucher_type' => 'redeemable',
         'feedback' => ['email' => 'guest@example.com', 'webhook' => null],
         'rider' => ['url' => 'https://example.com/thank-you'],
