@@ -18,7 +18,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Funding\PrepareOnDemandPayCodeIssuance;
 use LBHurtado\XChange\Actions\Funding\SimulateQrPhPayment;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
-use LBHurtado\XChange\Contracts\CommercialPrincipalResolverContract;
+use LBHurtado\XChange\Contracts\Commercial\PublicIssuanceEscrowPrincipalResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
@@ -56,7 +56,7 @@ final class PublicAutoGenerateScenarioRunner implements ScenarioRunnerContract
 
     public function __construct(
         private readonly DatabaseManager $databases,
-        private readonly CommercialPrincipalResolverContract $principals,
+        private readonly PublicIssuanceEscrowPrincipalResolverContract $principals,
         private readonly WalletAccessContract $wallets,
         private readonly CompileCockpitQuickGenerateClaimPolicy $claimPolicy,
         private readonly EstimatePayCodeCost $estimate,

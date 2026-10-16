@@ -98,6 +98,7 @@ use LBHurtado\XChange\Console\Commands\Commercial\AuthorizeCommercialOperatorCom
 use LBHurtado\XChange\Console\Commands\Commercial\CommercialGovernanceStatusCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ProvisionCommercialBaselinesCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ProvisionCommercialPrincipalCommand;
+use LBHurtado\XChange\Console\Commands\Commercial\ProvisionPublicIssuanceEscrowPrincipalCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ReconcilePartnerCommissionPayoutBatchCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ReconcilePendingPartnerCommissionPayoutsCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\RecordProviderCostBatchCommand;
@@ -254,6 +255,7 @@ use LBHurtado\XChange\Contracts\CockpitQuickGenerateDraftFactoryContract;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Contracts\CockpitRedactorContract;
 use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
+use LBHurtado\XChange\Contracts\Commercial\PublicIssuanceEscrowPrincipalResolverContract;
 use LBHurtado\XChange\Contracts\CommercialComponentEconomicsResolverContract;
 use LBHurtado\XChange\Contracts\CommercialLegalTraceResolverContract;
 use LBHurtado\XChange\Contracts\CommercialOfferingResolverContract;
@@ -431,6 +433,7 @@ use LBHurtado\XChange\Services\Cockpit\VoucherLifecycleCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\WalletCockpitHeaderReadModelProvider;
 use LBHurtado\XChange\Services\Commercial\ConfigCommercialPartnerResolver;
 use LBHurtado\XChange\Services\Commercial\ConfiguredCommercialPrincipalResolver;
+use LBHurtado\XChange\Services\Commercial\ConfiguredPublicIssuanceEscrowPrincipalResolver;
 use LBHurtado\XChange\Services\Commercial\DatabaseCommercialComponentEconomicsResolver;
 use LBHurtado\XChange\Services\Commercial\DatabaseCommercialOfferingResolver;
 use LBHurtado\XChange\Services\Commercial\DatabaseCommercialOperatorAuthority;
@@ -713,6 +716,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(
             CommercialPrincipalResolverContract::class,
             ConfiguredCommercialPrincipalResolver::class,
+        );
+        $this->app->singleton(
+            PublicIssuanceEscrowPrincipalResolverContract::class,
+            ConfiguredPublicIssuanceEscrowPrincipalResolver::class,
         );
         $this->app->scoped(
             SystemUserResolverContract::class,
@@ -1827,6 +1834,7 @@ class XChangeServiceProvider extends ServiceProvider
                 CommercialGovernanceStatusCommand::class,
                 ProvisionCommercialBaselinesCommand::class,
                 ProvisionCommercialPrincipalCommand::class,
+                ProvisionPublicIssuanceEscrowPrincipalCommand::class,
                 ReconcilePartnerCommissionPayoutBatchCommand::class,
                 ReconcilePendingPartnerCommissionPayoutsCommand::class,
                 RecordProviderCostBatchCommand::class,

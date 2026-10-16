@@ -9,7 +9,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
-use LBHurtado\XChange\Contracts\CommercialPrincipalResolverContract;
+use LBHurtado\XChange\Contracts\Commercial\PublicIssuanceEscrowPrincipalResolverContract;
 use LBHurtado\XChange\Contracts\SettlementRailCapabilityRegistryContract;
 use LBHurtado\XChange\Services\Checkout\PublicCheckoutDraftAccess;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
@@ -24,7 +24,7 @@ final class PublicAutoGeneratePageController extends Controller
 {
     public function __construct(
         private readonly CockpitReadOnlyPageProps $props,
-        private readonly CommercialPrincipalResolverContract $principals,
+        private readonly PublicIssuanceEscrowPrincipalResolverContract $principals,
         private readonly InstructionCapabilityReadinessRegistry $instructionCapabilities,
         private readonly SettlementRailCapabilityRegistryContract $settlementRails,
         private readonly PublicIssuanceOrderAccess $publicOrderAccess,
@@ -52,7 +52,7 @@ final class PublicAutoGeneratePageController extends Controller
             'quick_generate_read_model.mutation_contract.route_url',
             $enabled ? route('x-change.public-auto-generate.store', [], false) : null,
         );
-        data_set($props, 'quick_generate_read_model.mutation_contract.authorization', 'commercial-principal-server-bound');
+        data_set($props, 'quick_generate_read_model.mutation_contract.authorization', 'public-issuance-escrow-server-bound');
         data_set($props, 'quick_generate_read_model.mutation_contract.runtime_enabled', $enabled);
         data_set($props, 'quick_generate_read_model.mutation_contract.allowed_methods', ['GET', 'POST']);
 

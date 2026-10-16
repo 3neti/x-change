@@ -1241,6 +1241,15 @@ return [
         'receipt_link_ttl_days' => (int) env('XCHANGE_PUBLIC_AUTO_GENERATE_RECEIPT_TTL_DAYS', 30),
     ],
 
+    'public_issuance_escrow' => [
+        'enabled' => (bool) env('XCHANGE_PUBLIC_ISSUANCE_ESCROW_ENABLED', false),
+        'principal' => [
+            'reference' => env('XCHANGE_PUBLIC_ISSUANCE_ESCROW_PRINCIPAL_REFERENCE', 'public-issuance-escrow'),
+            'legal_name' => env('XCHANGE_PUBLIC_ISSUANCE_ESCROW_PRINCIPAL_LEGAL_NAME', 'Public Issuance Escrow'),
+            'authorization_reference' => env('XCHANGE_PUBLIC_ISSUANCE_ESCROW_PRINCIPAL_AUTHORIZATION_REFERENCE', 'commissioning:public-issuance-escrow:v1'),
+        ],
+    ],
+
     'checkout_console' => [
         'owner_password' => env('XCHANGE_CHECKOUT_OWNER_PASSWORD', env('APP_ENV') === 'production' ? null : 'password'),
     ],
