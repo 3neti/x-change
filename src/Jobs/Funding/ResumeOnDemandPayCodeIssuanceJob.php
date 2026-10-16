@@ -126,7 +126,7 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
                 attributes: ['issuing_at' => now(), 'metadata' => $metadata],
             );
             $holds->consume(new TreasuryHoldConsumptionData(
-                operationReference: 'issuance-hold-consume:'.$order->reference,
+                operationReference: 'issuance-hold-consume:'.$order->reference.':'.mb_strtolower((string) $order->treasury_hold_reference),
                 holdReference: $order->treasury_hold_reference,
                 destinationPositionReference: $clientFunds->positionReference,
                 amountMinor: $order->required_amount_minor,
