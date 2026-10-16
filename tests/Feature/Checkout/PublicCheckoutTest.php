@@ -464,6 +464,26 @@ it('saves an editable checkout draft while new placement is paused and requires 
         ->and(Checkout::query()->firstOrFail()->instructions_ciphertext['cash']['amount'])->toBe(75);
 });
 
+it('stores public checkout drafts against the dedicated escrow principal after cutover', function (): void {
+    checkoutTestPrincipal();
+    config()->set('x-change.public_issuance_escrow.enabled', true);
+    config()->set('x-change.public_issuance_escrow.principal.reference', 'public-issuance-escrow');
+
+    $escrow = CommercialPrincipal::query()->create([
+        'reference' => 'public-issuance-escrow',
+        'legal_name' => 'Public Issuance Escrow',
+        'authorization_reference' => 'commissioning:public-issuance-escrow:v1',
+        'active' => true,
+    ]);
+
+    $created = $this->postJson(route('x-change.public-auto-generate.checkouts.store'), [
+        'instructions' => ['cash' => ['amount' => 50, 'currency' => 'PHP']],
+    ])->assertOk();
+
+    expect(Checkout::query()->where('reference', $created->json('reference'))->firstOrFail())
+        ->owner_id->toBe((string) $escrow->getKey());
+});
+
 it('backfills existing public orders without duplicating checkout history', function (): void {
     $order = checkoutTestOrder(checkoutTestPrincipal());
 

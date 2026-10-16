@@ -7,17 +7,18 @@ namespace LBHurtado\XChange\Http\Controllers\Web\PublicIssuance;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\IssuanceBatch\CreateIssuanceBatch;
 use LBHurtado\XChange\Actions\IssuanceBatch\EstimateIssuanceBatchPricing;
 use LBHurtado\XChange\Actions\IssuanceBatch\PrepareIssuanceBatchFunding;
-use LBHurtado\XChange\Models\IssuanceBatch;
+use LBHurtado\XChange\Contracts\Commercial\PublicIssuanceEscrowPrincipalResolverContract;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Models\IssuanceBatch;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Checkout\CheckoutLifecycle;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
-use LBHurtado\XChange\Services\Commercial\ConfiguredCommercialPrincipalResolver;
 use LBHurtado\XChange\Services\IssuanceBatch\IssuanceBatchAccess;
 use LBHurtado\XChange\Services\IssuanceBatch\IssuanceBatchImportNormalizer;
 use LBHurtado\XChange\Services\IssuanceBatch\IssuanceBatchTabularReader;
@@ -58,7 +59,7 @@ final class PublicIssuanceBatchController extends Controller
         ]);
     }
 
-    public function store(Request $request, ConfiguredCommercialPrincipalResolver $resolver, IssuanceBatchTabularReader $reader, IssuanceBatchImportNormalizer $normalizer, CreateIssuanceBatch $create): JsonResponse
+    public function store(Request $request, PublicIssuanceEscrowPrincipalResolverContract $resolver, IssuanceBatchTabularReader $reader, IssuanceBatchImportNormalizer $normalizer, CreateIssuanceBatch $create): JsonResponse
     {
         $this->decodeJsonInput($request);
         $validated = $request->validate([
@@ -147,8 +148,8 @@ final class PublicIssuanceBatchController extends Controller
         ]);
     }
 
-    /** @return \Illuminate\Support\Collection<int, array<string, mixed>> */
-    private function reportItems(IssuanceBatch $batch): \Illuminate\Support\Collection
+    /** @return Collection<int, array<string, mixed>> */
+    private function reportItems(IssuanceBatch $batch): Collection
     {
         $voucherIds = $batch->items->pluck('voucher_id')->filter()->values();
         $vouchers = Voucher::query()->whereKey($voucherIds->all())->get()->keyBy(fn (Voucher $voucher): string => (string) $voucher->getKey());
@@ -224,7 +225,7 @@ final class PublicIssuanceBatchController extends Controller
         return $mobile === '' ? null : (strlen($mobile) <= 4 ? str_repeat('•', strlen($mobile)) : str_repeat('•', strlen($mobile) - 4).substr($mobile, -4));
     }
 
-    public function fund(Request $request, IssuanceBatch $batch, ConfiguredCommercialPrincipalResolver $resolver, PrepareIssuanceBatchFunding $funding, CheckoutLifecycle $checkouts, PublicIssuanceOrderAccess $orders, OnDemandIssuanceFundingOrderPresenter $presenter, IssuanceBatchAccess $batches): JsonResponse
+    public function fund(Request $request, IssuanceBatch $batch, PublicIssuanceEscrowPrincipalResolverContract $resolver, PrepareIssuanceBatchFunding $funding, CheckoutLifecycle $checkouts, PublicIssuanceOrderAccess $orders, OnDemandIssuanceFundingOrderPresenter $presenter, IssuanceBatchAccess $batches): JsonResponse
     {
         $batches->authorize($request, $batch);
         $validated = $request->validate(['idempotency_key' => ['required', 'string', 'max:191']]);

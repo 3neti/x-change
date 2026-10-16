@@ -7,12 +7,12 @@ namespace LBHurtado\XChange\Http\Controllers\Web\PublicIssuance;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use LBHurtado\XChange\Contracts\Commercial\PublicIssuanceEscrowPrincipalResolverContract;
 use LBHurtado\XChange\Services\Checkout\PublicCheckoutDraftAccess;
-use LBHurtado\XChange\Services\Commercial\ConfiguredCommercialPrincipalResolver;
 
 final class PublicCheckoutDraftController extends Controller
 {
-    public function store(Request $request, ConfiguredCommercialPrincipalResolver $resolver, PublicCheckoutDraftAccess $drafts): JsonResponse
+    public function store(Request $request, PublicIssuanceEscrowPrincipalResolverContract $resolver, PublicCheckoutDraftAccess $drafts): JsonResponse
     {
         $validated = $request->validate(['instructions' => ['required', 'array']]);
         $draft = $drafts->save($request, $resolver->resolve(), $validated['instructions']);
@@ -25,7 +25,7 @@ final class PublicCheckoutDraftController extends Controller
         ]);
     }
 
-    public function show(Request $request, ConfiguredCommercialPrincipalResolver $resolver, PublicCheckoutDraftAccess $drafts): JsonResponse
+    public function show(Request $request, PublicIssuanceEscrowPrincipalResolverContract $resolver, PublicCheckoutDraftAccess $drafts): JsonResponse
     {
         $draft = $drafts->active($request, $resolver->resolve());
 
