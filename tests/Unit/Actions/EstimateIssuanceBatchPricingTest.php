@@ -26,6 +26,7 @@ it('includes each batch row payload when estimating the payment total', function
             currency: 'PHP',
             total: 19.5,
             pay_code_value: 100,
+            account_debit: 119.75,
         ));
 
     $pricing = new EstimateIssuanceBatchPricing($estimator);
@@ -40,6 +41,6 @@ it('includes each batch row payload when estimating the payment total', function
     ]));
 
     expect($result->total)->toBe(19.5)
-        ->and($result->account_debit)->toBe(119.5)
+        ->and($result->account_debit)->toBe(119.75)
         ->and($result->customer_charge_minor)->toBe(1950);
 });

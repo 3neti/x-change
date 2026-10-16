@@ -41,12 +41,16 @@ final readonly class EstimateIssuanceBatchPricing
         });
         $totalValue = $items->sum(fn ($item): float => $item->amount_minor / 100);
         $totalFee = $pricing->sum(fn (PricingEstimateData $quote): float => $quote->total);
+        $totalDebit = $pricing->sum(
+            fn (PricingEstimateData $quote): float => $quote->account_debit
+                ?? (($quote->pay_code_value ?? 0) + $quote->total),
+        );
 
         return new PricingEstimateData(
             currency: 'PHP',
             total: $totalFee,
             pay_code_value: $totalValue,
-            account_debit: $totalValue + $totalFee,
+            account_debit: $totalDebit,
             customer_charge_minor: (int) round($totalFee * 100),
             customer_charge: $totalFee,
             billing_mode: $pricing->first()?->billing_mode ?? 'informational',
