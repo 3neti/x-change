@@ -19,12 +19,26 @@ final readonly class EstimateIssuanceBatchPricing
     public function handle(Collection $items): PricingEstimateData
     {
         $defaults = VoucherInstructionsData::generateFromScratch()->toArray();
-        $pricing = $items->map(fn ($item): PricingEstimateData => $this->estimate->handle([
-            ...$defaults,
-            'cash' => ['amount' => $item->amount_minor / 100, 'currency' => 'PHP'],
-            'voucher_type' => 'redeemable',
-            'metadata' => ['flow_type' => 'disbursable'],
-        ]));
+        $pricing = $items->map(function ($item) use ($defaults): PricingEstimateData {
+            $payload = [
+                ...$defaults,
+                ...(array) ($item->payload ?? []),
+            ];
+
+            // Keep this payload assembly aligned with IssueIssuanceBatchPayCodes.
+            // Row-level instructions are billable and must be included before payment.
+            $payload['cash'] = [
+                'amount' => $item->amount_minor / 100,
+                'currency' => 'PHP',
+            ];
+            $payload['voucher_type'] = 'redeemable';
+            $payload['metadata'] = [
+                ...(array) ($payload['metadata'] ?? []),
+                'flow_type' => 'disbursable',
+            ];
+
+            return $this->estimate->handle($payload);
+        });
         $totalValue = $items->sum(fn ($item): float => $item->amount_minor / 100);
         $totalFee = $pricing->sum(fn (PricingEstimateData $quote): float => $quote->total);
 
