@@ -9,20 +9,24 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\IssuanceBatch\CreateIssuanceBatch;
 use LBHurtado\XChange\Actions\IssuanceBatch\EstimateIssuanceBatchPricing;
 use LBHurtado\XChange\Actions\IssuanceBatch\PrepareIssuanceBatchFunding;
 use LBHurtado\XChange\Contracts\Commercial\PublicIssuanceEscrowPrincipalResolverContract;
+use LBHurtado\XChange\Exceptions\IdempotencyConflict;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\IssuanceBatch;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Checkout\CheckoutLifecycle;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
+use LBHurtado\XChange\Services\IdempotencyService;
 use LBHurtado\XChange\Services\IssuanceBatch\IssuanceBatchAccess;
 use LBHurtado\XChange\Services\IssuanceBatch\IssuanceBatchImportNormalizer;
 use LBHurtado\XChange\Services\IssuanceBatch\IssuanceBatchTabularReader;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceOrderAccess;
+use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceTurnstileVerifier;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class PublicIssuanceBatchController extends Controller
@@ -70,8 +74,9 @@ final class PublicIssuanceBatchController extends Controller
         ]);
     }
 
-    public function store(Request $request, PublicIssuanceEscrowPrincipalResolverContract $resolver, IssuanceBatchTabularReader $reader, IssuanceBatchImportNormalizer $normalizer, CreateIssuanceBatch $create): JsonResponse
+    public function store(Request $request, PublicIssuanceEscrowPrincipalResolverContract $resolver, IssuanceBatchTabularReader $reader, IssuanceBatchImportNormalizer $normalizer, CreateIssuanceBatch $create, IdempotencyService $idempotency, PublicIssuanceTurnstileVerifier $turnstile): JsonResponse
     {
+        $turnstile->verify($request);
         $this->decodeJsonInput($request);
         $validated = $request->validate([
             'file' => ['nullable', 'file', 'max:'.(int) ceil(config('x-change.issuance_batches.maximum_upload_bytes', 10_485_760) / 1024)],
@@ -84,9 +89,47 @@ final class PublicIssuanceBatchController extends Controller
         $mapping = $this->mapping($validated['mapping'] ?? null, $table['headers'], $normalizer);
         $normalized = $normalizer->normalize($table['rows'], $mapping);
         abort_if($normalized['errors'] !== [] || $normalized['items'] === [], 422, implode(' ', $normalized['errors'] ?: ['No valid rows were found.']));
+        abort_if(count($normalized['items']) > (int) config('x-change.public_auto_generate.batch_maximum_rows', 1_000), 422, 'The batch contains too many rows for public issuance.');
+        abort_if($normalized['total_minor'] > (int) config('x-change.public_auto_generate.batch_maximum_principal_minor', 1_000_000), 422, 'The batch principal exceeds the public issuance limit.');
+
+        $idempotencyKey = $idempotency->extractKey($request);
+        if ($idempotencyKey === null) {
+            throw ValidationException::withMessages([
+                'idempotency_key' => ['An idempotency key is required for batch creation.'],
+            ]);
+        }
+
+        $requestFingerprint = $idempotency->fingerprint([
+            'mobile' => $validated['mobile'],
+            'items' => $normalized['items'],
+        ]);
+        $idempotencyHash = hash('sha256', $idempotencyKey);
+        $existing = IssuanceBatch::query()->where('idempotency_key_hash', $idempotencyHash)->first();
+        if ($existing !== null) {
+            if (data_get($existing->metadata, 'request_fingerprint') !== $requestFingerprint) {
+                throw new IdempotencyConflict('The supplied idempotency key has already been used with a different batch.');
+            }
+
+            return response()->json([
+                'reference' => $existing->reference,
+                'access_token' => $existing->access_token_ciphertext,
+                'item_count' => $existing->valid_item_count,
+                'total_minor' => $existing->total_minor,
+                'replayed' => true,
+            ], 200);
+        }
+
         $token = Str::random(64);
         $batch = $create->handle($resolver->resolve(), $normalized['items'], uploaderMobile: $validated['mobile']);
-        $batch->forceFill(['metadata' => [...(array) $batch->metadata, 'access_token_hash' => hash('sha256', $token)]])->save();
+        $batch->forceFill([
+            'idempotency_key_hash' => $idempotencyHash,
+            'access_token_ciphertext' => $token,
+            'metadata' => [
+                ...(array) $batch->metadata,
+                'access_token_hash' => hash('sha256', $token),
+                'request_fingerprint' => $requestFingerprint,
+            ],
+        ])->save();
 
         return response()->json(['reference' => $batch->reference, 'access_token' => $token, 'item_count' => $batch->valid_item_count, 'total_minor' => $batch->total_minor], 201);
     }

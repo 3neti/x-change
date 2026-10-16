@@ -1233,6 +1233,8 @@ return [
         ],
         'minimum_principal_minor' => max(1, (int) env('XCHANGE_PUBLIC_AUTO_GENERATE_MINIMUM_PRINCIPAL_MINOR', 100)),
         'maximum_principal_minor' => max(100, (int) env('XCHANGE_PUBLIC_AUTO_GENERATE_MAXIMUM_PRINCIPAL_MINOR', 100_000)),
+        'batch_maximum_rows' => max(1, (int) env('XCHANGE_PUBLIC_AUTO_GENERATE_BATCH_MAXIMUM_ROWS', 1_000)),
+        'batch_maximum_principal_minor' => max(100, (int) env('XCHANGE_PUBLIC_AUTO_GENERATE_BATCH_MAXIMUM_PRINCIPAL_MINOR', 1_000_000)),
         'currencies' => array_values(array_filter(array_map(
             static fn (string $currency): string => strtoupper(trim($currency)),
             explode(',', (string) env('XCHANGE_PUBLIC_AUTO_GENERATE_CURRENCIES', 'PHP')),

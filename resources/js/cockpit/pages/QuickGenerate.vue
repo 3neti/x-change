@@ -58,6 +58,10 @@ const props = defineProps<CockpitQuickGeneratePageProps>();
 const publicAutoGenerate = computed(
   () => props.surface_profile?.kind === "public_auto_generate",
 );
+const publicTurnstileToken = ref("");
+const publicTurnstileWidget = ref<InstanceType<
+  typeof PublicIssuanceTurnstile
+> | null>(null);
 const pageLayout = computed(() =>
   publicAutoGenerate.value ? PublicIssuanceLayout : CockpitLayout,
 );
@@ -66,7 +70,8 @@ const pageLayoutProps = computed(() =>
     ? {
         navigation: props.public_navigation,
         batch_endpoints: props.batch_endpoints,
-      batch_recovery_endpoints: props.batch_recovery_endpoints,
+        turnstile_token: publicTurnstileToken.value,
+        batch_recovery_endpoints: props.batch_recovery_endpoints,
       }
     : {
         activeNavigation: "quick-generate",
@@ -81,10 +86,6 @@ const issuanceSurface = ref<CockpitQuickGenerateSurface>(
 const displaySession = ref(props.display_session ?? null);
 const submitPanelElement = ref<InstanceType<
   typeof CockpitQuickGenerateSubmitPanel
-> | null>(null);
-const publicTurnstileToken = ref("");
-const publicTurnstileWidget = ref<InstanceType<
-  typeof PublicIssuanceTurnstile
 > | null>(null);
 
 async function beginPublicIssuance(trigger: HTMLButtonElement): Promise<void> {

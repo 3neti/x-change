@@ -3,7 +3,71 @@
 The follow-on Checkout and owner payments console work is specified in
 [`CHECKOUT_PLAN.md`](CHECKOUT_PLAN.md) and governed by its companion compass.
 
-Last updated: 2026-09-30
+Last updated: 2026-10-16
+
+## Security hardening plan — P0/P1/P2
+
+This section is the implementation plan for the public issuance security and
+infrastructure assessment. It keeps the package as the source of domain
+behavior and UI; the host application remains responsible for Laravel Cloud,
+worker, Cloudflare, backup, and deployment settings.
+
+### P0 — required before relying on public issuance
+
+- Run the payout worker on the same Redis/Valkey queue connection used by the
+  application and consume the funding, issuance, feedback, and default queues.
+- Add queue health and stale-order signals for pending jobs, failed jobs,
+  funded orders without terminal issuance state, and issuance attempts without
+  a terminal outcome.
+- Make public issuance fail closed unless the dedicated public issuance escrow
+  is enabled, unique, active, and matches its commissioned legal name and
+  authorization reference. There is no Commercial Principal fallback.
+- Keep one authoritative pricing calculation across single and batch issuance;
+  freeze and verify the exact amount before payment and issuance.
+- Preserve the kill-switch rule: disabling new public orders must not strand
+  already funded orders.
+
+### P1 — required before wider public usage
+
+- Require a server-validated idempotency key for batch creation and replay only
+  an identical normalized request.
+- Enforce public batch row and aggregate-principal ceilings, in addition to
+  route throttles and upload limits.
+- Require Turnstile on final batch creation while leaving preview and polling
+  available; preserve the batch draft when the token expires.
+- Add escrow reconciliation for payment, funding intent, hold, reserve,
+  issuance, expiry/cancellation release, payout settlement, and recovery.
+- Configure nonzero database backup/PITR retention and execute a restore drill
+  in the host deployment.
+- Add Cloudflare mutation-path rate limits for issuance, batch creation,
+  payment checks, and recovery challenges.
+
+### P2 — UX and operational improvements
+
+- Prefer managed or interaction-only Turnstile presentation at the final
+  mutation and expose an explicit retry state.
+- Show queue health, stale orders, escrow totals, unresolved exceptions, and
+  lifecycle outcomes in the operator console.
+- Record bounded browser and operating-system diagnostics for troubleshooting
+  without exposing payer identity, provider payloads, or credentials.
+- Surface provider rejection and low-value payout failures as governed,
+  recoverable public-escrow states.
+
+### Public batch mutation contract
+
+The final batch mutation accepts normalized recipient rows, a server-generated
+`Idempotency-Key` header, and a Turnstile token when enabled. The server owns
+the issuer, escrow principal, pricing, wallet, and Client Funds authority.
+Idempotent replay returns the original batch reference and possession token;
+the same key with a different normalized payload is rejected.
+
+### Acceptance gates
+
+P0 is complete only after a payout acceptance run proves Redis queue draining,
+funding verification, Pay Code issuance, SMS delivery, stale-order detection,
+and fail-closed escrow commissioning. P1 is complete only after batch replay,
+limits, Turnstile, reconciliation, backup retention, restore, and Cloudflare
+rate-limit evidence are recorded. P2 is evaluated during beta operations.
 
 ## Objective
 

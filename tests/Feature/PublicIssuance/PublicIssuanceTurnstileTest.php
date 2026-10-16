@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\XChange\Models\CommercialPrincipal;
+use LBHurtado\XChange\Models\IssuanceBatch;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceTurnstileVerifier;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -81,6 +82,16 @@ it('blocks public order creation without a challenge before opening a funding or
         'active' => true,
         'metadata' => ['interactive_login' => false],
     ]);
+    config()->set('x-change.public_issuance_escrow.enabled', true);
+    config()->set('x-change.public_issuance_escrow.principal.reference', 'public-issuance-escrow');
+    config()->set('x-change.public_issuance_escrow.principal.legal_name', 'Public Issuance Escrow');
+    config()->set('x-change.public_issuance_escrow.principal.authorization_reference', 'commissioning:public-issuance-escrow:v1');
+    CommercialPrincipal::query()->create([
+        'reference' => 'public-issuance-escrow',
+        'legal_name' => 'Public Issuance Escrow',
+        'authorization_reference' => 'commissioning:public-issuance-escrow:v1',
+        'active' => true,
+    ]);
 
     $this->withHeaders([
         'X-Inertia' => 'true',
@@ -100,4 +111,92 @@ it('blocks public order creation without a challenge before opening a funding or
 
     expect(PayCodeIssuanceFundingOrder::query()->count())->toBe(0);
     Http::assertNothingSent();
+});
+
+it('blocks public batch creation without a challenge before creating a batch', function (): void {
+    config()->set('x-change.public_issuance_escrow.enabled', true);
+    config()->set('x-change.public_issuance_escrow.principal.reference', 'public-issuance-escrow');
+    config()->set('x-change.public_issuance_escrow.principal.legal_name', 'Public Issuance Escrow');
+    config()->set('x-change.public_issuance_escrow.principal.authorization_reference', 'commissioning:public-issuance-escrow:v1');
+    CommercialPrincipal::query()->create([
+        'reference' => 'public-issuance-escrow',
+        'legal_name' => 'Public Issuance Escrow',
+        'authorization_reference' => 'commissioning:public-issuance-escrow:v1',
+        'active' => true,
+    ]);
+
+    $this->postJson(route('x-change.public-auto-generate.batches.store'), [
+        'headers' => ['name', 'mobile', 'amount'],
+        'rows' => [['Recipient', '09170000000', '25.00']],
+        'mobile' => '09170000000',
+    ], ['Idempotency-Key' => 'batch-turnstile-test'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('turnstile');
+
+    expect(IssuanceBatch::query()->count())->toBe(0);
+    Http::assertNothingSent();
+});
+
+it('replays public batch creation idempotently and rejects changed payloads', function (): void {
+    config()->set('x-change.public_auto_generate.turnstile.enabled', false);
+    config()->set('x-change.public_issuance_escrow.enabled', true);
+    config()->set('x-change.public_issuance_escrow.principal.reference', 'public-issuance-escrow');
+    config()->set('x-change.public_issuance_escrow.principal.legal_name', 'Public Issuance Escrow');
+    config()->set('x-change.public_issuance_escrow.principal.authorization_reference', 'commissioning:public-issuance-escrow:v1');
+    CommercialPrincipal::query()->create([
+        'reference' => 'public-issuance-escrow',
+        'legal_name' => 'Public Issuance Escrow',
+        'authorization_reference' => 'commissioning:public-issuance-escrow:v1',
+        'active' => true,
+    ]);
+
+    $payload = [
+        'headers' => ['name', 'mobile', 'amount'],
+        'rows' => [['Recipient', '09170000000', '25.00']],
+        'mobile' => '09170000000',
+    ];
+    $headers = ['Idempotency-Key' => 'batch-replay-test'];
+
+    $first = $this->postJson(route('x-change.public-auto-generate.batches.store'), $payload, $headers)
+        ->assertCreated();
+    $second = $this->postJson(route('x-change.public-auto-generate.batches.store'), $payload, $headers)
+        ->assertOk()
+        ->assertJsonPath('replayed', true)
+        ->assertJsonPath('reference', $first->json('reference'));
+
+    expect(IssuanceBatch::query()->count())->toBe(1)
+        ->and($second->json('access_token'))->toBe($first->json('access_token'));
+
+    $this->postJson(route('x-change.public-auto-generate.batches.store'), [
+        ...$payload,
+        'rows' => [['Recipient', '09170000000', '30.00']],
+    ], $headers)->assertConflict();
+});
+
+it('enforces the public batch aggregate principal ceiling', function (): void {
+    config()->set('x-change.public_auto_generate.turnstile.enabled', false);
+    config()->set('x-change.public_auto_generate.batch_maximum_principal_minor', 2_500);
+    config()->set('x-change.public_issuance_escrow.enabled', true);
+    config()->set('x-change.public_issuance_escrow.principal.reference', 'public-issuance-escrow');
+    config()->set('x-change.public_issuance_escrow.principal.legal_name', 'Public Issuance Escrow');
+    config()->set('x-change.public_issuance_escrow.principal.authorization_reference', 'commissioning:public-issuance-escrow:v1');
+    CommercialPrincipal::query()->create([
+        'reference' => 'public-issuance-escrow',
+        'legal_name' => 'Public Issuance Escrow',
+        'authorization_reference' => 'commissioning:public-issuance-escrow:v1',
+        'active' => true,
+    ]);
+
+    $this->postJson(route('x-change.public-auto-generate.batches.store'), [
+        'headers' => ['name', 'mobile', 'amount'],
+        'rows' => [
+            ['Recipient One', '09170000000', '20.00'],
+            ['Recipient Two', '09171111111', '10.00'],
+        ],
+        'mobile' => '09170000000',
+    ], ['Idempotency-Key' => 'batch-limit-test'])
+        ->assertUnprocessable()
+        ->assertSee('public issuance limit');
+
+    expect(IssuanceBatch::query()->count())->toBe(0);
 });

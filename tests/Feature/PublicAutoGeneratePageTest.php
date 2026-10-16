@@ -27,6 +27,17 @@ beforeEach(function (): void {
         'x-change.commercial.principal.authorization_reference',
         'commissioning:commercial-public:v1',
     );
+    config()->set('x-change.public_issuance_escrow.enabled', true);
+    config()->set('x-change.public_issuance_escrow.principal.reference', 'public-issuance-escrow');
+    config()->set('x-change.public_issuance_escrow.principal.legal_name', 'Public Issuance Escrow');
+    config()->set('x-change.public_issuance_escrow.principal.authorization_reference', 'commissioning:public-issuance-escrow:v1');
+    CommercialPrincipal::query()->create([
+        'reference' => 'public-issuance-escrow',
+        'legal_name' => 'Public Issuance Escrow',
+        'authorization_reference' => 'commissioning:public-issuance-escrow:v1',
+        'active' => true,
+        'metadata' => ['interactive_login' => false],
+    ]);
 });
 
 it('renders the public issuance surface without cockpit navigation', function (): void {
@@ -57,7 +68,7 @@ it('renders the public issuance surface without cockpit navigation', function ()
         ->assertJsonPath('props.public_navigation.pricing_url', '/x/pricing')
         ->assertJsonPath('props.public_navigation.claim_url', '/x/claim')
         ->assertJsonPath('props.public_navigation.login_url', null)
-        ->assertJsonPath('props.commercial_principal.reference', 'commercial-public');
+        ->assertJsonPath('props.commercial_principal.reference', 'public-issuance-escrow');
 });
 
 it('offers a sanitized batch upload template', function (): void {

@@ -8,6 +8,7 @@ const props = defineProps<{
     fund: string;
     template: string;
   };
+  turnstileToken?: string;
 }>();
 
 const open = ref(false);
@@ -155,8 +156,9 @@ async function continueToPayment(): Promise<void> {
   if (pastedRows.value) form.append("rows", JSON.stringify(pastedRows.value));
   form.append("mapping", JSON.stringify(preview.value.mapping));
   form.append("mobile", mobile.value.trim());
+  const idempotencyKey = crypto.randomUUID();
   try {
-    const createResponse = await fetch(props.endpoints.create, { method: "POST", body: form, headers: { Accept: "application/json" } });
+    const createResponse = await fetch(props.endpoints.create, { method: "POST", body: form, headers: { Accept: "application/json", "Idempotency-Key": idempotencyKey, ...(props.turnstileToken ? { "X-Turnstile-Token": props.turnstileToken } : {}) } });
     const created = await createResponse.json();
     if (!createResponse.ok) throw new Error(created.message ?? "The batch could not be created.");
     batch.value = created;

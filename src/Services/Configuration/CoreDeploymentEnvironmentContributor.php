@@ -491,6 +491,20 @@ final class CoreDeploymentEnvironmentContributor implements DeploymentEnvironmen
                 safeExample: 'commissioning:public-issuance-escrow:v1',
             ),
             new EnvironmentVariableData(
+                key: 'XCHANGE_PUBLIC_AUTO_GENERATE_BATCH_MAXIMUM_ROWS',
+                description: 'Maximum recipient rows allowed in one public batch issuance.',
+                category: 'Public Issuance',
+                configPath: 'x-change.public_auto_generate.batch_maximum_rows',
+                safeExample: '1000',
+            ),
+            new EnvironmentVariableData(
+                key: 'XCHANGE_PUBLIC_AUTO_GENERATE_BATCH_MAXIMUM_PRINCIPAL_MINOR',
+                description: 'Maximum aggregate Pay Code principal in one public batch issuance, in minor currency units.',
+                category: 'Public Issuance',
+                configPath: 'x-change.public_auto_generate.batch_maximum_principal_minor',
+                safeExample: '1000000',
+            ),
+            new EnvironmentVariableData(
                 key: 'XCHANGE_FUNDING_LIQUIDITY_SCHEDULED_REFRESH_ENABLED',
                 description: 'Refresh the cached provider-liquidity guard every five minutes.',
                 category: 'Runtime',

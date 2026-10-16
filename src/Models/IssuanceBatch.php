@@ -31,6 +31,7 @@ final class IssuanceBatch extends Model
             'item_count' => 'integer',
             'valid_item_count' => 'integer',
             'metadata' => 'array',
+            'access_token_ciphertext' => 'encrypted',
             'uploader_mobile_ciphertext' => 'encrypted',
             'expires_at' => 'immutable_datetime',
             'funded_at' => 'immutable_datetime',

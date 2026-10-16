@@ -3,7 +3,7 @@
 The follow-on Checkout decisions and acceptance evidence are tracked in
 [`CHECKOUT_COMPASS.md`](CHECKOUT_COMPASS.md).
 
-Last updated: 2026-10-08
+Last updated: 2026-10-16
 
 ## North Star
 
@@ -14,7 +14,7 @@ wallet, or Client Funds.
 
 ## Current position
 
-Status: **Testing-instance Gates 0 through 5A complete. Gate 5A proved the
+Status: **Public issuance security hardening is in progress. Testing-instance Gates 0 through 5A complete. Gate 5A proved the
 repaired live issuance path with a positive amount-lease adjustment, zero new
 Client Funds residual, exactly one Pay Code, and a mutation-free replay.**
 
@@ -115,6 +115,49 @@ public_auto_generate:
   secondary_method: fixed_amount_qr_ph
   captcha: deferred
 ```
+
+## Security hardening compass
+
+The dedicated `public-issuance-escrow` is now a mandatory authority for public
+issuance. If it is disabled, missing, ambiguous, inactive, or does not match
+its commissioned legal name and authorization reference, public issuance must
+fail closed. The Commercial Principal remains separate and is not a fallback.
+
+### P0 gate — queue and escrow safety
+
+Open until payout evidence proves that the application and worker consume the
+same Redis/Valkey connection, funding/issuance/feedback jobs drain, stale
+funded orders are visible, and escrow commissioning failures prevent mutation.
+
+### P1 gate — abuse, reconciliation, and durability
+
+Open until final batch creation has Turnstile and idempotency protection,
+aggregate principal limits, escrow reconciliation, nonzero backup retention,
+a restore drill, and Cloudflare mutation-path limits.
+
+### P2 gate — operations and UX
+
+Open until submit-time Turnstile retry preserves drafts, operator health and
+escrow views are available, lifecycle outcomes are measurable, and provider
+rejections have governed recovery states.
+
+### Promotion criteria
+
+Do not expand public usage while any P0 condition is open, while the escrow
+resolver can fall back to the Commercial Principal, while a paid order can
+remain without a terminal issuance/recovery state, or while reconciliation
+cannot account for every public escrow movement.
+
+### Current implementation evidence
+
+- Public batch creation now requires a server idempotency key and rejects a
+  changed payload under the same key.
+- Public batch creation enforces row and aggregate-principal limits.
+- Turnstile is applied to the final batch creation mutation.
+- The escrow resolver validates enabled state, uniqueness, activity, legal
+  name, and authorization reference and fails closed without fallback.
+- The remaining P0 host evidence is the Laravel Cloud worker/queue alignment
+  and operational queue monitoring.
 
 ## Immediate next gate
 
