@@ -17,6 +17,7 @@ final class IssuanceBatchImportNormalizer
         'email' => ['email', 'email address'],
         'amount' => ['amount', 'value', 'php', 'salary', 'gross amount', 'benefit amount'],
         'amount_minor' => ['amount minor', 'centavos'],
+        'message' => ['message', 'rider message', 'note', 'notes'],
         'external_reference' => ['reference', 'external reference', 'employee id', 'employee number', 'recipient id'],
     ];
 
@@ -69,6 +70,7 @@ final class IssuanceBatchImportNormalizer
                     'name' => $name,
                     'mobile' => $mobile,
                     'email' => $email,
+                    'message' => $this->value($source, $mapping, 'message'),
                     'external_reference' => $this->value($source, $mapping, 'external_reference'),
                 ], static fn (?string $value): bool => $value !== null),
             ];

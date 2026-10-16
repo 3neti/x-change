@@ -31,8 +31,9 @@ final class PublicIssuanceBatchController extends Controller
     {
         return response()->streamDownload(function (): void {
             $handle = fopen('php://output', 'wb');
-            fputcsv($handle, ['name', 'mobile', 'email', 'amount']);
-            fputcsv($handle, ['Example Recipient', '09170000000', 'recipient@example.com', '100.00']);
+            fwrite($handle, '"name","mobile","email","amount","message"'.PHP_EOL);
+            fwrite($handle, '"Example Recipient","09170000000","recipient@example.com","100.00","Emergency assistance"'.PHP_EOL);
+            fwrite($handle, '"Second Recipient","09171112222","second@example.com","50.00",""'.PHP_EOL);
             fclose($handle);
         }, 'pay-code-batch-template.csv', ['Content-Type' => 'text/csv']);
     }

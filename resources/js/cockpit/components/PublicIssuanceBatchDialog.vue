@@ -20,7 +20,8 @@ const preview = ref<{ headers: string[]; mapping: Record<string, string>; items:
 const batch = ref<{ reference: string; access_token: string } | null>(null);
 const busy = ref(false);
 const error = ref<string | null>(null);
-const mappingFields = ["name", "mobile", "email", "amount"] as const;
+const copiedTemplate = ref(false);
+const mappingFields = ["name", "mobile", "email", "amount", "message"] as const;
 
 const validItems = computed(() => preview.value?.items.filter((item) => item.status === "valid") ?? []);
 const invalidItems = computed(() => preview.value?.items.filter((item) => item.status !== "valid") ?? []);
@@ -40,6 +41,20 @@ function formatMoney(minor: number): string {
   return new Intl.NumberFormat("en-PH", { style: "currency", currency: currency.value }).format(minor / 100);
 }
 
+function templateCsv(): string {
+  return '"name","mobile","email","amount","message"\n"Example Recipient","09170000000","recipient@example.com","100.00","Emergency assistance"\n"Second Recipient","09171112222","second@example.com","50.00",""\n';
+}
+
+async function copyTemplate(): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(templateCsv());
+    copiedTemplate.value = true;
+    window.setTimeout(() => { copiedTemplate.value = false; }, 2500);
+  } catch {
+    copiedTemplate.value = false;
+  }
+}
+
 function resetSource(): void {
   file.value = null;
   pastedRows.value = null;
@@ -54,11 +69,36 @@ function chooseFile(event: Event): void {
   file.value = (event.target as HTMLInputElement).files?.[0] ?? null;
 }
 
+function parseDelimitedLine(line: string, delimiter: string): string[] {
+  const values: string[] = [];
+  let value = "";
+  let quoted = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index];
+    const next = line[index + 1];
+    if (character === '"' && quoted && next === '"') {
+      value += '"';
+      index += 1;
+    } else if (character === '"') {
+      quoted = !quoted;
+    } else if (character === delimiter && !quoted) {
+      values.push(value.trim());
+      value = "";
+    } else {
+      value += character;
+    }
+  }
+
+  values.push(value.trim());
+  return values;
+}
+
 function parsePastedRows(text: string): void {
   const lines = text.trim().split(/\r?\n/).filter((line) => line.trim() !== "");
   if (lines.length < 1) return;
   const delimiter = lines[0].includes("\t") ? "\t" : ",";
-  const values = lines.map((line) => line.split(delimiter).map((value) => value.trim()));
+  const values = lines.map((line) => parseDelimitedLine(line, delimiter));
   const knownHeaders = /name|mobile|phone|email|amount|value/i.test(lines[0]);
   pastedHeaders.value = knownHeaders ? values.shift() ?? null : null;
   pastedRows.value = values.length > 0 ? values : null;
@@ -163,7 +203,10 @@ async function continueToPayment(): Promise<void> {
               <div class="flex size-12 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm dark:bg-slate-900"><span class="text-xl">▦</span></div>
               <p class="mt-3 text-sm font-bold">{{ isDragging ? 'Drop to review' : 'Drop your recipient list here' }}</p>
               <p class="mt-1 text-xs text-slate-500">CSV · XLS · XLSX · or copied spreadsheet rows</p>
-              <a :href="endpoints.template" download class="mt-3 inline-flex text-xs font-bold text-emerald-700 underline decoration-emerald-300 underline-offset-4 transition hover:text-emerald-900 dark:text-emerald-300 dark:hover:text-emerald-200">Download CSV template</a>
+              <div class="mt-3 flex flex-wrap items-center justify-center gap-3">
+                <a :href="endpoints.template" download class="text-xs font-bold text-emerald-700 underline decoration-emerald-300 underline-offset-4 transition hover:text-emerald-900 dark:text-emerald-300 dark:hover:text-emerald-200">Download CSV template</a>
+                <button type="button" class="text-xs font-bold text-sky-700 underline decoration-sky-300 underline-offset-4 transition hover:text-sky-900 dark:text-sky-300 dark:hover:text-sky-200" @click="copyTemplate">{{ copiedTemplate ? 'Template copied' : 'Copy template CSV' }}</button>
+              </div>
               <label class="mt-4 inline-flex cursor-pointer rounded-full bg-slate-900 px-4 py-2 text-sm font-bold text-white dark:bg-white dark:text-slate-900">Choose file<input class="sr-only" type="file" accept=".csv,.xls,.xlsx" @change="chooseFile" /></label>
             </div>
 

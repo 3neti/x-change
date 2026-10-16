@@ -6,16 +6,17 @@ use LBHurtado\XChange\Services\IssuanceBatch\IssuanceBatchImportNormalizer;
 
 it('normalizes valid rows and calculates the exact batch total', function (): void {
     $normalizer = new IssuanceBatchImportNormalizer;
-    $mapping = $normalizer->detectMapping(['Full Name', 'Phone Number', 'Amount', 'Reference']);
+    $mapping = $normalizer->detectMapping(['Full Name', 'Phone Number', 'Amount', 'Reference', 'Message']);
 
     $result = $normalizer->normalize([
-        ['Full Name' => 'Ana Santos', 'Phone Number' => '09170000001', 'Amount' => '100.00', 'Reference' => 'A-1'],
-        ['Full Name' => 'Ben Reyes', 'Phone Number' => '09170000002', 'Amount' => '250.50', 'Reference' => 'B-1'],
+        ['Full Name' => 'Ana Santos', 'Phone Number' => '09170000001', 'Amount' => '100.00', 'Reference' => 'A-1', 'Message' => 'First payment'],
+        ['Full Name' => 'Ben Reyes', 'Phone Number' => '09170000002', 'Amount' => '250.50', 'Reference' => 'B-1', 'Message' => 'Second payment'],
     ], $mapping);
 
     expect($result['errors'])->toBe([])
         ->and($result['total_minor'])->toBe(35050)
-        ->and($result['items'][0]['status'])->toBe('valid');
+        ->and($result['items'][0]['status'])->toBe('valid')
+        ->and($result['items'][0]['payload']['message'])->toBe('First payment');
 });
 
 it('rejects incomplete rows without adding them to the payable total', function (): void {

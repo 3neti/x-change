@@ -74,8 +74,9 @@ it('offers a sanitized batch upload template', function (): void {
         ->assertDownload('pay-code-batch-template.csv');
 
     expect($response->streamedContent())
-        ->toContain('name,mobile,email,amount')
-        ->toContain('Example Recipient');
+        ->toContain('"name","mobile","email","amount","message"')
+        ->toContain('"Example Recipient","09170000000"')
+        ->toContain('"Second Recipient","09171112222"');
 });
 
 it('accepts only safe public amount and currency prefill values', function (): void {
