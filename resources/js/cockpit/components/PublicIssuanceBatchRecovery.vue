@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { nextTick, ref, watch } from "vue";
 
 type Endpoints = { request: string; verify: string; select: string };
 type Workspace = {
@@ -20,11 +20,27 @@ const props = defineProps<{ endpoints: Endpoints }>();
 const open = ref(false);
 const mobile = ref("");
 const code = ref("");
+const mobileInput = ref<HTMLInputElement | null>(null);
+const codeInput = ref<HTMLInputElement | null>(null);
 const challenge = ref<string | null>(null);
 const workspaces = ref<Workspace[]>([]);
 const busy = ref(false);
 const error = ref<string | null>(null);
 const message = ref<string | null>(null);
+
+watch(open, async (isOpen) => {
+  if (!isOpen) return;
+
+  await nextTick();
+  (challenge.value ? codeInput.value : mobileInput.value)?.focus();
+});
+
+watch(challenge, async (value) => {
+  if (!open.value) return;
+
+  await nextTick();
+  (value ? codeInput.value : mobileInput.value)?.focus();
+});
 
 function close(): void {
   open.value = false;
@@ -151,14 +167,14 @@ async function selectWorkspace(workspace: Workspace): Promise<void> {
 
         <div class="mt-5 space-y-3">
           <form v-if="!challenge" class="flex flex-col gap-2 sm:flex-row" @submit.prevent="requestCode">
-            <input v-model="mobile" required type="tel" inputmode="tel" autocomplete="tel" placeholder="09XXXXXXXXX" class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" />
+            <input ref="mobileInput" v-model="mobile" required type="tel" inputmode="tel" autocomplete="tel" placeholder="09XXXXXXXXX" data-testid="public-batch-recovery-mobile" class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" />
             <button type="submit" :disabled="busy" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{{ busy ? 'Sending…' : 'Send recovery code' }}</button>
           </form>
           <p v-if="message && !challenge" class="text-xs text-slate-600 dark:text-slate-300">{{ message }}</p>
           <form v-if="challenge && workspaces.length === 0" class="space-y-2" @submit.prevent="verifyCode">
             <p class="text-xs text-slate-600 dark:text-slate-300">{{ message }}</p>
             <div class="flex flex-col gap-2 sm:flex-row">
-              <input v-model="code" required type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="Recovery code" class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" />
+              <input ref="codeInput" v-model="code" required type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="Recovery code" data-testid="public-batch-recovery-code" class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" />
               <button type="submit" :disabled="busy" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{{ busy ? 'Checking…' : 'Verify code' }}</button>
             </div>
           </form>

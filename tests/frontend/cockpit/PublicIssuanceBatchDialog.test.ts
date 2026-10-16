@@ -1,5 +1,6 @@
 import { mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
+import { nextTick } from "vue";
 
 vi.mock("@inertiajs/vue3", async () => {
   const actual = await vi.importActual<typeof import("@inertiajs/vue3")>("@inertiajs/vue3");
@@ -19,6 +20,7 @@ import BatchPayCodeDetail from "../../../resources/js/pages/x-change/public/Batc
 describe("PublicIssuanceBatchDialog", () => {
   it("offers mobile-based batch recovery in a compact modal", async () => {
     const wrapper = mount(PublicIssuanceBatchRecovery, {
+      attachTo: document.body,
       global: { stubs: { Teleport: true } },
       props: {
         endpoints: { request: "/discover", verify: "/verify", select: "/select" },
@@ -30,12 +32,14 @@ describe("PublicIssuanceBatchDialog", () => {
     expect(wrapper.find('[data-testid="public-batch-recovery-modal"]').exists()).toBe(false);
 
     await wrapper.get('[data-testid="public-batch-recovery-launcher"]').trigger("click");
+    await nextTick();
 
     expect(wrapper.get('[data-testid="public-batch-recovery-modal"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="public-batch-recovery-modal"]').classes()).toContain("z-[200]");
     expect(wrapper.get('[data-testid="public-batch-recovery-modal"] h2').text()).toBe(
       "Recover a previous issuance",
     );
+    expect(document.activeElement).toBe(wrapper.get('[data-testid="public-batch-recovery-mobile"]').element);
 
     await wrapper.get('[data-testid="public-batch-recovery-close"]').trigger("click");
     expect(wrapper.find('[data-testid="public-batch-recovery-modal"]').exists()).toBe(false);
@@ -64,6 +68,7 @@ describe("PublicIssuanceBatchDialog", () => {
       });
     vi.stubGlobal("fetch", fetchMock);
     const wrapper = mount(PublicIssuanceBatchRecovery, {
+      attachTo: document.body,
       global: { stubs: { Teleport: true } },
       props: { endpoints: { request: "/discover", verify: "/verify", select: "/select" } },
     });
@@ -72,6 +77,8 @@ describe("PublicIssuanceBatchDialog", () => {
     await wrapper.get('input[placeholder="09XXXXXXXXX"]').setValue("09173011987");
     await wrapper.get("form").trigger("submit");
     await new Promise((resolve) => window.setTimeout(resolve, 0));
+    await nextTick();
+    expect(document.activeElement).toBe(wrapper.get('[data-testid="public-batch-recovery-code"]').element);
     await wrapper.get('input[placeholder="Recovery code"]').setValue("123456");
     await wrapper.get("form").trigger("submit");
     await new Promise((resolve) => window.setTimeout(resolve, 0));
