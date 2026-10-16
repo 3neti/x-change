@@ -139,8 +139,6 @@ use LBHurtado\XChange\Http\Controllers\Web\Legal\AgreementPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Legal\DeclineAgreementController;
 use LBHurtado\XChange\Http\Controllers\Web\LinkPaynamicsWalletController;
 use LBHurtado\XChange\Http\Controllers\Web\Onboarding\InitialPinSetupController;
-use LBHurtado\XChange\Http\Controllers\Web\PublicOnboarding\AutoRegisterMutationController;
-use LBHurtado\XChange\Http\Controllers\Web\PublicOnboarding\AutoRegisterPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Onboarding\MobileVerificationChallengeController;
 use LBHurtado\XChange\Http\Controllers\Web\Onboarding\MobileVerificationPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Onboarding\MobileVerificationSubmissionController;
@@ -165,6 +163,8 @@ use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceBatchRec
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuance\PublicIssuanceVoucherActionController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuanceReceiptController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicIssuanceRecoveryController;
+use LBHurtado\XChange\Http\Controllers\Web\PublicOnboarding\AutoRegisterMutationController;
+use LBHurtado\XChange\Http\Controllers\Web\PublicOnboarding\AutoRegisterPageController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicPricingPageController;
 use LBHurtado\XChange\Http\Controllers\Web\StoredValueInstrumentPageController;
 use LBHurtado\XChange\Http\Middleware\AuthorizePublicIssuanceOrderAccess;
@@ -282,6 +282,9 @@ Route::prefix('x/auto-generate')->middleware([
     Route::get('batches/{batch:reference}/pay-codes/{code}/evidence/{source}/{evidence}', [PublicIssuanceBatchPayCodeDetailController::class, 'evidence'])
         ->middleware('throttle:30,1,public-auto-generate-batch-evidence:')
         ->name('x-change.public-auto-generate.batches.pay-codes.evidence');
+    Route::get('batches/template', [PublicIssuanceBatchController::class, 'template'])
+        ->middleware('throttle:30,1,public-auto-generate-batch-template:')
+        ->name('x-change.public-auto-generate.batches.template');
     Route::get('batches/{batch:reference}', [PublicIssuanceBatchController::class, 'show'])
         ->middleware('throttle:30,1,public-auto-generate-batch-read:')
         ->name('x-change.public-auto-generate.batches.show');

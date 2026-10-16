@@ -6,6 +6,7 @@ const props = defineProps<{
     preview: string;
     create: string;
     fund: string;
+    template: string;
   };
 }>();
 
@@ -162,6 +163,7 @@ async function continueToPayment(): Promise<void> {
               <div class="flex size-12 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm dark:bg-slate-900"><span class="text-xl">▦</span></div>
               <p class="mt-3 text-sm font-bold">{{ isDragging ? 'Drop to review' : 'Drop your recipient list here' }}</p>
               <p class="mt-1 text-xs text-slate-500">CSV · XLS · XLSX · or copied spreadsheet rows</p>
+              <a :href="endpoints.template" download class="mt-3 inline-flex text-xs font-bold text-emerald-700 underline decoration-emerald-300 underline-offset-4 transition hover:text-emerald-900 dark:text-emerald-300 dark:hover:text-emerald-200">Download CSV template</a>
               <label class="mt-4 inline-flex cursor-pointer rounded-full bg-slate-900 px-4 py-2 text-sm font-bold text-white dark:bg-white dark:text-slate-900">Choose file<input class="sr-only" type="file" accept=".csv,.xls,.xlsx" @change="chooseFile" /></label>
             </div>
 

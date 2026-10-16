@@ -60,6 +60,24 @@ it('renders the public issuance surface without cockpit navigation', function ()
         ->assertJsonPath('props.commercial_principal.reference', 'commercial-public');
 });
 
+it('offers a sanitized batch upload template', function (): void {
+    CommercialPrincipal::query()->create([
+        'reference' => 'commercial-public',
+        'legal_name' => '3neti R&D OPC',
+        'authorization_reference' => 'commissioning:commercial-public:v1',
+        'active' => true,
+        'metadata' => ['interactive_login' => false],
+    ]);
+
+    $response = $this->get(route('x-change.public-auto-generate.batches.template'))
+        ->assertOk()
+        ->assertDownload('pay-code-batch-template.csv');
+
+    expect($response->streamedContent())
+        ->toContain('name,mobile,email,amount')
+        ->toContain('Example Recipient');
+});
+
 it('accepts only safe public amount and currency prefill values', function (): void {
     CommercialPrincipal::query()->create([
         'reference' => 'commercial-public',

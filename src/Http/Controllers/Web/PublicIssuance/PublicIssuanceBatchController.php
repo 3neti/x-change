@@ -27,6 +27,16 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class PublicIssuanceBatchController extends Controller
 {
+    public function template(): StreamedResponse
+    {
+        return response()->streamDownload(function (): void {
+            $handle = fopen('php://output', 'wb');
+            fputcsv($handle, ['name', 'mobile', 'email', 'amount']);
+            fputcsv($handle, ['Example Recipient', '09170000000', 'recipient@example.com', '100.00']);
+            fclose($handle);
+        }, 'pay-code-batch-template.csv', ['Content-Type' => 'text/csv']);
+    }
+
     public function preview(Request $request, IssuanceBatchTabularReader $reader, IssuanceBatchImportNormalizer $normalizer, EstimateIssuanceBatchPricing $pricing): JsonResponse
     {
         $this->decodeJsonInput($request);

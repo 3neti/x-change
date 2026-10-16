@@ -26,7 +26,7 @@ withDefaults(
       login_url: string | null;
       register_url: string | null;
     };
-    batch_endpoints?: { preview: string; create: string; fund: string };
+    batch_endpoints?: { preview: string; create: string; fund: string; template: string };
     batch_recovery_endpoints?: { request: string; verify: string; select: string };
   }>(),
   {
