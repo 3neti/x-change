@@ -7,7 +7,7 @@ namespace LBHurtado\XChange\Console\Commands\Checkout;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 use LBHurtado\XChange\Models\CheckoutViewerLink;
-use LBHurtado\XChange\Services\Commercial\ConfiguredCommercialPrincipalResolver;
+use LBHurtado\XChange\Services\Commercial\ConfiguredPublicIssuanceEscrowPrincipalResolver;
 
 final class ManageCheckoutViewerLinkCommand extends Command
 {
@@ -19,7 +19,7 @@ final class ManageCheckoutViewerLinkCommand extends Command
 
     protected $description = 'Create, list, or revoke read-only Checkout console viewer links.';
 
-    public function handle(ConfiguredCommercialPrincipalResolver $resolver): int
+    public function handle(ConfiguredPublicIssuanceEscrowPrincipalResolver $resolver): int
     {
         $principal = $resolver->resolve();
         $links = CheckoutViewerLink::query()

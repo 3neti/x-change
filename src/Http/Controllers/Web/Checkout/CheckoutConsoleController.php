@@ -17,13 +17,13 @@ use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Services\Checkout\CheckoutConsoleAccess;
 use LBHurtado\XChange\Services\Checkout\CheckoutConsoleReadModel;
 use LBHurtado\XChange\Services\Checkout\CheckoutLifecycle;
-use LBHurtado\XChange\Services\Commercial\ConfiguredCommercialPrincipalResolver;
+use LBHurtado\XChange\Services\Commercial\ConfiguredPublicIssuanceEscrowPrincipalResolver;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class CheckoutConsoleController extends Controller
 {
-    public function show(Request $request, ConfiguredCommercialPrincipalResolver $resolver, CheckoutConsoleAccess $access, CheckoutConsoleReadModel $read): HttpResponse
+    public function show(Request $request, ConfiguredPublicIssuanceEscrowPrincipalResolver $resolver, CheckoutConsoleAccess $access, CheckoutConsoleReadModel $read): HttpResponse
     {
         $principal = $resolver->resolve();
         $owner = $access->owner($request, $principal);
@@ -35,7 +35,7 @@ final class CheckoutConsoleController extends Controller
         ])->toResponse($request)->withHeaders($this->responseHeaders());
     }
 
-    public function viewer(Request $request, string $token, ConfiguredCommercialPrincipalResolver $resolver, CheckoutConsoleAccess $access, CheckoutConsoleReadModel $read): HttpResponse
+    public function viewer(Request $request, string $token, ConfiguredPublicIssuanceEscrowPrincipalResolver $resolver, CheckoutConsoleAccess $access, CheckoutConsoleReadModel $read): HttpResponse
     {
         $principal = $resolver->resolve();
         abort_unless($access->viewer($token, $principal), 404);
@@ -49,7 +49,7 @@ final class CheckoutConsoleController extends Controller
         ])->toResponse($request)->withHeaders($this->responseHeaders());
     }
 
-    public function unlock(Request $request, ConfiguredCommercialPrincipalResolver $resolver, CheckoutConsoleAccess $access): RedirectResponse
+    public function unlock(Request $request, ConfiguredPublicIssuanceEscrowPrincipalResolver $resolver, CheckoutConsoleAccess $access): RedirectResponse
     {
         $validated = $request->validate(['password' => ['required', 'string', 'max:512']]);
         $principal = $resolver->resolve();
@@ -61,7 +61,7 @@ final class CheckoutConsoleController extends Controller
         return redirect()->route('x-change.checkout.show');
     }
 
-    public function lock(Request $request, ConfiguredCommercialPrincipalResolver $resolver, CheckoutConsoleAccess $access): RedirectResponse
+    public function lock(Request $request, ConfiguredPublicIssuanceEscrowPrincipalResolver $resolver, CheckoutConsoleAccess $access): RedirectResponse
     {
         $principal = $resolver->resolve();
         if ($access->owner($request, $principal)) {
@@ -76,7 +76,7 @@ final class CheckoutConsoleController extends Controller
     public function retry(
         Request $request,
         Checkout $checkout,
-        ConfiguredCommercialPrincipalResolver $resolver,
+        ConfiguredPublicIssuanceEscrowPrincipalResolver $resolver,
         CheckoutConsoleAccess $access,
         CheckoutLifecycle $lifecycle,
         RequestOnDemandPayCodeIssuanceRetry $retry,
@@ -93,7 +93,7 @@ final class CheckoutConsoleController extends Controller
     public function openRefund(
         Request $request,
         Checkout $checkout,
-        ConfiguredCommercialPrincipalResolver $resolver,
+        ConfiguredPublicIssuanceEscrowPrincipalResolver $resolver,
         CheckoutConsoleAccess $access,
         CheckoutLifecycle $lifecycle,
     ): RedirectResponse {
@@ -134,7 +134,7 @@ final class CheckoutConsoleController extends Controller
     public function recordRefund(
         Request $request,
         Checkout $checkout,
-        ConfiguredCommercialPrincipalResolver $resolver,
+        ConfiguredPublicIssuanceEscrowPrincipalResolver $resolver,
         CheckoutConsoleAccess $access,
         CheckoutLifecycle $lifecycle,
     ): RedirectResponse {
@@ -167,7 +167,7 @@ final class CheckoutConsoleController extends Controller
     public function reconcileRefund(
         Request $request,
         Checkout $checkout,
-        ConfiguredCommercialPrincipalResolver $resolver,
+        ConfiguredPublicIssuanceEscrowPrincipalResolver $resolver,
         CheckoutConsoleAccess $access,
         CheckoutLifecycle $lifecycle,
     ): RedirectResponse {
@@ -198,7 +198,7 @@ final class CheckoutConsoleController extends Controller
         return back();
     }
 
-    private function authorizeOwner(Request $request, Checkout $checkout, ConfiguredCommercialPrincipalResolver $resolver, CheckoutConsoleAccess $access): void
+    private function authorizeOwner(Request $request, Checkout $checkout, ConfiguredPublicIssuanceEscrowPrincipalResolver $resolver, CheckoutConsoleAccess $access): void
     {
         $principal = $resolver->resolve();
 

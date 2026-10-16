@@ -352,6 +352,34 @@ it('gates the monitor and keeps expiring viewer links read only', function (): v
     $this->get(route('x-change.checkout.viewer', ['token' => $token]))->assertNotFound();
 });
 
+it('scopes the checkout console to the public issuance escrow after cutover', function (): void {
+    config()->set('x-change.public_issuance_escrow.enabled', true);
+    config()->set('x-change.public_issuance_escrow.principal.reference', 'public-issuance-escrow');
+
+    $principal = CommercialPrincipal::query()->create([
+        'reference' => 'public-issuance-escrow',
+        'legal_name' => 'Public Issuance Escrow',
+        'authorization_reference' => 'commissioning:public-issuance-escrow:v1',
+        'active' => true,
+        'metadata' => ['interactive_login' => false],
+    ]);
+    $checkout = app(CheckoutLifecycle::class)->place(checkoutTestOrder($principal));
+    $token = str_repeat('E', 64);
+
+    CheckoutViewerLink::query()->create([
+        'token_hash' => hash('sha256', $token),
+        'owner_type' => $principal::class,
+        'owner_id' => (string) $principal->getKey(),
+        'label' => 'Public issuance viewer',
+        'expires_at' => now()->addHour(),
+    ]);
+
+    $this->withHeaders(['X-Inertia' => 'true', 'Accept' => 'text/html, application/xhtml+xml'])
+        ->get(route('x-change.checkout.viewer', ['token' => $token]))
+        ->assertOk()
+        ->assertJsonPath('props.monitor.rows.0.reference', $checkout->reference);
+});
+
 it('keeps all owner rows visible after computing attention totals', function (): void {
     $principal = checkoutTestPrincipal();
     $first = app(CheckoutLifecycle::class)->place(checkoutTestOrder($principal));
