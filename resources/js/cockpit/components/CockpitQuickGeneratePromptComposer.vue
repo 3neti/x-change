@@ -113,8 +113,12 @@ function focusPrompt(): void {
 }
 
 function showCostPreview(): void {
+  if (isReady.value && instructions.value !== null && !draftApplied.value) {
+    emit("interpreted", instructions.value);
+    draftApplied.value = true;
+  }
+
   emit("show-cost");
-  focusPrompt();
 }
 
 async function interpret(apply = false): Promise<void> {

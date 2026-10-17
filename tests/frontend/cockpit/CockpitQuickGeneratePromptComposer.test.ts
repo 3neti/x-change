@@ -39,10 +39,10 @@ describe('CockpitQuickGeneratePromptComposer', () => {
         await new Promise((resolve) => setTimeout(resolve, 500));
         await flushPromises();
         expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-result"]').text()).toContain('Estimated Cost ₱500.00');
-        await wrapper.get('[data-testid="cockpit-quick-generate-prompt-result"] button').trigger('click');
-        expect(wrapper.emitted('show-cost')).toHaveLength(1);
         await wrapper.get('[data-testid="cockpit-quick-generate-prompt-go"]').trigger('click');
         await flushPromises();
+        await wrapper.get('[data-testid="cockpit-quick-generate-prompt-result"] button').trigger('click');
+        expect(wrapper.emitted('show-cost')).toHaveLength(1);
 
         expect(fetch).toHaveBeenCalledOnce();
         expect(wrapper.emitted('interpreted')?.[0]?.[0]).toMatchObject({
