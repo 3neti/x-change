@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d111eb2bbc4389ba426c98bc0017fb23",
+    "content-hash": "1879bc3d4629e485157c40d16e4d49b4",
     "packages": [
         {
             "name": "3neti/cash",
@@ -2081,21 +2081,14 @@
                     "LBHurtado\\XStamp\\": "src/"
                 }
             },
-            "scripts": {
-                "test": [
-                    "pest --compact"
-                ],
-                "format": [
-                    "pint --format agent"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "proprietary"
             ],
             "description": "Portable versioned Stamp documents, validation, and HTML/SVG/PNG rendering.",
             "support": {
-                "source": "https://github.com/3neti/x-stamp/tree/v1.0.0",
-                "issues": "https://github.com/3neti/x-stamp/issues"
+                "issues": "https://github.com/3neti/x-stamp/issues",
+                "source": "https://github.com/3neti/x-stamp/tree/v1.0.0"
             },
             "time": "2026-10-17T01:17:26+00:00"
         },
@@ -2126,18 +2119,14 @@
                     "collection": "collection.json"
                 }
             },
-            "scripts": {
-                "test": [
-                    "pest --compact"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "proprietary"
             ],
             "description": "Versioned portable Stamp design collection.",
             "support": {
-                "source": "https://github.com/3neti/x-stamp-designs/tree/v1.0.0",
-                "issues": "https://github.com/3neti/x-stamp-designs/issues"
+                "issues": "https://github.com/3neti/x-stamp-designs/issues",
+                "source": "https://github.com/3neti/x-stamp-designs/tree/v1.0.0"
             },
             "time": "2026-10-17T01:17:29+00:00"
         },

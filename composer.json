@@ -48,14 +48,6 @@
         {
             "type": "git",
             "url": "https://github.com/3neti/x-provisioning.git"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/3neti/x-stamp.git"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/3neti/x-stamp-designs.git"
         }
     ],
     "require": {
