@@ -7266,7 +7266,7 @@ function instructionRecord(
         class="min-w-0 2xl:sticky 2xl:top-4 2xl:self-start"
         :class="
           costPreviewOpen
-            ? 'fixed inset-x-4 top-6 z-[51] mx-auto max-h-[calc(100vh-3rem)] max-w-4xl overflow-y-auto rounded-3xl bg-white p-4 shadow-2xl dark:bg-slate-950'
+            ? 'fixed inset-x-4 top-6 z-[51] mx-auto max-h-[calc(100vh-3rem)] max-w-6xl overflow-y-auto rounded-3xl bg-white p-4 shadow-2xl dark:bg-slate-950'
             : ''
         "
         data-testid="cockpit-quick-generate-cost-preview"
