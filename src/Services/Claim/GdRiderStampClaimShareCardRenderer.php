@@ -110,7 +110,7 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
                 'tagline' => $rider->stamp?->show_tagline === false ? '' : 'The instruction that moves money.',
                 'amount' => $formattedAmount,
                 'recipient' => $recipient->visible ? $recipient->label : '',
-                'purpose' => $copy->visible ? trim($copy->title.' '.$copy->description) : '',
+                'purpose' => $copy->plainText(),
                 'expiry' => $voucher->expires_at === null ? 'No expiry' : 'Expires '.$voucher->expires_at->format('M j, Y'),
                 'instructions' => implode(' · ', $this->indicators->resolve($voucher)),
             ]);

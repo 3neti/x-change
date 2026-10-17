@@ -9,6 +9,7 @@ use Inertia\ServiceProvider;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\RiderStampArtifactStoreContract;
+use LBHurtado\XChange\Data\Claim\RiderStampCopyData;
 use LBHurtado\XChange\Http\Middleware\RequireCurrentAgreementAcceptance;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
 use LBHurtado\XChange\Services\RiderStampDesignRegistry;
@@ -154,3 +155,12 @@ it('keeps the themed QR scannable in the exported Stamp', function (): void {
     $decoded = new QrReader($artifact->contents, QrReader::SOURCE_TYPE_BLOB, false);
     expect($decoded->text())->toContain((string) $voucher->code);
 });
+
+it('keeps exported Stamp copy aligned with the preview sentences', function (string $title, string $description, bool $visible, string $expected): void {
+    $copy = new RiderStampCopyData('custom', $title, $description, $description, $visible);
+    expect($copy->plainText())->toBe($expected);
+})->with([
+    ['Pay Code', 'Money should adapt to people. Not the other way around.', true, "Money should adapt to people.\nNot the other way around."],
+    ['For Amelia', 'Thank you for your help.', true, "For Amelia\nThank you for your help."],
+    ['Hidden', 'Hidden', false, ''],
+]);

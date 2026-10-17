@@ -224,6 +224,25 @@ const showStampCopy = computed<boolean>(() => {
     );
 });
 
+const systemStampPurpose = computed<string>(() => {
+    const stamp = props.riderStamp;
+    if (stamp?.composition.copySource === 'none') {
+        return '';
+    }
+    if (
+        stamp?.title === 'Pay Code' &&
+        stamp.description ===
+            'Money should adapt to people. Not the other way around.'
+    ) {
+        return 'Money should adapt to people.\nNot the other way around.';
+    }
+
+    return (
+        [stamp?.title, stamp?.description].filter(Boolean).join('\n') ||
+        props.purpose
+    );
+});
+
 const showPurposeLine = computed<boolean>(() => {
     const purpose = props.purpose.trim();
 
@@ -675,12 +694,7 @@ function stringValue(value: unknown): string | null {
                         : '',
                     amount: formattedAmount,
                     recipient: recipientLabel,
-                    purpose:
-                        riderStamp.composition.copySource === 'none'
-                            ? ''
-                            : [riderStamp.title, riderStamp.description]
-                                  .filter(Boolean)
-                                  .join(' ') || purpose,
+                    purpose: systemStampPurpose,
                     expiry,
                     instructions: stampIndicatorKeys
                         .map((key) => resolvePayCodeIndicator(key).label)

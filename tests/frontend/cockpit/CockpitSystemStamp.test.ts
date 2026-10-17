@@ -339,3 +339,46 @@ it('uses the design paper and brass trim without changing the supplied QR image'
     expect(qr.classes()).toContain('mix-blend-multiply');
     wrapper.unmount();
 });
+
+it('sends the default slogan as two complete sentences without a repeated Pay Code title', async () => {
+    vi.useFakeTimers();
+    const fetch = vi
+        .fn()
+        .mockResolvedValue({
+            ok: true,
+            json: async () => ({ image: 'data:image/png;base64,stamp' }),
+        });
+    vi.stubGlobal('fetch', fetch);
+    const wrapper = mount(Canvas, {
+        props: {
+            amount: 150,
+            currency: 'PHP',
+            claimOutcome: 'provider_disbursement',
+            voucherType: 'redeemable',
+            riderStamp: {
+                ...resolveRiderStampPreview({}),
+                design: { id: 'steampunk', version: 4 },
+            },
+        },
+    });
+    await vi.advanceTimersByTimeAsync(350);
+    await flushPromises();
+    expect(JSON.parse(fetch.mock.calls[0][1].body).slots.purpose).toBe(
+        'Money should adapt to people.\nNot the other way around.',
+    );
+    await wrapper.setProps({
+        riderStamp: {
+            ...resolveRiderStampPreview({
+                title: 'For Amelia',
+                description: 'Thank you for your help.',
+            }),
+            design: { id: 'steampunk', version: 4 },
+        },
+    });
+    await vi.advanceTimersByTimeAsync(350);
+    await flushPromises();
+    expect(JSON.parse(fetch.mock.calls[1][1].body).slots.purpose).toBe(
+        'For Amelia\nThank you for your help.',
+    );
+    wrapper.unmount();
+});
