@@ -36,7 +36,7 @@ describe('CockpitQuickGeneratePromptComposer', () => {
         expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-go"]').text()).toContain('₱500.00');
         expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-go"]').text()).toContain('✍️');
         expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-go"]').text()).toContain('📸');
-        expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-result"]').text()).toContain('Draft applied');
+        expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-result"]').text()).toContain('Estimated Cost ₱500.00');
     });
 
     it('keeps the action inactive when the interpreter cannot construct instructions', async () => {

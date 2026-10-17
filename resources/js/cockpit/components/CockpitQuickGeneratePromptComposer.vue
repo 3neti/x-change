@@ -212,7 +212,7 @@ onBeforeUnmount(clearInterpretationTimer);
       class="mt-2 px-1 text-xs font-medium text-emerald-700 dark:text-emerald-300"
       data-testid="cockpit-quick-generate-prompt-result"
     >
-      Draft applied
+      Estimated Cost {{ summary[0] ?? "—" }}
     </p>
   </section>
 </template>
