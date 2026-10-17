@@ -1,5 +1,7 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import Canvas from '../../../resources/js/cockpit/components/CockpitPayCodeCanvas.vue';
+import { resolveRiderStampPreview } from '../../../resources/js/cockpit/riderStampPreview';
 import Stamp from '../../../resources/js/cockpit/components/CockpitSystemStamp.vue';
 afterEach(() => {
     vi.useRealTimers();
@@ -136,5 +138,70 @@ it('does not replace a newer amount with an older response', async () => {
         'data:image/png;base64,new',
     );
     expect(wrapper.find('img').attributes('alt')).toContain('₱200');
+    wrapper.unmount();
+});
+
+it('rerenders expiration and input requirements through the shared Pay Code canvas', async () => {
+    vi.useFakeTimers();
+    const fetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ image: 'data:image/png;base64,initial' }),
+        })
+        .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ image: 'data:image/png;base64,updated' }),
+        })
+        .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ image: 'data:image/png;base64,cleared' }),
+        });
+    vi.stubGlobal('fetch', fetch);
+    const wrapper = mount(Canvas, {
+        props: {
+            amount: 150,
+            currency: 'PHP',
+            claimOutcome: 'provider_disbursement',
+            voucherType: 'redeemable',
+            expiry: 'No Expiration',
+            instructionKeys: [],
+            riderStamp: {
+                ...resolveRiderStampPreview({}),
+                design: { id: 'cats', version: 1 },
+            },
+        },
+    });
+    await vi.advanceTimersByTimeAsync(350);
+    await flushPromises();
+    expect(
+        wrapper.get('[data-testid="system-stamp"] img').attributes('src'),
+    ).toBe('data:image/png;base64,initial');
+
+    await wrapper.setProps({
+        expiry: '3 Days',
+        instructionKeys: ['input.name'],
+    });
+    await vi.advanceTimersByTimeAsync(350);
+    await flushPromises();
+    expect(JSON.parse(fetch.mock.calls[1][1].body).slots).toMatchObject({
+        expiry: '3 Days',
+        instructions: 'Receive Funds · Full Name',
+    });
+    const image = wrapper.get('[data-testid="system-stamp"] img');
+    expect(image.attributes('src')).toBe('data:image/png;base64,updated');
+    expect(image.attributes('alt')).toContain('3 Days');
+    expect(image.attributes('alt')).toContain('Full Name');
+
+    await wrapper.setProps({ expiry: 'No Expiration', instructionKeys: [] });
+    await vi.advanceTimersByTimeAsync(350);
+    await flushPromises();
+    expect(JSON.parse(fetch.mock.calls[2][1].body).slots).toMatchObject({
+        expiry: 'No Expiration',
+        instructions: 'Receive Funds',
+    });
+    expect(
+        wrapper.get('[data-testid="system-stamp"] img').attributes('src'),
+    ).toBe('data:image/png;base64,cleared');
     wrapper.unmount();
 });

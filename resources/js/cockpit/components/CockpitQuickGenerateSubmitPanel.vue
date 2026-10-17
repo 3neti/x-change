@@ -2719,7 +2719,11 @@ const canvasInstructionKeys = computed<string[]>(() => {
 
 const canvasExpiryLabel = computed<string>(() => {
   if (expiresAt.value.trim() !== "") {
-    return "Exact Expiration";
+    return `Expires ${expiresAt.value.trim().replace("T", " ")}`;
+  }
+
+  if (ttl.value.trim() !== "") {
+    return `Duration: ${ttl.value.trim()}`;
   }
 
   if (expiryPreset.value === "none") {

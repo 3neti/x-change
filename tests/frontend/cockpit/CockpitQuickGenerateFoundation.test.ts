@@ -59,6 +59,51 @@ function quickGenerateEngineeringPreview(
 }
 
 describe('Cockpit Quick Generate foundation', () => {
+    it('updates the Stamp expiration and requirements from the Order', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: { templates: cockpitQuickGenerateTemplates },
+            global: { stubs: { CockpitPayCodeCanvas: true } },
+        });
+        const canvas = wrapper.findComponent(CockpitPayCodeCanvas);
+        expect(canvas.props('expiry')).toBe('No Expiration');
+
+        await wrapper
+            .get('[data-testid="cockpit-quick-generate-expiry-preset"]')
+            .setValue('P3D');
+        await wrapper
+            .get(
+                '[data-testid="cockpit-quick-generate-input-fields"] input[value="name"]',
+            )
+            .setValue(true);
+        expect(canvas.props('expiry')).toBe('3 Days');
+        expect(canvas.props('instructionKeys')).toContain('input.name');
+
+        const duration = wrapper.get('[data-testid="cockpit-quick-generate-ttl"]');
+        await duration.setValue('2 hours');
+        expect(canvas.props('expiry')).toBe('Duration: 2 hours');
+        await duration.setValue('1 day');
+        expect(canvas.props('expiry')).toBe('Duration: 1 day');
+
+        const expiration = wrapper.get(
+            '[data-testid="cockpit-quick-generate-expires-at"]',
+        );
+        await expiration.setValue('2026-12-24T18:00');
+        expect(canvas.props('expiry')).toBe('Expires 2026-12-24 18:00');
+        await expiration.setValue('2026-12-25T20:30');
+        expect(canvas.props('expiry')).toBe('Expires 2026-12-25 20:30');
+        await expiration.setValue('');
+        expect(canvas.props('expiry')).toBe('Duration: 1 day');
+        await duration.setValue('');
+        expect(canvas.props('expiry')).toBe('3 Days');
+        await wrapper
+            .get(
+                '[data-testid="cockpit-quick-generate-input-fields"] input[value="name"]',
+            )
+            .setValue(false);
+        expect(canvas.props('instructionKeys')).not.toContain('input.name');
+        wrapper.unmount();
+    });
+
     it('renders the untouched Stamp canvas from the issuer theme design', () => {
         const wrapper = mount(CockpitPayCodeCanvas, {
             props: {

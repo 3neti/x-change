@@ -122,7 +122,7 @@ onBeforeUnmount(() => {
         <img
             v-if="image"
             :src="image"
-            :alt="`${slots.brand}: ${slots.amount}. ${slots.recipient}. ${slots.purpose}`"
+            :alt="`${slots.brand}: ${slots.amount}. ${slots.recipient}. ${slots.purpose}. ${slots.expiry || ''}. ${slots.instructions || ''}`"
             class="block h-full w-full"
         />
         <div
