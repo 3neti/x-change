@@ -25,6 +25,7 @@ describe('CockpitQuickGeneratePromptComposer', () => {
         await wrapper.get('[data-testid="cockpit-quick-generate-prompt-input"]').setValue('500 pesos. Require signature and selfie.');
         await new Promise((resolve) => setTimeout(resolve, 500));
         await flushPromises();
+        expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-result"]').text()).toContain('Estimated Cost ₱500.00');
         await wrapper.get('[data-testid="cockpit-quick-generate-prompt-go"]').trigger('click');
         await flushPromises();
 

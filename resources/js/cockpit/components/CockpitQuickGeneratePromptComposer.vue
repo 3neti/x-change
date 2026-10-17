@@ -208,7 +208,7 @@ onBeforeUnmount(clearInterpretationTimer);
       {{ clarification }}
     </p>
     <p
-      v-else-if="draftApplied"
+      v-else-if="isReady"
       class="mt-2 px-1 text-xs font-medium text-emerald-700 dark:text-emerald-300"
       data-testid="cockpit-quick-generate-prompt-result"
     >
