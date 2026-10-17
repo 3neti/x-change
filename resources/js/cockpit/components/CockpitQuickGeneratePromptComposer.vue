@@ -1,5 +1,30 @@
 <script setup lang="ts">
+import { Mic, MicOff } from "lucide-vue-next";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+
+type SpeechRecognitionResultEvent = {
+  results: ArrayLike<ArrayLike<{ transcript: string }>>;
+};
+
+type SpeechRecognitionInstance = {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  onresult: ((event: SpeechRecognitionResultEvent) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionInstance;
+
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
+}
 
 const props = defineProps<{
   endpoint?: string;
@@ -16,6 +41,8 @@ const error = ref("");
 const result = ref<Record<string, unknown> | null>(null);
 const draftApplied = ref(false);
 const promptInput = ref<HTMLInputElement | null>(null);
+const voiceSupported = ref(false);
+const voiceListening = ref(false);
 const hintIndex = ref(0);
 const promptHints = [
   "Try: 1,000 pesos with signature and selfie",
@@ -25,6 +52,7 @@ const promptHints = [
 ];
 let interpretationTimer: ReturnType<typeof setTimeout> | null = null;
 let hintTimer: ReturnType<typeof setInterval> | null = null;
+let speechRecognition: SpeechRecognitionInstance | null = null;
 
 const instructions = computed<Record<string, unknown> | null>(() => {
   const value = result.value?.instructions;
@@ -112,6 +140,22 @@ function focusPrompt(): void {
   promptInput.value?.focus();
 }
 
+function toggleVoiceInput(): void {
+  if (speechRecognition === null) {
+    return;
+  }
+
+  if (voiceListening.value) {
+    speechRecognition.stop();
+    return;
+  }
+
+  error.value = "";
+  speechRecognition.start();
+  voiceListening.value = true;
+  focusPrompt();
+}
+
 function showCostPreview(): void {
   if (isReady.value && instructions.value !== null && !draftApplied.value) {
     emit("interpreted", instructions.value);
@@ -194,12 +238,40 @@ watch(prompt, () => {
 onBeforeUnmount(clearInterpretationTimer);
 
 onMounted(() => {
+  const SpeechRecognition =
+    window.SpeechRecognition ?? window.webkitSpeechRecognition;
+
+  if (SpeechRecognition !== undefined) {
+    voiceSupported.value = true;
+    speechRecognition = new SpeechRecognition();
+    speechRecognition.lang = "en-PH";
+    speechRecognition.interimResults = false;
+    speechRecognition.continuous = false;
+    speechRecognition.onresult = (event): void => {
+      const transcript = event.results[0]?.[0]?.transcript?.trim();
+
+      if (transcript !== undefined && transcript !== "") {
+        prompt.value = `${prompt.value.trim()} ${transcript}`.trim();
+      }
+    };
+    speechRecognition.onend = (): void => {
+      voiceListening.value = false;
+    };
+    speechRecognition.onerror = (): void => {
+      voiceListening.value = false;
+      error.value = "Voice input was unavailable. You can continue typing.";
+    };
+  }
+
   hintTimer = setInterval(() => {
     hintIndex.value = (hintIndex.value + 1) % promptHints.length;
   }, 3500);
 });
 
 onBeforeUnmount(() => {
+  speechRecognition?.stop();
+  speechRecognition = null;
+
   if (hintTimer !== null) {
     clearInterval(hintTimer);
     hintTimer = null;
@@ -213,15 +285,30 @@ onBeforeUnmount(() => {
     data-testid="cockpit-quick-generate-prompt-composer"
   >
     <div class="flex gap-2">
-      <input
-        v-model="prompt"
-        ref="promptInput"
-        class="min-w-0 flex-1 rounded-xl border border-violet-200 bg-white px-4 py-3 text-sm text-slate-950 shadow-sm outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:border-violet-800 dark:bg-slate-950 dark:text-white"
-        placeholder="500 pesos. Require signature and selfie."
-        aria-label="Describe the Pay Code"
-        data-testid="cockpit-quick-generate-prompt-input"
-        @keydown.enter="submit"
-      />
+      <div class="relative min-w-0 flex-1">
+        <input
+          v-model="prompt"
+          ref="promptInput"
+          class="w-full rounded-xl border border-violet-200 bg-white px-4 py-3 pr-12 text-sm text-slate-950 shadow-sm outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:border-violet-800 dark:bg-slate-950 dark:text-white"
+          placeholder="500 pesos. Require signature and selfie."
+          aria-label="Describe the Pay Code"
+          data-testid="cockpit-quick-generate-prompt-input"
+          @keydown.enter="submit"
+        />
+        <button
+          type="button"
+          class="absolute right-2 top-1/2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-violet-600 transition hover:bg-violet-100 hover:text-violet-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-violet-300 dark:hover:bg-violet-900/40 dark:hover:text-violet-100"
+          :aria-label="voiceListening ? 'Stop voice input' : 'Start voice input'"
+          :aria-pressed="voiceListening"
+          :disabled="!voiceSupported"
+          :title="voiceSupported ? 'Use voice input' : 'Voice input is unavailable in this browser'"
+          data-testid="cockpit-quick-generate-prompt-microphone"
+          @click="toggleVoiceInput"
+        >
+          <MicOff v-if="voiceListening" class="size-4" aria-hidden="true" />
+          <Mic v-else class="size-4" aria-hidden="true" />
+        </button>
+      </div>
       <button
         type="button"
         class="min-w-36 rounded-xl bg-violet-600 px-4 py-3 text-xs font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-45"
