@@ -81,7 +81,11 @@ const pageLayoutProps = computed(() =>
       },
 );
 const issuanceSurface = ref<CockpitQuickGenerateSurface>(
-  props.display_session ? "qr" : "composer",
+  props.display_session
+    ? "qr"
+    : props.composer_view === "prompt"
+      ? "llm"
+      : "composer",
 );
 const displaySession = ref(props.display_session ?? null);
 const submitPanelElement = ref<InstanceType<
@@ -1205,6 +1209,8 @@ function stringValue(value: unknown): string | null {
                 ? "Create a payment QR and watch the sale complete."
                 : issuanceSurface === "qr"
                   ? "Pair a campaign with this seller display."
+                  : issuanceSurface === "llm"
+                    ? "Describe the Pay Code you want to create."
                   : "Create a Pay Code for someone to claim."
             }}
           </p>
@@ -1226,7 +1232,7 @@ function stringValue(value: unknown): string | null {
         data-testid="cockpit-quick-generate-primary-workflow-stack"
       >
         <CockpitQuickGenerateSubmitPanel
-          v-if="issuanceSurface === 'composer'"
+          v-if="issuanceSurface === 'composer' || issuanceSurface === 'llm'"
           ref="submitPanelElement"
           v-model:issuance-surface="issuanceSurface"
           :client-funds-minor="clientFundsMinor"

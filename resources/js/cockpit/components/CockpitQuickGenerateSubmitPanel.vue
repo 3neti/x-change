@@ -6185,13 +6185,6 @@ function instructionRecord(
     data-testid="cockpit-quick-generate-submit-panel"
     @submit.prevent="submit"
   >
-    <CockpitQuickGeneratePromptComposer
-      v-if="!props.publicMode"
-      :initial-view="props.composerView"
-      :endpoint="props.promptComposerEndpoint"
-      @interpreted="applyInstructionBlueprint($event, false)"
-      @show-cost="openCostPreview"
-    />
     <div
       v-if="templatePickerOpen"
       class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
@@ -6498,6 +6491,14 @@ function instructionRecord(
             @update:model-value="emit('update:issuanceSurface', $event)"
           />
         </div>
+        <CockpitQuickGeneratePromptComposer
+          v-if="!props.publicMode && issuanceSurface === 'llm'"
+          class="mt-4"
+          :initial-view="props.composerView"
+          :endpoint="props.promptComposerEndpoint"
+          @interpreted="applyInstructionBlueprint($event, false)"
+          @show-cost="openCostPreview"
+        />
         <div
           class="mt-4 grid min-w-0 items-start gap-3 sm:grid-cols-[minmax(0,18rem)_minmax(0,18rem)]"
           data-testid="cockpit-quick-generate-order-fields"
