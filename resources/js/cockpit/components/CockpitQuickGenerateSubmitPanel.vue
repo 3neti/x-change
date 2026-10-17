@@ -855,6 +855,7 @@ const onDemandFundingProjection =
 const instructionBuilderElement = ref<HTMLDetailsElement | null>(null);
 const canvasSectionElement = ref<HTMLElement | null>(null);
 const canvasView = ref<"stamp" | "design" | "claim" | "cost">("stamp");
+const costPreviewOpen = ref(false);
 const amountInputElement = ref<InstanceType<typeof CockpitAmountPicker> | null>(
   null,
 );
@@ -1175,12 +1176,7 @@ async function openDesignEditor(): Promise<void> {
 
 async function openCostPreview(): Promise<void> {
   canvasView.value = "cost";
-  await nextTick();
-
-  canvasSectionElement.value?.scrollIntoView?.({
-    behavior: "smooth",
-    block: "center",
-  });
+  costPreviewOpen.value = true;
 }
 
 function hydrateLastInstructions(): boolean {
@@ -7253,9 +7249,30 @@ function instructionRecord(
       </div>
 
       <div
+        v-if="costPreviewOpen"
+        class="fixed inset-0 z-50 bg-slate-950/60"
+        data-testid="cockpit-quick-generate-cost-preview-backdrop"
+        @click="costPreviewOpen = false"
+      />
+      <div
         ref="canvasSectionElement"
         class="min-w-0 2xl:sticky 2xl:top-4 2xl:self-start"
+        :class="
+          costPreviewOpen
+            ? 'fixed inset-x-4 top-6 z-[51] mx-auto max-h-[calc(100vh-3rem)] max-w-4xl overflow-y-auto rounded-3xl bg-white p-4 shadow-2xl dark:bg-slate-950'
+            : ''
+        "
+        data-testid="cockpit-quick-generate-cost-preview"
       >
+        <button
+          v-if="costPreviewOpen"
+          type="button"
+          class="absolute right-4 top-4 z-10 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+          data-testid="cockpit-quick-generate-cost-preview-close"
+          @click="costPreviewOpen = false"
+        >
+          Close
+        </button>
         <div class="mb-3" v-if="systemStampOptions.length">
           <label class="text-sm font-medium" for="system-stamp-design">Stamp design</label>
           <select id="system-stamp-design" class="ml-3 rounded-md border bg-background px-3 py-2 text-sm" :value="`${riderStampPreview.design.id}@${riderStampPreview.design.version}`" @change="selectSystemStamp">

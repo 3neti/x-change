@@ -11,7 +11,7 @@ describe('CockpitQuickGeneratePromptComposer', () => {
         const hint = wrapper.get('[data-testid="cockpit-quick-generate-prompt-result"]');
         expect(hint.text()).toContain('Try:');
         await hint.trigger('click');
-        expect(wrapper.emitted('show-cost')).toHaveLength(1);
+        expect(wrapper.emitted('show-cost')).toBeUndefined();
 
         wrapper.unmount();
     });

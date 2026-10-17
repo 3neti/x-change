@@ -247,7 +247,7 @@ onBeforeUnmount(() => {
       type="button"
       class="mt-2 w-full rounded-lg px-1 text-left text-xs text-slate-600 transition hover:text-violet-700 dark:text-slate-300 dark:hover:text-violet-300"
       data-testid="cockpit-quick-generate-prompt-result"
-      @click="showCostPreview"
+      @click="focusPrompt"
     >
       {{ emptyStateLabel }}
     </button>
