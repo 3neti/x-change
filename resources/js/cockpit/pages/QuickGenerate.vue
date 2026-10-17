@@ -1276,7 +1276,8 @@ function stringValue(value: unknown): string | null {
         data-testid="cockpit-quick-generate-primary-workflow-stack"
       >
         <CockpitQuickGenerateSubmitPanel
-          v-if="issuanceSurface === 'composer'"
+          v-if="issuanceSurface === 'composer' || restoreLlmAfterIssuance"
+          v-show="issuanceSurface === 'composer' && !restoreLlmAfterIssuance"
           ref="submitPanelElement"
           v-model:issuance-surface="issuanceSurface"
           :client-funds-minor="clientFundsMinor"
@@ -1321,7 +1322,7 @@ function stringValue(value: unknown): string | null {
           @funding-flow-closed="restoreLlmAfterIssuanceFlow"
         />
         <CockpitQuickGenerateLlmPanel
-          v-else-if="issuanceSurface === 'llm'"
+          v-if="issuanceSurface === 'llm' || restoreLlmAfterIssuance"
           :issuance-surface="issuanceSurface"
           :composer-view="props.composer_view ?? 'prompt'"
           :prompt-composer-endpoint="props.prompt_interpret_endpoint"
