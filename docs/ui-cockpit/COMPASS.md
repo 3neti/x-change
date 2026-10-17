@@ -10,6 +10,11 @@ Last updated: 2026-08-10
 
 ## Completed
 
+- Added the reactive issuance funding preflight contract for Quick Generate.
+  The read-only preflight returns authoritative pricing and direct-versus-payment-required funding without creating money movement state.
+  Architecture: `../architecture/issuance-funding-preflight/ISSUANCE_FUNDING_PREFLIGHT_PLAN.md`.
+  Compass: `../architecture/issuance-funding-preflight/ISSUANCE_FUNDING_PREFLIGHT_COMPASS.md`.
+
 - Rationalized **Pay To** in `/x/cockpit/quick-generate`:
   - one canonical TypeScript/PHP classifier now distinguishes open, mobile,
     email, vendor, release-secret, and invalid entries;

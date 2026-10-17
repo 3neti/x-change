@@ -113,6 +113,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPrev
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewShowController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewStepController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateInterpretController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateFundingPreflightController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateMutationRouteShellController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGeneratePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitReviewedFundingPayCodeClaimController;
@@ -837,6 +838,9 @@ Route::prefix('x')->middleware([
         Route::post('quick-generate/interpret', CockpitQuickGenerateInterpretController::class)
             ->middleware('throttle:30,1,quick-generate-interpret:')
             ->name('x-change.cockpit.quick-generate.interpret');
+        Route::post('quick-generate/funding-preflight', CockpitQuickGenerateFundingPreflightController::class)
+            ->middleware('throttle:30,1,quick-generate-funding-preflight:')
+            ->name('x-change.cockpit.quick-generate.funding-preflight');
         Route::post('display-sessions', [CockpitCampaignDisplaySessionController::class, 'store'])
             ->middleware('throttle:12,1,display-write:')->name('x-change.cockpit.display-sessions.store');
         Route::get('display-sessions/{displaySession:reference}', [CockpitCampaignDisplaySessionController::class, 'show'])

@@ -61,6 +61,7 @@ import type {
   CockpitSettlementRailCapability,
 } from "../types";
 import { usePayCodeCostEstimate } from "../../composables/usePayCodeCostEstimate";
+import { useIssuanceFundingPreflight } from "../../composables/useIssuanceFundingPreflight";
 import { useTheme } from "../../composables/useTheme";
 import type { PayCodeCostEstimate } from "../../composables/usePayCodeCostEstimate";
 import { useRiderUrlArtworkPreview } from "../composables/useRiderUrlArtworkPreview";
@@ -4618,6 +4619,18 @@ const {
   estimateError: livePricingEstimateError,
   refreshEstimate: refreshLivePricingEstimate,
 } = usePayCodeCostEstimate(livePricingPayload, canEstimateLivePricing);
+const liveFundingPreflightPayload = computed<Record<string, unknown>>(() =>
+  buildPayloadShape(false, amountCalculatorPreview.value),
+);
+const {
+  preflight: liveFundingPreflight,
+  preflighting: liveFundingPreflighting,
+  preflightError: liveFundingPreflightError,
+  refreshPreflight: refreshLiveFundingPreflight,
+} = useIssuanceFundingPreflight(
+  liveFundingPreflightPayload,
+  computed(() => canEstimateLivePricing.value && !props.publicMode),
+);
 const liveAccountDebit = computed<number | null>(() =>
   optionalMoney(livePricingEstimate.value?.account_debit),
 );
@@ -4648,6 +4661,16 @@ const liveAccountDebitPending = computed<boolean>(
 const liveAccountDebitAffordability = computed<
   "unknown" | "affordable" | "insufficient-client-funds"
 >(() => {
+  const execution = liveFundingPreflight.value?.funding?.execution;
+
+  if (execution === "direct") {
+    return "affordable";
+  }
+
+  if (execution === "payment_required") {
+    return "insufficient-client-funds";
+  }
+
   if (
     liveAccountDebit.value === null ||
     typeof props.clientFundsMinor !== "number" ||
@@ -4666,14 +4689,22 @@ const liveAccountDebitExceedsClientFunds = computed<boolean>(
   () => liveAccountDebitAffordability.value === "insufficient-client-funds",
 );
 const requiresOnDemandFunding = computed<boolean>(() => {
+  const execution = liveFundingPreflight.value?.funding?.execution;
+
+  if (execution === "payment_required") {
+    return true;
+  }
+
+  if (execution === "direct") {
+    return false;
+  }
+
   if (!props.onDemandIssuancePolicy?.enabled) {
     return false;
   }
 
-  return (
-    props.onDemandIssuancePolicy.basis === "full_amount" ||
-    liveAccountDebitAffordability.value === "insufficient-client-funds"
-  );
+  return props.onDemandIssuancePolicy.basis === "full_amount" ||
+    liveAccountDebitAffordability.value === "insufficient-client-funds";
 });
 const issueActionLabel = computed<string>(() => {
   if (onboardingEnabled.value) {

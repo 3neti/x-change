@@ -194,6 +194,11 @@ export default defineConfig({
           import.meta.dirname,
           "tests/frontend/stubs/estimate-pay-code-route.ts",
         ),
+      "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitQuickGenerateFundingPreflightController":
+        path.resolve(
+          import.meta.dirname,
+          "tests/frontend/stubs/cockpit-quick-generate-funding-preflight-route.ts",
+        ),
       "@/routes/x-change/cockpit/funding/intents/instructions": path.resolve(
         import.meta.dirname,
         "tests/frontend/stubs/funding-instruction-route.ts",
