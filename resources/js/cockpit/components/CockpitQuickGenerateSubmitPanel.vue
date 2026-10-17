@@ -222,6 +222,7 @@ const emit = defineEmits<{
   submitSuccess: [response: Record<string, unknown>];
   submitError: [error: Record<string, unknown>];
   resetTurnstile: [];
+  costPreviewClosed: [];
 }>();
 
 type VoucherInputFieldOption = {
@@ -1183,6 +1184,11 @@ async function openCostPreview(): Promise<void> {
   if (canEstimateLivePricing.value) {
     await refreshLivePricingEstimate();
   }
+}
+
+function closeCostPreview(): void {
+  costPreviewOpen.value = false;
+  emit("costPreviewClosed");
 }
 
 function hydrateLastInstructions(): boolean {
@@ -7251,7 +7257,7 @@ function instructionRecord(
         v-if="costPreviewOpen"
         class="fixed inset-0 z-50 bg-slate-950/60"
         data-testid="cockpit-quick-generate-cost-preview-backdrop"
-        @click="costPreviewOpen = false"
+        @click="closeCostPreview"
       />
       <div
         ref="canvasSectionElement"
@@ -7268,7 +7274,7 @@ function instructionRecord(
           type="button"
           class="absolute right-4 top-4 z-10 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
           data-testid="cockpit-quick-generate-cost-preview-close"
-          @click="costPreviewOpen = false"
+          @click="closeCostPreview"
         >
           Close
         </button>

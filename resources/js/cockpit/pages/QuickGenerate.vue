@@ -92,6 +92,7 @@ const displaySession = ref(props.display_session ?? null);
 const submitPanelElement = ref<InstanceType<
   typeof CockpitQuickGenerateSubmitPanel
 > | null>(null);
+const restoreLlmAfterCostPreview = ref(false);
 
 async function beginPublicIssuance(trigger: HTMLButtonElement): Promise<void> {
   document.getElementById("public-pay-code-builder")?.scrollIntoView({
@@ -111,8 +112,18 @@ async function applyLlmInstructions(
 }
 
 async function showLlmCostPreview(): Promise<void> {
+  restoreLlmAfterCostPreview.value = true;
   await nextTick();
   await submitPanelElement.value?.openCostPreview();
+}
+
+function restoreLlmWorkspace(): void {
+  if (!restoreLlmAfterCostPreview.value) {
+    return;
+  }
+
+  restoreLlmAfterCostPreview.value = false;
+  issuanceSurface.value = "llm";
 }
 
 const clientFundsMinor = computed<number | null>(() => {
@@ -1287,6 +1298,7 @@ function stringValue(value: unknown): string | null {
           :prompt-composer-endpoint="props.prompt_interpret_endpoint"
           :templates="templates"
           @reset-turnstile="publicTurnstileWidget?.reset()"
+          @cost-preview-closed="restoreLlmWorkspace"
         />
         <CockpitQuickGenerateLlmPanel
           v-else-if="issuanceSurface === 'llm'"
