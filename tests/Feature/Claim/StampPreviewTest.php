@@ -13,6 +13,8 @@ use LBHurtado\XChange\Http\Middleware\RequireCurrentAgreementAcceptance;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
 use LBHurtado\XChange\Services\RiderStampDesignRegistry;
 use LBHurtado\XChange\Services\Stamp\StampCatalog;
+use LBHurtado\XStamp\Design;
+use Zxing\QrReader;
 
 it('renders installed Stamp revisions for a guest without issuing a Pay Code', function (): void {
     Http::preventStrayRequests();
@@ -123,4 +125,32 @@ it('shares the same generic claim-entry QR for guest Stamp previews without issu
         ->assertJsonPath('props.xchange.claim_entry_artifact.image_data_uri', fn (string $value): bool => str_starts_with($value, 'data:image/png;base64,'));
     expect(Voucher::count())->toBe($before);
     Http::assertNothingSent();
+});
+
+it('provides a warm light QR paper from the design palette', function (): void {
+    $this->postJson(route('x-change.stamps.preview'), [
+        'design_id' => 'cats', 'revision' => 1, 'slots' => ['amount' => '₱100.00'],
+    ])->assertOk()->assertJsonPath('marker_palette.paper', '#F5EFE6');
+    $catalog = app(StampCatalog::class);
+    $design = $catalog->resolve('cats', 1);
+    $darkDesign = new Design([...$design->document, 'background' => '#101719', 'foreground' => '#F8EDD4'], [
+        'assets/fonts/NotoSans.ttf' => $design->asset('assets/fonts/NotoSans.ttf'),
+    ]);
+    expect($catalog->markerPalette($darkDesign)['paper'])->toBe('#F8EDD4');
+});
+
+it('keeps the themed QR scannable in the exported Stamp', function (): void {
+    Storage::fake('local');
+    $user = actingAsTestUser();
+    $instructions = validVoucherInstructions()->toArray();
+    data_set($instructions, 'rider.stamp', ['version' => 3, 'design_id' => 'cats', 'design_version' => 1, 'artwork_source' => 'x_change', 'claim_marker' => 'qr']);
+    $issued = app(PayCodeIssuanceContract::class)->issue($user, $instructions);
+    $voucher = Voucher::findOrFail($issued['voucher_id']);
+    $artifact = app(RiderStampArtifactStoreContract::class)->read($voucher);
+    $image = imagecreatefromstring($artifact->contents);
+    $paper = imagecolorsforindex($image, imagecolorat($image, 964, 389));
+    expect([$paper['red'], $paper['green'], $paper['blue']])->toBe([245, 239, 230]);
+    imagedestroy($image);
+    $decoded = new QrReader($artifact->contents, QrReader::SOURCE_TYPE_BLOB, false);
+    expect($decoded->text())->toContain((string) $voucher->code);
 });

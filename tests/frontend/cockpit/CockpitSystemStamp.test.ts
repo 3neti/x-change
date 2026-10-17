@@ -212,14 +212,12 @@ it.each(['cats', 'x-change-steampunk'])(
         vi.useFakeTimers();
         vi.stubGlobal(
             'fetch',
-            vi
-                .fn()
-                .mockResolvedValue({
-                    ok: true,
-                    json: async () => ({
-                        image: 'data:image/png;base64,stamp',
-                    }),
+            vi.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    image: 'data:image/png;base64,stamp',
                 }),
+            }),
         );
         const artifact = {
             kind: 'claim_entry' as const,
@@ -305,3 +303,39 @@ it.each(['cats', 'x-change-steampunk'])(
         wrapper.unmount();
     },
 );
+
+it('uses the design paper and brass trim without changing the supplied QR image', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                image: 'data:image/png;base64,stamp',
+                marker_palette: { paper: '#F8EDD4', trim: '#DDBB84' },
+            }),
+        }),
+    );
+    const wrapper = mount(Stamp, {
+        props: {
+            designId: 'steampunk',
+            revision: 4,
+            slots: { amount: '₱100' },
+            claimQr: 'data:image/png;base64,qr',
+            marker: 'qr',
+        },
+    });
+    await vi.advanceTimersByTimeAsync(350);
+    await flushPromises();
+    const marker = wrapper.get('[data-testid="system-stamp-claim-marker"]');
+    expect((marker.element as HTMLElement).style.backgroundColor).toBe(
+        'rgb(248, 237, 212)',
+    );
+    expect((marker.element as HTMLElement).style.borderColor).toBe(
+        'rgb(221, 187, 132)',
+    );
+    const qr = marker.get('img');
+    expect(qr.attributes('src')).toBe('data:image/png;base64,qr');
+    expect(qr.classes()).toContain('mix-blend-multiply');
+    wrapper.unmount();
+});

@@ -91,6 +91,25 @@ final class StampCatalog
         return $design->withLayers([...$decoration, ...$content]);
     }
 
+    /** @return array{paper: string, trim: string} */
+    public function markerPalette(Design $design): array
+    {
+        $background = $design->document['background'];
+        $brightness = hexdec(substr($background, 1, 2)) * .299
+            + hexdec(substr($background, 3, 2)) * .587
+            + hexdec(substr($background, 5, 2)) * .114;
+        $paper = $brightness >= 128 ? $background : $design->document['foreground'];
+        $trim = $design->document['foreground'];
+        foreach ($design->document['layers'] as $layer) {
+            if (($layer['slot'] ?? null) === 'brand') {
+                $trim = $layer['color'];
+                break;
+            }
+        }
+
+        return ['paper' => $paper, 'trim' => $trim];
+    }
+
     /** @return list<array{id: string, revision: int, name: string}> */
     public function options(): array
     {

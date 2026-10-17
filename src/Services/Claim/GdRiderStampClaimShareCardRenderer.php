@@ -121,7 +121,7 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
             }
             $foreground = $design->document['foreground'];
             $textColor = imagecolorallocate($canvas, hexdec(substr($foreground, 1, 2)), hexdec(substr($foreground, 3, 2)), hexdec(substr($foreground, 5, 2)));
-            $this->paintClaimMarker($canvas, $voucher, $claimUrl, $textColor);
+            $this->paintClaimMarker($canvas, $voucher, $claimUrl, $textColor, app(StampCatalog::class)->markerPalette($design));
             ob_start();
             imagepng($canvas, null, 8);
             $contents = ob_get_clean();
@@ -1142,11 +1142,13 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         imagefilledpolygon($canvas, $points, $amber);
     }
 
+    /** @param array{paper: string, trim: string}|null $markerPalette */
     private function paintClaimMarker(
         GdImage $canvas,
         Voucher $voucher,
         string $claimUrl,
         int $textColor,
+        ?array $markerPalette = null,
     ): void {
         $marker = $voucher->instructions->rider->stamp?->claim_marker?->value
             ?? 'qr';
@@ -1167,8 +1169,22 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
             $qr = $this->imageFromDataUrl($this->claimQr->render($claimUrl));
 
             if ($qr instanceof GdImage) {
-                $white = imagecolorallocate($canvas, 255, 255, 255);
-                imagefilledrectangle($canvas, $x, $y, $x + 190, $y + 190, $white);
+                $paper = $markerPalette['paper'] ?? '#FFFFFF';
+                $paperRgb = [hexdec(substr($paper, 1, 2)), hexdec(substr($paper, 3, 2)), hexdec(substr($paper, 5, 2))];
+                $trim = $markerPalette['trim'] ?? '#FFFFFF';
+                $trimColor = imagecolorallocate($canvas, hexdec(substr($trim, 1, 2)), hexdec(substr($trim, 3, 2)), hexdec(substr($trim, 5, 2)));
+                $paperColor = imagecolorallocate($canvas, ...$paperRgb);
+                imagefilledrectangle($canvas, $x, $y, $x + 190, $y + 190, $trimColor);
+                imagefilledrectangle($canvas, $x + 2, $y + 2, $x + 188, $y + 188, $paperColor);
+                if ($paper !== '#FFFFFF') {
+                    for ($qrY = 0; $qrY < imagesy($qr); $qrY++) {
+                        for ($qrX = 0; $qrX < imagesx($qr); $qrX++) {
+                            $color = imagecolorsforindex($qr, imagecolorat($qr, $qrX, $qrY));
+                            $tinted = imagecolorallocate($qr, (int) round($color['red'] * $paperRgb[0] / 255), (int) round($color['green'] * $paperRgb[1] / 255), (int) round($color['blue'] * $paperRgb[2] / 255));
+                            imagesetpixel($qr, $qrX, $qrY, $tinted);
+                        }
+                    }
+                }
                 imagecopyresampled(
                     $canvas,
                     $qr,

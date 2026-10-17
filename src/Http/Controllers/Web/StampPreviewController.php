@@ -28,6 +28,6 @@ final class StampPreviewController
         }
         $slots = array_map(fn (?string $value): string => $value ?? '', $input['slots']);
 
-        return response()->json(['image' => 'data:image/png;base64,'.base64_encode($renderer->png($design, $slots))])->header('Cache-Control', 'no-store');
+        return response()->json(['image' => 'data:image/png;base64,'.base64_encode($renderer->png($design, $slots)), 'marker_palette' => $catalog->markerPalette($design)])->header('Cache-Control', 'no-store');
     }
 }

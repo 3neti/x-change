@@ -12,7 +12,10 @@ const props = defineProps<{
     marker?: 'none' | 'code' | 'qr' | 'both';
     position?: 'top_left' | 'top_right' | 'bottom_left' | 'bottom_right';
 }>();
+const markerPalette = ref({ paper: '#FFFFFF', trim: '#FFFFFF' });
 const markerStyle = computed(() => ({
+    backgroundColor: markerPalette.value.paper,
+    border: `2px solid ${markerPalette.value.trim}`,
     width: props.marker === 'code' ? '20.833%' : '15.833%',
     [props.position?.endsWith('_left') ? 'left' : 'right']: '4.5%',
     [props.position?.startsWith('top_') ? 'top' : 'bottom']: '8.571%',
@@ -84,6 +87,13 @@ watch(
                 }
                 if (current === sequence) {
                     image.value = result.image;
+                    const palette = result.marker_palette;
+                    markerPalette.value =
+                        palette &&
+                        /^#[0-9a-f]{6}$/i.test(palette.paper) &&
+                        /^#[0-9a-f]{6}$/i.test(palette.trim)
+                            ? palette
+                            : { paper: '#FFFFFF', trim: '#FFFFFF' };
                 }
             } catch (failure) {
                 if (
@@ -126,8 +136,9 @@ onBeforeUnmount(() => {
         />
         <div
             v-if="image && marker !== 'none'"
+            data-testid="system-stamp-claim-marker"
             :style="markerStyle"
-            class="absolute flex flex-col items-center gap-1 bg-white p-[clamp(2px,0.833cqw,10px)] text-center text-[clamp(6px,2.5cqw,12px)] text-slate-900"
+            class="absolute isolate flex flex-col items-center gap-1 rounded-lg p-[clamp(2px,0.833cqw,10px)] text-center text-[clamp(6px,2.5cqw,12px)] text-slate-900"
         >
             <template v-if="marker !== 'code'">
                 <button
@@ -140,14 +151,14 @@ onBeforeUnmount(() => {
                     <img
                         :src="claimQr"
                         :alt="claimQrLabel || 'Claim Pay Code QR'"
-                        class="aspect-square w-full"
+                        class="aspect-square w-full mix-blend-multiply"
                     />
                 </button>
                 <img
                     v-else-if="claimQr"
                     :src="claimQr"
                     :alt="claimQrLabel || 'Claim Pay Code QR'"
-                    class="aspect-square w-full"
+                    class="aspect-square w-full mix-blend-multiply"
                 />
                 <span
                     v-else
