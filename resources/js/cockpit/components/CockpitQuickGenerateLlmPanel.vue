@@ -9,10 +9,12 @@ withDefaults(
     issuanceSurface?: CockpitQuickGenerateSurface;
     composerView?: "prompt" | "standard";
     promptComposerEndpoint?: string;
+    availableSurfaces?: CockpitQuickGenerateSurface[];
   }>(),
   {
     issuanceSurface: "llm",
     composerView: "prompt",
+    availableSurfaces: () => ["composer", "llm", "pos", "qr"],
   },
 );
 
@@ -44,6 +46,7 @@ const emit = defineEmits<{
       </div>
       <CockpitQuickGenerateSurfaceSwitch
         :model-value="issuanceSurface"
+        :surfaces="availableSurfaces"
         class="w-auto shrink-0 p-0.5 [&>button]:min-h-7 [&>button]:px-2"
         @update:model-value="emit('update:issuanceSurface', $event)"
       />

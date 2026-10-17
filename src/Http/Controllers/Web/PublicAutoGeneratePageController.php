@@ -69,6 +69,9 @@ final class PublicAutoGeneratePageController extends Controller
         );
         $discovery = $this->publicIssuanceDiscovery->describe();
         $draft = $this->checkoutDrafts->active($request, $principal);
+        $workspace = in_array($request->query('workspace'), ['composer', 'llm'], true)
+            ? (string) $request->query('workspace')
+            : 'composer';
 
         return Inertia::render('x-change/public/AutoGenerate', [
             ...$props,
@@ -83,8 +86,9 @@ final class PublicAutoGeneratePageController extends Controller
                 'kind' => 'public_auto_generate',
                 'show_funding_navigation' => false,
                 'show_engineering_preview' => false,
-                'show_workspace_switcher' => false,
+                'show_workspace_switcher' => true,
                 'allow_template_management' => false,
+                'available_surfaces' => ['composer', 'llm'],
             ],
             'public_navigation' => [
                 'analytics_url' => Route::has('x-change.analytics.show')
@@ -125,6 +129,7 @@ final class PublicAutoGeneratePageController extends Controller
             ],
             'onboarding_policy' => ['otp_required' => false],
             'invitation_preset' => ['enabled' => false, 'source' => 'public'],
+            'initial_workspace' => $workspace,
             'startup_mode' => 'blank',
             'public_prefill' => $prefill,
             'turnstile' => [

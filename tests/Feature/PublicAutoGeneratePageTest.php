@@ -59,8 +59,10 @@ it('renders the public issuance surface without cockpit navigation', function ()
         ->assertJsonPath('props.surface_profile.kind', 'public_auto_generate')
         ->assertJsonPath('props.surface_profile.show_funding_navigation', false)
         ->assertJsonPath('props.surface_profile.show_engineering_preview', false)
-        ->assertJsonPath('props.surface_profile.show_workspace_switcher', false)
+        ->assertJsonPath('props.surface_profile.show_workspace_switcher', true)
         ->assertJsonPath('props.surface_profile.allow_template_management', false)
+        ->assertJsonPath('props.surface_profile.available_surfaces', ['composer', 'llm'])
+        ->assertJsonPath('props.initial_workspace', 'composer')
         ->assertJsonPath('props.startup_mode', 'blank')
         ->assertJsonCount(0, 'props.saved_templates')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.route', 'x-change.public-auto-generate.store')
@@ -70,6 +72,32 @@ it('renders the public issuance surface without cockpit navigation', function ()
         ->assertJsonPath('props.public_navigation.claim_url', '/x/claim')
         ->assertJsonPath('props.public_navigation.login_url', null)
         ->assertJsonPath('props.commercial_principal.reference', 'public-issuance-escrow');
+});
+
+it('opens the public issuance surface in the requested workspace', function (): void {
+    CommercialPrincipal::query()->create([
+        'reference' => 'commercial-public',
+        'legal_name' => '3neti R&D OPC',
+        'authorization_reference' => 'commissioning:commercial-public:v1',
+        'active' => true,
+        'metadata' => ['interactive_login' => false],
+    ]);
+
+    $headers = [
+        'X-Inertia' => 'true',
+        'Accept' => 'text/html, application/xhtml+xml',
+    ];
+
+    $this->withHeaders($headers)
+        ->get(route('x-change.public-auto-generate.show', ['workspace' => 'llm']))
+        ->assertOk()
+        ->assertJsonPath('props.initial_workspace', 'llm')
+        ->assertJsonPath('props.surface_profile.available_surfaces', ['composer', 'llm']);
+
+    $this->withHeaders($headers)
+        ->get(route('x-change.public-auto-generate.show', ['workspace' => 'pos']))
+        ->assertOk()
+        ->assertJsonPath('props.initial_workspace', 'composer');
 });
 
 it('offers a sanitized batch upload template', function (): void {

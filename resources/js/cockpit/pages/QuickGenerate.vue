@@ -81,12 +81,17 @@ const pageLayoutProps = computed(() =>
         cockpitEntryNotice: props.cockpit_entry_notice,
       },
 );
+const initialWorkspace: CockpitQuickGenerateSurface =
+  props.initial_workspace ??
+  (!publicAutoGenerate.value && props.composer_view === "prompt"
+    ? "llm"
+    : "composer");
 const issuanceSurface = ref<CockpitQuickGenerateSurface>(
-  props.display_session
-    ? "qr"
-    : !publicAutoGenerate.value && props.composer_view === "prompt"
-      ? "llm"
-      : "composer",
+  props.display_session ? "qr" : initialWorkspace,
+);
+const availableSurfaces = computed<CockpitQuickGenerateSurface[]>(
+  () =>
+    props.surface_profile?.available_surfaces ?? ["composer", "llm", "pos", "qr"],
 );
 const displaySession = ref(props.display_session ?? null);
 const submitPanelElement = ref<InstanceType<
@@ -1315,6 +1320,7 @@ function stringValue(value: unknown): string | null {
             props.surface_profile?.allow_template_management ?? true
           "
           :composer-view="props.composer_view ?? 'standard'"
+          :available-surfaces="availableSurfaces"
           :prompt-composer-endpoint="props.prompt_interpret_endpoint"
           :templates="templates"
           @reset-turnstile="publicTurnstileWidget?.reset()"
@@ -1325,6 +1331,7 @@ function stringValue(value: unknown): string | null {
           v-if="issuanceSurface === 'llm' || restoreLlmAfterIssuance"
           :issuance-surface="issuanceSurface"
           :composer-view="props.composer_view ?? 'prompt'"
+          :available-surfaces="availableSurfaces"
           :prompt-composer-endpoint="props.prompt_interpret_endpoint"
           @update:issuance-surface="issuanceSurface = $event"
           @interpreted="applyLlmInstructions"

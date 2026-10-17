@@ -159,6 +159,7 @@ const props = withDefaults(
     allowTemplateManagement?: boolean;
     composerView?: "prompt" | "standard";
     promptComposerEndpoint?: string;
+    availableSurfaces?: CockpitQuickGenerateSurface[];
     templates: CockpitQuickGenerateTemplate[];
   }>(),
   {
@@ -174,6 +175,7 @@ const props = withDefaults(
     showWorkspaceSwitcher: true,
     allowTemplateManagement: true,
     composerView: "standard",
+    availableSurfaces: () => ["composer", "llm", "pos", "qr"],
   },
 );
 
@@ -6532,6 +6534,7 @@ function instructionRecord(
             v-if="showWorkspaceSwitcher"
             class="w-auto p-0.5 [&>button]:min-h-7 [&>button]:px-2"
             :model-value="issuanceSurface"
+            :surfaces="availableSurfaces"
             :disabled="processing"
             @update:model-value="emit('update:issuanceSurface', $event)"
           />

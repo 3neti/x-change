@@ -1830,6 +1830,7 @@ export type CockpitCollectionDestination = {
 
 export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
   composer_view?: "prompt" | "standard";
+  initial_workspace?: "composer" | "llm";
   prompt_interpret_endpoint?: string;
   surface_profile?: {
     kind: "cockpit" | "public_auto_generate";
@@ -1837,6 +1838,7 @@ export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
     show_engineering_preview: boolean;
     show_workspace_switcher: boolean;
     allow_template_management: boolean;
+    available_surfaces?: Array<"composer" | "llm" | "pos" | "qr">;
   };
   public_navigation?: {
     pricing_url: string | null;

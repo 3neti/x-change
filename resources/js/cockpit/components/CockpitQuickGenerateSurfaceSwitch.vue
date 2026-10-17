@@ -1,17 +1,33 @@
 <script setup lang="ts">
 import { QrCode, Sparkles, WandSparkles } from "lucide-vue-next";
+import { computed } from "vue";
 
 export type CockpitQuickGenerateSurface = "composer" | "llm" | "pos" | "qr";
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     modelValue: CockpitQuickGenerateSurface;
     disabled?: boolean;
+    surfaces?: CockpitQuickGenerateSurface[];
   }>(),
   {
     disabled: false,
+    surfaces: () => ["composer", "llm", "pos", "qr"],
   },
 );
+
+const surfaces = computed(() => props.surfaces);
+const columnsClass = computed(() => {
+  if (surfaces.value.length <= 2) {
+    return "grid-cols-2";
+  }
+
+  if (surfaces.value.length === 3) {
+    return "grid-cols-3";
+  }
+
+  return "grid-cols-4";
+});
 
 const emit = defineEmits<{
   "update:modelValue": [value: CockpitQuickGenerateSurface];
@@ -20,12 +36,14 @@ const emit = defineEmits<{
 
 <template>
   <div
-    class="inline-grid min-w-0 grid-cols-4 rounded-full bg-slate-100 p-1 dark:bg-slate-900"
+    class="inline-grid min-w-0 rounded-full bg-slate-100 p-1 dark:bg-slate-900"
+    :class="columnsClass"
     role="group"
     aria-label="Issuance workspace"
     data-testid="cockpit-quick-generate-surface-toggle"
   >
     <button
+      v-if="surfaces.includes('composer')"
       type="button"
       :aria-pressed="modelValue === 'composer'"
       :class="[
@@ -42,6 +60,7 @@ const emit = defineEmits<{
       <span class="truncate">Composer</span>
     </button>
     <button
+      v-if="surfaces.includes('llm')"
       type="button"
       :aria-pressed="modelValue === 'llm'"
       :class="[
@@ -58,6 +77,7 @@ const emit = defineEmits<{
       <span>LLM</span>
     </button>
     <button
+      v-if="surfaces.includes('pos')"
       type="button"
       :aria-pressed="modelValue === 'pos'"
       :class="[
@@ -74,6 +94,7 @@ const emit = defineEmits<{
       <span>POS</span>
     </button>
     <button
+      v-if="surfaces.includes('qr')"
       type="button"
       :aria-pressed="modelValue === 'qr'"
       :class="[
