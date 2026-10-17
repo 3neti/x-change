@@ -112,7 +112,6 @@ import CockpitRiderMessageEditor from "./CockpitRiderMessageEditor.vue";
 import CockpitRiderLibrary from "./CockpitRiderLibrary.vue";
 import CockpitRiderPreviewFrame from "./CockpitRiderPreviewFrame.vue";
 import CockpitQuickGenerateSurfaceSwitch from "./CockpitQuickGenerateSurfaceSwitch.vue";
-import CockpitQuickGeneratePromptComposer from "./CockpitQuickGeneratePromptComposer.vue";
 import type { CockpitQuickGenerateSurface } from "./CockpitQuickGenerateSurfaceSwitch.vue";
 import type { CockpitScheduledPortion } from "./CockpitScheduledPortionsEditor.vue";
 import CockpitValueUseControl from "./CockpitValueUseControl.vue";
@@ -924,7 +923,7 @@ async function openAmountCalculator(
   amountInputElement.value?.open(returnFocusTo);
 }
 
-defineExpose({ openAmountCalculator, applyInstructionBlueprint });
+defineExpose({ openAmountCalculator, applyInstructionBlueprint, openCostPreview });
 
 watch(
   selectedTemplate,
@@ -6491,14 +6490,6 @@ function instructionRecord(
             @update:model-value="emit('update:issuanceSurface', $event)"
           />
         </div>
-        <CockpitQuickGeneratePromptComposer
-          v-if="!props.publicMode && issuanceSurface === 'llm'"
-          class="mt-4"
-          :initial-view="props.composerView"
-          :endpoint="props.promptComposerEndpoint"
-          @interpreted="applyInstructionBlueprint($event, false)"
-          @show-cost="openCostPreview"
-        />
         <div
           class="mt-4 grid min-w-0 items-start gap-3 sm:grid-cols-[minmax(0,18rem)_minmax(0,18rem)]"
           data-testid="cockpit-quick-generate-order-fields"

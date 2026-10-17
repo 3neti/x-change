@@ -16,6 +16,7 @@ import CockpitQuickGenerateMutationHandoffPlanPanel from "../components/CockpitQ
 import CockpitQuickGenerateMutationPreconditionsReviewPanel from "../components/CockpitQuickGenerateMutationPreconditionsReviewPanel.vue";
 import CockpitQuickGeneratePosPanel from "../components/CockpitQuickGeneratePosPanel.vue";
 import CockpitQuickGenerateQrPanel from "../components/CockpitQuickGenerateQrPanel.vue";
+import CockpitQuickGenerateLlmPanel from "../components/CockpitQuickGenerateLlmPanel.vue";
 import type { CockpitQuickGenerateSurface } from "../components/CockpitQuickGenerateSurfaceSwitch.vue";
 import CockpitQuickGeneratePricingGatePanel from "../components/CockpitQuickGeneratePricingGatePanel.vue";
 import CockpitQuickGenerateSubmitPanel from "../components/CockpitQuickGenerateSubmitPanel.vue";
@@ -83,7 +84,7 @@ const pageLayoutProps = computed(() =>
 const issuanceSurface = ref<CockpitQuickGenerateSurface>(
   props.display_session
     ? "qr"
-    : props.composer_view === "prompt"
+    : !publicAutoGenerate.value && props.composer_view === "prompt"
       ? "llm"
       : "composer",
 );
@@ -99,6 +100,19 @@ async function beginPublicIssuance(trigger: HTMLButtonElement): Promise<void> {
   });
   await nextTick();
   await submitPanelElement.value?.openAmountCalculator(trigger);
+}
+
+async function applyLlmInstructions(
+  instructions: Record<string, unknown>,
+): Promise<void> {
+  issuanceSurface.value = "composer";
+  await nextTick();
+  submitPanelElement.value?.applyInstructionBlueprint(instructions, false);
+}
+
+async function showLlmCostPreview(): Promise<void> {
+  await nextTick();
+  await submitPanelElement.value?.openCostPreview();
 }
 
 const clientFundsMinor = computed<number | null>(() => {
@@ -1232,7 +1246,7 @@ function stringValue(value: unknown): string | null {
         data-testid="cockpit-quick-generate-primary-workflow-stack"
       >
         <CockpitQuickGenerateSubmitPanel
-          v-if="issuanceSurface === 'composer' || issuanceSurface === 'llm'"
+          v-if="issuanceSurface === 'composer'"
           ref="submitPanelElement"
           v-model:issuance-surface="issuanceSurface"
           :client-funds-minor="clientFundsMinor"
@@ -1273,6 +1287,15 @@ function stringValue(value: unknown): string | null {
           :prompt-composer-endpoint="props.prompt_interpret_endpoint"
           :templates="templates"
           @reset-turnstile="publicTurnstileWidget?.reset()"
+        />
+        <CockpitQuickGenerateLlmPanel
+          v-else-if="issuanceSurface === 'llm'"
+          :issuance-surface="issuanceSurface"
+          :composer-view="props.composer_view ?? 'prompt'"
+          :prompt-composer-endpoint="props.prompt_interpret_endpoint"
+          @update:issuance-surface="issuanceSurface = $event"
+          @interpreted="applyLlmInstructions"
+          @show-cost="showLlmCostPreview"
         />
         <CockpitQuickGeneratePosPanel
           v-else-if="issuanceSurface === 'pos'"
