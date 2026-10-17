@@ -62,7 +62,7 @@ const buttonLabel = computed<string>(() => {
     return "Checking…";
   }
 
-  if (canSubmit.value && summary.value.length > 0) {
+  if (isReady.value && summary.value.length > 0) {
     return summary.value.join(" · ");
   }
 

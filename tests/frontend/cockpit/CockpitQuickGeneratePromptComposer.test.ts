@@ -33,6 +33,9 @@ describe('CockpitQuickGeneratePromptComposer', () => {
             cash: { amount: 500 },
             inputs: { fields: ['signature', 'selfie'] },
         });
+        expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-go"]').text()).toContain('₱500.00');
+        expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-go"]').text()).toContain('✍️');
+        expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-go"]').text()).toContain('📸');
         expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-result"]').text()).toContain('Draft applied');
     });
 
