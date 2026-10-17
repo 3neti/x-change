@@ -12,9 +12,13 @@ import XChangeQrArtifact from '../../components/x-change/XChangeQrArtifact.vue';
 import type { XChangeQrArtifactData } from '../../components/x-change/qrArtifacts';
 import { cockpitClaimEntryLauncherEvent } from '../claimEntryLauncher';
 
-const props = defineProps<{
-    artifact?: XChangeQrArtifactData | null;
-}>();
+const props = withDefaults(
+    defineProps<{
+        artifact?: XChangeQrArtifactData | null;
+        listenForLauncherEvent?: boolean;
+    }>(),
+    { listenForLauncherEvent: true },
+);
 
 const isOpen = ref(false);
 const copied = ref(false);
@@ -122,7 +126,9 @@ async function share(): Promise<void> {
 }
 
 onMounted(() => {
-    window.addEventListener(cockpitClaimEntryLauncherEvent, open);
+    if (props.listenForLauncherEvent) {
+        window.addEventListener(cockpitClaimEntryLauncherEvent, open);
+    }
     window.addEventListener('popstate', handlePopState);
     window.addEventListener('keydown', handleKeydown);
 });
@@ -137,6 +143,7 @@ onBeforeUnmount(() => {
         clearTimeout(copyStatusTimer);
     }
 });
+defineExpose({ open });
 </script>
 
 <template>

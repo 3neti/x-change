@@ -205,3 +205,103 @@ it('rerenders expiration and input requirements through the shared Pay Code canv
     ).toBe('data:image/png;base64,cleared');
     wrapper.unmount();
 });
+
+it.each(['cats', 'x-change-steampunk'])(
+    'uses the sidebar claim-entry QR before issuance in %s Stamps',
+    async (designId) => {
+        vi.useFakeTimers();
+        vi.stubGlobal(
+            'fetch',
+            vi
+                .fn()
+                .mockResolvedValue({
+                    ok: true,
+                    json: async () => ({
+                        image: 'data:image/png;base64,stamp',
+                    }),
+                }),
+        );
+        const artifact = {
+            kind: 'claim_entry' as const,
+            destination: 'https://example.test/x/claim',
+            image_data_uri: 'data:image/png;base64,entry',
+            title: 'Enter Pay Code',
+            description: 'Scan to open the Pay Code entry page.',
+            identifier: null,
+            center_mark: 'pay_code' as const,
+        };
+        const wrapper = mount(Canvas, {
+            props: {
+                amount: 150,
+                currency: 'PHP',
+                claimOutcome: 'provider_disbursement',
+                voucherType: 'redeemable',
+                riderStamp: {
+                    ...resolveRiderStampPreview({}),
+                    design: { id: designId, version: 1 },
+                },
+                claimEntryArtifact: artifact,
+                interactiveClaimQr: true,
+            },
+            global: { stubs: { Teleport: true } },
+        });
+        await vi.advanceTimersByTimeAsync(350);
+        await flushPromises();
+        expect(
+            wrapper.get('img[alt="Enter Pay Code QR"]').attributes('src'),
+        ).toBe(artifact.image_data_uri);
+        window.dispatchEvent(
+            new CustomEvent('x-change:open-cockpit-claim-entry'),
+        );
+        await wrapper.vm.$nextTick();
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-claim-entry-launcher"]')
+                .exists(),
+        ).toBe(false);
+
+        await wrapper
+            .get(
+                designId === 'cats'
+                    ? '[aria-label="Expand claim QR"]'
+                    : '[aria-label="Expand claim entry QR"]',
+            )
+            .trigger('click');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-claim-entry-qr-image"]')
+                .attributes('src'),
+        ).toBe(artifact.image_data_uri);
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-claim-entry-open"]')
+                .attributes('href'),
+        ).toBe(artifact.destination);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+        await wrapper.vm.$nextTick();
+
+        await wrapper.setProps({
+            claimQr: 'data:image/png;base64,direct',
+            issuedCode: 'ABCD',
+        });
+        await vi.advanceTimersByTimeAsync(350);
+        await flushPromises();
+        expect(
+            wrapper.get('img[alt="Claim Pay Code QR"]').attributes('src'),
+        ).toBe('data:image/png;base64,direct');
+        await wrapper
+            .get(
+                designId === 'cats'
+                    ? '[aria-label="Expand claim QR"]'
+                    : '[data-testid="cockpit-pay-code-canvas-claim-qr-button"]',
+            )
+            .trigger('click');
+        expect(wrapper.emitted('claimQrClick')).toHaveLength(1);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-claim-entry-launcher"]')
+                .exists(),
+        ).toBe(false);
+        wrapper.unmount();
+    },
+);

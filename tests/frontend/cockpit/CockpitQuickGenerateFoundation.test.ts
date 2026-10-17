@@ -1,6 +1,6 @@
 import { config, flushPromises, mount } from '@vue/test-utils';
 import type { VueWrapper } from '@vue/test-utils';
-import { router } from '@inertiajs/vue3';
+import { router, usePage } from '@inertiajs/vue3';
 import { describe, expect, it, vi } from 'vitest';
 import CockpitDiagnosticsDisclosure from '../../../resources/js/cockpit/components/CockpitDiagnosticsDisclosure.vue';
 import CockpitGenerateActionPanel from '../../../resources/js/cockpit/components/CockpitGenerateActionPanel.vue';
@@ -36,9 +36,9 @@ vi.mock('@inertiajs/vue3', () => ({
     router: {
         reload: vi.fn(),
     },
-    usePage: () => ({
+    usePage: vi.fn(() => ({
         props: {},
-    }),
+    })),
 }));
 
 config.global.stubs = {
@@ -103,6 +103,34 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(canvas.props('instructionKeys')).not.toContain('input.name');
         wrapper.unmount();
     });
+
+    it.each([false, true])(
+        'passes the shared claim-entry artifact into the Stamp in public mode %s',
+        (publicMode) => {
+            const artifact = {
+                kind: 'claim_entry',
+                destination: '/x/claim',
+                image_data_uri: 'data:image/png;base64,entry',
+                title: 'Enter Pay Code',
+                description: 'Scan to open the Pay Code entry page.',
+                identifier: null,
+                center_mark: 'pay_code',
+            };
+            vi.mocked(usePage).mockReturnValueOnce({
+                props: { xchange: { claim_entry_artifact: artifact } },
+            } as ReturnType<typeof usePage>);
+            const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+                props: { templates: cockpitQuickGenerateTemplates, publicMode },
+                global: { stubs: { CockpitPayCodeCanvas: true } },
+            });
+            expect(
+                wrapper
+                    .findComponent(CockpitPayCodeCanvas)
+                    .props('claimEntryArtifact'),
+            ).toEqual(artifact);
+            wrapper.unmount();
+        },
+    );
 
     it('renders the untouched Stamp canvas from the issuer theme design', () => {
         const wrapper = mount(CockpitPayCodeCanvas, {

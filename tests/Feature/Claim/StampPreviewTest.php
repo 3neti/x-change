@@ -3,12 +3,14 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Inertia\ServiceProvider;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\RiderStampArtifactStoreContract;
 use LBHurtado\XChange\Http\Middleware\RequireCurrentAgreementAcceptance;
+use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
 use LBHurtado\XChange\Services\RiderStampDesignRegistry;
 use LBHurtado\XChange\Services\Stamp\StampCatalog;
 
@@ -103,5 +105,22 @@ it('keeps a system design when linked artwork is text-only', function (): void {
     $pixel = imagecolorsforindex($image, imagecolorat($image, 26, 100));
     expect([$pixel['red'], $pixel['green'], $pixel['blue']])->toBe([132, 97, 165]);
     imagedestroy($image);
+    Http::assertNothingSent();
+});
+
+it('shares the same generic claim-entry QR for guest Stamp previews without issuing a voucher', function (): void {
+    app()->register(ServiceProvider::class);
+    Http::preventStrayRequests();
+    $before = Voucher::count();
+    Route::middleware(['web', ShareXChangeBranding::class])
+        ->get('/stamp-claim-entry-test', fn () => Inertia\Inertia::render('StampPreview'));
+
+    $this->withHeader('X-Inertia', 'true')->get('/stamp-claim-entry-test')
+        ->assertOk()
+        ->assertJsonPath('props.xchange.claim_entry_artifact.kind', 'claim_entry')
+        ->assertJsonPath('props.xchange.claim_entry_artifact.destination', route('x-change.claim.start'))
+        ->assertJsonPath('props.xchange.claim_entry_artifact.identifier', null)
+        ->assertJsonPath('props.xchange.claim_entry_artifact.image_data_uri', fn (string $value): bool => str_starts_with($value, 'data:image/png;base64,'));
+    expect(Voucher::count())->toBe($before);
     Http::assertNothingSent();
 });

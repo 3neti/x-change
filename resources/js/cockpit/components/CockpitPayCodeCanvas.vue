@@ -7,8 +7,10 @@ import {
     Route,
     UserRound,
 } from 'lucide-vue-next';
-import { computed, useId, useSlots, watchEffect } from 'vue';
+import { computed, ref, useId, useSlots, watchEffect } from 'vue';
 import CockpitSystemStamp from './CockpitSystemStamp.vue';
+import CockpitClaimEntryLauncher from './CockpitClaimEntryLauncher.vue';
+import type { XChangeQrArtifactData } from '../../components/x-change/qrArtifacts';
 import type {
     PayCodeCostCharge,
     PayCodeCostEstimate,
@@ -39,6 +41,7 @@ const props = withDefaults(
         riderDesignDocument?: string;
         riderStamp?: RiderStampPreview | null;
         claimQr?: string | null;
+        claimEntryArtifact?: XChangeQrArtifactData | null;
         interactiveClaimQr?: boolean;
         presentation?: 'live' | 'finalized';
         costEstimate?: PayCodeCostEstimate | null;
@@ -58,6 +61,7 @@ const props = withDefaults(
         riderDesignDocument: '',
         riderStamp: null,
         claimQr: null,
+        claimEntryArtifact: null,
         interactiveClaimQr: false,
         presentation: 'live',
         costEstimate: null,
@@ -71,6 +75,24 @@ const props = withDefaults(
 const emit = defineEmits<{
     claimQrClick: [];
 }>();
+
+const claimEntryLauncher = ref<{ open: () => void } | null>(null);
+const stampClaimQr = computed(
+    () => props.claimQr || props.claimEntryArtifact?.image_data_uri || null,
+);
+const stampQrInteractive = computed(() =>
+    props.claimQr ? props.interactiveClaimQr : !!props.claimEntryArtifact,
+);
+const stampQrLabel = computed(() =>
+    props.claimQr ? 'Claim Pay Code QR' : 'Enter Pay Code QR',
+);
+function openStampQr(): void {
+    if (props.claimQr) {
+        emit('claimQrClick');
+    } else {
+        claimEntryLauncher.value?.open();
+    }
+}
 
 type PayCodeCanvasView = 'stamp' | 'design' | 'claim' | 'cost';
 
@@ -664,12 +686,13 @@ function stringValue(value: unknown): string | null {
                         .map((key) => resolvePayCodeIndicator(key).label)
                         .join(' · '),
                 }"
-                :claim-qr="claimQr"
+                :claim-qr="stampClaimQr"
+                :claim-qr-label="stampQrLabel"
                 :code="issuedCode"
                 :marker="riderStamp.composition.claimMarker"
                 :position="riderStamp.composition.claimMarkerPosition"
-                :interactive="interactiveClaimQr"
-                @claim-qr-click="emit('claimQrClick')"
+                :interactive="stampQrInteractive"
+                @claim-qr-click="openStampQr"
             />
         </section>
         <article
@@ -722,24 +745,28 @@ function stringValue(value: unknown): string | null {
                 data-testid="cockpit-pay-code-canvas-claim-marker"
             >
                 <button
-                    v-if="showClaimQr && claimQr && interactiveClaimQr"
+                    v-if="showClaimQr && stampClaimQr && stampQrInteractive"
                     type="button"
                     class="rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300"
-                    :aria-label="`Enlarge claim QR for ${displayedCode}`"
+                    :aria-label="
+                        claimQr
+                            ? `Enlarge claim QR for ${displayedCode}`
+                            : 'Expand claim entry QR'
+                    "
                     data-testid="cockpit-pay-code-canvas-claim-qr-button"
-                    @click="emit('claimQrClick')"
+                    @click="openStampQr"
                 >
                     <img
-                        :src="claimQr"
-                        :alt="`Claim ${displayedCode}`"
+                        :src="stampClaimQr"
+                        :alt="stampQrLabel"
                         class="@md:size-20 size-16 rounded-lg border-4 border-white bg-white object-contain shadow-lg"
                         data-testid="cockpit-pay-code-canvas-claim-qr"
                     />
                 </button>
                 <img
-                    v-else-if="showClaimQr && claimQr"
-                    :src="claimQr"
-                    :alt="`Claim ${displayedCode}`"
+                    v-else-if="showClaimQr && stampClaimQr"
+                    :src="stampClaimQr"
+                    :alt="stampQrLabel"
                     class="@md:size-20 size-16 rounded-lg border-4 border-white bg-white object-contain shadow-lg"
                     data-testid="cockpit-pay-code-canvas-claim-qr"
                 />
@@ -1196,5 +1223,11 @@ function stringValue(value: unknown): string | null {
                 <slot name="action" />
             </div>
         </footer>
+        <CockpitClaimEntryLauncher
+            v-if="!claimQr && claimEntryArtifact"
+            ref="claimEntryLauncher"
+            :artifact="claimEntryArtifact"
+            :listen-for-launcher-event="false"
+        />
     </section>
 </template>

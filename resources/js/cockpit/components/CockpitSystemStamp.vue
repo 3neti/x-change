@@ -6,6 +6,7 @@ const props = defineProps<{
     revision: number;
     slots: Record<string, string>;
     claimQr?: string | null;
+    claimQrLabel?: string;
     code?: string | null;
     interactive?: boolean;
     marker?: 'none' | 'code' | 'qr' | 'both';
@@ -67,11 +68,9 @@ watch(
                         slots: props.slots,
                     }),
                 });
-                const result = await response
-                    .json()
-                    .catch(() => ({
-                        message: 'Stamp preview unavailable. Please try again.',
-                    }));
+                const result = await response.json().catch(() => ({
+                    message: 'Stamp preview unavailable. Please try again.',
+                }));
                 if (!response.ok) {
                     throw new Error(
                         result.message || 'Stamp preview unavailable.',
@@ -140,14 +139,14 @@ onBeforeUnmount(() => {
                 >
                     <img
                         :src="claimQr"
-                        alt="Claim Pay Code QR"
+                        :alt="claimQrLabel || 'Claim Pay Code QR'"
                         class="aspect-square w-full"
                     />
                 </button>
                 <img
                     v-else-if="claimQr"
                     :src="claimQr"
-                    alt="Claim Pay Code QR"
+                    :alt="claimQrLabel || 'Claim Pay Code QR'"
                     class="aspect-square w-full"
                 />
                 <span

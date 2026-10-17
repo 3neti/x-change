@@ -763,6 +763,12 @@ const riderStampPosition = ref<RiderStampPosition>("center");
 const riderStampScrim = ref("18");
 const riderStampTheme = ref<RiderStampTheme>("automatic");
 const stampPage = usePage();
+const stampClaimEntryArtifact = computed<XChangeQrArtifactData | null>(() =>
+  qrArtifactValue(
+    dataGet(stampPage.props, ["cockpit_claim_entry_artifact"])
+      ?? dataGet(stampPage.props, ["xchange", "claim_entry_artifact"]),
+  ),
+);
 const systemStampOptions = computed<Array<{ id: string; revision: number; name: string }>>(() => (stampPage.props.xchange as { stamps?: Array<{ id: string; revision: number; name: string }> } | undefined)?.stamps ?? []);
 function selectSystemStamp(event: Event): void {
   const id = (event.target as HTMLSelectElement).value;
@@ -7344,6 +7350,8 @@ function instructionRecord(
           :rider-design-source="riderStampPreview.source"
           :rider-design-document="riderCanvasArtworkDocument"
           :rider-stamp="riderStampPreview"
+          :claim-qr="beneficiaryClaimQr"
+          :claim-entry-artifact="stampClaimEntryArtifact"
           :cost-estimate="livePricingEstimate"
           :cost-loading="livePricingEstimating"
           :cost-error="livePricingEstimateError"
