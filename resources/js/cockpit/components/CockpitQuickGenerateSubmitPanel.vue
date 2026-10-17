@@ -3,7 +3,7 @@ import CockpitPayCodeTemplateStoreController from "@/actions/LBHurtado/XChange/H
 import CockpitPayCodeTemplateUpdateController from "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPayCodeTemplateUpdateController";
 import { store as savePublicCheckoutDraft } from "@/routes/x-change/public-auto-generate/checkouts";
 import type { RequestPayload } from "@inertiajs/core";
-import { Link, router } from "@inertiajs/vue3";
+import { Link, router, usePage } from "@inertiajs/vue3";
 import type {
   XChangePayCodeQrArtifacts,
   XChangeQrArtifactData,
@@ -758,8 +758,17 @@ const riderStampFit = ref<RiderStampFit>("cover");
 const riderStampPosition = ref<RiderStampPosition>("center");
 const riderStampScrim = ref("18");
 const riderStampTheme = ref<RiderStampTheme>("automatic");
-const riderStampDesignId = ref<string | null>(null);
-const riderStampDesignVersion = ref<number | null>(null);
+const stampPage = usePage();
+const systemStampOptions = computed<Array<{ id: string; revision: number; name: string }>>(() => (stampPage.props.xchange as { stamps?: Array<{ id: string; revision: number; name: string }> } | undefined)?.stamps ?? []);
+function selectSystemStamp(event: Event): void {
+  const id = (event.target as HTMLSelectElement).value;
+  const design = systemStampOptions.value.find(option => `${option.id}@${option.revision}` === id);
+  if (design) { riderStampDesignId.value = design.id; riderStampDesignVersion.value = design.revision; }
+}
+const defaultSystemStamp = (stampPage.props.xchange as { stamp_default?: string } | undefined)?.stamp_default ?? "steampunk";
+const riderStampDesignId = ref<string | null>(defaultSystemStamp);
+const defaultSystemStampRevision = Math.max(1, ...systemStampOptions.value.filter(design => design.id === defaultSystemStamp).map(design => design.revision));
+const riderStampDesignVersion = ref<number | null>(defaultSystemStampRevision);
 const {
   preview: riderUrlArtworkPreview,
   resolving: riderUrlArtworkResolving,
@@ -1072,8 +1081,8 @@ function applyTemplateDefaults(templateKey: string): void {
   riderStampPosition.value = "center";
   riderStampScrim.value = "18";
   riderStampTheme.value = "automatic";
-  riderStampDesignId.value = null;
-  riderStampDesignVersion.value = null;
+  riderStampDesignId.value = defaultSystemStamp;
+  riderStampDesignVersion.value = defaultSystemStampRevision;
   cashType.value =
     defaults.executionDriver === "settlement_envelope"
       ? "settlement_cash"
@@ -7232,6 +7241,13 @@ function instructionRecord(
         ref="canvasSectionElement"
         class="min-w-0 2xl:sticky 2xl:top-4 2xl:self-start"
       >
+        <div class="mb-3" v-if="systemStampOptions.length">
+          <label class="text-sm font-medium" for="system-stamp-design">Stamp design</label>
+          <select id="system-stamp-design" class="ml-3 rounded-md border bg-background px-3 py-2 text-sm" :value="`${riderStampPreview.design.id}@${riderStampPreview.design.version}`" @change="selectSystemStamp">
+            <option v-for="design in systemStampOptions" :key="`${design.id}@${design.revision}`" :value="`${design.id}@${design.revision}`">{{ design.name }}{{ systemStampOptions.filter(option => option.id === design.id).length > 1 ? ' · v' + design.revision : '' }}</option>
+            <option v-if="!systemStampOptions.some(design => design.id === riderStampPreview.design.id)" :value="`${riderStampPreview.design.id}@${riderStampPreview.design.version}`">Existing design</option>
+          </select>
+        </div>
         <CockpitPayCodeCanvas
           v-model:view="canvasView"
           :amount="amount"

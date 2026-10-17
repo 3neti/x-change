@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Validator;
 use LBHurtado\Voucher\Data\RiderStampData;
+use LBHurtado\XChange\Http\Requests\EstimatePayCodeRequest;
+use LBHurtado\XChange\Http\Requests\GeneratePayCodeRequest;
 use LBHurtado\XChange\Services\RiderStampDesignRegistry;
 
 it('materializes the configured default design for every new issuance', function (): void {
@@ -15,7 +18,7 @@ it('materializes the configured default design for every new issuance', function
 
     expect(data_get($payload, 'rider.stamp'))->toMatchArray([
         'version' => 3,
-        'design_id' => 'x-change-default',
+        'design_id' => 'steampunk',
         'design_version' => 1,
     ]);
 });
@@ -76,7 +79,7 @@ it('bridges the design snapshot through extension metadata until voucher v3 is a
     if (defined(RiderStampData::class.'::COMPOSITION_SCHEMA_VERSION')) {
         expect(data_get($payload, 'rider.stamp'))->toMatchArray([
             'version' => 3,
-            'design_id' => 'x-change-default',
+            'design_id' => 'steampunk',
             'design_version' => 1,
         ]);
 
@@ -86,7 +89,7 @@ it('bridges the design snapshot through extension metadata until voucher v3 is a
     expect(data_get($payload, 'rider.stamp.version'))->toBe(2)
         ->and(data_get($payload, 'rider.stamp.design_id'))->toBeNull()
         ->and(data_get($payload, 'metadata.custom.rider_stamp_design'))->toBe([
-            'id' => 'x-change-default',
+            'id' => 'steampunk',
             'version' => 1,
         ]);
 });
@@ -110,4 +113,15 @@ it('retains historical palettes after a design default advances', function (): v
         'glow_primary' => [251, 146, 60],
         'glow_secondary' => [245, 158, 11],
     ]);
+});
+
+it('accepts independently introduced revisions without hardcoded request versions', function (): void {
+    config()->set('x-change.experience.stamp_designs.x-change-amber.versions.2', config('x-change.experience.stamp_designs.x-change-amber.versions.1'));
+    foreach ([GeneratePayCodeRequest::class, EstimatePayCodeRequest::class] as $class) {
+        $request = new $class;
+        $request->merge(['rider' => ['stamp' => ['design_id' => 'x-change-amber']]]);
+        $rules = $request->rules()['rider.stamp.design_version'];
+        $validator = Validator::make(['rider' => ['stamp' => ['design_version' => 2]]], ['rider.stamp.design_version' => $rules]);
+        expect($validator->passes())->toBeTrue();
+    }
 });

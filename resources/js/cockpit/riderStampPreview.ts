@@ -221,6 +221,9 @@ export function resolveRiderStampDesign(
         'experienceTheme' | 'designId' | 'designVersion'
     >,
 ): RiderStampDesignReference {
+    if (input.designId && !input.designId.startsWith('x-change-')) {
+        return { id: input.designId, version: Number(input.designVersion) || 1 };
+    }
     const explicitTheme = experienceThemeForStampDesign(input.designId);
     const theme =
         explicitTheme ??

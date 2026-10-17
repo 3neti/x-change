@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services;
 
 use InvalidArgumentException;
 use LBHurtado\Voucher\Data\RiderStampData;
+use LBHurtado\XChange\Services\Stamp\StampCatalog;
 
 final class RiderStampDesignRegistry
 {
@@ -38,8 +39,22 @@ final class RiderStampDesignRegistry
     {
         /** @var array<string, array{default_version: int, versions: array<int, array{palette: array<string, array{int, int, int}>}>}> $designs */
         $designs = config('x-change.experience.stamp_designs', []);
+        foreach (app(StampCatalog::class)->catalog()->all() as $design) {
+            $rgb = static fn (string $hex): array => [hexdec(substr($hex, 1, 2)), hexdec(substr($hex, 3, 2)), hexdec(substr($hex, 5, 2))];
+            $background = $rgb($design->document['background']);
+            $designs[$design->id()]['default_version'] = max($designs[$design->id()]['default_version'] ?? 0, $design->revision());
+            $designs[$design->id()]['versions'][$design->revision()] = ['palette' => ['start' => $background, 'end' => $background, 'glow_primary' => $background, 'glow_secondary' => $background]];
+        }
 
         return $designs;
+    }
+
+    /** @return list<int> */
+    public function versions(mixed $designId): array
+    {
+        $id = is_string($designId) ? $designId : (string) config('x-change.experience.default_system_stamp_design', 'steampunk');
+
+        return array_keys($this->all()[$id]['versions'] ?? []);
     }
 
     /**
@@ -87,8 +102,8 @@ final class RiderStampDesignRegistry
         $designId = is_string($designId) && trim($designId) !== ''
             ? trim($designId)
             : (string) config(
-                'x-change.experience.default_stamp_design',
-                'x-change-default',
+                'x-change.experience.default_system_stamp_design',
+                'steampunk',
             );
         $designVersion = data_get($stamp, 'design_version');
         $designVersion = is_numeric($designVersion)

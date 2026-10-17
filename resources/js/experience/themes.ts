@@ -1,8 +1,8 @@
 export type ExperienceThemeId = 'default' | 'amber' | 'steampunk';
 
 export type RiderStampDesignReference = {
-    id: 'x-change-default' | 'x-change-amber' | 'x-change-steampunk';
-    version: 1;
+    id: string;
+    version: number;
 };
 
 export type ExperienceThemeDefinition = {

@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
+      "@/routes/x-change/stamps": path.resolve(import.meta.dirname, "tests/frontend/stubs/stamp-preview-route.ts"),
       "@/routes/x-change/public-auto-generate/checkouts": path.resolve(
         import.meta.dirname,
         "tests/frontend/stubs/public-checkout-draft-route.ts",

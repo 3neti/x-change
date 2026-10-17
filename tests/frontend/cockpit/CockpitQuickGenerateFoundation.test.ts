@@ -1594,7 +1594,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 .text(),
         ).toBe('₱117.00');
         expect(
-            JSON.parse(String(fetchMock.mock.calls.at(-1)?.[1]?.body)).cash
+            JSON.parse(String(fetchMock.mock.calls.filter(call => call[0] === '/api/x/v1/pay-codes/estimate').at(-1)?.[1]?.body)).cash
                 .amount,
         ).toBe(100);
         expect(
@@ -2945,7 +2945,7 @@ describe('Cockpit Quick Generate foundation', () => {
             splash_meta: null,
             stamp: {
                 version: 3,
-                design_id: 'x-change-default',
+                design_id: 'steampunk',
                 design_version: 1,
             },
         });

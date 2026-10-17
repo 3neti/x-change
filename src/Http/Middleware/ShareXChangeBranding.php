@@ -15,6 +15,7 @@ use LBHurtado\XChange\Enums\TreasuryOperatorCapability;
 use LBHurtado\XChange\Services\Cockpit\CockpitSystemReadinessAccess;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiOperatorAuthority;
 use LBHurtado\XChange\Services\Provisioning\ProvisioningOperatorAuthority;
+use LBHurtado\XChange\Services\Stamp\StampCatalog;
 use LBHurtado\XChange\Services\Treasury\TreasuryOperatorAuthority;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -37,6 +38,8 @@ class ShareXChangeBranding
                 'logo_light' => (string) config('x-change.branding.logo_light', '/vendor/x-change/images/brand-library/x-change/svg/x-change-logo.svg'),
                 'logo_dark' => (string) config('x-change.branding.logo_dark', '/vendor/x-change/images/brand-library/x-change/svg/x-change-light.svg'),
             ],
+            'stamp_default' => (string) config('x-change.experience.default_system_stamp_design', 'steampunk'),
+            'stamps' => app(StampCatalog::class)->options(),
             'experience' => [
                 'profile' => (array) config('x-change.experience.profile', []),
                 'themes' => (array) config('x-change.experience.themes', []),

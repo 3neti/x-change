@@ -568,6 +568,7 @@ use LBHurtado\XChange\Services\Settlement\MedicardDemoBenefitResponder;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\SettlementEnvelopeReadinessService;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
+use LBHurtado\XChange\Services\Stamp\StampCatalog;
 use LBHurtado\XChange\Services\StartProviderProvisioningFromOnboardingCompletion;
 use LBHurtado\XChange\Services\SystemWalletProxy;
 use LBHurtado\XChange\Services\Treasury\AdvisoryTreasuryVocabularyReadModel;
@@ -641,6 +642,7 @@ class XChangeServiceProvider extends ServiceProvider
             },
         );
 
+        $this->app->singleton(StampCatalog::class);
         if (class_exists(OnboardingGuard::class) && ! $this->app->bound(OnboardingGuard::class)) {
             $this->app->singleton(OnboardingGuard::class);
         }
@@ -1736,6 +1738,15 @@ class XChangeServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $stampCollection = InstalledVersions::getInstallPath('3neti/x-stamp-designs');
+        if ($stampCollection !== null) {
+            $this->publishes([
+                $stampCollection.'/assets' => public_path('vendor/x-stamp/assets'),
+                $stampCollection.'/designs' => public_path('vendor/x-stamp/designs'),
+                $stampCollection.'/collection.json' => public_path('vendor/x-stamp/collection.json'),
+            ], 'x-stamp-assets');
+        }
+
         Inertia::share(
             'xchange.version',
             InstalledVersions::getPrettyVersion('3neti/x-change') ?? 'dev',

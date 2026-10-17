@@ -29,6 +29,11 @@ final class CorePublicationContributor implements XChangePublicationContributor
             resource_path('js/experience/themes.ts'),
             resource_path('js/experience/themes.css'),
         ]);
+        yield $this->build('x-stamp.assets', '3neti/x-stamp-designs', 'x-stamp-assets', 'Versioned Stamp collection assets.', [
+            public_path('vendor/x-stamp/collection.json'),
+            public_path('vendor/x-stamp/assets/fonts/NotoSans.ttf'),
+            public_path('vendor/x-stamp/designs/steampunk/1/stamp.json'),
+        ]);
         yield $this->build('x-change.assets', '3neti/x-change', 'x-change-assets', 'X-Change public branding assets.', [
             public_path('vendor/x-change/favicon.svg'),
             public_path('vendor/x-change/images/brand-library/inventory.json'),

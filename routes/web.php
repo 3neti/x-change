@@ -112,9 +112,9 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPrev
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewFrameController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewShowController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewStepController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateInterpretController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateMutationRouteShellController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGeneratePageController;
-use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateInterpretController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitReviewedFundingPayCodeClaimController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitRiderArtworkPreviewController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitRiderLibraryForgetController;
@@ -167,6 +167,7 @@ use LBHurtado\XChange\Http\Controllers\Web\PublicIssuanceRecoveryController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicOnboarding\AutoRegisterMutationController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicOnboarding\AutoRegisterPageController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicPricingPageController;
+use LBHurtado\XChange\Http\Controllers\Web\StampPreviewController;
 use LBHurtado\XChange\Http\Controllers\Web\StoredValueInstrumentPageController;
 use LBHurtado\XChange\Http\Middleware\AuthorizePublicIssuanceOrderAccess;
 use LBHurtado\XChange\Http\Middleware\GuardPairedCampaignClaim;
@@ -241,6 +242,10 @@ Route::prefix('x/auto-register')->middleware(['web', ShareXChangeBranding::class
     Route::get('{registration:reference}', [AutoRegisterMutationController::class, 'status'])->middleware('throttle:30,1,public-auto-register-status:')->name('x-change.public-auto-register.status');
     Route::post('{registration:reference}/complete', [AutoRegisterMutationController::class, 'complete'])->middleware('throttle:6,1,public-auto-register-complete:')->name('x-change.public-auto-register.complete');
 });
+
+Route::post('x/stamps/preview', StampPreviewController::class)
+    ->middleware(['web', 'throttle:60,1,stamp-preview:'])
+    ->name('x-change.stamps.preview');
 
 Route::prefix('x/auto-generate')->middleware([
     'web',

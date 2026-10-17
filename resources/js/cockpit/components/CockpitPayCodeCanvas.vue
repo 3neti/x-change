@@ -8,6 +8,7 @@ import {
     UserRound,
 } from 'lucide-vue-next';
 import { computed, useId, useSlots, watchEffect } from 'vue';
+import CockpitSystemStamp from './CockpitSystemStamp.vue';
 import type {
     PayCodeCostCharge,
     PayCodeCostEstimate,
@@ -631,8 +632,48 @@ function stringValue(value: unknown): string | null {
             </div>
         </div>
 
+        <section
+            v-if="
+                visibleView === 'stamp' &&
+                riderStamp &&
+                !riderStamp.design.id.startsWith('x-change-') &&
+                !hasRiderDesign
+            "
+            :id="panelId('stamp')"
+            role="tabpanel"
+            :aria-labelledby="tabId('stamp')"
+        >
+            <CockpitSystemStamp
+                :design-id="riderStamp.design.id"
+                :revision="riderStamp.design.version"
+                :slots="{
+                    brand: riderStamp.composition.showLogo ? 'Pay Code' : '',
+                    tagline: riderStamp.composition.showTagline
+                        ? 'The instruction that moves money.'
+                        : '',
+                    amount: formattedAmount,
+                    recipient: recipientLabel,
+                    purpose:
+                        riderStamp.composition.copySource === 'none'
+                            ? ''
+                            : [riderStamp.title, riderStamp.description]
+                                  .filter(Boolean)
+                                  .join(' ') || purpose,
+                    expiry,
+                    instructions: stampIndicatorKeys
+                        .map((key) => resolvePayCodeIndicator(key).label)
+                        .join(' · '),
+                }"
+                :claim-qr="claimQr"
+                :code="issuedCode"
+                :marker="riderStamp.composition.claimMarker"
+                :position="riderStamp.composition.claimMarkerPosition"
+                :interactive="interactiveClaimQr"
+                @claim-qr-click="emit('claimQrClick')"
+            />
+        </section>
         <article
-            v-if="visibleView === 'stamp'"
+            v-else-if="visibleView === 'stamp'"
             :id="panelId('stamp')"
             role="tabpanel"
             :aria-labelledby="tabId('stamp')"
@@ -1092,7 +1133,9 @@ function stringValue(value: unknown): string | null {
                         class="@sm:text-xs mt-auto grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-0.5 border-t border-white/20 pt-2 text-[0.6875rem] leading-4"
                         data-testid="cockpit-pay-code-cost-summary"
                     >
-                        <dt class="text-slate-300">Service &amp; Instruction Fees</dt>
+                        <dt class="text-slate-300">
+                            Service &amp; Instruction Fees
+                        </dt>
                         <dd
                             class="whitespace-nowrap text-right font-semibold tabular-nums text-white"
                             :class="
@@ -1122,9 +1165,7 @@ function stringValue(value: unknown): string | null {
                             class="col-span-2 my-1 border-t border-dashed border-white/25"
                             aria-hidden="true"
                         />
-                        <dt class="font-bold text-white">
-                            Total Required Now
-                        </dt>
+                        <dt class="font-bold text-white">Total Required Now</dt>
                         <dd
                             class="@sm:text-base whitespace-nowrap text-right text-sm font-black tabular-nums text-emerald-300"
                             data-testid="cockpit-pay-code-cost-total"
