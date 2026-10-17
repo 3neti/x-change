@@ -1,50 +1,113 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 
-const props = withDefaults(
-  defineProps<{
-    endpoint?: string;
-    initialView?: "prompt" | "standard";
-  }>(),
-  { initialView: "standard" },
-);
+const props = defineProps<{
+  endpoint?: string;
+}>();
 
 const emit = defineEmits<{
   interpreted: [instructions: Record<string, unknown>];
-  viewChange: [view: "prompt" | "standard"];
 }>();
 
 const prompt = ref("");
-const view = ref<"prompt" | "standard">(props.initialView);
 const busy = ref(false);
 const error = ref("");
 const result = ref<Record<string, unknown> | null>(null);
+const draftApplied = ref(false);
+let interpretationTimer: ReturnType<typeof setTimeout> | null = null;
 
-const summary = computed(() => {
-  const instructions = result.value?.instructions;
-  if (typeof instructions !== "object" || instructions === null) return [];
-  const data = instructions as Record<string, any>;
-  const amount = data.cash?.amount;
-  const fields = Array.isArray(data.inputs?.fields) ? data.inputs.fields : [];
-  return [
-    typeof amount === "number" ? `₱${amount.toFixed(2)}` : null,
-    fields.length > 0 ? `Requires ${fields.join(", ")}` : null,
-    typeof data.ttl === "string" ? `Expires in ${data.ttl}` : null,
-  ].filter(Boolean);
+const instructions = computed<Record<string, unknown> | null>(() => {
+  const value = result.value?.instructions;
+
+  return typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : null;
 });
 
-function switchView(next: "prompt" | "standard"): void {
-  view.value = next;
-  emit("viewChange", next);
-  const url = new URL(window.location.href);
-  url.searchParams.set("view", next);
-  window.history.replaceState({}, "", url);
+const summary = computed<string[]>(() => {
+  const data = instructions.value;
+
+  if (data === null) {
+    return [];
+  }
+
+  const amount = data.cash && typeof data.cash === "object"
+    ? (data.cash as Record<string, unknown>).amount
+    : null;
+  const fields = data.inputs && typeof data.inputs === "object"
+    ? (data.inputs as Record<string, unknown>).fields
+    : [];
+  const icons = Array.isArray(fields)
+    ? fields.map((field) => instructionIcon(String(field))).join(" ")
+    : "";
+
+  return [
+    typeof amount === "number" ? `₱${amount.toFixed(2)}` : null,
+    icons || null,
+  ].filter((value): value is string => value !== null);
+});
+
+const clarification = computed<string>(() => {
+  const clarifications = result.value?.clarifications;
+
+  return Array.isArray(clarifications)
+    ? clarifications.filter((value): value is string => typeof value === "string").join(" ")
+    : "";
+});
+
+const isReady = computed<boolean>(() => result.value?.status === "ready" && instructions.value !== null);
+const canSubmit = computed<boolean>(() => !busy.value && isReady.value && !draftApplied.value);
+const buttonLabel = computed<string>(() => {
+  if (busy.value) {
+    return "Checking…";
+  }
+
+  if (canSubmit.value && summary.value.length > 0) {
+    return summary.value.join(" · ");
+  }
+
+  if (result.value?.status === "needs_clarification" || clarification.value !== "") {
+    return "Needs details";
+  }
+
+  if (error.value !== "") {
+    return "Try again";
+  }
+
+  return "Describe Pay Code";
+});
+
+function instructionIcon(field: string): string {
+  return {
+    signature: "✍️",
+    selfie: "📸",
+    location: "📍",
+    otp: "🔐",
+    kyc: "🪪",
+    name: "👤",
+    address: "📍",
+  }[field.toLowerCase()] ?? "•";
 }
 
-async function interpret(): Promise<void> {
+function clearInterpretationTimer(): void {
+  if (interpretationTimer !== null) {
+    clearTimeout(interpretationTimer);
+    interpretationTimer = null;
+  }
+}
+
+async function interpret(apply = false): Promise<void> {
+  clearInterpretationTimer();
   error.value = "";
-  result.value = null;
+  draftApplied.value = false;
+
+  if (prompt.value.trim() === "") {
+    result.value = null;
+    return;
+  }
+
   busy.value = true;
+
   try {
     const response = await fetch(props.endpoint ?? "", {
       method: "POST",
@@ -58,41 +121,98 @@ async function interpret(): Promise<void> {
       body: JSON.stringify({ prompt: prompt.value }),
     });
     const payload = (await response.json()) as Record<string, unknown>;
-    if (!response.ok) throw new Error(String(payload.message ?? "Unable to interpret this prompt."));
+
+    if (!response.ok) {
+      throw new Error(String(payload.message ?? "Unable to interpret this prompt."));
+    }
+
     result.value = payload;
-    if (payload.status === "ready" && typeof payload.instructions === "object" && payload.instructions !== null) {
-      emit("interpreted", payload.instructions as Record<string, unknown>);
+
+    if (apply && isReady.value && instructions.value !== null) {
+      emit("interpreted", instructions.value);
+      draftApplied.value = true;
     }
   } catch (caught) {
     error.value = caught instanceof Error ? caught.message : "Unable to interpret this prompt.";
+    result.value = null;
   } finally {
     busy.value = false;
   }
 }
+
+function submit(): void {
+  if (canSubmit.value && instructions.value !== null) {
+    emit("interpreted", instructions.value);
+    draftApplied.value = true;
+
+    return;
+  }
+
+  void interpret(true);
+}
+
+watch(prompt, () => {
+  clearInterpretationTimer();
+  result.value = null;
+  error.value = "";
+  draftApplied.value = false;
+
+  if (prompt.value.trim() === "") {
+    return;
+  }
+
+  interpretationTimer = setTimeout(() => {
+    void interpret();
+  }, 450);
+});
+
+onBeforeUnmount(clearInterpretationTimer);
 </script>
 
 <template>
-  <section class="rounded-2xl border border-violet-200 bg-violet-50/80 p-4 shadow-sm dark:border-violet-900/70 dark:bg-violet-950/20" data-testid="cockpit-quick-generate-prompt-composer">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-violet-700 dark:text-violet-300">Engineering Preview</p>
-        <h3 class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">Describe the Pay Code</h3>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Try “500 pesos. Require signature and selfie.”</p>
-      </div>
-      <div class="flex rounded-full border border-violet-200 bg-white p-1 text-xs dark:border-violet-800 dark:bg-slate-950">
-        <button type="button" class="rounded-full px-3 py-1.5 font-semibold" :class="view === 'prompt' ? 'bg-violet-600 text-white' : 'text-slate-600'" data-testid="cockpit-quick-generate-view-prompt" @click="switchView('prompt')">Prompt</button>
-        <button type="button" class="rounded-full px-3 py-1.5 font-semibold" :class="view === 'standard' ? 'bg-violet-600 text-white' : 'text-slate-600'" data-testid="cockpit-quick-generate-view-standard" @click="switchView('standard')">Standard</button>
-      </div>
+  <section
+    class="rounded-2xl border border-violet-200 bg-violet-50/80 p-2 shadow-sm dark:border-violet-900/70 dark:bg-violet-950/20"
+    data-testid="cockpit-quick-generate-prompt-composer"
+  >
+    <div class="flex gap-2">
+      <input
+        v-model="prompt"
+        class="min-w-0 flex-1 rounded-xl border border-violet-200 bg-white px-4 py-3 text-sm text-slate-950 shadow-sm outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:border-violet-800 dark:bg-slate-950 dark:text-white"
+        placeholder="500 pesos. Require signature and selfie."
+        aria-label="Describe the Pay Code"
+        data-testid="cockpit-quick-generate-prompt-input"
+        @keydown.enter="submit"
+      />
+      <button
+        type="button"
+        class="min-w-36 rounded-xl bg-violet-600 px-4 py-3 text-xs font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-45"
+        :disabled="!canSubmit"
+        data-testid="cockpit-quick-generate-prompt-go"
+        @click="submit"
+      >
+        {{ buttonLabel }}
+      </button>
     </div>
-    <div class="mt-4 flex flex-col gap-3 sm:flex-row">
-      <input v-model="prompt" class="min-w-0 flex-1 rounded-xl border border-violet-200 bg-white px-4 py-3 text-sm text-slate-950 shadow-sm outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:border-violet-800 dark:bg-slate-950 dark:text-white" placeholder="500 pesos. Require signature and selfie." data-testid="cockpit-quick-generate-prompt-input" @keydown.enter="interpret" />
-      <button type="button" class="rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white shadow-sm disabled:opacity-50" :disabled="busy || prompt.trim() === ''" data-testid="cockpit-quick-generate-prompt-go" @click="interpret">{{ busy ? 'Interpreting…' : 'Go!' }}</button>
-    </div>
-    <p v-if="error" class="mt-3 text-sm text-rose-700 dark:text-rose-300" data-testid="cockpit-quick-generate-prompt-error">{{ error }}</p>
-    <div v-if="result" class="mt-3 rounded-xl border border-violet-200 bg-white p-3 text-sm dark:border-violet-800 dark:bg-slate-950" data-testid="cockpit-quick-generate-prompt-result">
-      <p class="font-semibold">{{ result.status === 'ready' ? 'Draft applied' : 'More detail needed' }}</p>
-      <p v-if="summary.length" class="mt-1 text-slate-600 dark:text-slate-300">{{ summary.join(' · ') }}</p>
-      <p v-if="Array.isArray(result.clarifications)" class="mt-1 text-slate-600 dark:text-slate-300">{{ result.clarifications.join(' ') }}</p>
-    </div>
+    <p
+      v-if="error"
+      class="mt-2 px-1 text-xs text-rose-700 dark:text-rose-300"
+      data-testid="cockpit-quick-generate-prompt-error"
+    >
+      {{ error }}
+    </p>
+    <p
+      v-else-if="clarification && !isReady"
+      class="mt-2 px-1 text-xs text-slate-600 dark:text-slate-300"
+      data-testid="cockpit-quick-generate-prompt-result"
+    >
+      {{ clarification }}
+    </p>
+    <p
+      v-else-if="draftApplied"
+      class="mt-2 px-1 text-xs font-medium text-emerald-700 dark:text-emerald-300"
+      data-testid="cockpit-quick-generate-prompt-result"
+    >
+      Draft applied
+    </p>
   </section>
 </template>

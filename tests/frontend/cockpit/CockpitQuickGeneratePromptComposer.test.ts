@@ -23,6 +23,8 @@ describe('CockpitQuickGeneratePromptComposer', () => {
         });
 
         await wrapper.get('[data-testid="cockpit-quick-generate-prompt-input"]').setValue('500 pesos. Require signature and selfie.');
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        await flushPromises();
         await wrapper.get('[data-testid="cockpit-quick-generate-prompt-go"]').trigger('click');
         await flushPromises();
 
@@ -32,5 +34,27 @@ describe('CockpitQuickGeneratePromptComposer', () => {
             inputs: { fields: ['signature', 'selfie'] },
         });
         expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-result"]').text()).toContain('Draft applied');
+    });
+
+    it('keeps the action inactive when the interpreter cannot construct instructions', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                status: 'needs_clarification',
+                instructions: null,
+                clarifications: ['Please provide an amount.'],
+            }),
+        }));
+
+        const wrapper = mount(CockpitQuickGeneratePromptComposer, {
+            props: { endpoint: '/x/cockpit/quick-generate/interpret' },
+        });
+
+        await wrapper.get('[data-testid="cockpit-quick-generate-prompt-input"]').setValue('make it useful');
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        await flushPromises();
+
+        expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-go"]').attributes('disabled')).toBeDefined();
+        expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-result"]').text()).toContain('Please provide an amount.');
     });
 });
