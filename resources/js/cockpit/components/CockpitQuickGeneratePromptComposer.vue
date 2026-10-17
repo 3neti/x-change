@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 const props = defineProps<{
   endpoint?: string;
@@ -14,7 +14,16 @@ const busy = ref(false);
 const error = ref("");
 const result = ref<Record<string, unknown> | null>(null);
 const draftApplied = ref(false);
+const promptInput = ref<HTMLInputElement | null>(null);
+const hintIndex = ref(0);
+const promptHints = [
+  "Try: 1,000 pesos with signature and selfie",
+  "Try: 500 pesos for Sofia",
+  "Try: 100 pesos, claimable until tomorrow",
+  "Try: 5,370 The Usual",
+];
 let interpretationTimer: ReturnType<typeof setTimeout> | null = null;
+let hintTimer: ReturnType<typeof setInterval> | null = null;
 
 const instructions = computed<Record<string, unknown> | null>(() => {
   const value = result.value?.instructions;
@@ -77,6 +86,8 @@ const buttonLabel = computed<string>(() => {
   return "Describe Pay Code";
 });
 
+const emptyStateLabel = computed<string>(() => promptHints[hintIndex.value] ?? promptHints[0]);
+
 function instructionIcon(field: string): string {
   return {
     signature: "✍️",
@@ -94,6 +105,10 @@ function clearInterpretationTimer(): void {
     clearTimeout(interpretationTimer);
     interpretationTimer = null;
   }
+}
+
+function focusPrompt(): void {
+  promptInput.value?.focus();
 }
 
 async function interpret(apply = false): Promise<void> {
@@ -167,6 +182,19 @@ watch(prompt, () => {
 });
 
 onBeforeUnmount(clearInterpretationTimer);
+
+onMounted(() => {
+  hintTimer = setInterval(() => {
+    hintIndex.value = (hintIndex.value + 1) % promptHints.length;
+  }, 3500);
+});
+
+onBeforeUnmount(() => {
+  if (hintTimer !== null) {
+    clearInterval(hintTimer);
+    hintTimer = null;
+  }
+});
 </script>
 
 <template>
@@ -177,6 +205,7 @@ onBeforeUnmount(clearInterpretationTimer);
     <div class="flex gap-2">
       <input
         v-model="prompt"
+        ref="promptInput"
         class="min-w-0 flex-1 rounded-xl border border-violet-200 bg-white px-4 py-3 text-sm text-slate-950 shadow-sm outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:border-violet-800 dark:bg-slate-950 dark:text-white"
         placeholder="500 pesos. Require signature and selfie."
         aria-label="Describe the Pay Code"
@@ -207,12 +236,27 @@ onBeforeUnmount(clearInterpretationTimer);
     >
       {{ clarification }}
     </p>
+    <button
+      v-else-if="!isReady && !error"
+      type="button"
+      class="mt-2 w-full rounded-lg px-1 text-left text-xs text-slate-600 transition hover:text-violet-700 dark:text-slate-300 dark:hover:text-violet-300"
+      data-testid="cockpit-quick-generate-prompt-result"
+      @click="focusPrompt"
+    >
+      {{ emptyStateLabel }}
+    </button>
     <p
       v-else-if="isReady"
       class="mt-2 px-1 text-xs font-medium text-emerald-700 dark:text-emerald-300"
       data-testid="cockpit-quick-generate-prompt-result"
     >
-      Estimated Cost {{ summary[0] ?? "—" }}
+      <button
+        type="button"
+        class="text-left underline decoration-dotted underline-offset-2 transition hover:text-emerald-900 dark:hover:text-emerald-100"
+        @click="focusPrompt"
+      >
+        Estimated Cost {{ summary[0] ?? "—" }}
+      </button>
     </p>
   </section>
 </template>

@@ -3,6 +3,16 @@ import { describe, expect, it, vi } from 'vitest';
 import CockpitQuickGeneratePromptComposer from '../../../resources/js/cockpit/components/CockpitQuickGeneratePromptComposer.vue';
 
 describe('CockpitQuickGeneratePromptComposer', () => {
+    it('shows a rotating prompt hint while the composer is empty', () => {
+        const wrapper = mount(CockpitQuickGeneratePromptComposer, {
+            props: { endpoint: '/x/cockpit/quick-generate/interpret' },
+        });
+
+        expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-result"]').text()).toContain('Try:');
+
+        wrapper.unmount();
+    });
+
     it('interprets a prompt and emits the normalized draft without issuing', async () => {
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
             ok: true,
