@@ -102,7 +102,7 @@ const buttonLabel = computed<string>(() => {
   }
 
   if (isReady.value && summary.value.length > 0) {
-    return "Fund and Issue Pay Code";
+    return summary.value.join(" · ");
   }
 
   if (result.value?.status === "needs_clarification" || clarification.value !== "") {
