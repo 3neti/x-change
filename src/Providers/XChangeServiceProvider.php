@@ -32,6 +32,7 @@ use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 use Laravel\Passport\Passport;
 use LBHurtado\Cash\Contracts\WithdrawalIntervalEnforcerContract;
+use LBHurtado\Contact\Models\Contact;
 use LBHurtado\EmiCore\Contracts\DeploymentConnectionContributor;
 use LBHurtado\EmiCore\Contracts\DeploymentEnvironmentContributor;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
@@ -332,6 +333,7 @@ use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Contracts\VoucherCollectionWalletResolverContract;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
+use LBHurtado\XChange\Contracts\VoucherInstructionInterpreter;
 use LBHurtado\XChange\Contracts\VoucherLiabilitySummaryContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\VoucherOperationalStatusResolverContract;
@@ -586,6 +588,8 @@ use LBHurtado\XChange\Services\Treasury\VerifiedTreasuryFundingAllocationService
 use LBHurtado\XChange\Services\TxtcmdrWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\UserLifecycleService;
 use LBHurtado\XChange\Services\VoucherAccessService;
+use LBHurtado\XChange\Services\VoucherInstruction\Commands\TipCommand;
+use LBHurtado\XChange\Services\VoucherInstruction\DeterministicVoucherInstructionInterpreter;
 use LBHurtado\XChange\Services\VoucherLiabilitySummaryService;
 use LBHurtado\XChange\Services\VoucherLifecycleService;
 use LBHurtado\XChange\Services\VoucherPaymentQrRendererFactory;
@@ -609,6 +613,34 @@ class XChangeServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton(
+            VoucherInstructionInterpreter::class,
+            function (): VoucherInstructionInterpreter {
+                return new DeterministicVoucherInstructionInterpreter(
+                    contactResolver: static function (string $name): ?array {
+                        $matches = Contact::query()->get()->filter(
+                            static fn (Contact $contact): bool => strcasecmp(trim((string) $contact->name), trim($name)) === 0,
+                        );
+
+                        if ($matches->count() !== 1) {
+                            return null;
+                        }
+
+                        $contact = $matches->first();
+
+                        return $contact instanceof Contact
+                            ? ['name' => $contact->name, 'mobile' => $contact->mobile]
+                            : null;
+                    },
+                    templates: (array) config('x-change.cockpit.quick_generate.prompt_templates', []),
+                    tipCommand: new TipCommand(
+                        defaultMinimum: (int) config('x-change.cockpit.quick_generate.prompt_commands.tip.minimum', 50),
+                        defaultMaximum: (int) config('x-change.cockpit.quick_generate.prompt_commands.tip.maximum', 100),
+                    ),
+                );
+            },
+        );
+
         if (class_exists(OnboardingGuard::class) && ! $this->app->bound(OnboardingGuard::class)) {
             $this->app->singleton(OnboardingGuard::class);
         }

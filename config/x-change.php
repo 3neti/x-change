@@ -490,6 +490,17 @@ return [
         ],
 
         'quick_generate' => [
+            'prompt_templates' => [
+                'the_usual' => [
+                    'amount' => 100,
+                ],
+            ],
+            'prompt_commands' => [
+                'tip' => [
+                    'minimum' => 50,
+                    'maximum' => 100,
+                ],
+            ],
             'startup_mode' => env(
                 'XCHANGE_COCKPIT_QUICK_GENERATE_STARTUP_MODE',
                 'blank',

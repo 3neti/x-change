@@ -1829,6 +1829,8 @@ export type CockpitCollectionDestination = {
 };
 
 export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
+  composer_view?: "prompt" | "standard";
+  prompt_interpret_endpoint?: string;
   surface_profile?: {
     kind: "cockpit" | "public_auto_generate";
     show_funding_navigation: boolean;

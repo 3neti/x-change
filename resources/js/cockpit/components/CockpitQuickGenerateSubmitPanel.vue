@@ -112,6 +112,7 @@ import CockpitRiderMessageEditor from "./CockpitRiderMessageEditor.vue";
 import CockpitRiderLibrary from "./CockpitRiderLibrary.vue";
 import CockpitRiderPreviewFrame from "./CockpitRiderPreviewFrame.vue";
 import CockpitQuickGenerateSurfaceSwitch from "./CockpitQuickGenerateSurfaceSwitch.vue";
+import CockpitQuickGeneratePromptComposer from "./CockpitQuickGeneratePromptComposer.vue";
 import type { CockpitQuickGenerateSurface } from "./CockpitQuickGenerateSurfaceSwitch.vue";
 import type { CockpitScheduledPortion } from "./CockpitScheduledPortionsEditor.vue";
 import CockpitValueUseControl from "./CockpitValueUseControl.vue";
@@ -156,6 +157,8 @@ const props = withDefaults(
     showEngineeringPreview?: boolean;
     showWorkspaceSwitcher?: boolean;
     allowTemplateManagement?: boolean;
+    composerView?: "prompt" | "standard";
+    promptComposerEndpoint?: string;
     templates: CockpitQuickGenerateTemplate[];
   }>(),
   {
@@ -170,6 +173,7 @@ const props = withDefaults(
     showEngineeringPreview: true,
     showWorkspaceSwitcher: true,
     allowTemplateManagement: true,
+    composerView: "standard",
   },
 );
 
@@ -818,6 +822,8 @@ const executionVisibility = ref("");
 const executionMetadata = ref("");
 const metadataFlowType = ref("");
 const metadataIssuerId = ref("");
+const interpretedPrompt = ref("");
+const interpreterVersion = ref("");
 const processing = ref(false);
 const savingCheckoutDraft = ref(false);
 const checkoutDraftToken = ref<string | null>(props.checkoutDraft?.guest_token ?? null);
@@ -908,7 +914,7 @@ async function openAmountCalculator(
   amountInputElement.value?.open(returnFocusTo);
 }
 
-defineExpose({ openAmountCalculator });
+defineExpose({ openAmountCalculator, applyInstructionBlueprint });
 
 watch(
   selectedTemplate,
@@ -1418,6 +1424,18 @@ function applyInstructionBlueprint(
   instructions: Record<string, unknown>,
   clearRecipient: boolean,
 ): void {
+  interpretedPrompt.value = instructionString(instructions, [
+    "metadata",
+    "custom",
+    "cockpit",
+    "prompt",
+  ]);
+  interpreterVersion.value = instructionString(instructions, [
+    "metadata",
+    "custom",
+    "cockpit",
+    "parser_version",
+  ]);
   const templateKey = instructionString(
     instructions,
     ["metadata", "custom", "cockpit", "template_key"],
@@ -5163,6 +5181,12 @@ function buildPayloadShape(
               }),
           source: "cockpit.quick-generate",
           builder: "guided-voucher-instruction-builder",
+          ...(interpretedPrompt.value === ""
+            ? {}
+            : {
+                interpreted_prompt: interpretedPrompt.value,
+                interpreter_version: interpreterVersion.value || "unknown",
+              }),
           payee: {
             kind: payeePolicy.value.kind,
             explicit_secret: payeePolicy.value.explicitSecret,
@@ -6135,6 +6159,12 @@ function instructionRecord(
     data-testid="cockpit-quick-generate-submit-panel"
     @submit.prevent="submit"
   >
+    <CockpitQuickGeneratePromptComposer
+      v-if="!props.publicMode"
+      :initial-view="props.composerView"
+      :endpoint="props.promptComposerEndpoint"
+      @interpreted="applyInstructionBlueprint($event, false)"
+    />
     <div
       v-if="templatePickerOpen"
       class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"

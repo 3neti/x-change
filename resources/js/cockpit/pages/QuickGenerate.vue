@@ -1263,6 +1263,8 @@ function stringValue(value: unknown): string | null {
           :allow-template-management="
             props.surface_profile?.allow_template_management ?? true
           "
+          :composer-view="props.composer_view ?? 'standard'"
+          :prompt-composer-endpoint="props.prompt_interpret_endpoint"
           :templates="templates"
           @reset-turnstile="publicTurnstileWidget?.reset()"
         />

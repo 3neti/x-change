@@ -85,6 +85,8 @@ class CockpitQuickGeneratePageController extends Controller
                 'enabled' => $this->onDemandFundingPolicy->enabled(),
                 'basis' => $this->onDemandFundingPolicy->basis()->value,
             ],
+            'composer_view' => $request->query('view') === 'prompt' ? 'prompt' : 'standard',
+            'prompt_interpret_endpoint' => route('x-change.cockpit.quick-generate.interpret'),
         ]);
     }
 
