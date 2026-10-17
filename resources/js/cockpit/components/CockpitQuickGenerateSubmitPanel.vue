@@ -1176,7 +1176,14 @@ async function openDesignEditor(): Promise<void> {
 
 async function openCostPreview(): Promise<void> {
   canvasView.value = "cost";
+  await nextTick();
   costPreviewOpen.value = true;
+
+  await nextTick();
+
+  if (canEstimateLivePricing.value) {
+    await refreshLivePricingEstimate();
+  }
 }
 
 function hydrateLastInstructions(): boolean {
