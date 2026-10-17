@@ -90,6 +90,11 @@ final class PublicAutoGeneratePageController extends Controller
                 'allow_template_management' => false,
                 'available_surfaces' => ['composer', 'llm'],
             ],
+            'prompt_interpret_endpoint' => route(
+                'x-change.public-auto-generate.interpret',
+                [],
+                false,
+            ),
             'public_navigation' => [
                 'analytics_url' => Route::has('x-change.analytics.show')
                     ? route('x-change.analytics.show', [], false)

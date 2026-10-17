@@ -63,6 +63,7 @@ it('renders the public issuance surface without cockpit navigation', function ()
         ->assertJsonPath('props.surface_profile.allow_template_management', false)
         ->assertJsonPath('props.surface_profile.available_surfaces', ['composer', 'llm'])
         ->assertJsonPath('props.initial_workspace', 'composer')
+        ->assertJsonPath('props.prompt_interpret_endpoint', '/x/auto-generate/interpret')
         ->assertJsonPath('props.startup_mode', 'blank')
         ->assertJsonCount(0, 'props.saved_templates')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.route', 'x-change.public-auto-generate.store')
@@ -98,6 +99,15 @@ it('opens the public issuance surface in the requested workspace', function (): 
         ->get(route('x-change.public-auto-generate.show', ['workspace' => 'pos']))
         ->assertOk()
         ->assertJsonPath('props.initial_workspace', 'composer');
+});
+
+it('interprets a public LLM prompt without cockpit authentication', function (): void {
+    $this->postJson(route('x-change.public-auto-generate.interpret'), [
+        'prompt' => '1000 pesos with signature',
+    ])
+        ->assertOk()
+        ->assertJsonPath('status', 'ready')
+        ->assertJsonPath('instructions.cash.amount', 1000);
 });
 
 it('offers a sanitized batch upload template', function (): void {

@@ -325,6 +325,9 @@ Route::prefix('x/auto-generate')->middleware([
     Route::get('batches/{batch:reference}/download', [PublicIssuanceBatchController::class, 'download'])
         ->middleware('throttle:10,1,public-auto-generate-batch-download:')
         ->name('x-change.public-auto-generate.batches.download');
+    Route::post('interpret', CockpitQuickGenerateInterpretController::class)
+        ->middleware('throttle:30,1,public-auto-generate-interpret:')
+        ->name('x-change.public-auto-generate.interpret');
     Route::get('/', PublicAutoGeneratePageController::class)
         ->middleware('throttle:60,1,public-auto-generate-page:')
         ->name('x-change.public-auto-generate.show');
