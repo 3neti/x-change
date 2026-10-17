@@ -45,13 +45,11 @@ describe('CockpitQuickGeneratePromptComposer', () => {
         expect(wrapper.emitted('show-cost')).toHaveLength(1);
 
         expect(fetch).toHaveBeenCalledOnce();
-        expect(wrapper.emitted('interpreted')?.[0]?.[0]).toMatchObject({
+        expect(wrapper.emitted('activate')?.[0]?.[0]).toMatchObject({
             cash: { amount: 500 },
             inputs: { fields: ['signature', 'selfie'] },
         });
-        expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-go"]').text()).toContain('₱500.00');
-        expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-go"]').text()).toContain('✍️');
-        expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-go"]').text()).toContain('📸');
+        expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-go"]').text()).toContain('Fund and Issue Pay Code');
         expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-result"]').text()).toContain('Estimated Cost ₱500.00');
     });
 

@@ -924,7 +924,7 @@ async function openAmountCalculator(
   amountInputElement.value?.open(returnFocusTo);
 }
 
-defineExpose({ openAmountCalculator, applyInstructionBlueprint, openCostPreview });
+defineExpose({ openAmountCalculator, applyInstructionBlueprint, openCostPreview, submit });
 
 watch(
   selectedTemplate,
@@ -4681,7 +4681,7 @@ const issueActionLabel = computed<string>(() => {
   }
 
   return requiresOnDemandFunding.value
-    ? "Fund & Issue Pay Code"
+    ? "Fund and Issue Pay Code"
     : "Issue Pay Code";
 });
 

@@ -32,6 +32,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   interpreted: [instructions: Record<string, unknown>];
+  activate: [instructions: Record<string, unknown>];
   "show-cost": [];
 }>();
 
@@ -101,7 +102,7 @@ const buttonLabel = computed<string>(() => {
   }
 
   if (isReady.value && summary.value.length > 0) {
-    return summary.value.join(" · ");
+    return "Fund and Issue Pay Code";
   }
 
   if (result.value?.status === "needs_clarification" || clarification.value !== "") {
@@ -238,8 +239,8 @@ async function interpret(apply = false): Promise<void> {
 
 function submit(): void {
   if (canSubmit.value && instructions.value !== null) {
-    emit("interpreted", instructions.value);
     draftApplied.value = true;
+    emit("activate", instructions.value);
 
     return;
   }

@@ -111,6 +111,14 @@ async function applyLlmInstructions(
   submitPanelElement.value?.applyInstructionBlueprint(instructions, false);
 }
 
+async function activateLlmIssuance(
+  instructions: Record<string, unknown>,
+): Promise<void> {
+  await applyLlmInstructions(instructions);
+  await nextTick();
+  await submitPanelElement.value?.submit();
+}
+
 async function showLlmCostPreview(): Promise<void> {
   restoreLlmAfterCostPreview.value = true;
   await nextTick();
@@ -1307,6 +1315,7 @@ function stringValue(value: unknown): string | null {
           :prompt-composer-endpoint="props.prompt_interpret_endpoint"
           @update:issuance-surface="issuanceSurface = $event"
           @interpreted="applyLlmInstructions"
+          @activate="activateLlmIssuance"
           @show-cost="showLlmCostPreview"
         />
         <CockpitQuickGeneratePosPanel

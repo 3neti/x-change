@@ -19,6 +19,7 @@ withDefaults(
 const emit = defineEmits<{
   "update:issuanceSurface": [value: CockpitQuickGenerateSurface];
   interpreted: [instructions: Record<string, unknown>];
+  activate: [instructions: Record<string, unknown>];
   "show-cost": [];
 }>();
 </script>
@@ -51,6 +52,7 @@ const emit = defineEmits<{
       :initial-view="composerView"
       :endpoint="promptComposerEndpoint"
       @interpreted="emit('interpreted', $event)"
+      @activate="emit('activate', $event)"
       @show-cost="emit('show-cost')"
     />
   </section>
