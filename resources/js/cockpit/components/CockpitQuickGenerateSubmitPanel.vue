@@ -7296,22 +7296,23 @@ function instructionRecord(
         </section>
       </div>
 
-      <div
-        v-if="costPreviewOpen"
-        class="fixed inset-0 z-50 bg-slate-950/60"
-        data-testid="cockpit-quick-generate-cost-preview-backdrop"
-        @click="closeCostPreview"
-      />
-      <div
-        ref="canvasSectionElement"
-        class="min-w-0"
-        :class="
-          costPreviewOpen
-            ? 'fixed inset-x-4 top-6 z-[51] mx-auto max-h-[calc(100vh-3rem)] max-w-7xl overflow-y-auto rounded-3xl bg-white p-4 shadow-2xl dark:bg-slate-950'
-            : '2xl:sticky 2xl:top-4 2xl:self-start'
-        "
-        data-testid="cockpit-quick-generate-cost-preview"
-      >
+      <Teleport to="body" :disabled="!costPreviewOpen">
+        <div
+          v-if="costPreviewOpen"
+          class="fixed inset-0 z-50 bg-slate-950/60"
+          data-testid="cockpit-quick-generate-cost-preview-backdrop"
+          @click="closeCostPreview"
+        />
+        <div
+          ref="canvasSectionElement"
+          class="min-w-0"
+          :class="
+            costPreviewOpen
+              ? 'fixed inset-x-4 top-6 z-[51] mx-auto max-h-[calc(100vh-3rem)] max-w-7xl overflow-y-auto rounded-3xl bg-white p-4 shadow-2xl dark:bg-slate-950'
+              : '2xl:sticky 2xl:top-4 2xl:self-start'
+          "
+          data-testid="cockpit-quick-generate-cost-preview"
+        >
         <button
           v-if="costPreviewOpen"
           type="button"
@@ -7372,7 +7373,8 @@ function instructionRecord(
             />
           </template>
         </CockpitPayCodeCanvas>
-      </div>
+        </div>
+      </Teleport>
     </div>
 
     <CockpitOnDemandIssuanceFundingDialog
