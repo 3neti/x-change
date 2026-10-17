@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5a852079e3cb4dd0b9cd44c8f1f484db",
+    "content-hash": "d111eb2bbc4389ba426c98bc0017fb23",
     "packages": [
         {
             "name": "3neti/cash",
@@ -2050,6 +2050,96 @@
             ],
             "description": "Programmable claimant experience layer for post-claim rider messages, redirects, splash, analytics seams, and future campaign runtimes.",
             "time": "2026-07-31T09:37:29+00:00"
+        },
+        {
+            "name": "3neti/x-stamp",
+            "version": "v1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/3neti/x-stamp.git",
+                "reference": "0cd86ffc4370bd32a43fd3dd2445bc99ba878c6a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/3neti/x-stamp/zipball/0cd86ffc4370bd32a43fd3dd2445bc99ba878c6a",
+                "reference": "0cd86ffc4370bd32a43fd3dd2445bc99ba878c6a",
+                "shasum": ""
+            },
+            "require": {
+                "ext-gd": "*",
+                "ext-mbstring": "*",
+                "opis/json-schema": "^2.6",
+                "php": "^8.4"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.29",
+                "pestphp/pest": "^4.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "LBHurtado\\XStamp\\": "src/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "pest --compact"
+                ],
+                "format": [
+                    "pint --format agent"
+                ]
+            },
+            "license": [
+                "proprietary"
+            ],
+            "description": "Portable versioned Stamp documents, validation, and HTML/SVG/PNG rendering.",
+            "support": {
+                "source": "https://github.com/3neti/x-stamp/tree/v1.0.0",
+                "issues": "https://github.com/3neti/x-stamp/issues"
+            },
+            "time": "2026-10-17T01:17:26+00:00"
+        },
+        {
+            "name": "3neti/x-stamp-designs",
+            "version": "v1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/3neti/x-stamp-designs.git",
+                "reference": "1da7e7f66716c707aeab26d1bf6b49aac1d5221f"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/3neti/x-stamp-designs/zipball/1da7e7f66716c707aeab26d1bf6b49aac1d5221f",
+                "reference": "1da7e7f66716c707aeab26d1bf6b49aac1d5221f",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.4"
+            },
+            "require-dev": {
+                "3neti/x-stamp": "^1.0",
+                "pestphp/pest": "^4.0"
+            },
+            "type": "library",
+            "extra": {
+                "x-stamp": {
+                    "collection": "collection.json"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "pest --compact"
+                ]
+            },
+            "license": [
+                "proprietary"
+            ],
+            "description": "Versioned portable Stamp design collection.",
+            "support": {
+                "source": "https://github.com/3neti/x-stamp-designs/tree/v1.0.0",
+                "issues": "https://github.com/3neti/x-stamp-designs/issues"
+            },
+            "time": "2026-10-17T01:17:29+00:00"
         },
         {
             "name": "aws/aws-crt-php",
