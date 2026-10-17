@@ -3,12 +3,15 @@ import { describe, expect, it, vi } from 'vitest';
 import CockpitQuickGeneratePromptComposer from '../../../resources/js/cockpit/components/CockpitQuickGeneratePromptComposer.vue';
 
 describe('CockpitQuickGeneratePromptComposer', () => {
-    it('shows a rotating prompt hint while the composer is empty', () => {
+    it('shows a rotating prompt hint while the composer is empty', async () => {
         const wrapper = mount(CockpitQuickGeneratePromptComposer, {
             props: { endpoint: '/x/cockpit/quick-generate/interpret' },
         });
 
-        expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-result"]').text()).toContain('Try:');
+        const hint = wrapper.get('[data-testid="cockpit-quick-generate-prompt-result"]');
+        expect(hint.text()).toContain('Try:');
+        await hint.trigger('click');
+        expect(wrapper.emitted('show-cost')).toHaveLength(1);
 
         wrapper.unmount();
     });
@@ -36,6 +39,8 @@ describe('CockpitQuickGeneratePromptComposer', () => {
         await new Promise((resolve) => setTimeout(resolve, 500));
         await flushPromises();
         expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-result"]').text()).toContain('Estimated Cost ₱500.00');
+        await wrapper.get('[data-testid="cockpit-quick-generate-prompt-result"] button').trigger('click');
+        expect(wrapper.emitted('show-cost')).toHaveLength(1);
         await wrapper.get('[data-testid="cockpit-quick-generate-prompt-go"]').trigger('click');
         await flushPromises();
 

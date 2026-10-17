@@ -1173,6 +1173,16 @@ async function openDesignEditor(): Promise<void> {
   });
 }
 
+async function openCostPreview(): Promise<void> {
+  canvasView.value = "cost";
+  await nextTick();
+
+  canvasSectionElement.value?.scrollIntoView?.({
+    behavior: "smooth",
+    block: "center",
+  });
+}
+
 function hydrateLastInstructions(): boolean {
   const instructions = props.lastInstructions?.instructions;
 
@@ -6177,6 +6187,7 @@ function instructionRecord(
       :initial-view="props.composerView"
       :endpoint="props.promptComposerEndpoint"
       @interpreted="applyInstructionBlueprint($event, false)"
+      @show-cost="openCostPreview"
     />
     <div
       v-if="templatePickerOpen"

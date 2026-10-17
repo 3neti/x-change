@@ -7,6 +7,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   interpreted: [instructions: Record<string, unknown>];
+  "show-cost": [];
 }>();
 
 const prompt = ref("");
@@ -109,6 +110,11 @@ function clearInterpretationTimer(): void {
 
 function focusPrompt(): void {
   promptInput.value?.focus();
+}
+
+function showCostPreview(): void {
+  emit("show-cost");
+  focusPrompt();
 }
 
 async function interpret(apply = false): Promise<void> {
@@ -241,7 +247,7 @@ onBeforeUnmount(() => {
       type="button"
       class="mt-2 w-full rounded-lg px-1 text-left text-xs text-slate-600 transition hover:text-violet-700 dark:text-slate-300 dark:hover:text-violet-300"
       data-testid="cockpit-quick-generate-prompt-result"
-      @click="focusPrompt"
+      @click="showCostPreview"
     >
       {{ emptyStateLabel }}
     </button>
@@ -253,7 +259,7 @@ onBeforeUnmount(() => {
       <button
         type="button"
         class="text-left underline decoration-dotted underline-offset-2 transition hover:text-emerald-900 dark:hover:text-emerald-100"
-        @click="focusPrompt"
+        @click="showCostPreview"
       >
         Estimated Cost {{ summary[0] ?? "—" }}
       </button>
