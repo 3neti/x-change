@@ -3,7 +3,7 @@ import { Mic, MicOff } from "lucide-vue-next";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 type SpeechRecognitionResultEvent = {
-  results: ArrayLike<ArrayLike<{ transcript: string }>>;
+  results: ArrayLike<ArrayLike<{ transcript: string; isFinal?: boolean }>>;
 };
 
 type SpeechRecognitionInstance = {
@@ -156,6 +156,33 @@ function toggleVoiceInput(): void {
   focusPrompt();
 }
 
+function appendVoicePrompt(transcript: string): void {
+  prompt.value = `${prompt.value.trim()} ${transcript}`.trim();
+}
+
+function submitVoiceCommand(transcript: string): boolean {
+  const commandPattern = /^(go|proceed|issue|generate)[!.]?$/i;
+  const trailingCommandPattern = /^(.*?)\s+(go|proceed|issue|generate)[!.]?$/i;
+  const normalizedTranscript = transcript.trim();
+
+  if (commandPattern.test(normalizedTranscript)) {
+    submit();
+
+    return true;
+  }
+
+  const trailingCommand = normalizedTranscript.match(trailingCommandPattern);
+
+  if (trailingCommand?.[1] !== undefined) {
+    appendVoicePrompt(trailingCommand[1]);
+    submit();
+
+    return true;
+  }
+
+  return false;
+}
+
 function showCostPreview(): void {
   if (isReady.value && instructions.value !== null && !draftApplied.value) {
     emit("interpreted", instructions.value);
@@ -246,16 +273,28 @@ onMounted(() => {
     speechRecognition = new SpeechRecognition();
     speechRecognition.lang = "en-PH";
     speechRecognition.interimResults = false;
-    speechRecognition.continuous = false;
+    speechRecognition.continuous = true;
     speechRecognition.onresult = (event): void => {
       const transcript = event.results[0]?.[0]?.transcript?.trim();
 
-      if (transcript !== undefined && transcript !== "") {
-        prompt.value = `${prompt.value.trim()} ${transcript}`.trim();
+      if (
+        transcript !== undefined &&
+        transcript !== "" &&
+        !submitVoiceCommand(transcript)
+      ) {
+        appendVoicePrompt(transcript);
       }
     };
     speechRecognition.onend = (): void => {
-      voiceListening.value = false;
+      if (!voiceListening.value) {
+        return;
+      }
+
+      window.setTimeout(() => {
+        if (voiceListening.value) {
+          speechRecognition?.start();
+        }
+      }, 100);
     };
     speechRecognition.onerror = (): void => {
       voiceListening.value = false;
