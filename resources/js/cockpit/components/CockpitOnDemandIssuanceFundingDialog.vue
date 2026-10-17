@@ -76,6 +76,9 @@ const terminal = computed(() =>
 const needsAttention = computed(
   () => current.value?.status === "issuance_attention",
 );
+const paymentReceived = computed(
+  () => current.value?.order.receipt.verified_at !== null,
+);
 const paymentNeedsReview = computed(() =>
   ["underfunded", "payment_ambiguous"].includes(current.value?.status ?? ""),
 );
@@ -122,7 +125,9 @@ const dialogTitle = computed(() => {
   }
 
   if (needsAttention.value) {
-    return "Payment received — issuance needs attention";
+    return paymentReceived.value
+      ? "Payment received — issuance needs attention"
+      : "Issuance needs attention";
   }
 
   if (paymentNeedsReview.value) {
@@ -137,7 +142,9 @@ const dialogTitle = computed(() => {
 });
 const dialogDescription = computed(() => {
   if (needsAttention.value) {
-    return "Your payment was verified and remains protected. Pay Code issuance could not complete. Do not pay again.";
+    return paymentReceived.value
+      ? "Your payment was verified and remains protected. Pay Code issuance could not complete. Do not pay again."
+      : "Payment instructions could not be prepared. No payment was requested. You can cancel safely.";
   }
 
   if (paymentNeedsReview.value) {

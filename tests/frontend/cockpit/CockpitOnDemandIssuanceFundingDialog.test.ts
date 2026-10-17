@@ -273,6 +273,7 @@ describe("CockpitOnDemandIssuanceFundingDialog", () => {
     attentionProjection.status = "issuance_attention";
     attentionProjection.order.status = "issuance_attention";
     attentionProjection.order.can_cancel = false;
+    attentionProjection.order.receipt.verified_at = "2026-09-29T09:01:00+08:00";
     attentionProjection.retry.eligible = true;
     attentionProjection.lifecycle.current = "attention";
     const wrapper = mount(CockpitOnDemandIssuanceFundingDialog, {
@@ -295,6 +296,32 @@ describe("CockpitOnDemandIssuanceFundingDialog", () => {
     expect(document.body.textContent).toContain("Refresh status");
     expect(document.body.textContent).toContain("Try issuing again");
     expect(document.body.textContent).not.toContain("Cancel safely");
+
+    wrapper.unmount();
+  });
+
+  it("truthfully presents an attention state before payment is received", () => {
+    const attentionProjection = structuredClone(projection);
+    attentionProjection.status = "issuance_attention";
+    attentionProjection.order.status = "issuance_attention";
+    attentionProjection.order.can_cancel = true;
+    attentionProjection.lifecycle.current = "attention";
+
+    const wrapper = mount(CockpitOnDemandIssuanceFundingDialog, {
+      props: { open: true, projection: attentionProjection },
+      attachTo: document.body,
+    });
+
+    expect(document.body.textContent).toContain("Issuance needs attention");
+    expect(document.body.textContent).toContain(
+      "Payment instructions could not be prepared. No payment was requested.",
+    );
+    expect(document.body.textContent).not.toContain(
+      "Payment received — issuance needs attention",
+    );
+    expect(document.body.textContent).not.toContain(
+      "Your payment was verified and remains protected",
+    );
 
     wrapper.unmount();
   });

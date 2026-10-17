@@ -224,6 +224,7 @@ const emit = defineEmits<{
   submitError: [error: Record<string, unknown>];
   resetTurnstile: [];
   costPreviewClosed: [];
+  fundingFlowClosed: [];
 }>();
 
 type VoucherInputFieldOption = {
@@ -4954,6 +4955,7 @@ function handleOnDemandClosed(
       projection.order.late_payment_disposition === "client_funds"
         ? "The late payment was added to Client Funds. You may prepare a new Pay Code."
         : "Ready to prepare another Pay Code.";
+    emit("fundingFlowClosed");
 
     return;
   }
@@ -4961,6 +4963,7 @@ function handleOnDemandClosed(
   lastStatus.value = "awaiting_funds";
   lastMessage.value =
     "Funding is still active. Payment checking will continue when you resume this window.";
+  emit("fundingFlowClosed");
 }
 
 function generateAnotherAfterOnDemandIssuance(): void {
@@ -4977,6 +4980,12 @@ function handleOnDemandCancelled(): void {
   onDemandFundingProjection.value = null;
   lastStatus.value = "ready";
   lastMessage.value = "Funding cancelled safely. No Pay Code was issued.";
+  emit("fundingFlowClosed");
+}
+
+function handleIssuedPayCodeDialogClosed(): void {
+  issuedPayCodeDialogOpen.value = false;
+  emit("fundingFlowClosed");
 }
 
 async function generateClaimPreview(refreshPreview = false): Promise<void> {
@@ -7419,7 +7428,7 @@ function instructionRecord(
           : null
       "
       :public-account-url="publicMode ? publicAccountUrl : null"
-      @close="issuedPayCodeDialogOpen = false"
+      @close="handleIssuedPayCodeDialogClosed"
       @generate-another="generateAnotherAfterOnDemandIssuance"
     />
 
