@@ -86,6 +86,18 @@ const summary = computed<string[]>(() => {
   ].filter((value): value is string => value !== null);
 });
 
+const estimatedCost = computed<string>(() => {
+  const pricing = result.value?.pricing;
+  const accountDebit =
+    typeof pricing === "object" && pricing !== null
+      ? (pricing as Record<string, unknown>).account_debit
+      : null;
+
+  return typeof accountDebit === "number"
+    ? `₱${accountDebit.toFixed(2)}`
+    : "—";
+});
+
 const clarification = computed<string>(() => {
   const clarifications = result.value?.clarifications;
 
@@ -392,7 +404,7 @@ onBeforeUnmount(() => {
         class="text-left underline decoration-dotted underline-offset-2 transition hover:text-emerald-900 dark:hover:text-emerald-100"
         @click="showCostPreview"
       >
-        Estimated Cost {{ summary[0] ?? "—" }}
+      Estimated Cost {{ estimatedCost }}
       </button>
     </p>
   </section>

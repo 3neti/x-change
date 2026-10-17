@@ -8,6 +8,8 @@ use Illuminate\Session\Store;
 use Illuminate\Support\Facades\URL;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Funding\TransitionPayCodeIssuanceFundingOrder;
+use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
+use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitOnDemandIssuanceFundingOrderController;
@@ -102,12 +104,23 @@ it('opens the public issuance surface in the requested workspace', function (): 
 });
 
 it('interprets a public LLM prompt without cockpit authentication', function (): void {
+    $estimate = Mockery::mock(EstimatePayCodeCost::class);
+    $estimate->shouldReceive('handle')->once()->andReturn(
+        new PricingEstimateData(
+            total: 15.0,
+            pay_code_value: 100.0,
+            account_debit: 115.0,
+        ),
+    );
+    $this->app->instance(EstimatePayCodeCost::class, $estimate);
+
     $this->postJson(route('x-change.public-auto-generate.interpret'), [
         'prompt' => '1000 pesos with signature',
     ])
         ->assertOk()
         ->assertJsonPath('status', 'ready')
-        ->assertJsonPath('instructions.cash.amount', 1000);
+        ->assertJsonPath('instructions.cash.amount', 1000)
+        ->assertJsonPath('pricing.account_debit', 115);
 });
 
 it('offers a sanitized batch upload template', function (): void {

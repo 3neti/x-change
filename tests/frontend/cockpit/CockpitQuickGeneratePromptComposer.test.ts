@@ -28,6 +28,9 @@ describe('CockpitQuickGeneratePromptComposer', () => {
                 recognized: ['amount', 'signature', 'selfie'],
                 unresolved: [],
                 clarifications: [],
+                pricing: {
+                    account_debit: 515,
+                },
             }),
         }));
 
@@ -38,7 +41,7 @@ describe('CockpitQuickGeneratePromptComposer', () => {
         await wrapper.get('[data-testid="cockpit-quick-generate-prompt-input"]').setValue('500 pesos. Require signature and selfie.');
         await new Promise((resolve) => setTimeout(resolve, 500));
         await flushPromises();
-        expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-result"]').text()).toContain('Estimated Cost ₱500.00');
+        expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-result"]').text()).toContain('Estimated Cost ₱515.00');
         await wrapper.get('[data-testid="cockpit-quick-generate-prompt-go"]').trigger('click');
         await flushPromises();
         await wrapper.get('[data-testid="cockpit-quick-generate-prompt-result"] button').trigger('click');
@@ -52,7 +55,7 @@ describe('CockpitQuickGeneratePromptComposer', () => {
         expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-go"]').text()).toContain('₱500.00');
         expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-go"]').text()).toContain('✍️');
         expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-go"]').text()).toContain('📸');
-        expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-result"]').text()).toContain('Estimated Cost ₱500.00');
+        expect(wrapper.get('[data-testid="cockpit-quick-generate-prompt-result"]').text()).toContain('Estimated Cost ₱515.00');
     });
 
     it('keeps the action inactive when the interpreter cannot construct instructions', async () => {
