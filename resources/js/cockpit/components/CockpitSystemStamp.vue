@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { presentStampQr } from '../stampQrPresentation';
 import { preview } from '@/routes/x-change/stamps';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 const props = defineProps<{
@@ -20,10 +21,18 @@ function translucentColor(hex: string): string {
     );
     return `rgba(${channels.join(', ')}, 0.3)`;
 }
-const qrStyle = computed(() => ({
-    backgroundColor: markerPalette.value.paper,
-    opacity: 0.9,
-}));
+const presentedQr = ref('');
+let qrSequence = 0;
+watch(() => [props.claimQr, markerPalette.value.paper], async () => {
+    const current = ++qrSequence;
+    presentedQr.value = props.claimQr ?? '';
+    if (props.claimQr) {
+        const styled = await presentStampQr(props.claimQr, markerPalette.value.paper);
+        if (current === qrSequence) {
+            presentedQr.value = styled;
+        }
+    }
+}, { immediate: true });
 const markerStyle = computed(() => ({
     backgroundColor: translucentColor(markerPalette.value.paper),
     border: `2px solid ${translucentColor(markerPalette.value.trim)}`,
@@ -136,6 +145,7 @@ watch(
     { immediate: true, deep: true },
 );
 onBeforeUnmount(() => {
+    qrSequence++;
     clearTimeout(timer);
     request?.abort();
     sequence++;
@@ -164,24 +174,22 @@ onBeforeUnmount(() => {
                     type="button"
                     aria-label="Expand claim QR"
                     class="isolate w-full"
-                    :style="qrStyle"
                     @click="emit('claimQrClick')"
                 >
                     <img
-                        :src="claimQr"
+                        :src="presentedQr || claimQr"
                         :alt="claimQrLabel || 'Claim Pay Code QR'"
-                        class="aspect-square w-full mix-blend-multiply"
+                        class="aspect-square w-full"
                     />
                 </button>
                 <span
                     v-else-if="claimQr"
                     class="isolate block w-full"
-                    :style="qrStyle"
                 >
                     <img
-                        :src="claimQr"
+                        :src="presentedQr || claimQr"
                         :alt="claimQrLabel || 'Claim Pay Code QR'"
-                        class="aspect-square w-full mix-blend-multiply"
+                        class="aspect-square w-full"
                     />
                 </span>
                 <span

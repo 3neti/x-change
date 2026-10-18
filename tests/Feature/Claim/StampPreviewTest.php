@@ -289,11 +289,16 @@ it('shows artwork through the QR and its bounding box while keeping the exported
     $paper = imagecolorsforindex($image, imagecolorat($image, $x + 8, $y + 3));
     expect([$paper['red'], $paper['green'], $paper['blue']])->not->toBe([248, 237, 212]);
     $quietZone = imagecolorsforindex($image, imagecolorat($image, $x + 12, $y + 12));
-    expect($quietZone['red'])->toBeGreaterThan(200);
+    expect($quietZone['red'])->toBeGreaterThan(100);
+    expect($quietZone['red'])->toBeLessThan(240);
     $base = imagecreatefromstring((new Renderer)->png(app(StampCatalog::class)->presentation($designId, $revision, $position)));
     $background = imagecolorsforindex($base, imagecolorat($base, $x + 8, $y + 3));
     foreach (['red' => 248, 'green' => 237, 'blue' => 212] as $channel => $value) {
         expect(abs($paper[$channel] - (int) floor($value * .3 + $background[$channel] * .7)))->toBeLessThanOrEqual(1);
+    }
+    $quietBackground = imagecolorsforindex($base, imagecolorat($base, $x + 12, $y + 12));
+    foreach (['red' => 248, 'green' => 237, 'blue' => 212] as $channel => $value) {
+        expect(abs($quietZone[$channel] - (int) floor($value * .65 + $quietBackground[$channel] * .35)))->toBeLessThanOrEqual(2);
     }
     imagedestroy($base);
     $trim = imagecolorsforindex($image, imagecolorat($image, $x, $y));

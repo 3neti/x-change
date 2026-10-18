@@ -28,7 +28,7 @@ use RuntimeException;
 
 final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract, RiderStampClaimCardComposerContract
 {
-    private const string CacheVersion = 'v17';
+    private const string CacheVersion = 'v18';
 
     private const int Width = 1200;
 
@@ -1190,16 +1190,9 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
                 imagefilledrectangle($canvas, $x + 2, $y + 2, $x + 188, $y + 188, $paperColor);
                 if ($underlay instanceof GdImage) {
                     imagecopymerge($canvas, $underlay, $x, $y, 0, 0, $boxWidth + 1, $boxHeight + 1, 70);
-                    imagecopy($underlay, $canvas, 0, 0, $x, $y, $boxWidth + 1, $boxHeight + 1);
                 }
-                if ($paper !== '#FFFFFF') {
-                    for ($qrY = 0; $qrY < imagesy($qr); $qrY++) {
-                        for ($qrX = 0; $qrX < imagesx($qr); $qrX++) {
-                            $color = imagecolorsforindex($qr, imagecolorat($qr, $qrX, $qrY));
-                            $tinted = imagecolorallocate($qr, (int) round($color['red'] * $paperRgb[0] / 255), (int) round($color['green'] * $paperRgb[1] / 255), (int) round($color['blue'] * $paperRgb[2] / 255));
-                            imagesetpixel($qr, $qrX, $qrY, $tinted);
-                        }
-                    }
+                if ($markerPalette !== null) {
+                    $this->styleStampQr($qr, $paperRgb);
                 }
                 imagecopyresampled(
                     $canvas,
@@ -1213,9 +1206,6 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
                     imagesx($qr),
                     imagesy($qr),
                 );
-                if ($underlay instanceof GdImage) {
-                    imagecopymerge($canvas, $underlay, $x + 10, $y + 10, 10, 10, 170, 170, 10);
-                }
                 imagedestroy($qr);
             }
         }
@@ -1233,6 +1223,31 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         }
         if ($underlay instanceof GdImage) {
             imagedestroy($underlay);
+        }
+    }
+
+    /** @param array{int, int, int} $paper */
+    private function styleStampQr(GdImage $qr, array $paper): void
+    {
+        imagealphablending($qr, false);
+        imagesavealpha($qr, true);
+        $width = imagesx($qr);
+        $height = imagesy($qr);
+        for ($y = 0; $y < $height; $y++) {
+            for ($x = 0; $x < $width; $x++) {
+                $color = imagecolorsforindex($qr, imagecolorat($qr, $x, $y));
+                $rgb = [$color['red'], $color['green'], $color['blue']];
+                $ink = min(1, max(0, 299 - 100 * array_sum($rgb) / 255)) * .9;
+                $center = abs($x + .5 - $width / 2) < $width * 22 / 256
+                    && abs($y + .5 - $height / 2) < $height * 21.5 / 256;
+                $backing = $center ? .3 : .5;
+                $alpha = $ink + $backing * (1 - $ink);
+                foreach ($rgb as $channel => &$value) {
+                    $value = (int) round(($value * $ink + $paper[$channel] * $backing * (1 - $ink)) / $alpha);
+                }
+                unset($value);
+                imagesetpixel($qr, $x, $y, imagecolorallocatealpha($qr, ...[...$rgb, (int) round((1 - $alpha) * 127)]));
+            }
         }
     }
 

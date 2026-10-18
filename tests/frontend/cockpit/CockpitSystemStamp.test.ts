@@ -3,9 +3,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import Canvas from '../../../resources/js/cockpit/components/CockpitPayCodeCanvas.vue';
 import { resolveRiderStampPreview } from '../../../resources/js/cockpit/riderStampPreview';
 import Stamp from '../../../resources/js/cockpit/components/CockpitSystemStamp.vue';
+import { presentStampQr } from '../../../resources/js/cockpit/stampQrPresentation';
+vi.mock('../../../resources/js/cockpit/stampQrPresentation', () => ({
+    presentStampQr: vi.fn(async (source: string) => source),
+}));
 afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
+    vi.mocked(presentStampQr).mockReset().mockImplementation(async (source) => source);
 });
 describe('portable Stamp preview', () => {
     it('renders the selected revision with live data and no theme dependency', async () => {
@@ -338,9 +343,10 @@ it('uses the design paper and brass trim without changing the supplied QR image'
     );
     const qr = marker.get('img');
     expect(qr.attributes('src')).toBe('data:image/png;base64,qr');
-    expect(qr.classes()).toContain('mix-blend-multiply');
-    expect((qr.element.parentElement as HTMLElement).style.opacity).toBe('0.9');
-    expect((qr.element.parentElement as HTMLElement).style.backgroundColor).toBe('rgb(248, 237, 212)');
+    expect(qr.classes()).not.toContain('mix-blend-multiply');
+    expect(vi.mocked(presentStampQr)).toHaveBeenCalledWith('data:image/png;base64,qr', '#F8EDD4');
+    expect((qr.element.parentElement as HTMLElement).style.opacity).toBe('');
+    expect((qr.element.parentElement as HTMLElement).style.backgroundColor).toBe('');
     wrapper.unmount();
 });
 
