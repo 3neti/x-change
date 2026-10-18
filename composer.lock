@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1879bc3d4629e485157c40d16e4d49b4",
+    "content-hash": "4a28bc751495d90287ae9481af1656e5",
     "packages": [
         {
             "name": "3neti/cash",
@@ -2053,16 +2053,16 @@
         },
         {
             "name": "3neti/x-stamp",
-            "version": "v1.0.0",
+            "version": "v1.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/x-stamp.git",
-                "reference": "0cd86ffc4370bd32a43fd3dd2445bc99ba878c6a"
+                "reference": "59e1fca2e1a87a04d95c63aa73a6faa766066eca"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/x-stamp/zipball/0cd86ffc4370bd32a43fd3dd2445bc99ba878c6a",
-                "reference": "0cd86ffc4370bd32a43fd3dd2445bc99ba878c6a",
+                "url": "https://api.github.com/repos/3neti/x-stamp/zipball/59e1fca2e1a87a04d95c63aa73a6faa766066eca",
+                "reference": "59e1fca2e1a87a04d95c63aa73a6faa766066eca",
                 "shasum": ""
             },
             "require": {
@@ -2088,26 +2088,29 @@
             "description": "Portable versioned Stamp documents, validation, and HTML/SVG/PNG rendering.",
             "support": {
                 "issues": "https://github.com/3neti/x-stamp/issues",
-                "source": "https://github.com/3neti/x-stamp/tree/v1.0.0"
+                "source": "https://github.com/3neti/x-stamp/tree/v1.2.0"
             },
-            "time": "2026-10-17T01:17:26+00:00"
+            "time": "2026-10-18T05:20:40+00:00"
         },
         {
             "name": "3neti/x-stamp-designs",
-            "version": "v1.0.0",
+            "version": "v1.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/x-stamp-designs.git",
-                "reference": "1da7e7f66716c707aeab26d1bf6b49aac1d5221f"
+                "reference": "2746a6a983cfb75ff113e72bd6bc8cb32868bc87"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/x-stamp-designs/zipball/1da7e7f66716c707aeab26d1bf6b49aac1d5221f",
-                "reference": "1da7e7f66716c707aeab26d1bf6b49aac1d5221f",
+                "url": "https://api.github.com/repos/3neti/x-stamp-designs/zipball/2746a6a983cfb75ff113e72bd6bc8cb32868bc87",
+                "reference": "2746a6a983cfb75ff113e72bd6bc8cb32868bc87",
                 "shasum": ""
             },
             "require": {
                 "php": "^8.4"
+            },
+            "conflict": {
+                "3neti/x-stamp": "<1.2"
             },
             "require-dev": {
                 "3neti/x-stamp": "^1.0",
@@ -2126,9 +2129,9 @@
             "description": "Versioned portable Stamp design collection.",
             "support": {
                 "issues": "https://github.com/3neti/x-stamp-designs/issues",
-                "source": "https://github.com/3neti/x-stamp-designs/tree/v1.0.0"
+                "source": "https://github.com/3neti/x-stamp-designs/tree/v1.2.0"
             },
-            "time": "2026-10-17T01:17:29+00:00"
+            "time": "2026-10-18T05:20:53+00:00"
         },
         {
             "name": "aws/aws-crt-php",
