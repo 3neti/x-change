@@ -14,10 +14,19 @@ const props = defineProps<{
     position?: 'top_left' | 'top_right' | 'bottom_left' | 'bottom_right';
 }>();
 const markerPalette = ref({ paper: '#FFFFFF', trim: '#FFFFFF' });
-const markerStyle = computed(() => ({
-    opacity: 0.9,
+function translucentColor(hex: string): string {
+    const channels = [1, 3, 5].map((offset) =>
+        parseInt(hex.slice(offset, offset + 2), 16),
+    );
+    return `rgba(${channels.join(', ')}, 0.3)`;
+}
+const qrStyle = computed(() => ({
     backgroundColor: markerPalette.value.paper,
-    border: `2px solid ${markerPalette.value.trim}`,
+    opacity: 0.9,
+}));
+const markerStyle = computed(() => ({
+    backgroundColor: translucentColor(markerPalette.value.paper),
+    border: `2px solid ${translucentColor(markerPalette.value.trim)}`,
     width: props.marker === 'code' ? '20.833%' : '15.833%',
     [props.position?.endsWith('_left') ? 'left' : 'right']: '4.5%',
     [props.position?.startsWith('top_') ? 'top' : 'bottom']: '8.571%',
@@ -154,7 +163,8 @@ onBeforeUnmount(() => {
                     v-if="claimQr && interactive"
                     type="button"
                     aria-label="Expand claim QR"
-                    class="w-full"
+                    class="isolate w-full"
+                    :style="qrStyle"
                     @click="emit('claimQrClick')"
                 >
                     <img
@@ -163,12 +173,17 @@ onBeforeUnmount(() => {
                         class="aspect-square w-full mix-blend-multiply"
                     />
                 </button>
-                <img
+                <span
                     v-else-if="claimQr"
-                    :src="claimQr"
-                    :alt="claimQrLabel || 'Claim Pay Code QR'"
-                    class="aspect-square w-full mix-blend-multiply"
-                />
+                    class="isolate block w-full"
+                    :style="qrStyle"
+                >
+                    <img
+                        :src="claimQr"
+                        :alt="claimQrLabel || 'Claim Pay Code QR'"
+                        class="aspect-square w-full mix-blend-multiply"
+                    />
+                </span>
                 <span
                     v-else
                     class="grid aspect-square w-full place-items-center"

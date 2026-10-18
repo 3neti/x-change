@@ -28,7 +28,7 @@ use RuntimeException;
 
 final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract, RiderStampClaimCardComposerContract
 {
-    private const string CacheVersion = 'v16';
+    private const string CacheVersion = 'v17';
 
     private const int Width = 1200;
 
@@ -1188,6 +1188,10 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
                 $paperColor = imagecolorallocate($canvas, ...$paperRgb);
                 imagefilledrectangle($canvas, $x, $y, $x + 190, $y + 190, $trimColor);
                 imagefilledrectangle($canvas, $x + 2, $y + 2, $x + 188, $y + 188, $paperColor);
+                if ($underlay instanceof GdImage) {
+                    imagecopymerge($canvas, $underlay, $x, $y, 0, 0, $boxWidth + 1, $boxHeight + 1, 70);
+                    imagecopy($underlay, $canvas, 0, 0, $x, $y, $boxWidth + 1, $boxHeight + 1);
+                }
                 if ($paper !== '#FFFFFF') {
                     for ($qrY = 0; $qrY < imagesy($qr); $qrY++) {
                         for ($qrX = 0; $qrX < imagesx($qr); $qrX++) {
@@ -1209,6 +1213,9 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
                     imagesx($qr),
                     imagesy($qr),
                 );
+                if ($underlay instanceof GdImage) {
+                    imagecopymerge($canvas, $underlay, $x + 10, $y + 10, 10, 10, 170, 170, 10);
+                }
                 imagedestroy($qr);
             }
         }
@@ -1225,7 +1232,6 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
             );
         }
         if ($underlay instanceof GdImage) {
-            imagecopymerge($canvas, $underlay, $x, $y, 0, 0, $boxWidth + 1, $boxHeight + 1, 10);
             imagedestroy($underlay);
         }
     }

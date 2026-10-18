@@ -288,7 +288,14 @@ it('shows artwork through the QR and its bounding box while keeping the exported
     $y = $position === 'top_left' ? 54 : 386;
     $paper = imagecolorsforindex($image, imagecolorat($image, $x + 8, $y + 3));
     expect([$paper['red'], $paper['green'], $paper['blue']])->not->toBe([248, 237, 212]);
-    expect($paper['red'])->toBeGreaterThan(200);
+    $quietZone = imagecolorsforindex($image, imagecolorat($image, $x + 12, $y + 12));
+    expect($quietZone['red'])->toBeGreaterThan(200);
+    $base = imagecreatefromstring((new Renderer)->png(app(StampCatalog::class)->presentation($designId, $revision, $position)));
+    $background = imagecolorsforindex($base, imagecolorat($base, $x + 8, $y + 3));
+    foreach (['red' => 248, 'green' => 237, 'blue' => 212] as $channel => $value) {
+        expect(abs($paper[$channel] - (int) floor($value * .3 + $background[$channel] * .7)))->toBeLessThanOrEqual(1);
+    }
+    imagedestroy($base);
     $trim = imagecolorsforindex($image, imagecolorat($image, $x, $y));
     expect([$trim['red'], $trim['green'], $trim['blue']])->not->toBe([221, 187, 132]);
     imagedestroy($image);

@@ -329,16 +329,18 @@ it('uses the design paper and brass trim without changing the supplied QR image'
     await vi.advanceTimersByTimeAsync(350);
     await flushPromises();
     const marker = wrapper.get('[data-testid="system-stamp-claim-marker"]');
-    expect((marker.element as HTMLElement).style.opacity).toBe('0.9');
+    expect((marker.element as HTMLElement).style.opacity).toBe('');
     expect((marker.element as HTMLElement).style.backgroundColor).toBe(
-        'rgb(248, 237, 212)',
+        'rgba(248, 237, 212, 0.3)',
     );
     expect((marker.element as HTMLElement).style.borderColor).toBe(
-        'rgb(221, 187, 132)',
+        'rgba(221, 187, 132, 0.3)',
     );
     const qr = marker.get('img');
     expect(qr.attributes('src')).toBe('data:image/png;base64,qr');
     expect(qr.classes()).toContain('mix-blend-multiply');
+    expect((qr.element.parentElement as HTMLElement).style.opacity).toBe('0.9');
+    expect((qr.element.parentElement as HTMLElement).style.backgroundColor).toBe('rgb(248, 237, 212)');
     wrapper.unmount();
 });
 
