@@ -25,6 +25,7 @@ use LBHurtado\XChange\Services\Stamp\StampPresentation;
 use LBHurtado\XChange\Services\Stamp\StampProviderIdentity;
 use LBHurtado\XStamp\Appearance;
 use LBHurtado\XStamp\Design;
+use LBHurtado\XStamp\IdentifierPresentation;
 use LBHurtado\XStamp\QrPresentation;
 use LBHurtado\XStamp\Renderer;
 use ReflectionClass;
@@ -32,7 +33,7 @@ use RuntimeException;
 
 final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract, RiderStampClaimCardComposerContract
 {
-    private const string CacheVersion = 'v21';
+    private const string CacheVersion = 'v22';
 
     private const int Width = 1200;
 
@@ -120,8 +121,10 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
             $palette = app(StampCatalog::class)->markerPalette($design);
             $kind = $rider->stamp?->claim_marker?->value ?? 'qr';
             $qr = in_array($kind, ['qr', 'both'], true) ? base64_decode(explode(',', $this->claimQr->render($claimUrl), 2)[1], true) : null;
-            $composition = (new QrPresentation)->compose($design, $qr, $voucher->code, $kind, $rider->stamp?->claim_marker_position?->value ?? 'bottom_right', $palette['paper'], $palette['trim'], $appearance['qr']);
-            $badges = $this->systemIndicators($composition['design'], $this->indicators->resolve($voucher), $rider->stamp?->claim_marker_position?->value ?? 'bottom_right', $kind);
+            $header = (new IdentifierPresentation)->compose($design, $voucher->code);
+            $qrKind = in_array($kind, ['qr', 'both'], true) ? 'qr' : 'none';
+            $composition = (new QrPresentation)->compose($header['design'], $qr, $voucher->code, $qrKind, $rider->stamp?->claim_marker_position?->value ?? 'bottom_right', $palette['paper'], $palette['trim'], $appearance['qr']);
+            $badges = $this->systemIndicators($composition['design'], $this->indicators->resolve($voucher, null), $rider->stamp?->claim_marker_position?->value ?? 'bottom_right', $kind, $formattedAmount);
             imagedestroy($canvas);
 
             return app(Renderer::class)->png($badges['design'], [
@@ -133,7 +136,7 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
                 'purpose' => isset($design->document['customization']) && $copy->source === 'custom' && blank($rider->stamp?->title) ? $copy->description : $copy->plainText(),
                 'expiry' => $voucher->expires_at === null ? 'No expiry' : 'Expires '.$voucher->expires_at->format('M j, Y'),
                 'instructions' => implode(' · ', $this->indicators->resolve($voucher)),
-            ], [...($hasProviderLogo ? ['provider_logo' => $identity['logo']] : []), ...$composition['images'], ...$badges['images']]);
+            ], [...($hasProviderLogo ? ['provider_logo' => $identity['logo']] : []), ...$composition['images'], ...$header['images'], ...$badges['images']]);
         }
         $this->paintBrandBackground($canvas, $palette);
         $artwork = $this->resolveArtwork($voucher);
@@ -193,10 +196,11 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
 
     /**
      * @param  list<string>  $keys
-     * @return array{design: Design, images: array<string, string>}
+     * @return array{design: Design, images: array<string, string>, keys: list<string>, bounds: array{x: int, y: int, width: int, height: int}|null}
      */
-    public function systemIndicators(Design $design, array $keys, string $position = 'bottom_right', string $marker = 'qr'): array
+    public function systemIndicators(Design $design, array $keys, string $position = 'bottom_right', string $marker = 'qr', string $amount = ''): array
     {
+        $keys = array_values(array_filter($keys, static fn (string $key): bool => str_starts_with($key, 'input.') || str_starts_with($key, 'validation.')));
         $keys = array_map(static fn (string $key): string => match ($key) {
             'validation.selfie' => 'input.selfie',
             'validation.signature' => 'input.signature',
@@ -207,7 +211,7 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         }, $keys);
         $keys = array_slice(array_values(array_unique($keys)), 0, 6);
         if ($keys === []) {
-            return ['design' => $design, 'images' => []];
+            return ['design' => $design, 'images' => [], 'keys' => [], 'bounds' => null];
         }
         $width = count($keys) * 48 - 8;
         $image = imagecreatetruecolor($width, 40);
@@ -225,10 +229,41 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         if (! is_string($contents)) {
             throw new RuntimeException('Cannot encode Stamp indicators.');
         }
-        $right = $marker !== 'none' && $position === 'top_right' ? self::Width - 264 : self::Width - 62;
-        $layer = ['type' => 'image', 'slot' => 'claim_indicators', 'x' => $right - $width, 'y' => 65, 'width' => $width, 'height' => 40, 'color' => '#047857'];
+        $layers = $design->document['layers'];
+        $amountIndex = null;
+        foreach ($layers as $index => $layer) {
+            if (($layer['slot'] ?? null) === 'amount') {
+                $amountIndex = $index;
+                break;
+            }
+        }
+        if ($amountIndex === null) {
+            throw new RuntimeException('The Stamp amount slot is unavailable.');
+        }
+        $amountLayer = $layers[$amountIndex];
+        $font = $design->asset($design->document['font']);
+        $right = str_ends_with($position, '_left') ? $design->document['width'] - 54 : min(900, $design->document['width'] - 54);
+        $available = $right - $amountLayer['x'] - $width - 24;
+        $size = $amountLayer['size'] ?? 72;
+        do {
+            $box = imagettfbbox($size * .75, 0, $font, $amount);
+            $textWidth = abs($box[2] - $box[0]);
+            if ($textWidth <= $available) {
+                break;
+            }
+            $size--;
+        } while ($size >= 12);
+        if ($textWidth > $available) {
+            throw new RuntimeException('The Stamp amount and claim requirements cannot fit legibly.');
+        }
+        $layers[$amountIndex]['width'] = min($amountLayer['width'], max(1, (int) ceil($textWidth) + 1));
+        $layers[$amountIndex]['size'] = $size;
+        $layers[$amountIndex]['max_lines'] = 1;
+        $x = (int) ceil($amountLayer['x'] + $textWidth + 24);
+        $y = (int) round($amountLayer['y'] + $size + ($box[5] + $box[1]) / 2 - 20);
+        $layer = ['type' => 'image', 'slot' => 'claim_indicators', 'x' => $x, 'y' => $y, 'width' => $width, 'height' => 40, 'color' => '#047857'];
 
-        return ['design' => $design->withLayers([...$design->document['layers'], $layer]), 'images' => ['claim_indicators' => $contents]];
+        return ['design' => $design->withLayers([...$layers, $layer]), 'images' => ['claim_indicators' => $contents], 'keys' => $keys, 'bounds' => compact('x', 'y', 'width') + ['height' => 40]];
     }
 
     /**

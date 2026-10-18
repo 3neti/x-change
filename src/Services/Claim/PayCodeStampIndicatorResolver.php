@@ -11,7 +11,7 @@ final class PayCodeStampIndicatorResolver
     /**
      * @return list<string>
      */
-    public function resolve(Voucher $voucher): array
+    public function resolve(Voucher $voucher, ?int $limit = 6): array
     {
         $instructions = $voucher->instructions->toArray();
         $keys = [$this->outcomeKey($instructions)];
@@ -62,7 +62,9 @@ final class PayCodeStampIndicatorResolver
             $keys[] = 'claim.multiple';
         }
 
-        return array_slice(array_values(array_unique($keys)), 0, 6);
+        $keys = array_values(array_unique($keys));
+
+        return $limit === null ? $keys : array_slice($keys, 0, $limit);
     }
 
     /**

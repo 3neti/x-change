@@ -17,6 +17,7 @@ use LBHurtado\XChange\Services\RiderStampDesignRegistry;
 use LBHurtado\XChange\Services\Stamp\StampCatalog;
 use LBHurtado\XChange\Services\Stamp\StampProviderIdentity;
 use LBHurtado\XStamp\Design;
+use LBHurtado\XStamp\IdentifierPresentation;
 use LBHurtado\XStamp\Renderer;
 use Zxing\QrReader;
 
@@ -63,7 +64,9 @@ it('pins system designs into issued artifacts without changing their revisions',
     $image = imagecreatefromstring($artifact->contents);
     $pixel = imagecolorsforindex($image, imagecolorat($image, 0, 0));
     expect([$pixel['red'], $pixel['green'], $pixel['blue']])->toBe($rgb);
-    $badgePixel = imagecolorsforindex($image, imagecolorat($image, 1111, 85));
+    $presentation = app(GdRiderStampClaimShareCardRenderer::class)->systemIndicators(app(StampCatalog::class)->presentation($id, 1, 'bottom_right', '₱100.00'), ['input.location', 'input.selfie', 'input.signature'], 'bottom_right', 'qr', '₱100.00');
+    $bounds = array_last($presentation['design']->document['layers']);
+    $badgePixel = imagecolorsforindex($image, imagecolorat($image, $bounds['x'] + 5, $bounds['y'] + 20));
     expect([$badgePixel['red'], $badgePixel['green'], $badgePixel['blue']])->toBe([4, 120, 87]);
     imagedestroy($image);
 })->with([
@@ -245,8 +248,9 @@ it('shows the provider logo or its name before Pay Code without duplicating the 
         expect($header['brand']['x'])->toBeGreaterThan($header['provider_name']['x']);
         expect($header['brand']['x'])->toBeLessThan(260);
     }
-    $expected = (new Renderer)->png($design, [...$slots, 'provider_name' => $name], isset($identity['logo']) ? ['provider_logo' => $identity['logo']] : []);
-    expect($response->json('image'))->toBe('data:image/png;base64,'.base64_encode($expected));
+    $header = (new IdentifierPresentation)->compose($design, 'AA317', true);
+    $expected = (new Renderer)->png($header['design'], [...$slots, 'provider_name' => $name], [...(isset($identity['logo']) ? ['provider_logo' => $identity['logo']] : []), ...$header['images']]);
+    expect(hash('sha256', base64_decode(explode(',', $response->json('image'), 2)[1])))->toBe(hash('sha256', $expected));
 })->with([
     ['netbank', '', 129],
     ['landbank', 'LandBank', 0],
@@ -263,7 +267,7 @@ it('exports the same provider-first logo or name header as the guest preview', f
     $voucher = Voucher::findOrFail($issued['voucher_id']);
     $artifact = app(RiderStampArtifactStoreContract::class)->read($voucher);
     $response = $this->postJson(route('x-change.stamps.preview'), [
-        'design_id' => 'steampunk', 'revision' => 7, 'provider' => $provider,
+        'design_id' => 'steampunk', 'revision' => 7, 'provider' => $provider, 'code' => $voucher->code,
         'slots' => ['brand' => 'Pay Code', 'amount' => '₱100.00'],
     ])->assertOk();
     $preview = base64_decode(substr($response->json('image'), strlen('data:image/png;base64,')));
@@ -321,8 +325,11 @@ it('renders requirement badges into guest Stamp images for both current designs'
     $payload = ['design_id' => $id, 'revision' => $revision, 'marker' => 'none', 'slots' => ['amount' => '₱500'], 'indicator_keys' => ['input.location', 'input.selfie', 'input.signature']];
     $response = $this->postJson(route('x-change.stamps.preview'), $payload)->assertOk();
     $image = imagecreatefromstring(base64_decode(explode(',', $response->json('image'), 2)[1]));
-    foreach ([1015, 1063, 1111] as $x) {
-        $pixel = imagecolorsforindex($image, imagecolorat($image, $x, 85));
+    $presentation = app(GdRiderStampClaimShareCardRenderer::class)->systemIndicators(app(StampCatalog::class)->presentation($id, $revision, 'bottom_right', '₱500'), $payload['indicator_keys'], 'bottom_right', 'none', '₱500');
+    $bounds = array_last($presentation['design']->document['layers']);
+    expect($bounds['y'])->toBeGreaterThan(155)->toBeLessThan(255);
+    foreach ([5, 53, 101] as $offset) {
+        $pixel = imagecolorsforindex($image, imagecolorat($image, $bounds['x'] + $offset, $bounds['y'] + 20));
         expect([$pixel['red'], $pixel['green'], $pixel['blue']])->toBe([4, 120, 87]);
     }
     imagedestroy($image);
@@ -338,8 +345,8 @@ it('keeps badge composition shared with issued rendering and clear of a top-righ
     $moved = $renderer->systemIndicators($design, $keys, 'top_right');
     $normalLayer = array_last($normal['design']->document['layers']);
     $movedLayer = array_last($moved['design']->document['layers']);
-    expect($movedLayer['x'] + $movedLayer['width'])->toBeLessThanOrEqual(936)
-        ->and($normalLayer['x'])->toBeGreaterThan($movedLayer['x'])
+    expect($movedLayer['x'] + $movedLayer['width'])->toBeLessThanOrEqual(900)
+        ->and($normalLayer['x'])->toBe($movedLayer['x'])
         ->and($normal['images'])->toBe($moved['images'])
         ->and($renderer->systemIndicators($design, [...$keys, 'validation.selfie', 'validation.signature', 'validation.location'])['images'])->toBe($normal['images'])
         ->and($renderer->systemIndicators($design, [])['design'])->toBe($design);
@@ -349,3 +356,37 @@ it('keeps badge composition shared with issued rendering and clear of a top-righ
 it('rejects unbounded or malformed preview indicator keys', function (array $keys): void {
     $this->postJson(route('x-change.stamps.preview'), ['design_id' => 'cats', 'revision' => 7, 'slots' => [], 'indicator_keys' => $keys])->assertUnprocessable();
 })->with([[array_fill(0, 33, 'input.selfie')], [['<script>']]]);
+
+it('shows a branded sample identifier without using it as the draft QR destination', function (): void {
+    $before = Voucher::count();
+    $response = $this->postJson(route('x-change.stamps.preview'), [
+        'design_id' => 'cats', 'revision' => 7, 'position' => 'top_right', 'marker' => 'both',
+        'slots' => ['brand' => 'Pay Code', 'amount' => '₱500'],
+    ])->assertOk()->assertJsonPath('identifier.label', '|| AA317 ||')->assertJsonPath('identifier.sample', true);
+    expect($response->json('marker_bounds.y'))->toBeGreaterThanOrEqual($response->json('identifier.bounds.y') + $response->json('identifier.bounds.height'));
+    $bytes = base64_decode(explode(',', $response->json('image'), 2)[1]);
+    $decoded = (new QrReader($bytes, QrReader::SOURCE_TYPE_BLOB, false))->text();
+    expect($decoded)->toContain('/x/claim')->not->toContain('AA317');
+    expect(Voucher::count())->toBe($before);
+    $this->postJson(route('x-change.stamps.preview'), [
+        'design_id' => 'cats', 'revision' => 7, 'marker' => 'code', 'code' => 'ABCD1234', 'slots' => ['amount' => '₱500'],
+    ])->assertOk()->assertJsonPath('identifier.label', '|| ABCD1234 ||')->assertJsonPath('identifier.sample', false)->assertJsonPath('marker_bounds', null);
+});
+
+it('keeps only deduplicated claim requirements beside a long amount without changing its value', function (): void {
+    $renderer = app(GdRiderStampClaimShareCardRenderer::class);
+    $amount = '₱999,999,999,999.99';
+    $design = app(StampCatalog::class)->presentation('cats', 7, 'bottom_right', $amount);
+    $keys = ['outcome.provider_disbursement', 'input.signature', 'validation.signature', 'input.selfie', 'input.location', 'input.mobile', 'input.name', 'input.otp'];
+    $composition = $renderer->systemIndicators($design, $keys, 'bottom_right', 'qr', $amount);
+    $badge = array_last($composition['design']->document['layers']);
+    expect($badge['width'])->toBe(280);
+    expect($badge['x'] + $badge['width'])->toBeLessThanOrEqual(900);
+    $text = array_values(array_filter((new Renderer)->layout($composition['design'], ['amount' => $amount], $composition['images']), fn (array $layer): bool => ($layer['slot'] ?? null) === 'amount'));
+    expect($text)->toHaveCount(1);
+    expect($text[0]['text'])->toBe($amount);
+    expect($text[0]['x'] + $text[0]['width'])->toBeLessThan($badge['x']);
+    expect($badge['y'])->toBeGreaterThanOrEqual($text[0]['y']);
+    expect($renderer->systemIndicators($design, ['outcome.provider_disbursement'])['images'])->toBeEmpty();
+    expect($renderer->systemIndicators($design, ['input.selfie', 'validation.selfie'], 'bottom_right', 'qr', $amount)['images'])->toBe($renderer->systemIndicators($design, ['input.selfie'], 'bottom_right', 'qr', $amount)['images']);
+});

@@ -456,3 +456,40 @@ it('refreshes the rendered image when requirement icons change', async () => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
 });
+
+
+it('describes a sample identifier accessibly without submitting it as an issued code', async () => {
+    vi.useFakeTimers();
+    const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({image: 'data:image/png;base64,test'}) });
+    vi.stubGlobal('fetch', fetch);
+    const wrapper = mount(Stamp, {props: {designId: 'cats', revision: 7, slots: {brand: 'Pay Code', amount: '₱500'}}});
+    await vi.advanceTimersByTimeAsync(350);
+    await flushPromises();
+    expect(wrapper.get('img').attributes('alt')).toContain('Sample || AA317 ||');
+    expect(JSON.parse(fetch.mock.calls[0][1].body).code).toBeUndefined();
+    await wrapper.setProps({code: 'ABCD1234'});
+    await vi.advanceTimersByTimeAsync(350);
+    await flushPromises();
+    expect(wrapper.get('img').attributes('alt')).toContain('|| ABCD1234 ||');
+    expect(wrapper.get('img').attributes('alt')).not.toContain('Sample');
+    expect(JSON.parse(fetch.mock.calls[1][1].body).code).toBe('ABCD1234');
+    wrapper.unmount();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+});
+
+it('exposes readable hover hints on the rendered claim requirement icons', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ok: true, json: async () => ({image: 'data:image/png;base64,test', requirements: {keys: ['input.signature', 'input.selfie'], bounds: {x: 350, y: 185, width: 88, height: 40}}})}));
+    const wrapper = mount(Stamp, {props: {designId: 'cats', revision: 7, slots: {brand: 'Pay Code', amount: '₱500'}}});
+    await vi.advanceTimersByTimeAsync(350);
+    await flushPromises();
+    const icons = wrapper.findAll('[data-testid="system-stamp-requirement"]');
+    expect(icons).toHaveLength(2);
+    expect(icons[0].attributes('aria-label')).toBe('Digital Signature');
+    expect(icons[0].attributes('title')).toContain('signature');
+    expect(icons[1].attributes('title')).toContain('selfie');
+    wrapper.unmount();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+});

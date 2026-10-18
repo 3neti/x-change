@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { preview } from '@/routes/x-change/stamps';
+import { resolvePayCodeIndicator } from '../payCodeIndicators';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 const props = defineProps<{
     designId: string;
@@ -15,6 +16,7 @@ const props = defineProps<{
     marker?: 'none' | 'code' | 'qr' | 'both';
     position?: 'top_left' | 'top_right' | 'bottom_left' | 'bottom_right';
 }>();
+const requirementOverlays = ref<Array<{ key: string; label: string; tooltip: string; style: Record<string, string> }>>([]);
 const markerBounds = ref<{
     x: number;
     y: number;
@@ -118,6 +120,19 @@ watch(
                             ? result.provider_identity.name
                             : '';
                     markerBounds.value = result.marker_bounds ?? null;
+                    const requirements = result.requirements;
+                    requirementOverlays.value = requirements?.bounds && Array.isArray(requirements.keys)
+                        ? requirements.keys.map((key: string, index: number) => {
+                            const indicator = resolvePayCodeIndicator(key);
+                            return {
+                                key, label: indicator.label, tooltip: indicator.tooltip,
+                                style: {
+                                    left: `${(requirements.bounds.x + index * 48) / 12}%`,
+                                    top: `${requirements.bounds.y / 6.3}%`,
+                                    width: `${40 / 12}%`, height: `${40 / 6.3}%`,
+                                },
+                            };
+                        }) : [];
                 }
             } catch (failure) {
                 if (
@@ -155,9 +170,15 @@ onBeforeUnmount(() => {
         <img
             v-if="image"
             :src="image"
-            :alt="`${providerName ? `${providerName} ` : ''}${slots.brand}: ${slots.amount}. ${slots.recipient}. ${slots.purpose}. ${slots.expiry || ''}. ${slots.instructions || ''}`"
+            :alt="`${providerName ? `${providerName} ` : ''}${slots.brand}: ${code ? `|| ${code} ||` : 'Sample || AA317 ||'}. ${slots.amount}. ${slots.recipient}. ${slots.purpose}. ${slots.expiry || ''}. ${slots.instructions || ''}`"
             class="block h-full w-full"
         />
+        <template v-if="image && !loading && !error">
+            <span v-for="indicator in requirementOverlays" :key="indicator.key"
+                role="img" tabindex="0" :aria-label="indicator.label" :title="indicator.tooltip"
+                :style="indicator.style" class="absolute rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                data-testid="system-stamp-requirement" />
+        </template>
         <button
             v-if="
                 image &&
