@@ -572,6 +572,9 @@ it('stores public checkout drafts against the dedicated escrow principal after c
 
     expect(Checkout::query()->where('reference', $created->json('reference'))->firstOrFail())
         ->owner_id->toBe((string) $escrow->getKey());
+    $instructions = Checkout::query()->where('reference', $created->json('reference'))->firstOrFail()->instructions_ciphertext;
+    expect(data_get($instructions, 'metadata.custom.stamp_presentation.schema'))->toBe('x-stamp-presentation/1');
+    expect(data_get($instructions, 'metadata.custom.stamp_presentation.resolved.paper'))->toBe(.5);
 });
 
 it('backfills existing public orders without duplicating checkout history', function (): void {

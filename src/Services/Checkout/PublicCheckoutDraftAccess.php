@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\XChange\Models\Checkout;
 use LBHurtado\XChange\Models\CommercialPrincipal;
+use LBHurtado\XChange\Services\RiderStampDesignRegistry;
 
 final readonly class PublicCheckoutDraftAccess
 {
@@ -19,6 +20,8 @@ final readonly class PublicCheckoutDraftAccess
      */
     public function save(Request $request, CommercialPrincipal $principal, array $instructions): array
     {
+        $instructions = app(RiderStampDesignRegistry::class)->materialize($instructions);
+
         $encoded = json_encode($instructions, JSON_THROW_ON_ERROR);
 
         if (strlen($encoded) > 32_768) {

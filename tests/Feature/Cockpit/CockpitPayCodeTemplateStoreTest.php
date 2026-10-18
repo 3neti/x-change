@@ -215,3 +215,14 @@ it('rejects a stale pay code template update', function () {
 
     expect($template->fresh()->name)->toBe('Updated Elsewhere');
 });
+
+it('freezes the latest Stamp defaults when saving a reusable template', function (): void {
+    actingAsTestUser();
+    $this->post(route('x-change.cockpit.pay-code-templates.store'), [
+        'name' => 'Stamp appearance', 'base_template_key' => 'blank-pay-code',
+        'include_amount' => false, 'include_purpose' => true,
+        'instructions' => ['cash' => ['amount' => 100, 'currency' => 'PHP']],
+    ])->assertRedirect();
+    $snapshot = data_get(PayCodeTemplate::query()->sole()->instructions_ciphertext, 'metadata.custom.stamp_presentation');
+    expect($snapshot['design_id'])->toBe('steampunk')->and($snapshot['revision'])->toBe(8)->and($snapshot['resolved']['paper'])->toBe(.5);
+});

@@ -21,14 +21,17 @@ use LBHurtado\XChange\Data\Claim\RiderStampRecipientData;
 use LBHurtado\XChange\Services\Cockpit\RiderUrlArtworkPreviewResolver;
 use LBHurtado\XChange\Services\RiderStampDesignRegistry;
 use LBHurtado\XChange\Services\Stamp\StampCatalog;
+use LBHurtado\XChange\Services\Stamp\StampPresentation;
 use LBHurtado\XChange\Services\Stamp\StampProviderIdentity;
+use LBHurtado\XStamp\Appearance;
+use LBHurtado\XStamp\QrPresentation;
 use LBHurtado\XStamp\Renderer;
 use ReflectionClass;
 use RuntimeException;
 
 final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract, RiderStampClaimCardComposerContract
 {
-    private const string CacheVersion = 'v18';
+    private const string CacheVersion = 'v19';
 
     private const int Width = 1200;
 
@@ -111,30 +114,24 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
             $providerName = $showProvider && ! isset($identity['logo']) ? ($identity['name'] ?? '') : '';
             $hasProviderLogo = $showProvider && isset($identity['logo']);
             $design = app(StampCatalog::class)->providerPresentation($design, $providerName, $hasProviderLogo);
-            $png = app(Renderer::class)->png($design, [
-                'provider_name' => $providerName,
-                'brand' => $rider->stamp?->show_logo === false ? '' : 'Pay Code',
-                'tagline' => $rider->stamp?->show_tagline === false ? '' : 'The instruction that moves money.',
-                'amount' => $formattedAmount,
-                'recipient' => $recipient->visible ? $recipient->label : '',
-                'purpose' => $copy->plainText(),
-                'expiry' => $voucher->expires_at === null ? 'No expiry' : 'Expires '.$voucher->expires_at->format('M j, Y'),
-                'instructions' => implode(' · ', $this->indicators->resolve($voucher)),
-            ], $hasProviderLogo ? ['provider_logo' => $identity['logo']] : []);
-            imagedestroy($canvas);
-            $canvas = imagecreatefromstring($png);
-            if (! $canvas instanceof GdImage) {
-                throw new RuntimeException('The portable Stamp could not be decoded.');
-            }
-            $foreground = $design->document['foreground'];
-            $textColor = imagecolorallocate($canvas, hexdec(substr($foreground, 1, 2)), hexdec(substr($foreground, 3, 2)), hexdec(substr($foreground, 5, 2)));
-            $this->paintClaimMarker($canvas, $voucher, $claimUrl, $textColor, app(StampCatalog::class)->markerPalette($design));
-            ob_start();
-            imagepng($canvas, null, 8);
-            $contents = ob_get_clean();
+            $appearance = app(StampPresentation::class)->appearance($design, data_get($voucher, 'metadata.instructions.metadata.custom.stamp_presentation'));
+            $design = (new Appearance)->apply($design, $appearance);
+            $palette = app(StampCatalog::class)->markerPalette($design);
+            $kind = $rider->stamp?->claim_marker?->value ?? 'qr';
+            $qr = in_array($kind, ['qr', 'both'], true) ? base64_decode(explode(',', $this->claimQr->render($claimUrl), 2)[1], true) : null;
+            $composition = (new QrPresentation)->compose($design, $qr, $voucher->code, $kind, $rider->stamp?->claim_marker_position?->value ?? 'bottom_right', $palette['paper'], $palette['trim'], $appearance['qr']);
             imagedestroy($canvas);
 
-            return $contents ?: throw new RuntimeException('The portable Stamp could not be encoded.');
+            return app(Renderer::class)->png($composition['design'], [
+                'provider_name' => $providerName,
+                'brand' => $rider->stamp?->show_logo === false ? '' : 'Pay Code',
+                'tagline' => $rider->stamp?->show_tagline === false || ! $appearance['options']['show_tagline'] ? '' : 'The instruction that moves money.',
+                'amount' => $formattedAmount,
+                'recipient' => $recipient->visible ? $recipient->label : '',
+                'purpose' => isset($design->document['customization']) && $copy->source === 'custom' && blank($rider->stamp?->title) ? $copy->description : $copy->plainText(),
+                'expiry' => $voucher->expires_at === null ? 'No expiry' : 'Expires '.$voucher->expires_at->format('M j, Y'),
+                'instructions' => implode(' · ', $this->indicators->resolve($voucher)),
+            ], [...($hasProviderLogo ? ['provider_logo' => $identity['logo']] : []), ...$composition['images']]);
         }
         $this->paintBrandBackground($canvas, $palette);
         $artwork = $this->resolveArtwork($voucher);

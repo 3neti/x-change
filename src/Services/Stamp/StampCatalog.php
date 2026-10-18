@@ -138,9 +138,21 @@ final class StampCatalog
         return ['paper' => $paper, 'trim' => $trim];
     }
 
-    /** @return list<array{id: string, revision: int, name: string}> */
+    /** @return list<array<string, mixed>> */
     public function options(): array
     {
-        return array_map(fn (Design $design): array => ['id' => $design->id(), 'revision' => $design->revision(), 'name' => $design->document['name']], $this->catalog()->all());
+        $latest = [];
+        foreach ($this->catalog()->all() as $design) {
+            if (! isset($latest[$design->id()]) || $latest[$design->id()]->revision() < $design->revision()) {
+                $latest[$design->id()] = $design;
+            }
+        }
+
+        return array_values(array_map(static fn (Design $design): array => [
+            'id' => $design->id(), 'revision' => $design->revision(), 'name' => $design->document['name'],
+            'thumbnail' => '/vendor/x-stamp/designs/'.$design->id().'/'.$design->revision().'/preview.png',
+            'customization' => isset($design->document['customization']) ? array_replace($design->document['customization'], ['defaults' => app(StampPresentation::class)->snapshot($design)['options']]) : null,
+            'presentation' => app(StampPresentation::class)->snapshot($design),
+        ], $latest));
     }
 }

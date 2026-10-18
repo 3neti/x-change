@@ -971,6 +971,7 @@ export type CockpitOnDemandIssuanceFundingProjection = {
     late_payment_detected_at: string | null;
     voucher: {
       stamp_provider?: string | null;
+      stamp_presentation?: Record<string, unknown> | null;
       code: string;
       amount: number;
       currency: string;

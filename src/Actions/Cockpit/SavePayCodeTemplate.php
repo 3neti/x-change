@@ -11,6 +11,7 @@ use Illuminate\Validation\ValidationException;
 use LBHurtado\XChange\Contracts\CockpitIssuanceTemplateRegistryContract;
 use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Services\Cockpit\QuickGenerateTemplateBlueprintSanitizer;
+use LBHurtado\XChange\Services\RiderStampDesignRegistry;
 
 final readonly class SavePayCodeTemplate
 {
@@ -34,6 +35,8 @@ final readonly class SavePayCodeTemplate
                 'base_template_key' => 'Choose an available Pay Code template.',
             ]);
         }
+
+        $attributes['instructions'] = app(RiderStampDesignRegistry::class)->materialize($attributes['instructions']);
 
         $values = [
             'name' => trim((string) $attributes['name']),

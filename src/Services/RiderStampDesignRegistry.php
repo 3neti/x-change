@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services;
 
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use LBHurtado\Voucher\Data\RiderStampData;
 use LBHurtado\XChange\Services\Stamp\StampCatalog;
+use LBHurtado\XChange\Services\Stamp\StampPresentation;
 
 final class RiderStampDesignRegistry
 {
@@ -115,6 +117,18 @@ final class RiderStampDesignRegistry
         data_set($stamp, 'design_id', $designId);
         data_set($stamp, 'design_version', (int) $design['version']);
         data_set($input, 'rider.stamp', $stamp);
+        $customArtwork = in_array(data_get($stamp, 'artwork_source'), ['url', 'splash'], true)
+            && data_get($stamp, 'artwork_treatment') !== 'text';
+        if (! str_starts_with($designId, 'x-change-') && ! $customArtwork) {
+            $candidate = data_get($input, 'metadata.custom.stamp_presentation');
+            if ($candidate !== null && ! is_array($candidate)) {
+                throw ValidationException::withMessages(['metadata.custom.stamp_presentation' => 'Stamp appearance must be an object.']);
+            }
+            $snapshot = app(StampPresentation::class)->snapshot(app(StampCatalog::class)->resolve($designId, (int) $design['version']), $candidate);
+            if ($snapshot !== null) {
+                data_set($input, 'metadata.custom.stamp_presentation', $snapshot);
+            }
+        }
 
         return $input;
     }

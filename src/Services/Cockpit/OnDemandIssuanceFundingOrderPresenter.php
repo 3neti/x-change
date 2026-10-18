@@ -195,6 +195,7 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
         return [
             'code' => $voucher->code,
             'stamp_provider' => app(StampProviderIdentity::class)->forVoucher($voucher)['code'] ?? null,
+            'stamp_presentation' => data_get($voucher, 'metadata.instructions.metadata.custom.stamp_presentation'),
             'amount' => is_numeric($amount) ? (float) $amount : 0.0,
             'currency' => is_string($currency) && $currency !== '' ? $currency : $order->currency,
             'claim_url' => $claimUrl,

@@ -5,6 +5,7 @@ import PublicIssuanceLayout from "../../../resources/js/cockpit/layouts/PublicIs
 import { cockpitQuickGenerateTemplates } from "../../../resources/js/cockpit/quickGenerateDefaults";
 
 vi.mock("@inertiajs/vue3", () => ({
+  usePage: () => ({ props: {} }),
   Head: {
     template: "<div><slot /></div>",
   },

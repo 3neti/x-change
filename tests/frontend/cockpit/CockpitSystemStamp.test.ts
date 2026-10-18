@@ -222,6 +222,7 @@ it.each(['cats', 'x-change-steampunk'])(
                 ok: true,
                 json: async () => ({
                     image: 'data:image/png;base64,stamp',
+                    marker_bounds: { x: 956, y: 386, width: 190, height: 190 },
                 }),
             }),
         );
@@ -251,9 +252,11 @@ it.each(['cats', 'x-change-steampunk'])(
         });
         await vi.advanceTimersByTimeAsync(350);
         await flushPromises();
-        expect(
-            wrapper.get('img[alt="Enter Pay Code QR"]').attributes('src'),
-        ).toBe(artifact.image_data_uri);
+        if (designId === 'cats') {
+            expect(wrapper.get('[data-testid="system-stamp"] img').attributes('src')).toBe('data:image/png;base64,stamp');
+        } else {
+            expect(wrapper.get('img[alt="Enter Pay Code QR"]').attributes('src')).toBe(artifact.image_data_uri);
+        }
         window.dispatchEvent(
             new CustomEvent('x-change:open-cockpit-claim-entry'),
         );
@@ -290,9 +293,11 @@ it.each(['cats', 'x-change-steampunk'])(
         });
         await vi.advanceTimersByTimeAsync(350);
         await flushPromises();
-        expect(
-            wrapper.get('img[alt="Claim Pay Code QR"]').attributes('src'),
-        ).toBe('data:image/png;base64,direct');
+        if (designId === 'cats') {
+            expect(wrapper.findAll('[data-testid="system-stamp"] img')).toHaveLength(1);
+        } else {
+            expect(wrapper.get('img[alt="Claim Pay Code QR"]').attributes('src')).toBe('data:image/png;base64,direct');
+        }
         await wrapper
             .get(
                 designId === 'cats'
@@ -319,6 +324,7 @@ it('uses the design paper and brass trim without changing the supplied QR image'
             json: async () => ({
                 image: 'data:image/png;base64,stamp',
                 marker_palette: { paper: '#F8EDD4', trim: '#DDBB84' },
+                marker_bounds: { x: 956, y: 386, width: 190, height: 190 },
             }),
         }),
     );
@@ -329,24 +335,21 @@ it('uses the design paper and brass trim without changing the supplied QR image'
             slots: { amount: '₱100' },
             claimQr: 'data:image/png;base64,qr',
             marker: 'qr',
+            interactive: true,
         },
     });
     await vi.advanceTimersByTimeAsync(350);
     await flushPromises();
     const marker = wrapper.get('[data-testid="system-stamp-claim-marker"]');
     expect((marker.element as HTMLElement).style.opacity).toBe('');
-    expect((marker.element as HTMLElement).style.backgroundColor).toBe(
-        'rgba(248, 237, 212, 0.3)',
-    );
-    expect((marker.element as HTMLElement).style.borderColor).toBe(
-        'rgba(221, 187, 132, 0.3)',
-    );
-    const qr = marker.get('img');
-    expect(qr.attributes('src')).toBe('data:image/png;base64,qr');
-    expect(qr.classes()).not.toContain('mix-blend-multiply');
-    expect(vi.mocked(presentStampQr)).toHaveBeenCalledWith('data:image/png;base64,qr', '#F8EDD4');
-    expect((qr.element.parentElement as HTMLElement).style.opacity).toBe('');
-    expect((qr.element.parentElement as HTMLElement).style.backgroundColor).toBe('');
+    expect((marker.element as HTMLElement).style.backgroundColor).toBe('');
+    expect((marker.element as HTMLElement).style.borderColor).toBe('');
+    expect(marker.find('img').exists()).toBe(false);
+    expect(wrapper.get('img').attributes('src')).toBe('data:image/png;base64,stamp');
+    expect(wrapper.props('claimQr')).toBe('data:image/png;base64,qr');
+    expect(vi.mocked(presentStampQr)).not.toHaveBeenCalled();
+    await marker.trigger('click');
+    expect(wrapper.emitted('claimQrClick')).toHaveLength(1);
     wrapper.unmount();
 });
 
@@ -418,5 +421,21 @@ it('refreshes the shared card when the selected provider changes and ignores sta
     completeFirst({ ok: true, json: async () => ({ image: 'data:image/png;base64,netbank' }) });
     await flushPromises();
     expect(wrapper.get('[data-testid="system-stamp"] > img').attributes('src')).toBe('data:image/png;base64,paynamics');
+    wrapper.unmount();
+});
+
+it('keeps a previous composed preview clearly stale while appearance updates or fails', async () => {
+    vi.useFakeTimers();
+    const fetch = vi.fn().mockResolvedValueOnce({ ok: true, json: async () => ({ image: 'data:image/png;base64,previous' }) }).mockResolvedValue({ ok: false, json: async () => ({ message: 'Try later' }) });
+    vi.stubGlobal('fetch', fetch);
+    const wrapper = mount(Stamp, { props: { designId: 'cats', revision: 7, slots: { amount: '100' } } });
+    await vi.advanceTimersByTimeAsync(350);
+    await flushPromises();
+    await wrapper.setProps({ stampPresentation: { options: { darkening: 20 } } });
+    expect(wrapper.get('[role="status"]').text()).toContain('Updating');
+    expect(wrapper.get('img').attributes('src')).toContain('previous');
+    await vi.advanceTimersByTimeAsync(350);
+    await flushPromises();
+    expect(wrapper.get('[role="alert"]').text()).toContain('Previous preview shown. Try later');
     wrapper.unmount();
 });

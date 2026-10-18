@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { presentStampQr } from '../stampQrPresentation';
 import { preview } from '@/routes/x-change/stamps';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 const props = defineProps<{
     designId: string;
     revision: number;
     provider?: string | null;
+    stampPresentation?: Record<string, unknown> | null;
     slots: Record<string, string>;
     claimQr?: string | null;
     claimQrLabel?: string;
@@ -14,32 +14,22 @@ const props = defineProps<{
     marker?: 'none' | 'code' | 'qr' | 'both';
     position?: 'top_left' | 'top_right' | 'bottom_left' | 'bottom_right';
 }>();
-const markerPalette = ref({ paper: '#FFFFFF', trim: '#FFFFFF' });
-function translucentColor(hex: string): string {
-    const channels = [1, 3, 5].map((offset) =>
-        parseInt(hex.slice(offset, offset + 2), 16),
-    );
-    return `rgba(${channels.join(', ')}, 0.3)`;
-}
-const presentedQr = ref('');
-let qrSequence = 0;
-watch(() => [props.claimQr, markerPalette.value.paper], async () => {
-    const current = ++qrSequence;
-    presentedQr.value = props.claimQr ?? '';
-    if (props.claimQr) {
-        const styled = await presentStampQr(props.claimQr, markerPalette.value.paper);
-        if (current === qrSequence) {
-            presentedQr.value = styled;
-        }
-    }
-}, { immediate: true });
-const markerStyle = computed(() => ({
-    backgroundColor: translucentColor(markerPalette.value.paper),
-    border: `2px solid ${translucentColor(markerPalette.value.trim)}`,
-    width: props.marker === 'code' ? '20.833%' : '15.833%',
-    [props.position?.endsWith('_left') ? 'left' : 'right']: '4.5%',
-    [props.position?.startsWith('top_') ? 'top' : 'bottom']: '8.571%',
-}));
+const markerBounds = ref<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+} | null>(null);
+const markerStyle = computed(() =>
+    markerBounds.value
+        ? {
+              left: `${markerBounds.value.x / 12}%`,
+              top: `${markerBounds.value.y / 6.3}%`,
+              width: `${markerBounds.value.width / 12}%`,
+              height: `${markerBounds.value.height / 6.3}%`,
+          }
+        : {},
+);
 const emit = defineEmits<{ claimQrClick: [] }>();
 const image = ref('');
 const providerName = ref('');
@@ -54,6 +44,9 @@ watch(
         props.designId,
         props.revision,
         props.provider,
+        props.stampPresentation,
+        props.marker,
+        props.code,
         props.slots,
         props.position,
         retry.value,
@@ -62,8 +55,6 @@ watch(
         clearTimeout(timer);
         request?.abort();
         const current = ++sequence;
-        image.value = '';
-        providerName.value = '';
         error.value = '';
         loading.value = true;
         timer = setTimeout(async () => {
@@ -93,6 +84,9 @@ watch(
                         ...(props.provider ? { provider: props.provider } : {}),
                         position: props.position ?? 'bottom_right',
                         slots: props.slots,
+                        presentation: props.stampPresentation ?? undefined,
+                        marker: props.marker ?? 'qr',
+                        code: props.code || undefined,
                     }),
                 });
                 const result = await response.json().catch(() => ({
@@ -111,16 +105,12 @@ watch(
                 }
                 if (current === sequence) {
                     image.value = result.image;
-                    providerName.value = props.slots.brand && typeof result.provider_identity?.name === 'string'
-                        ? result.provider_identity.name
-                        : '';
-                    const palette = result.marker_palette;
-                    markerPalette.value =
-                        palette &&
-                        /^#[0-9a-f]{6}$/i.test(palette.paper) &&
-                        /^#[0-9a-f]{6}$/i.test(palette.trim)
-                            ? palette
-                            : { paper: '#FFFFFF', trim: '#FFFFFF' };
+                    providerName.value =
+                        props.slots.brand &&
+                        typeof result.provider_identity?.name === 'string'
+                            ? result.provider_identity.name
+                            : '';
+                    markerBounds.value = result.marker_bounds ?? null;
                 }
             } catch (failure) {
                 if (
@@ -145,7 +135,6 @@ watch(
     { immediate: true, deep: true },
 );
 onBeforeUnmount(() => {
-    qrSequence++;
     clearTimeout(timer);
     request?.abort();
     sequence++;
@@ -162,54 +151,41 @@ onBeforeUnmount(() => {
             :alt="`${providerName ? `${providerName} ` : ''}${slots.brand}: ${slots.amount}. ${slots.recipient}. ${slots.purpose}. ${slots.expiry || ''}. ${slots.instructions || ''}`"
             class="block h-full w-full"
         />
-        <div
-            v-if="image && marker !== 'none'"
+        <button
+            v-if="
+                image &&
+                markerBounds &&
+                claimQr &&
+                interactive &&
+                marker !== 'code' &&
+                marker !== 'none' &&
+                !loading &&
+                !error
+            "
+            type="button"
             data-testid="system-stamp-claim-marker"
             :style="markerStyle"
-            class="absolute isolate flex flex-col items-center gap-1 rounded-lg p-[clamp(2px,0.833cqw,10px)] text-center text-[clamp(6px,2.5cqw,12px)] text-slate-900"
+            aria-label="Expand claim QR"
+            class="absolute rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            @click="emit('claimQrClick')"
+        />
+        <p
+            v-if="loading"
+            role="status"
+            class="absolute bottom-2 left-2 rounded bg-slate-950/80 px-3 py-1 text-xs text-white"
         >
-            <template v-if="marker !== 'code'">
-                <button
-                    v-if="claimQr && interactive"
-                    type="button"
-                    aria-label="Expand claim QR"
-                    class="isolate w-full"
-                    @click="emit('claimQrClick')"
-                >
-                    <img
-                        :src="presentedQr || claimQr"
-                        :alt="claimQrLabel || 'Claim Pay Code QR'"
-                        class="aspect-square w-full"
-                    />
-                </button>
-                <span
-                    v-else-if="claimQr"
-                    class="isolate block w-full"
-                >
-                    <img
-                        :src="presentedQr || claimQr"
-                        :alt="claimQrLabel || 'Claim Pay Code QR'"
-                        class="aspect-square w-full"
-                    />
-                </span>
-                <span
-                    v-else
-                    class="grid aspect-square w-full place-items-center"
-                    >QR appears after issuance</span
-                >
-            </template>
-            <span
-                v-if="marker === 'code' || marker === 'both'"
-                class="break-all font-mono"
-                >{{ code || 'Code appears after issuance' }}</span
-            >
-        </div>
-        <p v-if="loading" role="status" class="p-6 text-sm">Rendering Stamp…</p>
-        <div v-if="error" class="p-6 text-sm">
-            <p role="alert">{{ error }}</p>
+            Updating preview…
+        </p>
+        <div
+            v-if="error"
+            class="absolute inset-x-0 bottom-0 bg-white/95 p-3 text-sm text-slate-900"
+        >
+            <p role="alert">
+                {{ image ? 'Previous preview shown. ' : '' }}{{ error }}
+            </p>
             <button
                 type="button"
-                class="mt-3 rounded border px-3 py-2"
+                class="mt-2 rounded border px-3 py-1"
                 @click="retry++"
             >
                 Try Again

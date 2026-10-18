@@ -95,8 +95,8 @@
         "league/flysystem-aws-s3-v3": "^3.25.1",
         "spatie/laravel-data": "^4.21",
         "symfony/yaml": "^7.4",
-        "3neti/x-stamp": "^1.0",
-        "3neti/x-stamp-designs": "^1.0"
+        "3neti/x-stamp": "^1.2",
+        "3neti/x-stamp-designs": "^1.2"
     },
     "suggest": {
         "3neti/x-legal": "Provides jurisdiction-aware advisory Treasury vocabulary and policy traceability.",

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import CockpitStampDesigner from './CockpitStampDesigner.vue';
+import { defaultStampPresentation, changeStampPresentation } from '../stampQrPresentation';
+import type { StampDesignOption, StampPresentation, StampOptions } from '../stampQrPresentation';
 import CockpitPayCodeTemplateStoreController from "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPayCodeTemplateStoreController";
 import CockpitPayCodeTemplateUpdateController from "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPayCodeTemplateUpdateController";
 import { store as savePublicCheckoutDraft } from "@/routes/x-change/public-auto-generate/checkouts";
@@ -769,11 +772,37 @@ const stampClaimEntryArtifact = computed<XChangeQrArtifactData | null>(() =>
       ?? dataGet(stampPage.props, ["xchange", "claim_entry_artifact"]),
   ),
 );
-const systemStampOptions = computed<Array<{ id: string; revision: number; name: string }>>(() => (stampPage.props.xchange as { stamps?: Array<{ id: string; revision: number; name: string }> } | undefined)?.stamps ?? []);
-function selectSystemStamp(event: Event): void {
-  const id = (event.target as HTMLSelectElement).value;
-  const design = systemStampOptions.value.find(option => `${option.id}@${option.revision}` === id);
-  if (design) { riderStampDesignId.value = design.id; riderStampDesignVersion.value = design.revision; }
+const systemStampOptions = computed<StampDesignOption[]>(() => (stampPage.props.xchange as { stamps?: StampDesignOption[] } | undefined)?.stamps ?? []);
+const stampPresentation = ref<StampPresentation | null>(null);
+const currentStampOption = computed(() => systemStampOptions.value.find(design => design.id === riderStampDesignId.value && design.revision === riderStampDesignVersion.value));
+function changeStampAppearance(changes: Partial<StampOptions>): void {
+  stampPresentation.value = changeStampPresentation(stampPresentation.value ?? defaultStampPresentation(currentStampOption.value), changes);
+  if (changes.show_tagline !== undefined) riderStampShowTagline.value = changes.show_tagline;
+}
+function resetStampAppearance(): void {
+  stampPresentation.value = defaultStampPresentation(currentStampOption.value);
+  riderStampCopySource.value = 'automatic';
+  riderStampTitle.value = '';
+  riderStampDescription.value = '';
+  riderStampShowLogo.value = true;
+  riderStampShowTagline.value = stampPresentation.value?.options.show_tagline ?? true;
+  riderStampClaimMarker.value = 'qr';
+  riderStampClaimMarkerPosition.value = 'bottom_right';
+  riderStampArtworkSource.value = 'x_change';
+  riderStampArtworkTreatment.value = 'automatic';
+  riderStampFit.value = 'cover'; riderStampPosition.value = 'center'; riderStampScrim.value = '18'; riderStampTheme.value = 'automatic';
+}
+function selectSystemStamp(id: string): void {
+  const design = systemStampOptions.value.find(option => option.id === id);
+  if (design) {
+    riderStampDesignId.value = design.id; riderStampDesignVersion.value = design.revision;
+    resetStampAppearance();
+  }
+}
+function setStampCustomMessage(enabled: boolean): void {
+  riderStampCopySource.value = enabled ? 'custom' : 'automatic';
+  riderStampTitle.value = '';
+  if (!enabled) riderStampDescription.value = '';
 }
 const defaultSystemStamp = (stampPage.props.xchange as { stamp_default?: string } | undefined)?.stamp_default ?? "steampunk";
 const riderStampDesignId = ref<string | null>(defaultSystemStamp);
@@ -874,7 +903,6 @@ const amountCalculatorPreview = ref<number | null>(null);
 const amountCalculatorEstimatePending = ref(false);
 const riderDesignEditor = ref<RiderDesignEditor>("appearance");
 const riderDesignTeleportReady = ref(false);
-const riderDesignTeleportTarget = ref<HTMLElement | null>(null);
 const startingPoint = ref<"blank" | "last" | "template">("blank");
 const templatePickerOpen = ref(false);
 const saveTemplateOpen = ref(false);
@@ -950,6 +978,12 @@ watch(
   },
   { flush: "sync" },
 );
+
+watch(riderStampShowTagline, (visible): void => {
+  if (stampPresentation.value && stampPresentation.value.options.show_tagline !== visible) {
+    changeStampAppearance({ show_tagline: visible });
+  }
+});
 
 watch(amount, (): void => {
   if (sliceMode.value === "whole") {
@@ -1094,6 +1128,7 @@ function applyTemplateDefaults(templateKey: string): void {
   riderStampTheme.value = "automatic";
   riderStampDesignId.value = defaultSystemStamp;
   riderStampDesignVersion.value = defaultSystemStampRevision;
+  stampPresentation.value = defaultStampPresentation(currentStampOption.value);
   cashType.value =
     defaults.executionDriver === "settlement_envelope"
       ? "settlement_cash"
@@ -1159,6 +1194,9 @@ function initializeStartingPoint(): void {
   }
 
   if (props.startupMode === "repeat_last" && hydrateLastInstructions()) {
+    riderStampDesignId.value = defaultSystemStamp;
+    riderStampDesignVersion.value = defaultSystemStampRevision;
+    resetStampAppearance();
     return;
   }
 
@@ -1740,6 +1778,10 @@ function applyInstructionBlueprint(
     hydratedStampDesignVersion > 0
       ? hydratedStampDesignVersion
       : null;
+
+  const savedPresentation = dataGet(instructions, ['metadata', 'custom', 'stamp_presentation']);
+  stampPresentation.value = savedPresentation && typeof savedPresentation === 'object'
+    ? JSON.parse(JSON.stringify(savedPresentation)) as StampPresentation : defaultStampPresentation(currentStampOption.value);
 
   feedbackEmail.value = instructionString(instructions, ["feedback", "email"]);
   feedbackMobile.value = instructionString(instructions, [
@@ -4940,6 +4982,7 @@ function handleOnDemandIssued(
     result: {
       code: voucher.code,
       stamp_provider: voucher.stamp_provider,
+      stamp_presentation: voucher.stamp_presentation,
       amount: voucher.amount,
       currency: voucher.currency,
       links: {
@@ -5256,6 +5299,7 @@ function buildPayloadShape(
     metadata: {
       ...(campaign === null ? {} : { campaign }),
       custom: {
+        ...(stampPresentation.value && !usesRiderArtwork.value ? { stamp_presentation: stampPresentation.value } : {}),
         cockpit: {
           template_key: selectedTemplate.value,
           ...(activeSavedTemplate.value === null
@@ -7336,13 +7380,6 @@ function instructionRecord(
         >
           Close
         </button>
-        <div class="mb-3" v-if="systemStampOptions.length">
-          <label class="text-sm font-medium" for="system-stamp-design">Stamp design</label>
-          <select id="system-stamp-design" class="ml-3 rounded-md border bg-background px-3 py-2 text-sm" :value="`${riderStampPreview.design.id}@${riderStampPreview.design.version}`" @change="selectSystemStamp">
-            <option v-for="design in systemStampOptions" :key="`${design.id}@${design.revision}`" :value="`${design.id}@${design.revision}`">{{ design.name }}{{ systemStampOptions.filter(option => option.id === design.id).length > 1 ? ' · v' + design.revision : '' }}</option>
-            <option v-if="!systemStampOptions.some(design => design.id === riderStampPreview.design.id)" :value="`${riderStampPreview.design.id}@${riderStampPreview.design.version}`">Existing design</option>
-          </select>
-        </div>
         <CockpitPayCodeCanvas
           v-model:view="canvasView"
           :amount="amount"
@@ -7358,6 +7395,7 @@ function instructionRecord(
           :rider-design-source="riderStampPreview.source"
           :rider-design-document="riderCanvasArtworkDocument"
           :rider-stamp="riderStampPreview"
+          :stamp-presentation="stampPresentation"
           :provider="provider"
           :claim-qr="beneficiaryClaimQr"
           :claim-entry-artifact="stampClaimEntryArtifact"
@@ -7368,12 +7406,9 @@ function instructionRecord(
           :quantity="count"
         >
           <template #design>
-            <div
-              ref="riderDesignTeleportTarget"
-              id="quick-generate-rider-design-editor"
-              class="h-full overflow-y-auto overscroll-contain pr-1"
-              data-testid="cockpit-quick-generate-rider-design-editor"
-            />
+            <CockpitStampDesigner :legacy-artwork="usesRiderArtwork" :designs="systemStampOptions" :design-id="riderStampPreview.design.id" :revision="riderStampPreview.design.version" :presentation="stampPresentation" :custom-message="riderStampCopySource === 'custom'" :message="riderStampDescription" @choose="selectSystemStamp" @change="changeStampAppearance" @reset="resetStampAppearance" @custom-message="setStampCustomMessage" @message="riderStampDescription = $event">
+              <div id="quick-generate-rider-design-editor" class="max-h-[50vh] overflow-y-auto overscroll-contain pr-1" data-testid="cockpit-quick-generate-rider-design-editor" />
+            </CockpitStampDesigner>
           </template>
           <template #claim>
             <CockpitClaimExperiencePreview
@@ -7435,6 +7470,7 @@ function instructionRecord(
       :rider-design-document="riderCanvasArtworkDocument"
       :rider-stamp="riderStampPreview"
       :provider="resultStampProvider"
+      :stamp-presentation="dataGet(lastResponse, ['result', 'stamp_presentation']) as Record<string, unknown> | null"
       :cost-estimate="issuedCostEstimate"
       :quantity="count"
       :claim-url="beneficiaryClaimUrl"
@@ -8694,9 +8730,9 @@ function instructionRecord(
           </div>
           <Teleport
             v-if="
-              riderDesignTeleportReady && riderDesignTeleportTarget !== null
+              riderDesignTeleportReady
             "
-            :to="riderDesignTeleportTarget"
+            to="#quick-generate-rider-design-editor"
           >
             <div class="grid gap-3">
               <div

@@ -19,7 +19,7 @@ it('materializes the configured default design for every new issuance', function
     expect(data_get($payload, 'rider.stamp'))->toMatchArray([
         'version' => 3,
         'design_id' => 'steampunk',
-        'design_version' => 1,
+        'design_version' => 8,
     ]);
 });
 
@@ -80,7 +80,7 @@ it('bridges the design snapshot through extension metadata until voucher v3 is a
         expect(data_get($payload, 'rider.stamp'))->toMatchArray([
             'version' => 3,
             'design_id' => 'steampunk',
-            'design_version' => 1,
+            'design_version' => 8,
         ]);
 
         return;
@@ -90,7 +90,7 @@ it('bridges the design snapshot through extension metadata until voucher v3 is a
         ->and(data_get($payload, 'rider.stamp.design_id'))->toBeNull()
         ->and(data_get($payload, 'metadata.custom.rider_stamp_design'))->toBe([
             'id' => 'steampunk',
-            'version' => 1,
+            'version' => 8,
         ]);
 });
 

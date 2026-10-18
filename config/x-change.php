@@ -407,6 +407,7 @@ return [
         ],
         'default_stamp_design' => 'x-change-default',
         'default_system_stamp_design' => 'steampunk',
+        'stamp_presentation' => ['defaults' => [], 'presets' => []],
         'stamp_collections' => ['3neti/x-stamp-designs'],
         'stamp_designs' => [
             'x-change-default' => [

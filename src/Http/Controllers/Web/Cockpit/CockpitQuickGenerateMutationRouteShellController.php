@@ -482,6 +482,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         return [
             'code' => $result->code,
             'stamp_provider' => $result->stamp_provider,
+            'stamp_presentation' => $result->stamp_presentation,
             'amount' => $result->amount,
             'currency' => $result->currency,
             'issue_cost' => $this->operatorSafeIssueCost($result->cost),

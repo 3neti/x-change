@@ -191,6 +191,7 @@ class GeneratePayCode
                 ),
                 allocations: $allocation['allocations'] ?? [],
                 stamp_provider: data_get($issued, 'metadata.instructions.metadata.custom.stamp_provider'),
+                stamp_presentation: data_get($issued, 'metadata.instructions.metadata.custom.stamp_presentation'),
             );
         });
     }

@@ -5583,3 +5583,34 @@ describe('Cockpit Quick Generate foundation', () => {
     });
 
 });
+
+it('restores a pinned Stamp appearance, explicitly upgrades by card, and resets without changing the Order', async () => {
+    const designs = [
+        { id: 'steampunk', revision: 8, name: 'Steampunk', thumbnail: '/steam.png', customization: { controls: ['qr', 'darkening', 'tagline'], defaults: {} } },
+        { id: 'cats', revision: 7, name: 'Cats', thumbnail: '/cats.png', customization: { controls: ['qr', 'crop', 'darkening', 'tagline'], defaults: {} } },
+    ];
+    vi.mocked(usePage).mockReturnValueOnce({ props: { xchange: { stamps: designs, stamp_default: 'steampunk' } } } as any);
+    const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates }, global: { stubs: { CockpitPayCodeCanvas: { template: '<div><slot name="design" /></div>' } } } });
+    const saved = { schema: 'x-stamp-presentation/1', design_id: 'cats', revision: 6, options: { preset: 'soft', crop: 'center', darkening: 0, show_tagline: true }, resolved: { paper: .9, logo_backing: .9, ink: .9, frame: .3 } };
+    (wrapper.vm as any).applyInstructionBlueprint({ cash: { amount: 321, currency: 'PHP' }, rider: { message: 'Order purpose', stamp: { version: 3, design_id: 'cats', design_version: 6 } }, metadata: { custom: { stamp_presentation: saved } } }, true);
+    await wrapper.vm.$nextTick();
+    expect(quickGenerateEngineeringPreview(wrapper).metadata.custom.stamp_presentation).toEqual(saved);
+    let designer = wrapper.get('[data-testid="stamp-designer"]');
+    expect(designer.text()).toContain('Saved design preserved');
+    await designer.findAll('button').find(button => button.text() === 'Cats')!.trigger('click');
+    expect(quickGenerateEngineeringPreview(wrapper).rider.stamp.design_version).toBe(7);
+    designer = wrapper.get('[data-testid="stamp-designer"]');
+    await designer.get('[aria-label="Artwork crop"]').setValue('bottom');
+    designer = wrapper.get('[data-testid="stamp-designer"]');
+    await designer.get('[aria-label="QR appearance"]').setValue('clear');
+    let payload = quickGenerateEngineeringPreview(wrapper);
+    expect(payload.rider.stamp.design_version).toBe(7);
+    expect(payload.metadata.custom.stamp_presentation.options).toMatchObject({ crop: 'bottom', preset: 'clear' });
+    await wrapper.get('[data-testid="stamp-designer"]').findAll('button').find(button => button.text() === 'Reset appearance')!.trigger('click');
+    payload = quickGenerateEngineeringPreview(wrapper);
+    expect(payload.cash.amount).toBe(321);
+    expect(payload.rider.message).toBe('Order purpose');
+    expect(payload.rider.stamp.design_version).toBe(7);
+    expect(payload.metadata.custom.stamp_presentation.options).toMatchObject({ crop: 'center', preset: 'transparent', darkening: 0 });
+    wrapper.unmount();
+});

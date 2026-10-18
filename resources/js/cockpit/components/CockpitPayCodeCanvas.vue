@@ -30,6 +30,7 @@ const props = withDefaults(
         amount: string | number;
         currency: string;
         provider?: string | null;
+        stampPresentation?: Record<string, unknown> | null;
         recipient?: string;
         purpose?: string;
         claimOutcome: 'provider_disbursement' | 'account_funding';
@@ -229,6 +230,9 @@ const systemStampPurpose = computed<string>(() => {
     const stamp = props.riderStamp;
     if (stamp?.composition.copySource === 'none') {
         return '';
+    }
+    if (props.stampPresentation && stamp?.composition.copySource === 'custom' && stamp.title === 'Pay Code') {
+        return stamp.description;
     }
     if (
         stamp?.title === 'Pay Code' &&
@@ -674,21 +678,23 @@ function stringValue(value: unknown): string | null {
             </div>
         </div>
 
+        <div :class="visibleView === 'design' ? '@3xl:grid @3xl:grid-cols-2 @3xl:items-start @3xl:gap-4' : ''">
         <section
             v-if="
-                visibleView === 'stamp' &&
+                (visibleView === 'stamp' || visibleView === 'design') &&
                 riderStamp &&
                 !riderStamp.design.id.startsWith('x-change-') &&
                 !hasRiderDesign
             "
-            :id="panelId('stamp')"
-            role="tabpanel"
-            :aria-labelledby="tabId('stamp')"
+            :id="visibleView === 'stamp' ? panelId('stamp') : undefined"
+            :role="visibleView === 'stamp' ? 'tabpanel' : undefined"
+            :aria-labelledby="visibleView === 'stamp' ? tabId('stamp') : undefined"
         >
             <CockpitSystemStamp
                 :design-id="riderStamp.design.id"
                 :revision="riderStamp.design.version"
                 :provider="provider"
+                :stamp-presentation="stampPresentation"
                 :slots="{
                     brand: riderStamp.composition.showLogo ? 'Pay Code' : '',
                     tagline: riderStamp.composition.showTagline
@@ -712,10 +718,10 @@ function stringValue(value: unknown): string | null {
             />
         </section>
         <article
-            v-else-if="visibleView === 'stamp'"
-            :id="panelId('stamp')"
-            role="tabpanel"
-            :aria-labelledby="tabId('stamp')"
+            v-else-if="visibleView === 'stamp' || visibleView === 'design'"
+            :id="visibleView === 'stamp' ? panelId('stamp') : undefined"
+            :role="visibleView === 'stamp' ? 'tabpanel' : undefined"
+            :aria-labelledby="visibleView === 'stamp' ? tabId('stamp') : undefined"
             class="@md:min-h-72 @md:p-7 min-h-88 relative flex aspect-[1.72/1] w-full flex-col overflow-hidden rounded-[1.4rem] border p-5 shadow-xl shadow-slate-900/10"
             :class="
                 hasRiderDesign
@@ -1000,11 +1006,13 @@ function stringValue(value: unknown): string | null {
             :id="panelId('design')"
             role="tabpanel"
             :aria-labelledby="tabId('design')"
-            class="h-[clamp(24rem,58vh,36rem)] w-full overflow-hidden rounded-[1.4rem] border border-slate-200 bg-slate-50/80 p-4 xl:h-[clamp(28rem,64vh,42rem)] 2xl:h-[clamp(28rem,64vh,38rem)] dark:border-slate-800 dark:bg-slate-900/70"
+            class="@3xl:mt-0 mt-4 max-h-[64vh] w-full overflow-y-auto rounded-[1.4rem] border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70"
             data-testid="cockpit-pay-code-canvas-design"
         >
             <slot name="design" />
         </section>
+
+        </div>
 
         <section
             v-show="visibleView === 'claim' && hasClaimView"

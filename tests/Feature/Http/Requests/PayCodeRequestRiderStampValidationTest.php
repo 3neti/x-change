@@ -107,7 +107,7 @@ it('rejects authoritative or malformed Rider Stamp values', function (
     'invalid scrim' => ['scrim', 101],
     'unsupported contract version' => ['version', 4],
     'unknown design identity' => ['design_id', 'outside-theme'],
-    'unknown design version' => ['design_version', 2],
+    'unknown design version' => ['design_version', 999],
     'unsafe artwork source' => ['artwork_source', 'remote_page'],
     'unsafe artwork treatment' => ['artwork_treatment', 'iframe'],
     'unsafe copy source' => ['copy_source', 'provider_payload'],
