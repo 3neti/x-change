@@ -41,6 +41,7 @@ function configureCockpitCommercialSystemPrincipal(): User
 }
 
 beforeEach(function (): void {
+    config()->set('x-change.commercial.enabled', true);
     config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
     config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
     $system = User::query()->create([

@@ -10,6 +10,7 @@ use Illuminate\Cookie\CookieServiceProvider;
 use Illuminate\Session\SessionServiceProvider;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Inertia\ServiceProvider as InertiaServiceProvider;
 use Laravel\Passport\PassportServiceProvider;
 use LBHurtado\Cash\CashServiceProvider;
 use LBHurtado\Contact\ContactServiceProvider;
@@ -76,6 +77,7 @@ abstract class TestCase extends Orchestra
             SchemalessAttributesServiceProvider::class,
             CookieServiceProvider::class,
             SessionServiceProvider::class,
+            InertiaServiceProvider::class,
             PassportServiceProvider::class,
             BavixWalletServiceProvider::class,
             CashServiceProvider::class,
@@ -147,6 +149,8 @@ abstract class TestCase extends Orchestra
         $app['config']->set('x-change.deployment.profile_explicitly_configured', true);
         $app['config']->set('x-change.commissioning.enabled', false);
         $app['config']->set('x-change.affiliation.enabled', false);
+        $app['config']->set('x-change.legal.eula.enabled', false);
+        $app['config']->set('x-change.onboarding.mobile_first_auth', false);
         $app['config']->set('x-change.instance.id', 'x-change-test-instance');
         $app['config']->set('x-affiliation.identity_pepper', 'x-change-test-affiliation-pepper');
 
