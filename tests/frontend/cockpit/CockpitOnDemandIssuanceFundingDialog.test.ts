@@ -501,6 +501,7 @@ describe("CockpitOnDemandIssuanceFundingDialog", () => {
     expect(document.body.querySelector('[data-testid="on-demand-qr-ph-artifact"]')?.classList.contains('size-[232px]')).toBe(true);
     expect(document.body.textContent).not.toContain("The exact amount is encoded");
     expect(document.body.textContent).not.toContain("QR Ph · Scan to pay");
+    expect(document.querySelector('[data-testid="on-demand-qr-ph-artifact"]')?.classList.contains('-translate-y-1/2')).toBe(true);
     expect(document.querySelector('[data-testid="funding-qr-amount"]')?.textContent).toBe('₱50.00');
     expect(document.body.textContent).toContain("Check now");
     expect(document.body.querySelector("img")?.getAttribute("src")).toBe(

@@ -629,7 +629,8 @@ function text(value: unknown): string | null {
           <div class="[perspective:1200px]">
             <div id="funding-flip-card" class="relative h-[280px] rounded-2xl transition-transform duration-500 [transform-style:preserve-3d] motion-reduce:transition-none" :class="showingStamp ? '[transform:rotateY(180deg)]' : ''" data-testid="funding-flip-card">
               <div class="absolute inset-0 overflow-auto rounded-2xl border border-slate-200 bg-slate-50 [backface-visibility:hidden] dark:border-slate-800 dark:bg-slate-900" :inert="showingStamp" :aria-hidden="showingStamp" data-testid="funding-payment-face">
-                <img v-if="stampBackground" :src="stampBackground" alt="" aria-hidden="true" class="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-[0.06] blur-[2px]" data-testid="funding-stamp-background" />
+                <img v-if="stampBackground" :src="stampBackground" alt="" aria-hidden="true" class="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-100 blur-[2px]" data-testid="funding-stamp-background" />
+                <div class="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/90 via-white/80 to-white/90 dark:from-slate-950/90 dark:via-slate-950/80 dark:to-slate-950/90" aria-hidden="true" />
                 <div class="relative h-full">
 
         <div
@@ -691,8 +692,8 @@ function text(value: unknown): string | null {
           class="relative h-full"
           data-testid="on-demand-fixed-qr-ph"
         >
-          <span class="absolute right-4 top-2 text-base font-bold sm:text-lg tabular-nums text-slate-950 dark:text-white" data-testid="funding-qr-amount">{{ amount }}</span>
-          <img :src="fixedQrPh.image" alt="Order-specific fixed-amount QR Ph" class="absolute bottom-3 left-1/2 size-[232px] -translate-x-1/2 bg-white object-contain sm:left-3 sm:size-64 sm:translate-x-0" width="256" height="256" data-testid="on-demand-qr-ph-artifact" />
+          <span class="absolute right-4 top-1 text-sm leading-4 font-bold sm:top-2 sm:text-lg tabular-nums text-slate-950 dark:text-white" data-testid="funding-qr-amount">{{ amount }}</span>
+          <img :src="fixedQrPh.image" alt="Order-specific fixed-amount QR Ph" class="absolute left-1/2 top-1/2 size-[232px] -translate-x-1/2 -translate-y-1/2 bg-white object-contain sm:size-64" width="256" height="256" data-testid="on-demand-qr-ph-artifact" />
         </div>
 
         <div
