@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import CockpitPayCodeCanvas from "./CockpitPayCodeCanvas.vue";
 import type { PayCodeStampPreviewState } from "../payCodeStampPreview";
-import { Mic, MicOff } from "lucide-vue-next";
+import { Mic, MicOff, Ticket } from "lucide-vue-next";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 type SpeechRecognitionResultEvent = {
@@ -418,6 +418,7 @@ onBeforeUnmount(() => {
         <input
           v-model="prompt"
           ref="promptInput"
+          :class="{ 'h-12': reviewOnly }"
           class="w-full rounded-xl border border-violet-200 bg-white px-4 py-3 pr-12 text-sm text-slate-950 shadow-sm outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:border-violet-800 dark:bg-slate-950 dark:text-white"
           placeholder="500 pesos. Require signature and selfie."
           aria-label="Describe the Pay Code"
@@ -454,54 +455,55 @@ onBeforeUnmount(() => {
       >
         {{ buttonLabel }}
       </button>
-    </div>
-    <section
-      v-if="reviewOnly"
-      class="relative mt-3 overflow-hidden rounded-2xl border border-violet-200 bg-white dark:border-violet-800 dark:bg-slate-950"
-      data-testid="llm-stamp-action-card"
-      :aria-busy="busy"
-    >
-      <CockpitPayCodeCanvas
-        v-if="hasInterpretedDraft && stampPreview"
-        v-bind="stampPreview"
-        preview-only
-        @preview-error="stampPreviewFailed = $event"
-      />
-      <div
-        v-else
-        class="grid aspect-[1200/630] w-full place-items-center bg-violet-50 p-6 text-center text-sm text-violet-900 dark:bg-violet-950 dark:text-violet-100"
-        data-testid="llm-stamp-placeholder"
+      <section
+        v-if="reviewOnly"
+        class="relative h-12 w-[91.43px] shrink-0 overflow-hidden rounded-lg bg-violet-100 ring-1 ring-violet-300 dark:bg-violet-950 dark:ring-violet-800"
+        data-testid="llm-stamp-action-card"
+        :aria-busy="busy"
       >
-        Describe a Pay Code to see its stamp.
-      </div>
-      <p
-        v-if="busy"
-        role="status"
-        class="px-4 pt-3 text-xs text-muted-foreground"
-      >
-        Updating your Order and stamp…
-      </p>
-      <p
-        v-else-if="!isReady && hasInterpretedDraft"
-        role="status"
-        class="px-4 pt-3 text-xs text-muted-foreground"
-      >
-        Previous preview shown. Complete your prompt before reviewing.
-      </p>
-      <button
-        type="button"
-        class="flex w-full items-center justify-between gap-3 bg-violet-600 px-4 py-3 text-left text-sm font-semibold text-white after:absolute after:inset-0 after:z-10 after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-white disabled:cursor-not-allowed disabled:bg-violet-400"
-        :class="{ 'after:hidden': stampPreviewFailed }"
-        :disabled="!canSubmit"
-        data-testid="cockpit-quick-generate-prompt-go"
-        @click="submit"
-      >
-        <span>Review Order</span
-        ><span class="text-xs font-normal"
-          >Estimated total {{ isReady && !busy ? estimatedCost : "—" }}</span
+        <div
+          v-if="hasInterpretedDraft && stampPreview"
+          class="pointer-events-none absolute left-0 top-0 h-[630px] w-[1200px] origin-top-left scale-[0.07619]"
+          aria-hidden="true"
+          inert
         >
-      </button>
-    </section>
+          <CockpitPayCodeCanvas
+            v-bind="stampPreview"
+            preview-only
+            @preview-error="stampPreviewFailed = $event"
+          />
+        </div>
+        <div
+          v-else
+          class="grid aspect-[1200/630] w-full place-items-center text-violet-500 dark:text-violet-300"
+          data-testid="llm-stamp-placeholder"
+          aria-hidden="true"
+        >
+          <Ticket class="size-6" />
+        </div>
+        <button
+          type="button"
+          class="absolute inset-0 rounded-lg transition hover:bg-violet-500/10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-violet-600 disabled:cursor-not-allowed disabled:bg-white/40"
+          :disabled="!canSubmit"
+          title="Review Order"
+          aria-label="Review Order"
+          data-testid="cockpit-quick-generate-prompt-go"
+          @click="submit"
+        >
+          <span class="sr-only">Review Order</span>
+        </button>
+      </section>
+    </div>
+    <p v-if="reviewOnly" class="mt-2 px-1 text-xs text-muted-foreground" aria-live="polite">
+      <template v-if="busy">Updating your Order and stamp…</template>
+      <template v-else-if="!isReady && hasInterpretedDraft">
+        Previous preview shown. Complete your prompt before reviewing.
+      </template>
+      <template v-else-if="isReady">
+        Estimated total {{ estimatedCost }} · Click the stamp to review
+        <span v-if="stampPreviewFailed"> · Stamp unavailable; retry in Review Order</span>
+      </template>
+    </p>
     <p
       v-if="error"
       class="mt-2 px-1 text-xs text-rose-700 dark:text-rose-300"

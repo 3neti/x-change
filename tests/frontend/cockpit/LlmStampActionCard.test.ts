@@ -86,7 +86,9 @@ describe('LLM stamp review action', () => {
             '[data-testid="cockpit-quick-generate-prompt-go"]',
         );
         expect(action.text()).toContain('Review Order');
-        expect(action.text()).toContain('₱515.00');
+        expect(wrapper.text()).toContain('₱515.00');
+        expect(action.attributes('aria-label')).toBe('Review Order');
+        expect(action.element.parentElement).toBe(wrapper.get('[data-testid="cockpit-quick-generate-prompt-input"]').element.parentElement?.parentElement?.lastElementChild);
         await action.trigger('click');
         await action.trigger('click');
         expect(wrapper.emitted('show-cost')).toHaveLength(2);
@@ -129,9 +131,7 @@ describe('LLM stamp review action', () => {
             [ready(700).instructions],
         ]);
         expect(
-            wrapper
-                .get('[data-testid="cockpit-quick-generate-prompt-go"]')
-                .text(),
+            wrapper.text(),
         ).toContain('₱715.00');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-prompt-input"]')
@@ -141,7 +141,7 @@ describe('LLM stamp review action', () => {
                 .get('[data-testid="cockpit-quick-generate-prompt-go"]')
                 .attributes('disabled'),
         ).toBeDefined();
-        expect(wrapper.get('[role="status"]').text()).toContain(
+        expect(wrapper.get('[aria-live="polite"]').text()).toContain(
             'Previous preview shown',
         );
     });
@@ -184,7 +184,7 @@ describe('LLM stamp review action', () => {
         },
     );
 
-    it('leaves preview retry accessible and Order review available if stamp rendering fails', async () => {
+    it('keeps Order review available with a full-size retry when the thumbnail fails', async () => {
         vi.useFakeTimers();
         vi.stubGlobal(
             'fetch',
@@ -197,7 +197,7 @@ describe('LLM stamp review action', () => {
         const button = wrapper.get(
             '[data-testid="cockpit-quick-generate-prompt-go"]',
         );
-        expect(button.classes()).toContain('after:hidden');
+        expect(wrapper.text()).toContain('retry in Review Order');
         expect(button.attributes('disabled')).toBeUndefined();
         await button.trigger('click');
         expect(wrapper.emitted('show-cost')).toHaveLength(1);
