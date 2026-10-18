@@ -220,6 +220,25 @@ Route::middleware(['web', ShareXChangeBranding::class])->group(function (): void
         ->name('x-change.provisioning.claim.accept');
 });
 
+Route::prefix('x/operations')->middleware(['web', ShareXChangeBranding::class])->group(function (): void {
+    Route::get('/', [CheckoutConsoleController::class, 'show'])->name('x-change.operations.show');
+    Route::get('pricing', static fn () => redirect()->route('x-change.cockpit.commercial.index'))
+        ->name('x-change.operations.pricing');
+    Route::post('unlock', [CheckoutConsoleController::class, 'unlock'])
+        ->middleware('throttle:5,1,checkout-console-unlock:')->name('x-change.operations.unlock');
+    Route::post('lock', [CheckoutConsoleController::class, 'lock'])->name('x-change.operations.lock');
+    Route::get('view/{token}', [CheckoutConsoleController::class, 'viewer'])
+        ->middleware('throttle:60,1,checkout-console-viewer:')->name('x-change.operations.viewer');
+    Route::post('{checkout:reference}/retry', [CheckoutConsoleController::class, 'retry'])
+        ->middleware('throttle:3,1,checkout-console-retry:')->name('x-change.operations.retry');
+    Route::post('{checkout:reference}/refund', [CheckoutConsoleController::class, 'openRefund'])
+        ->middleware('throttle:3,1,checkout-console-refund:')->name('x-change.operations.refund.open');
+    Route::post('{checkout:reference}/refund/record', [CheckoutConsoleController::class, 'recordRefund'])
+        ->middleware('throttle:3,1,checkout-console-refund-record:')->name('x-change.operations.refund.record');
+    Route::post('{checkout:reference}/refund/reconcile', [CheckoutConsoleController::class, 'reconcileRefund'])
+        ->middleware('throttle:3,1,checkout-console-refund-reconcile:')->name('x-change.operations.refund.reconcile');
+});
+
 Route::prefix('x/checkout')->middleware(['web', ShareXChangeBranding::class])->group(function (): void {
     Route::get('/', [CheckoutConsoleController::class, 'show'])->name('x-change.checkout.show');
     Route::post('unlock', [CheckoutConsoleController::class, 'unlock'])

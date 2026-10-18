@@ -36,6 +36,10 @@ final readonly class PublicIssuanceEstimateService
             components: $estimate->components,
             authoritative: true,
             creates_order: false,
+            commercial_quote_reference: $estimate->commercial_quote_reference,
+            commercial_offering_reference: $estimate->commercial_offering_reference,
+            commercial_offering_version: $estimate->commercial_offering_version,
+            commercial_offering_snapshot_hash: $estimate->commercial_offering_snapshot_hash,
         );
     }
 }

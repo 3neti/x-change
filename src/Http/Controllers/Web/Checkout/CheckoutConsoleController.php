@@ -31,6 +31,8 @@ final class CheckoutConsoleController extends Controller
 
         return Inertia::render('x-change/checkout/Console', [
             'role' => $owner ? 'owner' : 'locked',
+            'console_name' => 'Payment Operations',
+            'pricing_url' => route('x-change.operations.pricing', [], false),
             'monitor' => $owner ? $read->forOwner($principal, is_string($status) ? $status : null, includeFullPayCodes: true) : null,
         ])->toResponse($request)->withHeaders($this->responseHeaders());
     }
@@ -44,6 +46,8 @@ final class CheckoutConsoleController extends Controller
 
         return Inertia::render('x-change/checkout/Console', [
             'role' => 'viewer',
+            'console_name' => 'Payment Operations',
+            'pricing_url' => route('x-change.operations.pricing', [], false),
             'viewer_token' => $token,
             'monitor' => $read->forOwner($principal, is_string($status) ? $status : null),
         ])->toResponse($request)->withHeaders($this->responseHeaders());
@@ -58,7 +62,7 @@ final class CheckoutConsoleController extends Controller
             throw ValidationException::withMessages(['password' => ['The console password is invalid or unavailable.']]);
         }
 
-        return redirect()->route('x-change.checkout.show');
+        return redirect()->route($this->consoleRoute($request));
     }
 
     public function lock(Request $request, ConfiguredPublicIssuanceEscrowPrincipalResolver $resolver, CheckoutConsoleAccess $access): RedirectResponse
@@ -70,7 +74,7 @@ final class CheckoutConsoleController extends Controller
         $request->session()->forget('x-change.checkout.owner');
         $request->session()->regenerate();
 
-        return redirect()->route('x-change.checkout.show');
+        return redirect()->route($this->consoleRoute($request));
     }
 
     public function retry(
@@ -220,6 +224,13 @@ final class CheckoutConsoleController extends Controller
     private function sessionActor(Request $request): string
     {
         return hash('sha256', $request->session()->getId());
+    }
+
+    private function consoleRoute(Request $request): string
+    {
+        return str_starts_with($request->path(), 'x/operations')
+            ? 'x-change.operations.show'
+            : 'x-change.checkout.show';
     }
 
     /** @return array<string, string> */

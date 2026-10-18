@@ -21,5 +21,9 @@ final class PublicIssuanceEstimateData extends Data
         public array $components,
         public bool $authoritative,
         public bool $creates_order,
+        public ?string $commercial_quote_reference = null,
+        public ?string $commercial_offering_reference = null,
+        public ?int $commercial_offering_version = null,
+        public ?string $commercial_offering_snapshot_hash = null,
     ) {}
 }

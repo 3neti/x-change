@@ -414,6 +414,13 @@ it('gates the monitor and keeps expiring viewer links read only', function (): v
     $this->get(route('x-change.checkout.viewer', ['token' => $token]))->assertNotFound();
 });
 
+it('exposes Payment Operations under the canonical operations route', function (): void {
+    expect(route('x-change.operations.show'))->toEndWith('/x/operations')
+        ->and(route('x-change.operations.pricing'))->toEndWith('/x/operations/pricing')
+        ->and(route('x-change.operations.unlock'))->toEndWith('/x/operations/unlock')
+        ->and(route('x-change.checkout.show'))->toEndWith('/x/checkout');
+});
+
 it('scopes the checkout console to the public issuance escrow after cutover', function (): void {
     config()->set('x-change.public_issuance_escrow.enabled', true);
     config()->set('x-change.public_issuance_escrow.principal.reference', 'public-issuance-escrow');
