@@ -7484,6 +7484,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
     <CockpitOnDemandIssuanceFundingDialog
       :open="onDemandFundingDialogOpen"
       :projection="onDemandFundingProjection"
+      :stamp-preview="stampPreviewProjection"
       @issued="handleOnDemandIssued"
       @cancelled="handleOnDemandCancelled"
       @closed="handleOnDemandClosed"

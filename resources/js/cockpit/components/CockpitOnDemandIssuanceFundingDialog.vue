@@ -10,11 +10,14 @@ import type {
   CockpitOnDemandIssuanceFundingProjection,
   CockpitPrimaryFundingWorkspaceMode,
 } from "../types";
+import type { PayCodeStampPreviewState } from "../payCodeStampPreview";
+import CockpitPayCodeCanvas from "./CockpitPayCodeCanvas.vue";
 import CockpitFundingMethodSelector from "./CockpitFundingMethodSelector.vue";
 
 const props = defineProps<{
   open: boolean;
   projection: CockpitOnDemandIssuanceFundingProjection | null;
+  stampPreview?: PayCodeStampPreviewState | null;
 }>();
 
 const emit = defineEmits<{
@@ -26,6 +29,8 @@ const emit = defineEmits<{
 const current = ref<CockpitOnDemandIssuanceFundingProjection | null>(
   props.projection,
 );
+const showingStamp = ref(false);
+watch(() => [props.open, props.projection?.order.reference], () => { showingStamp.value = false; });
 const selectedMode = ref<CockpitPrimaryFundingWorkspaceMode>("bank_transfer");
 const checking = ref(false);
 const monitoring = ref(false);
@@ -194,6 +199,7 @@ watch(
 );
 
 watch(selectedMode, (mode) => {
+  showingStamp.value = false;
   if (mode === "self_top_up" && current.value?.actions.funding_method
     && current.value.checkout?.selected_method !== "qr_ph") {
     void selectFundingMethod("qr_ph");
@@ -501,7 +507,7 @@ function text(value: unknown): string | null {
       @keydown.esc.prevent.stop
     >
       <section
-        class="max-h-[96dvh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl dark:bg-slate-950"
+        class="max-h-[96dvh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl dark:bg-slate-950"
       >
         <header class="flex items-start justify-between gap-4">
           <div>
@@ -614,16 +620,25 @@ function text(value: unknown): string | null {
           </p>
         </div>
 
+        <section v-if="paymentOpen && !needsAttention" class="mt-3" aria-label="Pay Code payment card">
+          <div class="mb-2 flex justify-end">
+            <button v-if="stampPreview" type="button" class="min-h-8 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-emerald-600 dark:text-slate-300 dark:hover:bg-slate-800" :aria-pressed="showingStamp" aria-controls="funding-flip-card" data-testid="funding-flip-toggle" @click="showingStamp = !showingStamp">
+              {{ showingStamp ? 'Back to payment' : 'View stamp' }} ↻
+            </button>
+          </div>
+          <div class="[perspective:1200px]">
+            <div id="funding-flip-card" class="relative h-[280px] rounded-2xl transition-transform duration-500 [transform-style:preserve-3d] motion-reduce:transition-none" :class="showingStamp ? '[transform:rotateY(180deg)]' : ''" data-testid="funding-flip-card">
+              <div class="absolute inset-0 overflow-auto rounded-2xl border border-slate-200 bg-slate-50 [backface-visibility:hidden] dark:border-slate-800 dark:bg-slate-900" :inert="showingStamp" :aria-hidden="showingStamp" data-testid="funding-payment-face">
         <div
-          v-else-if="paymentOpen && selectedMode === 'bank_transfer'"
-          class="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900"
+          v-if="selectedMode === 'bank_transfer'"
+          class="flex h-full flex-col justify-center p-5"
           data-testid="on-demand-bank-transfer-instructions"
         >
-          <div v-if="current.actions.funding_method && !current.checkout?.bank_transfer_unlocked" class="mb-4 rounded-xl border border-amber-200 bg-white p-4 dark:border-amber-900 dark:bg-slate-950">
+          <div v-if="current.actions.funding_method && !current.checkout?.bank_transfer_unlocked" class="w-full">
             <label for="checkout-bank-mobile" class="block text-sm font-semibold text-slate-900 dark:text-white">Your mobile number</label>
-            <div class="mt-3 flex flex-wrap gap-2">
-              <input id="checkout-bank-mobile" v-model="bankMobile" type="tel" inputmode="tel" autocomplete="tel" placeholder="09xxxxxxxxx" class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900" />
-              <button type="button" :disabled="selectingFundingMethod" class="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-950" @click="selectFundingMethod('bank_transfer')">Show instructions</button>
+            <div class="mt-3 grid gap-3">
+              <input id="checkout-bank-mobile" v-model="bankMobile" type="tel" inputmode="tel" autocomplete="tel" placeholder="09xxxxxxxxx" class="min-w-0 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900" />
+              <button type="button" :disabled="selectingFundingMethod" class="min-h-10 justify-self-end rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-950" @click="selectFundingMethod('bank_transfer')">Show instructions</button>
             </div>
           </div>
           <template v-else>
@@ -670,7 +685,7 @@ function text(value: unknown): string | null {
             fixedQrPh?.fixed_amount &&
             fixedQrPh.image
           "
-          class="mt-3 text-center"
+          class="flex h-full items-center justify-center p-3"
           data-testid="on-demand-fixed-qr-ph"
         >
           <XChangeQrArtifact
@@ -678,14 +693,14 @@ function text(value: unknown): string | null {
             alt="Order-specific fixed-amount QR Ph"
             kind="qrph_payment"
             :title="amount"
-            class="mx-auto max-w-[248px]"
+            class="mx-auto w-full max-w-[220px]"
             test-id="on-demand-qr-ph-artifact"
           />
         </div>
 
         <div
           v-else-if="paymentOpen"
-          class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+          class="flex h-full items-center justify-center p-5 text-sm text-amber-900"
         >
           {{
             current.funding_selector.methods.find(
@@ -693,6 +708,14 @@ function text(value: unknown): string | null {
             )?.unavailable_reason
           }}
         </div>
+
+              </div>
+              <div class="absolute inset-0 flex items-center justify-center overflow-hidden rounded-2xl bg-slate-950 [backface-visibility:hidden] [transform:rotateY(180deg)]" :inert="!showingStamp" :aria-hidden="!showingStamp" data-testid="funding-stamp-face">
+                <CockpitPayCodeCanvas v-if="stampPreview" v-bind="stampPreview" preview-only class="w-full" />
+              </div>
+            </div>
+          </div>
+        </section>
 
         <p
           v-if="error"

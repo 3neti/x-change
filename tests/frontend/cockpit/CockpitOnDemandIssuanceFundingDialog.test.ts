@@ -498,7 +498,7 @@ describe("CockpitOnDemandIssuanceFundingDialog", () => {
     expect(
       document.body.querySelector('[data-testid="on-demand-fixed-qr-ph"]'),
     ).not.toBeNull();
-    expect(document.body.querySelector('[data-testid="on-demand-qr-ph-artifact"]')?.classList.contains('max-w-[248px]')).toBe(true);
+    expect(document.body.querySelector('[data-testid="on-demand-qr-ph-artifact"]')?.classList.contains('max-w-[220px]')).toBe(true);
     expect(document.body.textContent).not.toContain("The exact amount is encoded");
     expect(document.body.textContent).toContain("Check now");
     expect(document.body.querySelector("img")?.getAttribute("src")).toBe(
@@ -537,4 +537,26 @@ describe("CockpitOnDemandIssuanceFundingDialog", () => {
 
     wrapper.unmount();
   });
+});
+
+it("keeps payment and stamp on fixed-size faces without changing payment state", async () => {
+  const wrapper = mount(CockpitOnDemandIssuanceFundingDialog, {
+    props: { open: true, projection, stampPreview: { amount: '50', currency: 'PHP', provider: 'netbank', recipient: 'Anyone', purpose: '', claimOutcome: 'provider_disbursement', voucherType: 'redeemable', expiry: '3 Days', instructionKeys: [], hasRiderDesign: false, riderDesignSource: 'default', riderDesignDocument: '', riderStamp: null, stampPresentation: null, claimEntryArtifact: null, quantity: '1' } },
+    global: { stubs: { CockpitPayCodeCanvas: { template: '<div data-testid="stamp-fixture" />' } } },
+    attachTo: document.body,
+  });
+  const card = document.querySelector('[data-testid="funding-flip-card"]')!;
+  const toggle = document.querySelector<HTMLButtonElement>('[data-testid="funding-flip-toggle"]')!;
+  expect(card.classList.contains('h-[280px]')).toBe(true);
+  toggle.click();
+  await nextTick();
+  expect(document.querySelector('[data-testid="funding-payment-face"]')?.getAttribute('inert')).not.toBeNull();
+  expect(document.querySelector('[data-testid="funding-stamp-face"]')?.getAttribute('aria-hidden')).toBe('false');
+  expect(toggle.textContent).toContain('Back to payment');
+  expect(wrapper.emitted('issued')).toBeUndefined();
+  toggle.click();
+  await nextTick();
+  expect(document.querySelector('[data-testid="funding-payment-face"]')?.getAttribute('aria-hidden')).toBe('false');
+  expect(card.classList.contains('h-[280px]')).toBe(true);
+  wrapper.unmount();
 });
