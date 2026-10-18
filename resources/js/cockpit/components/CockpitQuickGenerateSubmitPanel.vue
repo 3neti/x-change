@@ -1230,9 +1230,9 @@ async function openDesignEditor(): Promise<void> {
 
 const reviewIssueAvailable = ref(false);
 
-async function openCostPreview(allowIssue = false): Promise<void> {
+async function openCostPreview(allowIssue = false, view: "cost" | "stamp" = "cost"): Promise<void> {
   reviewIssueAvailable.value = allowIssue;
-  canvasView.value = "cost";
+  canvasView.value = view;
   await nextTick();
   costPreviewOpen.value = true;
 

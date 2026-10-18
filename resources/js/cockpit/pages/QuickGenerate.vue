@@ -129,11 +129,11 @@ function showReviewedOrderErrors(): void {
   issuanceSurface.value = "composer";
 }
 
-async function showLlmCostPreview(): Promise<void> {
+async function showLlmCostPreview(view: "cost" | "stamp" = "cost"): Promise<void> {
   restoreLlmAfterCostPreview.value = true;
   issuanceSurface.value = "composer";
   await nextTick();
-  await submitPanelElement.value?.openCostPreview(true);
+  await submitPanelElement.value?.openCostPreview(true, view);
 }
 
 function restoreLlmWorkspace(): void {
@@ -1344,7 +1344,8 @@ function stringValue(value: unknown): string | null {
           :prompt-composer-endpoint="props.prompt_interpret_endpoint"
           @update:issuance-surface="issuanceSurface = $event"
           @interpreted="applyLlmInstructions"
-          @show-cost="showLlmCostPreview"
+          @show-cost="showLlmCostPreview()"
+          @show-stamp="showLlmCostPreview('stamp')"
         />
         <CockpitQuickGeneratePosPanel
           v-else-if="issuanceSurface === 'pos'"

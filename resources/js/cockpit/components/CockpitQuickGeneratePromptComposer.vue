@@ -38,6 +38,7 @@ const emit = defineEmits<{
   interpreted: [instructions: Record<string, unknown>];
   activate: [instructions: Record<string, unknown>];
   "show-cost": [];
+  "show-stamp": [];
 }>();
 
 const prompt = ref("");
@@ -285,7 +286,7 @@ async function interpret(apply = false): Promise<void> {
       draftApplied.value = true;
       hasInterpretedDraft.value = true;
       if (apply && props.reviewOnly) {
-        emit("show-cost");
+        emit("show-stamp");
       }
     }
   } catch (caught) {
@@ -312,7 +313,7 @@ function submit(): void {
     return;
   }
   if (props.reviewOnly && canSubmit.value) {
-    emit("show-cost");
+    emit("show-stamp");
     return;
   }
   if (canSubmit.value && instructions.value !== null) {
@@ -500,7 +501,15 @@ onBeforeUnmount(() => {
         Previous preview shown. Complete your prompt before reviewing.
       </template>
       <template v-else-if="isReady">
-        Estimated total {{ estimatedCost }} · Click the stamp to review
+        <button
+          type="button"
+          class="rounded-sm underline decoration-dotted underline-offset-4 hover:text-violet-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 dark:hover:text-violet-300"
+          data-testid="llm-estimated-total"
+          :disabled="!canSubmit"
+          @click="showCostPreview"
+        >
+          Estimated total {{ estimatedCost }}
+        </button>
         <span v-if="stampPreviewFailed"> · Stamp unavailable; retry in Review Order</span>
       </template>
     </p>

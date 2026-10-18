@@ -91,12 +91,18 @@ describe('LLM stamp review action', () => {
         expect(action.element.parentElement).toBe(wrapper.get('[data-testid="cockpit-quick-generate-prompt-input"]').element.parentElement?.parentElement?.lastElementChild);
         await action.trigger('click');
         await action.trigger('click');
-        expect(wrapper.emitted('show-cost')).toHaveLength(2);
+        expect(wrapper.emitted('show-stamp')).toHaveLength(2);
         expect(wrapper.emitted('activate')).toBeUndefined();
         await wrapper
             .get('[data-testid="cockpit-quick-generate-prompt-input"]')
             .trigger('keydown.enter');
-        expect(wrapper.emitted('show-cost')).toHaveLength(3);
+        expect(wrapper.emitted('show-stamp')).toHaveLength(3);
+        const estimate = wrapper.get('[data-testid="llm-estimated-total"]');
+        expect(estimate.text()).toBe('Estimated total ₱515.00');
+        expect(wrapper.text()).not.toContain('Click the stamp to review');
+        await estimate.trigger('click');
+        expect(wrapper.emitted('show-cost')).toHaveLength(1);
+        expect(wrapper.emitted('show-stamp')).toHaveLength(3);
     });
 
     it('invalidates review immediately and ignores an older interpretation after the prompt changes', async () => {
@@ -200,7 +206,7 @@ describe('LLM stamp review action', () => {
         expect(wrapper.text()).toContain('retry in Review Order');
         expect(button.attributes('disabled')).toBeUndefined();
         await button.trigger('click');
-        expect(wrapper.emitted('show-cost')).toHaveLength(1);
+        expect(wrapper.emitted('show-stamp')).toHaveLength(1);
     });
 });
 

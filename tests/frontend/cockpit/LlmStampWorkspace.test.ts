@@ -175,6 +175,7 @@ it.each([false, true])(
                     )
                     .exists(),
             ).toBe(true);
+            expect(wrapper.findAll('[role="tab"][aria-selected="true"]').map(tab => tab.text())).toContain('Stamp');
             expect(
                 wrapper.get('[data-testid="llm-reviewed-order-issue"]').text(),
             ).toContain('Issue');
@@ -205,9 +206,11 @@ it.each([false, true])(
                     .attributes('disabled'),
             ).toBeUndefined();
             await prompt
-                .get('[data-testid="cockpit-quick-generate-prompt-go"]')
+                .get('[data-testid="llm-estimated-total"]')
                 .trigger('click');
             await flushPromises();
+            expect(wrapper.findAll('[role="tab"][aria-selected="true"]').map(tab => tab.text())).toContain('Cost');
+            expect(fetch.mock.calls.some((call) => call[0] === '/issue')).toBe(false);
             const issue = wrapper.get(
                 '[data-testid="llm-reviewed-order-issue"]',
             );

@@ -25,6 +25,7 @@ const emit = defineEmits<{
   interpreted: [instructions: Record<string, unknown>];
   activate: [instructions: Record<string, unknown>];
   "show-cost": [];
+  "show-stamp": [];
 }>();
 </script>
 
@@ -63,6 +64,7 @@ const emit = defineEmits<{
       @interpreted="emit('interpreted', $event)"
       @activate="emit('activate', $event)"
       @show-cost="emit('show-cost')"
+      @show-stamp="emit('show-stamp')"
     />
   </section>
 </template>
