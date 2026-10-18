@@ -1,10 +1,7 @@
 <script setup lang="ts">
 import {
-  Check,
-  Circle,
   LoaderCircle,
   RefreshCw,
-  ShieldCheck,
   X,
 } from "lucide-vue-next";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
@@ -95,7 +92,7 @@ const latePaymentCredited = computed(
 const batchCount = computed(() => current.value?.batch?.item_count ?? 0);
 const isBatch = computed(() => batchCount.value > 0);
 const issuanceLabel = computed(() =>
-  isBatch.value ? `${batchCount.value} Pay Codes` : "this Pay Code",
+  `${Math.max(batchCount.value, 1)} Pay Code${batchCount.value > 1 ? "s" : ""}`,
 );
 const amount = computed(() => {
   const order = current.value?.order;
@@ -138,7 +135,7 @@ const dialogTitle = computed(() => {
     return "Payment received";
   }
 
-  return `Pay ${amount.value} to issue ${issuanceLabel.value}`;
+  return `Pay ${amount.value}`;
 });
 const dialogDescription = computed(() => {
   if (needsAttention.value) {
@@ -495,7 +492,7 @@ function text(value: unknown): string | null {
   <Teleport to="body">
     <div
       v-if="open && current"
-      class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm"
+      class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/75 p-2 backdrop-blur-sm sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="on-demand-funding-title"
@@ -504,32 +501,20 @@ function text(value: unknown): string | null {
       @keydown.esc.prevent.stop
     >
       <section
-        class="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl sm:p-7 dark:bg-slate-950"
+        class="max-h-[96dvh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl dark:bg-slate-950"
       >
         <header class="flex items-start justify-between gap-4">
           <div>
-            <p
-              class="text-xs font-bold uppercase tracking-[0.18em] text-emerald-600"
-            >
-              On-demand issuance funding
-            </p>
             <h2
               id="on-demand-funding-title"
-              class="mt-1 text-2xl font-bold text-slate-950 dark:text-white"
+              class="text-2xl font-bold text-slate-950 dark:text-white"
             >
               {{ dialogTitle }}
             </h2>
-            <p
-              class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300"
-            >
-              {{ dialogDescription }}
-            </p>
+            <p class="mt-1 text-xs text-slate-500">{{ issuanceLabel }}</p>
+            <p v-if="needsAttention || paymentNeedsReview" class="mt-2 text-sm text-amber-800 dark:text-amber-200">{{ dialogDescription }}</p>
           </div>
           <div class="flex items-center gap-2">
-            <ShieldCheck
-              class="size-8 shrink-0 text-emerald-600"
-              aria-hidden="true"
-            />
             <button
               v-if="terminal"
               type="button"
@@ -542,108 +527,13 @@ function text(value: unknown): string | null {
           </div>
         </header>
 
-        <ol
-          v-if="!terminal && !needsAttention"
-          class="mt-5 grid grid-cols-5 gap-1"
-          aria-label="Funding progress"
-        >
-          <li
-            v-for="step in current.lifecycle.steps"
-            :key="step.key"
-            class="min-w-0 text-center"
-            :aria-current="step.state === 'current' ? 'step' : undefined"
-          >
-            <div class="flex items-center gap-1">
-              <span class="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-              <Check
-                v-if="step.state === 'complete'"
-                class="size-4 text-emerald-600"
-                aria-hidden="true"
-              />
-              <LoaderCircle
-                v-else-if="step.state === 'current'"
-                class="size-4 animate-spin text-emerald-600"
-                aria-hidden="true"
-              />
-              <Circle
-                v-else
-                class="size-3 text-slate-300 dark:text-slate-700"
-                aria-hidden="true"
-              />
-              <span class="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-            </div>
-            <span
-              class="mt-1 block truncate text-[0.62rem] font-semibold text-slate-500"
-              >{{ step.label }}</span
-            >
-          </li>
-        </ol>
-
-        <div
-          class="mt-4 grid gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-800 dark:bg-slate-900"
-        >
-          <div class="flex justify-between gap-4">
-            <span class="text-slate-500">Order reference</span>
-            <span
-              class="font-mono font-semibold text-slate-900 dark:text-white"
-              >{{ current.order.reference }}</span
-            >
-          </div>
-          <div class="flex justify-between gap-4">
-            <span class="text-slate-500">Expires</span>
-            <span class="font-semibold text-slate-900 dark:text-white">{{
-              current.order.expires_at
-                ? new Date(current.order.expires_at).toLocaleString()
-                : "No expiry"
-            }}</span>
-          </div>
-          <p v-if="current.pricing && current.pricing.customer_charge > 0" class="text-xs text-slate-500 dark:text-slate-400">
-            {{ new Intl.NumberFormat("en-PH", { style: "currency", currency: current.pricing.currency }).format(current.pricing.pay_code_value) }} Pay Code value + {{ new Intl.NumberFormat("en-PH", { style: "currency", currency: current.pricing.currency }).format(current.pricing.customer_charge) }} issuance fee
-          </p>
-          <p
-            class="border-t border-slate-200 pt-2 text-slate-600 dark:border-slate-800 dark:text-slate-300"
-            role="status"
-          >
-            {{ current.lifecycle.message }}
-          </p>
-          <a
-            v-if="current.public_links?.recovery"
-            :href="current.public_links.recovery"
-            class="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700 transition hover:border-emerald-400 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-            data-testid="public-issuance-recovery-link"
-          >
-            Save or reopen this order
-          </a>
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs" role="status" aria-live="polite">
+          <span>{{ current.lifecycle.steps.find(step => step.state === 'current')?.label ?? current.status }}</span>
+          <span v-if="paymentOpen && current.monitor.enabled" class="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-300" data-testid="on-demand-automatic-verification">
+            <RefreshCw :class="['size-3', monitoring ? 'animate-spin' : '']" aria-hidden="true" />
+            Auto-checking · Pay once
+          </span>
         </div>
-
-        <div
-          v-if="paymentOpen && current.monitor.enabled"
-          class="mt-4 flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-100"
-          role="status"
-          aria-live="polite"
-          data-testid="on-demand-automatic-verification"
-        >
-          <RefreshCw
-            :class="[
-              'mt-0.5 size-4 shrink-0',
-              monitoring ? 'animate-spin' : '',
-            ]"
-            aria-hidden="true"
-          />
-          <div>
-            <p class="font-bold">Payment checking is automatic</p>
-            <p class="mt-1 leading-5">
-              {{
-                monitorMessage ??
-                "Pay only once. We will keep checking while this order is open."
-              }}
-            </p>
-            <p class="mt-1 text-xs text-sky-700 dark:text-sky-300">
-              {{ lastCheckedLabel }}
-            </p>
-          </div>
-        </div>
-
         <div
           v-if="terminal"
           :class="[
@@ -696,6 +586,7 @@ function text(value: unknown): string | null {
           v-if="paymentOpen && !needsAttention"
           v-model="selectedMode"
           :selector="current.funding_selector"
+          compact
         />
 
         <div
@@ -725,25 +616,18 @@ function text(value: unknown): string | null {
 
         <div
           v-else-if="paymentOpen && selectedMode === 'bank_transfer'"
-          class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900"
+          class="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900"
           data-testid="on-demand-bank-transfer-instructions"
         >
           <div v-if="current.actions.funding_method && !current.checkout?.bank_transfer_unlocked" class="mb-4 rounded-xl border border-amber-200 bg-white p-4 dark:border-amber-900 dark:bg-slate-950">
             <label for="checkout-bank-mobile" class="block text-sm font-semibold text-slate-900 dark:text-white">Your mobile number</label>
-            <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">Enter a Philippine mobile number before viewing transfer details. We will associate it with a confirmed payment.</p>
             <div class="mt-3 flex flex-wrap gap-2">
               <input id="checkout-bank-mobile" v-model="bankMobile" type="tel" inputmode="tel" autocomplete="tel" placeholder="09xxxxxxxxx" class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900" />
               <button type="button" :disabled="selectingFundingMethod" class="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-950" @click="selectFundingMethod('bank_transfer')">Show instructions</button>
             </div>
           </div>
           <template v-else>
-          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">
-            Exact transfer amount
-          </p>
-          <p class="mt-1 text-3xl font-black text-slate-950 dark:text-white">
-            {{ amount }}
-          </p>
-          <dl class="mt-4 grid gap-3 text-sm">
+          <dl class="grid gap-3 text-sm">
             <div
               v-if="text(instructions.institution)"
               class="flex justify-between gap-4"
@@ -786,29 +670,17 @@ function text(value: unknown): string | null {
             fixedQrPh?.fixed_amount &&
             fixedQrPh.image
           "
-          class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center dark:border-slate-800 dark:bg-slate-900"
+          class="mt-3 text-center"
           data-testid="on-demand-fixed-qr-ph"
         >
-          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">
-            Exact QR Ph amount
-          </p>
-          <p class="mt-1 text-3xl font-black text-slate-950 dark:text-white">
-            {{ amount }}
-          </p>
           <XChangeQrArtifact
             :src="fixedQrPh.image"
             alt="Order-specific fixed-amount QR Ph"
             kind="qrph_payment"
-            :title="`Pay ${amount}`"
-            description="Order-specific fixed-amount QR Ph"
-            class="mx-auto mt-4 max-w-sm"
+            :title="amount"
+            class="mx-auto max-w-[248px]"
             test-id="on-demand-qr-ph-artifact"
           />
-          <p
-            class="mx-auto mt-4 max-w-sm text-sm leading-6 text-slate-600 dark:text-slate-300"
-          >
-            {{ fixedQrPh.notice }}
-          </p>
         </div>
 
         <div
@@ -830,9 +702,48 @@ function text(value: unknown): string | null {
           {{ error }}
         </p>
 
+        <details class="mt-3 rounded-xl border border-slate-200 p-3 text-xs dark:border-slate-800" data-testid="funding-order-details">
+          <summary class="cursor-pointer font-semibold text-slate-500">Order details</summary>
+          <div class="mt-2 grid gap-2">
+          <div class="flex justify-between gap-4">
+            <span class="text-slate-500">Order reference</span>
+            <span
+              class="font-mono font-semibold text-slate-900 dark:text-white"
+              >{{ current.order.reference }}</span
+            >
+          </div>
+          <div class="flex justify-between gap-4">
+            <span class="text-slate-500">Expires</span>
+            <span class="font-semibold text-slate-900 dark:text-white">{{
+              current.order.expires_at
+                ? new Date(current.order.expires_at).toLocaleString()
+                : "No expiry"
+            }}</span>
+          </div>
+          <p v-if="current.pricing && current.pricing.customer_charge > 0" class="text-xs text-slate-500 dark:text-slate-400">
+            {{ new Intl.NumberFormat("en-PH", { style: "currency", currency: current.pricing.currency }).format(current.pricing.pay_code_value) }} Pay Code value + {{ new Intl.NumberFormat("en-PH", { style: "currency", currency: current.pricing.currency }).format(current.pricing.customer_charge) }} issuance fee
+          </p>
+          <p
+            class="border-t border-slate-200 pt-2 text-slate-600 dark:border-slate-800 dark:text-slate-300"
+            role="status"
+          >
+            {{ current.lifecycle.message }}
+          </p>
+          <a
+            v-if="current.public_links?.recovery"
+            :href="current.public_links.recovery"
+            class="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700 transition hover:border-emerald-400 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+            data-testid="public-issuance-recovery-link"
+          >
+            Save / reopen order
+          </a>
+          <p v-if="monitorMessage" role="status">{{ monitorMessage }}</p>
+          <p>{{ lastCheckedLabel }}</p>
+          </div>
+        </details>
         <footer
           v-if="current.status !== 'issued'"
-          class="mt-6 grid gap-3 sm:grid-cols-[1fr_auto]"
+          class="sticky bottom-0 mt-3 flex flex-wrap justify-end gap-2 bg-white pt-2 dark:bg-slate-950"
         >
           <button
             v-if="
@@ -841,7 +752,7 @@ function text(value: unknown): string | null {
               )
             "
             type="button"
-            class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200"
+            class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200"
             :disabled="refreshing"
             data-testid="on-demand-status-refresh"
             @click="refresh"
@@ -857,7 +768,7 @@ function text(value: unknown): string | null {
           <button
             v-if="needsAttention && current.retry.eligible"
             type="button"
-            class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+            class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
             :disabled="retrying"
             data-testid="on-demand-issuance-retry"
             @click="retryIssuance"
@@ -898,7 +809,7 @@ function text(value: unknown): string | null {
           <button
             v-if="paymentOpen && !needsAttention"
             type="button"
-            class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+            class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
             :disabled="checking || monitoring"
             data-testid="on-demand-payment-check"
             @click="checkNow"
@@ -914,7 +825,7 @@ function text(value: unknown): string | null {
           <button
             v-if="terminal || paymentNeedsReview"
             type="button"
-            class="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-300 px-4 font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200"
+            class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 px-4 font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200"
             @click="closeForNow"
           >
             Close
@@ -922,7 +833,7 @@ function text(value: unknown): string | null {
           <button
             v-if="current.order.can_cancel"
             type="button"
-            class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200"
+            class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200"
             :disabled="cancelling"
             @click="cancel"
           >

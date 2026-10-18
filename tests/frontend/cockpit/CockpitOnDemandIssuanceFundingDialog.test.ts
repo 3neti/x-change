@@ -179,14 +179,18 @@ describe("CockpitOnDemandIssuanceFundingDialog", () => {
     });
 
     expect(document.body.textContent).toContain(
-      "Pay ₱50.00 to issue this Pay Code",
+      "Pay ₱50.00",
     );
-    expect(document.body.textContent).toContain("Exact transfer amount");
+    expect(document.body.querySelector("h2")?.textContent?.trim()).toBe("Pay ₱50.00");
     expect(document.body.textContent).toContain("113-001-00001-9");
     expect(document.body.textContent).toContain(
-      "Payment checking is automatic",
+      "Auto-checking · Pay once",
     );
-    expect(document.body.textContent).toContain("Pay only once");
+    expect(document.body.textContent).not.toContain("Choose Bank Transfer or QR Ph");
+    expect(document.body.querySelector('details')?.hasAttribute('open')).toBe(false);
+    expect(document.body.querySelector('[data-testid="funding-confirmation-notice"]')).toBeNull();
+    expect(document.body.querySelector('[data-testid="funding-mode-pay_code"]')?.getAttribute('style')).toContain('display: none');
+    expect(document.body.querySelector('[aria-label="Funding progress"]')).toBeNull();
     expect(
       document.body.querySelector(
         '[data-testid="public-issuance-recovery-link"]',
@@ -494,7 +498,8 @@ describe("CockpitOnDemandIssuanceFundingDialog", () => {
     expect(
       document.body.querySelector('[data-testid="on-demand-fixed-qr-ph"]'),
     ).not.toBeNull();
-    expect(document.body.textContent).toContain("Exact QR Ph amount");
+    expect(document.body.querySelector('[data-testid="on-demand-qr-ph-artifact"]')?.classList.contains('max-w-[248px]')).toBe(true);
+    expect(document.body.textContent).not.toContain("The exact amount is encoded");
     expect(document.body.textContent).toContain("Check now");
     expect(document.body.querySelector("img")?.getAttribute("src")).toBe(
       "data:image/png;base64,ZmFrZQ==",
