@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Http\Controllers\Web;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
+use LBHurtado\XChange\Services\Claim\GdRiderStampClaimShareCardRenderer;
 use LBHurtado\XChange\Services\QrArtifactFactory;
 use LBHurtado\XChange\Services\Stamp\StampCatalog;
 use LBHurtado\XChange\Services\Stamp\StampPresentation;
@@ -29,6 +30,8 @@ final class StampPreviewController
             'code' => ['sometimes', 'nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9_-]+$/'],
             'slots' => ['required', 'array:brand,tagline,amount,recipient,purpose,expiry,instructions'],
             'slots.*' => ['nullable', 'string', 'max:1024'],
+            'indicator_keys' => ['sometimes', 'array', 'list', 'max:32'],
+            'indicator_keys.*' => ['required', 'string', 'max:80', 'regex:/^[a-z][a-z0-9_.]*$/'],
         ]);
         try {
             $design = $catalog->presentation($input['design_id'], (int) $input['revision'], $input['position'] ?? 'bottom_right', $input['slots']['amount'] ?? '');
@@ -58,9 +61,11 @@ final class StampPreviewController
         $palette = $catalog->markerPalette($design);
         $composition = (new QrPresentation)->compose($design, $qr, $input['code'] ?? 'Code after issuance', $marker, $input['position'] ?? 'bottom_right', $palette['paper'], $palette['trim'], $appearance['qr']);
 
+        $badges = app(GdRiderStampClaimShareCardRenderer::class)->systemIndicators($composition['design'], $input['indicator_keys'] ?? [], $input['position'] ?? 'bottom_right', $marker);
+
         return response()->json([
             'provider_identity' => $identity === null ? null : ['code' => $identity['code'], 'name' => $identity['name']],
-            'image' => 'data:image/png;base64,'.base64_encode($renderer->png($composition['design'], $slots, [...$images, ...$composition['images']])),
+            'image' => 'data:image/png;base64,'.base64_encode($renderer->png($badges['design'], $slots, [...$images, ...$composition['images'], ...$badges['images']])),
             'marker_palette' => $palette,
             'marker_bounds' => $composition['bounds'],
         ])->header('Cache-Control', 'no-store');

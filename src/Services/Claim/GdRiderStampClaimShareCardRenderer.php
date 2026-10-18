@@ -24,6 +24,7 @@ use LBHurtado\XChange\Services\Stamp\StampCatalog;
 use LBHurtado\XChange\Services\Stamp\StampPresentation;
 use LBHurtado\XChange\Services\Stamp\StampProviderIdentity;
 use LBHurtado\XStamp\Appearance;
+use LBHurtado\XStamp\Design;
 use LBHurtado\XStamp\QrPresentation;
 use LBHurtado\XStamp\Renderer;
 use ReflectionClass;
@@ -31,7 +32,7 @@ use RuntimeException;
 
 final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract, RiderStampClaimCardComposerContract
 {
-    private const string CacheVersion = 'v20';
+    private const string CacheVersion = 'v21';
 
     private const int Width = 1200;
 
@@ -120,9 +121,10 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
             $kind = $rider->stamp?->claim_marker?->value ?? 'qr';
             $qr = in_array($kind, ['qr', 'both'], true) ? base64_decode(explode(',', $this->claimQr->render($claimUrl), 2)[1], true) : null;
             $composition = (new QrPresentation)->compose($design, $qr, $voucher->code, $kind, $rider->stamp?->claim_marker_position?->value ?? 'bottom_right', $palette['paper'], $palette['trim'], $appearance['qr']);
+            $badges = $this->systemIndicators($composition['design'], $this->indicators->resolve($voucher), $rider->stamp?->claim_marker_position?->value ?? 'bottom_right', $kind);
             imagedestroy($canvas);
 
-            return app(Renderer::class)->png($composition['design'], [
+            return app(Renderer::class)->png($badges['design'], [
                 'provider_name' => $providerName,
                 'brand' => $rider->stamp?->show_logo === false ? '' : 'Pay Code',
                 'tagline' => $rider->stamp?->show_tagline === false || ! $appearance['options']['show_tagline'] ? '' : 'The instruction that moves money.',
@@ -131,7 +133,7 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
                 'purpose' => isset($design->document['customization']) && $copy->source === 'custom' && blank($rider->stamp?->title) ? $copy->description : $copy->plainText(),
                 'expiry' => $voucher->expires_at === null ? 'No expiry' : 'Expires '.$voucher->expires_at->format('M j, Y'),
                 'instructions' => implode(' · ', $this->indicators->resolve($voucher)),
-            ], [...($hasProviderLogo ? ['provider_logo' => $identity['logo']] : []), ...$composition['images']]);
+            ], [...($hasProviderLogo ? ['provider_logo' => $identity['logo']] : []), ...$composition['images'], ...$badges['images']]);
         }
         $this->paintBrandBackground($canvas, $palette);
         $artwork = $this->resolveArtwork($voucher);
@@ -187,6 +189,46 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         }
 
         return $contents;
+    }
+
+    /**
+     * @param  list<string>  $keys
+     * @return array{design: Design, images: array<string, string>}
+     */
+    public function systemIndicators(Design $design, array $keys, string $position = 'bottom_right', string $marker = 'qr'): array
+    {
+        $keys = array_map(static fn (string $key): string => match ($key) {
+            'validation.selfie' => 'input.selfie',
+            'validation.signature' => 'input.signature',
+            'validation.location' => 'input.location',
+            'validation.otp' => 'input.otp',
+            'validation.mobile' => 'input.mobile',
+            default => $key,
+        }, $keys);
+        $keys = array_slice(array_values(array_unique($keys)), 0, 6);
+        if ($keys === []) {
+            return ['design' => $design, 'images' => []];
+        }
+        $width = count($keys) * 48 - 8;
+        $image = imagecreatetruecolor($width, 40);
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+        imagefill($image, 0, 0, imagecolorallocatealpha($image, 0, 0, 0, 127));
+        imagealphablending($image, true);
+        foreach ($keys as $index => $key) {
+            $this->paintIndicator($image, $key, $index * 48 + 1, 1, 38);
+        }
+        ob_start();
+        imagepng($image);
+        $contents = ob_get_clean();
+        imagedestroy($image);
+        if (! is_string($contents)) {
+            throw new RuntimeException('Cannot encode Stamp indicators.');
+        }
+        $right = $marker !== 'none' && $position === 'top_right' ? self::Width - 264 : self::Width - 62;
+        $layer = ['type' => 'image', 'slot' => 'claim_indicators', 'x' => $right - $width, 'y' => 65, 'width' => $width, 'height' => 40, 'color' => '#047857'];
+
+        return ['design' => $design->withLayers([...$design->document['layers'], $layer]), 'images' => ['claim_indicators' => $contents]];
     }
 
     /**

@@ -12,6 +12,7 @@ use LBHurtado\XChange\Contracts\RiderStampArtifactStoreContract;
 use LBHurtado\XChange\Data\Claim\RiderStampCopyData;
 use LBHurtado\XChange\Http\Middleware\RequireCurrentAgreementAcceptance;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
+use LBHurtado\XChange\Services\Claim\GdRiderStampClaimShareCardRenderer;
 use LBHurtado\XChange\Services\RiderStampDesignRegistry;
 use LBHurtado\XChange\Services\Stamp\StampCatalog;
 use LBHurtado\XChange\Services\Stamp\StampProviderIdentity;
@@ -52,6 +53,7 @@ it('pins system designs into issued artifacts without changing their revisions',
     Storage::fake('local');
     $user = actingAsTestUser();
     $instructions = validVoucherInstructions()->toArray();
+    data_set($instructions, 'inputs.fields', ['location', 'selfie', 'signature']);
     data_set($instructions, 'rider.stamp', ['version' => 3, 'design_id' => $id, 'design_version' => 1, 'artwork_source' => 'x_change', 'claim_marker' => 'qr', 'claim_marker_position' => 'bottom_right']);
     $issued = app(PayCodeIssuanceContract::class)->issue($user, $instructions);
     $voucher = Voucher::findOrFail($issued['voucher_id']);
@@ -60,6 +62,8 @@ it('pins system designs into issued artifacts without changing their revisions',
     $image = imagecreatefromstring($artifact->contents);
     $pixel = imagecolorsforindex($image, imagecolorat($image, 0, 0));
     expect([$pixel['red'], $pixel['green'], $pixel['blue']])->toBe($rgb);
+    $badgePixel = imagecolorsforindex($image, imagecolorat($image, 1111, 85));
+    expect([$badgePixel['red'], $badgePixel['green'], $badgePixel['blue']])->toBe([4, 120, 87]);
     imagedestroy($image);
 })->with([
     ['steampunk', [245, 230, 200]],
@@ -310,3 +314,37 @@ it('shows artwork through the QR and its bounding box while keeping the exported
     ['cats', 6, 'bottom_right'], ['steampunk', 7, 'bottom_right'],
     ['cats', 6, 'top_left'], ['steampunk', 7, 'top_left'],
 ]);
+
+it('renders requirement badges into guest Stamp images for both current designs', function (string $id): void {
+    $revision = collect(app(StampCatalog::class)->options())->where('id', $id)->max('revision');
+    $payload = ['design_id' => $id, 'revision' => $revision, 'marker' => 'none', 'slots' => ['amount' => '₱500'], 'indicator_keys' => ['input.location', 'input.selfie', 'input.signature']];
+    $response = $this->postJson(route('x-change.stamps.preview'), $payload)->assertOk();
+    $image = imagecreatefromstring(base64_decode(explode(',', $response->json('image'), 2)[1]));
+    foreach ([1015, 1063, 1111] as $x) {
+        $pixel = imagecolorsforindex($image, imagecolorat($image, $x, 85));
+        expect([$pixel['red'], $pixel['green'], $pixel['blue']])->toBe([4, 120, 87]);
+    }
+    imagedestroy($image);
+    $empty = $this->postJson(route('x-change.stamps.preview'), [...$payload, 'indicator_keys' => []])->assertOk();
+    expect($response->json('image'))->not->toBe($empty->json('image'));
+})->with(['cats', 'steampunk']);
+
+it('keeps badge composition shared with issued rendering and clear of a top-right QR', function (): void {
+    $renderer = app(GdRiderStampClaimShareCardRenderer::class);
+    $design = app(StampCatalog::class)->resolve('cats', 7);
+    $keys = ['input.location', 'input.selfie', 'input.signature'];
+    $normal = $renderer->systemIndicators($design, $keys);
+    $moved = $renderer->systemIndicators($design, $keys, 'top_right');
+    $normalLayer = array_last($normal['design']->document['layers']);
+    $movedLayer = array_last($moved['design']->document['layers']);
+    expect($movedLayer['x'] + $movedLayer['width'])->toBeLessThanOrEqual(936)
+        ->and($normalLayer['x'])->toBeGreaterThan($movedLayer['x'])
+        ->and($normal['images'])->toBe($moved['images'])
+        ->and($renderer->systemIndicators($design, [...$keys, 'validation.selfie', 'validation.signature', 'validation.location'])['images'])->toBe($normal['images'])
+        ->and($renderer->systemIndicators($design, [])['design'])->toBe($design);
+    expect(array_last($design->document['layers'])['slot'] ?? null)->not->toBe('claim_indicators');
+});
+
+it('rejects unbounded or malformed preview indicator keys', function (array $keys): void {
+    $this->postJson(route('x-change.stamps.preview'), ['design_id' => 'cats', 'revision' => 7, 'slots' => [], 'indicator_keys' => $keys])->assertUnprocessable();
+})->with([[array_fill(0, 33, 'input.selfie')], [['<script>']]]);

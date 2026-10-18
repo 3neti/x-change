@@ -439,3 +439,20 @@ it('keeps a previous composed preview clearly stale while appearance updates or 
     expect(wrapper.get('[role="alert"]').text()).toContain('Previous preview shown. Try later');
     wrapper.unmount();
 });
+
+it('refreshes the rendered image when requirement icons change', async () => {
+    vi.useFakeTimers();
+    const fetch = vi.fn().mockResolvedValue({ok: true, json: async () => ({image: 'data:image/png;base64,test'})});
+    vi.stubGlobal('fetch', fetch);
+    const wrapper = mount(Stamp, {props: {designId: 'cats', revision: 7, slots: {amount: '₱500'}, indicatorKeys: ['input.selfie']}});
+    await vi.advanceTimersByTimeAsync(350);
+    await flushPromises();
+    expect(JSON.parse(fetch.mock.calls[0][1].body).indicator_keys).toEqual(['input.selfie']);
+    await wrapper.setProps({indicatorKeys: ['input.location', 'input.signature']});
+    await vi.advanceTimersByTimeAsync(350);
+    await flushPromises();
+    expect(JSON.parse(fetch.mock.calls[1][1].body).indicator_keys).toEqual(['input.location', 'input.signature']);
+    wrapper.unmount();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+});

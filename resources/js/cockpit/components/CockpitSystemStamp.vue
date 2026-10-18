@@ -7,6 +7,7 @@ const props = defineProps<{
     provider?: string | null;
     stampPresentation?: Record<string, unknown> | null;
     slots: Record<string, string>;
+    indicatorKeys?: string[];
     claimQr?: string | null;
     claimQrLabel?: string;
     code?: string | null;
@@ -52,6 +53,7 @@ watch(
         props.marker,
         props.code,
         props.slots,
+        props.indicatorKeys,
         props.position,
         retry.value,
     ],
@@ -88,6 +90,7 @@ watch(
                         ...(props.provider ? { provider: props.provider } : {}),
                         position: props.position ?? 'bottom_right',
                         slots: props.slots,
+                        indicator_keys: props.indicatorKeys ?? [],
                         presentation: props.stampPresentation ?? undefined,
                         marker: props.marker ?? 'qr',
                         code: props.code || undefined,

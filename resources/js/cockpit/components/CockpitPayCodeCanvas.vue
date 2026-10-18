@@ -728,6 +728,7 @@ function stringValue(value: unknown): string | null {
             <CockpitSystemStamp
                 :design-id="riderStamp.design.id"
                 :revision="riderStamp.design.version"
+                :indicator-keys="stampIndicatorKeys"
                 :provider="provider"
                 :stamp-presentation="stampPresentation"
                 :slots="{
