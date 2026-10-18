@@ -12,7 +12,7 @@ describe('portable Stamp preview', () => {
         vi.useFakeTimers();
         const fetch = vi.fn().mockResolvedValue({
             ok: true,
-            json: async () => ({ image: 'data:image/png;base64,abc' }),
+            json: async () => ({ image: 'data:image/png;base64,abc', provider_identity: { code: 'netbank', name: 'NetBank' } }),
         });
         vi.stubGlobal('fetch', fetch);
         const wrapper = mount(Stamp, {
@@ -38,6 +38,7 @@ describe('portable Stamp preview', () => {
             'data:image/png;base64,abc',
         );
         expect(wrapper.find('img').attributes('alt')).toContain('Amelia');
+        expect(wrapper.find('img').attributes('alt')).toContain('NetBank');
         wrapper.element.classList.add('dark');
         await wrapper.vm.$nextTick();
         expect(wrapper.find('img').attributes('src')).toBe(
@@ -380,5 +381,33 @@ it('sends the default slogan as two complete sentences without a repeated Pay Co
     expect(JSON.parse(fetch.mock.calls[1][1].body).slots.purpose).toBe(
         'For Amelia\nThank you for your help.',
     );
+    wrapper.unmount();
+});
+
+
+it('refreshes the shared card when the selected provider changes and ignores stale responses', async () => {
+    vi.useFakeTimers();
+    let completeFirst: (value: unknown) => void = () => {};
+    const fetch = vi.fn()
+        .mockImplementationOnce(() => new Promise(resolve => { completeFirst = resolve; }))
+        .mockResolvedValue({ ok: true, json: async () => ({ image: 'data:image/png;base64,paynamics' }) });
+    vi.stubGlobal('fetch', fetch);
+    const wrapper = mount(Canvas, {
+        props: {
+            amount: 150, currency: 'PHP', provider: 'netbank',
+            claimOutcome: 'provider_disbursement', voucherType: 'redeemable',
+            riderStamp: { ...resolveRiderStampPreview({}), design: { id: 'cats', version: 5 } },
+        },
+    });
+    await vi.advanceTimersByTimeAsync(350);
+    expect(JSON.parse(fetch.mock.calls[0][1].body).provider).toBe('netbank');
+    await wrapper.setProps({ provider: 'paynamics' });
+    expect(fetch.mock.calls[0][1].signal.aborted).toBe(true);
+    await vi.advanceTimersByTimeAsync(350);
+    await flushPromises();
+    expect(JSON.parse(fetch.mock.calls[1][1].body).provider).toBe('paynamics');
+    completeFirst({ ok: true, json: async () => ({ image: 'data:image/png;base64,netbank' }) });
+    await flushPromises();
+    expect(wrapper.get('[data-testid="system-stamp"] > img').attributes('src')).toBe('data:image/png;base64,paynamics');
     wrapper.unmount();
 });

@@ -143,7 +143,12 @@ class GeneratePayCode
         return app(PayCodeIssuanceTransaction::class)->run(function () use ($issuer, $wallet, $input, $estimate, $funding): GeneratePayCodeResultData {
             $this->synchronizeCompatibilityLedger($issuer, $wallet, $funding);
             $balanceBefore = $this->wallets->getBalance($wallet);
-            $issued = $this->issuance->issue($issuer, $input);
+            $issuanceInput = $input;
+            $effectiveProvider = data_get($funding->meta, 'provider');
+            if (is_string($effectiveProvider) && $effectiveProvider !== '') {
+                $issuanceInput['provider'] = $effectiveProvider;
+            }
+            $issued = $this->issuance->issue($issuer, $issuanceInput);
             $allocation = $this->shouldAllocateLocalRevenue($funding->authority)
                 ? $this->allocateCommercialRevenue($issuer, $input, $issued, $estimate, $funding)
                 : $this->providerWalletAllocationPlaceholder($funding);
@@ -185,6 +190,7 @@ class GeneratePayCode
                     pay_path: data_get($issued, 'links.pay_path'),
                 ),
                 allocations: $allocation['allocations'] ?? [],
+                stamp_provider: data_get($issued, 'metadata.instructions.metadata.custom.stamp_provider'),
             );
         });
     }

@@ -28,6 +28,7 @@ const props = withDefaults(
         code?: string | null;
         amount: string | number;
         currency: string;
+        provider?: string | null;
         recipient?: string;
         purpose?: string;
         claimOutcome: 'provider_disbursement' | 'account_funding';
@@ -507,6 +508,7 @@ function handleEscape(): void {
                     </div>
 
                     <CockpitPayCodeCanvas
+                        :provider="provider"
                         v-else
                         :amount="amount"
                         :currency="currency"

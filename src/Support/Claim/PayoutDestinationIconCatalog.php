@@ -20,7 +20,7 @@ final class PayoutDestinationIconCatalog
     private static ?array $entries = null;
 
     /**
-     * @return array{slug: string, kind: string, confidence: string, icon_asset: string|null}|null
+     * @return array{slug: string, display_name: string, kind: string, confidence: string, icon_asset: string|null}|null
      */
     public function forCode(mixed $code): ?array
     {
@@ -38,6 +38,7 @@ final class PayoutDestinationIconCatalog
 
         return [
             'slug' => (string) ($entry['slug'] ?? ''),
+            'display_name' => (string) ($entry['display_name'] ?? $normalized),
             'kind' => (string) ($entry['kind'] ?? 'unknown'),
             'confidence' => (string) ($entry['confidence'] ?? 'low'),
             'icon_asset' => $this->publicAssetUrl($entry),

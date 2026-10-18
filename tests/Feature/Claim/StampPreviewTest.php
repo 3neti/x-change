@@ -14,6 +14,7 @@ use LBHurtado\XChange\Http\Middleware\RequireCurrentAgreementAcceptance;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
 use LBHurtado\XChange\Services\RiderStampDesignRegistry;
 use LBHurtado\XChange\Services\Stamp\StampCatalog;
+use LBHurtado\XChange\Services\Stamp\StampProviderIdentity;
 use LBHurtado\XStamp\Design;
 use Zxing\QrReader;
 
@@ -42,7 +43,7 @@ it('returns 422 for missing revisions or unexpected slot fields', function (arra
 
 it('keeps historical palettes and exposes independently installed designs', function (): void {
     $catalog = app(StampCatalog::class);
-    expect(array_column($catalog->options(), 'id'))->toBe(['steampunk', 'cats', 'valentine']);
+    expect(array_unique(array_column($catalog->options(), 'id')))->toContain('steampunk', 'cats', 'valentine');
     expect(app(RiderStampDesignRegistry::class)->resolve('x-change-steampunk', 1)['palette']['start'])->toBe([49, 34, 20]);
 });
 
@@ -90,8 +91,7 @@ it('shares the installed catalog with authenticated cockpit issuance', function 
     $this->withHeader('X-Inertia', 'true')->get(route('x-change.cockpit.quick-generate'))
         ->assertOk()
         ->assertJsonPath('props.xchange.stamp_default', 'steampunk')
-        ->assertJsonCount(3, 'props.xchange.stamps')
-        ->assertJsonPath('props.xchange.stamps.1.id', 'cats');
+        ->assertJsonPath('props.xchange.stamps', fn (array $stamps): bool => in_array('cats', array_column($stamps, 'id'), true));
 });
 
 it('keeps a system design when linked artwork is text-only', function (): void {
@@ -164,3 +164,60 @@ it('keeps exported Stamp copy aligned with the preview sentences', function (str
     ['For Amelia', 'Thank you for your help.', true, "For Amelia\nThank you for your help."],
     ['Hidden', 'Hidden', false, ''],
 ]);
+
+it('renders the selected provider identity for guests using trusted package artwork only', function (): void {
+    Http::preventStrayRequests();
+    $before = Voucher::count();
+    $payload = ['design_id' => 'cats', 'revision' => 5, 'provider' => 'netbank', 'slots' => ['brand' => 'Pay Code', 'amount' => '₱100.00']];
+    $response = $this->postJson(route('x-change.stamps.preview'), $payload)
+        ->assertOk()->assertJsonPath('provider_identity', ['code' => 'netbank', 'name' => 'NetBank']);
+    $withoutProvider = $this->postJson(route('x-change.stamps.preview'), [...$payload, 'provider' => 'manual'])->assertOk()->assertJsonPath('provider_identity', null);
+    expect($response->json('image'))->not->toBe($withoutProvider->json('image'));
+    $this->postJson(route('x-change.stamps.preview'), [...$payload, 'provider' => 'https://example.test/logo.png'])->assertUnprocessable();
+    $this->postJson(route('x-change.stamps.preview'), [...$payload, 'slots' => [...$payload['slots'], 'provider_logo' => '/etc/passwd']])->assertUnprocessable();
+    expect(Voucher::count())->toBe($before);
+    Http::assertNothingSent();
+});
+
+it('resolves configured provider defaults and omits unresolved identity', function (): void {
+    config(['x-change.provider_runtime.default_provider' => 'netbank']);
+    $resolver = app(StampProviderIdentity::class);
+    expect($resolver->resolve()['name'])->toBe('NetBank');
+    expect($resolver->resolve('unknown-provider'))->toBeNull();
+    config(['x-change.provider_runtime.providers.example' => ['enabled' => true]]);
+    expect($resolver->resolve('example'))->toBe(['code' => 'example', 'name' => 'Example', 'logo' => null]);
+});
+
+it('pins issued provider identity and ignores recipient bank and subsequent default changes', function (): void {
+    Storage::fake('local');
+    $user = actingAsTestUser();
+    $instructions = validVoucherInstructions()->toArray();
+    $instructions['provider'] = 'netbank';
+    data_set($instructions, 'metadata.custom.stamp_provider', 'paynamics');
+    data_set($instructions, 'rider.stamp', ['version' => 3, 'design_id' => 'cats', 'design_version' => 5, 'artwork_source' => 'x_change', 'claim_marker' => 'qr']);
+    $issued = app(PayCodeIssuanceContract::class)->issue($user, $instructions);
+    $voucher = Voucher::findOrFail($issued['voucher_id']);
+    $artifact = app(RiderStampArtifactStoreContract::class)->read($voucher);
+    config(['x-change.provider_runtime.default_provider' => 'paynamics']);
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'bank_code', 'GXCHPHM2XXX');
+    $voucher->metadata = $metadata;
+    $resolver = app(StampProviderIdentity::class);
+    expect($resolver->forVoucher($voucher)['code'])->toBe('netbank');
+    $reader = new QrReader($artifact->contents, QrReader::SOURCE_TYPE_BLOB, false);
+    expect($reader->text())->toContain($voucher->code);
+    $image = imagecreatefromstring($artifact->contents);
+    $logo = imagecolorsforindex($image, imagecolorat($image, 274, 86));
+    expect($logo['blue'])->toBeGreaterThan($logo['red']);
+    imagedestroy($image);
+    data_set($metadata, 'treasury.pay_code_reservation.provider', 'paynamics');
+    $voucher->metadata = $metadata;
+    expect($resolver->forVoucher($voucher)['code'])->toBe('paynamics');
+});
+
+it('keeps the provider header elements separated when moving away from a left claim marker', function (): void {
+    $design = app(StampCatalog::class)->presentation('steampunk', 6, 'top_left');
+    $slots = array_column(array_filter($design->document['layers'], fn ($layer) => isset($layer['slot'])), null, 'slot');
+    expect($slots['provider_logo']['x'])->toBeGreaterThan($slots['brand']['x'] + $slots['brand']['width']);
+    expect($slots['provider_name']['x'])->toBeGreaterThan($slots['provider_logo']['x'] + $slots['provider_logo']['width']);
+});

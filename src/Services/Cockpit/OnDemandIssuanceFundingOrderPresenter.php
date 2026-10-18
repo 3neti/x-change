@@ -16,6 +16,7 @@ use LBHurtado\XChange\Models\Checkout;
 use LBHurtado\XChange\Models\IssuanceBatch;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Services\QrArtifactFactory;
+use LBHurtado\XChange\Services\Stamp\StampProviderIdentity;
 use Throwable;
 
 final readonly class OnDemandIssuanceFundingOrderPresenter
@@ -193,6 +194,7 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
 
         return [
             'code' => $voucher->code,
+            'stamp_provider' => app(StampProviderIdentity::class)->forVoucher($voucher)['code'] ?? null,
             'amount' => is_numeric($amount) ? (float) $amount : 0.0,
             'currency' => is_string($currency) && $currency !== '' ? $currency : $order->currency,
             'claim_url' => $claimUrl,

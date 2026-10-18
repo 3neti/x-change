@@ -1525,7 +1525,7 @@ it('resumes an expired issuance-attention order whose provider payment was alrea
 
     $voucher = Voucher::query()->create([
         'code' => 'ODIF-4242',
-        'metadata' => ['source' => 'on_demand_issuance_test'],
+        'metadata' => ['source' => 'on_demand_issuance_test', 'instructions' => ['metadata' => ['custom' => ['stamp_provider' => 'netbank']]]],
     ]);
     $result = new GeneratePayCodeResultData(
         voucher_id: $voucher->getKey(),
@@ -1569,6 +1569,7 @@ it('resumes an expired issuance-attention order whose provider payment was alrea
     $projection = app(OnDemandIssuanceFundingOrderPresenter::class)->present($order->refresh());
     expect(data_get($projection, 'lifecycle.current'))->toBe('pay_code_ready')
         ->and(data_get($projection, 'order.voucher.code'))->toBe('ODIF-4242')
+        ->and(data_get($projection, 'order.voucher.stamp_provider'))->toBe('netbank')
         ->and(data_get($projection, 'order.voucher.amount'))->toBe(50.0)
         ->and(data_get($projection, 'order.voucher.currency'))->toBe('PHP')
         ->and(data_get($projection, 'order.voucher.claim_qr'))->toStartWith('data:image/png;base64,')

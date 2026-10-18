@@ -65,8 +65,8 @@ final class StampCatalog
                 continue;
             }
             if (str_ends_with($position, '_left')) {
-                $layer['x'] = 330;
-                $layer['width'] = min($layer['width'], 820);
+                $layer['x'] = in_array('provider_logo', $design->slots(), true) ? $layer['x'] + 265 : 330;
+                $layer['width'] = min($layer['width'], 1150 - $layer['x']);
             }
             if ($layer['slot'] === 'amount' && $amount !== '') {
                 $size = $layer['size'] ?? 24;

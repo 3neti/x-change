@@ -29,7 +29,7 @@ use LBHurtado\XChange\Services\ResumeProviderProvisioningFromOnboarding;
 use LBHurtado\XChange\Services\VoucherIssuancePayloadNormalizer;
 use LBHurtado\XChange\Tests\Fakes\User;
 
-it('generates a pay code by resolving issuer, estimating cost, allocating revenue, and issuing voucher', function () {
+it('generates a pay code by resolving issuer, estimating cost, allocating revenue, and issuing voucher', function (?string $fundedProvider) {
     config()->set('x-change.commercial.enabled', true);
 
     $issuer = new User;
@@ -83,6 +83,7 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
     );
 
     $issued = [
+        'metadata' => ['instructions' => ['metadata' => ['custom' => ['stamp_provider' => $fundedProvider]]]],
         'voucher_id' => 99,
         'code' => 'TEST-1234',
         'amount' => 100.0,
@@ -124,7 +125,7 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
     $issuance = Mockery::mock(PayCodeIssuanceContract::class);
     $issuance->shouldReceive('issue')
         ->once()
-        ->with($issuer, $normalizedInput)
+        ->with($issuer, $fundedProvider === null ? $normalizedInput : [...$normalizedInput, 'provider' => $fundedProvider])
         ->andReturn($issued);
 
     $allocator = Mockery::mock(InstructionRevenueAllocatorService::class);
@@ -133,7 +134,7 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
     $commercialSales = Mockery::mock(PayCodeCommercialSaleService::class);
     $commercialSales->shouldReceive('post')
         ->once()
-        ->with($issuer, $normalizedInput, $issued, 'manual', $estimate)
+        ->with($issuer, $normalizedInput, $issued, $fundedProvider ?? 'manual', $estimate)
         ->andReturn([
             'debit' => [
                 'id' => 501,
@@ -159,6 +160,7 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
             authority: 'local_ledger',
             availableMinor: 100000,
             requiredMinor: 13100,
+            meta: $fundedProvider === null ? [] : ['provider' => $fundedProvider],
         ));
 
     $action = new GeneratePayCode(
@@ -176,6 +178,7 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
 
     expect($result)->toBeInstanceOf(GeneratePayCodeResultData::class);
     expect($result->voucher_id)->toBe(99);
+    expect($result->stamp_provider)->toBe($fundedProvider);
     expect($result->code)->toBe('TEST-1234');
     expect($result->issuer->id)->toBe(1);
     expect($result->links->redeem)->toBe('https://example.test/disburse?code=TEST-1234');
@@ -189,7 +192,7 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
     expect($result->wallet['balance_after'])->toBe(969.0);
     expect($result->debit->id)->toBe(501);
     expect($result->debit->amount)->toBe(31.0);
-});
+})->with([null, 'netbank']);
 
 it('throws when issuer cannot be resolved', function () {
     $input = ['cash' => ['amount' => 100.0, 'currency' => 'PHP']];

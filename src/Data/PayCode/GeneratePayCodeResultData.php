@@ -27,5 +27,6 @@ class GeneratePayCodeResultData extends Data
         public DebitData $debit,
         public PayCodeLinksData $links,
         public array $allocations = [],
+        public ?string $stamp_provider = null,
     ) {}
 }

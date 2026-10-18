@@ -1010,6 +1010,7 @@ it('hands quick generate mutation requests to the existing issuance action with 
                     redeem: 'https://example.test/r/PC-COCKPIT-001',
                     redeem_path: '/r/PC-COCKPIT-001',
                 ),
+                stamp_provider: 'netbank',
                 allocations: [
                     ['internal' => 'must-not-leak'],
                 ],
@@ -1060,6 +1061,7 @@ it('hands quick generate mutation requests to the existing issuance action with 
         ->assertJsonPath('idempotency.replay_checked', false)
         ->assertJsonPath('idempotency.replayed', false)
         ->assertJsonPath('result.code', 'PC-COCKPIT-001')
+        ->assertJsonPath('result.stamp_provider', 'netbank')
         ->assertJsonPath('result.amount', 25)
         ->assertJsonPath('result.currency', 'PHP')
         ->assertJsonPath('result.links.redeem_path', '/r/PC-COCKPIT-001')

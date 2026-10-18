@@ -2346,6 +2346,13 @@ const resultCode = computed<string | null>(() => {
   return stringValue(dataGet(lastResponse.value, ["result", "code"]));
 });
 
+const resultStampProvider = computed<string>(() => {
+  return (
+    stringValue(dataGet(lastResponse.value, ["result", "stamp_provider"])) ??
+    "manual"
+  );
+});
+
 const resultAmount = computed<string | number>(() => {
   const issuedAmount = dataGet(lastResponse.value, ["result", "amount"]);
 
@@ -4932,6 +4939,7 @@ function handleOnDemandIssued(
     status: "issued",
     result: {
       code: voucher.code,
+      stamp_provider: voucher.stamp_provider,
       amount: voucher.amount,
       currency: voucher.currency,
       links: {
@@ -7350,6 +7358,7 @@ function instructionRecord(
           :rider-design-source="riderStampPreview.source"
           :rider-design-document="riderCanvasArtworkDocument"
           :rider-stamp="riderStampPreview"
+          :provider="provider"
           :claim-qr="beneficiaryClaimQr"
           :claim-entry-artifact="stampClaimEntryArtifact"
           :cost-estimate="livePricingEstimate"
@@ -7425,6 +7434,7 @@ function instructionRecord(
       :rider-design-source="riderStampPreview.source"
       :rider-design-document="riderCanvasArtworkDocument"
       :rider-stamp="riderStampPreview"
+      :provider="resultStampProvider"
       :cost-estimate="issuedCostEstimate"
       :quantity="count"
       :claim-url="beneficiaryClaimUrl"

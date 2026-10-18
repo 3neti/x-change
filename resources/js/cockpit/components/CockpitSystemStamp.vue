@@ -4,6 +4,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 const props = defineProps<{
     designId: string;
     revision: number;
+    provider?: string | null;
     slots: Record<string, string>;
     claimQr?: string | null;
     claimQrLabel?: string;
@@ -22,6 +23,7 @@ const markerStyle = computed(() => ({
 }));
 const emit = defineEmits<{ claimQrClick: [] }>();
 const image = ref('');
+const providerName = ref('');
 const error = ref('');
 const retry = ref(0);
 const loading = ref(false);
@@ -32,6 +34,7 @@ watch(
     () => [
         props.designId,
         props.revision,
+        props.provider,
         props.slots,
         props.position,
         retry.value,
@@ -41,6 +44,7 @@ watch(
         request?.abort();
         const current = ++sequence;
         image.value = '';
+        providerName.value = '';
         error.value = '';
         loading.value = true;
         timer = setTimeout(async () => {
@@ -67,6 +71,7 @@ watch(
                     body: JSON.stringify({
                         design_id: props.designId,
                         revision: props.revision,
+                        ...(props.provider ? { provider: props.provider } : {}),
                         position: props.position ?? 'bottom_right',
                         slots: props.slots,
                     }),
@@ -87,6 +92,9 @@ watch(
                 }
                 if (current === sequence) {
                     image.value = result.image;
+                    providerName.value = props.slots.brand && typeof result.provider_identity?.name === 'string'
+                        ? result.provider_identity.name
+                        : '';
                     const palette = result.marker_palette;
                     markerPalette.value =
                         palette &&
@@ -131,7 +139,7 @@ onBeforeUnmount(() => {
         <img
             v-if="image"
             :src="image"
-            :alt="`${slots.brand}: ${slots.amount}. ${slots.recipient}. ${slots.purpose}. ${slots.expiry || ''}. ${slots.instructions || ''}`"
+            :alt="`${slots.brand}${providerName ? ` · ${providerName}` : ''}: ${slots.amount}. ${slots.recipient}. ${slots.purpose}. ${slots.expiry || ''}. ${slots.instructions || ''}`"
             class="block h-full w-full"
         />
         <div

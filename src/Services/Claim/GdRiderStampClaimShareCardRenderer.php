@@ -21,13 +21,14 @@ use LBHurtado\XChange\Data\Claim\RiderStampRecipientData;
 use LBHurtado\XChange\Services\Cockpit\RiderUrlArtworkPreviewResolver;
 use LBHurtado\XChange\Services\RiderStampDesignRegistry;
 use LBHurtado\XChange\Services\Stamp\StampCatalog;
+use LBHurtado\XChange\Services\Stamp\StampProviderIdentity;
 use LBHurtado\XStamp\Renderer;
 use ReflectionClass;
 use RuntimeException;
 
 final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract, RiderStampClaimCardComposerContract
 {
-    private const string CacheVersion = 'v13';
+    private const string CacheVersion = 'v14';
 
     private const int Width = 1200;
 
@@ -105,7 +106,10 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
             $design = app(StampCatalog::class)->presentation($designId, $designVersion, $rider->stamp?->claim_marker_position?->value ?? 'bottom_right', $formattedAmount);
             $copy = $this->copy->resolve($voucher);
             $recipient = $this->recipient->resolve($voucher);
+            $identity = app(StampProviderIdentity::class)->forVoucher($voucher);
+            $showProvider = $rider->stamp?->show_logo !== false;
             $png = app(Renderer::class)->png($design, [
+                'provider_name' => $showProvider ? ($identity['name'] ?? '') : '',
                 'brand' => $rider->stamp?->show_logo === false ? '' : 'Pay Code',
                 'tagline' => $rider->stamp?->show_tagline === false ? '' : 'The instruction that moves money.',
                 'amount' => $formattedAmount,
@@ -113,7 +117,7 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
                 'purpose' => $copy->plainText(),
                 'expiry' => $voucher->expires_at === null ? 'No expiry' : 'Expires '.$voucher->expires_at->format('M j, Y'),
                 'instructions' => implode(' · ', $this->indicators->resolve($voucher)),
-            ]);
+            ], $showProvider && isset($identity['logo']) ? ['provider_logo' => $identity['logo']] : []);
             imagedestroy($canvas);
             $canvas = imagecreatefromstring($png);
             if (! $canvas instanceof GdImage) {

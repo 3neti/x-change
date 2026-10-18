@@ -128,6 +128,7 @@ describe('Cockpit Quick Generate foundation', () => {
                     .findComponent(CockpitPayCodeCanvas)
                     .props('claimEntryArtifact'),
             ).toEqual(artifact);
+            expect(wrapper.findComponent(CockpitPayCodeCanvas).props('provider')).toBe('netbank');
             wrapper.unmount();
         },
     );

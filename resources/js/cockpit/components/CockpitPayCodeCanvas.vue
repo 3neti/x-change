@@ -29,6 +29,7 @@ const props = withDefaults(
     defineProps<{
         amount: string | number;
         currency: string;
+        provider?: string | null;
         recipient?: string;
         purpose?: string;
         claimOutcome: 'provider_disbursement' | 'account_funding';
@@ -687,6 +688,7 @@ function stringValue(value: unknown): string | null {
             <CockpitSystemStamp
                 :design-id="riderStamp.design.id"
                 :revision="riderStamp.design.version"
+                :provider="provider"
                 :slots="{
                     brand: riderStamp.composition.showLogo ? 'Pay Code' : '',
                     tagline: riderStamp.composition.showTagline

@@ -19,6 +19,7 @@ use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Services\Cockpit\CockpitPosSaleReferenceService;
 use LBHurtado\XChange\Services\Payment\PayCodePaymentLinkResolver;
+use LBHurtado\XChange\Services\Stamp\StampProviderIdentity;
 
 class PayCodeIssuanceService implements PayCodeIssuanceContract
 {
@@ -42,6 +43,14 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
         $instructions = VoucherInstructionsData::createFromAttribs($input);
         $this->restoreCustomMetadata($instructions, $input);
         $this->restorePreparedSplashArtworkSnapshot($instructions, $input);
+        $identity = app(StampProviderIdentity::class)->resolve(data_get($input, 'provider'));
+        $instructions->metadata ??= VoucherMetadataData::from([]);
+        $custom = (array) $instructions->metadata->custom;
+        unset($custom['stamp_provider']);
+        if ($identity !== null) {
+            $custom['stamp_provider'] = $identity['code'];
+        }
+        $instructions->metadata->custom = $custom;
 
         /** @var Authenticatable|null $previousUser */
         $previousUser = Auth::user();
