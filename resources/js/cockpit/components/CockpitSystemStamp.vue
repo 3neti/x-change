@@ -30,10 +30,14 @@ const markerStyle = computed(() =>
           }
         : {},
 );
-const emit = defineEmits<{ claimQrClick: [] }>();
+const emit = defineEmits<{
+    claimQrClick: [];
+    previewError: [failed: boolean];
+}>();
 const image = ref('');
 const providerName = ref('');
 const error = ref('');
+watch(error, (value) => emit('previewError', value !== ''));
 const retry = ref(0);
 const loading = ref(false);
 let timer: ReturnType<typeof setTimeout> | undefined;
@@ -185,7 +189,7 @@ onBeforeUnmount(() => {
             </p>
             <button
                 type="button"
-                class="mt-2 rounded border px-3 py-1"
+                class="relative z-20 mt-2 rounded border px-3 py-1"
                 @click="retry++"
             >
                 Try Again

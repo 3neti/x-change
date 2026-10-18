@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { PayCodeStampPreviewState } from "../payCodeStampPreview";
 import { Link } from "@inertiajs/vue3";
 import { Landmark } from "lucide-vue-next";
 import { computed, nextTick, ref } from "vue";
@@ -97,6 +98,7 @@ const displaySession = ref(props.display_session ?? null);
 const submitPanelElement = ref<InstanceType<
   typeof CockpitQuickGenerateSubmitPanel
 > | null>(null);
+const llmStampPreview = ref<PayCodeStampPreviewState | null>(null);
 const restoreLlmAfterCostPreview = ref(false);
 const restoreLlmAfterIssuance = ref(false);
 
@@ -109,27 +111,29 @@ async function beginPublicIssuance(trigger: HTMLButtonElement): Promise<void> {
   await submitPanelElement.value?.openAmountCalculator(trigger);
 }
 
-async function applyLlmInstructions(
-  instructions: Record<string, unknown>,
-): Promise<void> {
-  issuanceSurface.value = "composer";
-  await nextTick();
-  submitPanelElement.value?.applyInstructionBlueprint(instructions, false);
+function applyLlmInstructions(instructions: Record<string, unknown>): void {
+  submitPanelElement.value?.applyLlmInstructionBlueprint(instructions);
 }
 
-async function activateLlmIssuance(
-  instructions: Record<string, unknown>,
-): Promise<void> {
+function beginReviewedLlmIssuance(): void {
+  restoreLlmAfterCostPreview.value = false;
   restoreLlmAfterIssuance.value = true;
-  await applyLlmInstructions(instructions);
-  await nextTick();
-  await submitPanelElement.value?.submit();
+  issuanceSurface.value = "composer";
+}
+
+function showReviewedOrderErrors(): void {
+  if (!restoreLlmAfterIssuance.value) {
+    return;
+  }
+  restoreLlmAfterIssuance.value = false;
+  issuanceSurface.value = "composer";
 }
 
 async function showLlmCostPreview(): Promise<void> {
   restoreLlmAfterCostPreview.value = true;
+  issuanceSurface.value = "composer";
   await nextTick();
-  await submitPanelElement.value?.openCostPreview();
+  await submitPanelElement.value?.openCostPreview(true);
 }
 
 function restoreLlmWorkspace(): void {
@@ -1281,7 +1285,7 @@ function stringValue(value: unknown): string | null {
         data-testid="cockpit-quick-generate-primary-workflow-stack"
       >
         <CockpitQuickGenerateSubmitPanel
-          v-if="issuanceSurface === 'composer' || restoreLlmAfterIssuance"
+          v-if="issuanceSurface === 'composer' || issuanceSurface === 'llm' || restoreLlmAfterIssuance"
           v-show="issuanceSurface === 'composer' && !restoreLlmAfterIssuance"
           ref="submitPanelElement"
           v-model:issuance-surface="issuanceSurface"
@@ -1323,19 +1327,23 @@ function stringValue(value: unknown): string | null {
           :available-surfaces="availableSurfaces"
           :prompt-composer-endpoint="props.prompt_interpret_endpoint"
           :templates="templates"
+          @stamp-preview="llmStampPreview = $event"
+          @review-issue="beginReviewedLlmIssuance"
+          @submit-error="showReviewedOrderErrors"
           @reset-turnstile="publicTurnstileWidget?.reset()"
           @cost-preview-closed="restoreLlmWorkspace"
           @funding-flow-closed="restoreLlmAfterIssuanceFlow"
         />
         <CockpitQuickGenerateLlmPanel
-          v-if="issuanceSurface === 'llm' || restoreLlmAfterIssuance"
+          v-if="issuanceSurface === 'llm' || restoreLlmAfterIssuance || restoreLlmAfterCostPreview"
+          v-show="issuanceSurface === 'llm'"
+          :stamp-preview="llmStampPreview"
           :issuance-surface="issuanceSurface"
           :composer-view="props.composer_view ?? 'prompt'"
           :available-surfaces="availableSurfaces"
           :prompt-composer-endpoint="props.prompt_interpret_endpoint"
           @update:issuance-surface="issuanceSurface = $event"
           @interpreted="applyLlmInstructions"
-          @activate="activateLlmIssuance"
           @show-cost="showLlmCostPreview"
         />
         <CockpitQuickGeneratePosPanel

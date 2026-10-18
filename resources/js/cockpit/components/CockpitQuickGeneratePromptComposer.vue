@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import CockpitPayCodeCanvas from "./CockpitPayCodeCanvas.vue";
+import type { PayCodeStampPreviewState } from "../payCodeStampPreview";
 import { Mic, MicOff } from "lucide-vue-next";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
@@ -28,6 +30,8 @@ declare global {
 
 const props = defineProps<{
   endpoint?: string;
+  reviewOnly?: boolean;
+  stampPreview?: PayCodeStampPreviewState | null;
 }>();
 
 const emit = defineEmits<{
@@ -54,6 +58,10 @@ const promptHints = [
 let interpretationTimer: ReturnType<typeof setTimeout> | null = null;
 let hintTimer: ReturnType<typeof setInterval> | null = null;
 let speechRecognition: SpeechRecognitionInstance | null = null;
+let interpretationRequest: AbortController | null = null;
+let interpretationSequence = 0;
+const hasInterpretedDraft = ref(false);
+const stampPreviewFailed = ref(false);
 
 const instructions = computed<Record<string, unknown> | null>(() => {
   const value = result.value?.instructions;
@@ -70,12 +78,14 @@ const summary = computed<string[]>(() => {
     return [];
   }
 
-  const amount = data.cash && typeof data.cash === "object"
-    ? (data.cash as Record<string, unknown>).amount
-    : null;
-  const fields = data.inputs && typeof data.inputs === "object"
-    ? (data.inputs as Record<string, unknown>).fields
-    : [];
+  const amount =
+    data.cash && typeof data.cash === "object"
+      ? (data.cash as Record<string, unknown>).amount
+      : null;
+  const fields =
+    data.inputs && typeof data.inputs === "object"
+      ? (data.inputs as Record<string, unknown>).fields
+      : [];
   const icons = Array.isArray(fields)
     ? fields.map((field) => instructionIcon(String(field))).join(" ")
     : "";
@@ -93,21 +103,26 @@ const estimatedCost = computed<string>(() => {
       ? (pricing as Record<string, unknown>).account_debit
       : null;
 
-  return typeof accountDebit === "number"
-    ? `₱${accountDebit.toFixed(2)}`
-    : "—";
+  return typeof accountDebit === "number" ? `₱${accountDebit.toFixed(2)}` : "—";
 });
 
 const clarification = computed<string>(() => {
   const clarifications = result.value?.clarifications;
 
   return Array.isArray(clarifications)
-    ? clarifications.filter((value): value is string => typeof value === "string").join(" ")
+    ? clarifications
+        .filter((value): value is string => typeof value === "string")
+        .join(" ")
     : "";
 });
 
-const isReady = computed<boolean>(() => result.value?.status === "ready" && instructions.value !== null);
-const canSubmit = computed<boolean>(() => !busy.value && isReady.value && !draftApplied.value);
+const isReady = computed<boolean>(
+  () => result.value?.status === "ready" && instructions.value !== null,
+);
+const canSubmit = computed<boolean>(
+  () =>
+    !busy.value && isReady.value && (props.reviewOnly || !draftApplied.value),
+);
 const buttonLabel = computed<string>(() => {
   if (busy.value) {
     return "Checking…";
@@ -117,7 +132,10 @@ const buttonLabel = computed<string>(() => {
     return summary.value.join(" · ");
   }
 
-  if (result.value?.status === "needs_clarification" || clarification.value !== "") {
+  if (
+    result.value?.status === "needs_clarification" ||
+    clarification.value !== ""
+  ) {
     return "Needs details";
   }
 
@@ -128,18 +146,22 @@ const buttonLabel = computed<string>(() => {
   return "Describe Pay Code";
 });
 
-const emptyStateLabel = computed<string>(() => promptHints[hintIndex.value] ?? promptHints[0]);
+const emptyStateLabel = computed<string>(
+  () => promptHints[hintIndex.value] ?? promptHints[0],
+);
 
 function instructionIcon(field: string): string {
-  return {
-    signature: "✍️",
-    selfie: "📸",
-    location: "📍",
-    otp: "🔐",
-    kyc: "🪪",
-    name: "👤",
-    address: "📍",
-  }[field.toLowerCase()] ?? "•";
+  return (
+    {
+      signature: "✍️",
+      selfie: "📸",
+      location: "📍",
+      otp: "🔐",
+      kyc: "🪪",
+      name: "👤",
+      address: "📍",
+    }[field.toLowerCase()] ?? "•"
+  );
 }
 
 function clearInterpretationTimer(): void {
@@ -197,6 +219,12 @@ function submitVoiceCommand(transcript: string): boolean {
 }
 
 function showCostPreview(): void {
+  if (props.reviewOnly) {
+    if (canSubmit.value) {
+      emit("show-cost");
+    }
+    return;
+  }
   if (isReady.value && instructions.value !== null && !draftApplied.value) {
     emit("interpreted", instructions.value);
     draftApplied.value = true;
@@ -216,40 +244,77 @@ async function interpret(apply = false): Promise<void> {
   }
 
   busy.value = true;
+  interpretationRequest?.abort();
+  interpretationRequest = new AbortController();
+  const current = ++interpretationSequence;
 
   try {
     const response = await fetch(props.endpoint ?? "", {
       method: "POST",
+      signal: interpretationRequest.signal,
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        "X-CSRF-TOKEN": document
-          .querySelector('meta[name="csrf-token"]')
-          ?.getAttribute("content") ?? "",
+        "X-CSRF-TOKEN":
+          document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute("content") ?? "",
       },
       body: JSON.stringify({ prompt: prompt.value }),
     });
     const payload = (await response.json()) as Record<string, unknown>;
 
+    if (current !== interpretationSequence) {
+      return;
+    }
+
     if (!response.ok) {
-      throw new Error(String(payload.message ?? "Unable to interpret this prompt."));
+      throw new Error(
+        String(payload.message ?? "Unable to interpret this prompt."),
+      );
     }
 
     result.value = payload;
 
-    if (apply && isReady.value && instructions.value !== null) {
+    if (
+      (apply || props.reviewOnly) &&
+      isReady.value &&
+      instructions.value !== null
+    ) {
       emit("interpreted", instructions.value);
       draftApplied.value = true;
+      hasInterpretedDraft.value = true;
+      if (apply && props.reviewOnly) {
+        emit("show-cost");
+      }
     }
   } catch (caught) {
-    error.value = caught instanceof Error ? caught.message : "Unable to interpret this prompt.";
+    if (
+      current !== interpretationSequence ||
+      (caught instanceof DOMException && caught.name === "AbortError")
+    ) {
+      return;
+    }
+    error.value =
+      caught instanceof Error
+        ? caught.message
+        : "Unable to interpret this prompt.";
     result.value = null;
   } finally {
-    busy.value = false;
+    if (current === interpretationSequence) {
+      busy.value = false;
+    }
   }
 }
 
 function submit(): void {
+  if (props.reviewOnly && busy.value) {
+    return;
+  }
+  if (props.reviewOnly && canSubmit.value) {
+    emit("show-cost");
+    return;
+  }
   if (canSubmit.value && instructions.value !== null) {
     draftApplied.value = true;
     emit("activate", instructions.value);
@@ -260,22 +325,34 @@ function submit(): void {
   void interpret(true);
 }
 
-watch(prompt, () => {
+watch(
+  prompt,
+  () => {
+    clearInterpretationTimer();
+    interpretationSequence++;
+    interpretationRequest?.abort();
+    busy.value = false;
+    result.value = null;
+    error.value = "";
+    draftApplied.value = false;
+
+    if (prompt.value.trim() === "") {
+      return;
+    }
+
+    busy.value = true;
+    interpretationTimer = setTimeout(() => {
+      void interpret();
+    }, 450);
+  },
+  { flush: "sync" },
+);
+
+onBeforeUnmount(() => {
   clearInterpretationTimer();
-  result.value = null;
-  error.value = "";
-  draftApplied.value = false;
-
-  if (prompt.value.trim() === "") {
-    return;
-  }
-
-  interpretationTimer = setTimeout(() => {
-    void interpret();
-  }, 450);
+  interpretationSequence++;
+  interpretationRequest?.abort();
 });
-
-onBeforeUnmount(clearInterpretationTimer);
 
 onMounted(() => {
   const SpeechRecognition =
@@ -350,10 +427,16 @@ onBeforeUnmount(() => {
         <button
           type="button"
           class="absolute right-2 top-1/2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-violet-600 transition hover:bg-violet-100 hover:text-violet-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-violet-300 dark:hover:bg-violet-900/40 dark:hover:text-violet-100"
-          :aria-label="voiceListening ? 'Stop voice input' : 'Start voice input'"
+          :aria-label="
+            voiceListening ? 'Stop voice input' : 'Start voice input'
+          "
           :aria-pressed="voiceListening"
           :disabled="!voiceSupported"
-          :title="voiceSupported ? 'Use voice input' : 'Voice input is unavailable in this browser'"
+          :title="
+            voiceSupported
+              ? 'Use voice input'
+              : 'Voice input is unavailable in this browser'
+          "
           data-testid="cockpit-quick-generate-prompt-microphone"
           @click="toggleVoiceInput"
         >
@@ -362,6 +445,7 @@ onBeforeUnmount(() => {
         </button>
       </div>
       <button
+        v-if="!reviewOnly"
         type="button"
         class="min-w-36 rounded-xl bg-violet-600 px-4 py-3 text-xs font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-45"
         :disabled="!canSubmit"
@@ -371,6 +455,53 @@ onBeforeUnmount(() => {
         {{ buttonLabel }}
       </button>
     </div>
+    <section
+      v-if="reviewOnly"
+      class="relative mt-3 overflow-hidden rounded-2xl border border-violet-200 bg-white dark:border-violet-800 dark:bg-slate-950"
+      data-testid="llm-stamp-action-card"
+      :aria-busy="busy"
+    >
+      <CockpitPayCodeCanvas
+        v-if="hasInterpretedDraft && stampPreview"
+        v-bind="stampPreview"
+        preview-only
+        @preview-error="stampPreviewFailed = $event"
+      />
+      <div
+        v-else
+        class="grid aspect-[1200/630] w-full place-items-center bg-violet-50 p-6 text-center text-sm text-violet-900 dark:bg-violet-950 dark:text-violet-100"
+        data-testid="llm-stamp-placeholder"
+      >
+        Describe a Pay Code to see its stamp.
+      </div>
+      <p
+        v-if="busy"
+        role="status"
+        class="px-4 pt-3 text-xs text-muted-foreground"
+      >
+        Updating your Order and stamp…
+      </p>
+      <p
+        v-else-if="!isReady && hasInterpretedDraft"
+        role="status"
+        class="px-4 pt-3 text-xs text-muted-foreground"
+      >
+        Previous preview shown. Complete your prompt before reviewing.
+      </p>
+      <button
+        type="button"
+        class="flex w-full items-center justify-between gap-3 bg-violet-600 px-4 py-3 text-left text-sm font-semibold text-white after:absolute after:inset-0 after:z-10 after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-white disabled:cursor-not-allowed disabled:bg-violet-400"
+        :class="{ 'after:hidden': stampPreviewFailed }"
+        :disabled="!canSubmit"
+        data-testid="cockpit-quick-generate-prompt-go"
+        @click="submit"
+      >
+        <span>Review Order</span
+        ><span class="text-xs font-normal"
+          >Estimated total {{ isReady && !busy ? estimatedCost : "—" }}</span
+        >
+      </button>
+    </section>
     <p
       v-if="error"
       class="mt-2 px-1 text-xs text-rose-700 dark:text-rose-300"
@@ -395,7 +526,7 @@ onBeforeUnmount(() => {
       {{ emptyStateLabel }}
     </button>
     <p
-      v-else-if="isReady"
+      v-else-if="isReady && !reviewOnly"
       class="mt-2 px-1 text-xs font-medium text-emerald-700 dark:text-emerald-300"
       data-testid="cockpit-quick-generate-prompt-result"
     >
@@ -404,7 +535,7 @@ onBeforeUnmount(() => {
         class="text-left underline decoration-dotted underline-offset-2 transition hover:text-emerald-900 dark:hover:text-emerald-100"
         @click="showCostPreview"
       >
-      Estimated Cost {{ estimatedCost }}
+        Estimated Cost {{ estimatedCost }}
       </button>
     </p>
   </section>

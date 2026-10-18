@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { PayCodeStampPreviewState } from "../payCodeStampPreview";
 import CockpitStampDesigner from './CockpitStampDesigner.vue';
 import { defaultStampPresentation, changeStampPresentation } from '../stampQrPresentation';
 import type { StampDesignOption, StampPresentation, StampOptions } from '../stampQrPresentation';
@@ -230,6 +231,8 @@ const emit = defineEmits<{
   resetTurnstile: [];
   costPreviewClosed: [];
   fundingFlowClosed: [];
+  stampPreview: [value: PayCodeStampPreviewState];
+  reviewIssue: [];
 }>();
 
 type VoucherInputFieldOption = {
@@ -952,6 +955,9 @@ onBeforeUnmount((): void => {
 
 async function focusAmountEditor(): Promise<void> {
   await nextTick();
+  if (props.issuanceSurface !== "composer") {
+    return;
+  }
   amountInputElement.value?.focus();
 }
 
@@ -962,7 +968,7 @@ async function openAmountCalculator(
   amountInputElement.value?.open(returnFocusTo);
 }
 
-defineExpose({ openAmountCalculator, applyInstructionBlueprint, openCostPreview, submit });
+defineExpose({ openAmountCalculator, applyInstructionBlueprint, applyLlmInstructionBlueprint, openCostPreview, submit });
 
 watch(
   selectedTemplate,
@@ -1222,7 +1228,10 @@ async function openDesignEditor(): Promise<void> {
   });
 }
 
-async function openCostPreview(): Promise<void> {
+const reviewIssueAvailable = ref(false);
+
+async function openCostPreview(allowIssue = false): Promise<void> {
+  reviewIssueAvailable.value = allowIssue;
   canvasView.value = "cost";
   await nextTick();
   costPreviewOpen.value = true;
@@ -1235,6 +1244,7 @@ async function openCostPreview(): Promise<void> {
 }
 
 function closeCostPreview(): void {
+  reviewIssueAvailable.value = false;
   costPreviewOpen.value = false;
   emit("costPreviewClosed");
 }
@@ -1493,6 +1503,34 @@ function applyRiderSplashLibraryPayload(
   riderSplashMetaSanitized.value = meta.sanitized === true;
   riderSplashMetaProfile.value =
     typeof meta.html_profile === "string" ? meta.html_profile : "";
+}
+
+function applyLlmInstructionBlueprint(instructions: Record<string, unknown>): void {
+  const rider = (instructions.rider ?? {}) as Record<string, unknown>;
+  const metadata = (instructions.metadata ?? {}) as Record<string, unknown>;
+  const custom = (metadata.custom ?? {}) as Record<string, unknown>;
+  applyInstructionBlueprint({
+    ...instructions,
+    rider: { ...rider, stamp: riderSummary.value.stamp },
+    metadata: {
+      ...metadata,
+      custom: {
+        ...custom,
+        ...(stampPresentation.value ? { stamp_presentation: stampPresentation.value } : {}),
+      },
+    },
+  }, false);
+}
+
+async function issueReviewedOrder(): Promise<void> {
+  if (!canSubmit.value || processing.value) {
+    return;
+  }
+  reviewIssueAvailable.value = false;
+  costPreviewOpen.value = false;
+  emit("reviewIssue");
+  await nextTick();
+  await submit();
 }
 
 function applyInstructionBlueprint(
@@ -6282,6 +6320,17 @@ function instructionRecord(
     ? (value as Record<string, unknown>)
     : {};
 }
+const stampPreviewProjection = computed<PayCodeStampPreviewState>(() => ({
+  amount: amount.value, currency: currency.value, provider: provider.value,
+  recipient: payeeDisplayReference.value, purpose: purpose.value,
+  claimOutcome: claimOutcome.value, voucherType: voucherType.value,
+  expiry: canvasExpiryLabel.value, instructionKeys: canvasInstructionKeys.value,
+  hasRiderDesign: usesRiderArtwork.value, riderDesignSource: riderStampPreview.value.source,
+  riderDesignDocument: riderCanvasArtworkDocument.value, riderStamp: riderStampPreview.value,
+  stampPresentation: stampPresentation.value, claimEntryArtifact: stampClaimEntryArtifact.value,
+  quantity: count.value,
+}));
+watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediate: true });
 </script>
 
 <template>
@@ -7382,6 +7431,7 @@ function instructionRecord(
         </button>
         <CockpitPayCodeCanvas
           v-model:view="canvasView"
+          :render-stamp="issuanceSurface === 'composer' || costPreviewOpen"
           :amount="amount"
           :currency="currency"
           :recipient="payeeDisplayReference"
@@ -7425,6 +7475,9 @@ function instructionRecord(
             />
           </template>
         </CockpitPayCodeCanvas>
+        <div v-if="costPreviewOpen && reviewIssueAvailable" class="mt-4 flex justify-end border-t pt-4">
+          <button type="button" data-testid="llm-reviewed-order-issue" class="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50" :disabled="!canSubmit || processing" @click="issueReviewedOrder">{{ issueActionLabel }}</button>
+        </div>
         </div>
       </Teleport>
     </div>

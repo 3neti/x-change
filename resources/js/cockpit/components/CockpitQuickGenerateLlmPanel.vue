@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { PayCodeStampPreviewState } from "../payCodeStampPreview";
 import { Sparkles } from "lucide-vue-next";
 import CockpitQuickGeneratePromptComposer from "./CockpitQuickGeneratePromptComposer.vue";
 import CockpitQuickGenerateSurfaceSwitch from "./CockpitQuickGenerateSurfaceSwitch.vue";
@@ -6,6 +7,7 @@ import type { CockpitQuickGenerateSurface } from "./CockpitQuickGenerateSurfaceS
 
 withDefaults(
   defineProps<{
+    stampPreview?: PayCodeStampPreviewState | null;
     issuanceSurface?: CockpitQuickGenerateSurface;
     composerView?: "prompt" | "standard";
     promptComposerEndpoint?: string;
@@ -39,9 +41,12 @@ const emit = defineEmits<{
             Describe a Pay Code
           </h3>
         </div>
-        <p class="mt-1 max-w-2xl text-sm leading-5 text-slate-600 dark:text-slate-300">
+        <p
+          class="mt-1 max-w-2xl text-sm leading-5 text-slate-600 dark:text-slate-300"
+        >
           Describe the amount and claim requirements in plain language. We will
-          apply the interpreted instructions to the Composer before issuing.
+          update your Order and stamp as the instructions become ready. Review
+          the cost before issuing.
         </p>
       </div>
       <CockpitQuickGenerateSurfaceSwitch
@@ -52,7 +57,8 @@ const emit = defineEmits<{
       />
     </div>
     <CockpitQuickGeneratePromptComposer
-      :initial-view="composerView"
+      review-only
+      :stamp-preview="stampPreview"
       :endpoint="promptComposerEndpoint"
       @interpreted="emit('interpreted', $event)"
       @activate="emit('activate', $event)"
