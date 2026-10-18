@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Http\Controllers\PublicIssuance\PublicIssuanceDiscoveryController;
 use LBHurtado\XChange\Http\Controllers\Web\BalancePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Checkout\CheckoutConsoleController;
+use LBHurtado\XChange\Http\Controllers\Web\Checkout\OperationsPricingController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimApprovalOtpController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimApprovalPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimAuthorizationRequiredController;
@@ -222,8 +223,11 @@ Route::middleware(['web', ShareXChangeBranding::class])->group(function (): void
 
 Route::prefix('x/operations')->middleware(['web', ShareXChangeBranding::class])->group(function (): void {
     Route::get('/', [CheckoutConsoleController::class, 'show'])->name('x-change.operations.show');
-    Route::get('pricing', static fn () => redirect()->route('x-change.cockpit.commercial.index'))
+    Route::get('pricing', [OperationsPricingController::class, 'show'])
         ->name('x-change.operations.pricing');
+    Route::post('pricing', [OperationsPricingController::class, 'update'])
+        ->middleware('throttle:12,1,checkout-console-pricing:')
+        ->name('x-change.operations.pricing.update');
     Route::post('unlock', [CheckoutConsoleController::class, 'unlock'])
         ->middleware('throttle:5,1,checkout-console-unlock:')->name('x-change.operations.unlock');
     Route::post('lock', [CheckoutConsoleController::class, 'lock'])->name('x-change.operations.lock');
