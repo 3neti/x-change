@@ -2,12 +2,13 @@ import { mount, flushPromises } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Canvas from '../../../resources/js/cockpit/components/CockpitPayCodeCanvas.vue';
 import { resolveRiderStampPreview } from '../../../resources/js/cockpit/riderStampPreview';
-import Stamp from '../../../resources/js/cockpit/components/CockpitSystemStamp.vue';
+import Stamp, { stampPreviewCache } from '../../../resources/js/cockpit/components/CockpitSystemStamp.vue';
 import { presentStampQr } from '../../../resources/js/cockpit/stampQrPresentation';
 vi.mock('../../../resources/js/cockpit/stampQrPresentation', () => ({
     presentStampQr: vi.fn(async (source: string) => source),
 }));
 afterEach(() => {
+    stampPreviewCache.clear();
     vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.mocked(presentStampQr).mockReset().mockImplementation(async (source) => source);
@@ -202,13 +203,10 @@ it('rerenders expiration and input requirements through the shared Pay Code canv
     await wrapper.setProps({ expiry: 'No Expiration', instructionKeys: [] });
     await vi.advanceTimersByTimeAsync(350);
     await flushPromises();
-    expect(JSON.parse(fetch.mock.calls[2][1].body).slots).toMatchObject({
-        expiry: 'No Expiration',
-        instructions: 'Receive Funds',
-    });
+    expect(fetch).toHaveBeenCalledTimes(2);
     expect(
         wrapper.get('[data-testid="system-stamp"] img').attributes('src'),
-    ).toBe('data:image/png;base64,cleared');
+    ).toBe('data:image/png;base64,initial');
     wrapper.unmount();
 });
 
@@ -492,4 +490,31 @@ it('exposes readable hover hints on the rendered claim requirement icons', async
     wrapper.unmount();
     vi.useRealTimers();
     vi.unstubAllGlobals();
+});
+
+it('reuses a completed thumbnail immediately, invalidates changed inputs, and expires previews', async () => {
+    vi.useFakeTimers();
+    const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ image: 'data:image/png;base64,cached' }) });
+    vi.stubGlobal('fetch', fetch);
+    const props = { designId: 'cats', revision: 7, slots: { amount: '₱500' } };
+    const thumbnail = mount(Stamp, { props });
+    await vi.advanceTimersByTimeAsync(350);
+    await flushPromises();
+    const viewer = mount(Stamp, { props });
+    expect(viewer.get('img').attributes('src')).toBe('data:image/png;base64,cached');
+    expect(viewer.find('[role="status"]').exists()).toBe(false);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await viewer.setProps({ slots: { amount: '₱700' }, indicatorKeys: ['input.selfie'] });
+    await vi.advanceTimersByTimeAsync(350);
+    await flushPromises();
+    expect(fetch).toHaveBeenCalledTimes(2);
+    viewer.unmount();
+    thumbnail.unmount();
+    await vi.advanceTimersByTimeAsync(60_000);
+    const expired = mount(Stamp, { props });
+    expect(expired.find('img').exists()).toBe(false);
+    await vi.advanceTimersByTimeAsync(350);
+    await flushPromises();
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expired.unmount();
 });

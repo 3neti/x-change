@@ -1,3 +1,14 @@
+<script lang="ts">
+interface StampPreviewResult {
+    image: string;
+    provider_identity?: { name?: string };
+    marker_bounds?: { x: number; y: number; width: number; height: number };
+    requirements?: { keys: string[]; bounds?: { x: number; y: number } };
+}
+
+// Page-memory only: never persist voucher instructions or rendered images to storage.
+export const stampPreviewCache = new Map<string, { expires: number; result: StampPreviewResult }>();
+</script>
 <script setup lang="ts">
 import { preview } from '@/routes/x-change/stamps';
 import { resolvePayCodeIndicator } from '../payCodeIndicators';
@@ -46,6 +57,29 @@ const loading = ref(false);
 let timer: ReturnType<typeof setTimeout> | undefined;
 let request: AbortController | undefined;
 let sequence = 0;
+function applyPreview(result: StampPreviewResult): void {
+    image.value = result.image;
+    providerName.value =
+        props.slots.brand &&
+        typeof result.provider_identity?.name === 'string'
+            ? result.provider_identity.name
+            : '';
+    markerBounds.value = result.marker_bounds ?? null;
+    const requirements = result.requirements;
+    const bounds = requirements?.bounds;
+    requirementOverlays.value = bounds && Array.isArray(requirements.keys)
+        ? requirements.keys.map((key: string, index: number) => {
+            const indicator = resolvePayCodeIndicator(key);
+            return {
+                key, label: indicator.label, tooltip: indicator.tooltip,
+                style: {
+                    left: `${(bounds.x + index * 48) / 12}%`,
+                    top: `${bounds.y / 6.3}%`,
+                    width: `${40 / 12}%`, height: `${40 / 6.3}%`,
+                },
+            };
+        }) : [];
+}
 watch(
     () => [
         props.designId,
@@ -64,6 +98,25 @@ watch(
         request?.abort();
         const current = ++sequence;
         error.value = '';
+        const payload = {
+            design_id: props.designId,
+            revision: props.revision,
+            ...(props.provider ? { provider: props.provider } : {}),
+            position: props.position ?? 'bottom_right',
+            slots: props.slots,
+            indicator_keys: props.indicatorKeys ?? [],
+            presentation: props.stampPresentation ?? undefined,
+            marker: props.marker ?? 'qr',
+            code: props.code || undefined,
+        };
+        const cacheKey = JSON.stringify(payload);
+        const cached = stampPreviewCache.get(cacheKey);
+        if (cached && cached.expires > Date.now()) {
+            applyPreview(cached.result);
+            loading.value = false;
+            return;
+        }
+        stampPreviewCache.delete(cacheKey);
         loading.value = true;
         timer = setTimeout(async () => {
             request = new AbortController();
@@ -86,17 +139,7 @@ watch(
                               }
                             : {}),
                     },
-                    body: JSON.stringify({
-                        design_id: props.designId,
-                        revision: props.revision,
-                        ...(props.provider ? { provider: props.provider } : {}),
-                        position: props.position ?? 'bottom_right',
-                        slots: props.slots,
-                        indicator_keys: props.indicatorKeys ?? [],
-                        presentation: props.stampPresentation ?? undefined,
-                        marker: props.marker ?? 'qr',
-                        code: props.code || undefined,
-                    }),
+                    body: JSON.stringify(payload),
                 });
                 const result = await response.json().catch(() => ({
                     message: 'Stamp preview unavailable. Please try again.',
@@ -113,26 +156,11 @@ watch(
                     throw new Error('Stamp preview unavailable.');
                 }
                 if (current === sequence) {
-                    image.value = result.image;
-                    providerName.value =
-                        props.slots.brand &&
-                        typeof result.provider_identity?.name === 'string'
-                            ? result.provider_identity.name
-                            : '';
-                    markerBounds.value = result.marker_bounds ?? null;
-                    const requirements = result.requirements;
-                    requirementOverlays.value = requirements?.bounds && Array.isArray(requirements.keys)
-                        ? requirements.keys.map((key: string, index: number) => {
-                            const indicator = resolvePayCodeIndicator(key);
-                            return {
-                                key, label: indicator.label, tooltip: indicator.tooltip,
-                                style: {
-                                    left: `${(requirements.bounds.x + index * 48) / 12}%`,
-                                    top: `${requirements.bounds.y / 6.3}%`,
-                                    width: `${40 / 12}%`, height: `${40 / 6.3}%`,
-                                },
-                            };
-                        }) : [];
+                    stampPreviewCache.set(cacheKey, { expires: Date.now() + 60_000, result });
+                    while (stampPreviewCache.size > 8) {
+                        stampPreviewCache.delete(stampPreviewCache.keys().next().value!);
+                    }
+                    applyPreview(result);
                 }
             } catch (failure) {
                 if (

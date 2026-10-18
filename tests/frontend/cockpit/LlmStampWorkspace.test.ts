@@ -3,6 +3,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import QuickGenerate from '../../../resources/js/cockpit/pages/QuickGenerate.vue';
 import SubmitPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateSubmitPanel.vue';
 import Prompt from '../../../resources/js/cockpit/components/CockpitQuickGeneratePromptComposer.vue';
+import { stampPreviewCache } from '../../../resources/js/cockpit/components/CockpitSystemStamp.vue';
 import Canvas from '../../../resources/js/cockpit/components/CockpitPayCodeCanvas.vue';
 
 vi.mock('@inertiajs/vue3', () => ({
@@ -41,6 +42,7 @@ vi.mock('@inertiajs/vue3', () => ({
     }),
 }));
 afterEach(() => {
+    stampPreviewCache.clear();
     vi.useRealTimers();
     vi.unstubAllGlobals();
 });

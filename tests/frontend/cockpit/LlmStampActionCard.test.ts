@@ -249,3 +249,10 @@ it('renders a stamp-only canvas without tabs or QR actions at the original aspec
     ).toBe(false);
     expect(wrapper.find('img').exists()).toBe(true);
 });
+
+it('focuses the LLM input when its workspace mounts without scrolling the page', () => {
+    const focus = vi.spyOn(HTMLInputElement.prototype, 'focus');
+    mountPrompt();
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    focus.mockRestore();
+});

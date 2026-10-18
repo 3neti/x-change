@@ -356,6 +356,9 @@ onBeforeUnmount(() => {
 });
 
 onMounted(() => {
+  if (props.reviewOnly) {
+    promptInput.value?.focus({ preventScroll: true });
+  }
   const SpeechRecognition =
     window.SpeechRecognition ?? window.webkitSpeechRecognition;
 
