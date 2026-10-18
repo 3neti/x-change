@@ -15,6 +15,7 @@ const props = defineProps<{
 }>();
 const markerPalette = ref({ paper: '#FFFFFF', trim: '#FFFFFF' });
 const markerStyle = computed(() => ({
+    opacity: 0.9,
     backgroundColor: markerPalette.value.paper,
     border: `2px solid ${markerPalette.value.trim}`,
     width: props.marker === 'code' ? '20.833%' : '15.833%',

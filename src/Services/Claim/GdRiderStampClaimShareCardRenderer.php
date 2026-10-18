@@ -28,7 +28,7 @@ use RuntimeException;
 
 final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract, RiderStampClaimCardComposerContract
 {
-    private const string CacheVersion = 'v15';
+    private const string CacheVersion = 'v16';
 
     private const int Width = 1200;
 
@@ -1171,6 +1171,11 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         $boxWidth = $showQr ? 190 : 250;
         $boxHeight = $showQr ? ($showCode ? 226 : 190) : 62;
         [$x, $y] = $this->markerPosition($position, $boxWidth, $boxHeight);
+        $underlay = null;
+        if ($markerPalette !== null) {
+            $underlay = imagecreatetruecolor($boxWidth + 1, $boxHeight + 1);
+            imagecopy($underlay, $canvas, 0, 0, $x, $y, $boxWidth + 1, $boxHeight + 1);
+        }
 
         if ($showQr) {
             $qr = $this->imageFromDataUrl($this->claimQr->render($claimUrl));
@@ -1218,6 +1223,10 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
                 $codeY,
                 $textColor,
             );
+        }
+        if ($underlay instanceof GdImage) {
+            imagecopymerge($canvas, $underlay, $x, $y, 0, 0, $boxWidth + 1, $boxHeight + 1, 10);
+            imagedestroy($underlay);
         }
     }
 

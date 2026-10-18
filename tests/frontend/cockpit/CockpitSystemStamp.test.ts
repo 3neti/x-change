@@ -329,6 +329,7 @@ it('uses the design paper and brass trim without changing the supplied QR image'
     await vi.advanceTimersByTimeAsync(350);
     await flushPromises();
     const marker = wrapper.get('[data-testid="system-stamp-claim-marker"]');
+    expect((marker.element as HTMLElement).style.opacity).toBe('0.9');
     expect((marker.element as HTMLElement).style.backgroundColor).toBe(
         'rgb(248, 237, 212)',
     );

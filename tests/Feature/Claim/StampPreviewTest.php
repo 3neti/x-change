@@ -275,3 +275,26 @@ it('exports the same provider-first logo or name header as the guest preview', f
     };
     expect($header($artifact->contents))->toBe($header($preview));
 })->with(['netbank', 'landbank']);
+
+it('shows artwork through the QR and its bounding box while keeping the exported code scannable', function (string $designId, int $revision, string $position) {
+    Storage::fake('local');
+    $instructions = validVoucherInstructions()->toArray();
+    data_set($instructions, 'rider.stamp', ['version' => 3, 'design_id' => $designId, 'design_version' => $revision, 'artwork_source' => 'x_change', 'claim_marker' => 'qr', 'claim_marker_position' => $position]);
+    $issued = app(PayCodeIssuanceContract::class)->issue(actingAsTestUser(), $instructions);
+    $voucher = Voucher::findOrFail($issued['voucher_id']);
+    $artifact = app(RiderStampArtifactStoreContract::class)->read($voucher);
+    $image = imagecreatefromstring($artifact->contents);
+    $x = $position === 'top_left' ? 54 : 956;
+    $y = $position === 'top_left' ? 54 : 386;
+    $paper = imagecolorsforindex($image, imagecolorat($image, $x + 8, $y + 3));
+    expect([$paper['red'], $paper['green'], $paper['blue']])->not->toBe([248, 237, 212]);
+    expect($paper['red'])->toBeGreaterThan(200);
+    $trim = imagecolorsforindex($image, imagecolorat($image, $x, $y));
+    expect([$trim['red'], $trim['green'], $trim['blue']])->not->toBe([221, 187, 132]);
+    imagedestroy($image);
+    $decoded = new QrReader($artifact->contents, QrReader::SOURCE_TYPE_BLOB, false);
+    expect($decoded->text())->toContain((string) $voucher->code);
+})->with([
+    ['cats', 6, 'bottom_right'], ['steampunk', 7, 'bottom_right'],
+    ['cats', 6, 'top_left'], ['steampunk', 7, 'top_left'],
+]);
