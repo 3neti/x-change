@@ -33,7 +33,7 @@ final readonly class StampProviderIdentity
             $logo = file_get_contents($path) ?: null;
         }
 
-        return ['code' => $code, 'name' => $entry['display_name'] ?? ucfirst($code), 'logo' => $logo];
+        return ['code' => $code, 'name' => $entry['display_name'] ?? (string) config("x-change.provider_runtime.providers.{$code}.label", ucfirst($code)), 'logo' => $logo];
     }
 
     /** @return array{code: string, name: string, logo: ?string}|null */

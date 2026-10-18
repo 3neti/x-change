@@ -31,8 +31,9 @@ final class StampPreviewController
         $slots = array_map(fn (?string $value): string => $value ?? '', $input['slots']);
 
         $identity = $providers->resolve($input['provider'] ?? null);
-        $slots['provider_name'] = ($slots['brand'] ?? '') === '' ? '' : ($identity['name'] ?? '');
         $images = ($slots['brand'] ?? '') !== '' && isset($identity['logo']) ? ['provider_logo' => $identity['logo']] : [];
+        $slots['provider_name'] = ($slots['brand'] ?? '') !== '' && $images === [] ? ($identity['name'] ?? '') : '';
+        $design = $catalog->providerPresentation($design, $slots['provider_name'], $images !== []);
 
         return response()->json(['provider_identity' => $identity === null ? null : ['code' => $identity['code'], 'name' => $identity['name']], 'image' => 'data:image/png;base64,'.base64_encode($renderer->png($design, $slots, $images)), 'marker_palette' => $catalog->markerPalette($design)])->header('Cache-Control', 'no-store');
     }

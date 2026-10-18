@@ -91,6 +91,34 @@ final class StampCatalog
         return $design->withLayers([...$decoration, ...$content]);
     }
 
+    public function providerPresentation(Design $design, string $name, bool $hasLogo): Design
+    {
+        $header = array_column(array_filter($design->document['layers'], static fn (array $layer): bool => isset($layer['slot'])), null, 'slot');
+        if (! isset($header['provider_logo'], $header['provider_name'], $header['brand'])
+            || $header['provider_logo']['x'] >= $header['brand']['x']) {
+            return $design;
+        }
+
+        $provider = $hasLogo ? $header['provider_logo'] : $header['provider_name'];
+        $width = $hasLogo ? $provider['width'] : 0;
+        if (! $hasLogo && $name !== '') {
+            $bounds = imagettfbbox(($provider['size'] ?? 24) * .75, 0, $design->asset($design->document['font']), $name);
+            $width = min($provider['width'], abs($bounds[2] - $bounds[0]));
+        }
+        $brandX = $provider['x'] + $width + ($width > 0 ? 16 : 0);
+        $layers = $design->document['layers'];
+        foreach ($layers as &$layer) {
+            if (($layer['slot'] ?? null) === 'brand') {
+                $right = $layer['x'] + $layer['width'];
+                $layer['x'] = $brandX;
+                $layer['width'] = $right - $brandX;
+            }
+        }
+        unset($layer);
+
+        return $design->withLayers($layers);
+    }
+
     /** @return array{paper: string, trim: string} */
     public function markerPalette(Design $design): array
     {

@@ -38,7 +38,7 @@ describe('portable Stamp preview', () => {
             'data:image/png;base64,abc',
         );
         expect(wrapper.find('img').attributes('alt')).toContain('Amelia');
-        expect(wrapper.find('img').attributes('alt')).toContain('NetBank');
+        expect(wrapper.find('img').attributes('alt')).toMatch(/^NetBank Pay Code:/);
         wrapper.element.classList.add('dark');
         await wrapper.vm.$nextTick();
         expect(wrapper.find('img').attributes('src')).toBe(

@@ -28,7 +28,7 @@ use RuntimeException;
 
 final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract, RiderStampClaimCardComposerContract
 {
-    private const string CacheVersion = 'v14';
+    private const string CacheVersion = 'v15';
 
     private const int Width = 1200;
 
@@ -108,8 +108,11 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
             $recipient = $this->recipient->resolve($voucher);
             $identity = app(StampProviderIdentity::class)->forVoucher($voucher);
             $showProvider = $rider->stamp?->show_logo !== false;
+            $providerName = $showProvider && ! isset($identity['logo']) ? ($identity['name'] ?? '') : '';
+            $hasProviderLogo = $showProvider && isset($identity['logo']);
+            $design = app(StampCatalog::class)->providerPresentation($design, $providerName, $hasProviderLogo);
             $png = app(Renderer::class)->png($design, [
-                'provider_name' => $showProvider ? ($identity['name'] ?? '') : '',
+                'provider_name' => $providerName,
                 'brand' => $rider->stamp?->show_logo === false ? '' : 'Pay Code',
                 'tagline' => $rider->stamp?->show_tagline === false ? '' : 'The instruction that moves money.',
                 'amount' => $formattedAmount,
@@ -117,7 +120,7 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
                 'purpose' => $copy->plainText(),
                 'expiry' => $voucher->expires_at === null ? 'No expiry' : 'Expires '.$voucher->expires_at->format('M j, Y'),
                 'instructions' => implode(' · ', $this->indicators->resolve($voucher)),
-            ], $showProvider && isset($identity['logo']) ? ['provider_logo' => $identity['logo']] : []);
+            ], $hasProviderLogo ? ['provider_logo' => $identity['logo']] : []);
             imagedestroy($canvas);
             $canvas = imagecreatefromstring($png);
             if (! $canvas instanceof GdImage) {

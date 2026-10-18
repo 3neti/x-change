@@ -16,6 +16,7 @@ use LBHurtado\XChange\Services\RiderStampDesignRegistry;
 use LBHurtado\XChange\Services\Stamp\StampCatalog;
 use LBHurtado\XChange\Services\Stamp\StampProviderIdentity;
 use LBHurtado\XStamp\Design;
+use LBHurtado\XStamp\Renderer;
 use Zxing\QrReader;
 
 it('renders installed Stamp revisions for a guest without issuing a Pay Code', function (): void {
@@ -194,7 +195,7 @@ it('pins issued provider identity and ignores recipient bank and subsequent defa
     $instructions = validVoucherInstructions()->toArray();
     $instructions['provider'] = 'netbank';
     data_set($instructions, 'metadata.custom.stamp_provider', 'paynamics');
-    data_set($instructions, 'rider.stamp', ['version' => 3, 'design_id' => 'cats', 'design_version' => 5, 'artwork_source' => 'x_change', 'claim_marker' => 'qr']);
+    data_set($instructions, 'rider.stamp', ['version' => 3, 'design_id' => 'cats', 'design_version' => 6, 'artwork_source' => 'x_change', 'claim_marker' => 'qr']);
     $issued = app(PayCodeIssuanceContract::class)->issue($user, $instructions);
     $voucher = Voucher::findOrFail($issued['voucher_id']);
     $artifact = app(RiderStampArtifactStoreContract::class)->read($voucher);
@@ -207,7 +208,7 @@ it('pins issued provider identity and ignores recipient bank and subsequent defa
     $reader = new QrReader($artifact->contents, QrReader::SOURCE_TYPE_BLOB, false);
     expect($reader->text())->toContain($voucher->code);
     $image = imagecreatefromstring($artifact->contents);
-    $logo = imagecolorsforindex($image, imagecolorat($image, 274, 86));
+    $logo = imagecolorsforindex($image, imagecolorat($image, 89, 86));
     expect($logo['blue'])->toBeGreaterThan($logo['red']);
     imagedestroy($image);
     data_set($metadata, 'treasury.pay_code_reservation.provider', 'paynamics');
@@ -221,3 +222,56 @@ it('keeps the provider header elements separated when moving away from a left cl
     expect($slots['provider_logo']['x'])->toBeGreaterThan($slots['brand']['x'] + $slots['brand']['width']);
     expect($slots['provider_name']['x'])->toBeGreaterThan($slots['provider_logo']['x'] + $slots['provider_logo']['width']);
 });
+
+it('shows the provider logo or its name before Pay Code without duplicating the identity', function (string $provider, string $name, int $brandX) {
+    config(['x-change.provider_runtime.providers.landbank' => ['label' => 'LandBank']]);
+    $catalog = app(StampCatalog::class);
+    $identity = app(StampProviderIdentity::class)->resolve($provider);
+    $slots = ['brand' => 'Pay Code', 'amount' => '₱100.00'];
+    $response = $this->postJson(route('x-change.stamps.preview'), [
+        'design_id' => 'cats', 'revision' => 6, 'provider' => $provider, 'slots' => $slots,
+    ])->assertOk();
+    $design = $catalog->presentation('cats', 6, 'bottom_right');
+    $design = $catalog->providerPresentation($design, $name, isset($identity['logo']));
+    $header = array_column(array_filter($design->document['layers'], fn ($layer) => isset($layer['slot'])), null, 'slot');
+    if ($brandX > 0) {
+        expect($header['brand']['x'])->toBe($brandX);
+    } else {
+        expect($header['brand']['x'])->toBeGreaterThan($header['provider_name']['x']);
+        expect($header['brand']['x'])->toBeLessThan(260);
+    }
+    $expected = (new Renderer)->png($design, [...$slots, 'provider_name' => $name], isset($identity['logo']) ? ['provider_logo' => $identity['logo']] : []);
+    expect($response->json('image'))->toBe('data:image/png;base64,'.base64_encode($expected));
+})->with([
+    ['netbank', '', 129],
+    ['landbank', 'LandBank', 0],
+    ['manual', '', 65],
+]);
+
+it('exports the same provider-first logo or name header as the guest preview', function (string $provider) {
+    config(['x-change.provider_runtime.providers.landbank' => ['label' => 'LandBank']]);
+    Storage::fake('local');
+    $instructions = validVoucherInstructions()->toArray();
+    $instructions['provider'] = $provider;
+    data_set($instructions, 'rider.stamp', ['version' => 3, 'design_id' => 'steampunk', 'design_version' => 7, 'artwork_source' => 'x_change', 'claim_marker' => 'none', 'show_tagline' => false]);
+    $issued = app(PayCodeIssuanceContract::class)->issue(actingAsTestUser(), $instructions);
+    $voucher = Voucher::findOrFail($issued['voucher_id']);
+    $artifact = app(RiderStampArtifactStoreContract::class)->read($voucher);
+    $response = $this->postJson(route('x-change.stamps.preview'), [
+        'design_id' => 'steampunk', 'revision' => 7, 'provider' => $provider,
+        'slots' => ['brand' => 'Pay Code', 'amount' => '₱100.00'],
+    ])->assertOk();
+    $preview = base64_decode(substr($response->json('image'), strlen('data:image/png;base64,')));
+    $header = function (string $png): string {
+        $image = imagecreatefromstring($png);
+        $crop = imagecrop($image, ['x' => 50, 'y' => 50, 'width' => 800, 'height' => 60]);
+        ob_start();
+        imagepng($crop);
+        $contents = ob_get_clean();
+        imagedestroy($crop);
+        imagedestroy($image);
+
+        return $contents;
+    };
+    expect($header($artifact->contents))->toBe($header($preview));
+})->with(['netbank', 'landbank']);
