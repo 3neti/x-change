@@ -142,7 +142,9 @@ final class StampCatalog
     public function options(): array
     {
         $latest = [];
-        foreach ($this->catalog()->all() as $design) {
+        $catalog = $this->catalog();
+        $choices = method_exists($catalog, 'selectable') ? $catalog->selectable() : $catalog->all();
+        foreach ($choices as $design) {
             if (! isset($latest[$design->id()]) || $latest[$design->id()]->revision() < $design->revision()) {
                 $latest[$design->id()] = $design;
             }

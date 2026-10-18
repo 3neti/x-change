@@ -45,7 +45,8 @@ it('returns 422 for missing revisions or unexpected slot fields', function (arra
 
 it('keeps historical palettes and exposes independently installed designs', function (): void {
     $catalog = app(StampCatalog::class);
-    expect(array_unique(array_column($catalog->options(), 'id')))->toContain('steampunk', 'cats', 'valentine');
+    expect($catalog->resolve('valentine', 1)->id())->toBe('valentine');
+    expect(array_unique(array_column($catalog->options(), 'id')))->toContain('steampunk', 'cats');
     expect(app(RiderStampDesignRegistry::class)->resolve('x-change-steampunk', 1)['palette']['start'])->toBe([49, 34, 20]);
 });
 
