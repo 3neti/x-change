@@ -178,6 +178,9 @@ it.each([false, true])(
             expect(
                 wrapper.get('[data-testid="llm-reviewed-order-issue"]').text(),
             ).toContain('Issue');
+            const actions = wrapper.get('[data-testid="pay-code-review-actions"]');
+            expect(actions.get('[data-testid="cockpit-quick-generate-cost-preview-close"]').text()).toBe('Close');
+            expect(actions.get('[data-testid="llm-reviewed-order-issue"]').exists()).toBe(true);
             expect(fetch.mock.calls.some((call) => call[0] === '/issue')).toBe(
                 false,
             );

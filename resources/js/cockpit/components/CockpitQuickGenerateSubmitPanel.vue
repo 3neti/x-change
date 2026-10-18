@@ -7420,15 +7420,6 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
           "
           data-testid="cockpit-quick-generate-cost-preview"
         >
-        <button
-          v-if="costPreviewOpen"
-          type="button"
-          class="absolute right-4 top-4 z-10 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-          data-testid="cockpit-quick-generate-cost-preview-close"
-          @click="closeCostPreview"
-        >
-          Close
-        </button>
         <CockpitPayCodeCanvas
           v-model:view="canvasView"
           :render-stamp="issuanceSurface === 'composer' || costPreviewOpen"
@@ -7475,8 +7466,16 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
             />
           </template>
         </CockpitPayCodeCanvas>
-        <div v-if="costPreviewOpen && reviewIssueAvailable" class="mt-4 flex justify-end border-t pt-4">
-          <button type="button" data-testid="llm-reviewed-order-issue" class="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50" :disabled="!canSubmit || processing" @click="issueReviewedOrder">{{ issueActionLabel }}</button>
+        <div v-if="costPreviewOpen" class="sticky bottom-0 z-10 mt-4 flex flex-wrap justify-end gap-3 border-t bg-white py-4 dark:bg-slate-950" data-testid="pay-code-review-actions">
+          <button
+            type="button"
+            class="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+            data-testid="cockpit-quick-generate-cost-preview-close"
+            @click="closeCostPreview"
+          >
+            Close
+          </button>
+          <button v-if="reviewIssueAvailable" type="button" data-testid="llm-reviewed-order-issue" class="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50" :disabled="!canSubmit || processing" @click="issueReviewedOrder">{{ issueActionLabel }}</button>
         </div>
         </div>
       </Teleport>
