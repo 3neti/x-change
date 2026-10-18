@@ -81,6 +81,7 @@ const props = withDefaults(
 const emit = defineEmits<{
     claimQrClick: [];
     previewError: [failed: boolean];
+    previewImage: [image: string];
 }>();
 
 const claimEntryLauncher = ref<{ open: () => void } | null>(null);
@@ -753,6 +754,7 @@ function stringValue(value: unknown): string | null {
                 :position="riderStamp.composition.claimMarkerPosition"
                 :interactive="stampQrInteractive"
                     @preview-error="emit('previewError', $event)"
+                    @preview-image="emit('previewImage', $event)"
                 @claim-qr-click="openStampQr"
             />
         </section>

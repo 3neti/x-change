@@ -47,6 +47,7 @@ const markerStyle = computed(() =>
 const emit = defineEmits<{
     claimQrClick: [];
     previewError: [failed: boolean];
+    previewImage: [image: string];
 }>();
 const image = ref('');
 const providerName = ref('');
@@ -59,6 +60,7 @@ let request: AbortController | undefined;
 let sequence = 0;
 function applyPreview(result: StampPreviewResult): void {
     image.value = result.image;
+    emit('previewImage', result.image);
     providerName.value =
         props.slots.brand &&
         typeof result.provider_identity?.name === 'string'
@@ -98,6 +100,7 @@ watch(
         request?.abort();
         const current = ++sequence;
         error.value = '';
+        emit('previewImage', '');
         const payload = {
             design_id: props.designId,
             revision: props.revision,
