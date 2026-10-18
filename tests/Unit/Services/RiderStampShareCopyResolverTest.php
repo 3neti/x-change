@@ -189,3 +189,13 @@ it('keeps Rider Message copy title-only when no custom subtitle is supplied', fu
         ->and($copy->description)->toBe('')
         ->and($copy->rasterDescription)->toBe('');
 });
+
+it('hides default brand messaging without hiding authored messages', function (array $rider, string $expected): void {
+    $voucher = issueVoucher(validVoucherInstructions(overrides: ['rider' => $rider]));
+    $copy = app(RiderStampCopyResolverContract::class)->resolve($voucher);
+    expect($copy->plainText())->toBe($expected);
+})->with([
+    'fallback slogan' => [['message' => '', 'stamp' => ['version' => 2, 'show_tagline' => false]], ''],
+    'Order purpose' => [['message' => 'School allowance', 'stamp' => ['version' => 2, 'show_tagline' => false]], 'School allowance'],
+    'custom slogan text' => [['message' => '', 'stamp' => ['version' => 2, 'show_tagline' => false, 'copy_source' => 'custom', 'description' => 'Money should adapt to people. Not the other way around.']], 'Money should adapt to people. Not the other way around.'],
+]);

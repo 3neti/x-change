@@ -442,6 +442,10 @@ function resolveStampCopy(
         return { title: '', description: '' };
     }
 
+    if (!composition.showTagline) {
+        return { title: '', description: '' };
+    }
+
     return {
         title: 'Pay Code',
         description: 'Money should adapt to people. Not the other way around.',

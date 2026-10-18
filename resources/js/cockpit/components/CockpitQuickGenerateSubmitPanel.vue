@@ -9419,7 +9419,7 @@ function instructionRecord(
                             class="rounded border-sky-300"
                             :disabled="processing"
                           />
-                          Show Tagline
+                          Show brand messaging
                         </label>
                         <fieldset
                           class="grid gap-2"

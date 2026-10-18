@@ -44,11 +44,19 @@ final class DefaultRiderStampCopyResolver implements RiderStampCopyResolverContr
                     240,
                 ));
 
+        $hideDefaultBrandCopy = $source === 'custom' && (
+            $rider->stamp?->show_tagline === false
+            || data_get($voucher->metadata, 'instructions.metadata.custom.stamp_presentation.options.show_tagline', true) === false
+        );
+        if ($hideDefaultBrandCopy && $stampDescription === '') {
+            $resolvedDescription = '';
+        }
+
         return new RiderStampCopyData(
             source: $source,
             title: $this->safeText(
                 $rider->stamp?->title,
-                $title === '' ? $defaultTitle : $title,
+                $hideDefaultBrandCopy ? '' : ($title === '' ? $defaultTitle : $title),
                 120,
             ),
             description: $resolvedDescription,

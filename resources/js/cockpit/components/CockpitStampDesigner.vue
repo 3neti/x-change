@@ -183,8 +183,14 @@ const options = computed(() => ({
                                 ).checked,
                             })
                         "
-                    />Show tagline</label
+                    />Show brand messaging</label
                 >
+                <p
+                    v-if="controls.includes('tagline')"
+                    class="text-xs text-muted-foreground"
+                >
+                    Show the Pay Code tagline and default slogan.
+                </p>
             </div>
         </details>
         <button

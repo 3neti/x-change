@@ -309,3 +309,12 @@ describe('Rider Stamp preview helpers', () => {
         });
     });
 });
+
+it('hides default brand copy while preserving Order purpose and custom Stamp copy', () => {
+    const hidden = resolveRiderStampPreview({ showTagline: false });
+    expect(hidden.title).toBe('');
+    expect(hidden.description).toBe('');
+    expect(resolveRiderStampPreview({ showTagline: false, message: 'School allowance' }).title).toBe('School allowance');
+    const custom = resolveRiderStampPreview({ showTagline: false, copySource: 'custom', description: 'Money should adapt to people. Not the other way around.' });
+    expect(custom.description).toBe('Money should adapt to people. Not the other way around.');
+});

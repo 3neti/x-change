@@ -60,6 +60,10 @@ describe('simple Stamp designer', () => {
         await wrapper.get('button').trigger('click');
         expect(wrapper.emitted('choose')).toEqual([['cats']]);
         await wrapper.setProps({ revision: 7 });
+        expect(wrapper.text()).toContain('Show brand messaging');
+        expect(wrapper.text()).toContain(
+            'Show the Pay Code tagline and default slogan.',
+        );
         expect(wrapper.find('[aria-label="Artwork crop"]').exists()).toBe(true);
         await wrapper.get('[aria-label="QR appearance"]').setValue('soft');
         expect(wrapper.emitted('change')).toEqual([[{ preset: 'soft' }]]);
