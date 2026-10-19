@@ -4,5 +4,5 @@ export default {
     timeout: 30000,
     workers: 1,
     outputDir: process.env.WORKFLOW_BROWSER_ARTIFACTS,
-    use: { ignoreHTTPSErrors: true, viewport: { width: 1440, height: 1000 } },
+    use: { browserName: process.env.WORKFLOW_BROWSER_ENGINE ?? 'chromium', ignoreHTTPSErrors: true, viewport: { width: 1440, height: 1000 } },
 };

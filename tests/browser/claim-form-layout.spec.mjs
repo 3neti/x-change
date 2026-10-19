@@ -93,3 +93,21 @@ for (const width of [360, 390, 1280]) {
         });
     }
 }
+
+for (const mode of ['light','dark']) {
+    for (const screen of ['claim_entry','splash','details','confirmation','success']) {
+        test(`public ${screen} stays light with device appearance ${mode}`,async({page})=>{
+            await page.setViewportSize({width:402,height:874});
+            await page.emulateMedia({colorScheme:mode});
+            await page.addInitScript(()=>localStorage.setItem('appearance','dark'));
+            if(screen==='splash') await render(page,'form-flow/core/Splash',{content:'',is_default_splash:true,voucher_code:'AA317',timeout:0});
+            else if(screen==='details') await render(page,'form-flow/core/GenericForm',{title:'Disbursement Details',fields:[{name:'mobile',type:'tel',group:'redeemer',label:'Mobile Number'},{name:'account_number',type:'text',group:'endorsement',label:'Account Number'}]});
+            else await render(page,'x-change/claim/Preview',{viewport:{profile:'mobile',width:402,height:874},step:{title:screen,screen:{kind:screen,code:'AA317',amount:'₱100.00',title:screen,description:'Synthetic claim preview',fields:[]}}});
+            await expect(page.locator('html')).toHaveAttribute('data-x-change-claim-appearance','light');
+            expect(await page.locator('html').evaluate(el=>({dark:el.classList.contains('dark'),scheme:el.style.colorScheme,saved:localStorage.getItem('appearance')}))).toEqual({dark:false,scheme:'light',saved:'dark'});
+            await page.emulateMedia({colorScheme:mode==='dark'?'light':'dark'});
+            await expect(page.locator('html')).not.toHaveClass(/\bdark\b/);
+            await page.screenshot({path:`${process.env.WORKFLOW_BROWSER_ARTIFACTS}/appearance-${screen}-${mode}.png`,fullPage:true,animations:'disabled'});
+        });
+    }
+}

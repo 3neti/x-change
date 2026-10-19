@@ -2653,6 +2653,7 @@ class XChangeServiceProvider extends ServiceProvider
             $this->packagePath('resources/js/components/NumericKeypad.vue') => resource_path('js/components/NumericKeypad.vue'),
             $this->packagePath('resources/js/composables/useFormFlowSummary.ts') => resource_path('js/composables/useFormFlowSummary.ts'),
             $this->packagePath('resources/js/composables/useTheme.ts') => resource_path('js/composables/useTheme.ts'),
+            $this->packagePath('resources/js/composables/useClaimAppearance.ts') => resource_path('js/composables/useClaimAppearance.ts'),
             $this->packagePath('resources/js/layouts/PublicLayout.vue') => resource_path('js/layouts/PublicLayout.vue'),
             $this->packagePath('resources/js/config') => resource_path('js/config'),
             $this->packagePath('resources/js/data') => resource_path('js/data'),
