@@ -1,4 +1,6 @@
 schema: form-flow.presentation.v1
+layout:
+  artwork_aspect_ratio: 1200/630
 appearance:
   mode: light
   light:

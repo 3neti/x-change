@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 const require = createRequire(`${process.env.WORKFLOW_BROWSER_HOST}/package.json`);
 const { test, expect } = require('@playwright/test');
@@ -5,7 +6,7 @@ const { test, expect } = require('@playwright/test');
 const presentation = {
     schema: 'form-flow.presentation.v1', profile: 'guided-claim-v1',
     brand: {name:'Pay Code',logo:'/vendor/x-change/images/pay-code/pay-code-logo.svg',placement:'top_left',logo_height:32,logo_max_width:112},
-    layout: {density:'compact',capture_surface:'fill_available',scrolling:'when_needed'},
+    layout: {artwork_aspect_ratio:'1200/630',density:'compact',capture_surface:'fill_available',scrolling:'when_needed'},
     actions: {placement:'viewport_bottom',primary_position:'right',secondary_position:'left',reserve_content_space:true,primary_label:null,secondary_label:null},
     progress: {show:true,current:1,total:2},diagnostics:{show_versions:false},
 };
@@ -144,3 +145,68 @@ for (const screen of ['claim_entry','splash','details','confirmation','success']
         await expect(canvas).toHaveCSS('background-color','rgb(240, 249, 255)');
     });
 }
+
+for (const width of [360, 402, 1280]) {
+    test(`custom rider splash keeps the complete artwork at ${width}px`, async ({page}) => {
+        await page.setViewportSize({width,height:874});
+        const content = readFileSync(new URL('./fixtures/planetary-rose-splash.html', import.meta.url), 'utf8')
+            .replace('https://github.com/lbhurtado/failure-of-simultaneity/blob/main/planetary-rose.PNG?raw=true', '/vendor/x-stamp/assets/artwork/planetary-rose-v1.png');
+        await render(page, 'form-flow/core/Splash', {content, voucher_code:'AA317', is_default_splash:false,timeout:0});
+        const image = page.getByRole('img', {name:'i carry your heart with me'});
+        await expect(image).toBeVisible();
+        await expect.poll(() => image.evaluate(el => el.complete && el.naturalWidth > 0)).toBe(true);
+        const geometry = await image.evaluate(el => {
+            const image = el.getBoundingClientRect();
+            const frame = el.parentElement.getBoundingClientRect();
+            return {image:{x:image.x,y:image.y,width:image.width,height:image.height},frame:{x:frame.x,width:frame.width},natural:{width:el.naturalWidth,height:el.naturalHeight},pageWidth:document.documentElement.scrollWidth,viewport:innerWidth};
+        });
+        const artwork = page.getByTestId('form-flow-html-content');
+        const card = await page.getByTestId('form-flow-splash-artwork-card').boundingBox();
+        expect(card.width / card.height).toBeCloseTo(1200 / 630, 2);
+        const frame = await artwork.boundingBox();
+        expect(frame.width / frame.height).toBeCloseTo(1200 / 630, 2);
+        expect(geometry.image.width).toBeLessThanOrEqual(frame.width + 1);
+        expect(geometry.image.height).toBeLessThanOrEqual(frame.height + 1);
+        const textBoxes = await image.evaluate(el => [...el.parentElement.querySelectorAll('h2,p')].map(e => {
+            const r = e.getBoundingClientRect(); return {left:r.left,right:r.right,top:r.top,bottom:r.bottom};
+        }));
+        for (const text of textBoxes) {
+            expect(text.left).toBeGreaterThanOrEqual(geometry.image.x - 1);
+            expect(text.right).toBeLessThanOrEqual(geometry.image.x + geometry.image.width + 2);
+            expect(text.top).toBeGreaterThanOrEqual(geometry.image.y - 1);
+            expect(text.bottom).toBeLessThanOrEqual(geometry.image.y + geometry.image.height + 1);
+        }
+        await page.screenshot({path:`${process.env.WORKFLOW_BROWSER_ARTIFACTS}/custom-splash-${width}.png`,fullPage:true,animations:'disabled'});
+        expect(geometry.image.x).toBeGreaterThanOrEqual(0);
+        expect(geometry.image.x + geometry.image.width).toBeLessThanOrEqual(width);
+        expect(geometry.pageWidth).toBeLessThanOrEqual(width);
+        expect(geometry.image.width / geometry.image.height).toBeCloseTo(geometry.natural.width / geometry.natural.height, 2);
+    });
+}
+
+test('compiled Claim-tab splash uses the same fitted artwork and keeps sanitization', async ({page}) => {
+    await page.setViewportSize({width:402,height:874});
+    const content = readFileSync(new URL('./fixtures/planetary-rose-splash.html', import.meta.url), 'utf8')
+        .replace('https://github.com/lbhurtado/failure-of-simultaneity/blob/main/planetary-rose.PNG?raw=true', '/vendor/x-stamp/assets/artwork/planetary-rose-v1.png')
+        .replace('<h2 ', '<h2 onclick="window.splashUnsafe=true" ')
+        + '<script>window.splashUnsafe=true</script>';
+    await render(page,'x-change/claim/Preview',{viewport:{profile:'mobile',width:402,height:874},step:{title:'Splash',screen:{kind:'splash',component:'form-flow/core/Splash',props:{presentation,content,voucher_code:'AA317',is_default_splash:false,timeout:0,preview_mode:true}}}});
+    const artwork = page.getByTestId('form-flow-html-content');
+    await expect(artwork).toBeVisible();
+    await expect(artwork.locator('img')).toBeVisible();
+    expect(await artwork.locator('h2').getAttribute('onclick')).toBeNull();
+    expect(await artwork.locator('script').count()).toBe(0);
+    expect(await page.evaluate(() => window.splashUnsafe)).toBeUndefined();
+    await page.setViewportSize({width:800,height:900});
+    await expect.poll(async () => artwork.locator('img').evaluate(el=>Math.round(el.getBoundingClientRect().height))).toBe(353);
+    expect(await page.locator('html').evaluate(el=>el.scrollWidth<=innerWidth)).toBe(true);
+});
+
+test('text-only rider introductions keep a natural height', async ({page}) => {
+    await page.setViewportSize({width:402,height:874});
+    await render(page,'form-flow/core/Splash',{content:'<div style="max-width:1200px"><h2>Welcome</h2><p>Your claim begins here.</p></div>',is_default_splash:false,timeout:0});
+    const content=page.getByTestId('form-flow-html-content');
+    await expect(content).toBeVisible();
+    expect(await content.evaluate(el=>el.style.aspectRatio)).toBe('');
+    expect(await content.locator('h2').evaluate(el=>getComputedStyle(el.parentElement.parentElement).transform)).toBe('none');
+});
