@@ -4,15 +4,21 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services;
 
+use Bavix\Wallet\Interfaces\ProductInterface;
 use Bavix\Wallet\Interfaces\Wallet;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use LBHurtado\Instruction\Models\InstructionItem;
+use LBHurtado\Wallet\Contracts\ProductWalletTransferContract;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use RuntimeException;
 
 class InstructionRevenueAllocatorService
 {
+    public function __construct(
+        protected ?ProductWalletTransferContract $productTransfers = null,
+    ) {}
+
     /**
      * @param  Model&Wallet  $issuer
      * @return array{
@@ -63,16 +69,22 @@ class InstructionRevenueAllocatorService
                 throw new RuntimeException("Unable to resolve instruction item for charge [{$index}].");
             }
 
-            if (! $instructionItem instanceof Wallet) {
-                throw new RuntimeException("Instruction item [{$index}] is not wallet-enabled.");
+            if (! $instructionItem instanceof ProductInterface) {
+                throw new RuntimeException("Instruction item [{$index}] is not a wallet Product.");
             }
 
             $amount = $amountMinor / 100;
 
-            $transfer = $issuer->transferFloat(
-                $instructionItem,
-                $amount,
-                $this->buildTransferMeta($charge, $context)
+            $transfer = ($this->productTransfers ??= app(ProductWalletTransferContract::class))->transfer(
+                source: $issuer,
+                product: $instructionItem,
+                amountMinor: $amountMinor,
+                idempotencyKey: (string) data_get(
+                    $context,
+                    'idempotency_key',
+                    'instruction-revenue:'.$issuer->getKey().':'.$index.':'.$amountMinor,
+                ),
+                metadata: $this->buildTransferMeta($charge, $context),
             );
 
             $withdraw = $transfer->withdraw ?? null;
@@ -122,7 +134,7 @@ class InstructionRevenueAllocatorService
     {
         $modelClass = (string) config(
             'x-change.revenue.instruction_item_model',
-            \LBHurtado\Instruction\Models\InstructionItem::class
+            InstructionItem::class
         );
 
         if ($modelClass === '' || ! class_exists($modelClass)) {

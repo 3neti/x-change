@@ -1649,6 +1649,9 @@ return [
 
     'commercial' => [
         'enabled' => (bool) env('XCHANGE_COMMERCIAL_WATERFALL_ENABLED', true),
+        'product_revenue_bridge' => [
+            'enabled' => (bool) env('XCHANGE_COMMERCIAL_PRODUCT_REVENUE_BRIDGE_ENABLED', false),
+        ],
         'principal' => [
             'reference' => env(
                 'XCHANGE_COMMERCIAL_PRINCIPAL_REFERENCE',
@@ -2471,6 +2474,10 @@ return [
             'XCHANGE_REVENUE_INSTRUCTION_ITEM_MODEL',
             InstructionItem::class,
         ),
+
+        'commercial_product_map' => [
+            'product:pay-code' => 'cash.amount',
+        ],
 
         'destination' => [
             'model' => env(

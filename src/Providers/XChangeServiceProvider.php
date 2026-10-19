@@ -264,6 +264,8 @@ use LBHurtado\XChange\Contracts\CommercialOfferingResolverContract;
 use LBHurtado\XChange\Contracts\CommercialOperatorAuthorityContract;
 use LBHurtado\XChange\Contracts\CommercialPartnerResolverContract;
 use LBHurtado\XChange\Contracts\CommercialPrincipalResolverContract;
+use LBHurtado\XChange\Contracts\CommercialProductResolverContract;
+use LBHurtado\XChange\Contracts\CommercialProductRevenueBridgeAdapterContract;
 use LBHurtado\XChange\Contracts\CommercialRecipientDesignationResolverContract;
 use LBHurtado\XChange\Contracts\CommercialSettlementAccountResolverContract;
 use LBHurtado\XChange\Contracts\Deployment\CloudMutationGatewayContract;
@@ -434,6 +436,11 @@ use LBHurtado\XChange\Services\Cockpit\OptionalCockpitIntegrationReadModels;
 use LBHurtado\XChange\Services\Cockpit\SystemPrincipalCockpitTreasuryAccess;
 use LBHurtado\XChange\Services\Cockpit\VoucherLifecycleCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\WalletCockpitHeaderReadModelProvider;
+use LBHurtado\XChange\Services\Commercial\CommercialProductRevenueBridgeCommissioningSimulator;
+use LBHurtado\XChange\Services\Commercial\CommercialProductRevenueBridgeCommissioningStatus;
+use LBHurtado\XChange\Services\Commercial\CommercialProductRevenueBridgePlan;
+use LBHurtado\XChange\Services\Commercial\CommercialProductRevenueReconciliation;
+use LBHurtado\XChange\Services\Commercial\CommercialProductRevenueShadowReconciler;
 use LBHurtado\XChange\Services\Commercial\ConfigCommercialPartnerResolver;
 use LBHurtado\XChange\Services\Commercial\ConfiguredCommercialPrincipalResolver;
 use LBHurtado\XChange\Services\Commercial\ConfiguredPublicIssuanceEscrowPrincipalResolver;
@@ -441,6 +448,8 @@ use LBHurtado\XChange\Services\Commercial\DatabaseCommercialComponentEconomicsRe
 use LBHurtado\XChange\Services\Commercial\DatabaseCommercialOfferingResolver;
 use LBHurtado\XChange\Services\Commercial\DatabaseCommercialOperatorAuthority;
 use LBHurtado\XChange\Services\Commercial\DatabaseCommercialRecipientDesignationResolver;
+use LBHurtado\XChange\Services\Commercial\GovernedCommercialProductRevenueBridgeAdapter;
+use LBHurtado\XChange\Services\Commercial\InstructionCommercialProductResolver;
 use LBHurtado\XChange\Services\Commercial\OptionalXLegalCommercialTraceResolver;
 use LBHurtado\XChange\Services\Commercial\WalletCommercialSettlementAccountResolver;
 use LBHurtado\XChange\Services\ConfigMinimumWithdrawalPolicyResolver;
@@ -614,6 +623,19 @@ class XChangeServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton(CommercialProductRevenueReconciliation::class);
+        $this->app->singleton(CommercialProductRevenueShadowReconciler::class);
+        $this->app->singleton(CommercialProductRevenueBridgePlan::class);
+        $this->app->singleton(CommercialProductRevenueBridgeCommissioningStatus::class);
+        $this->app->singleton(CommercialProductRevenueBridgeCommissioningSimulator::class);
+        $this->app->singleton(
+            CommercialProductRevenueBridgeAdapterContract::class,
+            GovernedCommercialProductRevenueBridgeAdapter::class,
+        );
+        $this->app->singleton(
+            CommercialProductResolverContract::class,
+            InstructionCommercialProductResolver::class,
+        );
         $this->app->singleton(
             VoucherInstructionInterpreter::class,
             function (): VoucherInstructionInterpreter {
