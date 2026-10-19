@@ -85,22 +85,23 @@ final class OperationsPricingController extends Controller
             catalog: CommercialCatalogData::fromArray($catalog),
             waterfallPolicy: CommercialWaterfallPolicyData::fromArray($active->waterfallPolicy->toArray()),
             attributionPolicy: $active->attributionPolicy,
-            legalTrace: $legalTrace->forPublication($active),
+            legalTrace: $active->legalTrace,
             effectiveAt: UtcInstant::canonical(now()->toIso8601String()),
         );
-        $manifest = $manifests->compile('pay_code', $data);
+        $published = $legalTrace->forPublication($data);
+        $manifest = $manifests->compile('pay_code', $published);
         $authorizationReference = 'operations-beta:'.hash('sha256', $request->session()->getId().':'.$version);
 
-        $offering = DB::transaction(function () use ($principal, $data, $manifest, $authorizationReference): CommercialOffering {
+        $offering = DB::transaction(function () use ($principal, $published, $manifest, $authorizationReference): CommercialOffering {
             return CommercialOffering::query()->create([
-                'reference' => $data->reference,
-                'version' => $data->version,
+                'reference' => $published->reference,
+                'version' => $published->version,
                 'profile' => 'pay_code',
                 'status' => 'published',
                 'origin' => 'maker_checker_revision',
-                'currency' => $data->catalog->currency,
-                'snapshot_hash' => $data->snapshotHash(),
-                'snapshot' => $data->toArray(),
+                'currency' => $published->catalog->currency,
+                'snapshot_hash' => $published->snapshotHash(),
+                'snapshot' => $published->toArray(),
                 'manifest_schema' => $manifest->schema,
                 'manifest_hash' => $manifest->hash,
                 'manifest_yaml' => $manifest->yaml,
