@@ -6,7 +6,7 @@ artwork:
     enabled: true
     opacity: 0.55
     blur: 18
-    overlay: 0.75
+    overlay: 0.5
   foreground:
     position: top
     top_spacing: 32
