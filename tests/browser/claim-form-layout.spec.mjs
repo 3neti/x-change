@@ -210,3 +210,14 @@ test('text-only rider introductions keep a natural height', async ({page}) => {
     expect(await content.evaluate(el=>el.style.aspectRatio)).toBe('');
     expect(await content.locator('h2').evaluate(el=>getComputedStyle(el.parentElement.parentElement).transform)).toBe('none');
 });
+
+test('older rider splash previews contain the full image in a stamp-ratio frame', async ({page}) => {
+    await page.setViewportSize({width:402,height:874});
+    await render(page,'x-change/claim/Preview',{viewport:{profile:'mobile',width:402,height:874},step:{title:'Rider splash',screen:{kind:'rider_splash',artwork_url:'/vendor/x-stamp/assets/artwork/planetary-rose-v1.png',title:'A message for you',description:'The issuer’s introduction appears before claim details.'}}});
+    const frame=page.getByTestId('claim-rider-splash-artwork');
+    await expect(frame).toBeVisible();
+    await expect(frame.locator('img')).toHaveCSS('object-fit','contain');
+    const box=await frame.boundingBox();
+    expect(box.width/box.height).toBeCloseTo(1200/630,2);
+    await expect(page.getByRole('button',{name:'Continue',exact:true})).toBeVisible();
+});

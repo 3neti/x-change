@@ -87,3 +87,10 @@ it('retains the started claim profile separately for each Pay Code', function ()
     $route->setParameter('code', 'OTHER');
     expect($profiles->forRequest($request)['icons']['size'])->toBe(32);
 });
+
+it('invalidates preview artifacts when the renderer changes', function (): void {
+    $fingerprints = app(ClaimPreviewArtifactFingerprint::class);
+    $old = $fingerprints->make(['key' => 'synthetic'], ['render_mode' => 'compiled_claim_screen_v2']);
+    $current = $fingerprints->make(['key' => 'synthetic'], ['render_mode' => 'compiled_claim_screen_v3']);
+    expect($current['fingerprint'])->not->toBe($old['fingerprint']);
+});

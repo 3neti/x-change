@@ -137,32 +137,19 @@ const actualScreenComponent = computed<Component | null>(() => {
         </template>
 
         <template v-else-if="screen.kind === 'rider_splash'">
-            <div class="relative flex min-h-0 flex-1 flex-col bg-slate-950">
-                <img
-                    v-if="screen.artwork_url"
-                    :src="screen.artwork_url"
-                    alt="Rider introduction artwork"
-                    class="absolute inset-0 size-full object-cover"
-                />
-                <div
-                    class="absolute inset-0 bg-gradient-to-t from-black via-black/45 to-black/15"
-                />
-                <div
-                    class="relative mt-auto grid gap-3 px-5 pb-6 pt-20 text-white"
-                >
-                    <p class="text-xl font-semibold tracking-tight">
-                        {{ screen.message || screen.title }}
-                    </p>
-                    <p class="text-xs leading-5 text-white/75">
-                        {{ screen.description }}
-                    </p>
-                    <button
-                        type="button"
-                        tabindex="-1"
-                        class="min-h-10 rounded-full bg-white px-4 text-xs font-bold text-slate-950"
-                    >
-                        Continue
-                    </button>
+            <div class="x-claim-canvas flex min-h-0 flex-1 flex-col justify-center gap-6 bg-background p-5">
+                <div class="aspect-[1200/630] w-full overflow-hidden rounded-lg bg-muted/30" data-testid="claim-rider-splash-artwork">
+                    <img
+                        v-if="screen.artwork_url"
+                        :src="screen.artwork_url"
+                        alt="Rider introduction artwork"
+                        class="size-full object-contain"
+                    />
+                </div>
+                <div class="grid gap-3 text-foreground">
+                    <p class="text-xl font-semibold tracking-tight">{{ screen.message || screen.title }}</p>
+                    <p class="text-xs leading-5 text-muted-foreground">{{ screen.description }}</p>
+                    <button type="button" tabindex="-1" class="min-h-10 rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground">Continue</button>
                 </div>
             </div>
         </template>

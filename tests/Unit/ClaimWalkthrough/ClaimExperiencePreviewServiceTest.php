@@ -166,6 +166,13 @@ it('compiles conditional redeemer journey steps from the instruction contract', 
         ->and($steps->pluck('sequence')->all())
         ->toBe(range(1, $steps->count()));
 
+    $splash = $steps->firstWhere('key', 'pre-claim-rider-splash');
+    expect(data_get($splash, 'screen.component'))->toBe('form-flow/core/Splash')
+        ->and(data_get($splash, 'screen.props.content'))->toBe('<section>Welcome</section>')
+        ->and(data_get($splash, 'screen.props.preview_mode'))->toBeTrue()
+        ->and(data_get($splash, 'screen.props.timeout'))->toBe(0)
+        ->and(data_get($splash, 'screen.props.presentation'))->toBe(data_get($result, 'journey.presentation'));
+
     expect($steps->where('phase', 'form_flow')->pluck('screen.component')->all())
         ->toBe([
             'form-flow/core/GenericForm',

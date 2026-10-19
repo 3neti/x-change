@@ -49,7 +49,7 @@ final class ClaimExperiencePreviewService
             'storage_scope' => $options->storageScope,
             'profile' => $options->profile,
             'dry_run' => $options->dryRun,
-            'render_mode' => 'compiled_claim_screen_v2',
+            'render_mode' => 'compiled_claim_screen_v3',
             'submit_claim' => false,
             'mobile' => $options->mobile,
             'bank_code' => $options->bankCode,
@@ -129,13 +129,15 @@ final class ClaimExperiencePreviewService
                         : 'compiled_claim_flow',
                 );
 
+            $presentation = app(FormFlowPresentationResolver::class)->resolve($compiled->instructions->presentation ?? ['profile' => 'guided-claim-v1']);
             $journey = $this->journeys->fromReport(
                 $report,
                 $scenario,
                 $screens,
                 $simulation,
+                $presentation,
             );
-            $journey['presentation'] = app(FormFlowPresentationResolver::class)->resolve($compiled->instructions->presentation ?? ['profile' => 'guided-claim-v1']);
+            $journey['presentation'] = $presentation;
             $artifact = $this->cache->rememberRendered(
                 scenario: $scenario,
                 fingerprint: $context['fingerprint'],

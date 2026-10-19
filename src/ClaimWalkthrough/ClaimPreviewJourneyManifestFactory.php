@@ -25,6 +25,7 @@ final class ClaimPreviewJourneyManifestFactory
         array $scenario,
         array $formFlowScreens = [],
         array $simulation = [],
+        array $presentation = [],
     ): array {
         $canonical = $this->canonicalSteps($scenario);
         $storyboard = $this->storyboard($report);
@@ -56,6 +57,7 @@ final class ClaimPreviewJourneyManifestFactory
             $steps = $this->withCompiledFormFlowScreens($steps, $formFlowScreens);
         }
 
+        $steps = $this->withRiderSplash($steps, $scenario, $presentation);
         $steps = $this->withSimulation($steps, $simulation);
 
         return [
@@ -69,6 +71,44 @@ final class ClaimPreviewJourneyManifestFactory
             'steps' => $steps,
             'simulation' => $simulation,
         ];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $steps
+     * @param  array<string, mixed>  $scenario
+     * @param  array<string, mixed>  $presentation
+     * @return array<int, array<string, mixed>>
+     */
+    private function withRiderSplash(array $steps, array $scenario, array $presentation): array
+    {
+        $content = (string) data_get($scenario, 'fixture.rider.splash', '');
+
+        if (trim($content) === '') {
+            return $steps;
+        }
+
+        return array_map(function (array $step) use ($content, $presentation): array {
+            if (data_get($step, 'screen.kind') !== 'rider_splash') {
+                return $step;
+            }
+
+            $step['render_kind'] = 'actual_screen';
+            $step['screen']['component'] = 'form-flow/core/Splash';
+            $step['screen']['props'] = [
+                'flow_id' => 'preview-rider-splash',
+                'step_index' => 0,
+                'content' => $content,
+                'is_default_splash' => false,
+                'voucher_code' => self::SampleCode,
+                'timeout' => 0,
+                'button_label' => 'Continue',
+                'action_placement' => 'viewport_bottom',
+                'preview_mode' => true,
+                'presentation' => $presentation === [] ? null : $presentation,
+            ];
+
+            return $step;
+        }, $steps);
     }
 
     /**
