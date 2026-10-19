@@ -139,6 +139,11 @@ final readonly class HandleConfirmedDisbursement
         DisbursementReconciliation $reconciliation,
         array $reservation,
     ): void {
+        DB::transaction(fn () => $this->persistRedemptionReadModels($voucher, $reconciliation, $reservation));
+    }
+
+    private function persistRedemptionReadModels(Voucher $voucher, DisbursementReconciliation $reconciliation, array $reservation): void
+    {
         if ($reconciliation->status !== 'succeeded') {
             return;
         }

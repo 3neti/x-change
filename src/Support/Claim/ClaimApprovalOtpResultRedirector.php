@@ -6,12 +6,14 @@ namespace LBHurtado\XChange\Support\Claim;
 
 use Illuminate\Http\RedirectResponse;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Services\Claim\RiderRedirectEngine;
 
 final class ClaimApprovalOtpResultRedirector
 {
     public function redirect(Voucher $voucher, array $result): RedirectResponse
     {
         $status = (string) ($result['status'] ?? '');
+        app(RiderRedirectEngine::class)->authorizeSession($voucher, request());
 
         if (in_array($status, ['success', 'completed', 'withdrawn', 'redeemed', 'settled'], true)) {
             return redirect()->route('x-change.claim.success', [

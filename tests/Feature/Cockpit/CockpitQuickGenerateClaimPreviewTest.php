@@ -193,7 +193,7 @@ it('falls back to a useful storyboard when browser capture is unavailable', func
         ->assertJsonPath('journey.steps.0.status', 'rendered')
         ->assertJsonPath('journey.steps.0.screen.kind', 'claim_entry')
         ->assertJsonPath('journey.steps.0.screen.title', 'Claim Pay Code')
-        ->assertJsonPath('journey.steps.0.screen.code', 'PREVIEW');
+        ->assertJsonPath('journey.steps.0.screen.code', 'AA317');
 
     $screens = collect($response->json('journey.steps'))
         ->where('phase', 'form_flow');

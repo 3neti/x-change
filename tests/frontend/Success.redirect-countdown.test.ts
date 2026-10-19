@@ -10,6 +10,7 @@ vi.mock('@inertiajs/vue3', () => ({
     },
     router: {
         visit: vi.fn(),
+        reload: vi.fn(),
     },
 }));
 
@@ -122,7 +123,7 @@ describe('claim Success redirect countdown rendering', () => {
             },
         });
 
-        expect(wrapper.get('[data-testid="attention-icon"]').exists()).toBe(true);
+        expect(wrapper.get('[data-claim-icon-role="attention"]').exists()).toBe(true);
         expect(wrapper.text()).toContain('Claim journey needs attention');
         expect(wrapper.text()).toContain('Contact the issuer before continuing.');
         expect(wrapper.find('[data-testid="provider-payout-pending-region"]').exists()).toBe(false);
@@ -967,4 +968,26 @@ describe('claim Success redirect countdown rendering', () => {
             '/x/claim/TEST123/redirect',
         );
     });
+});
+
+it('does not run a legacy countdown for a backend-controlled handoff', () => {
+    const wrapper = mount(Success, {
+        props: { ...baseProps, rider_handoff: { pending: false }, redirectEndpoint: null, redirect: { owner: null, show_countdown: false } },
+    });
+    expect(wrapper.find('[data-testid="redirect-countdown-region"]').exists()).toBe(false);
+    wrapper.unmount();
+});
+
+it('checks server status for pending backend handoff without showing destination prose', async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(Success, {
+        props: { ...baseProps, rider_handoff: { pending: true }, redirectEndpoint: null, redirect: { owner: null, show_countdown: false } },
+    });
+    await vi.advanceTimersByTimeAsync(5000);
+    const { router } = await import('@inertiajs/vue3');
+    expect(router.reload).toHaveBeenCalled();
+    expect(wrapper.text()).toContain('Checking payment status');
+    expect(wrapper.text()).not.toContain('After confirmation');
+    wrapper.unmount();
+    vi.useRealTimers();
 });

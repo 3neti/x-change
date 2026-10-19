@@ -24,6 +24,7 @@ use LBHurtado\XChange\Enums\ClaimAuthenticationMode;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Services\BuildProvisioningRequirementViewData;
 use LBHurtado\XChange\Services\Claim\ClaimPresentationProfile;
+use LBHurtado\XChange\Services\Claim\RiderRedirectEngine;
 use LBHurtado\XChange\Services\Claim\VoucherClaimFlowCompiler;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
 use LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator;
@@ -124,6 +125,7 @@ class ClaimStartController extends Controller
             }
 
             try {
+                app(RiderRedirectEngine::class)->authorizeSession($prepared->voucher, $request);
                 $claimResult = app(SubmitCompiledFormClaim::class)->handle(
                     voucher: $prepared->voucher,
                     prepared: $preparedData,

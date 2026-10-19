@@ -56,6 +56,7 @@ interface VoucherProps {
 
 interface Props {
     paired_payment?: boolean;
+    rider_handoff?: { pending: boolean } | null;
     voucher: VoucherProps;
     claimOutcome?: string;
     claimWorkflowKey?: string | null;
@@ -103,11 +104,12 @@ const props = defineProps<Props>();
 
 const completionProcessing = computed(
     () =>
+        props.rider_handoff?.pending === true ||
         props.claimWorkflowKey === 'campaign.coverage-completion.v1' &&
         props.success_presentation?.suppress_legacy_rider === true &&
         props.success_presentation?.state === 'processing',
 );
-const completionPoll = useCompletionStatusPoll(completionProcessing);
+const completionPoll = useCompletionStatusPoll(completionProcessing, () => props.rider_handoff?.pending === true);
 
 const suppressLegacyRider = computed(
     () => props.success_presentation?.suppress_legacy_rider === true,

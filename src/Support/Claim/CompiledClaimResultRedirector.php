@@ -7,12 +7,14 @@ namespace LBHurtado\XChange\Support\Claim;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Route;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Services\Claim\RiderRedirectEngine;
 
 final class CompiledClaimResultRedirector
 {
     public function redirect(Voucher $voucher, mixed $result): RedirectResponse
     {
         $status = (string) data_get($result, 'status', '');
+        app(RiderRedirectEngine::class)->authorizeSession($voucher, request());
 
         if (in_array($status, ['success', 'completed'], true)) {
             return redirect()->route('x-change.claim.success', [

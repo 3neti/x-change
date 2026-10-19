@@ -20,6 +20,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimStartController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSubmitController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\DemonstrationPolicySummaryController;
+use LBHurtado\XChange\Http\Controllers\Web\Claim\RiderRedirectReceiptController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountScenarioController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAuiDemonstrationPolicyOutcomeController;
@@ -113,8 +114,8 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPrev
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewFrameController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewShowController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewStepController;
-use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateInterpretController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateFundingPreflightController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateInterpretController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateMutationRouteShellController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGeneratePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitReviewedFundingPayCodeClaimController;
@@ -1076,6 +1077,10 @@ Route::prefix('x')->middleware(['web', ShareXChangeBranding::class, GuardPairedC
         ->name('x-change.claim.submit');
     Route::get('claim/{code}/success', ClaimSuccessPageController::class)->name('x-change.claim.success');
     Route::get('claim/{code}/redirect', ClaimRedirectController::class)->name('x-change.claim.redirect');
+    Route::post('claim/rider/receipts', RiderRedirectReceiptController::class)
+        ->withoutMiddleware([VerifyCsrfToken::class])
+        ->middleware('throttle:60,1')
+        ->name('x-change.claim.rider.receipts');
     Route::get('claim/{code}/approval', ClaimApprovalPageController::class)
         ->name('x-change.claim.approval');
     Route::post('claim/{code}/approval/otp', ClaimApprovalOtpController::class)

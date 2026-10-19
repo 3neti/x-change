@@ -475,3 +475,17 @@ describe("Cockpit Voucher Detail foundation", () => {
     expect(wrapper.text()).not.toContain("plan-wave-46");
   });
 });
+
+it('distinguishes prepared redirects from destination acknowledgment', () => {
+  const wrapper = mount(VoucherDetail, {
+    props: {
+      rider_redirect: {
+        reference: 'test-obligation', destination_host: 'example.com', eligible_at: null,
+        events: [{ event_type: 'claim.rider_redirect.redirect_prepared', occurred_at: '2026-10-19T00:00:00Z', attempt_reference: 'test-attempt' }],
+      },
+    },
+    global: { stubs: { CockpitLayout: { template: '<div><slot /></div>' }, CockpitPayCodeRecordWorkspace: true } },
+  });
+  expect(wrapper.get('[data-testid="rider-redirect-evidence"]').text()).toContain('Redirect prepared — arrival unconfirmed');
+  expect(wrapper.text()).toContain('example.com');
+});

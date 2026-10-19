@@ -57,6 +57,7 @@ use LBHurtado\Voucher\Contracts\SettlementEnvelopeExecutionGateway;
 use LBHurtado\Voucher\Contracts\StoredValueExecutionGateway;
 use LBHurtado\Voucher\Events\VoucherDisbursementFailed;
 use LBHurtado\Voucher\Events\VoucherDisbursementSucceeded;
+use LBHurtado\Voucher\Events\VouchersGenerated;
 use LBHurtado\Voucher\Services\ExecutionDriverRegistry;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\Wallet\Services\SystemUserResolverService;
@@ -87,6 +88,7 @@ use LBHurtado\XChange\Console\Commands\Campaigns\SyncCampaignPaymentAddressesCom
 use LBHurtado\XChange\Console\Commands\Checkout\BackfillPublicCheckoutsCommand;
 use LBHurtado\XChange\Console\Commands\Checkout\ManageCheckoutViewerLinkCommand;
 use LBHurtado\XChange\Console\Commands\Claim\ClaimWalkthroughCommand;
+use LBHurtado\XChange\Console\Commands\Claim\DeliverRiderRedirectJournalCommand;
 use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionContextCommand;
 use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
 use LBHurtado\XChange\Console\Commands\Claim\SnapshotRiderSplashArtworkCommand;
@@ -390,6 +392,7 @@ use LBHurtado\XChange\Listeners\QueueSettledPaymentPipeline;
 use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
 use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Models\LeadCampaign;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Affiliation\XJournalAffiliationEventSink;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\Base64PngClaimUrlQrRenderer;
@@ -407,6 +410,7 @@ use LBHurtado\XChange\Services\Claim\DefaultRiderStampArtifactStore;
 use LBHurtado\XChange\Services\Claim\DefaultRiderStampCopyResolver;
 use LBHurtado\XChange\Services\Claim\DefaultRiderStampRecipientResolver;
 use LBHurtado\XChange\Services\Claim\GdRiderStampClaimShareCardRenderer;
+use LBHurtado\XChange\Services\Claim\RiderRedirectEngine;
 use LBHurtado\XChange\Services\Claim\RiderStampClaimShareMetadataResolver;
 use LBHurtado\XChange\Services\Claim\StoredRiderStampClaimShareCardRenderer;
 use LBHurtado\XChange\Services\Cockpit\CampaignWorkflowDraftEditor;
@@ -672,6 +676,7 @@ class XChangeServiceProvider extends ServiceProvider
             'x-change'
         );
         $this->mergeConfigFrom($this->packagePath('config/x-change-workflows.php'), 'x-change-workflows');
+        $this->mergeConfigFrom($this->packagePath('config/rider-redirect.php'), 'rider-redirect');
         $this->app->when(CampaignWorkflowDraftEditor::class)
             ->needs(WorkflowCatalog::class)
             ->give(function ($app) {
@@ -1877,6 +1882,7 @@ class XChangeServiceProvider extends ServiceProvider
                 AuthorizeProvisioningOperatorCommand::class,
                 ExpireProvisioningOffersCommand::class,
                 DeliverVoucherSliceExecutionJournalCommand::class,
+                DeliverRiderRedirectJournalCommand::class,
                 ProcessCampaignBatchFulfillmentOutboxCommand::class,
                 ShowCampaignPayoutRecoveryDeliveriesCommand::class,
 
@@ -1947,6 +1953,21 @@ class XChangeServiceProvider extends ServiceProvider
                 ValidateLinkPreviewDriversCommand::class,
             ]);
         }
+
+        Event::listen(VouchersGenerated::class, function (VouchersGenerated $event): void {
+            foreach ($event->getVouchers() as $voucher) {
+                app(RiderRedirectEngine::class)->commit($voucher);
+            }
+        });
+        VoucherClaim::saving(function (VoucherClaim $claim): void {
+            app(RiderRedirectEngine::class)->bindClaimSession($claim, request());
+        });
+        VoucherClaim::saved(function (VoucherClaim $claim): void {
+            app(RiderRedirectEngine::class)->eligible($claim);
+        });
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            $schedule->command('x-change:rider:deliver-journal')->everyMinute()->withoutOverlapping(5);
+        });
 
         Event::listen(CampaignPaymentRecognized::class, QueueCampaignPaymentLifecycle::class);
         Event::listen(PaymentSettled::class, QueueSettledPaymentPipeline::class);

@@ -15,6 +15,7 @@ use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
 use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Services\BuildProvisioningRequirementViewData;
+use LBHurtado\XChange\Services\Claim\RiderRedirectEngine;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalResumePayloadSession;
 use LBHurtado\XChange\Support\Claim\ClaimEvidenceSynchronizer;
 use LBHurtado\XChange\Support\Claim\ClaimFlowStateGuard;
@@ -124,6 +125,7 @@ class ClaimSubmitController extends Controller
 
             $receipt = app(CompletionClaimReceipt::class);
             $pendingIssuanceId = $receipt->pendingIssuanceId($voucher);
+            app(RiderRedirectEngine::class)->authorizeSession($voucher, request());
             $result = $this->submitAction->handle($voucher, $payload);
             $receipt->remember($voucher, $result, $pendingIssuanceId, $idempotencyKey);
 

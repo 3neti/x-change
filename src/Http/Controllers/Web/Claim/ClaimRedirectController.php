@@ -2,8 +2,9 @@
 
 namespace LBHurtado\XChange\Http\Controllers\Web\Claim;
 
-use Illuminate\Http\RedirectResponse;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Models\RiderRedirect;
+use LBHurtado\XChange\Services\Claim\RiderRedirectEngine;
 use LBHurtado\XChange\Services\Claim\VoucherRiderFallbackPolicy;
 use LBHurtado\XChange\Support\Rider\XChangeRiderOutcomeResolver;
 use LBHurtado\XChange\Support\Rider\XChangeRiderSubjectFactory;
@@ -11,6 +12,7 @@ use LBHurtado\XRider\Contracts\RiderAnalyticsRecorderContract;
 use LBHurtado\XRider\Contracts\RiderExperienceResolverContract;
 use LBHurtado\XRider\Contracts\SuccessRedirectResolverContract;
 use LBHurtado\XRider\Data\RiderAnalyticsEventData;
+use Symfony\Component\HttpFoundation\Response;
 
 class ClaimRedirectController
 {
@@ -22,10 +24,14 @@ class ClaimRedirectController
         XChangeRiderSubjectFactory $subjects,
         XChangeRiderOutcomeResolver $outcomes,
         VoucherRiderFallbackPolicy $riderFallbacks,
-    ): RedirectResponse {
+    ): Response {
         $voucher = Voucher::query()
             ->where('code', $code)
             ->firstOrFail();
+
+        if (RiderRedirect::query()->where('voucher_id', $voucher->getKey())->exists()) {
+            return app(RiderRedirectEngine::class)->handoff($voucher, request());
+        }
 
         $subject = $subjects->fromVoucher($voucher);
         $state = $outcomes->forVoucher($voucher);

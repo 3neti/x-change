@@ -11,9 +11,11 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Data\Claim\ClaimWorkflowInterpretationData;
+use LBHurtado\XChange\Models\RiderRedirect;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Claim\ClaimWorkflowReadModelProjector;
 use LBHurtado\XChange\Services\Claim\OnboardingSuccessActionResolver;
+use LBHurtado\XChange\Services\Claim\RiderRedirectEngine;
 use LBHurtado\XChange\Services\Claim\VoucherRiderFallbackPolicy;
 use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
 use LBHurtado\XChange\Services\Settlement\DemonstrationPolicySummary;
@@ -51,6 +53,11 @@ class ClaimSuccessPageController
 
         if ($workflow->requiresAttention()) {
             return $this->attentionResponse($voucher, $workflow, $request);
+        }
+
+        $navigation = app(RiderRedirectEngine::class)->completion($voucher, $request);
+        if ($navigation !== null) {
+            return $navigation;
         }
 
         $display = $displays->forPayer($voucher, $request);
@@ -99,6 +106,16 @@ class ClaimSuccessPageController
                 collectionProgress: $collectionProgress,
             ),
         ];
+
+        $obligation = RiderRedirect::query()->where('voucher_id', $voucher->getKey())->first();
+        if ($obligation !== null) {
+            $props['rider_handoff'] = ['pending' => app(RiderRedirectEngine::class)->authorized($voucher, $request)];
+            $props['redirectEndpoint'] = null;
+            $props['redirect'] = ['owner' => null, 'show_countdown' => false];
+            if (is_array($props['rider'])) {
+                $props['rider']['redirect'] = null;
+            }
+        }
 
         if (request()->wantsJson()) {
             return response()->json($props)->withHeaders(($successPresentation['suppress_legacy_rider'] ?? false) ? [

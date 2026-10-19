@@ -9,6 +9,7 @@ use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
+use LBHurtado\XChange\Services\Claim\RiderRedirectEngine;
 use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeDetailAccess;
 use LBHurtado\XChange\Services\Cockpit\PayCodeTerminalControlReadModel;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
@@ -45,6 +46,7 @@ class CockpitVoucherDetailPageController extends Controller
         );
 
         if ($voucher !== null) {
+            $props['rider_redirect'] = app(RiderRedirectEngine::class)->summary($voucher);
             $props['terminal_control'] = $this->terminalControls->forVoucher(
                 $voucher,
                 $request->user(),

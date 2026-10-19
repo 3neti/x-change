@@ -342,3 +342,5 @@ release an immutable package version, and update the host through Composer.
 ## License
 
 See [LICENSE.md](./LICENSE.md) for the authoritative license terms.
+
+Backend rider redirects: [integration guide](docs/claim-ux/rider-redirect-guide.md), [plan](docs/claim-ux/RIDER_REDIRECT_PLAN.md), and [compass](docs/claim-ux/RIDER_REDIRECT_COMPASS.md).

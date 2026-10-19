@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Redemption;
 
+use Illuminate\Support\Facades\DB;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Models\VoucherClaim;
@@ -30,6 +31,11 @@ class RecordVoucherClaim
         SubmitPayCodeClaimResultData $result,
         array $payload = [],
     ): VoucherClaim {
+        return DB::transaction(fn (): VoucherClaim => $this->persist($voucher, $result, $payload));
+    }
+
+    private function persist(Voucher $voucher, SubmitPayCodeClaimResultData $result, array $payload): VoucherClaim
+    {
         $settledAccountFundingClaim = $this->settledAccountFundingClaim(
             $voucher,
             $result,

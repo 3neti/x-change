@@ -34,6 +34,7 @@ final class ClaimPreviewScenarioFactory
             ],
             'rider_splash' => filled(data_get($payload, 'rider.splash')),
             'rider_redirect' => filled(data_get($payload, 'rider.url')),
+            'rider_redirect_mode' => config('rider-redirect.enabled') ? 'backend' : 'legacy',
             'rider' => [
                 'message' => data_get($payload, 'rider.message'),
                 'url' => data_get($payload, 'rider.url'),
@@ -220,6 +221,10 @@ final class ClaimPreviewScenarioFactory
                 'expected' => 'The browser reaches the configured rider URL.',
                 'screenshot' => 'screenshots/08-rider-url.png',
             ];
+        }
+
+        if (data_get($fixture, 'rider_redirect_mode') === 'backend' && ($fixture['rider_redirect'] ?? false)) {
+            $checkpoints = array_values(array_filter($checkpoints, static fn (array $step): bool => ! in_array($step['key'], ['claim-success-rider-message', 'rider-redirect-countdown'], true)));
         }
 
         return $checkpoints;

@@ -10,6 +10,15 @@ import type {
 
 const props = defineProps<CockpitVoucherDetailPageProps>();
 
+function redirectEventLabel(type: string): string {
+  const labels: Record<string, string> = {
+    committed: 'Destination committed', eligible: 'Claim eligible',
+    handoff_requested: 'Handoff requested', redirect_prepared: 'Redirect prepared — arrival unconfirmed',
+    destination_received: 'Destination acknowledged receipt', page_initialized: 'Destination reported page initialized',
+  };
+  return labels[type.split('.').at(-1) ?? ''] ?? 'Delivery event';
+}
+
 const voucher = computed(() => props.read_model?.voucher);
 const summary = computed<Record<string, unknown>>(
   () => voucher.value?.summary ?? {},
@@ -395,6 +404,16 @@ function setParam(
             </dd>
           </div>
         </dl>
+      </section>
+
+      <section v-if="props.rider_redirect" class="rounded-xl border p-4" data-testid="rider-redirect-evidence">
+        <h2 class="font-semibold">Landing page delivery</h2>
+        <p class="text-sm text-muted-foreground">{{ props.rider_redirect.destination_host }}</p>
+        <ul class="mt-3 space-y-2 text-sm">
+          <li v-for="event in props.rider_redirect.events" :key="`${event.event_type}:${event.attempt_reference}`">
+            {{ redirectEventLabel(event.event_type) }} · {{ event.occurred_at }}
+          </li>
+        </ul>
       </section>
 
       <CockpitPayCodeRecordWorkspace

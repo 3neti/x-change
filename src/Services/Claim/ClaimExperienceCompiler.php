@@ -10,6 +10,7 @@ use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Data\Claim\ClaimExperienceData;
 use LBHurtado\XChange\Data\Claim\ClaimExperienceDiagnosticsData;
 use LBHurtado\XChange\Data\Claim\ClaimPhaseData;
+use LBHurtado\XChange\Models\RiderRedirect;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
 use LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
@@ -33,6 +34,10 @@ class ClaimExperienceCompiler
         $hasRiderSplash = filled(data_get($rider, 'splash'));
         $hasRiderMessage = filled(data_get($rider, 'message'));
         $redirectUrl = data_get($rider, 'redirect_url') ?? data_get($rider, 'url');
+        $obligation = RiderRedirect::query()->where('voucher_id', $voucher->getKey())->first();
+        if ($obligation !== null) {
+            $redirectUrl = $obligation->destination;
+        }
         $isCampaignCoverageCompletion = app(ClaimWorkflowResolverContract::class)->resolve($voucher)->key === 'campaign.coverage-completion.v1';
         if ($isCampaignCoverageCompletion) {
             $hasRiderMessage = false;
@@ -126,11 +131,11 @@ class ClaimExperienceCompiler
         if (filled($redirectUrl)) {
             $phases[] = new ClaimPhaseData(
                 key: 'redirect',
-                owner: 'claim-widget',
+                owner: $obligation !== null ? 'backend' : 'claim-widget',
                 source: 'voucher.instructions.rider.redirect_url',
                 url: $redirectUrl,
-                delay_seconds: (int) (data_get($rider, 'redirect_delay') ?? 5),
-                show_countdown: true,
+                delay_seconds: $obligation !== null ? 0 : (int) (data_get($rider, 'redirect_delay') ?? 5),
+                show_countdown: $obligation === null,
             );
         }
 
@@ -142,7 +147,7 @@ class ClaimExperienceCompiler
             ],
             options: [
                 'skip_consumed_splash' => $hasRiderSplash,
-                'show_redirect_countdown' => filled($redirectUrl),
+                'show_redirect_countdown' => $obligation === null && filled($redirectUrl),
                 'suppress_legacy_pre_claim_stages' => $isOfficerAuthorization,
             ],
             phases: new DataCollection(ClaimPhaseData::class, $phases),
@@ -151,7 +156,7 @@ class ClaimExperienceCompiler
             ],
             diagnostics: new ClaimExperienceDiagnosticsData(
                 duplicate_splash_prevented: $hasRiderSplash,
-                redirect_owner: filled($redirectUrl) ? 'claim-widget' : null,
+                redirect_owner: filled($redirectUrl) ? ($obligation !== null ? 'backend' : 'claim-widget') : null,
                 splash_owner: $hasRiderSplash ? 'x-rider' : 'form-flow',
                 form_flow_splash_policy: $hasRiderSplash ? 'skip_consumed' : 'allow',
                 consumed: [

@@ -25,6 +25,7 @@ use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
 use LBHurtado\XChange\Services\Claim\ClaimEvidenceRequirements;
+use LBHurtado\XChange\Services\Claim\RiderRedirectEngine;
 use LBHurtado\XChange\Services\Commercial\CommercialBillingPolicy;
 use LBHurtado\XChange\Services\Commercial\CommercialCustomerChargingGuard;
 use LBHurtado\XChange\Services\Commercial\CommercialPricingAcceptanceGuard;
@@ -69,6 +70,7 @@ class GeneratePayCode
     public function handle(array $input): GeneratePayCodeResultData
     {
         $input = app(VoucherIssuancePayloadNormalizer::class)->normalize($input);
+        app(RiderRedirectEngine::class)->validate($input);
         app(InstructionCapabilityIssuanceGuard::class)->ensureAvailable($input);
         $input = app(ClaimEvidenceRequirements::class)->snapshot($input);
 
