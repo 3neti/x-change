@@ -225,6 +225,8 @@ Route::prefix('x/operations')->middleware(['web', ShareXChangeBranding::class])-
     Route::get('/', [CheckoutConsoleController::class, 'show'])->name('x-change.operations.show');
     Route::get('pricing', [OperationsPricingController::class, 'show'])
         ->name('x-change.operations.pricing');
+    Route::get('pricing/template', [OperationsPricingController::class, 'template'])
+        ->name('x-change.operations.pricing.template');
     Route::post('pricing', [OperationsPricingController::class, 'update'])
         ->middleware('throttle:12,1,checkout-console-pricing:')
         ->name('x-change.operations.pricing.update');

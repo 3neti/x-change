@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\Contact\Models\Contact;
@@ -19,6 +20,7 @@ use LBHurtado\XChange\Jobs\Payment\QueueIssuedPayCodeSmsJob;
 use LBHurtado\XChange\Models\Checkout;
 use LBHurtado\XChange\Models\CheckoutRefundCase;
 use LBHurtado\XChange\Models\CheckoutViewerLink;
+use LBHurtado\XChange\Models\CommercialOffering;
 use LBHurtado\XChange\Models\CommercialPrincipal;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingSettlement;
@@ -31,6 +33,7 @@ use LBHurtado\XChange\Services\Checkout\PublicCheckoutDraftAccess;
 use LBHurtado\XChange\Services\Checkout\ReverifyCheckoutQrPayer;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Commercial\ConfiguredCommercialPrincipalResolver;
+use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XFeedback\Models\FeedbackDeliveryRecord;
 
 beforeEach(function (): void {
@@ -419,6 +422,38 @@ it('exposes Payment Operations under the canonical operations route', function (
         ->and(route('x-change.operations.pricing'))->toEndWith('/x/operations/pricing')
         ->and(route('x-change.operations.unlock'))->toEndWith('/x/operations/unlock')
         ->and(route('x-change.checkout.show'))->toEndWith('/x/checkout');
+});
+
+it('downloads the current pricing template and accepts it as a pricing update', function (): void {
+    $principal = new CommercialPrincipal([
+        'reference' => 'public-issuance-escrow',
+        'legal_name' => 'Public Issuance Escrow',
+        'authorization_reference' => 'commissioning:public-issuance-escrow:v1',
+        'active' => true,
+        'metadata' => ['interactive_login' => false],
+    ]);
+    $principal->save();
+    config()->set('x-change.public_issuance_escrow.enabled', true);
+    config()->set('x-change.public_issuance_escrow.principal.reference', 'public-issuance-escrow');
+    config()->set('x-change.public_issuance_escrow.principal.legal_name', 'Public Issuance Escrow');
+    config()->set('x-change.public_issuance_escrow.principal.authorization_reference', 'commissioning:public-issuance-escrow:v1');
+    app(ProvisionCommercialBaselines::class)->provision('commissioning:pricing-template-test');
+
+    $this->post(route('x-change.operations.unlock'), ['password' => 'password'])
+        ->assertRedirect();
+
+    $download = $this->get(route('x-change.operations.pricing.template'))
+        ->assertOk();
+    $csv = $download->streamedContent();
+
+    expect($csv)->toContain('reference,label,category,currency,unit_price')
+        ->and($download->headers->get('Content-Disposition'))->toContain('x-change-pricing-template.csv');
+
+    $this->post(route('x-change.operations.pricing.update'), [
+        'pricing_file' => UploadedFile::fake()->createWithContent('pricing.csv', $csv),
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    expect(CommercialOffering::query()->where('status', 'published')->count())->toBeGreaterThan(1);
 });
 
 it('scopes the checkout console to the public issuance escrow after cutover', function (): void {

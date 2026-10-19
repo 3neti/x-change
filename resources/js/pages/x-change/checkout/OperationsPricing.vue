@@ -26,10 +26,26 @@ const form = useForm({
   })),
 });
 
+const uploadForm = useForm<{ pricing_file: File | null }>({
+  pricing_file: null,
+});
+
 const changed = computed(() => form.isDirty);
 
 function publish(): void {
   form.post("/x/operations/pricing", { preserveScroll: true });
+}
+
+function selectPricingFile(event: Event): void {
+  uploadForm.pricing_file = (event.target as HTMLInputElement).files?.[0] ?? null;
+}
+
+function uploadPricing(): void {
+  uploadForm.post("/x/operations/pricing", {
+    forceFormData: true,
+    preserveScroll: true,
+    onSuccess: () => window.location.reload(),
+  });
 }
 </script>
 
@@ -54,6 +70,23 @@ function publish(): void {
             <p class="text-xs text-slate-400">Active version {{ props.pricing.active_version }} · {{ props.pricing.currency }}</p>
           </div>
           <span class="rounded-full bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-300">Beta write mode</span>
+        </div>
+
+        <div class="flex flex-col gap-4 border-b border-slate-800 bg-slate-950/40 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 class="font-semibold">Spreadsheet update</h3>
+            <p class="mt-1 max-w-2xl text-xs text-slate-400">Download the current price list, edit the unit_price column, then upload it to publish every row as one new active version.</p>
+          </div>
+          <div class="flex flex-col gap-2 sm:items-end">
+            <a href="/x/operations/pricing/template" class="text-sm font-semibold text-amber-300 hover:text-amber-200">Download current pricing template</a>
+            <form class="flex flex-wrap items-center justify-end gap-2" @submit.prevent="uploadPricing">
+              <input type="file" accept=".csv,.txt,text/csv" class="block max-w-full text-xs text-slate-300 file:mr-2 file:rounded-md file:border-0 file:bg-slate-700 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-slate-100 hover:file:bg-slate-600" @change="selectPricingFile" />
+              <button type="submit" :disabled="!uploadForm.pricing_file || uploadForm.processing" class="rounded-lg border border-amber-400/60 px-3 py-2 text-xs font-semibold text-amber-300 transition hover:bg-amber-400/10 disabled:cursor-not-allowed disabled:opacity-40">
+                {{ uploadForm.processing ? "Uploading…" : "Upload and publish" }}
+              </button>
+            </form>
+            <p v-if="uploadForm.errors.pricing_file" class="text-xs text-rose-300">{{ uploadForm.errors.pricing_file }}</p>
+          </div>
         </div>
 
         <form class="flex flex-col gap-5 p-5" @submit.prevent="publish">
