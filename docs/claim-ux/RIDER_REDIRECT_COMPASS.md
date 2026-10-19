@@ -121,3 +121,17 @@ Release set: Form Flow v1.11.0, OTP v1.4.0, KYC v1.3.0, location v1.4.0, selfie 
 Cloud baseline: testing release/v1.0.0-beta.98 at 89519ec6; payout release/v1.0.0-beta.107 at 0ad4985. Clean release worktrees are used; unrelated shared-checkout work is preserved. Both builds already install Composer dependencies, publish verified package resources, run npm ci and build the host; deploy commands migrate and refresh commissioning. Scheduler is enabled. Failed-job baseline is testing 0, payout 2796; payout funding queue size is 7. Historical failed jobs are preserved.
 
 Testing and payout deployment IDs and final smoke evidence will be recorded in a follow-up compass entry after deployment; this package tag records the approved release candidate, not a claim that deployment has already completed.
+
+
+## Cloud release evidence — 2026-10-20
+
+Published all eight approved tags to GitHub and verified their Packagist source references. Both host lockfiles update only these eight packages and contain no path dependencies. Generated frontend inputs were published through the package command, followed by npm ci and production Vite builds. Focused host checks passed: testing 6 tests / 33 assertions, payout 14 tests / 60 assertions.
+
+- Testing: host d5b582eface08d556170369f7dd933897c9266fa, deployment `depl-a305c459-ba1b-4e1a-93ad-8441e8b96426`, succeeded; required monitor completed in 02:11.
+- Payout: host ca42dc07fcaf625ad33ce30475c08ff6d5ae6346, deployment `depl-a305c60a-5a51-4402-8cf6-8cc78075f2a2`, succeeded; required monitor completed in 02:06.
+
+Both live runtimes report the eight expected versions, rider engine enabled and allow-any-host enabled. The rider migration and both tables exist, handoff and receipt routes are registered, strict asset verification passes 862/862 with no stale or missing resources, and journal delivery is scheduled every minute. Payout callback routes remain registered. Public auto-generate and its Claim tab controls render in a mobile Chromium browser with HTTP 200 and no page errors; testing also passed desktop rendering. The initial payout network-idle wait timed out; DOM readiness and visible Claim controls passed after rollout.
+
+Testing queues and failed jobs remain zero. Payout funding queue snapshot is 8; other monitored queues are zero. Failed jobs increased from the earlier baseline 2796 to 2801; one failure occurred after deployment started: VerifyFundingIntentJob on x-change-funding, ModelNotFoundException for PayCodeIssuanceFundingOrder, with no rider reference. Historical failures were preserved; no retries or deletions were performed. This funding failure is an outstanding operational finding, not evidence of a successful funding flow.
+
+No real payments, voucher issuance, provider callbacks or destination arrival receipts were exercised during Cloud smoke checks. Browser checks verify rendering, not an end-to-end paid claim. A prepared handoff remains distinct from destination-confirmed arrival. The published v1.0.250 tag is immutable; this deployment evidence is a documentation-only follow-up.
