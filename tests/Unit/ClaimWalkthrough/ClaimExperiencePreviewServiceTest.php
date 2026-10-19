@@ -75,6 +75,8 @@ it('renders and caches preview artifacts from voucher instructions', function ()
         ->and($result['cache_hit'])->toBeFalse()
         ->and(data_get($result, 'journey.schema'))->toBe('x-change.claim-experience-preview.journey.v2')
         ->and(data_get($result, 'journey.steps.0.key'))->toBe('claim-entry')
+        ->and(data_get($result, 'journey.steps.0.screen.code'))->toBe('AA317')
+        ->and(data_get($result, 'journey.steps.0.screen.fields.0.value'))->toBe('AA317')
         ->and(collect(data_get($result, 'journey.steps'))->pluck('key')->all())
         ->not->toContain('og-social-preview')
         ->and(data_get($result, 'artifacts.storyboard_pdf'))->toBeFile()
@@ -320,6 +322,7 @@ it('shows the draft stamp sample code on the native claim splash', function (): 
     $splash = collect(data_get($result, 'journey.steps'))->first(
         fn (array $step): bool => data_get($step, 'screen.component') === 'form-flow/core/Splash',
     );
+    expect(collect(data_get($result, 'journey.steps'))->pluck('screen.code')->filter()->unique()->values()->all())->toBe(['AA317']);
     expect(data_get($splash, 'screen.props.voucher_code'))->toBe('AA317')
         ->and(data_get($splash, 'screen.props.preview_mode'))->toBeTrue()
         ->and(Voucher::query()->where('code', 'AA317')->exists())->toBeFalse();

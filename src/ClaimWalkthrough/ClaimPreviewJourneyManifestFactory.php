@@ -9,6 +9,8 @@ use LBHurtado\FormFlowManager\Data\FormFlowPreviewStepData;
 
 final class ClaimPreviewJourneyManifestFactory
 {
+    public const SampleCode = 'AA317';
+
     public function __construct(
         private readonly Filesystem $files,
     ) {}
@@ -98,7 +100,7 @@ final class ClaimPreviewJourneyManifestFactory
                 'kind' => ($presentation['state'] ?? null) === 'needs_attention'
                     ? 'claim_attention'
                     : 'claim_progress',
-                'code' => 'PREVIEW',
+                'code' => self::SampleCode,
                 'title' => (string) ($presentation['title_template'] ?? 'Claim progress'),
                 'description' => (string) ($presentation['body'] ?? ''),
                 'progress_state' => (string) ($presentation['state'] ?? 'current'),
@@ -270,7 +272,7 @@ final class ClaimPreviewJourneyManifestFactory
 
         return [
             'kind' => $this->screenKind($key, $validation),
-            'code' => 'PREVIEW',
+            'code' => self::SampleCode,
             'amount' => $formattedAmount,
             'title' => $this->screenTitle($key, $validation),
             'description' => $this->screenDescription($key, $validation),
@@ -369,7 +371,7 @@ final class ClaimPreviewJourneyManifestFactory
         }
 
         if ($key === 'claim-entry') {
-            return [['key' => 'code', 'label' => 'Pay Code', 'value' => 'PREVIEW']];
+            return [['key' => 'code', 'label' => 'Pay Code', 'value' => self::SampleCode]];
         }
 
         if ($key === 'confirmation') {

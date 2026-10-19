@@ -105,7 +105,7 @@ final class ClaimExperiencePreviewService
                     'mobile' => $options->mobile,
                     'preview_mobile' => $options->mobile,
                     'voucher_code' => $payCode,
-                    'preview_voucher_code' => 'AA317',
+                    'preview_voucher_code' => ClaimPreviewJourneyManifestFactory::SampleCode,
                     'claim_experience' => $compiled->experience->toArray(),
                 ]);
             }

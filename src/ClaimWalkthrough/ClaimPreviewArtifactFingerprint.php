@@ -15,6 +15,7 @@ final class ClaimPreviewArtifactFingerprint
     {
         $payload = $this->canonicalize([
             'schema_version' => 'x-change.claim-preview.fingerprint.v2',
+            'sample_code' => ClaimPreviewJourneyManifestFactory::SampleCode,
             'scenario_key' => $scenario['key'] ?? null,
             'scenario_version' => $scenario['version'] ?? 1,
             'fixture' => $scenario['fixture'] ?? [],
