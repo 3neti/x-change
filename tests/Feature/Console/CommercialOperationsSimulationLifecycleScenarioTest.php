@@ -84,6 +84,10 @@ it('simulates governed commercial operations and rolls every record back', funct
         ])
         ->and(data_get($payload, 'provider_simulation.disbursement_calls'))->toBe(1)
         ->and(data_get($payload, 'provider_simulation.status_calls'))->toBe(1)
+        ->and(data_get($payload, 'product_revenue_bridge.execution'))->toBe('not_executed')
+        ->and(data_get($payload, 'product_revenue_bridge.shadow_reconciliation.status'))->toBe('reconciled')
+        ->and(data_get($payload, 'product_revenue_bridge.shadow_reconciliation.variance_minor'))->toBe(0)
+        ->and(data_get($payload, 'product_revenue_bridge.plan.status'))->toBe('planned')
         ->and(collect(data_get($payload, 'invariants'))->every(
             static fn (bool $passed): bool => $passed,
         ))->toBeTrue()

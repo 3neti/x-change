@@ -45,6 +45,9 @@ use LBHurtado\XChange\Lifecycle\Runners\Support\CommercialSimulationPayoutProvid
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioBootstrapper;
 use LBHurtado\XChange\Models\CommercialOperatorAuthorization;
 use LBHurtado\XChange\Services\Commercial\CommercialGovernanceInspector;
+use LBHurtado\XChange\Services\Commercial\CommercialProductRevenueBridgeCommissioningStatus;
+use LBHurtado\XChange\Services\Commercial\CommercialProductRevenueBridgePlan;
+use LBHurtado\XChange\Services\Commercial\CommercialProductRevenueShadowReconciler;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XCommerce\Data\CommercialAccountingContextData;
@@ -412,6 +415,19 @@ final class CommercialOperationsSimulationScenarioRunner implements ScenarioRunn
             ])
             ->values()
             ->all();
+        $productRevenueBridgePlan = $this->container
+            ->make(CommercialProductRevenueBridgePlan::class)
+            ->build(
+                $quote->allocationPlan,
+                $sale->reference,
+                $positions['product_revenue']->position_reference,
+            );
+        $productRevenueBridgeShadow = $this->container
+            ->make(CommercialProductRevenueShadowReconciler::class)
+            ->reconcile($quote->allocationPlan, $allocations);
+        $productRevenueBridgeStatus = $this->container
+            ->make(CommercialProductRevenueBridgeCommissioningStatus::class)
+            ->inspect();
 
         return [
             'success' => true,
@@ -463,6 +479,12 @@ final class CommercialOperationsSimulationScenarioRunner implements ScenarioRunn
                 'quote_reference' => $sale->quote_reference,
                 'snapshot_hash' => $sale->snapshot_hash,
                 'allocations' => $allocations,
+            ],
+            'product_revenue_bridge' => [
+                'execution' => 'not_executed',
+                'commissioning_status' => $productRevenueBridgeStatus,
+                'plan' => $productRevenueBridgePlan,
+                'shadow_reconciliation' => $productRevenueBridgeShadow,
             ],
             'positions' => $timeline,
             'provider_cost_batch' => [

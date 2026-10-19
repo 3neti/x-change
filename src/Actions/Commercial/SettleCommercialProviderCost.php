@@ -145,9 +145,9 @@ final readonly class SettleCommercialProviderCost
                         currency: mb_strtoupper($evidence->currency),
                         status: 'requested',
                         idempotencyKey: 'provider-cost-inventory-outflow-key:'.$scope,
-                        effectiveAt: UtcInstant::canonical(
-                            UtcInstant::parseDateOrOffsetRequired($evidence->observedAt),
-                        ),
+                        effectiveAt: UtcInstant::parseDateOrOffsetRequired(
+                            $evidence->observedAt,
+                        )->toRfc3339String(),
                         externalReference: $evidence->evidenceReference,
                         metadata: [
                             'source' => 'x_change_provider_cost_settlement',
