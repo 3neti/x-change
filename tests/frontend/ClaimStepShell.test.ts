@@ -109,3 +109,11 @@ describe('ClaimStepShell', () => {
         );
     });
 });
+
+it('hides palette selection while the public claim uses its standardized palette',()=>{
+    document.documentElement.dataset.xChangeClaimAppearance='light';
+    const wrapper=mount(ClaimStepShell);
+    expect(wrapper.find('[data-testid="claim-theme-picker"]').exists()).toBe(false);
+    wrapper.unmount();
+    delete document.documentElement.dataset.xChangeClaimAppearance;
+});

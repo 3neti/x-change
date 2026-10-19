@@ -48,7 +48,7 @@ const handleSubmit = () => {
         <div class="space-y-6">
             <Card class="border-primary/10 shadow-none">
                 <CardHeader class="text-center">
-                    <ReceiptText class="mx-auto h-10 w-10 text-primary" />
+                    <ReceiptText class="mx-auto h-12 w-12 text-foreground" data-testid="claim-review-icon" aria-hidden="true" />
                     <CardTitle class="mt-4">Confirm Claim</CardTitle>
                     <CardDescription>
                         Review and confirm your Pay Code claim

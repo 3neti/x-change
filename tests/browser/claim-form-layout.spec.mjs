@@ -99,11 +99,22 @@ for (const mode of ['light','dark']) {
         test(`public ${screen} stays light with device appearance ${mode}`,async({page})=>{
             await page.setViewportSize({width:402,height:874});
             await page.emulateMedia({colorScheme:mode});
-            await page.addInitScript(()=>localStorage.setItem('appearance','dark'));
+            await page.addInitScript(()=>{localStorage.setItem('appearance','dark');localStorage.setItem('x-change:experience-theme:v1','amber');});
             if(screen==='splash') await render(page,'form-flow/core/Splash',{content:'',is_default_splash:true,voucher_code:'AA317',timeout:0});
             else if(screen==='details') await render(page,'form-flow/core/GenericForm',{title:'Disbursement Details',fields:[{name:'mobile',type:'tel',group:'redeemer',label:'Mobile Number'},{name:'account_number',type:'text',group:'endorsement',label:'Account Number'}]});
             else await render(page,'x-change/claim/Preview',{viewport:{profile:'mobile',width:402,height:874},step:{title:screen,screen:{kind:screen,code:'AA317',amount:'₱100.00',title:screen,description:'Synthetic claim preview',fields:[]}}});
             await expect(page.locator('html')).toHaveAttribute('data-x-change-claim-appearance','light');
+            await expect(page.locator('html')).toHaveAttribute('data-x-change-theme','default');
+            const canvas = screen === 'details' || screen === 'splash'
+                ? page.getByTestId('form-flow-presentation')
+                : page.locator('.x-claim-canvas').first();
+            expect(await canvas.evaluate(el=>getComputedStyle(el).backgroundColor)).toBe('rgb(255, 255, 255)');
+            if (screen==='confirmation') {
+                await expect(page.getByTestId('claim-review-icon')).toBeVisible();
+                await expect(page.locator('svg.lucide-circle-check')).toHaveCount(0);
+            }
+            if (screen==='success') await expect(page.getByTestId('claim-pending-icon')).toBeVisible();
+
             expect(await page.locator('html').evaluate(el=>({dark:el.classList.contains('dark'),scheme:el.style.colorScheme,saved:localStorage.getItem('appearance')}))).toEqual({dark:false,scheme:'light',saved:'dark'});
             await page.emulateMedia({colorScheme:mode==='dark'?'light':'dark'});
             await expect(page.locator('html')).not.toHaveClass(/\bdark\b/);

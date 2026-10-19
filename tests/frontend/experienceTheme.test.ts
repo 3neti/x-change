@@ -80,3 +80,10 @@ describe('x-change experience themes', () => {
         );
     });
 });
+
+it('prevents a stored amber theme from recoloring an active public claim',()=>{
+    document.documentElement.dataset.xChangeClaimAppearance='light';
+    applyExperienceTheme('amber');
+    expect(document.documentElement.dataset.xChangeTheme).toBe('default');
+    delete document.documentElement.dataset.xChangeClaimAppearance;
+});

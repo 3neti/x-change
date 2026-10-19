@@ -147,3 +147,29 @@
             var(--x-experience-line) 32px
         );
 }
+
+/* Claim stages share a neutral canvas; state is communicated by content. */
+:root[data-x-change-claim-appearance='light'] {
+    --background: #fff;
+    --foreground: #0f172a;
+    --card: #fff;
+    --card-foreground: #0f172a;
+    --popover: #fff;
+    --popover-foreground: #0f172a;
+    --primary: #0f172a;
+    --primary-foreground: #fff;
+    --muted: #f1f5f9;
+    --muted-foreground: #64748b;
+    --border: #e2e8f0;
+    --input: #e2e8f0;
+    --ring: #2563eb;
+    --x-experience-canvas: #fff;
+    --x-experience-glow: transparent;
+    --x-experience-line: transparent;
+}
+
+:root[data-x-change-claim-appearance='light'] .x-experience-surface,
+:root[data-x-change-claim-appearance='light'] .x-claim-canvas {
+    background-color: #fff;
+    background-image: none;
+}

@@ -34,4 +34,15 @@ describe('public claim appearance',()=>{
         expect(document.documentElement.dataset.xChangeClaimAppearance).toBe('light');
         cleanup();expect(document.documentElement.classList.contains('dark')).toBe(false);
     });
+
+it('uses the same neutral claim palette despite a saved artwork theme, then restores it',()=>{
+    localStorage.setItem('x-change:experience-theme:v1','amber');
+    document.documentElement.dataset.xChangeTheme='amber';
+    const cleanup=initializeClaimAppearance({component:'x-change/claim/Entry',props:{}});
+    expect(document.documentElement.dataset.xChangeTheme).toBe('default');
+    cleanup();
+    expect(document.documentElement.dataset.xChangeTheme).toBe('amber');
+    expect(localStorage.getItem('x-change:experience-theme:v1')).toBe('amber');
+});
+
 });

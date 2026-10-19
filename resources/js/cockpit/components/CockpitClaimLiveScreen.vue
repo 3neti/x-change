@@ -9,6 +9,8 @@ import {
     LocateFixed,
     MapPin,
     PenTool,
+    ReceiptText,
+    Clock3,
     ShieldCheck,
     Smartphone,
     UserRound,
@@ -96,7 +98,7 @@ const actualScreenComponent = computed<Component | null>(() => {
         </div>
         <template v-else-if="screen.kind === 'claim_entry'">
             <div
-                class="from-primary/5 via-background to-background min-h-0 flex-1 overflow-y-auto bg-gradient-to-b px-5 py-8"
+                class="x-claim-canvas from-primary/5 via-background to-background min-h-0 flex-1 overflow-y-auto bg-gradient-to-b px-5 py-8"
             >
                 <div
                     class="mx-auto flex min-h-full w-full max-w-md flex-col justify-center"
@@ -166,7 +168,7 @@ const actualScreenComponent = computed<Component | null>(() => {
 
         <template v-else-if="screen.kind === 'claim_details'">
             <div
-                class="from-primary/5 via-background to-background flex min-h-0 flex-1 flex-col bg-gradient-to-b px-4 py-5"
+                class="x-claim-canvas from-primary/5 via-background to-background flex min-h-0 flex-1 flex-col bg-gradient-to-b px-4 py-5"
             >
                 <div class="grid gap-1">
                     <h3 class="text-lg font-semibold">{{ screen.title }}</h3>
@@ -245,7 +247,7 @@ const actualScreenComponent = computed<Component | null>(() => {
 
         <template v-else-if="isValidation">
             <div
-                class="from-primary/5 via-background to-background flex min-h-0 flex-1 flex-col bg-gradient-to-b px-5 py-6"
+                class="x-claim-canvas from-primary/5 via-background to-background flex min-h-0 flex-1 flex-col bg-gradient-to-b px-5 py-6"
             >
                 <div class="grid gap-1">
                     <div class="flex items-center gap-2">
@@ -398,9 +400,9 @@ const actualScreenComponent = computed<Component | null>(() => {
 
         <template v-else-if="screen.kind === 'confirmation'">
             <div
-                class="from-primary/5 via-background to-background flex min-h-0 flex-1 flex-col bg-gradient-to-b px-5 py-6"
+                class="x-claim-canvas from-primary/5 via-background to-background flex min-h-0 flex-1 flex-col bg-gradient-to-b px-5 py-6"
             >
-                <CheckCircle2 class="text-primary mx-auto size-11" />
+                <ReceiptText class="text-foreground mx-auto h-12 w-12" data-testid="claim-review-icon" aria-hidden="true" />
                 <div class="mt-3 text-center">
                     <h3 class="text-lg font-semibold">{{ screen.title }}</h3>
                     <p class="text-muted-foreground mt-1 text-[11px]">
@@ -438,9 +440,9 @@ const actualScreenComponent = computed<Component | null>(() => {
 
         <template v-else-if="screen.kind === 'success'">
             <div
-                class="via-background to-background flex min-h-0 flex-1 flex-col justify-center gap-5 bg-gradient-to-b from-emerald-500/10 px-5 py-6 text-center"
+                class="x-claim-canvas via-background to-background flex min-h-0 flex-1 flex-col justify-center gap-5 bg-gradient-to-b from-emerald-500/10 px-5 py-6 text-center"
             >
-                <CheckCircle2 class="mx-auto size-14 text-emerald-500" />
+                <Clock3 class="mx-auto h-12 w-12 text-amber-500" data-testid="claim-pending-icon" aria-hidden="true" />
                 <div class="grid gap-2">
                     <p class="text-2xl font-bold">{{ screen.amount }}</p>
                     <h3 class="text-lg font-semibold">{{ screen.title }}</h3>
@@ -475,7 +477,7 @@ const actualScreenComponent = computed<Component | null>(() => {
             "
         >
             <div
-                class="via-background to-background flex min-h-0 flex-1 flex-col justify-center gap-5 bg-gradient-to-b px-5 py-6 text-center"
+                class="x-claim-canvas via-background to-background flex min-h-0 flex-1 flex-col justify-center gap-5 bg-gradient-to-b px-5 py-6 text-center"
                 :class="
                     screen.kind === 'claim_attention'
                         ? 'from-amber-500/10'

@@ -32,6 +32,8 @@ const props = withDefaults(
     },
 );
 
+const hasFixedClaimPalette = computed(() => typeof document !== 'undefined' && document.documentElement.dataset.xChangeClaimAppearance === 'light');
+
 const toneClass = computed(() => {
     if (props.tone === 'success') {
         return 'from-emerald-500/10 via-background to-background';
@@ -74,7 +76,7 @@ const widthClass = computed(() => {
         :class="toneClass"
     >
         <ExperienceThemePicker
-            v-if="showThemePicker"
+            v-if="showThemePicker && !hasFixedClaimPalette"
             compact
             class="absolute right-4 top-4 sm:right-6 sm:top-6"
             data-testid="claim-theme-picker"
