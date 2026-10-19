@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import Success from '../../resources/js/pages/x-change/claim/Success.vue';
 
 vi.mock('@inertiajs/vue3', () => ({
+    usePage: () => ({props: {}}),
     Head: {
         props: ['title'],
         template: '<slot />',
@@ -30,7 +31,8 @@ vi.mock('@/components/ui/button', () => ({
     },
 }));
 
-vi.mock('lucide-vue-next', () => ({
+vi.mock('lucide-vue-next', async (importOriginal) => ({
+    ...await importOriginal<typeof import('lucide-vue-next')>(),
     AlertTriangle: {
         name: 'AlertTriangle',
         template: '<span data-testid="attention-icon" />',

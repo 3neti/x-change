@@ -129,11 +129,11 @@ it('attaches x-ray claim presentation before starting form flow', function () {
 
     assertClaimExperienceStartFlow($this, function (array $experience, array $payload) {
         expect(data_get($payload, 'metadata.claim_presentation.schema'))->toBe('x-change.claim-presentation.v1')
-            ->and(data_get($payload, 'metadata.claim_presentation.title'))->toBe('Claim Pay Code')
-            ->and(data_get($payload, 'metadata.claim_presentation.primary_action_label'))->toBe('Start Claim')
+            ->and(data_get($payload, 'metadata.claim_presentation.title'))->toBe('Disbursement Details')
+            ->and(data_get($payload, 'metadata.claim_presentation.primary_action_label'))->toBe('Continue')
             ->and(data_get($payload, 'metadata.claim_presentation.eyebrow'))->toBe('Pay Code')
             ->and(data_get($payload, 'metadata.claim_presentation.subject_label'))->toBe('Pay Code')
-            ->and(data_get($payload, 'metadata.claim_presentation.intent'))->toBe('claim');
+            ->and(data_get($payload, 'metadata.claim_presentation.intent'))->toBe('disbursement.v1');
     }, 'flow-claim-presentation-test');
 
     $this->get('/x/claim?code='.$voucher->code)

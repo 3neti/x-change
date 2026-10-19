@@ -122,3 +122,25 @@ for (const mode of ['light','dark']) {
         });
     }
 }
+
+for (const screen of ['claim_entry','splash','details','confirmation','success']) {
+    test(`YAML presentation contract customizes ${screen}`, async ({page}) => {
+        const profile = {...presentation, appearance:{mode:'system',light:{canvas:'#f0f9ff',surface:'#f0f9ff',foreground:'#102030'},dark:{canvas:'#112233',surface:'#112233',foreground:'#ffffff'}},icons:{size:40,review:{name:'clipboard-check',color:'#123456'},pending:{name:'clock',color:'#a16207'}}};
+        await page.emulateMedia({colorScheme:'dark'});
+        if(screen==='splash') await render(page,'form-flow/core/Splash',{presentation:profile,content:'',is_default_splash:true,voucher_code:'AA317',timeout:0});
+        else if(screen==='details') await render(page,'form-flow/core/GenericForm',{presentation:profile,title:'Disbursement Details',fields:[{name:'mobile',type:'tel',label:'Mobile Number'}]});
+        else await render(page,'x-change/claim/Preview',{presentation:null,claim_ui:profile,viewport:{profile:'mobile',width:402,height:874},step:{title:screen,screen:{kind:screen,code:'AA317',amount:'₱100.00',title:screen,description:'Synthetic claim preview',fields:[]}}});
+        await expect(page.locator('html')).toHaveAttribute('data-x-change-claim-appearance','dark');
+        const canvas = ['splash','details'].includes(screen) ? page.getByTestId('form-flow-presentation') : page.locator('.x-claim-canvas').first();
+        await expect(canvas).toHaveCSS('background-color','rgb(17, 34, 51)');
+        if(screen==='confirmation') {
+            const icon=page.getByTestId('claim-review-icon');
+            await expect(icon).toHaveAttribute('data-claim-icon-name','clipboard-check');
+            await expect(icon).toHaveCSS('width','40px');
+            await expect(icon).toHaveCSS('color','rgb(18, 52, 86)');
+        }
+        await page.emulateMedia({colorScheme:'light'});
+        await expect(page.locator('html')).toHaveAttribute('data-x-change-claim-appearance','light');
+        await expect(canvas).toHaveCSS('background-color','rgb(240, 249, 255)');
+    });
+}

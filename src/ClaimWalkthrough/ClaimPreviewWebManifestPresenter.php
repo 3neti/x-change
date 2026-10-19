@@ -43,6 +43,7 @@ final class ClaimPreviewWebManifestPresenter
                 'claim_submission' => false,
             ],
             'journey' => [
+                'presentation' => data_get($artifact->metadata, 'journey.presentation'),
                 'viewport' => $this->viewport($artifact),
                 'step_count' => count($steps),
                 'steps' => $steps,

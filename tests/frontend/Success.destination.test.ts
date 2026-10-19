@@ -4,6 +4,7 @@ import Success from '../../resources/js/pages/x-change/claim/Success.vue';
 import { router } from '@inertiajs/vue3';
 
 vi.mock('@inertiajs/vue3', () => ({
+    usePage: () => ({props: {}}),
     Head: {
         props: ['title'],
         template: '<slot />',

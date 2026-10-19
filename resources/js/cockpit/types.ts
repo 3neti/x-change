@@ -1,3 +1,4 @@
+import type { FormFlowPresentation } from '@/pages/form-flow/core/components/formFlowPresentation';
 export type CockpitNavigationGroup = "primary" | "secondary";
 
 export type CockpitNavigationItem = {
@@ -1777,6 +1778,7 @@ export type CockpitClaimExperiencePreviewManifest = {
     claim_submission: boolean;
   };
   journey: {
+    presentation?: FormFlowPresentation | null;
     viewport: {
       profile: string;
       width: number;

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\ClaimWalkthrough;
 
 use InvalidArgumentException;
+use LBHurtado\FormFlowManager\Services\FormFlowPresentationResolver;
 use LBHurtado\FormFlowManager\Services\FormFlowPreviewCompiler;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Models\Voucher;
@@ -94,6 +95,7 @@ final class ClaimExperiencePreviewService
                 $options->progressState,
             );
             $screens = [];
+            $compiled = null;
 
             if (! $workflow->requiresAttention()) {
                 $compiled = $this->claimFlows->compile($previewVoucher);
@@ -133,6 +135,7 @@ final class ClaimExperiencePreviewService
                 $screens,
                 $simulation,
             );
+            $journey['presentation'] = app(FormFlowPresentationResolver::class)->resolve($compiled->instructions->presentation ?? ['profile' => 'guided-claim-v1']);
             $artifact = $this->cache->rememberRendered(
                 scenario: $scenario,
                 fingerprint: $context['fingerprint'],

@@ -32,6 +32,7 @@ final class ClaimPreviewArtifactFingerprint
             'locale' => app()->getLocale(),
             'asset_fingerprint' => $this->assetFingerprint(),
             'presentation_fingerprint' => hash('sha256', json_encode([
+                'profile_yaml' => hash_file('sha256', is_file(config_path('form-flow-presentations/guided-claim-v1.yaml')) ? config_path('form-flow-presentations/guided-claim-v1.yaml') : dirname(__DIR__, 2).'/config/form-flow-presentations/guided-claim-v1.yaml'),
                 'profiles' => config('form-flow.presentation.profiles', []),
                 'driver' => is_file(config_path('form-flow-drivers/voucher-redemption.yaml')) ? hash_file('sha256', config_path('form-flow-drivers/voucher-redemption.yaml')) : null,
                 'campaign_driver' => hash_file('sha256', dirname(__DIR__, 2).'/config/form-flow-drivers/campaign-payment-completion.yaml'),

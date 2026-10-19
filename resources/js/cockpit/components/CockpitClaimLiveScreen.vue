@@ -9,13 +9,13 @@ import {
     LocateFixed,
     MapPin,
     PenTool,
-    ReceiptText,
-    Clock3,
     ShieldCheck,
     Smartphone,
     UserRound,
 } from 'lucide-vue-next';
 import { computed, defineAsyncComponent, type Component } from 'vue';
+import type { FormFlowPresentation } from '@/pages/form-flow/core/components/formFlowPresentation';
+import ClaimStatusIcon from '../../components/x-change/ClaimStatusIcon.vue';
 import PayCodeLogo from '../../components/x-change/PayCodeLogo.vue';
 
 type ClaimPreviewField = {
@@ -46,6 +46,7 @@ type ClaimPreviewScreen = {
 
 const props = defineProps<{
     screen: ClaimPreviewScreen;
+    profile?: FormFlowPresentation | null;
     presentation?: 'framed' | 'viewport';
 }>();
 
@@ -402,7 +403,7 @@ const actualScreenComponent = computed<Component | null>(() => {
             <div
                 class="x-claim-canvas from-primary/5 via-background to-background flex min-h-0 flex-1 flex-col bg-gradient-to-b px-5 py-6"
             >
-                <ReceiptText class="text-foreground mx-auto h-12 w-12" data-testid="claim-review-icon" aria-hidden="true" />
+                <ClaimStatusIcon :profile="profile" role="review" data-testid="claim-review-icon" />
                 <div class="mt-3 text-center">
                     <h3 class="text-lg font-semibold">{{ screen.title }}</h3>
                     <p class="text-muted-foreground mt-1 text-[11px]">
@@ -442,7 +443,7 @@ const actualScreenComponent = computed<Component | null>(() => {
             <div
                 class="x-claim-canvas via-background to-background flex min-h-0 flex-1 flex-col justify-center gap-5 bg-gradient-to-b from-emerald-500/10 px-5 py-6 text-center"
             >
-                <Clock3 class="mx-auto h-12 w-12 text-amber-500" data-testid="claim-pending-icon" aria-hidden="true" />
+                <ClaimStatusIcon :profile="profile" role="pending" data-testid="claim-pending-icon" />
                 <div class="grid gap-2">
                     <p class="text-2xl font-bold">{{ screen.amount }}</p>
                     <h3 class="text-lg font-semibold">{{ screen.title }}</h3>

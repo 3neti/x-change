@@ -46,3 +46,21 @@ it('uses the same neutral claim palette despite a saved artwork theme, then rest
 });
 
 });
+
+it('uses a frozen page palette and restores existing custom properties', () => {
+    const root = document.documentElement;
+    root.style.setProperty('--x-claim-canvas', '#123456');
+    const cleanup = initializeClaimAppearance({component:'x-change/claim/Confirm',props:{claim_ui:{appearance:{mode:'dark',dark:{canvas:'#112233',foreground:'#ffffff'}}}}});
+    expect(root.dataset.xChangeClaimAppearance).toBe('dark');
+    expect(root.classList.contains('dark')).toBe(true);
+    expect(root.style.getPropertyValue('--x-claim-canvas')).toBe('#112233');
+    cleanup();
+    expect(root.style.getPropertyValue('--x-claim-canvas')).toBe('#123456');
+});
+
+it('gives the frozen step palette precedence over the root profile', () => {
+    const cleanup = initializeClaimAppearance({component:'x-change/claim/Preview',props:{claim_ui:{appearance:{mode:'dark'}},step:{screen:{props:{presentation:{appearance:{mode:'light',light:{canvas:'#fafafa'}}}}}}}});
+    expect(document.documentElement.dataset.xChangeClaimAppearance).toBe('light');
+    expect(document.documentElement.style.getPropertyValue('--x-claim-canvas')).toBe('#fafafa');
+    cleanup();
+});

@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import ClaimStatusIcon from '@/components/x-change/ClaimStatusIcon.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ReceiptText } from 'lucide-vue-next';
+import { Loader2 } from 'lucide-vue-next';
 import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
 import PayoutRouteDisplay from '@/components/x-change/PayoutRouteDisplay.vue';
 
@@ -48,7 +49,7 @@ const handleSubmit = () => {
         <div class="space-y-6">
             <Card class="border-primary/10 shadow-none">
                 <CardHeader class="text-center">
-                    <ReceiptText class="mx-auto h-12 w-12 text-foreground" data-testid="claim-review-icon" aria-hidden="true" />
+                    <ClaimStatusIcon role="review" data-testid="claim-review-icon" />
                     <CardTitle class="mt-4">Confirm Claim</CardTitle>
                     <CardDescription>
                         Review and confirm your Pay Code claim

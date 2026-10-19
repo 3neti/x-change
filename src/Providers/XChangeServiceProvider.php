@@ -609,6 +609,7 @@ use LBHurtado\XProvisioning\Contracts\ProvisioningActivatorContract;
 use LBHurtado\XProvisioning\Contracts\ProvisioningActorGuardContract;
 use LBHurtado\XProvisioning\Contracts\ProvisioningEvidenceVerifierContract;
 use LBHurtado\XProvisioning\Contracts\ProvisioningRevokerContract;
+use Symfony\Component\Yaml\Yaml;
 
 class XChangeServiceProvider extends ServiceProvider
 {
@@ -1749,7 +1750,9 @@ class XChangeServiceProvider extends ServiceProvider
             'actions' => ['placement' => 'viewport_bottom', 'primary_position' => 'right', 'secondary_position' => 'left', 'reserve_content_space' => true],
             'progress' => ['show' => (bool) config('x-change.claim.experience_ui.show_progress', true)],
             'diagnostics' => ['show_versions' => (bool) config('x-change.claim.experience_ui.show_package_versions', false)],
-        ], (array) config('form-flow.presentation.profiles.guided-claim-v1', [])));
+        ], Yaml::parseFile(is_file(config_path('form-flow-presentations/guided-claim-v1.yaml'))
+            ? config_path('form-flow-presentations/guided-claim-v1.yaml')
+            : $this->packagePath('config/form-flow-presentations/guided-claim-v1.yaml')), (array) config('form-flow.presentation.profiles.guided-claim-v1', [])));
 
         $stampCollection = InstalledVersions::getInstallPath('3neti/x-stamp-designs');
         if ($stampCollection !== null) {
@@ -2608,6 +2611,7 @@ class XChangeServiceProvider extends ServiceProvider
         ], 'x-change-policy-completion-transport');
 
         $this->publishes([
+            $this->packagePath('config/form-flow-presentations/guided-claim-v1.yaml') => config_path('form-flow-presentations/guided-claim-v1.yaml'),
             $this->packagePath('config/form-flow-drivers/voucher-redemption.yaml') => config_path('form-flow-drivers/voucher-redemption.yaml'),
             $this->packagePath('config/form-flow-drivers/campaign-payment-completion.yaml') => config_path('form-flow-drivers/campaign-payment-completion.yaml'),
         ], 'x-change-form-flow-drivers');

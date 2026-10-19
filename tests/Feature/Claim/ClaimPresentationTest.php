@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Http\Request;
+use Illuminate\Routing\Route;
 use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
 use LBHurtado\FormFlowManager\FormFlowServiceProvider;
 use LBHurtado\FormFlowManager\Services\FormFlowPresentationResolver;
@@ -13,6 +15,7 @@ use LBHurtado\FormHandlerOtp\OtpHandlerServiceProvider;
 use LBHurtado\FormHandlerSelfie\SelfieHandlerServiceProvider;
 use LBHurtado\FormHandlerSignature\SignatureHandlerServiceProvider;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewArtifactFingerprint;
+use LBHurtado\XChange\Services\Claim\ClaimPresentationProfile;
 use Symfony\Component\Yaml\Yaml;
 
 beforeEach(function (): void {
@@ -61,4 +64,26 @@ it('invalidates cached claim previews when the presentation profile changes', fu
     config()->set('form-flow.presentation.profiles.guided-claim-v1.brand.logo_height', 24);
     $after = $fingerprints->make(['key' => 'synthetic']);
     expect($after['fingerprint'])->not->toBe($before['fingerprint']);
+});
+
+it('loads the package YAML palette and icon registry into the public claim profile', function (): void {
+    $yaml = Yaml::parseFile(dirname(__DIR__, 3).'/config/form-flow-presentations/guided-claim-v1.yaml');
+    $profile = app(ClaimPresentationProfile::class)->current();
+    expect($profile['appearance'])->toBe($yaml['appearance'])
+        ->and($profile['icons'])->toBe($yaml['icons']);
+});
+
+it('retains the started claim profile separately for each Pay Code', function (): void {
+    $profiles = app(ClaimPresentationProfile::class);
+    $frozen = $profiles->current();
+    $profiles->remember('AA317', ['instructions' => ['metadata' => ['form_flow_presentation' => $frozen]]]);
+    config()->set('form-flow.presentation.profiles.guided-claim-v1.icons.size', 32);
+    $request = Request::create('/x/claim/AA317');
+    $request->setLaravelSession(session()->driver());
+    $route = new Route('GET', '/x/claim/{code}', fn () => null);
+    $route->bind($request);
+    $request->setRouteResolver(fn () => $route);
+    expect($profiles->forRequest($request))->toBe($frozen);
+    $route->setParameter('code', 'OTHER');
+    expect($profiles->forRequest($request)['icons']['size'])->toBe(32);
 });

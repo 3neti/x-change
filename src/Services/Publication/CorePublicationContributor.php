@@ -43,6 +43,7 @@ final class CorePublicationContributor implements XChangePublicationContributor
             public_path('vendor/x-change/images/payout-destinations/gcash-128.png'),
         ]);
         yield $this->build('x-change.form-flow-driver', '3neti/x-change', 'x-change-form-flow-drivers', 'Voucher and campaign completion Form Flow drivers.', [
+            config_path('form-flow-presentations/guided-claim-v1.yaml'),
             config_path('form-flow-drivers/voucher-redemption.yaml'),
             config_path('form-flow-drivers/campaign-payment-completion.yaml'),
         ]);

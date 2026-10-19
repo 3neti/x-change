@@ -149,27 +149,27 @@
 }
 
 /* Claim stages share a neutral canvas; state is communicated by content. */
-:root[data-x-change-claim-appearance='light'] {
-    --background: #fff;
-    --foreground: #0f172a;
-    --card: #fff;
-    --card-foreground: #0f172a;
-    --popover: #fff;
-    --popover-foreground: #0f172a;
-    --primary: #0f172a;
-    --primary-foreground: #fff;
-    --muted: #f1f5f9;
-    --muted-foreground: #64748b;
-    --border: #e2e8f0;
-    --input: #e2e8f0;
-    --ring: #2563eb;
-    --x-experience-canvas: #fff;
+:root[data-x-change-claim-appearance] {
+    --background: var(--x-claim-canvas, #fff);
+    --foreground: var(--x-claim-foreground, #0f172a);
+    --card: var(--x-claim-surface, #fff);
+    --card-foreground: var(--x-claim-foreground, #0f172a);
+    --popover: var(--x-claim-surface, #fff);
+    --popover-foreground: var(--x-claim-foreground, #0f172a);
+    --primary: var(--x-claim-accent, #0f172a);
+    --primary-foreground: var(--x-claim-accent-foreground, #fff);
+    --muted: var(--x-claim-surface, #f1f5f9);
+    --muted-foreground: var(--x-claim-muted, #64748b);
+    --border: var(--x-claim-border, #e2e8f0);
+    --input: var(--x-claim-border, #e2e8f0);
+    --ring: var(--x-claim-accent, #2563eb);
+    --x-experience-canvas: var(--x-claim-canvas, #fff);
     --x-experience-glow: transparent;
     --x-experience-line: transparent;
 }
 
-:root[data-x-change-claim-appearance='light'] .x-experience-surface,
-:root[data-x-change-claim-appearance='light'] .x-claim-canvas {
-    background-color: #fff;
+:root[data-x-change-claim-appearance] .x-experience-surface,
+:root[data-x-change-claim-appearance] .x-claim-canvas {
+    background-color: var(--x-claim-canvas, #fff);
     background-image: none;
 }

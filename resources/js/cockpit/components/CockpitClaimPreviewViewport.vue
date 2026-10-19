@@ -7,12 +7,14 @@ import {
     ref,
     watch,
 } from 'vue';
+import type { FormFlowPresentation } from '@/pages/form-flow/core/components/formFlowPresentation';
 import type { CockpitClaimExperiencePreviewStep } from '../types';
 import CockpitClaimLiveScreen from './CockpitClaimLiveScreen.vue';
 
 const props = withDefaults(
     defineProps<{
         step: CockpitClaimExperiencePreviewStep;
+        profile?: FormFlowPresentation | null;
         viewport: {
             profile: string;
             width: number;
@@ -148,6 +150,7 @@ watch(
             >
                 <CockpitClaimLiveScreen
                     :screen="step.screen"
+                    :profile="profile"
                     presentation="viewport"
                 />
             </div>

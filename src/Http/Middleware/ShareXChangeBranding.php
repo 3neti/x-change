@@ -12,6 +12,7 @@ use LBHurtado\XChange\Contracts\CommercialOperatorAuthorityContract;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
 use LBHurtado\XChange\Enums\ProvisioningOperatorCapability;
 use LBHurtado\XChange\Enums\TreasuryOperatorCapability;
+use LBHurtado\XChange\Services\Claim\ClaimPresentationProfile;
 use LBHurtado\XChange\Services\Cockpit\CockpitSystemReadinessAccess;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiOperatorAuthority;
 use LBHurtado\XChange\Services\Provisioning\ProvisioningOperatorAuthority;
@@ -32,6 +33,7 @@ class ShareXChangeBranding
 
     public function handle(Request $request, Closure $next): Response
     {
+        Inertia::share('claim_ui', fn (): array => app(ClaimPresentationProfile::class)->forRequest($request));
         Inertia::share('xchange', [
             ...(array) Inertia::getShared('xchange', []),
             'branding' => [

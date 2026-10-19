@@ -32,7 +32,7 @@ const props = withDefaults(
     },
 );
 
-const hasFixedClaimPalette = computed(() => typeof document !== 'undefined' && document.documentElement.dataset.xChangeClaimAppearance === 'light');
+const hasFixedClaimPalette = computed(() => typeof document !== 'undefined' && Boolean(document.documentElement.dataset.xChangeClaimAppearance));
 
 const toneClass = computed(() => {
     if (props.tone === 'success') {

@@ -23,6 +23,7 @@ use LBHurtado\XChange\Data\PreparedCompiledClaimData;
 use LBHurtado\XChange\Enums\ClaimAuthenticationMode;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Services\BuildProvisioningRequirementViewData;
+use LBHurtado\XChange\Services\Claim\ClaimPresentationProfile;
 use LBHurtado\XChange\Services\Claim\VoucherClaimFlowCompiler;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
 use LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator;
@@ -316,6 +317,8 @@ class ClaimStartController extends Controller
 
         $state = $this->formFlowService->startFlow($instructions);
 
+        app(ClaimPresentationProfile::class)->remember($voucher->code, $state);
+
         return redirect("/form-flow/{$state['flow_id']}");
     }
 
@@ -382,6 +385,8 @@ class ClaimStartController extends Controller
 
         session()->forget(CompiledClaimSessionKeys::SUBMISSION);
         session()->forget(CompiledClaimSessionKeys::PREPARED);
+
+        app(ClaimPresentationProfile::class)->remember($voucher->code, $state);
 
         return redirect("/form-flow/{$state['flow_id']}");
     }

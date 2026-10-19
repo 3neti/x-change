@@ -6,6 +6,8 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
+      "lucide-vue-next": path.resolve(import.meta.dirname, "node_modules/lucide-vue-next/dist/esm/lucide-vue-next.js"),
+      "@/pages/form-flow/core/components": path.resolve(import.meta.dirname, "vendor/3neti/form-flow/stubs/resources/js/pages/form-flow/core/components"),
       "@/routes/x-change/stamps": path.resolve(import.meta.dirname, "tests/frontend/stubs/stamp-preview-route.ts"),
       "@/routes/x-change/public-auto-generate/checkouts": path.resolve(
         import.meta.dirname,

@@ -32,6 +32,7 @@ final class CockpitQuickGenerateClaimPreviewStepController extends Controller
 
         $response = Inertia::render('x-change/claim/Preview', [
             'step' => $presentedStep,
+            'claim_ui' => data_get($manifest, 'journey.presentation'),
             'viewport' => data_get($manifest, 'journey.viewport'),
         ])->rootView('x-change::claim-root')->toResponse($request);
 
