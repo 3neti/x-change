@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+/** Synthetic 1px PNG: lifecycle fixtures must never contain real biometric evidence. */
+$syntheticPresenceImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jkQ0AAAAASUVORK5CYII=';
+
 return [
 
     'defaults' => [
@@ -1282,7 +1285,7 @@ return [
                 'provided_signature_succeeds' => [
                     'claim' => [
                         'inputs' => [
-                            'signature' => 'data:image/png;base64,DEMO_SIGNATURE',
+                            'signature' => $syntheticPresenceImage,
                         ],
                     ],
                     'expect' => [
@@ -1320,7 +1323,7 @@ return [
                 'provided_selfie_succeeds' => [
                     'claim' => [
                         'inputs' => [
-                            'selfie' => 'data:image/jpeg;base64,DEMO_SELFIE',
+                            'selfie' => $syntheticPresenceImage,
                         ],
                     ],
                     'expect' => [
