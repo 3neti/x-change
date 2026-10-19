@@ -305,3 +305,22 @@ it('issues a temporary preview voucher without moving issuer funds', function ()
 
     expect($voucher->fresh())->toBeNull();
 });
+
+it('shows the draft stamp sample code on the native claim splash', function (): void {
+    config()->set('splash.enabled', true);
+    config()->set('splash.default_content', null);
+    $instructions = validVoucherInstructions(25, overrides: [
+        'rider' => ['splash' => null],
+        'feedback' => ['email' => null, 'mobile' => null, 'webhook' => null],
+    ]);
+    $result = app(ClaimExperiencePreviewService::class)->renderFromInstructions(
+        $instructions,
+        new ClaimExperiencePreviewOptions(issuer: actingAsTestUser(), dryRun: true, refresh: true),
+    );
+    $splash = collect(data_get($result, 'journey.steps'))->first(
+        fn (array $step): bool => data_get($step, 'screen.component') === 'form-flow/core/Splash',
+    );
+    expect(data_get($splash, 'screen.props.voucher_code'))->toBe('AA317')
+        ->and(data_get($splash, 'screen.props.preview_mode'))->toBeTrue()
+        ->and(Voucher::query()->where('code', 'AA317')->exists())->toBeFalse();
+});
