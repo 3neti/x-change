@@ -32,7 +32,22 @@ export function styleStampQrPixels(
     }
 }
 
+export function stylePaymentQrPixels(pixels: Uint8ClampedArray): void {
+    for (let offset = 0; offset < pixels.length; offset += 4) {
+        const lightness = Math.min(pixels[offset], pixels[offset + 1], pixels[offset + 2]) / 255;
+        pixels[offset + 3] = Math.round(pixels[offset + 3] * (0.9 - 0.4 * lightness));
+    }
+}
+
+export function presentPaymentQr(source: string): Promise<string> {
+    return renderQrPresentation(source, (pixels) => stylePaymentQrPixels(pixels));
+}
+
 export function presentStampQr(source: string, paper: string): Promise<string> {
+    return renderQrPresentation(source, (pixels, width, height) => styleStampQrPixels(pixels, width, height, paper));
+}
+
+function renderQrPresentation(source: string, stylePixels: (pixels: Uint8ClampedArray, width: number, height: number) => void): Promise<string> {
     if (
         !source.startsWith('data:image/png;base64,') ||
         source.length > 512_000
@@ -67,12 +82,7 @@ export function presentStampQr(source: string, paper: string): Promise<string> {
                     image.width,
                     image.height,
                 );
-                styleStampQrPixels(
-                    pixels.data,
-                    image.width,
-                    image.height,
-                    paper,
-                );
+                stylePixels(pixels.data, image.width, image.height);
                 context.putImageData(pixels, 0, 0);
                 resolve(canvas.toDataURL('image/png'));
             } catch {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { presentStampQr, styleStampQrPixels } from '../../../resources/js/cockpit/stampQrPresentation';
+import { presentStampQr, styleStampQrPixels, presentPaymentQr, stylePaymentQrPixels } from '../../../resources/js/cockpit/stampQrPresentation';
 
 describe('Stamp QR presentation', () => {
     it('uses 50% paper and 30% center backing with 90% pattern and logo ink', () => {
@@ -24,4 +24,14 @@ describe('Stamp QR presentation', () => {
         const oversized = 'data:image/png;base64,' + 'A'.repeat(512_001);
         expect(await presentStampQr(oversized, '#FFFFFF')).toBe(oversized);
     });
+});
+
+it('softens payment QR paper to 50% and ink to 90% without changing provider colors or transparent pixels', () => {
+    const pixels = new Uint8ClampedArray([255,255,255,255, 0,0,0,255, 0,80,180,255, 255,255,255,0]);
+    stylePaymentQrPixels(pixels);
+    expect(Array.from(pixels)).toEqual([255,255,255,128, 0,0,0,230, 0,80,180,230, 255,255,255,0]);
+});
+it('leaves unsupported provider QR images intact', async () => {
+    const source = 'https://example.test/provider.png';
+    expect(await presentPaymentQr(source)).toBe(source);
 });

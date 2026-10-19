@@ -9,6 +9,7 @@ import type {
   CockpitOnDemandIssuanceFundingProjection,
   CockpitPrimaryFundingWorkspaceMode,
 } from "../types";
+import { presentPaymentQr } from "../stampQrPresentation";
 import type { PayCodeStampPreviewState } from "../payCodeStampPreview";
 import CockpitPayCodeCanvas from "./CockpitPayCodeCanvas.vue";
 import CockpitFundingMethodSelector from "./CockpitFundingMethodSelector.vue";
@@ -115,6 +116,15 @@ const instructions = computed<Record<string, unknown>>(
   () => current.value?.funding_selector.bank_transfer.instructions ?? {},
 );
 const fixedQrPh = computed(() => current.value?.funding_selector.qr_ph ?? null);
+const paymentQrImage = ref("");
+let qrPresentationSequence = 0;
+watch(() => fixedQrPh.value?.image, async (source) => {
+  const sequence = ++qrPresentationSequence;
+  paymentQrImage.value = source ?? "";
+  if (!source) { return; }
+  const image = await presentPaymentQr(source);
+  if (sequence === qrPresentationSequence) { paymentQrImage.value = image; }
+}, { immediate: true });
 const dialogTitle = computed(() => {
   if (current.value?.status === "expired") {
     return latePaymentCredited.value
@@ -693,7 +703,7 @@ function text(value: unknown): string | null {
           data-testid="on-demand-fixed-qr-ph"
         >
           <span class="absolute right-4 top-1 text-sm leading-4 font-bold sm:top-2 sm:text-lg tabular-nums text-slate-950 dark:text-white" data-testid="funding-qr-amount">{{ amount }}</span>
-          <img :src="fixedQrPh.image" alt="Order-specific fixed-amount QR Ph" class="absolute left-1/2 top-1/2 size-[232px] -translate-x-1/2 -translate-y-1/2 bg-white object-contain sm:size-64" width="256" height="256" data-testid="on-demand-qr-ph-artifact" />
+          <img :src="paymentQrImage" alt="Order-specific fixed-amount QR Ph" class="absolute left-1/2 top-1/2 size-[232px] -translate-x-1/2 -translate-y-1/2 object-contain sm:size-64" width="256" height="256" data-testid="on-demand-qr-ph-artifact" />
         </div>
 
         <div
