@@ -96,7 +96,7 @@
         "spatie/laravel-data": "^4.21",
         "symfony/yaml": "^7.4",
         "3neti/x-stamp": "^1.3",
-        "3neti/x-stamp-designs": "^1.2"
+        "3neti/x-stamp-designs": "^1.3"
     },
     "suggest": {
         "3neti/x-legal": "Provides jurisdiction-aware advisory Treasury vocabulary and policy traceability.",
