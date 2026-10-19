@@ -110,3 +110,14 @@ The sandbox already contains unrelated changes from other work and generated pub
 - `README.md`
 
 x-journal source is unchanged: the bridge uses its existing immutable recorder API.
+
+
+## Approved release — 2026-10-20
+
+The issuer approved publishing and shipping to Cloud testing and payout, and explicitly approved allowing any host. Activation will set `X_CHANGE_RIDER_REDIRECT_ENABLED=true` and `X_RIDER_ALLOW_ANY_REDIRECT_HOST=true` in testing first, then payout after testing acceptance. Strict URL validation, session-bound handoff and receipt authentication remain enforced. No destination receipt secret is invented. Legacy vouchers retain their existing execution path; the allowed-host configuration is shared with their legacy resolver.
+
+Release set: Form Flow v1.11.0, OTP v1.4.0, KYC v1.3.0, location v1.4.0, selfie v1.3.0, signature v1.4.0, x-rider v1.1.0, and x-change v1.0.250. Version v1.0.249 is reserved by unrelated local work and is not overwritten or incorporated. The five handler suites were rerun: 100 passed. Combined package acceptance now includes 490 Pest passes from the owning package runs.
+
+Cloud baseline: testing release/v1.0.0-beta.98 at 89519ec6; payout release/v1.0.0-beta.107 at 0ad4985. Clean release worktrees are used; unrelated shared-checkout work is preserved. Both builds already install Composer dependencies, publish verified package resources, run npm ci and build the host; deploy commands migrate and refresh commissioning. Scheduler is enabled. Failed-job baseline is testing 0, payout 2796; payout funding queue size is 7. Historical failed jobs are preserved.
+
+Testing and payout deployment IDs and final smoke evidence will be recorded in a follow-up compass entry after deployment; this package tag records the approved release candidate, not a claim that deployment has already completed.
