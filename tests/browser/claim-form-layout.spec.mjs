@@ -62,3 +62,34 @@ for(const width of [360,390,1280]) {
         await page.screenshot({path:`${process.env.WORKFLOW_BROWSER_ARTIFACTS}/fields-${width}.png`,fullPage:true,animations:'disabled'});
     });
 }
+
+for (const width of [360, 390, 1280]) {
+    for (const account of ['09173011987', '123456789012345678901234']) {
+        test(`destination summary balances ${account.length}-digit account at ${width}px`, async ({page}) => {
+            await page.setViewportSize({width,height:720});
+            await render(page,'form-flow/core/GenericForm',{
+                title:'Disbursement Details', description:'Redeeming voucher AA317 from Synthetic Issuer',
+                fields:[
+                    {name:'amount',type:'hidden',default:100},
+                    {name:'mobile',type:'tel',label:'Mobile Number',group:'redeemer',default:'09173011987'},
+                    {name:'bank_code',type:'bank_account',label:'Bank/Wallet',group:'endorsement',default:'PAPHPHM1XXX',institution_options:[{key:'PAPHPHM1XXX',value:'PAPHPHM1XXX',name:'Maya Wallet',short_name:'Maya Wallet',category:'wallet',account_label:'Mobile number',identifier_scheme:'ph_mobile',aliases:[],commonly_used:true}]},
+                    {name:'account_number',type:'text',label:'Account Number',group:'endorsement',default:account},
+                ],
+            });
+            const summary=page.getByTestId('form-flow-destination-summary');
+            await expect(summary).toBeVisible();
+            await expect(summary.locator('dt')).toHaveText(['Amount','Payment method','Bank / wallet','Account number']);
+            await expect(summary.locator('dd')).toHaveText(['₱100.00','InstaPay','Maya Wallet',account]);
+            expect(await summary.evaluate(el=>{
+                const outer=el.getBoundingClientRect();
+                return [...el.querySelectorAll('dd')].every(dd=>{const r=dd.getBoundingClientRect();return dd.scrollWidth<=dd.clientWidth+1 && r.left>=outer.left+15 && r.right<=outer.right-15;});
+            })).toBe(true);
+            expect(await page.locator('html').evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
+            expect(await summary.locator('dl').evaluate(el=>getComputedStyle(el).rowGap)).toBe('16px');
+            await page.evaluate(()=>window.scrollTo(0,document.documentElement.scrollHeight));
+            const summaryBox=await summary.boundingBox(), actionBox=await page.getByRole('button',{name:'Continue',exact:true}).boundingBox();
+            expect(summaryBox.y+summaryBox.height).toBeLessThanOrEqual(actionBox.y);
+            await summary.screenshot({path:`${process.env.WORKFLOW_BROWSER_ARTIFACTS}/destination-${account.length}-${width}.png`,animations:'disabled'});
+        });
+    }
+}
