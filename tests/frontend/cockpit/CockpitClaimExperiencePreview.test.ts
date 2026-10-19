@@ -369,8 +369,8 @@ describe('Cockpit claim experience preview', () => {
                 .get('[data-testid="cockpit-claim-live-screen"]')
                 .attributes('data-screen-kind'),
         ).toBe('claim_entry');
-        expect(wrapper.get('img[alt="Pay Code"]').attributes('src')).toContain(
-            '/pay-code/pay-code-logo.svg',
+        expect(wrapper.get('[data-testid="claim-brand-logo"]').attributes('src')).toContain(
+            '/pay-code/pay-code-mark.svg',
         );
         expect(
             wrapper

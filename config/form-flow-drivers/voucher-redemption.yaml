@@ -92,6 +92,7 @@ steps:
     description: "Redeeming voucher {{ code }} from {{ owner_name }}"  # Subtitle
     config:
       presentation:
+        screen: details
         actions:
           primary_label: Continue
       auto_sync:                                         # Explicitly disabled payout-field copying
@@ -194,6 +195,8 @@ steps:
     description: "Please provide your details"
     condition: "{{ has_name or has_email or has_birth_date or has_address or has_reference_code or has_gross_monthly_income }}"  # Show if ANY bio field enabled
     config:
+      presentation:
+        screen: personal_information
       # Named references to previous step data (order-independent)
       # Syntax: $step_name.field_name
       # KYC handler flattens HyperVerge data to: {name, email, date_of_birth, address, ...}

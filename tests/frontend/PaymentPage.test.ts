@@ -9,7 +9,8 @@ const { routerPost, pollStart, pollStop, usePoll } = vi.hoisted(() => ({
     usePoll: vi.fn(),
 }));
 
-vi.mock('@inertiajs/vue3', () => ({
+vi.mock('@inertiajs/vue3', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@inertiajs/vue3')>()),
     Head: {
         template: '<div><slot /></div>',
     },

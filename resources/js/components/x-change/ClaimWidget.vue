@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import { useFormFlowPresentation } from '@/pages/form-flow/core/components/formFlowPresentation';
+
+import ClaimEntryPanel from './ClaimEntryPanel.vue';
+import FormFlowActions from '@/pages/form-flow/core/components/FormFlowActions.vue';
+import { useClaimActionLabel } from '@/composables/useClaimActionLabel';
+
 import InputError from '@/components/InputError.vue';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -29,6 +35,9 @@ import FormFlowRenderer from '@/components/x-change/FormFlowRenderer.vue';
 import { resolveClaimWidgetFormFlowSectionViewModel } from '@/components/x-change/claimWidgetFormFlowSectionViewModel';
 import { resolveClaimWidgetPreviewMode } from '@/components/x-change/claimWidgetPreviewMode';
 import { store as startClaimFlow } from '@/routes/x-change/claim/flows';
+
+const claimPresentation = useFormFlowPresentation();
+const claimActionLabel = useClaimActionLabel();
 
 initializeTheme();
 
@@ -121,7 +130,9 @@ const showIssuerConsole = computed(
 // `VoucherStatusStamp` block whenever the server already resolved a
 // terminal surface for this code -- avoids rendering both at once.
 const showSurfaceOutcome = computed(
-    () => !showIssuerConsole.value && Boolean(activeClaimSurface.value?.state?.terminal),
+    () =>
+        !showIssuerConsole.value &&
+        Boolean(activeClaimSurface.value?.state?.terminal),
 );
 
 const serverResolvedXRay = computed<Record<string, unknown> | null>(() => {
@@ -146,30 +157,33 @@ const resolvedXRay = computed<Record<string, unknown> | null>(
 const xrayPresentation = computed<XRayClaimPresentation>(() => {
     const presentation = resolvedXRay.value?.presentation;
 
-    return presentation && typeof presentation === 'object' && !Array.isArray(presentation)
+    return presentation &&
+        typeof presentation === 'object' &&
+        !Array.isArray(presentation)
         ? (presentation as XRayClaimPresentation)
         : {};
 });
 
-const claimTitle = computed(() =>
-    xrayPresentation.value.title?.trim() || 'Claim Pay Code',
+const claimTitle = computed(
+    () => xrayPresentation.value.title?.trim() || 'Claim Pay Code',
 );
 
-const claimPrimaryActionLabel = computed(() =>
-    xrayPresentation.value.primary_action_label?.trim() || 'Start Claim',
+const claimPrimaryActionLabel = computed(
+    () => xrayPresentation.value.primary_action_label?.trim() || 'Start Claim',
 );
 
-const claimCodeLabel = computed(() =>
-    xrayPresentation.value.subject_label?.trim() || 'Pay Code',
+const claimCodeLabel = computed(
+    () => xrayPresentation.value.subject_label?.trim() || 'Pay Code',
 );
 
 const surfaceTakesOver = computed(
     () => showIssuerConsole.value || showSurfaceOutcome.value,
 );
 
-const isCanonicalizingResolvedCode = computed(() =>
-    Boolean(canonicalizingCode.value)
-    && canonicalizingCode.value !== normalizedInitialCode.value,
+const isCanonicalizingResolvedCode = computed(
+    () =>
+        Boolean(canonicalizingCode.value) &&
+        canonicalizingCode.value !== normalizedInitialCode.value,
 );
 
 const riderStages = computed<RawRiderStage[]>(() =>
@@ -316,9 +330,7 @@ const hasSliceSelector = computed(() =>
 );
 
 const isSliceSelectionOnly = computed(
-    () =>
-        compiledFormFields.value.length === 1 &&
-        hasSliceSelector.value,
+    () => compiledFormFields.value.length === 1 && hasSliceSelector.value,
 );
 
 const isSecretGateOnly = computed(
@@ -341,7 +353,7 @@ const compiledFormDescription = computed(() =>
         ? 'Choose which slices to redeem. Payout details are collected in the next step.'
         : isSecretGateOnly.value
           ? "Enter the passcode shared by the issuer. We'll check it before asking for payout details."
-        : 'Complete the required claim details to continue.',
+          : 'Complete the required claim details to continue.',
 );
 
 function submitClaim(): void {
@@ -531,46 +543,61 @@ watch(
             data-testid="claim-widget-surface-region"
         />
 
-        <!-- Title -->
-        <div
-            v-if="!previewViewModel.isNonActive && !surfaceTakesOver"
-            class="space-y-2 text-center"
-        >
-            <h1 class="text-xl font-medium">{{ claimTitle }}</h1>
-        </div>
-
         <!-- Form -->
         <form
             v-if="!previewViewModel.isNonActive && !surfaceTakesOver"
             @submit.prevent="submitClaim"
             class="space-y-6"
         >
-            <div class="flex flex-col gap-2">
-                <Label for="code">{{ claimCodeLabel }}</Label>
-                <Input
-                    id="code"
-                    v-model="code"
-                    placeholder="Enter pay code"
-                    required
-                    autofocus
-                    ref="voucherInput"
-                    class="text-center text-lg tracking-wider"
-                />
-                <InputError :message="errors.code" class="mt-1" />
-            </div>
+            <ClaimEntryPanel :title="claimTitle" :code-label="claimCodeLabel">
+                <template #input>
+                    <Input
+                        id="code"
+                        v-model="code"
+                        placeholder="Enter pay code"
+                        required
+                        autofocus
+                        ref="voucherInput"
+                        class="text-center text-lg tracking-wider"
+                    />
+                    <InputError :message="errors.code" class="mt-1" />
+                </template>
 
-            <Button
-                ref="submitButton"
-                type="submit"
-                class="fixed inset-x-0 z-30 mx-auto h-11 w-[calc(100%-2.5rem)] max-w-md rounded-full shadow-lg shadow-foreground/10 sm:static sm:inset-auto sm:w-full sm:max-w-none sm:shadow-none"
-                style="bottom: max(0.2in, calc(env(safe-area-inset-bottom) + 1rem))"
-                data-testid="claim-widget-submit-button"
-                :disabled="submitViewModel.disabled"
-            >
-                {{ submitViewModel.label }}
-            </Button>
-
-            <div class="h-24 shrink-0 sm:hidden" aria-hidden="true" />
+                <FormFlowActions :show-secondary="false">
+                    <Button
+                        ref="submitButton"
+                        type="submit"
+                        :class="
+                            claimPresentation
+                                ? 'h-11 w-full rounded-full'
+                                : 'fixed inset-x-0 z-30 mx-auto h-11 w-[calc(100%-2.5rem)] max-w-md rounded-full shadow-lg shadow-foreground/10 sm:static sm:inset-auto sm:w-full sm:max-w-none sm:shadow-none'
+                        "
+                        :style="
+                            claimPresentation
+                                ? undefined
+                                : {
+                                      bottom: 'max(0.2in, calc(env(safe-area-inset-bottom) + 1rem))',
+                                  }
+                        "
+                        data-testid="claim-widget-submit-button"
+                        :disabled="submitViewModel.disabled"
+                    >
+                        {{
+                            claimActionLabel(
+                                compiledForm.normalizedFlow.value
+                                    ? 'submit'
+                                    : 'continue',
+                                submitViewModel.label,
+                            )
+                        }}
+                    </Button>
+                </FormFlowActions>
+            </ClaimEntryPanel>
+            <div
+                v-if="!claimPresentation"
+                class="h-24 shrink-0 sm:hidden"
+                aria-hidden="true"
+            />
 
             <p
                 v-if="claimExperienceLoading"
@@ -606,7 +633,11 @@ watch(
 
         <!-- Voucher Preview -->
         <div
-            v-if="showPreview && !surfaceTakesOver && !isCanonicalizingResolvedCode"
+            v-if="
+                showPreview &&
+                !surfaceTakesOver &&
+                !isCanonicalizingResolvedCode
+            "
             :class="previewViewModel.isNonActive ? '' : 'mt-6'"
         >
             <!-- Loading State -->
@@ -691,21 +722,33 @@ watch(
 
         <!-- Runtime Sequencer -->
         <div
-            v-if="runtimeStages.length > 0 && !surfaceTakesOver && !isCanonicalizingResolvedCode"
+            v-if="
+                runtimeStages.length > 0 &&
+                !surfaceTakesOver &&
+                !isCanonicalizingResolvedCode
+            "
             data-testid="claim-widget-runtime-region"
         >
             <RiderRuntimeSequencer :stages="contextualRuntimeStages" />
         </div>
 
         <div
-            v-if="redirectStages.length > 0 && !surfaceTakesOver && !isCanonicalizingResolvedCode"
+            v-if="
+                redirectStages.length > 0 &&
+                !surfaceTakesOver &&
+                !isCanonicalizingResolvedCode
+            "
             data-testid="claim-widget-redirect-region"
         >
             <RiderRuntimeSequencer :stages="contextualRedirectStages" />
         </div>
 
         <div
-            v-if="formFlowSection.visible && !surfaceTakesOver && !isCanonicalizingResolvedCode"
+            v-if="
+                formFlowSection.visible &&
+                !surfaceTakesOver &&
+                !isCanonicalizingResolvedCode
+            "
             data-testid="claim-widget-form-flow-boundary-region"
             :class="formFlowSection.className"
         >

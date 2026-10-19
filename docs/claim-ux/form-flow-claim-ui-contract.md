@@ -2,6 +2,12 @@
 
 This is the safe contract for making x-change claim screens more human-friendly after the shell hands off to form-flow.
 
+## Shared presentation configuration
+
+See the [YAML presentation guide and coverage audit](yaml-presentation-guide.md)
+for the released inherited appearance/layout contract. The claim-workflow metadata
+below is domain context, not a substitute for that presentation contract.
+
 ## Principle
 
 The form-flow package remains generic. x-change may add claim-specific copy and review context only through explicit metadata.

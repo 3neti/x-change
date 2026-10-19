@@ -35,7 +35,8 @@ vi.mock('@/components/ui/card', () => ({
     },
 }));
 
-vi.mock('lucide-vue-next', () => ({
+vi.mock('lucide-vue-next', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('lucide-vue-next')>()),
     Clock3: {
         template: '<span data-testid="approval-clock-icon" />',
     },
@@ -72,7 +73,7 @@ describe('Claim approval page', () => {
             true,
         );
         expect(
-            wrapper.find('[data-testid="approval-clock-icon"]').exists(),
+            wrapper.find('[data-claim-icon-role="pending"]').exists(),
         ).toBe(true);
         expect(wrapper.find('[data-testid="approval-title"]').text()).toBe(
             'Approval session unavailable',

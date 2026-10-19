@@ -320,6 +320,8 @@ release an immutable package version, and update the host through Composer.
 
 ## Documentation
 
+- [Claim YAML presentation guide and coverage audit](docs/claim-ux/yaml-presentation-guide.md)
+
 - [Partner API](docs/partner-api/README.md) — OAuth server-to-server integration, OpenAPI, Postman, and HTTP acceptance.
 - [Partner API Compass](docs/architecture/PARTNER_API_COMPASS.md) — implemented boundary and deferred MCP/security gates.
 - [Time authority](docs/architecture/TIME_AUTHORITY.md) — UTC storage, external timestamp, and legacy-conversion invariants.

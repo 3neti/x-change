@@ -1,5 +1,15 @@
 # Claim UI Config Profile
 
+## Relationship to YAML presentation
+
+For the released shared presentation contract, publishing instructions, and
+coverage limitations, start with the [YAML presentation guide](yaml-presentation-guide.md).
+This page documents the older PHP configuration surface, which remains relevant
+for copy, permission explanations, and integration defaults. Once a Form Flow
+presentation profile is active, its resolved settings take precedence in shared
+presentation consumers; the PHP layout hints are not a guarantee of screen-wide
+configuration.
+
 ## Purpose
 
 `x-change.claim.experience_ui` is the public claim presentation profile.

@@ -38,3 +38,12 @@ icons:
   success: { name: circle-check, color: '#16a34a' }
   attention: { name: triangle-alert, color: '#d97706' }
   error: { name: circle-alert, color: '#dc2626' }
+
+# Screen identities are presentation only; they never select a workflow or action.
+screens:
+  entry:
+    brand:
+      logo: /vendor/x-change/images/pay-code/pay-code-mark.svg
+      placement: center
+      logo_height: 80
+      logo_max_width: 80

@@ -33,6 +33,7 @@ class ShareXChangeBranding
 
     public function handle(Request $request, Closure $next): Response
     {
+        Inertia::share('claim_ui_versions', fn (): array => app(ClaimPresentationProfile::class)->versionsForRequest($request));
         Inertia::share('claim_ui', fn (): array => app(ClaimPresentationProfile::class)->forRequest($request));
         Inertia::share('xchange', [
             ...(array) Inertia::getShared('xchange', []),

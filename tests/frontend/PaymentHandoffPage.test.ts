@@ -2,7 +2,8 @@ import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import PaymentHandoff from '../../resources/js/pages/x-change/claim/PaymentHandoff.vue';
 
-vi.mock('@inertiajs/vue3', () => ({
+vi.mock('@inertiajs/vue3', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@inertiajs/vue3')>()),
     Head: {
         template: '<div><slot /></div>',
     },
@@ -12,7 +13,8 @@ vi.mock('@inertiajs/vue3', () => ({
     },
 }));
 
-vi.mock('lucide-vue-next', () => ({
+vi.mock('lucide-vue-next', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('lucide-vue-next')>()),
     CheckCircle2: { template: '<span data-testid="check-circle-icon" />' },
     CreditCard: { template: '<span data-testid="credit-card-icon" />' },
 }));
@@ -47,7 +49,7 @@ describe('PaymentHandoff page', () => {
                 .get('[data-testid="claim-step-shell"]')
                 .attributes('data-tone'),
         ).toBe('neutral');
-        expect(wrapper.get('[data-testid="credit-card-icon"]').exists()).toBe(
+        expect(wrapper.get('[data-claim-icon-role="pending"]').exists()).toBe(
             true,
         );
         expect(
@@ -82,7 +84,7 @@ describe('PaymentHandoff page', () => {
                 .get('[data-testid="claim-step-shell"]')
                 .attributes('data-tone'),
         ).toBe('success');
-        expect(wrapper.get('[data-testid="check-circle-icon"]').exists()).toBe(
+        expect(wrapper.get('[data-claim-icon-role="success"]').exists()).toBe(
             true,
         );
         expect(

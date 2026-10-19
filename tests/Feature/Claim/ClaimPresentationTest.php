@@ -94,3 +94,12 @@ it('invalidates preview artifacts when the renderer changes', function (): void 
     $current = $fingerprints->make(['key' => 'synthetic'], ['render_mode' => 'compiled_claim_screen_v3']);
     expect($current['fingerprint'])->not->toBe($old['fingerprint']);
 });
+
+it('never shares claim diagnostics outside local and testing even with screen overrides', function (): void {
+    config()->set('form-flow.presentation.profiles.guided-claim-v1.screens.entry.diagnostics.show_versions', true);
+    $profiles = app(ClaimPresentationProfile::class);
+    expect($profiles->versionsForRequest(Request::create('/x/claim')))->not->toBeEmpty();
+    $this->app['env'] = 'production';
+    expect($profiles->versionsForRequest(Request::create('/x/claim')))->toBe([]);
+    $this->app['env'] = 'testing';
+});

@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import FormFlowActions from '@/pages/form-flow/core/components/FormFlowActions.vue';
+import { useClaimActionLabel } from '@/composables/useClaimActionLabel';
+
+import FormFlowNotice from '@/pages/form-flow/core/components/FormFlowNotice.vue';
 import { Head, router, usePoll } from '@inertiajs/vue3';
 import {
     CheckCircle2,
@@ -26,6 +30,8 @@ import XChangeQrArtifact from '@/components/x-change/XChangeQrArtifact.vue';
 import { store as createPaymentAttempt } from '@/routes/x-change/pay/attempts';
 import { store as checkPaymentAttempt } from '@/routes/x-change/pay/attempts/checks';
 import { download as downloadPaymentQr } from '@/routes/x-change/pay/attempts/qr';
+
+const claimActionLabel = useClaimActionLabel();
 
 defineOptions({ layout: null });
 
@@ -82,6 +88,7 @@ type PaymentReadModel = {
 };
 
 const props = defineProps<{
+    preview_mode?: boolean;
     payment: PaymentReadModel;
     notice?: string | null;
 }>();
@@ -115,6 +122,7 @@ const attemptAmount = computed(() =>
 );
 const shouldPoll = computed(
     () =>
+        !props.preview_mode &&
         props.payment.attempt !== null &&
         (props.payment.attempt.can_check === true || completionPending.value) &&
         !props.payment.is_fully_paid,
@@ -195,6 +203,7 @@ function selectQr(): void {
 }
 
 function startPayment(): void {
+    if (props.preview_mode) return;
     if (
         selectedMethod.value !== 'qr' ||
         pairedUnavailable.value ||
@@ -218,6 +227,7 @@ function startPayment(): void {
 }
 
 function checkPaymentStatus(): void {
+    if (props.preview_mode) return;
     const attempt = props.payment.attempt;
 
     if (!attempt?.can_check || checking.value) {
@@ -400,18 +410,18 @@ function printReceipt(): void {
                     </div>
                 </CardHeader>
                 <CardContent class="space-y-5">
-                    <div
+                    <FormFlowNotice
                         v-if="pairedUnavailable"
-                        role="status"
                         class="rounded-lg border border-amber-500/25 bg-amber-500/10 p-4 text-sm"
                         data-testid="payer-pairing-unavailable"
+                        role="attention"
                     >
                         {{
                             payment.paired_display?.status === 'review'
                                 ? 'Your payment is under review. Do not pay again.'
                                 : 'This seller display pairing has ended or expired. Ask the seller for a new display before paying.'
                         }}
-                    </div>
+                    </FormFlowNotice>
                     <div class="grid gap-3 sm:grid-cols-3">
                         <Button
                             type="button"
@@ -548,17 +558,22 @@ function printReceipt(): void {
                                 data-testid="payer-download-qr"
                             >
                                 <a :href="qrDownloadUrl" download>
-                                    <Download class="mr-2 h-4 w-4" />Download QR
-                                    Ph
-                                </a>
+                                    <Download class="mr-2 h-4 w-4" />{{
+                                        claimActionLabel(
+                                            'download',
+                                            'Download QR Ph',
+                                        )
+                                    }}</a
+                                >
                             </Button>
                         </div>
-                        <div
+                        <FormFlowNotice
                             v-else
                             class="rounded-lg border border-amber-500/25 bg-amber-500/10 px-4 py-5 text-center text-sm text-foreground"
+                            role="attention"
                         >
                             The provider did not return a usable QR image.
-                        </div>
+                        </FormFlowNotice>
                         <div
                             v-if="!pairedUnavailable"
                             class="rounded-lg border border-border bg-muted p-4"
@@ -582,56 +597,71 @@ function printReceipt(): void {
                                 Expires {{ expiresAt }}
                             </p>
                         </div>
-                        <Button
-                            type="button"
-                            data-testid="payer-check-status"
-                            variant="outline"
-                            class="w-full"
-                            size="lg"
-                            :disabled="!payment.attempt.can_check || checking"
-                            @click="checkPaymentStatus"
+                        <FormFlowActions :show-secondary="false"
+                            ><Button
+                                type="button"
+                                data-testid="payer-check-status"
+                                variant="outline"
+                                class="w-full"
+                                size="lg"
+                                :disabled="
+                                    !payment.attempt.can_check || checking
+                                "
+                                @click="checkPaymentStatus"
+                            >
+                                <Loader2
+                                    v-if="checking"
+                                    class="mr-2 h-4 w-4 animate-spin"
+                                /><RefreshCw v-else class="mr-2 h-4 w-4" />{{
+                                    claimActionLabel(
+                                        'retry',
+                                        checking
+                                            ? 'Checking payment status…'
+                                            : 'Check payment status',
+                                        checking,
+                                    )
+                                }}
+                            </Button></FormFlowActions
                         >
-                            <Loader2
-                                v-if="checking"
-                                class="mr-2 h-4 w-4 animate-spin"
-                            /><RefreshCw v-else class="mr-2 h-4 w-4" />{{
-                                checking
-                                    ? 'Checking payment status…'
-                                    : 'Check payment status'
-                            }}
-                        </Button>
                     </template>
 
                     <template v-else>
-                        <div
+                        <FormFlowNotice
                             v-if="!payment.provider_available"
                             class="rounded-lg border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-foreground"
+                            role="attention"
                         >
                             QR Code payment is not available in this
                             environment.
-                        </div>
-                        <Button
-                            v-if="selectedMethod === 'qr'"
-                            type="button"
-                            data-testid="payer-create-qr"
-                            class="w-full"
-                            size="lg"
-                            :disabled="
-                                !payment.can_create_attempt ||
-                                creating ||
-                                pairedUnavailable
-                            "
-                            @click="startPayment"
+                        </FormFlowNotice>
+                        <FormFlowActions :show-secondary="false"
+                            ><Button
+                                v-if="selectedMethod === 'qr'"
+                                type="button"
+                                data-testid="payer-create-qr"
+                                class="w-full"
+                                size="lg"
+                                :disabled="
+                                    !payment.can_create_attempt ||
+                                    creating ||
+                                    pairedUnavailable
+                                "
+                                @click="startPayment"
+                            >
+                                <Loader2
+                                    v-if="creating"
+                                    class="mr-2 h-4 w-4 animate-spin"
+                                />{{
+                                    claimActionLabel(
+                                        'create_payment',
+                                        creating
+                                            ? 'Preparing secure QR…'
+                                            : 'Create exact QR Ph payment',
+                                        creating,
+                                    )
+                                }}
+                            </Button></FormFlowActions
                         >
-                            <Loader2
-                                v-if="creating"
-                                class="mr-2 h-4 w-4 animate-spin"
-                            />{{
-                                creating
-                                    ? 'Preparing secure QR…'
-                                    : 'Create exact QR Ph payment'
-                            }}
-                        </Button>
                         <p class="text-center text-xs text-muted-foreground">
                             Creating instructions does not mark this Pay Code
                             paid. Authoritative provider history must confirm
@@ -738,8 +768,9 @@ function printReceipt(): void {
                         class="w-full"
                         size="lg"
                         @click="printReceipt"
-                        ><Printer class="mr-2 h-4 w-4" />Print / Save as
-                        PDF</Button
+                        ><Printer class="mr-2 h-4 w-4" />{{
+                            claimActionLabel('download', 'Print / Save as PDF')
+                        }}</Button
                     >
                 </CardFooter>
             </Card>

@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import ClaimStatePanel from '@/components/x-change/ClaimStatePanel.vue';
+import FormFlowActions from '@/pages/form-flow/core/components/FormFlowActions.vue';
+
 import { Head } from '@inertiajs/vue3';
-import { Button } from '@/components/ui/button';
+import FormFlowAction from '@/pages/form-flow/core/components/FormFlowAction.vue';
 import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
 import { AlertCircle } from 'lucide-vue-next';
 
@@ -16,9 +19,7 @@ defineProps<{
     <Head title="Claim Error" />
 
     <ClaimStepShell tone="danger" width="sm">
-        <div class="space-y-4 text-center">
-            <AlertCircle class="mx-auto h-10 w-10 text-destructive" />
-
+        <ClaimStatePanel role="error" class="space-y-4 text-center">
             <h1 class="text-xl font-semibold tracking-tight">
                 Unable to Claim
             </h1>
@@ -31,13 +32,16 @@ defineProps<{
                 Code: {{ code }}
             </p>
 
-            <Button
-                class="w-full"
-                variant="outline"
-                @click="$inertia.visit('/x/dashboard')"
-            >
-                Go to Dashboard
-            </Button>
-        </div>
+            <FormFlowActions :show-secondary="false"
+                ><FormFlowAction
+                    role="open_link"
+                    label="Go to Dashboard"
+                    class="w-full"
+                    variant="outline"
+                    @click="$inertia.visit('/x/dashboard')"
+                >
+                </FormFlowAction
+            ></FormFlowActions>
+        </ClaimStatePanel>
     </ClaimStepShell>
 </template>

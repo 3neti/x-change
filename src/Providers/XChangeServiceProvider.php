@@ -38,6 +38,7 @@ use LBHurtado\EmiCore\Contracts\DeploymentEnvironmentContributor;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiCore\Contracts\SettlementProviderRegistryContract;
 use LBHurtado\EmiPaynamicsConstellation\Contracts\PendingOtpStore;
+use LBHurtado\FormFlowManager\Services\FormFlowPresentationResolver;
 use LBHurtado\FormHandlerOtp\Contracts\OtpChallengeGateway;
 use LBHurtado\FormHandlerOtp\Services\TxtcmdrOtpChallengeGateway;
 use LBHurtado\FormHandlerOtp\Services\UnavailableOtpChallengeGateway;
@@ -1739,6 +1740,8 @@ class XChangeServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        app(FormFlowPresentationResolver::class)->registerScreens(['entry', 'details', 'personal_information', 'confirmation', 'success', 'pending', 'approval', 'auth_required', 'error', 'payment', 'payment_handoff', 'rider_redirect', 'rider_url']);
+
         config()->set('form-flow.presentation.profiles.guided-claim-v1', array_replace_recursive([
             'schema' => 'form-flow.presentation.v1',
             'brand' => [
@@ -2658,6 +2661,7 @@ class XChangeServiceProvider extends ServiceProvider
             $this->packagePath('resources/js/composables/useFormFlowSummary.ts') => resource_path('js/composables/useFormFlowSummary.ts'),
             $this->packagePath('resources/js/composables/useTheme.ts') => resource_path('js/composables/useTheme.ts'),
             $this->packagePath('resources/js/composables/useClaimAppearance.ts') => resource_path('js/composables/useClaimAppearance.ts'),
+            $this->packagePath('resources/js/composables/useClaimActionLabel.ts') => resource_path('js/composables/useClaimActionLabel.ts'),
             $this->packagePath('resources/js/layouts/PublicLayout.vue') => resource_path('js/layouts/PublicLayout.vue'),
             $this->packagePath('resources/js/config') => resource_path('js/config'),
             $this->packagePath('resources/js/data') => resource_path('js/data'),

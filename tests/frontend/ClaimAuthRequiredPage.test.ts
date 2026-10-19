@@ -7,7 +7,8 @@ vi.mock('@inertiajs/vue3', async (importOriginal) => ({
     Head: { template: '<div><slot /></div>' },
 }));
 
-vi.mock('lucide-vue-next', () => ({
+vi.mock('lucide-vue-next', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('lucide-vue-next')>()),
     ShieldCheck: { template: '<span data-testid="shield-check-icon" />' },
 }));
 

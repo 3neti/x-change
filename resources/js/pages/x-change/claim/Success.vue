@@ -1,7 +1,12 @@
 <script setup lang="ts">
+import FormFlowActions from '@/pages/form-flow/core/components/FormFlowActions.vue';
+import ClaimStatePanel from '@/components/x-change/ClaimStatePanel.vue';
+import { useClaimActionLabel } from '@/composables/useClaimActionLabel';
+
+import FormFlowNotice from '@/pages/form-flow/core/components/FormFlowNotice.vue';
 import { computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
-import ClaimStatusIcon from '@/components/x-change/ClaimStatusIcon.vue';
+
 import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
 import RiderRenderer from '@/components/x-rider/RiderRenderer.vue';
 import RiderCountdown from '@/components/x-rider/RiderCountdown.vue';
@@ -26,13 +31,18 @@ import {
     shouldRenderSuccessRiderMessage,
 } from '@/components/x-change/successFallback';
 import { resolveSuccessViewModel } from '@/components/x-change/successViewModel';
-import { resolveSuccessCompiledClaimResultViewModel,
+import {
+    resolveSuccessCompiledClaimResultViewModel,
     type CompiledClaimResultPayload,
 } from '@/components/x-change/successCompiledClaimResult';
 import { resolveSuccessPageTone } from '@/components/x-change/successPageTone';
 import { resolveSuccessCountdownViewModel } from '@/components/x-change/successCountdownViewModel';
 import PayoutRouteDisplay from '@/components/x-change/PayoutRouteDisplay.vue';
 import type { PayoutDestinationSnapshot } from '@/components/x-change/support/payoutDestinations';
+
+const claimActionLabel = useClaimActionLabel(() =>
+    pageTone.value.isPending ? 'pending' : 'success',
+);
 
 defineOptions({ layout: null });
 
@@ -91,33 +101,43 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const completionProcessing = computed(() =>
-    props.claimWorkflowKey === 'campaign.coverage-completion.v1'
-    && props.success_presentation?.suppress_legacy_rider === true
-    && props.success_presentation?.state === 'processing',
+const completionProcessing = computed(
+    () =>
+        props.claimWorkflowKey === 'campaign.coverage-completion.v1' &&
+        props.success_presentation?.suppress_legacy_rider === true &&
+        props.success_presentation?.state === 'processing',
 );
 const completionPoll = useCompletionStatusPoll(completionProcessing);
 
-const suppressLegacyRider = computed(() => props.success_presentation?.suppress_legacy_rider === true);
-const hasPaymentHandoff = computed(() =>
-    props.success_action?.key === 'x-change.claim-success.continue-to-payment'
-    && props.success_action.enabled !== false
-    && Boolean(props.success_action.label?.trim())
-    && Boolean(props.success_action.target?.url?.trim()),
+const suppressLegacyRider = computed(
+    () => props.success_presentation?.suppress_legacy_rider === true,
 );
-const suppressAutomaticRedirects = computed(() =>
-    props.paired_payment || hasPaymentHandoff.value || suppressLegacyRider.value,
+const hasPaymentHandoff = computed(
+    () =>
+        props.success_action?.key ===
+            'x-change.claim-success.continue-to-payment' &&
+        props.success_action.enabled !== false &&
+        Boolean(props.success_action.label?.trim()) &&
+        Boolean(props.success_action.target?.url?.trim()),
+);
+const suppressAutomaticRedirects = computed(
+    () =>
+        props.paired_payment ||
+        hasPaymentHandoff.value ||
+        suppressLegacyRider.value,
 );
 
-const riderContent = computed(() => suppressLegacyRider.value ? null : props.rider?.success ?? null);
+const riderContent = computed(() =>
+    suppressLegacyRider.value ? null : (props.rider?.success ?? null),
+);
 const riderRedirect = computed(() =>
-    suppressAutomaticRedirects.value ? null : props.rider?.redirect ?? null,
+    suppressAutomaticRedirects.value ? null : (props.rider?.redirect ?? null),
 );
 const effectiveRedirect = computed(() =>
-    suppressAutomaticRedirects.value ? null : props.redirect ?? null,
+    suppressAutomaticRedirects.value ? null : (props.redirect ?? null),
 );
 const effectiveRedirectEndpoint = computed(() =>
-    suppressAutomaticRedirects.value ? null : props.redirectEndpoint ?? null,
+    suppressAutomaticRedirects.value ? null : (props.redirectEndpoint ?? null),
 );
 
 const displayedRiderContent = computed(() =>
@@ -128,10 +148,12 @@ const displayedRiderContent = computed(() =>
 );
 
 const successVisualStages = computed<RawRiderStage[]>(() =>
-    suppressLegacyRider.value ? [] : resolveSuccessVisualStages(props.claim_experience, props.rider, {
-        claimOutcome: props.claimOutcome,
-        riderState: props.rider?.state,
-    }),
+    suppressLegacyRider.value
+        ? []
+        : resolveSuccessVisualStages(props.claim_experience, props.rider, {
+              claimOutcome: props.claimOutcome,
+              riderState: props.rider?.state,
+          }),
 );
 
 const redirectRuntimeStages = computed<RawRiderStage[]>(() =>
@@ -237,9 +259,9 @@ const successPresentation = computed(() => {
         receiptCode: presentation.receipt_code?.trim() || props.voucher.code,
         funds: presentation.funds?.text?.trim()
             ? {
-                label: presentation.funds.label?.trim() || 'Client Funds',
-                text: presentation.funds.text.trim(),
-            }
+                  label: presentation.funds.label?.trim() || 'Client Funds',
+                  text: presentation.funds.text.trim(),
+              }
             : null,
     };
 });
@@ -267,6 +289,7 @@ const successAction = computed(() => {
     <Head :title="successPresentation?.title ?? 'Claim Successful'" />
 
     <ClaimStepShell
+        :screen="pageTone.isPending ? 'pending' : 'success'"
         :tone="pageTone.isWarning ? 'warning' : 'success'"
         :brand-placement="successPresentation ? 'center' : 'top_left'"
         :brand-size="successPresentation ? 'brand' : 'header'"
@@ -274,14 +297,21 @@ const successAction = computed(() => {
         :width="successPresentation ? 'lg' : 'md'"
     >
         <div class="space-y-8">
-            <div class="space-y-4 pt-4 text-center">
-                <ClaimStatusIcon :role="pageTone.isAttention ? 'attention' : pageTone.isPending ? 'pending' : 'success'" />
-
-                <div
+            <ClaimStatePanel
+                :role="
+                    pageTone.isAttention
+                        ? 'attention'
+                        : pageTone.isPending
+                          ? 'pending'
+                          : 'success'
+                "
+                class="space-y-4 pt-4 text-center"
+            >
+                <FormFlowNotice
                     v-if="pageTone.isPending"
                     data-testid="provider-payout-pending-region"
-                    role="status"
                     class="rounded-lg border border-amber-500/25 bg-amber-500/10 p-4 text-left"
+                    role="attention"
                 >
                     <p class="text-sm font-semibold text-foreground">
                         Claim accepted · payout pending
@@ -290,7 +320,7 @@ const successAction = computed(() => {
                         The Pay Code has been claimed. Funds are released only
                         after the payment provider confirms the transfer.
                     </p>
-                </div>
+                </FormFlowNotice>
 
                 <div
                     v-if="successPresentation"
@@ -319,10 +349,11 @@ const successAction = computed(() => {
                         {{ successPresentation.accountMessage }}
                     </p>
 
-                    <div
+                    <FormFlowNotice
                         v-if="successPresentation.funds"
                         data-testid="claim-success-funds"
                         class="mx-auto max-w-sm rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-5 py-4"
+                        role="success"
                     >
                         <p class="text-xl font-semibold text-foreground">
                             {{ successPresentation.funds.text }}
@@ -332,7 +363,7 @@ const successAction = computed(() => {
                         >
                             {{ successPresentation.funds.label }}
                         </p>
-                    </div>
+                    </FormFlowNotice>
 
                     <p
                         v-if="successPresentation.body"
@@ -391,29 +422,18 @@ const successAction = computed(() => {
                     </p>
                 </div>
 
-                <a
-                    v-if="successAction"
-                    :href="successAction.url"
-                    referrerpolicy="no-referrer"
-                    data-testid="claim-success-primary-action"
-                    class="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                <div
+                    v-if="completionProcessing"
+                    data-testid="completion-status-check"
+                    class="space-y-3"
                 >
-                    {{ successAction.label }}
-                </a>
-
-                <div v-if="completionProcessing" data-testid="completion-status-check" class="space-y-3">
-                    <p role="status" aria-live="polite" class="text-sm text-muted-foreground">
+                    <p
+                        role="status"
+                        aria-live="polite"
+                        class="text-sm text-muted-foreground"
+                    >
                         {{ completionPoll.message.value }}
                     </p>
-                    <button
-                        v-if="completionPoll.stopped.value"
-                        type="button"
-                        :disabled="completionPoll.checking.value"
-                        class="inline-flex min-h-11 items-center justify-center rounded-md border px-6 py-2 text-sm font-semibold disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring"
-                        @click="completionPoll.check"
-                    >
-                        {{ completionPoll.checking.value ? 'Checking…' : 'Check status' }}
-                    </button>
                 </div>
 
                 <div
@@ -473,7 +493,49 @@ const successAction = computed(() => {
                     :account-number="destination.account_number_masked"
                     :settlement-rail="destination.settlement_rail || 'INSTAPAY'"
                 />
-            </div>
+                <FormFlowActions
+                    v-if="
+                        successAction ||
+                        (completionProcessing && completionPoll.stopped.value)
+                    "
+                    :show-secondary="
+                        Boolean(
+                            successAction &&
+                            completionProcessing &&
+                            completionPoll.stopped.value,
+                        )
+                    "
+                >
+                    <a
+                        v-if="successAction"
+                        :href="successAction.url"
+                        referrerpolicy="no-referrer"
+                        data-testid="claim-success-primary-action"
+                        class="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                        {{ claimActionLabel('open_link', successAction.label) }}
+                    </a>
+                    <button
+                        v-if="
+                            completionProcessing && completionPoll.stopped.value
+                        "
+                        type="button"
+                        :disabled="completionPoll.checking.value"
+                        class="inline-flex min-h-11 items-center justify-center rounded-md border px-6 py-2 text-sm font-semibold disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring"
+                        @click="completionPoll.check"
+                    >
+                        {{
+                            claimActionLabel(
+                                'retry',
+                                completionPoll.checking.value
+                                    ? 'Checking…'
+                                    : 'Check status',
+                                completionPoll.checking.value,
+                            )
+                        }}
+                    </button>
+                </FormFlowActions>
+            </ClaimStatePanel>
 
             <RiderRuntimeSequencer
                 v-if="hasRedirectRuntimeStages"
