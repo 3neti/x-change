@@ -1,6 +1,18 @@
 schema: form-flow.presentation.v1
 layout:
-  artwork_aspect_ratio: 1200/630
+  artwork_aspect_ratio: natural
+artwork:
+  background:
+    enabled: true
+    opacity: 0.55
+    blur: 18
+    overlay: 0.75
+  foreground:
+    position: top
+    top_spacing: 32
+    gap: 20
+    padding: 20
+    max_width: 672
 appearance:
   mode: light
   light:

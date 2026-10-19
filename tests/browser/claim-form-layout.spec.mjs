@@ -221,3 +221,30 @@ test('older rider splash previews contain the full image in a stamp-ratio frame'
     expect(box.width/box.height).toBeCloseTo(1200/630,2);
     await expect(page.getByRole('button',{name:'Continue',exact:true})).toBeVisible();
 });
+
+for (const screen of ['splash','rider_handoff']) {
+    test(`layered artwork ${screen} preserves the full foreground and uses YAML styling`, async ({page}) => {
+        await page.setViewportSize({width:402,height:874});
+        const profile={...presentation,layout:{...presentation.layout,artwork_aspect_ratio:'natural'},artwork:{background:{enabled:true,opacity:0.55,blur:18,overlay:0.75},foreground:{position:'top',top_spacing:32,gap:20,padding:20,max_width:672}}};
+        if(screen==='splash') {
+            const content=readFileSync(new URL('./fixtures/planetary-rose-splash.html',import.meta.url),'utf8').replace('https://github.com/lbhurtado/failure-of-simultaneity/blob/main/planetary-rose.PNG?raw=true','/vendor/x-stamp/assets/artwork/planetary-rose-v1.png');
+            await render(page,'form-flow/core/Splash',{presentation:profile,content,is_default_splash:false,voucher_code:'AA317',timeout:0});
+        } else await render(page,'x-change/claim/Preview',{claim_ui:profile,presentation:null,viewport:{profile:'mobile',width:402,height:874},step:{title:'Issuer link',screen:{kind:'rider_handoff',title:'Issuer link',artwork_url:'/vendor/x-change/images/payout-destinations/gcash-128.png',description:'Synthetic link preview'}}});
+        const surface=page.getByTestId('form-flow-artwork-surface');
+        const backdrop=page.getByTestId('artwork-background');
+        await expect(backdrop).toHaveAttribute('aria-hidden','true');
+        await expect(backdrop.locator('img')).toHaveCSS('opacity','0.55');
+        await expect(backdrop.locator('img')).toHaveCSS('filter','blur(18px)');
+        const foreground=page.getByTestId('artwork-foreground');
+        const image=foreground.locator('img').first();
+        await expect(image).toBeVisible();
+        await expect.poll(()=>image.evaluate(el=>el.complete && el.naturalWidth>0)).toBe(true);
+        const geometry=await image.evaluate(el=>{const r=el.getBoundingClientRect();return {ratio:r.width/r.height,natural:el.naturalWidth/el.naturalHeight,x:r.x,right:r.right};});
+        expect(geometry.ratio).toBeCloseTo(geometry.natural,2);
+        expect(geometry.x).toBeGreaterThanOrEqual(0);expect(geometry.right).toBeLessThanOrEqual(402);
+        if(screen==='splash') await expect(page.getByRole('heading',{name:'i carry your heart with me'})).toHaveCount(1);
+        const body=await surface.boundingBox(), art=await foreground.boundingBox();
+        expect(art.y-body.y).toBeCloseTo(32,0);
+        await page.screenshot({path:`${process.env.WORKFLOW_BROWSER_ARTIFACTS}/layered-${screen}.png`,fullPage:true});
+    });
+}
