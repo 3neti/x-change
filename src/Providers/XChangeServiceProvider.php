@@ -1738,6 +1738,19 @@ class XChangeServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        config()->set('form-flow.presentation.profiles.guided-claim-v1', array_replace_recursive([
+            'schema' => 'form-flow.presentation.v1',
+            'brand' => [
+                'name' => config('x-change.claim.experience_ui.brand.app_name', 'Pay Code'),
+                'logo' => config('x-change.claim.experience_ui.brand.app_logo', '/vendor/x-change/images/pay-code/pay-code-logo.svg'),
+                'placement' => 'top_left', 'logo_height' => 32, 'logo_max_width' => 112,
+            ],
+            'layout' => ['density' => 'compact', 'capture_surface' => 'fill_available', 'scrolling' => 'when_needed'],
+            'actions' => ['placement' => 'viewport_bottom', 'primary_position' => 'right', 'secondary_position' => 'left', 'reserve_content_space' => true],
+            'progress' => ['show' => (bool) config('x-change.claim.experience_ui.show_progress', true)],
+            'diagnostics' => ['show_versions' => (bool) config('x-change.claim.experience_ui.show_package_versions', false)],
+        ], (array) config('form-flow.presentation.profiles.guided-claim-v1', [])));
+
         $stampCollection = InstalledVersions::getInstallPath('3neti/x-stamp-designs');
         if ($stampCollection !== null) {
             $this->publishes([

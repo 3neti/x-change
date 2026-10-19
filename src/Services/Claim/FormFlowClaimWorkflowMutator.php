@@ -47,7 +47,7 @@ final class FormFlowClaimWorkflowMutator
         ]);
 
         $payload['steps'] = array_map(
-            fn (array $step): array => $this->applyToStep($step, $workflow, $authenticatedMobile, $settlementRail),
+            fn (array $step): array => $this->applyToStep($step, $workflow, $authenticatedMobile, $settlementRail, isset($payload['presentation'])),
             (array) ($payload['steps'] ?? []),
         );
 
@@ -63,6 +63,7 @@ final class FormFlowClaimWorkflowMutator
         ClaimWorkflowDescriptorData $workflow,
         ?string $authenticatedMobile,
         ?string $settlementRail,
+        bool $hasPresentation,
     ): array {
         $step['config'] = (array) ($step['config'] ?? []);
         $step['config']['claim_workflow'] = $this->workflowPayload($workflow);
@@ -81,6 +82,9 @@ final class FormFlowClaimWorkflowMutator
         if (($step['handler'] ?? null) === 'otp'
             && ($workflow->review['payout_recovery'] ?? false) === true) {
             $step['config']['action_placement'] = 'inline';
+            if ($hasPresentation || isset($step['config']['presentation'])) {
+                $step['config']['presentation']['actions']['placement'] = 'inline';
+            }
         }
 
         if (($step['handler'] ?? null) === 'otp'

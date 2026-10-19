@@ -50,6 +50,10 @@ callbacks:
 #
 # See docs/guides/features/form-flow/INTEGRATION.md#context-variables for full list
 
+presentation:
+  schema: form-flow.presentation.v1
+  profile: guided-claim-v1
+
 steps:
   # Step 0: Splash Page
   # ===================
