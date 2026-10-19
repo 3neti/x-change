@@ -1175,7 +1175,7 @@ return [
                     ],
                     'expect' => [
                         'status' => 'failed',
-                        'message_contains' => ['email', 'birth date'],
+                        'message_contains' => ['email', 'birth_date'],
                     ],
                 ],
                 'complete_fields_succeed' => [
@@ -1409,6 +1409,7 @@ return [
                     ],
                     'expect' => [
                         'status' => 'failed',
+                        'message_contains' => ['redemption contract validation failed'],
                     ],
                 ],
                 'inside_radius_succeeds' => [

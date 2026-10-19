@@ -83,3 +83,28 @@ it('accepts complete identity media location OTP and KYC evidence', function ():
 
     expect(true)->toBeTrue();
 });
+
+it('accepts complete location coordinates in handler and lifecycle formats', function (array $location): void {
+    $voucher = (new Voucher)->forceFill([
+        'metadata' => ['instructions' => ['inputs' => ['fields' => ['location']]]],
+    ]);
+
+    app(ClaimEvidenceRequirements::class)->assertComplete($voucher, ['inputs' => ['location' => $location]]);
+
+    expect(true)->toBeTrue();
+})->with([
+    'handler coordinates' => [['latitude' => 14.5995, 'longitude' => 120.9842]],
+    'lifecycle coordinates' => [['lat' => 14.5995, 'lng' => 120.9842]],
+]);
+
+it('rejects incomplete or nonnumeric location coordinates', function (array $location): void {
+    $voucher = (new Voucher)->forceFill([
+        'metadata' => ['instructions' => ['inputs' => ['fields' => ['location']]]],
+    ]);
+
+    app(ClaimEvidenceRequirements::class)->assertComplete($voucher, ['inputs' => ['location' => $location]]);
+})->with([
+    'missing longitude' => [['lat' => 14.5995]],
+    'missing latitude' => [['lng' => 120.9842]],
+    'invalid latitude' => [['lat' => 'invalid', 'lng' => 120.9842]],
+])->throws(IncompleteClaimEvidence::class, 'location');

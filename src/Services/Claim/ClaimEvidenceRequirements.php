@@ -101,8 +101,8 @@ final class ClaimEvidenceRequirements
 
         if ($requirement === 'location') {
             return is_array($value)
-                && is_numeric(data_get($value, 'latitude'))
-                && is_numeric(data_get($value, 'longitude'));
+                && is_numeric(data_get($value, 'latitude', data_get($value, 'lat')))
+                && is_numeric(data_get($value, 'longitude', data_get($value, 'lng')));
         }
 
         if ($requirement === 'kyc') {
