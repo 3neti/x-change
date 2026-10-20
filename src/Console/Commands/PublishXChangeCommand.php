@@ -60,6 +60,20 @@ final class PublishXChangeCommand extends Command
 
             if (
                 $scope === PublicationScope::Build
+                && ! (bool) $this->option('dry-run')
+                && $this->getApplication()?->has('report:install-drivers')
+            ) {
+                $driverExitCode = $this->call('report:install-drivers', [
+                    '--force' => true,
+                ]);
+
+                if ($driverExitCode !== self::SUCCESS) {
+                    throw new \RuntimeException('Report driver installation failed.');
+                }
+            }
+
+            if (
+                $scope === PublicationScope::Build
                 && (bool) $this->option('verify')
                 && ! (bool) $this->option('dry-run')
             ) {
