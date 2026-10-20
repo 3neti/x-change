@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services\Commercial;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 final class CommercialOperationsEconomicsReadModel
 {
@@ -49,7 +50,7 @@ final class CommercialOperationsEconomicsReadModel
                 'commercial_sales_minor' => $salesAmount,
                 'provider_cost_minor' => (int) DB::table('x_change_commercial_provider_cost_settlements')->whereBetween('created_at', [$start, $end])->sum('observed_amount_minor'),
                 'product_revenue_minor' => (int) DB::table('x_change_commercial_allocations')->whereBetween('created_at', [$start, $end])->where('category', 'product_revenue')->sum('amount_minor'),
-                'reversed_minor' => (int) DB::table('x_change_commercial_product_revenue_reversals')->whereBetween('reversed_at', [$start, $end])->sum('amount_minor'),
+                'reversed_minor' => $this->reversedAmount($start, $end),
                 'exceptions' => (int) $this->exceptionQuery($start, $end)->count(),
                 'state' => 'read_only',
             ]],
@@ -183,6 +184,17 @@ final class CommercialOperationsEconomicsReadModel
         }
 
         return [$start, $end];
+    }
+
+    private function reversedAmount(CarbonImmutable $start, CarbonImmutable $end): int
+    {
+        if (! Schema::hasTable('x_change_commercial_product_revenue_reversals')) {
+            return 0;
+        }
+
+        return (int) DB::table('x_change_commercial_product_revenue_reversals')
+            ->whereBetween('reversed_at', [$start, $end])
+            ->sum('amount_minor');
     }
 
     private function parseDate(mixed $value, string $timezone): ?CarbonImmutable

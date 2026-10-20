@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
@@ -14,20 +15,24 @@ return new class extends Migration
             return;
         }
 
-        Schema::create('x_change_commercial_product_revenue_reversals', function (Blueprint $table): void {
-            $table->id();
-            $table->foreignId('commercial_sale_id')->constrained('x_change_commercial_sales')->restrictOnDelete();
-            $table->foreignId('commercial_allocation_id')->constrained('x_change_commercial_allocations')->restrictOnDelete();
-            $table->string('reason_reference');
-            $table->unsignedBigInteger('amount_minor');
-            $table->char('currency', 3);
-            $table->string('reverse_operation_reference')->unique();
-            $table->string('status')->index();
-            $table->timestampTz('reversed_at');
-            $table->timestampsTz();
-
-            $table->unique(['commercial_sale_id', 'commercial_allocation_id']);
-        });
+        try {
+            Schema::create('x_change_commercial_product_revenue_reversals', function (Blueprint $table): void {
+                $table->id();
+                $table->foreignId('commercial_sale_id')->constrained('x_change_commercial_sales')->restrictOnDelete();
+                $table->foreignId('commercial_allocation_id')->constrained('x_change_commercial_allocations')->restrictOnDelete();
+                $table->string('reason_reference');
+                $table->unsignedBigInteger('amount_minor');
+                $table->char('currency', 3);
+                $table->string('reverse_operation_reference')->unique();
+                $table->string('status')->index();
+                $table->timestampTz('reversed_at');
+                $table->timestampsTz();
+            });
+        } catch (QueryException $exception) {
+            if ((string) $exception->getCode() !== '42710') {
+                throw $exception;
+            }
+        }
     }
 
     public function down(): void
