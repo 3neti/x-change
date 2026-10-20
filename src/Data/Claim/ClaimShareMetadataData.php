@@ -13,6 +13,8 @@ final readonly class ClaimShareMetadataData
         public string $siteName,
         public ?string $imageUrl,
         public string $imageAlt,
+        public int $imageWidth = 1200,
+        public int $imageHeight = 630,
     ) {}
 
     /**
@@ -34,6 +36,8 @@ final readonly class ClaimShareMetadataData
             'site_name' => $this->siteName,
             'image_url' => $this->imageUrl,
             'image_alt' => $this->imageAlt,
+            'image_width' => $this->imageWidth,
+            'image_height' => $this->imageHeight,
         ];
     }
 }

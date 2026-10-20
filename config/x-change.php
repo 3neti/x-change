@@ -408,6 +408,15 @@ return [
         'default_stamp_design' => 'x-change-default',
         'default_system_stamp_design' => 'steampunk',
         'stamp_presentation' => ['defaults' => [], 'presets' => []],
+        'stamp_rendering' => [
+            'default' => env('STAMP_RENDERING_PROFILE', 'standard'),
+            'allowed' => array_values(array_filter(explode(',', (string) env('STAMP_RENDERING_ALLOWED', 'standard')))),
+            'comparison_enabled' => env('STAMP_RENDERING_COMPARISON_ENABLED', false),
+            'node_binary' => env('STAMP_NODE_BINARY'),
+            'node_module_path' => env('STAMP_NODE_MODULE_PATH'),
+            'chrome_path' => env('STAMP_CHROME_PATH'),
+            'timeout' => 20,
+        ],
         'stamp_collections' => ['3neti/x-stamp-designs'],
         'stamp_designs' => [
             'x-change-default' => [

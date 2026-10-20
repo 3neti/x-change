@@ -69,6 +69,7 @@ final readonly class StampPreviewComposer
             'expires_at' => ['nullable', 'date'],
             'ttl' => ['nullable', 'string', 'max:80', 'regex:/^P(?=.+)[0-9YMWDTHS.]+$/'],
             'metadata.custom.stamp_presentation' => ['nullable', 'array'],
+            'metadata.custom.stamp_rendering.profile' => ['sometimes', 'string', 'in:standard,browser,browser-hd'],
             'rider.redirect_timeout' => ['nullable', 'integer', 'min:0', 'max:86400'],
             'rider.splash_timeout' => ['nullable', 'integer', 'min:0', 'max:86400'],
             'rider.og_source' => ['nullable', 'in:default,message,url,splash'],
@@ -111,6 +112,7 @@ final readonly class StampPreviewComposer
         } catch (\InvalidArgumentException $exception) {
             throw ValidationException::withMessages(['instructions' => 'The Stamp instructions or expiry are invalid.']);
         }
+        $started = hrtime(true);
         $claimUrl = $code === null ? route('x-change.claim.start') : route('x-change.claim.show', ['code' => $code]);
         if ($this->composer instanceof GdRiderStampClaimShareCardRenderer) {
             $card = $this->composer->preview($voucher, $claimUrl, $code === null);
@@ -121,6 +123,11 @@ final readonly class StampPreviewComposer
 
         return [
             'image' => 'data:image/png;base64,'.base64_encode($card['contents']),
+            'rendering_ms' => round((hrtime(true) - $started) / 1000000, 1),
+            'file_bytes' => strlen($card['contents']),
+            'width' => getimagesizefromstring($card['contents'])[0],
+            'height' => getimagesizefromstring($card['contents'])[1],
+            'render_profile' => app(StampRenderingProfiles::class)->forVoucher($voucher)->value,
             'marker_bounds' => $card['marker_bounds'],
             'requirements' => $card['requirements'],
             'provider_identity' => $identity === null ? null : Arr::only($identity, ['code', 'name']),

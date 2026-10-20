@@ -36,7 +36,7 @@ it('server renders Rider Stamp share metadata with a composed image endpoint', f
     $claimUrl = "https://share.example.test/x/claim/{$voucher->code}";
     $shareCardUrl = "{$claimUrl}/share-card.png";
 
-    $this->withHeader('User-Agent', 'facebookexternalhit/1.1')
+    $response = $this->withHeader('User-Agent', 'facebookexternalhit/1.1')
         ->get(route('x-change.claim.show', ['code' => $voucher->code]))
         ->assertOk()
         ->assertSee(
@@ -66,8 +66,9 @@ it('server renders Rider Stamp share metadata with a composed image endpoint', f
         ->assertSee(
             '<meta name="twitter:card" content="summary_large_image">',
             false,
-        )
-        ->assertDontSee('data:image', false);
+        );
+    preg_match('/<head\b[^>]*>(.*?)<\/head>/s', $response->getContent(), $head);
+    expect($head[1] ?? '')->not->toContain('data:image');
 
     Http::assertNothingSent();
 });

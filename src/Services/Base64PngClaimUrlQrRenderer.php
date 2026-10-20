@@ -11,11 +11,20 @@ use Endroid\QrCode\RoundBlockSizeMode;
 use Endroid\QrCode\Writer\PngWriter;
 use InvalidArgumentException;
 use LBHurtado\XChange\Contracts\ClaimUrlQrRendererContract;
+use LBHurtado\XChange\Contracts\ScaledClaimUrlQrRendererContract;
 
-class Base64PngClaimUrlQrRenderer implements ClaimUrlQrRendererContract
+class Base64PngClaimUrlQrRenderer implements ClaimUrlQrRendererContract, ScaledClaimUrlQrRendererContract
 {
     public function render(string $claimUrl): string
     {
+        return $this->renderAtScale($claimUrl, 1);
+    }
+
+    public function renderAtScale(string $claimUrl, int $scale): string
+    {
+        if (! in_array($scale, [1, 2], true)) {
+            throw new InvalidArgumentException('Unsupported QR pixel density.');
+        }
         $canonicalUrl = trim($claimUrl);
 
         if (
@@ -32,11 +41,11 @@ class Base64PngClaimUrlQrRenderer implements ClaimUrlQrRendererContract
             data: $canonicalUrl,
             encoding: new Encoding('UTF-8'),
             errorCorrectionLevel: ErrorCorrectionLevel::High,
-            size: 240,
-            margin: 8,
+            size: 240 * $scale,
+            margin: 8 * $scale,
             roundBlockSizeMode: RoundBlockSizeMode::Margin,
             logoPath: dirname(__DIR__, 2).'/resources/assets/images/pay-code/pay-code-mark.png',
-            logoResizeToWidth: 44,
+            logoResizeToWidth: 44 * $scale,
             logoPunchoutBackground: true,
         ))->build();
 

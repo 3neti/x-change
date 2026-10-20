@@ -9,6 +9,7 @@ use InvalidArgumentException;
 use LBHurtado\Voucher\Data\RiderStampData;
 use LBHurtado\XChange\Services\Stamp\StampCatalog;
 use LBHurtado\XChange\Services\Stamp\StampPresentation;
+use LBHurtado\XChange\Services\Stamp\StampRenderingProfiles;
 
 final class RiderStampDesignRegistry
 {
@@ -98,6 +99,7 @@ final class RiderStampDesignRegistry
      */
     public function materialize(array $input): array
     {
+        $input = app(StampRenderingProfiles::class)->materialize($input);
         $stamp = data_get($input, 'rider.stamp');
         $stamp = is_array($stamp) ? $stamp : [];
         $designId = data_get($stamp, 'design_id');
