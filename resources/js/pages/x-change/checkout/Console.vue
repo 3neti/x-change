@@ -29,6 +29,7 @@ const props = defineProps<{
   role: "locked" | "owner" | "viewer";
   console_name?: string;
   pricing_url?: string | null;
+  economics_url?: string | null;
   viewer_token?: string | null;
   monitor: {
     counts: Record<string, number>;
@@ -138,6 +139,7 @@ async function copyPayCode(row: CheckoutRow): Promise<void> {
         <button v-if="role === 'owner'" type="button" class="rounded-lg border border-slate-300 px-4 py-2 text-sm" @click="router.post(lock().url)">Lock console</button>
         <span v-else-if="role === 'viewer'" class="rounded-full bg-sky-100 px-3 py-1 text-sm font-semibold text-sky-900">Read only</span>
         <a v-if="pricing_url" :href="pricing_url" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Manage pricing</a>
+        <a v-if="economics_url" :href="economics_url" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Economics</a>
       </header>
 
       <section v-if="role === 'locked'" class="max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

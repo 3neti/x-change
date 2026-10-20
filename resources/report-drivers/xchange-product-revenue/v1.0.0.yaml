@@ -1,0 +1,15 @@
+driver:
+  id: xchange-product-revenue
+  version: 1.0.0
+  title: Product Revenue
+  description: Revenue allocated to instruction Products
+  group: operations
+resolver: LBHurtado\XChange\Reports\Resolvers\CommercialProductRevenueReportResolver
+columns:
+  - { key: product, label: Product, type: text }
+  - { key: category, label: Category, type: text }
+  - { key: status, label: Status, type: text }
+  - { key: line_count, label: Lines, type: number }
+  - { key: amount_minor, label: Amount, type: minor_amount }
+filters:
+  - { key: period, label: Period, type: period, options: [today, seven_days, thirty_days] }

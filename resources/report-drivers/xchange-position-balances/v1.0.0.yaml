@@ -1,0 +1,15 @@
+driver:
+  id: xchange-position-balances
+  version: 1.0.0
+  title: Position Balances
+  description: Destination positions represented by commercial allocations
+  group: operations
+resolver: LBHurtado\XChange\Reports\Resolvers\CommercialPositionBalancesReportResolver
+columns:
+  - { key: position, label: Position, type: text }
+  - { key: currency, label: Currency, type: text }
+  - { key: status, label: Status, type: text }
+  - { key: movement_count, label: Movements, type: number }
+  - { key: amount_minor, label: Amount, type: minor_amount }
+filters:
+  - { key: period, label: Period, type: period, options: [today, seven_days, thirty_days] }

@@ -33,6 +33,7 @@ final class CheckoutConsoleController extends Controller
             'role' => $owner ? 'owner' : 'locked',
             'console_name' => 'Payment Operations',
             'pricing_url' => route('x-change.operations.pricing', [], false),
+            'economics_url' => route('x-change.operations.economics', [], false),
             'monitor' => $owner ? $read->forOwner($principal, is_string($status) ? $status : null, includeFullPayCodes: true) : null,
         ])->toResponse($request)->withHeaders($this->responseHeaders());
     }
@@ -48,6 +49,7 @@ final class CheckoutConsoleController extends Controller
             'role' => 'viewer',
             'console_name' => 'Payment Operations',
             'pricing_url' => route('x-change.operations.pricing', [], false),
+            'economics_url' => route('x-change.operations.economics', [], false),
             'viewer_token' => $token,
             'monitor' => $read->forOwner($principal, is_string($status) ? $status : null),
         ])->toResponse($request)->withHeaders($this->responseHeaders());

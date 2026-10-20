@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Http\Controllers\PublicIssuance\PublicIssuanceDiscoveryController;
 use LBHurtado\XChange\Http\Controllers\Web\BalancePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Checkout\CheckoutConsoleController;
+use LBHurtado\XChange\Http\Controllers\Web\Checkout\OperationsEconomicsController;
 use LBHurtado\XChange\Http\Controllers\Web\Checkout\OperationsPricingController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimApprovalOtpController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimApprovalPageController;
@@ -223,6 +224,11 @@ Route::middleware(['web', ShareXChangeBranding::class])->group(function (): void
 
 Route::prefix('x/operations')->middleware(['web', ShareXChangeBranding::class])->group(function (): void {
     Route::get('/', [CheckoutConsoleController::class, 'show'])->name('x-change.operations.show');
+    Route::get('economics', [OperationsEconomicsController::class, 'show'])
+        ->name('x-change.operations.economics');
+    Route::get('economics/report/{report}', [OperationsEconomicsController::class, 'report'])
+        ->where('report', '[a-z-]+')
+        ->name('x-change.operations.economics.report');
     Route::get('pricing', [OperationsPricingController::class, 'show'])
         ->name('x-change.operations.pricing');
     Route::get('pricing/template', [OperationsPricingController::class, 'template'])
@@ -438,6 +444,11 @@ Route::prefix('x')->middleware([
     Route::prefix('cockpit')->middleware(ShareCockpitHeaderReadModel::class)->group(function (): void {
         Route::get('/', CockpitEntryPageController::class)->name('x-change.cockpit.entry');
         Route::get('overview', CockpitDashboardPageController::class)->name('x-change.cockpit.dashboard');
+        Route::get('operations-economics', [OperationsEconomicsController::class, 'cockpit'])
+            ->name('x-change.cockpit.operations-economics');
+        Route::get('operations-economics/report/{report}', [OperationsEconomicsController::class, 'cockpitReport'])
+            ->where('report', '[a-z-]+')
+            ->name('x-change.cockpit.operations-economics.report');
         Route::get('documentation', CockpitDocumentationPageController::class)
             ->name('x-change.cockpit.documentation');
         Route::get('commercial', CockpitCommercialOfferingPageController::class)

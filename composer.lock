@@ -1144,16 +1144,16 @@
         },
         {
             "name": "3neti/report-registry",
-            "version": "v1.1.2",
+            "version": "v1.1.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/report-registry.git",
-                "reference": "b3e4d07883120d4c749cc195514932c880501992"
+                "reference": "0035d75693076e6ef015a83add52c75d1d4351e9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/report-registry/zipball/b3e4d07883120d4c749cc195514932c880501992",
-                "reference": "b3e4d07883120d4c749cc195514932c880501992",
+                "url": "https://api.github.com/repos/3neti/report-registry/zipball/0035d75693076e6ef015a83add52c75d1d4351e9",
+                "reference": "0035d75693076e6ef015a83add52c75d1d4351e9",
                 "shasum": ""
             },
             "require": {
@@ -1195,9 +1195,9 @@
             "description": "Driver-based report registry with multi-format output and Handlebars templating",
             "support": {
                 "issues": "https://github.com/3neti/report-registry/issues",
-                "source": "https://github.com/3neti/report-registry/tree/v1.1.2"
+                "source": "https://github.com/3neti/report-registry/tree/v1.1.3"
             },
-            "time": "2026-07-31T05:21:30+00:00"
+            "time": "2026-10-20T01:37:50+00:00"
         },
         {
             "name": "3neti/settlement-envelope",

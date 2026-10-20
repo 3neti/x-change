@@ -1,0 +1,21 @@
+driver:
+  id: xchange-operations-summary
+  version: 1.0.0
+  title: Operations Summary
+  description: Read-only issuance, payment, liability, revenue, and exception KPIs
+  group: operations
+resolver: LBHurtado\XChange\Reports\Resolvers\CommercialOperationsSummaryReportResolver
+columns:
+  - { key: checkouts, label: Checkouts, type: number }
+  - { key: payments_received, label: Payments Received, type: number }
+  - { key: orders_issued, label: Orders Issued, type: number }
+  - { key: claims, label: Claims, type: number }
+  - { key: principal_minor, label: Principal, type: minor_amount }
+  - { key: commercial_sales_minor, label: Commercial Sales, type: minor_amount }
+  - { key: provider_cost_minor, label: Provider Costs, type: minor_amount }
+  - { key: product_revenue_minor, label: Product Revenue, type: minor_amount }
+  - { key: reversed_minor, label: Reversed, type: minor_amount }
+  - { key: exceptions, label: Exceptions, type: number }
+filters:
+  - { key: period, label: Period, type: period, options: [today, seven_days, thirty_days] }
+  - { key: currency, label: Currency, type: select, options: [PHP] }
