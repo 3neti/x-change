@@ -11,6 +11,7 @@ use LBHurtado\XChange\Services\Claim\GdRiderStampClaimShareCardRenderer;
 use LBHurtado\XChange\Services\QrArtifactFactory;
 use LBHurtado\XChange\Services\Stamp\StampCatalog;
 use LBHurtado\XChange\Services\Stamp\StampPresentation;
+use LBHurtado\XChange\Services\Stamp\StampPreviewComposer;
 use LBHurtado\XChange\Services\Stamp\StampProviderIdentity;
 use LBHurtado\XStamp\Appearance;
 use LBHurtado\XStamp\IdentifierPresentation;
@@ -19,8 +20,18 @@ use LBHurtado\XStamp\Renderer;
 
 final class StampPreviewController
 {
-    public function __invoke(Request $request, StampCatalog $catalog, Renderer $renderer, StampProviderIdentity $providers): JsonResponse
+    public function __invoke(Request $request, StampCatalog $catalog, Renderer $renderer, StampProviderIdentity $providers, StampPreviewComposer $previews): JsonResponse
     {
+        if ($request->has('instructions')) {
+            $validated = $request->validate(['instructions' => ['required', 'array']]);
+
+            try {
+                return response()->json($previews->preview($validated['instructions']))->header('Cache-Control', 'no-store');
+            } catch (InvalidArgumentException $exception) {
+                return response()->json(['message' => $exception->getMessage()], 422);
+            }
+        }
+
         $input = $request->validate([
             'design_id' => ['required', 'string', 'max:80'],
             'revision' => ['required', 'integer', 'min:1'],

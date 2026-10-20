@@ -11,10 +11,12 @@ final class ClaimShareCardAmountFormatter
 {
     public function format(Voucher $voucher): string
     {
-        $amount = data_get($voucher, 'cash.amount');
+        $amount = $voucher->exists
+            ? data_get($voucher, 'cash.amount')
+            : data_get($voucher->instructions, 'cash.amount');
         $currency = strtoupper((string) data_get(
             $voucher,
-            'cash.currency',
+            $voucher->exists ? 'cash.currency' : 'instructions.cash.currency',
             'PHP',
         ));
         $value = $amount instanceof Money

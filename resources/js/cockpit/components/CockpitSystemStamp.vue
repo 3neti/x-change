@@ -14,6 +14,7 @@ import { preview } from '@/routes/x-change/stamps';
 import { resolvePayCodeIndicator } from '../payCodeIndicators';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 const props = defineProps<{
+    instructions?: Record<string, unknown>;
     designId: string;
     revision: number;
     provider?: string | null;
@@ -84,6 +85,7 @@ function applyPreview(result: StampPreviewResult): void {
 }
 watch(
     () => [
+        props.instructions,
         props.designId,
         props.revision,
         props.provider,
@@ -101,7 +103,7 @@ watch(
         const current = ++sequence;
         error.value = '';
         emit('previewImage', '');
-        const payload = {
+        const payload = props.instructions ? { instructions: props.instructions } : {
             design_id: props.designId,
             revision: props.revision,
             ...(props.provider ? { provider: props.provider } : {}),

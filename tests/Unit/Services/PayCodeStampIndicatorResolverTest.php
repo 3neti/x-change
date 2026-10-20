@@ -31,9 +31,11 @@ it('resolves outcome-first Stamp indicators from persisted instructions', functi
 });
 
 it('selects the account-funding outcome independently of voucher type', function (): void {
+    $user = actingAsTestUser();
     $voucher = issueVoucher(validVoucherInstructions(overrides: [
         'voucher_type' => 'settlement',
         'target_amount' => 100,
+        'metadata' => ['collection_wallet_id' => (string) $user->wallet->id],
         'claim' => [
             'outcomes' => [
                 [
@@ -50,4 +52,13 @@ it('selects the account-funding outcome independently of voucher type', function
 
     expect(app(PayCodeStampIndicatorResolver::class)->resolve($voucher))
         ->toBe(['outcome.account_funding']);
+});
+
+it('uses readable labels rather than internal instruction keys in the exported Stamp', function (): void {
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'inputs' => ['fields' => ['selfie', 'signature']],
+    ]));
+
+    expect(app(PayCodeStampIndicatorResolver::class)->labels($voucher))
+        ->toBe(['Receive Funds', 'Selfie Photo', 'Digital Signature']);
 });

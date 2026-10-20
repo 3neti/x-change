@@ -8,13 +8,17 @@ use Illuminate\Support\Facades\Storage;
 use Inertia\ServiceProvider;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
+use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
 use LBHurtado\XChange\Contracts\RiderStampArtifactStoreContract;
+use LBHurtado\XChange\Contracts\RiderStampClaimCardComposerContract;
+use LBHurtado\XChange\Data\Claim\ClaimShareCardData;
 use LBHurtado\XChange\Data\Claim\RiderStampCopyData;
 use LBHurtado\XChange\Http\Middleware\RequireCurrentAgreementAcceptance;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
 use LBHurtado\XChange\Services\Claim\GdRiderStampClaimShareCardRenderer;
 use LBHurtado\XChange\Services\RiderStampDesignRegistry;
 use LBHurtado\XChange\Services\Stamp\StampCatalog;
+use LBHurtado\XChange\Services\Stamp\StampPreviewComposer;
 use LBHurtado\XChange\Services\Stamp\StampProviderIdentity;
 use LBHurtado\XStamp\Design;
 use LBHurtado\XStamp\IdentifierPresentation;
@@ -389,4 +393,160 @@ it('keeps only deduplicated claim requirements beside a long amount without chan
     expect($badge['y'])->toBeGreaterThanOrEqual($text[0]['y']);
     expect($renderer->systemIndicators($design, ['outcome.provider_disbursement'])['images'])->toBeEmpty();
     expect($renderer->systemIndicators($design, ['input.selfie', 'validation.selfie'], 'bottom_right', 'qr', $amount)['images'])->toBe($renderer->systemIndicators($design, ['input.selfie'], 'bottom_right', 'qr', $amount)['images']);
+});
+
+it('renders canonical instruction previews for all installed designs without persisting vouchers', function (): void {
+    Http::preventStrayRequests();
+    $before = Voucher::count();
+    foreach (app(StampCatalog::class)->options() as $design) {
+        $instructions = validVoucherInstructions()->toArray();
+        data_set($instructions, 'rider.stamp', ['version' => 3, 'design_id' => $design['id'], 'design_version' => $design['revision'], 'artwork_source' => 'x_change']);
+        $response = $this->postJson(route('x-change.stamps.preview'), ['instructions' => $instructions])->assertOk();
+        $contents = base64_decode(explode(',', $response->json('image'), 2)[1], true);
+        expect(array_slice(getimagesizefromstring($contents), 0, 2))->toBe([1200, 630]);
+    }
+    expect(Voucher::count())->toBe($before);
+    Http::assertNothingSent();
+});
+
+it('renders the exact issued composition when preview identifiers and timing are resolved identically', function (string $design): void {
+    Http::preventStrayRequests();
+    Storage::fake('local');
+    $instructions = validVoucherInstructions()->toArray();
+    $instructions['provider'] = 'netbank';
+    $instructions['expires_at'] = '2030-12-25T12:00:00+00:00';
+    data_set($instructions, 'inputs.fields', ['selfie', 'signature']);
+    data_set($instructions, 'rider.stamp', ['version' => 3, 'design_id' => $design, 'design_version' => 1, 'artwork_source' => 'x_change', 'claim_marker' => 'qr']);
+    $user = actingAsTestUser();
+    $issued = app(PayCodeIssuanceContract::class)->issue($user, $instructions);
+    $voucher = Voucher::findOrFail($issued['voucher_id']);
+    $artifact = app(RiderStampArtifactStoreContract::class)->read($voucher);
+    $preview = app(StampPreviewComposer::class)->preview($instructions, $voucher->code);
+
+    expect(hash('sha256', base64_decode(explode(',', $preview['image'], 2)[1], true)))->toBe(hash('sha256', $artifact->contents));
+    Http::assertNothingSent();
+})->with(['cats', 'steampunk']);
+
+it('previews custom splash through the export composer and ignores forged artifact metadata', function (): void {
+    Storage::fake('local');
+    Http::preventStrayRequests();
+    $image = imagecreatetruecolor(20, 20);
+    imagefill($image, 0, 0, imagecolorallocate($image, 210, 35, 90));
+    ob_start();
+    imagepng($image);
+    $png = ob_get_clean();
+    imagedestroy($image);
+    $instructions = validVoucherInstructions()->toArray();
+    data_set($instructions, 'rider.splash', '<img src="data:image/png;base64,'.base64_encode($png).'" /><h2>Hello</h2>');
+    data_set($instructions, 'rider.stamp', ['version' => 2, 'artwork_source' => 'splash', 'copy_source' => 'splash', 'claim_marker' => 'qr']);
+    data_set($instructions, 'metadata.custom.rider_stamp_artifact', ['sha256' => str_repeat('a', 64)]);
+    data_set($instructions, 'metadata.custom.rider_splash_artwork', ['sha256' => str_repeat('b', 64)]);
+
+    $response = $this->postJson(route('x-change.stamps.preview'), ['instructions' => $instructions])->assertOk();
+    $contents = base64_decode(explode(',', $response->json('image'), 2)[1], true);
+    expect(array_slice(getimagesizefromstring($contents), 0, 2))->toBe([1200, 630]);
+    expect(Voucher::count())->toBe(0);
+    Http::assertNothingSent();
+});
+
+it('rejects invalid canonical preview inputs before fetching artwork', function (array $override): void {
+    Http::preventStrayRequests();
+    $instructions = array_replace_recursive(validVoucherInstructions()->toArray(), $override);
+    $this->postJson(route('x-change.stamps.preview'), ['instructions' => $instructions])->assertUnprocessable();
+    expect(Voucher::count())->toBe(0);
+    Http::assertNothingSent();
+})->with([
+    [['cash' => ['amount' => -1]]],
+    [['rider' => ['stamp' => ['version' => 3, 'design_id' => 'cats', 'design_version' => 999]]]],
+    [['rider' => ['url' => 'file:///etc/passwd']]],
+    [['ttl' => 'not a duration']],
+    [['rider' => 'not an object']],
+    [['metadata' => ['custom' => 'not an object']]],
+    [['rider' => ['splash_timeout' => 'not a number']]],
+]);
+
+it('uses the same allow-listed URL artwork pipeline in the guest canonical preview', function (): void {
+    Http::preventStrayRequests();
+    $image = imagecreatetruecolor(20, 20);
+    ob_start();
+    imagepng($image);
+    $png = ob_get_clean();
+    imagedestroy($image);
+    Http::fake([
+        'https://open.spotify.com/track/example' => Http::response('<meta property="og:title" content="Example"><meta property="og:image" content="https://i.scdn.co/image/example">', 200, ['Content-Type' => 'text/html']),
+        'https://i.scdn.co/image/example' => Http::response($png, 200, ['Content-Type' => 'image/png']),
+    ]);
+    $instructions = validVoucherInstructions()->toArray();
+    data_set($instructions, 'rider.url', 'https://open.spotify.com/track/example');
+    data_set($instructions, 'rider.stamp', ['version' => 2, 'artwork_source' => 'url', 'copy_source' => 'url']);
+
+    $this->postJson(route('x-change.stamps.preview'), ['instructions' => $instructions])->assertOk()->assertJsonPath('marker_bounds.width', 190);
+    expect(Voucher::count())->toBe(0);
+    Http::assertSentCount(2);
+});
+
+it('refuses private-network splash artwork in the guest canonical preview', function (): void {
+    Http::preventStrayRequests();
+    Storage::fake('local');
+    $instructions = validVoucherInstructions()->toArray();
+    data_set($instructions, 'rider.splash', '<img src="http://127.0.0.1/private.png">');
+    data_set($instructions, 'rider.stamp', ['version' => 2, 'artwork_source' => 'splash']);
+
+    $this->postJson(route('x-change.stamps.preview'), ['instructions' => $instructions])->assertUnprocessable();
+    expect(Voucher::count())->toBe(0);
+    Http::assertNothingSent();
+});
+
+it('matches the issued PNG for custom splash artwork with identical resolved values', function (): void {
+    Storage::fake('local');
+    Http::preventStrayRequests();
+    $image = imagecreatetruecolor(20, 20);
+    imagefill($image, 0, 0, imagecolorallocate($image, 30, 70, 160));
+    ob_start();
+    imagepng($image);
+    $png = ob_get_clean();
+    imagedestroy($image);
+    Http::fake(['https://raw.githubusercontent.com/example/artwork/main/splash.png' => Http::response($png, 200, ['Content-Type' => 'image/png'])]);
+    $instructions = validVoucherInstructions()->toArray();
+    $instructions['provider'] = 'netbank';
+    $instructions['expires_at'] = '2030-12-25T12:00:00+00:00';
+    data_set($instructions, 'rider.splash', '<img src="https://raw.githubusercontent.com/example/artwork/main/splash.png" /><h2>Hello</h2>');
+    data_set($instructions, 'rider.stamp', ['version' => 2, 'artwork_source' => 'splash', 'copy_source' => 'splash', 'claim_marker' => 'qr']);
+    $instructions = app(RiderSplashArtworkSnapshotterContract::class)->prepare($instructions);
+    $user = actingAsTestUser();
+    $issued = app(PayCodeIssuanceContract::class)->issue($user, $instructions);
+    $voucher = Voucher::findOrFail($issued['voucher_id']);
+    $artifact = app(RiderStampArtifactStoreContract::class)->read($voucher);
+
+    $preview = app(StampPreviewComposer::class)->preview($instructions, $voucher->code);
+
+    expect(hash('sha256', base64_decode(explode(',', $preview['image'], 2)[1], true)))->toBe(hash('sha256', $artifact->contents));
+    Http::assertSentCount(2);
+});
+
+it('renders a minimal blank draft without requiring issuance-only fields', function (): void {
+    Http::preventStrayRequests();
+    $this->postJson(route('x-change.stamps.preview'), ['instructions' => ['cash' => ['amount' => 0, 'currency' => 'PHP'], 'claim' => ['default_outcome' => 'provider_disbursement']]])
+        ->assertOk()->assertJsonPath('image', fn (string $image): bool => str_starts_with($image, 'data:image/png;base64,'));
+    expect(Voucher::count())->toBe(0);
+    Http::assertNothingSent();
+});
+
+it('honors the configured issuance composer for canonical previews without inventing interaction bounds', function (): void {
+    Http::preventStrayRequests();
+    $image = imagecreatetruecolor(1200, 630);
+    ob_start();
+    imagepng($image);
+    $png = ob_get_clean();
+    imagedestroy($image);
+    $composer = Mockery::mock(RiderStampClaimCardComposerContract::class);
+    $composer->shouldReceive('compose')->once()->withArgs(fn (Voucher $voucher, string $url): bool => ! $voucher->exists && $voucher->code === 'AA317' && $url === route('x-change.claim.start'))
+        ->andReturn(new ClaimShareCardData(contents: $png, etag: '"custom"'));
+    app()->instance(RiderStampClaimCardComposerContract::class, $composer);
+
+    $this->postJson(route('x-change.stamps.preview'), ['instructions' => validVoucherInstructions()->toArray()])
+        ->assertOk()->assertJsonPath('image', 'data:image/png;base64,'.base64_encode($png))
+        ->assertJsonPath('marker_bounds', null)->assertJsonPath('requirements.keys', []);
+    expect(Voucher::count())->toBe(0);
+    Http::assertNothingSent();
 });
