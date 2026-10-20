@@ -16,6 +16,7 @@ use LBHurtado\XCommerce\Data\CommercialComponentAllocationRuleData;
 use LBHurtado\XCommerce\Data\CommercialComponentAllocationScheduleData;
 use LBHurtado\XCommerce\Data\CommercialComponentEconomicsData;
 use LBHurtado\XCommerce\Data\CommercialComponentEconomicsSetData;
+use LBHurtado\XCommerce\Enums\CommercialAllocationDestinationKind;
 
 final readonly class ActivateCommercialOfferingRevision
 {
@@ -192,8 +193,11 @@ final readonly class ActivateCommercialOfferingRevision
         $policy = (array) config('x-change.commercial.component_economics.bootstrap', []);
         $category = trim((string) ($policy['category'] ?? 'service_provider_payable'));
         $recipientReference = trim((string) ($policy['recipient_reference'] ?? 'counterparty:3neti'));
+        $destinationKind = CommercialAllocationDestinationKind::tryFrom(
+            (string) ($policy['destination_kind'] ?? CommercialAllocationDestinationKind::ExternalRecipient->value),
+        );
 
-        if ($category === '' || $recipientReference === '') {
+        if ($category === '' || $recipientReference === '' || ! $destinationKind instanceof CommercialAllocationDestinationKind) {
             throw new \DomainException('Commercial Component Economics classification requires a category and recipient reference.');
         }
 
@@ -203,13 +207,17 @@ final readonly class ActivateCommercialOfferingRevision
                 sequence: $rule->sequence,
                 lineType: $rule->lineType,
                 category: $category,
-                destinationKind: $rule->destinationKind,
+                destinationKind: $destinationKind,
                 recipientReference: $recipientReference,
                 participantRole: $rule->participantRole,
                 fixedAmountMinor: $rule->fixedAmountMinor,
                 basisPoints: $rule->basisPoints,
-                agreementReference: $rule->agreementReference,
-                designationReference: $rule->designationReference,
+                agreementReference: $destinationKind === CommercialAllocationDestinationKind::ExternalRecipient
+                    ? $rule->agreementReference
+                    : null,
+                designationReference: $destinationKind === CommercialAllocationDestinationKind::ExternalRecipient
+                    ? $rule->designationReference
+                    : null,
                 taxPolicyReference: $rule->taxPolicyReference,
             ),
             $schedule->rules,
