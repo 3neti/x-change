@@ -3,8 +3,8 @@
 Ownership: x-stamp owns portable profiles and Chromium capture; x-change owns
 instruction projection, sanitization, trusted provider identity, QR destinations,
 profile freezing, immutable artifacts and OG metadata. x-stamp-designs owns
-artwork. The default remains GD at 1200×630. This feature is a local trial, not a
-Cloud rollout.
+artwork. The default remains GD at 1200×630. Browser profiles remain opt-in; deploying the package with
+the standard profile does not require a browser runtime.
 
 ## Deployment configuration
 
@@ -101,7 +101,8 @@ UI data in the body. Six Playwright checks passed for public/cockpit previews at
 The published sandbox passed the strict asset doctor. The full package suite and
 Cloud runtime were not exercised. Chrome peak memory was not measured.
 
-Implementation lives on local `feature/browser-stamp-profiles` branches in both
-packages; x-change targets the upcoming x-stamp 1.4 API. Release x-stamp first
-before publishing x-change. No tags, pushes, Packagist publication or Cloud changes
-were performed for this trial.
+The implementation is released as x-stamp v1.4.0 and x-change v1.0.255.
+x-stamp must be released first. Testing and payout may adopt these releases with
+the standard GD profile; enabling browser profiles requires provisioning and
+verifying the optional runtime first. The original local trial made no Cloud
+changes. Its comparison site and temporary host wiring were removed afterward.
