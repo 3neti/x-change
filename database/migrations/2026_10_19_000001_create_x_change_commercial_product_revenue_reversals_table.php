@@ -10,6 +10,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('x_change_commercial_product_revenue_reversals')) {
+            return;
+        }
+
         Schema::create('x_change_commercial_product_revenue_reversals', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('commercial_sale_id')->constrained('x_change_commercial_sales')->restrictOnDelete();
