@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Claim;
 
+use Illuminate\Support\Str;
 use LBHurtado\Voucher\Models\Voucher;
 
 final class PayCodeStampIndicatorResolver
@@ -65,6 +66,42 @@ final class PayCodeStampIndicatorResolver
         $keys = array_values(array_unique($keys));
 
         return $limit === null ? $keys : array_slice($keys, 0, $limit);
+    }
+
+    /** @return list<string> */
+    public function labels(Voucher $voucher): array
+    {
+        $labels = [
+            'outcome.provider_disbursement' => 'Receive Funds',
+            'outcome.account_funding' => 'Add to Account',
+            'outcome.collect_payment' => 'Collect Payment',
+            'outcome.settlement' => 'Settlement',
+            'input.mobile' => 'Mobile Number',
+            'input.name' => 'Full Name',
+            'input.email' => 'Email Address',
+            'input.address' => 'Full Address',
+            'input.birth_date' => 'Birth Date',
+            'input.gross_monthly_income' => 'Monthly Income',
+            'input.reference_code' => 'Reference Code',
+            'input.kyc' => 'KYC Verification',
+            'input.otp' => 'OTP Verification',
+            'input.selfie' => 'Selfie Photo',
+            'input.signature' => 'Digital Signature',
+            'input.location' => 'GPS Location',
+            'validation.mobile' => 'Mobile Restriction',
+            'validation.otp' => 'OTP Required',
+            'validation.identity' => 'Identity Check',
+            'validation.selfie' => 'Selfie Verification',
+            'validation.signature' => 'Signature Required',
+            'validation.location' => 'Location Validation',
+            'validation.time' => 'Time Window',
+            'claim.multiple' => 'Multiple Claims',
+        ];
+
+        return array_map(
+            static fn (string $key): string => $labels[$key] ?? Str::headline(Str::after($key, '.')),
+            $this->resolve($voucher),
+        );
     }
 
     /**

@@ -27,6 +27,7 @@ import CockpitPayCodeIndicator from './CockpitPayCodeIndicator.vue';
 
 const props = withDefaults(
     defineProps<{
+        stampInstructions?: Record<string, unknown>;
         previewOnly?: boolean;
         renderStamp?: boolean;
         amount: string | number;
@@ -703,8 +704,24 @@ function stringValue(value: unknown): string | null {
                     : ''
             "
         >
+        <section v-if="renderStamp && stampInstructions && (visibleView === 'stamp' || visibleView === 'design')"
+            :id="!previewOnly && visibleView === 'stamp' ? panelId('stamp') : undefined"
+            :role="!previewOnly && visibleView === 'stamp' ? 'tabpanel' : undefined"
+            :aria-labelledby="!previewOnly && visibleView === 'stamp' ? tabId('stamp') : undefined"
+            data-testid="canonical-stamp-preview">
+            <CockpitSystemStamp
+                :instructions="stampInstructions"
+                :design-id="riderStamp?.design.id ?? 'steampunk'"
+                :revision="riderStamp?.design.version ?? 1"
+                :slots="{ brand: 'Pay Code', amount: formattedAmount, recipient: recipientLabel, purpose, expiry }"
+                :claim-qr="stampClaimQr" :interactive="stampQrInteractive"
+                :marker="riderStamp?.composition.claimMarker"
+                @preview-error="emit('previewError', $event)"
+                @preview-image="emit('previewImage', $event)"
+                @claim-qr-click="openStampQr" />
+        </section>
         <section
-            v-if="
+            v-else-if="
                 renderStamp && (visibleView === 'stamp' || visibleView === 'design') &&
                 riderStamp &&
                 !riderStamp.design.id.startsWith('x-change-') &&

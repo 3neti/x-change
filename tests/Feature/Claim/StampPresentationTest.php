@@ -15,8 +15,9 @@ use Zxing\QrReader;
 
 it('lists only the latest design cards while retaining exact historical lookup', function (): void {
     $catalog = app(StampCatalog::class);
-    expect(array_column($catalog->options(), 'revision', 'id'))->toBe(['steampunk' => 8, 'cats' => 7, 'valentine' => 1]);
+    expect(array_column($catalog->options(), 'revision', 'id'))->toBe(['steampunk' => 8, 'cats' => 7, 'constellation' => 1, 'planetary-rose' => 1, 'jeans' => 1]);
     expect($catalog->resolve('cats', 6)->revision())->toBe(6);
+    expect($catalog->resolve('valentine', 1)->revision())->toBe(1);
 });
 
 it('pins resolved appearance before issuance and keeps it stable when configuration changes', function (): void {

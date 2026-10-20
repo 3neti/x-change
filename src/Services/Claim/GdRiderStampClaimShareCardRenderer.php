@@ -33,7 +33,7 @@ use RuntimeException;
 
 final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract, RiderStampClaimCardComposerContract
 {
-    private const string CacheVersion = 'v22';
+    private const string CacheVersion = 'v23';
 
     private const int Width = 1200;
 
@@ -85,7 +85,17 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         );
     }
 
-    private function renderPng(Voucher $voucher, string $claimUrl): string
+    /** @return array{contents: string, marker_bounds: array<string, int>|null, requirements: array<string, mixed>} */
+    public function preview(Voucher $voucher, string $claimUrl, bool $sample = true): array
+    {
+        $presentation = [];
+        $contents = $this->renderPng($voucher, $claimUrl, $sample, $presentation);
+
+        return ['contents' => $contents, ...$presentation];
+    }
+
+    /** @param array<string, mixed>|null $presentation */
+    private function renderPng(Voucher $voucher, string $claimUrl, bool $sample = false, ?array &$presentation = null): string
     {
         $canvas = imagecreatetruecolor(self::Width, self::Height);
 
@@ -121,10 +131,11 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
             $palette = app(StampCatalog::class)->markerPalette($design);
             $kind = $rider->stamp?->claim_marker?->value ?? 'qr';
             $qr = in_array($kind, ['qr', 'both'], true) ? base64_decode(explode(',', $this->claimQr->render($claimUrl), 2)[1], true) : null;
-            $header = (new IdentifierPresentation)->compose($design, $voucher->code);
+            $header = (new IdentifierPresentation)->compose($design, $voucher->code, $sample);
             $qrKind = in_array($kind, ['qr', 'both'], true) ? 'qr' : 'none';
             $composition = (new QrPresentation)->compose($header['design'], $qr, $voucher->code, $qrKind, $rider->stamp?->claim_marker_position?->value ?? 'bottom_right', $palette['paper'], $palette['trim'], $appearance['qr']);
             $badges = $this->systemIndicators($composition['design'], $this->indicators->resolve($voucher, null), $rider->stamp?->claim_marker_position?->value ?? 'bottom_right', $kind, $formattedAmount);
+            $presentation = ['marker_bounds' => $composition['bounds'], 'requirements' => ['keys' => $badges['keys'], 'bounds' => $badges['bounds']]];
             imagedestroy($canvas);
 
             return app(Renderer::class)->png($badges['design'], [
@@ -135,7 +146,7 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
                 'recipient' => $recipient->visible ? $recipient->label : '',
                 'purpose' => isset($design->document['customization']) && $copy->source === 'custom' && blank($rider->stamp?->title) ? $copy->description : $copy->plainText(),
                 'expiry' => $voucher->expires_at === null ? 'No expiry' : 'Expires '.$voucher->expires_at->format('M j, Y'),
-                'instructions' => implode(' · ', $this->indicators->resolve($voucher)),
+                'instructions' => implode(' · ', $this->indicators->labels($voucher)),
             ], [...($hasProviderLogo ? ['provider_logo' => $identity['logo']] : []), ...$composition['images'], ...$header['images'], ...$badges['images']]);
         }
         $this->paintBrandBackground($canvas, $palette);
@@ -181,6 +192,13 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
             $mutedColor,
         );
         $this->paintClaimMarker($canvas, $voucher, $claimUrl, $textColor);
+        $kind = $rider->stamp?->claim_marker?->value ?? 'qr';
+        $height = $kind === 'both' ? 226 : 190;
+        [$markerX, $markerY] = $this->markerPosition($rider->stamp?->claim_marker_position?->value ?? 'bottom_right', 190, $height);
+        $presentation = [
+            'marker_bounds' => in_array($kind, ['qr', 'both'], true) ? ['x' => $markerX, 'y' => $markerY, 'width' => 190, 'height' => $height] : null,
+            'requirements' => ['keys' => [], 'bounds' => null],
+        ];
 
         ob_start();
         imagepng($canvas, null, 8);

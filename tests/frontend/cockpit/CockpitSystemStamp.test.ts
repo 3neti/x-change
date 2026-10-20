@@ -519,3 +519,26 @@ it('reuses a completed thumbnail immediately, invalidates changed inputs, and ex
     expect(fetch).toHaveBeenCalledTimes(3);
     expired.unmount();
 });
+
+it('renders custom artwork as the canonical PNG without an HTML or painted Stamp layer', async () => {
+    vi.useFakeTimers();
+    const fetch = vi.fn().mockResolvedValue({ok: true, json: async () => ({image: 'data:image/png;base64,canonical'})});
+    vi.stubGlobal('fetch', fetch);
+    const instructions = {cash: {amount: 500, currency: 'PHP'}, rider: {splash: '<h2>Artwork</h2>'}};
+    const wrapper = mount(Canvas, {props: {
+        stampInstructions: instructions, amount: 500, currency: 'PHP',
+        claimOutcome: 'provider_disbursement', voucherType: 'redeemable',
+        hasRiderDesign: true, riderDesignDocument: '<h2>Different browser rendering</h2>',
+    }});
+    await vi.advanceTimersByTimeAsync(350);
+    await flushPromises();
+    expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({instructions});
+    expect(wrapper.get('[data-testid="canonical-stamp-preview"] img').attributes('src')).toBe('data:image/png;base64,canonical');
+    expect(wrapper.find('iframe').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="cockpit-pay-code-canvas-rider-scrim"]').exists()).toBe(false);
+    await wrapper.setProps({stampInstructions: {...instructions, cash: {amount: 750, currency: 'PHP'}}});
+    await vi.advanceTimersByTimeAsync(350);
+    await flushPromises();
+    expect(JSON.parse(fetch.mock.calls[1][1].body).instructions.cash.amount).toBe(750);
+    wrapper.unmount();
+});
