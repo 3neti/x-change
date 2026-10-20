@@ -1768,8 +1768,14 @@ return [
                 'billing_unit' => 'selected_instruction',
                 'billable_event_reference' => 'pay_code.issued_with_component',
                 'recognition_policy_reference' => 'recognition:pay-code-issuance:v1',
-                'category' => 'service_provider_payable',
-                'recipient_reference' => 'counterparty:3neti',
+                'category' => env(
+                    'XCHANGE_COMMERCIAL_COMPONENT_ECONOMICS_CATEGORY',
+                    'service_provider_payable',
+                ),
+                'recipient_reference' => env(
+                    'XCHANGE_COMMERCIAL_COMPONENT_ECONOMICS_RECIPIENT_REFERENCE',
+                    'counterparty:3neti',
+                ),
                 'participant_role' => 'service_aggregator',
                 'agreement_reference' => 'agreement:commissioning:institution-3neti:v1',
                 'designation_reference' => 'designation:commissioning:3neti:v1',

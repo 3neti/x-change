@@ -318,6 +318,44 @@ it('retains the catalog version when a new offering does not change prices', fun
     expect($pending->offering()->catalog->version)->toBe(3);
 });
 
+it('reclassifies eligible component fees when Product revenue economics is configured', function (): void {
+    config()->set('x-change.commercial.component_economics.bootstrap.category', 'product_revenue');
+    config()->set('x-change.commercial.component_economics.bootstrap.recipient_reference', 'product:pay-code');
+
+    $maker = actingAsTestUser();
+    authorizeCommercialOperator($maker, CommercialOperatorCapability::ManageOfferings);
+
+    $this->post(
+        route('x-change.cockpit.commercial.offerings.store'),
+        commercialOfferingFormPayload(),
+    )->assertRedirect();
+
+    $pending = CommercialOffering::query()
+        ->where('status', CommercialOfferingStatus::PendingApproval->value)
+        ->sole();
+    $checker = actingAsTestUser();
+    authorizeCommercialOperator($checker, CommercialOperatorCapability::ApproveOfferings);
+
+    $this->post(route('x-change.cockpit.commercial.offerings.approvals.store', $pending), [
+        'authorization_reference' => 'product-revenue-economics:2026-001',
+    ])->assertRedirect();
+    $this->post(route('x-change.cockpit.commercial.offerings.activations.store', $pending), [
+        'activation_reference' => 'product-revenue-economics:2026-001',
+    ])->assertRedirect();
+
+    $economics = CommercialComponentEconomicsHead::query()
+        ->with('currentActivation.economics')
+        ->findOrFail('pay_code')
+        ->currentActivation
+        ?->economics;
+    $component = collect($economics?->economics()->components)
+        ->firstWhere('componentReference', 'inputs.fields.selfie');
+
+    expect($component?->allocationSchedule?->rules[0]->category)->toBe('product_revenue')
+        ->and($component?->allocationSchedule?->rules[0]->recipientReference)->toBe('product:pay-code')
+        ->and($economics?->commercial_offering_id)->toBe($pending->getKey());
+});
+
 it('rejects Commercial Offering mutations without the matching authority', function (): void {
     $ordinaryUser = actingAsTestUser();
 

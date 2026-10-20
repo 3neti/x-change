@@ -116,11 +116,11 @@ final readonly class ActivateCommercialOfferingRevision
                 );
             }
 
-            if ($item->unitPriceMinor === $oldItem->unitPriceMinor) {
-                return $component;
-            }
+            $revisedComponent = $item->unitPriceMinor === $oldItem->unitPriceMinor
+                ? $component
+                : $this->repriceBillableComponent($component, $item->unitPriceMinor);
 
-            return $this->repriceBillableComponent($component, $item->unitPriceMinor);
+            return $this->reclassifyBillableComponent($revisedComponent);
         }, $offering->offering()->catalog->items);
 
         $economics = new CommercialComponentEconomicsSetData(
@@ -177,6 +177,57 @@ final readonly class ActivateCommercialOfferingRevision
                     taxPolicyReference: $rule->taxPolicyReference,
                 )],
             ),
+        );
+    }
+
+    private function reclassifyBillableComponent(
+        CommercialComponentEconomicsData $component,
+    ): CommercialComponentEconomicsData {
+        $schedule = $component->allocationSchedule;
+
+        if (! $schedule instanceof CommercialComponentAllocationScheduleData) {
+            return $component;
+        }
+
+        $policy = (array) config('x-change.commercial.component_economics.bootstrap', []);
+        $category = trim((string) ($policy['category'] ?? 'service_provider_payable'));
+        $recipientReference = trim((string) ($policy['recipient_reference'] ?? 'counterparty:3neti'));
+
+        if ($category === '' || $recipientReference === '') {
+            throw new \DomainException('Commercial Component Economics classification requires a category and recipient reference.');
+        }
+
+        $rules = array_map(
+            static fn (CommercialComponentAllocationRuleData $rule): CommercialComponentAllocationRuleData => new CommercialComponentAllocationRuleData(
+                reference: $rule->reference,
+                sequence: $rule->sequence,
+                lineType: $rule->lineType,
+                category: $category,
+                destinationKind: $rule->destinationKind,
+                recipientReference: $recipientReference,
+                participantRole: $rule->participantRole,
+                fixedAmountMinor: $rule->fixedAmountMinor,
+                basisPoints: $rule->basisPoints,
+                agreementReference: $rule->agreementReference,
+                designationReference: $rule->designationReference,
+                taxPolicyReference: $rule->taxPolicyReference,
+            ),
+            $schedule->rules,
+        );
+
+        return new CommercialComponentEconomicsData(
+            componentReference: $component->componentReference,
+            billingUnit: $component->billingUnit,
+            billableEventReference: $component->billableEventReference,
+            recognitionPolicyReference: $component->recognitionPolicyReference,
+            capabilityReferences: $component->capabilityReferences,
+            allocationSchedule: new CommercialComponentAllocationScheduleData(
+                reference: $schedule->reference,
+                version: $schedule->version + 1,
+                currency: $schedule->currency,
+                rules: $rules,
+            ),
+            nonBillableReason: $component->nonBillableReason,
         );
     }
 }
