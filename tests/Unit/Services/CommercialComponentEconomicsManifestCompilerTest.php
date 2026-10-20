@@ -5,6 +5,7 @@ declare(strict_types=1);
 use LBHurtado\XChange\Services\Commercial\BootstrapCommercialComponentEconomicsFactory;
 use LBHurtado\XChange\Services\Commercial\BootstrapCommercialOfferingFactory;
 use LBHurtado\XChange\Services\Commercial\CommercialComponentEconomicsManifestCompiler;
+use LBHurtado\XCommerce\Enums\CommercialAllocationDestinationKind;
 
 beforeEach(function (): void {
     config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
@@ -55,6 +56,30 @@ it('makes every non-zero bootstrap allocation equal its canonical catalog price'
             ->and($component->allocationSchedule->rules)->toHaveCount(1)
             ->and($component->allocationSchedule->rules[0]->fixedAmountMinor)->toBe($item->unitPriceMinor);
     }
+});
+
+it('can keep product revenue inside the governed treasury position for the product bridge', function (): void {
+    config()->set(
+        'x-change.commercial.component_economics.bootstrap.destination_kind',
+        CommercialAllocationDestinationKind::InternalOwner->value,
+    );
+    config()->set(
+        'x-change.commercial.component_economics.bootstrap.category',
+        'product_revenue',
+    );
+    config()->set(
+        'x-change.commercial.component_economics.bootstrap.recipient_reference',
+        'product:pay-code',
+    );
+
+    $offering = app(BootstrapCommercialOfferingFactory::class)->make('pay_code');
+    $economics = app(BootstrapCommercialComponentEconomicsFactory::class)->make('pay_code', $offering);
+    $component = collect($economics->components)->firstWhere('componentReference', 'cash.amount');
+
+    expect($component->allocationSchedule->rules[0]->destinationKind)
+        ->toBe(CommercialAllocationDestinationKind::InternalOwner)
+        ->and($component->allocationSchedule->rules[0]->recipientReference)
+        ->toBe('product:pay-code');
 });
 
 it('fails closed when an artifact is replayed against another Offering identity', function (): void {

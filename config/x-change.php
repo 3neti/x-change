@@ -1776,6 +1776,10 @@ return [
                     'XCHANGE_COMMERCIAL_COMPONENT_ECONOMICS_RECIPIENT_REFERENCE',
                     'counterparty:3neti',
                 ),
+                'destination_kind' => env(
+                    'XCHANGE_COMMERCIAL_COMPONENT_ECONOMICS_DESTINATION_KIND',
+                    'external_recipient',
+                ),
                 'participant_role' => 'service_aggregator',
                 'agreement_reference' => 'agreement:commissioning:institution-3neti:v1',
                 'designation_reference' => 'designation:commissioning:3neti:v1',

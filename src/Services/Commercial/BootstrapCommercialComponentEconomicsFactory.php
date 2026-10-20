@@ -17,6 +17,14 @@ final readonly class BootstrapCommercialComponentEconomicsFactory
     public function make(string $profile, CommercialOfferingData $offering): CommercialComponentEconomicsSetData
     {
         $policy = (array) config('x-change.commercial.component_economics.bootstrap', []);
+        $destinationKind = CommercialAllocationDestinationKind::tryFrom(
+            (string) ($policy['destination_kind'] ?? CommercialAllocationDestinationKind::ExternalRecipient->value),
+        );
+
+        if (! $destinationKind instanceof CommercialAllocationDestinationKind) {
+            throw new \DomainException('Commercial Component Economics requires a valid allocation destination kind.');
+        }
+
         $components = [];
 
         foreach ($offering->catalog->items as $item) {
@@ -52,12 +60,16 @@ final readonly class BootstrapCommercialComponentEconomicsFactory
                             sequence: 10,
                             lineType: CommercialWaterfallLineType::Allocation,
                             category: (string) ($policy['category'] ?? 'service_provider_payable'),
-                            destinationKind: CommercialAllocationDestinationKind::ExternalRecipient,
+                            destinationKind: $destinationKind,
                             recipientReference: (string) ($policy['recipient_reference'] ?? 'counterparty:3neti'),
                             participantRole: (string) ($policy['participant_role'] ?? 'service_aggregator'),
                             fixedAmountMinor: $item->unitPriceMinor,
-                            agreementReference: (string) ($policy['agreement_reference'] ?? 'agreement:commissioning:institution-3neti:v1'),
-                            designationReference: (string) ($policy['designation_reference'] ?? 'designation:commissioning:3neti:v1'),
+                            agreementReference: $destinationKind === CommercialAllocationDestinationKind::ExternalRecipient
+                                ? (string) ($policy['agreement_reference'] ?? 'agreement:commissioning:institution-3neti:v1')
+                                : null,
+                            designationReference: $destinationKind === CommercialAllocationDestinationKind::ExternalRecipient
+                                ? (string) ($policy['designation_reference'] ?? 'designation:commissioning:3neti:v1')
+                                : null,
                             taxPolicyReference: filled($policy['tax_policy_reference'] ?? null)
                                 ? (string) $policy['tax_policy_reference']
                                 : null,
