@@ -46,7 +46,6 @@ use LBHurtado\Onboarding\Support\OnboardingGuard;
 use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
 use LBHurtado\PaymentGateway\Contracts\WalletProxy;
 use LBHurtado\PaymentGateway\Funding\NetbankReusableFundingAddressProvider;
-use LBHurtado\ReportRegistry\Contracts\ReportResolverInterface;
 use LBHurtado\SettlementEnvelope\Contracts\WorkflowCatalog;
 use LBHurtado\SettlementEnvelope\Services\DriverService;
 use LBHurtado\SettlementEnvelope\Services\WorkflowConnectionReadiness;
@@ -2565,10 +2564,6 @@ class XChangeServiceProvider extends ServiceProvider
 
     protected function registerReportDriverSource(): void
     {
-        if (! interface_exists(ReportResolverInterface::class)) {
-            return;
-        }
-
         if (config('filesystems.disks.report-drivers') === null) {
             config()->set('filesystems.disks.report-drivers', [
                 'driver' => 'local',
