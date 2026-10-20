@@ -2569,6 +2569,14 @@ class XChangeServiceProvider extends ServiceProvider
             return;
         }
 
+        if (config('filesystems.disks.report-drivers') === null) {
+            config()->set('filesystems.disks.report-drivers', [
+                'driver' => 'local',
+                'root' => resource_path('report-drivers'),
+                'throw' => true,
+            ]);
+        }
+
         $sources = $this->app['config']->get('report-registry.driver_sources', []);
         $path = $this->packagePath('resources/report-drivers');
 

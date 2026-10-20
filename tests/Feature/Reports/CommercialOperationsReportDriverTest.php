@@ -7,6 +7,8 @@ it('registers the operations economics report source and routes', function (): v
     expect(config('report-registry.driver_sources'))
         ->toContain(dirname(__DIR__, 3).'/resources/report-drivers');
 
+    expect(config('filesystems.disks.report-drivers.driver'))->toBe('local');
+
     expect(Route::has('x-change.operations.economics'))->toBeTrue()
         ->and(Route::has('x-change.operations.economics.report'))->toBeTrue()
         ->and(Route::has('x-change.cockpit.operations-economics'))->toBeTrue()
