@@ -98,6 +98,7 @@ use LBHurtado\XChange\Console\Commands\Commercial\ApprovePartnerCommissionPayout
 use LBHurtado\XChange\Console\Commands\Commercial\AuthorizeCommercialOperatorCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\CommercialGovernanceStatusCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ProvisionCommercialBaselinesCommand;
+use LBHurtado\XChange\Console\Commands\Commercial\ReconcileCommercialComponentEconomicsCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ProvisionCommercialPrincipalCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ProvisionPublicIssuanceEscrowPrincipalCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ReconcilePartnerCommissionPayoutBatchCommand;
@@ -1899,6 +1900,7 @@ class XChangeServiceProvider extends ServiceProvider
                 ApprovePartnerCommissionPayoutBatchCommand::class,
                 CommercialGovernanceStatusCommand::class,
                 ProvisionCommercialBaselinesCommand::class,
+                ReconcileCommercialComponentEconomicsCommand::class,
                 ProvisionCommercialPrincipalCommand::class,
                 ProvisionPublicIssuanceEscrowPrincipalCommand::class,
                 ReconcilePartnerCommissionPayoutBatchCommand::class,

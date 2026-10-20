@@ -18,6 +18,7 @@ use LBHurtado\XChange\Services\Commercial\CommercialOfferingManifestCompiler;
 use LBHurtado\XChange\Services\Commercial\PayCodeCommercialQuoteService;
 use LBHurtado\XChange\Services\Commercial\PersistCommercialComponentEconomicsManifest;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
+use LBHurtado\XChange\Services\Commercial\ReconcileCommercialComponentEconomics;
 use LBHurtado\XCommerce\Data\CommercialOfferingData;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
@@ -75,6 +76,28 @@ it('replays identical commissioning without duplicating manifests activations he
         ->and(ExecutionJournalEntry::query()
             ->where('event_type', 'commercial.component_economics.activated')
             ->count())->toBe(2);
+});
+
+it('reconciles commissioned economics without independent approval', function (): void {
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:first');
+
+    config()->set('x-change.commercial.component_economics.bootstrap.destination_kind', 'internal_owner');
+    config()->set('x-change.commercial.component_economics.bootstrap.category', 'product_revenue');
+    config()->set('x-change.commercial.component_economics.bootstrap.recipient_reference', 'product:pay-code');
+
+    $activation = app(ReconcileCommercialComponentEconomics::class)->execute(
+        'pay_code',
+        'commissioning-manifest:reconciliation',
+    );
+
+    $rules = collect($activation->economics->economics()->components)
+        ->flatMap(fn ($component) => $component->allocationSchedule?->rules ?? []);
+
+    expect($activation->authority)->toBe(CommercialActivationAuthority::CommissioningManifest)
+        ->and($activation->actor_id)->toBeNull()
+        ->and($activation->economics->version)->toBe(2)
+        ->and($rules)->not->toBeEmpty()
+        ->and($rules->every(fn ($rule): bool => $rule->destinationKind?->value === 'internal_owner'))->toBeTrue();
 });
 
 it('fails closed when a quote recipient lacks active designation authority', function (): void {
