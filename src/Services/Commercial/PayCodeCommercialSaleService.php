@@ -264,6 +264,9 @@ class PayCodeCommercialSaleService
         $providerCostMinor = collect($quote->allocationPlan->lines)
             ->where('category', 'provider_cost')
             ->sum('amountMinor');
+        $expectedProviderCostMinor = property_exists($quote, 'totalExpectedProviderCostMinor')
+            ? $quote->totalExpectedProviderCostMinor
+            : $providerCostMinor;
         $productReference = collect($quote->allocationPlan->lines)
             ->firstWhere('category', 'product_revenue')
             ?->recipientReference;
@@ -289,7 +292,7 @@ class PayCodeCommercialSaleService
                 'x-change.commercial.accounting.recognition_policy_reference',
                 'recognition:pay-code-issuance:v1',
             ),
-            expectedProviderCostMinor: (int) $providerCostMinor,
+            expectedProviderCostMinor: (int) $expectedProviderCostMinor,
             partnerReference: (string) ($partnerReference ?? 'partner:none'),
         );
     }
