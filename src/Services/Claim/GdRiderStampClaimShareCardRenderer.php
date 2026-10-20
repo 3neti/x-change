@@ -16,24 +16,27 @@ use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
 use LBHurtado\XChange\Contracts\RiderStampClaimCardComposerContract;
 use LBHurtado\XChange\Contracts\RiderStampCopyResolverContract;
 use LBHurtado\XChange\Contracts\RiderStampRecipientResolverContract;
+use LBHurtado\XChange\Contracts\ScaledClaimUrlQrRendererContract;
 use LBHurtado\XChange\Data\Claim\ClaimShareCardData;
 use LBHurtado\XChange\Data\Claim\RiderStampRecipientData;
 use LBHurtado\XChange\Services\Cockpit\RiderUrlArtworkPreviewResolver;
 use LBHurtado\XChange\Services\RiderStampDesignRegistry;
 use LBHurtado\XChange\Services\Stamp\StampCatalog;
+use LBHurtado\XChange\Services\Stamp\StampImageRenderer;
 use LBHurtado\XChange\Services\Stamp\StampPresentation;
 use LBHurtado\XChange\Services\Stamp\StampProviderIdentity;
+use LBHurtado\XChange\Services\Stamp\StampRenderingProfiles;
 use LBHurtado\XStamp\Appearance;
 use LBHurtado\XStamp\Design;
 use LBHurtado\XStamp\IdentifierPresentation;
 use LBHurtado\XStamp\QrPresentation;
-use LBHurtado\XStamp\Renderer;
+use LBHurtado\XStamp\RenderingProfile;
 use ReflectionClass;
 use RuntimeException;
 
 final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract, RiderStampClaimCardComposerContract
 {
-    private const string CacheVersion = 'v23';
+    private const string CacheVersion = 'v24';
 
     private const int Width = 1200;
 
@@ -97,6 +100,7 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
     /** @param array<string, mixed>|null $presentation */
     private function renderPng(Voucher $voucher, string $claimUrl, bool $sample = false, ?array &$presentation = null): string
     {
+        $profile = app(StampRenderingProfiles::class)->forVoucher($voucher);
         $canvas = imagecreatetruecolor(self::Width, self::Height);
 
         if (! $canvas instanceof GdImage) {
@@ -116,7 +120,7 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         $designVersion = (int) (data_get($rider, 'stamp.design_version') ?? data_get($voucher, 'metadata.instructions.metadata.custom.rider_stamp_design.version'));
         $customArtwork = ($rider->stamp?->artwork_treatment?->value ?? 'automatic') !== 'text'
             && in_array($rider->stamp?->artwork_source?->value ?? $rider->og_source ?? '', ['url', 'splash'], true);
-        if ($designId !== '' && ! str_starts_with($designId, 'x-change-') && ! $customArtwork) {
+        if ($designId !== '' && ! str_starts_with($designId, 'x-change-') && (! $customArtwork || $profile !== RenderingProfile::Standard)) {
             $formattedAmount = $this->amounts->format($voucher);
             $design = app(StampCatalog::class)->presentation($designId, $designVersion, $rider->stamp?->claim_marker_position?->value ?? 'bottom_right', $formattedAmount);
             $copy = $this->copy->resolve($voucher);
@@ -130,15 +134,15 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
             $design = (new Appearance)->apply($design, $appearance);
             $palette = app(StampCatalog::class)->markerPalette($design);
             $kind = $rider->stamp?->claim_marker?->value ?? 'qr';
-            $qr = in_array($kind, ['qr', 'both'], true) ? base64_decode(explode(',', $this->claimQr->render($claimUrl), 2)[1], true) : null;
-            $header = (new IdentifierPresentation)->compose($design, $voucher->code, $sample);
+            $qr = in_array($kind, ['qr', 'both'], true) ? $this->qrBytes($claimUrl, $profile->scale()) : null;
+            $header = (new IdentifierPresentation)->compose($design, $voucher->code, $sample, $profile->scale());
             $qrKind = in_array($kind, ['qr', 'both'], true) ? 'qr' : 'none';
-            $composition = (new QrPresentation)->compose($header['design'], $qr, $voucher->code, $qrKind, $rider->stamp?->claim_marker_position?->value ?? 'bottom_right', $palette['paper'], $palette['trim'], $appearance['qr']);
+            $composition = (new QrPresentation)->compose($header['design'], $qr, $voucher->code, $qrKind, $rider->stamp?->claim_marker_position?->value ?? 'bottom_right', $palette['paper'], $palette['trim'], $appearance['qr'], $profile->scale());
             $badges = $this->systemIndicators($composition['design'], $this->indicators->resolve($voucher, null), $rider->stamp?->claim_marker_position?->value ?? 'bottom_right', $kind, $formattedAmount);
             $presentation = ['marker_bounds' => $composition['bounds'], 'requirements' => ['keys' => $badges['keys'], 'bounds' => $badges['bounds']]];
             imagedestroy($canvas);
 
-            return app(Renderer::class)->png($badges['design'], [
+            return app(StampImageRenderer::class)->png($voucher, $badges['design'], [
                 'provider_name' => $providerName,
                 'brand' => $rider->stamp?->show_logo === false ? '' : 'Pay Code',
                 'tagline' => $rider->stamp?->show_tagline === false || ! $appearance['options']['show_tagline'] ? '' : 'The instruction that moves money.',
@@ -147,7 +151,11 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
                 'purpose' => isset($design->document['customization']) && $copy->source === 'custom' && blank($rider->stamp?->title) ? $copy->description : $copy->plainText(),
                 'expiry' => $voucher->expires_at === null ? 'No expiry' : 'Expires '.$voucher->expires_at->format('M j, Y'),
                 'instructions' => implode(' · ', $this->indicators->labels($voucher)),
-            ], [...($hasProviderLogo ? ['provider_logo' => $identity['logo']] : []), ...$composition['images'], ...$header['images'], ...$badges['images']]);
+            ], [...($hasProviderLogo ? ['provider_logo' => $identity['logo']] : []), ...$composition['images'], ...$header['images'], ...$badges['images']], $customArtwork);
+        }
+        if ($profile !== RenderingProfile::Standard) {
+            imagedestroy($canvas);
+            throw new RuntimeException('Browser rendering requires an installed system Stamp design.');
         }
         $this->paintBrandBackground($canvas, $palette);
         $artwork = $this->resolveArtwork($voucher);
@@ -210,6 +218,23 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         }
 
         return $contents;
+    }
+
+    private function qrBytes(string $claimUrl, int $scale): string
+    {
+        if ($scale === 1) {
+            $dataUri = $this->claimQr->render($claimUrl);
+        } elseif ($this->claimQr instanceof ScaledClaimUrlQrRendererContract) {
+            $dataUri = $this->claimQr->renderAtScale($claimUrl, $scale);
+        } else {
+            throw new RuntimeException('The QR renderer does not support native HD output.');
+        }
+        $bytes = base64_decode(explode(',', $dataUri, 2)[1] ?? '', true);
+        if (! is_string($bytes) || $bytes === '') {
+            throw new RuntimeException('The claim QR renderer returned invalid image bytes.');
+        }
+
+        return $bytes;
     }
 
     /**

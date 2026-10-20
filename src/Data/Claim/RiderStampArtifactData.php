@@ -8,6 +8,8 @@ final readonly class RiderStampArtifactData
 {
     public const string Schema = 'x-change.rider-stamp-artifact.v1';
 
+    public const string BrowserSchema = 'x-change.rider-stamp-artifact.v2';
+
     public const string MimeType = 'image/png';
 
     public const int Width = 1200;
@@ -23,6 +25,7 @@ final readonly class RiderStampArtifactData
         public string $mimeType,
         public string $renderingManifestVersion,
         public string $renderedAt,
+        public string $renderProfile = 'standard',
     ) {}
 
     /**
@@ -39,7 +42,8 @@ final readonly class RiderStampArtifactData
     public function toArray(): array
     {
         return [
-            'schema' => self::Schema,
+            'schema' => $this->renderProfile === 'standard' ? self::Schema : self::BrowserSchema,
+            ...($this->renderProfile === 'standard' ? [] : ['render_profile' => $this->renderProfile, 'driver' => 'browsershot', 'scale' => $this->renderProfile === 'browser-hd' ? 2 : 1]),
             'sha256' => $this->sha256,
             'width' => $this->width,
             'height' => $this->height,
@@ -53,10 +57,9 @@ final readonly class RiderStampArtifactData
     {
         if (
             ! is_array($value)
-            || ($value['schema'] ?? null) !== self::Schema
+            || ! in_array($value['schema'] ?? null, [self::Schema, self::BrowserSchema], true)
             || preg_match('/^[a-f0-9]{64}$/', (string) ($value['sha256'] ?? '')) !== 1
-            || (int) ($value['width'] ?? 0) !== self::Width
-            || (int) ($value['height'] ?? 0) !== self::Height
+            || ! self::validDimensions($value)
             || ($value['mime_type'] ?? null) !== self::MimeType
             || ! is_string($value['rendering_manifest_version'] ?? null)
             || trim($value['rendering_manifest_version']) === ''
@@ -73,6 +76,23 @@ final readonly class RiderStampArtifactData
             mimeType: (string) $value['mime_type'],
             renderingManifestVersion: $value['rendering_manifest_version'],
             renderedAt: $value['rendered_at'],
+            renderProfile: $value['render_profile'] ?? 'standard',
         );
+    }
+
+    /** @param array<string, mixed> $value */
+    private static function validDimensions(array $value): bool
+    {
+        if (($value['schema'] ?? null) === self::Schema) {
+            return ! isset($value['render_profile']) && ($value['width'] ?? null) === 1200 && ($value['height'] ?? null) === 630;
+        }
+        $profile = $value['render_profile'] ?? null;
+        $scale = $profile === 'browser-hd' ? 2 : 1;
+
+        return in_array($profile, ['browser', 'browser-hd'], true)
+            && ($value['driver'] ?? null) === 'browsershot'
+            && ($value['scale'] ?? null) === $scale
+            && ($value['width'] ?? null) === 1200 * $scale
+            && ($value['height'] ?? null) === 630 * $scale;
     }
 }

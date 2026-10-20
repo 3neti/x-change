@@ -11,6 +11,8 @@ use LBHurtado\XChange\Contracts\RiderStampClaimCardComposerContract;
 use LBHurtado\XChange\Data\Claim\ClaimShareCardData;
 use LBHurtado\XChange\Data\Claim\RiderStampArtifactData;
 use LBHurtado\XChange\Exceptions\RiderStampArtifactUnavailable;
+use LBHurtado\XChange\Services\Stamp\StampRenderingProfiles;
+use LBHurtado\XStamp\RenderingProfile;
 use Throwable;
 
 final readonly class DefaultRiderStampArtifactStore implements RiderStampArtifactStoreContract
@@ -31,7 +33,7 @@ final readonly class DefaultRiderStampArtifactStore implements RiderStampArtifac
         }
 
         $card = $this->composer->compose($voucher, $claimUrl);
-        $artifact = $this->artifactFromContents($card->contents);
+        $artifact = $this->artifactFromContents($card->contents, app(StampRenderingProfiles::class)->forVoucher($voucher)->value);
         $path = $this->path($artifact);
 
         try {
@@ -95,7 +97,7 @@ final readonly class DefaultRiderStampArtifactStore implements RiderStampArtifac
         }
 
         try {
-            $verified = $this->artifactFromContents($contents);
+            $verified = $this->artifactFromContents($contents, $artifact->renderProfile);
         } catch (RiderStampArtifactUnavailable) {
             return null;
         }
@@ -111,16 +113,17 @@ final readonly class DefaultRiderStampArtifactStore implements RiderStampArtifac
         );
     }
 
-    private function artifactFromContents(string $contents): RiderStampArtifactData
+    private function artifactFromContents(string $contents, string $profile = 'standard'): RiderStampArtifactData
     {
+        $scale = RenderingProfile::resolve($profile)->scale();
         $dimensions = @getimagesizefromstring($contents);
 
         if (
             $contents === ''
             || ! is_array($dimensions)
             || ($dimensions['mime'] ?? null) !== RiderStampArtifactData::MimeType
-            || (int) ($dimensions[0] ?? 0) !== RiderStampArtifactData::Width
-            || (int) ($dimensions[1] ?? 0) !== RiderStampArtifactData::Height
+            || (int) ($dimensions[0] ?? 0) !== RiderStampArtifactData::Width * $scale
+            || (int) ($dimensions[1] ?? 0) !== RiderStampArtifactData::Height * $scale
         ) {
             throw new RiderStampArtifactUnavailable;
         }
@@ -135,6 +138,7 @@ final readonly class DefaultRiderStampArtifactStore implements RiderStampArtifac
                 RiderStampArtifactData::ManifestVersion,
             ),
             renderedAt: now()->toIso8601String(),
+            renderProfile: $profile,
         );
     }
 

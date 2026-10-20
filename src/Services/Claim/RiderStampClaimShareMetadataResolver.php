@@ -8,6 +8,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimShareMetadataResolverContract;
 use LBHurtado\XChange\Contracts\RiderStampCopyResolverContract;
 use LBHurtado\XChange\Data\Claim\ClaimShareMetadataData;
+use LBHurtado\XChange\Data\Claim\RiderStampArtifactData;
 
 final readonly class RiderStampClaimShareMetadataResolver implements ClaimShareMetadataResolverContract
 {
@@ -21,6 +22,7 @@ final readonly class RiderStampClaimShareMetadataResolver implements ClaimShareM
         string $shareCardUrl,
     ): ClaimShareMetadataData {
         $copy = $this->copy->resolve($voucher);
+        $artifact = RiderStampArtifactData::fromArray(data_get($voucher, 'instructions.metadata.custom.rider_stamp_artifact'));
 
         return new ClaimShareMetadataData(
             title: $copy->title,
@@ -32,6 +34,8 @@ final readonly class RiderStampClaimShareMetadataResolver implements ClaimShareM
             ),
             imageUrl: $shareCardUrl,
             imageAlt: "{$copy->title} preview",
+            imageWidth: $artifact?->width ?? 1200,
+            imageHeight: $artifact?->height ?? 630,
         );
     }
 }
