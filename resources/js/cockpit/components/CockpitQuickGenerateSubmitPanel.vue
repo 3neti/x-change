@@ -5082,6 +5082,10 @@ function handleOnDemandCancelled(): void {
 
 function handleIssuedPayCodeDialogClosed(): void {
   issuedPayCodeDialogOpen.value = false;
+  // The issued receipt is already complete. Release the funding projection so
+  // the next issuance can be prepared without requiring the operator to use
+  // the explicit "Generate another" action.
+  onDemandFundingProjection.value = null;
   emit("fundingFlowClosed");
 }
 
