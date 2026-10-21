@@ -241,6 +241,7 @@ The deploy command performs guarded runtime database changes:
 ```bash
 php artisan migrate --force
 php artisan x-change:commercial:provision-baselines --no-interaction
+php artisan x-change:commercial:reconcile-profiles --json --no-interaction
 php artisan x-change:commissioning:refresh-release --no-interaction
 ```
 

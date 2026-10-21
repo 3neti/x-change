@@ -54,3 +54,27 @@ Unknown services remain at PHP 0.00 until a rate or authoritative settlement is 
 - Confirm that expected costs and actual settlements remain separate in the economics read model.
 - Exercise temporary and permanent location-cost classifications.
 - Confirm that unconfigured services remain visible as unconfigured rather than being presented as settled cost.
+
+## Reliability controls
+
+Pricing activation and Component Economics activation must be treated as one
+governed cut-over. Before either active pointer changes, the package validates
+the offering version, offering snapshot hash, manifest hash, catalog coverage,
+and integer allocation conservation. Any failure rolls back the activation.
+
+Every deployment runs the idempotent reconciliation command for all configured
+commercial profiles, including `pay_code` and `account_funding`. The first
+rollout reports an unhealthy profile without blocking the deployment while
+the existing `account_funding` baseline is repaired. Once both profiles pass a
+clean commissioning run, the deployment gate becomes strict.
+
+Estimate and issuance paths perform the same readiness check. Missing or
+inconsistent economics return a stable 503 application error and create no
+payment order, reservation, debit, or Pay Code. The diagnostic identity is
+recorded in safe audit metadata; provider payloads and database details are
+never returned to the caller.
+
+Operations monitoring exposes each profile's active offering version,
+economics version, snapshot and artifact hashes, last reconciliation result,
+and blocked estimate or issuance attempts. Expected provider costs remain
+planning values and never become settled provider-cost movements.
