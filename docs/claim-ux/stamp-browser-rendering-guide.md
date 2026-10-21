@@ -106,3 +106,86 @@ x-stamp must be released first. Testing and payout may adopt these releases with
 the standard GD profile; enabling browser profiles requires provisioning and
 verifying the optional runtime first. The original local trial made no Cloud
 changes. Its comparison site and temporary host wiring were removed afterward.
+
+## Proposed independent provider and quality model
+
+**Documentation decision recorded 2026-10-21; implementation pending.** The
+portable source of truth is the owning x-stamp repository's
+`docs/rendering/PLAN.md` and `docs/rendering/COMPASS.md`, on documentation branch
+`docs/configurable-stamp-rendering`. These are cross-repository references, not
+files inside x-change. The documentation commits remain local until explicitly
+published; link published immutable references when releasing the implementation.
+
+The target model separates quality (`standard`, `hd`) from provider (`gd`,
+`browsershot`, `cloudflare`, `auto`). It is not the configuration/API shipped in
+v1.0.255. Do not copy proposed names into Cloud and expect provider switching.
+
+| Existing frozen profile | Provider interpretation | Quality interpretation |
+| --- | --- | --- |
+| `standard` | GD | standard, 1200×630 |
+| `browser` | Browsershot | standard, 1200×630 |
+| `browser-hd` | Browsershot | HD, 2400×1260 |
+
+Existing signatures and artifact descriptors retain their original verification
+rules. New contracts must explicitly version actual provider, effective quality,
+physical dimensions and renderer version, retaining the v1/v2 readers. `auto`
+records a selection policy, not the provider that actually produced an artifact.
+
+### Before funding versus after payment
+
+For best-effort automatic selection, prefer enabled compatible Cloudflare, then
+available local Browsershot, then GD. GD currently has no HD capability. The
+chosen default policy is **use available quality before payment**. A standard
+fallback must produce the displayed standard preview, with a quiet accessible
+reduced-quality indication. Explicit strict requests can require HD instead.
+
+Immediately before funding, preflight the composition and effective selection.
+If the selection changed, refresh the review to show the actual result before
+accepting payment. Freeze that resolved provider/quality with the order; never
+charge against a stale HD preview while quietly freezing GD. This preflight uses
+a sample code and generic claim destination, not a pre-created issued Pay Code.
+
+After payment, rendering failure must retain verified funds and recoverable
+issuance state. Retry the same frozen provider and quality, idempotently, without
+a second payment or a silent downgrade. A preflight does not guarantee a remote
+service remains available later. Existing immutable PNG reads do not call any
+renderer. Changing defaults or rolling back new-order admission does not rewrite
+active contracts; keep their required renderers available for recovery.
+
+### Capabilities, resilience and evidence
+
+Reject incompatible artwork before payment. The current browser path's HTML-only
+splash restriction must be addressed or explicitly gated for URL/plain/Markdown
+instructions before HD becomes a general default. Keep projection, sanitization,
+trusted asset snapshots, provider identity and QR destination authorization in
+x-change; use the same prepared composition in preview and issuance.
+
+Add cache keys covering content/assets, effective provider/quality and renderer
+version; deduplicate concurrent requests. Bound retries/timeouts and use circuit
+breaking. Distinguish missing credentials, invalid credentials, quota exhaustion,
+throttling and transient outages. Free-tier Cloudflare is eligible when enabled
+and within its allowance; absence of a paid subscription is not a failure.
+
+Record requested and effective quality, actual provider, fallback reason,
+duration, renderer version, artifact hash and measured browser milliseconds in
+sanitized operational evidence. Do not log HTML, QR URLs, secrets, sessions, OTPs
+or raw provider payloads. Remote rendering is explicit: Cloudflare receives
+necessary composed Stamp content, not application credentials or private claims.
+
+Browser-time budgets must account for both environments sharing one Cloudflare
+account. Monitoring alone is not a hard limit; a hard cap requires coordinated
+reservations across concurrent requests/environments. Budget policy for new
+requests must not silently invalidate already-paid contracts.
+
+### Future acceptance and activation
+
+Prove all supported artwork, native dimensions, fonts/emoji, QR decoding,
+preview/issuance parity, legacy signatures/artifacts, cache/deduplication,
+provider outage/quota/circuit recovery, and held-payment retries. Add mobile,
+desktop and theme browser checks. Keep automated provider fixtures separate from
+real-money acceptance.
+
+Hosts own commissioning: configure enabled providers and scoped credentials,
+measure actual Cloudflare usage and latency, verify storage/OG output and rollback,
+then promote testing to payout. Keep local comparison tooling disabled on Cloud.
+This documentation changes no runtime behavior, configuration or dependencies.

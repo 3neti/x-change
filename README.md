@@ -340,3 +340,9 @@ release an immutable package version, and update the host through Composer.
 ## License
 
 See [LICENSE.md](./LICENSE.md) for the authoritative license terms.
+
+### Stamp rendering roadmap
+
+See the [Stamp browser rendering guide](docs/claim-ux/stamp-browser-rendering-guide.md#proposed-independent-provider-and-quality-model)
+for the proposed provider/quality split, legacy compatibility and lifecycle-safe
+fallback policy. Cloudflare selection remains planned, not active.
