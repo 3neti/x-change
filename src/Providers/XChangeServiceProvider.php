@@ -98,10 +98,10 @@ use LBHurtado\XChange\Console\Commands\Commercial\ApprovePartnerCommissionPayout
 use LBHurtado\XChange\Console\Commands\Commercial\AuthorizeCommercialOperatorCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\CommercialGovernanceStatusCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ProvisionCommercialBaselinesCommand;
-use LBHurtado\XChange\Console\Commands\Commercial\ReconcileCommercialComponentEconomicsCommand;
-use LBHurtado\XChange\Console\Commands\Commercial\ReconcileCommercialProfilesCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ProvisionCommercialPrincipalCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ProvisionPublicIssuanceEscrowPrincipalCommand;
+use LBHurtado\XChange\Console\Commands\Commercial\ReconcileCommercialComponentEconomicsCommand;
+use LBHurtado\XChange\Console\Commands\Commercial\ReconcileCommercialProfilesCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ReconcilePartnerCommissionPayoutBatchCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ReconcilePendingPartnerCommissionPayoutsCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\RecordProviderCostBatchCommand;
@@ -357,8 +357,8 @@ use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Events\DisbursementRejected;
 use LBHurtado\XChange\Events\PaymentSettled;
 use LBHurtado\XChange\Events\PolicyCompletionOutcomeRecorded;
-use LBHurtado\XChange\Exceptions\CommercialPricingChanged;
 use LBHurtado\XChange\Exceptions\CommercialEconomicsUnavailable;
+use LBHurtado\XChange\Exceptions\CommercialPricingChanged;
 use LBHurtado\XChange\Exceptions\ExternalReferenceConflict;
 use LBHurtado\XChange\Exceptions\FundingIntentConflict;
 use LBHurtado\XChange\Exceptions\FundingIntentTransitionDenied;
@@ -2670,6 +2670,7 @@ class XChangeServiceProvider extends ServiceProvider
             $this->packagePath('resources/js/components/NumericKeypad.vue') => resource_path('js/components/NumericKeypad.vue'),
             $this->packagePath('resources/js/composables/useFormFlowSummary.ts') => resource_path('js/composables/useFormFlowSummary.ts'),
             $this->packagePath('resources/js/composables/useTheme.ts') => resource_path('js/composables/useTheme.ts'),
+            $this->packagePath('resources/js/composables/usePublicClaimAppearance.ts') => resource_path('js/composables/usePublicClaimAppearance.ts'),
             $this->packagePath('resources/js/layouts/PublicLayout.vue') => resource_path('js/layouts/PublicLayout.vue'),
             $this->packagePath('resources/js/config') => resource_path('js/config'),
             $this->packagePath('resources/js/data') => resource_path('js/data'),

@@ -25,7 +25,7 @@ it('emits a coherent claim experience contract for rider splash and redirect vou
         ->and(ClaimExperiencePayload::isXRiderSplash($experience))->toBeTrue()
         ->and(ClaimExperiencePayload::shouldSkipConsumedSplash($experience))->toBeTrue()
         ->and(ClaimExperiencePayload::isClaimWidgetRedirect($experience))->toBeTrue()
-        ->and(data_get($experience, 'options.show_redirect_countdown'))->toBeTrue()
+        ->and(data_get($experience, 'options.show_redirect_countdown'))->toBeFalse()
         ->and(data_get($experience, 'diagnostics.duplicate_splash_prevented'))->toBeTrue()
         ->and($phases->pluck('key')->all())->toContain('rider_intro', 'form_flow', 'success_rider', 'redirect')
         ->and($phases->where('key', 'redirect'))->toHaveCount(1)

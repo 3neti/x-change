@@ -18,10 +18,12 @@ use LBHurtado\XChange\Services\BuildProvisioningRequirementViewData;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalResumePayloadSession;
 use LBHurtado\XChange\Support\Claim\ClaimEvidenceSynchronizer;
 use LBHurtado\XChange\Support\Claim\ClaimFlowStateGuard;
+use LBHurtado\XChange\Support\Claim\ClaimRiderHandoff;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
 use LBHurtado\XChange\Support\Claim\CompletionClaimReceipt;
 use LBHurtado\XChange\Support\Claim\FormFlowClaimPayloadNormalizer;
+use Symfony\Component\HttpFoundation\Response;
 
 class ClaimSubmitController extends Controller
 {
@@ -37,7 +39,7 @@ class ClaimSubmitController extends Controller
         protected BuildProvisioningRequirementViewData $provisioning,
     ) {}
 
-    public function __invoke(Request $request, string $code): RedirectResponse
+    public function __invoke(Request $request, string $code): RedirectResponse|Response
     {
         $code = strtoupper(trim($code));
         $referenceId = $request->input('reference_id');
@@ -72,12 +74,13 @@ class ClaimSubmitController extends Controller
             (int) config('x-change.claim.submission_lock_seconds', 30),
         )->block(
             (int) config('x-change.claim.submission_lock_wait_seconds', 3),
-            fn (): RedirectResponse => $this->submit(
+            fn (): RedirectResponse|Response => $this->submit(
                 $state,
                 $voucher,
                 $code,
                 $flowId,
                 $lockKey,
+                $request,
             ),
         );
     }
@@ -91,7 +94,8 @@ class ClaimSubmitController extends Controller
         string $code,
         mixed $flowId,
         string $idempotencyKey,
-    ): RedirectResponse {
+        Request $request,
+    ): RedirectResponse|Response {
         $payload = $this->payloadNormalizer->normalize($state['collected_data'] ?? []);
         data_set($payload, '_meta.idempotency_key', $idempotencyKey);
         $onboardingReference = data_get($state, 'instructions.metadata.onboarding_reference');
@@ -142,6 +146,18 @@ class ClaimSubmitController extends Controller
             }
 
             $this->formFlowService->clearFlow($state['flow_id'] ?? $flowId);
+
+            try {
+                $handoff = app(ClaimRiderHandoff::class);
+                if ($handoff->prepare($voucher, $result, $idempotencyKey)) {
+                    return $handoff->navigate($request, $voucher);
+                }
+            } catch (\Throwable $exception) {
+                Log::warning('Claim completed but rider handoff could not be prepared', [
+                    'voucher_code' => $code,
+                    'exception' => $exception::class,
+                ]);
+            }
 
             return redirect()->route('x-change.claim.success', ['code' => $code]);
         } catch (ProviderProvisioningRequired $e) {

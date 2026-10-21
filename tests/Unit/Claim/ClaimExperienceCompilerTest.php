@@ -141,9 +141,9 @@ it('assigns exactly one redirect owner when rider url exists', function () {
     expect($redirectPhases)->toHaveCount(1)
         ->and($redirectPhases[0]['owner'])->toBe('claim-widget')
         ->and($redirectPhases[0]['url'])->toBe('https://example.com/after-claim')
-        ->and($redirectPhases[0]['delay_seconds'])->toBe(5)
-        ->and($redirectPhases[0]['show_countdown'])->toBeTrue()
-        ->and($experience['options']['show_redirect_countdown'])->toBeTrue()
+        ->and($redirectPhases[0]['delay_seconds'])->toBe(0)
+        ->and($redirectPhases[0]['show_countdown'])->toBeFalse()
+        ->and($experience['options']['show_redirect_countdown'])->toBeFalse()
         ->and(ClaimExperiencePayload::isClaimWidgetRedirect($experience))->toBeTrue();
 });
 

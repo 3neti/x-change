@@ -51,6 +51,7 @@ interface Props {
     claimWorkflowKey?: string | null;
     rider?: RiderExperience | null;
     redirectEndpoint?: string | null;
+    handoff_retry_url?: string | null;
     claim_experience?: Record<string, any> | null;
     redirect?: {
         show_countdown?: boolean;
@@ -164,7 +165,8 @@ const hasSuccessVisualStages = computed(
 );
 
 const hasRedirectRuntimeStages = computed(
-    () => successViewModel.value.hasRedirectRuntimeStages,
+    () => Boolean(effectiveRedirectEndpoint.value)
+        && successViewModel.value.hasRedirectRuntimeStages,
 );
 
 const shouldShowVoucherCodeBadge = computed(
@@ -270,7 +272,7 @@ const successAction = computed(() => {
         :tone="pageTone.isWarning ? 'warning' : 'success'"
         :brand-placement="successPresentation ? 'center' : 'top_left'"
         :brand-size="successPresentation ? 'brand' : 'header'"
-        :show-theme-picker="!successPresentation"
+        :show-theme-picker="false"
         :width="successPresentation ? 'lg' : 'md'"
     >
         <div class="space-y-8">
@@ -484,6 +486,14 @@ const successAction = computed(() => {
                 :stages="redirectRuntimeStages"
                 :redirect-endpoint="effectiveRedirectEndpoint"
             />
+
+            <a
+                v-if="handoff_retry_url"
+                :href="handoff_retry_url"
+                class="mx-auto block w-fit text-sm font-medium text-primary underline underline-offset-4"
+            >
+                Continue to destination
+            </a>
 
             <div
                 v-if="hasRedirect && shouldShowRedirectCountdown"

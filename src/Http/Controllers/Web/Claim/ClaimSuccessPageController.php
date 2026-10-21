@@ -20,6 +20,7 @@ use LBHurtado\XChange\Services\Settlement\DemonstrationPolicySummary;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LBHurtado\XChange\Services\XRay\VoucherXRayProjectionBuilder;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
+use LBHurtado\XChange\Support\Claim\ClaimRiderHandoff;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSuccessPayload;
 use LBHurtado\XChange\Support\Claim\CompletionClaimReceipt;
 use LBHurtado\XChange\Support\Rider\XChangeRiderOutcomeResolver;
@@ -83,11 +84,16 @@ class ClaimSuccessPageController
             'claimOutcome' => $state->value,
             'claimWorkflowKey' => $workflow->workflow?->key,
             'rider' => $experience?->toArray(),
-            'redirectEndpoint' => route('x-change.claim.redirect', [
-                'code' => $voucher->code,
-            ]),
+            'redirectEndpoint' => null,
+            'handoff_retry_url' => session()->get('claim_rider_handoff_failed')
+                && app(ClaimRiderHandoff::class)->claim($voucher) !== null
+                ? route('x-change.claim.redirect', ['code' => $voucher->code])
+                : null,
             'claim_experience' => $claimExperience,
-            'redirect' => ClaimExperiencePayload::redirect($claimExperience),
+            'redirect' => [
+                ...ClaimExperiencePayload::redirect($claimExperience),
+                'show_countdown' => false,
+            ],
             'compiled_claim_result' => app(CompiledClaimSuccessPayload::class)->pull(),
             'destination' => $this->destinationSnapshot($voucher),
             'success_presentation' => $successPresentation,

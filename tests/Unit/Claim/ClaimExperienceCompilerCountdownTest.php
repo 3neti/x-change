@@ -42,7 +42,7 @@ function countdownRedirectPhase(array $experience): ?array
     return is_array($phase) ? $phase : null;
 }
 
-it('emits redirect phase countdown metadata when rider redirect url exists', function () {
+it('emits an immediate redirect phase without a countdown when rider url exists', function () {
     $experience = resolveCountdownExperience(
         countdownVoucherWithRedirect(),
     );
@@ -55,17 +55,17 @@ it('emits redirect phase countdown metadata when rider redirect url exists', fun
         'source' => 'voucher.instructions.rider.redirect_url',
         'status' => 'active',
         'url' => 'https://example.com/success',
-        'delay_seconds' => 5,
-        'show_countdown' => true,
+        'delay_seconds' => 0,
+        'show_countdown' => false,
     ]);
 });
 
-it('enables redirect countdown option when rider redirect url exists', function () {
+it('disables the countdown while retaining redirect ownership', function () {
     $experience = resolveCountdownExperience(
         countdownVoucherWithRedirect(),
     );
 
-    expect(data_get($experience, 'options.show_redirect_countdown'))->toBeTrue()
+    expect(data_get($experience, 'options.show_redirect_countdown'))->toBeFalse()
         ->and(data_get($experience, 'diagnostics.redirect_owner'))
         ->toBe(ClaimExperiencePayload::REDIRECT_OWNER_CLAIM_WIDGET);
 });
@@ -76,9 +76,9 @@ it('derives countdown redirect payload from redirect phase', function () {
     );
 
     expect(ClaimExperiencePayload::redirect($experience))->toBe([
-        'show_countdown' => true,
+        'show_countdown' => false,
         'owner' => ClaimExperiencePayload::REDIRECT_OWNER_CLAIM_WIDGET,
-        'delay_seconds' => 5,
+        'delay_seconds' => 0,
     ]);
 });
 

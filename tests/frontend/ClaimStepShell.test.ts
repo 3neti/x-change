@@ -21,7 +21,7 @@ describe('ClaimStepShell', () => {
         );
         expect(
             wrapper.find('[data-testid="claim-theme-picker"]').exists(),
-        ).toBe(true);
+        ).toBe(false);
     });
 
     it('renders the Pay Code brand header by default', () => {

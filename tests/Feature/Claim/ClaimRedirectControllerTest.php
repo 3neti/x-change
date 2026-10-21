@@ -3,7 +3,12 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimRedirectController;
+use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Support\Claim\ClaimRiderHandoff;
+use LBHurtado\XJournal\Models\ExecutionJournalEntry;
+use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
 use LBHurtado\XRider\Contracts\RiderAnalyticsRecorderContract;
 use LBHurtado\XRider\Contracts\RiderExperienceResolverContract;
 use LBHurtado\XRider\Contracts\SuccessRedirectResolverContract;
@@ -65,7 +70,7 @@ beforeEach(function () {
         ->name('x-change.claim.redirect');
 });
 
-it('redirects to the voucher rider url through the redirect gate', function () {
+it('rejects a direct rider redirect before a completed claim', function () {
     $this->withoutMiddleware();
 
     $voucher = issueVoucher(validVoucherInstructions(
@@ -80,7 +85,75 @@ it('redirects to the voucher rider url through the redirect gate', function () {
     $this->get(route('x-change.claim.redirect', [
         'code' => $voucher->code,
     ]))
+        ->assertNotFound();
+});
+
+it('redirects a completed claim from its authorized browser session', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => ['url' => 'https://example.com/after-claim'],
+    ]));
+    VoucherClaim::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'claim_number' => 1,
+        'claim_type' => 'disbursement',
+        'status' => 'succeeded',
+        'idempotency_key' => 'claim-rider-test',
+        'completed_at' => now(),
+        'currency' => 'PHP',
+    ]);
+    $journal = Mockery::mock(ExecutionJournalRecorder::class);
+    $journal->shouldReceive('record')->times(3)->andReturn(new ExecutionJournalEntry);
+    $this->app->instance(ExecutionJournalRecorder::class, $journal);
+
+    $prepared = app(ClaimRiderHandoff::class)->prepare($voucher, new SubmitPayCodeClaimResultData(
+        voucher_code: (string) $voucher->code,
+        claim_type: 'disbursement',
+        claimed: true,
+        status: 'succeeded',
+    ), 'claim-rider-test');
+
+    expect($prepared)->toBeTrue();
+    $this->get(route('x-change.claim.redirect', ['code' => $voucher->code]))
         ->assertRedirect('https://example.com/after-claim');
+
+    $fallback = Mockery::mock(SuccessRedirectResolverContract::class);
+    $fallback->shouldReceive('resolve')->once()->andReturn('/');
+    $this->app->instance(SuccessRedirectResolverContract::class, $fallback);
+
+    $this->get(route('x-change.claim.redirect', ['code' => $voucher->code]))
+        ->assertRedirect(route('x-change.claim.success', ['code' => $voucher->code]));
+});
+
+it('does not authorize a rider handoff for a pending payout', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => ['url' => 'https://example.com/after-claim'],
+    ]));
+    VoucherClaim::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'claim_number' => 1,
+        'claim_type' => 'disbursement',
+        'status' => 'pending_review',
+        'idempotency_key' => 'pending-rider-claim',
+        'completed_at' => now(),
+        'currency' => 'PHP',
+    ]);
+    $journal = Mockery::mock(ExecutionJournalRecorder::class);
+    $journal->shouldNotReceive('record');
+    $this->app->instance(ExecutionJournalRecorder::class, $journal);
+
+    expect(app(ClaimRiderHandoff::class)->prepare($voucher, new SubmitPayCodeClaimResultData(
+        voucher_code: (string) $voucher->code,
+        claim_type: 'disbursement',
+        claimed: true,
+        status: 'pending_review',
+    ), 'pending-rider-claim'))->toBeFalse();
+
+    $this->get(route('x-change.claim.redirect', ['code' => $voucher->code]))
+        ->assertNotFound();
 });
 
 it('returns not found when voucher does not exist', function () {

@@ -25,7 +25,7 @@ const props = withDefaults(
         width: 'md',
         centered: true,
         showBrand: true,
-        showThemePicker: true,
+        showThemePicker: false,
         brandPlacement: 'top_left',
         brandSize: 'header',
         brandVariant: 'mark',

@@ -146,11 +146,11 @@ it('exposes claim experience redirect countdown metadata to the success page', f
         ],
     ]))
         ->assertOk()
-        ->assertJsonPath('claim_experience.options.show_redirect_countdown', true)
+        ->assertJsonPath('claim_experience.options.show_redirect_countdown', false)
         ->assertJsonPath('claim_experience.diagnostics.redirect_owner', 'claim-widget')
-        ->assertJsonPath('redirect.show_countdown', true)
+        ->assertJsonPath('redirect.show_countdown', false)
         ->assertJsonPath('redirect.owner', 'claim-widget')
-        ->assertJsonPath('redirect.delay_seconds', 5);
+        ->assertJsonPath('redirect.delay_seconds', 0);
 
     $claimExperience = $response->json('claim_experience');
 
@@ -173,11 +173,9 @@ it('passes claim widget redirect ownership metadata to success page', function (
         ]))
         ->assertOk()
         ->assertJsonPath('redirect.owner', 'claim-widget')
-        ->assertJsonPath('redirect.show_countdown', true)
-        ->assertJsonPath('redirect.delay_seconds', 5)
-        ->assertJsonPath('redirectEndpoint', route('x-change.claim.redirect', [
-            'code' => $voucher->code,
-        ]));
+        ->assertJsonPath('redirect.show_countdown', false)
+        ->assertJsonPath('redirect.delay_seconds', 0)
+        ->assertJsonPath('redirectEndpoint', null);
 });
 
 it('does not enable success countdown when redirect owner is not claim widget', function () {

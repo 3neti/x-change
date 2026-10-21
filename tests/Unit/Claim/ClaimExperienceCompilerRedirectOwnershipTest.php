@@ -66,7 +66,7 @@ it('derives redirect payload from claim experience', function () {
     ]);
 });
 
-it('shows countdown when redirect is owned by claim widget', function () {
+it('keeps claim widget ownership without showing a countdown', function () {
     $experience = resolveRedirectOwnershipExperience(
         redirectOwnershipVoucherWithRiderRedirect(),
     );
@@ -74,7 +74,7 @@ it('shows countdown when redirect is owned by claim widget', function () {
     expect(ClaimExperiencePayload::redirect($experience))
         ->toMatchArray([
             'owner' => ClaimExperiencePayload::REDIRECT_OWNER_CLAIM_WIDGET,
-            'show_countdown' => true,
+            'show_countdown' => false,
         ]);
 });
 

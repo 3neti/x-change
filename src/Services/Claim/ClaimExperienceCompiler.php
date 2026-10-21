@@ -129,8 +129,8 @@ class ClaimExperienceCompiler
                 owner: 'claim-widget',
                 source: 'voucher.instructions.rider.redirect_url',
                 url: $redirectUrl,
-                delay_seconds: (int) (data_get($rider, 'redirect_delay') ?? 5),
-                show_countdown: true,
+                delay_seconds: 0,
+                show_countdown: false,
             );
         }
 
@@ -142,7 +142,7 @@ class ClaimExperienceCompiler
             ],
             options: [
                 'skip_consumed_splash' => $hasRiderSplash,
-                'show_redirect_countdown' => filled($redirectUrl),
+                'show_redirect_countdown' => false,
                 'suppress_legacy_pre_claim_stages' => $isOfficerAuthorization,
             ],
             phases: new DataCollection(ClaimPhaseData::class, $phases),
