@@ -30,6 +30,8 @@ final readonly class CommercialGovernanceJournal
         string $eventType,
         Model|string $actor,
         string $authorityReference,
+        array $additionalPayload = [],
+        ?string $idempotencySuffix = null,
     ): void {
         $this->recorder->record(new ExecutionJournalEntryData(
             eventType: $eventType,
@@ -51,15 +53,16 @@ final readonly class CommercialGovernanceJournal
                 externalReference: $authorityReference,
                 metadata: ['profile' => $offering->profile, 'snapshot_hash' => $offering->snapshot_hash],
             ),
-            idempotencyKey: 'x-change:commercial-governance:'.$eventType.':'.$offering->getKey(),
-            payload: [
+            idempotencyKey: 'x-change:commercial-governance:'.$eventType.':'.$offering->getKey()
+                .($idempotencySuffix === null ? '' : ':'.$idempotencySuffix),
+            payload: array_merge([
                 'status' => $eventType === 'commercial.offering.baseline_provisioned'
                     ? CommercialOfferingStatus::Published->value
                     : $offering->status->value,
                 'origin' => $offering->origin->value,
                 'version' => $offering->version,
                 'snapshot_hash' => $offering->snapshot_hash,
-            ],
+            ], $additionalPayload),
             metadata: $this->metadata(),
         ));
     }

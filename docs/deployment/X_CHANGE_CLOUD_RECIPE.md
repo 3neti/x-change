@@ -31,6 +31,18 @@ composer x-change:cloud:ship -- --environment=staging --profile=netbank \
 vendor/bin/x-change-cloud accept --url=https://example.laravel.cloud --json
 ```
 
+Deployments repair the immutable installation baseline manifest evidence before
+reconciling component economics:
+
+```bash
+php artisan x-change:commercial:repair-baseline-manifest \
+  --profile=account_funding --json --no-interaction
+```
+
+This command only updates the derived manifest fields on an installation
+baseline, records the repair in the execution journal, and refuses governed
+maker-checker revisions.
+
 ## Product boundary
 
 The Cloud recipe owns deployment orchestration:
