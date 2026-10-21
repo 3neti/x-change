@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services\Commercial;
 
 use LBHurtado\XChange\Enums\CommercialActivationAuthority;
 use LBHurtado\XChange\Enums\CommercialOfferingOrigin;
+use LBHurtado\XChange\Models\CommercialComponentEconomics;
 use LBHurtado\XChange\Models\CommercialComponentEconomicsActivation;
 use LBHurtado\XChange\Models\CommercialComponentEconomicsHead;
 use LBHurtado\XChange\Models\CommercialOfferingActivation;
@@ -48,15 +49,25 @@ final readonly class ReconcileCommercialComponentEconomics
             return $current;
         }
 
-        $persisted = $this->persist->execute(
-            offering: $offering,
-            manifest: $manifest,
-            reference: $economics?->reference ?? 'component-economics:'.$profile,
-            version: ((int) $this->persistedVersion($profile)) + 1,
-            origin: CommercialOfferingOrigin::InstallationBaseline,
-            authority: CommercialActivationAuthority::CommissioningManifest,
-            commissioningManifestReference: $commissioningManifestReference,
-        );
+        $persisted = CommercialComponentEconomics::query()
+            ->where('profile', $profile)
+            ->where('commercial_offering_id', $offering->getKey())
+            ->where('offering_snapshot_hash', $manifest->offeringSnapshotHash)
+            ->where('offering_manifest_hash', $manifest->offeringManifestHash)
+            ->where('artifact_hash', $manifest->hash)
+            ->first();
+
+        if (! $persisted instanceof CommercialComponentEconomics) {
+            $persisted = $this->persist->execute(
+                offering: $offering,
+                manifest: $manifest,
+                reference: $economics?->reference ?? 'component-economics:'.$profile,
+                version: ((int) $this->persistedVersion($profile)) + 1,
+                origin: CommercialOfferingOrigin::InstallationBaseline,
+                authority: CommercialActivationAuthority::CommissioningManifest,
+                commissioningManifestReference: $commissioningManifestReference,
+            );
+        }
 
         return $this->activate->execute(
             economics: $persisted,
