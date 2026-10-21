@@ -60,7 +60,15 @@ final class OperationsPricingController extends Controller
 
         return response()->streamDownload(function () use ($active): void {
             $handle = fopen('php://output', 'wb');
-            fputcsv($handle, ['reference', 'label', 'category', 'currency', 'unit_price']);
+            fputcsv($handle, [
+                'reference',
+                'label',
+                'category',
+                'currency',
+                'unit_price',
+                'expected_provider_cost',
+                'expected_provider_cost_basis',
+            ]);
 
             foreach ($active->catalog->toArray()['items'] as $item) {
                 fputcsv($handle, [
@@ -69,6 +77,8 @@ final class OperationsPricingController extends Controller
                     $item['category'],
                     $active->catalog->currency,
                     number_format(((int) $item['unit_price_minor']) / 100, 2, '.', ''),
+                    number_format(((int) ($item['expected_provider_cost_minor'] ?? 0)) / 100, 2, '.', ''),
+                    (string) ($item['expected_provider_cost_basis'] ?? 'unconfigured'),
                 ]);
             }
 
@@ -95,16 +105,26 @@ final class OperationsPricingController extends Controller
                 'items' => ['required', 'array', 'min:1'],
                 'items.*.reference' => ['required', 'string', 'max:160', 'distinct'],
                 'items.*.unit_price' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
+                'items.*.expected_provider_cost' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
+                'items.*.expected_provider_cost_basis' => ['required', 'string', 'max:160'],
             ])['items'];
         $catalog = $active->catalog->toArray();
-        $prices = collect($items)->mapWithKeys(
-            fn (array $item): array => [$item['reference'] => (int) round(((float) $item['unit_price']) * 100)],
-        );
+        $catalogReferences = collect($catalog['items'])->pluck('reference')->sort()->values()->all();
+        $submittedReferences = collect($items)->pluck('reference')->sort()->values()->all();
+
+        if ($catalogReferences !== $submittedReferences) {
+            abort(422, 'The pricing update must contain exactly the current pricing references.');
+        }
+
+        $prices = collect($items)->keyBy('reference');
 
         foreach ($catalog['items'] as $index => $item) {
             $reference = (string) $item['reference'];
             if ($prices->has($reference)) {
-                $catalog['items'][$index]['unit_price_minor'] = (int) $prices->get($reference);
+                $updated = $prices->get($reference);
+                $catalog['items'][$index]['unit_price_minor'] = $this->minorUnits((string) $updated['unit_price']);
+                $catalog['items'][$index]['expected_provider_cost_minor'] = $this->minorUnits((string) $updated['expected_provider_cost']);
+                $catalog['items'][$index]['expected_provider_cost_basis'] = trim((string) $updated['expected_provider_cost_basis']);
             }
         }
         $catalog['version'] = (int) $catalog['version'] + 1;
@@ -157,7 +177,7 @@ final class OperationsPricingController extends Controller
 
     /**
      * @param  array<int, array<string, mixed>>  $catalogItems
-     * @return array<int, array{reference: string, unit_price: string}>
+     * @return array<int, array{reference: string, unit_price: string, expected_provider_cost: string, expected_provider_cost_basis: string}>
      */
     private function itemsFromSpreadsheet(Request $request, array $catalogItems): array
     {
@@ -171,8 +191,8 @@ final class OperationsPricingController extends Controller
         $headers = array_map(static fn (mixed $header): string => trim(ltrim((string) $header, "\xEF\xBB\xBF")), $headers);
         $headerIndexes = array_flip($headers);
 
-        if (! isset($headerIndexes['reference'], $headerIndexes['unit_price'])) {
-            abort(422, 'The pricing spreadsheet must include reference and unit_price columns.');
+        if (! isset($headerIndexes['reference'], $headerIndexes['unit_price'], $headerIndexes['expected_provider_cost'], $headerIndexes['expected_provider_cost_basis'])) {
+            abort(422, 'The pricing spreadsheet must include reference, unit_price, expected_provider_cost, and expected_provider_cost_basis columns.');
         }
 
         $items = [];
@@ -184,6 +204,8 @@ final class OperationsPricingController extends Controller
             $items[] = [
                 'reference' => trim((string) ($row[$headerIndexes['reference']] ?? '')),
                 'unit_price' => trim((string) ($row[$headerIndexes['unit_price']] ?? '')),
+                'expected_provider_cost' => trim((string) ($row[$headerIndexes['expected_provider_cost']] ?? '')),
+                'expected_provider_cost_basis' => trim((string) ($row[$headerIndexes['expected_provider_cost_basis']] ?? '')),
             ];
         }
         fclose($handle);
@@ -192,6 +214,8 @@ final class OperationsPricingController extends Controller
             'items' => ['required', 'array', 'min:1'],
             'items.*.reference' => ['required', 'string', 'max:160', 'distinct'],
             'items.*.unit_price' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
+            'items.*.expected_provider_cost' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
+            'items.*.expected_provider_cost_basis' => ['required', 'string', 'max:160'],
         ])->validate();
 
         $catalogReferences = collect($catalogItems)->pluck('reference')->sort()->values()->all();
@@ -202,5 +226,12 @@ final class OperationsPricingController extends Controller
         }
 
         return $validated['items'];
+    }
+
+    private function minorUnits(string $amount): int
+    {
+        [$whole, $fraction] = array_pad(explode('.', $amount, 2), 2, '');
+
+        return ((int) $whole * 100) + (int) str_pad(substr($fraction, 0, 2), 2, '0');
     }
 }

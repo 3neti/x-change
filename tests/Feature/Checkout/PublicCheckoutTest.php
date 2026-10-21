@@ -446,8 +446,12 @@ it('downloads the current pricing template and accepts it as a pricing update', 
         ->assertOk();
     $csv = $download->streamedContent();
 
-    expect($csv)->toContain('reference,label,category,currency,unit_price')
+    expect($csv)->toContain('reference,label,category,currency,unit_price,expected_provider_cost,expected_provider_cost_basis')
         ->and($download->headers->get('Content-Disposition'))->toContain('x-change-pricing-template.csv');
+
+    $this->post(route('x-change.operations.pricing.update'), [
+        'pricing_file' => UploadedFile::fake()->createWithContent('legacy-pricing.csv', "reference,unit_price\ncash.amount,15.00\n"),
+    ])->assertUnprocessable();
 
     $this->post(route('x-change.operations.pricing.update'), [
         'pricing_file' => UploadedFile::fake()->createWithContent('pricing.csv', $csv),
