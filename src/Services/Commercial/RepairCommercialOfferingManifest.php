@@ -29,10 +29,17 @@ final readonly class RepairCommercialOfferingManifest
 
             $manifest = $this->manifests->compile($profile, $snapshot);
             $previousSnapshotHash = $offering->snapshot_hash;
+            $activeActivationNeedsRepair = CommercialOfferingActivation::query()
+                ->where('commercial_offering_id', $offering->getKey())
+                ->where('profile', $profile)
+                ->whereNull('deactivated_at')
+                ->where('snapshot_hash', '!=', $snapshot->snapshotHash())
+                ->exists();
             $changed = $offering->manifest_schema !== $manifest->schema
                 || $offering->manifest_hash !== $manifest->hash
                 || $offering->manifest_yaml !== $manifest->yaml
-                || $offering->snapshot_hash !== $snapshot->snapshotHash();
+                || $offering->snapshot_hash !== $snapshot->snapshotHash()
+                || $activeActivationNeedsRepair;
 
             if (! $changed) {
                 return $offering;
