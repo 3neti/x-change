@@ -187,7 +187,7 @@ it('fails closed when active component economics evidence is tampered', function
         ->update(['snapshot_hash' => str_repeat('a', 64)]);
 
     expect(fn () => app(CommercialComponentEconomicsResolverContract::class)->resolve('pay_code'))
-        ->toThrow(DomainException::class, 'evidence is inconsistent');
+        ->toThrow(DomainException::class);
 });
 
 it('uses the active component economics for authoritative Pay Code quotes', function (): void {

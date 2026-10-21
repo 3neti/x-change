@@ -99,6 +99,7 @@ use LBHurtado\XChange\Console\Commands\Commercial\AuthorizeCommercialOperatorCom
 use LBHurtado\XChange\Console\Commands\Commercial\CommercialGovernanceStatusCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ProvisionCommercialBaselinesCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ReconcileCommercialComponentEconomicsCommand;
+use LBHurtado\XChange\Console\Commands\Commercial\ReconcileCommercialProfilesCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ProvisionCommercialPrincipalCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ProvisionPublicIssuanceEscrowPrincipalCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ReconcilePartnerCommissionPayoutBatchCommand;
@@ -357,6 +358,7 @@ use LBHurtado\XChange\Events\DisbursementRejected;
 use LBHurtado\XChange\Events\PaymentSettled;
 use LBHurtado\XChange\Events\PolicyCompletionOutcomeRecorded;
 use LBHurtado\XChange\Exceptions\CommercialPricingChanged;
+use LBHurtado\XChange\Exceptions\CommercialEconomicsUnavailable;
 use LBHurtado\XChange\Exceptions\ExternalReferenceConflict;
 use LBHurtado\XChange\Exceptions\FundingIntentConflict;
 use LBHurtado\XChange\Exceptions\FundingIntentTransitionDenied;
@@ -1901,6 +1903,7 @@ class XChangeServiceProvider extends ServiceProvider
                 CommercialGovernanceStatusCommand::class,
                 ProvisionCommercialBaselinesCommand::class,
                 ReconcileCommercialComponentEconomicsCommand::class,
+                ReconcileCommercialProfilesCommand::class,
                 ProvisionCommercialPrincipalCommand::class,
                 ProvisionPublicIssuanceEscrowPrincipalCommand::class,
                 ReconcilePartnerCommissionPayoutBatchCommand::class,
@@ -3041,6 +3044,25 @@ class XChangeServiceProvider extends ServiceProvider
                 ],
                 409,
             );
+        });
+
+        $exceptions->renderable(function (CommercialEconomicsUnavailable $e, Request $request) {
+            if (! $request->expectsJson()) {
+                return null;
+            }
+
+            return $this->apiResponses()
+                ->error(
+                    $e->getMessage(),
+                    CommercialEconomicsUnavailable::Code,
+                    [
+                        'pricing' => [
+                            CommercialEconomicsUnavailable::Message,
+                        ],
+                    ],
+                    503,
+                )
+                ->header('Retry-After', '5');
         });
 
         $exceptions->renderable(function (ProviderProvisioningRequired $e, Request $request) {
