@@ -59,7 +59,7 @@ const handoffTitle = computed(
 const handoffDescription = computed(
     () => props.screen.handoff?.description || props.screen.description,
 );
-const formFlowPages = import.meta.glob(
+const formFlowPages = import.meta.glob<{ default: Component }>(
     '/resources/js/pages/form-flow/**/*.vue',
 );
 const actualScreenComponent = computed<Component | null>(() => {

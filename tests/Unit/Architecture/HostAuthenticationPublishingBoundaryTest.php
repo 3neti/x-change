@@ -23,7 +23,8 @@ it('keeps the explicit replacement stub on the additive x-change base model', fu
 
     expect($stub)
         ->toContain('use LBHurtado\XChange\Auth\XChangeAuthenticatable;')
-        ->toContain('class User extends XChangeAuthenticatable')
+        ->toContain('class User extends XChangeAuthenticatable implements WalletFloat')
+        ->toContain('use Bavix\Wallet\Interfaces\WalletFloat;')
         ->not->toContain('Bavix\Wallet\Traits');
 });
 
