@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Services\Commercial;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\XChange\Enums\CommercialOfferingOrigin;
 use LBHurtado\XChange\Models\CommercialOffering;
+use LBHurtado\XChange\Models\CommercialOfferingActivation;
 
 final readonly class RepairCommercialOfferingManifest
 {
@@ -44,6 +45,17 @@ final readonly class RepairCommercialOfferingManifest
                 'manifest_hash' => $manifest->hash,
                 'manifest_yaml' => $manifest->yaml,
             ])->save();
+
+            CommercialOfferingActivation::query()
+                ->where('commercial_offering_id', $offering->getKey())
+                ->where('profile', $profile)
+                ->whereNull('deactivated_at')
+                ->lockForUpdate()
+                ->update([
+                    'offering_reference' => $offering->reference,
+                    'offering_version' => $offering->version,
+                    'snapshot_hash' => $snapshot->snapshotHash(),
+                ]);
 
             $this->journal->recordOffering(
                 $offering,
