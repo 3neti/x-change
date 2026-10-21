@@ -43,6 +43,13 @@ This command only updates the derived manifest fields on an installation
 baseline, records the repair in the execution journal, and refuses governed
 maker-checker revisions.
 
+The final deployment gate is strict and blocks a deployment when any configured
+commercial economics profile is not ready:
+
+```bash
+php artisan x-change:commercial:reconcile-profiles --strict --json --no-interaction
+```
+
 ## Product boundary
 
 The Cloud recipe owns deployment orchestration:

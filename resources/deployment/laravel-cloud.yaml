@@ -31,7 +31,7 @@ deploy:
     - php artisan migrate --force
     - php artisan x-change:commercial:provision-baselines --no-interaction
     - php artisan x-change:commercial:repair-baseline-manifest --profile=account_funding --json --no-interaction
-    - php artisan x-change:commercial:reconcile-profiles --json --no-interaction
+    - php artisan x-change:commercial:reconcile-profiles --strict --json --no-interaction
     - php artisan x-change:commissioning:refresh-release --no-interaction
 commission:
   preview: php artisan x-change:commission --dry-run --json --no-interaction
