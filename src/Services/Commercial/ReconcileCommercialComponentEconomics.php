@@ -8,6 +8,7 @@ use LBHurtado\XChange\Enums\CommercialActivationAuthority;
 use LBHurtado\XChange\Enums\CommercialOfferingOrigin;
 use LBHurtado\XChange\Models\CommercialComponentEconomicsActivation;
 use LBHurtado\XChange\Models\CommercialComponentEconomicsHead;
+use LBHurtado\XChange\Models\CommercialOfferingActivation;
 
 final readonly class ReconcileCommercialComponentEconomics
 {
@@ -27,11 +28,13 @@ final readonly class ReconcileCommercialComponentEconomics
         $current = $head->currentActivation;
         $economics = $current?->economics;
 
-        if (! $current instanceof CommercialComponentEconomicsActivation || $economics === null) {
-            throw new \DomainException("Commercial Component Economics profile [{$profile}] is not active.");
-        }
-
-        $offering = $economics->offering;
+        $offering = CommercialOfferingActivation::query()
+            ->with('offering')
+            ->where('profile', $profile)
+            ->whereNull('deactivated_at')
+            ->latest('activated_at')
+            ->firstOrFail()
+            ->offering;
         $manifest = $this->manifests->compile(
             $profile,
             $offering->offering(),
@@ -39,15 +42,17 @@ final readonly class ReconcileCommercialComponentEconomics
             $this->factory->make($profile, $offering->offering()),
         );
 
-        if ($manifest->hash === $economics->artifact_hash) {
+        if ($economics !== null
+            && $economics->commercial_offering_id === $offering->getKey()
+            && $manifest->hash === $economics->artifact_hash) {
             return $current;
         }
 
         $persisted = $this->persist->execute(
             offering: $offering,
             manifest: $manifest,
-            reference: $economics->reference,
-            version: $economics->version + 1,
+            reference: $economics?->reference ?? 'component-economics:'.$profile,
+            version: ((int) $this->persistedVersion($profile)) + 1,
             origin: CommercialOfferingOrigin::InstallationBaseline,
             authority: CommercialActivationAuthority::CommissioningManifest,
             commissioningManifestReference: $commissioningManifestReference,
@@ -58,5 +63,12 @@ final readonly class ReconcileCommercialComponentEconomics
             authority: CommercialActivationAuthority::CommissioningManifest,
             activationReference: 'component-economics-reconciliation:'.$profile.':'.$manifest->hash,
         );
+    }
+
+    private function persistedVersion(string $profile): int
+    {
+        return (int) \LBHurtado\XChange\Models\CommercialComponentEconomics::query()
+            ->where('profile', $profile)
+            ->max('version');
     }
 }
