@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 
 it('runs collectible basic payment through sequential claims runner', function () {
@@ -19,6 +20,7 @@ it('runs collectible basic payment through sequential claims runner', function (
     $issuer->save();
 
     fundTestUserWallet($issuer);
+    app(ProvisionCommercialBaselines::class)->provision('lifecycle-sequential-claims:test');
 
     $exitCode = Artisan::call('xchange:lifecycle:run', [
         'scenario' => 'collectible_basic_payment',

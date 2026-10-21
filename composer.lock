@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "37ea8e453f6a9bae454db3e889593e38",
+    "content-hash": "1a4b023be5ad2d2528d4fbb5fa50f6d0",
     "packages": [
         {
             "name": "3neti/cash",
@@ -1439,16 +1439,16 @@
         },
         {
             "name": "3neti/wallet",
-            "version": "v2.1.0",
+            "version": "v2.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/wallet.git",
-                "reference": "a6fba2ef9d13fdfda397a53347e4b88d8f7469f9"
+                "reference": "8f1387df0906058edf299f21a91e7ed6953f9a48"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/wallet/zipball/a6fba2ef9d13fdfda397a53347e4b88d8f7469f9",
-                "reference": "a6fba2ef9d13fdfda397a53347e4b88d8f7469f9",
+                "url": "https://api.github.com/repos/3neti/wallet/zipball/8f1387df0906058edf299f21a91e7ed6953f9a48",
+                "reference": "8f1387df0906058edf299f21a91e7ed6953f9a48",
                 "shasum": ""
             },
             "require": {
@@ -1490,9 +1490,9 @@
             "description": "Custom wallet for X-Change",
             "support": {
                 "issues": "https://github.com/3neti/wallet/issues",
-                "source": "https://github.com/3neti/wallet/tree/v2.1.0"
+                "source": "https://github.com/3neti/wallet/tree/v2.1.1"
             },
-            "time": "2026-09-29T02:45:51+00:00"
+            "time": "2026-10-20T11:59:55+00:00"
         },
         {
             "name": "3neti/x-action",
@@ -2053,16 +2053,16 @@
         },
         {
             "name": "3neti/x-stamp",
-            "version": "v1.3.0",
+            "version": "v1.4.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/x-stamp.git",
-                "reference": "d9d0e27f017b759e9d2a952b57728643c8f419e7"
+                "reference": "9450ddaf5d15db622a3b5563a1c9c5fbf80a8f6e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/x-stamp/zipball/d9d0e27f017b759e9d2a952b57728643c8f419e7",
-                "reference": "d9d0e27f017b759e9d2a952b57728643c8f419e7",
+                "url": "https://api.github.com/repos/3neti/x-stamp/zipball/9450ddaf5d15db622a3b5563a1c9c5fbf80a8f6e",
+                "reference": "9450ddaf5d15db622a3b5563a1c9c5fbf80a8f6e",
                 "shasum": ""
             },
             "require": {
@@ -2073,7 +2073,11 @@
             },
             "require-dev": {
                 "laravel/pint": "^1.29",
-                "pestphp/pest": "^4.0"
+                "pestphp/pest": "^4.0",
+                "spatie/browsershot": "^5.4"
+            },
+            "suggest": {
+                "spatie/browsershot": "^5.4 enables optional browser and browser-hd rendering (requires Node and Puppeteer)."
             },
             "type": "library",
             "autoload": {
@@ -2088,9 +2092,9 @@
             "description": "Portable versioned Stamp documents, validation, and HTML/SVG/PNG rendering.",
             "support": {
                 "issues": "https://github.com/3neti/x-stamp/issues",
-                "source": "https://github.com/3neti/x-stamp/tree/v1.3.0"
+                "source": "https://github.com/3neti/x-stamp/tree/v1.4.1"
             },
-            "time": "2026-10-18T14:43:22+00:00"
+            "time": "2026-10-21T06:38:47+00:00"
         },
         {
             "name": "3neti/x-stamp-designs",
