@@ -26,17 +26,12 @@ final readonly class RepairCommercialOfferingManifest
 
             $snapshot = $offering->offering();
 
-            if (! is_string($offering->snapshot_hash)
-                || ! hash_equals($offering->snapshot_hash, $snapshot->snapshotHash())) {
-                throw new \DomainException(
-                    "Commercial baseline [{$profile}] conflicts with its persisted snapshot.",
-                );
-            }
-
             $manifest = $this->manifests->compile($profile, $snapshot);
+            $previousSnapshotHash = $offering->snapshot_hash;
             $changed = $offering->manifest_schema !== $manifest->schema
                 || $offering->manifest_hash !== $manifest->hash
-                || $offering->manifest_yaml !== $manifest->yaml;
+                || $offering->manifest_yaml !== $manifest->yaml
+                || $offering->snapshot_hash !== $snapshot->snapshotHash();
 
             if (! $changed) {
                 return $offering;
@@ -44,6 +39,7 @@ final readonly class RepairCommercialOfferingManifest
 
             $previousHash = $offering->manifest_hash;
             $offering->forceFill([
+                'snapshot_hash' => $snapshot->snapshotHash(),
                 'manifest_schema' => $manifest->schema,
                 'manifest_hash' => $manifest->hash,
                 'manifest_yaml' => $manifest->yaml,
@@ -55,6 +51,7 @@ final readonly class RepairCommercialOfferingManifest
                 'commissioning-manifest',
                 $authorityReference,
                 [
+                    'previous_snapshot_hash' => $previousSnapshotHash,
                     'previous_manifest_hash' => $previousHash,
                     'manifest_hash' => $manifest->hash,
                 ],
