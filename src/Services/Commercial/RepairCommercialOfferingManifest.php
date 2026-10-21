@@ -29,17 +29,17 @@ final readonly class RepairCommercialOfferingManifest
 
             $manifest = $this->manifests->compile($profile, $snapshot);
             $previousSnapshotHash = $offering->snapshot_hash;
+            $manifestNeedsRepair = $offering->manifest_schema !== $manifest->schema
+                || $offering->manifest_hash !== $manifest->hash
+                || $offering->manifest_yaml !== $manifest->yaml
+                || $offering->snapshot_hash !== $snapshot->snapshotHash();
             $activeActivationNeedsRepair = CommercialOfferingActivation::query()
                 ->where('commercial_offering_id', $offering->getKey())
                 ->where('profile', $profile)
                 ->whereNull('deactivated_at')
                 ->where('snapshot_hash', '!=', $snapshot->snapshotHash())
                 ->exists();
-            $changed = $offering->manifest_schema !== $manifest->schema
-                || $offering->manifest_hash !== $manifest->hash
-                || $offering->manifest_yaml !== $manifest->yaml
-                || $offering->snapshot_hash !== $snapshot->snapshotHash()
-                || $activeActivationNeedsRepair;
+            $changed = $manifestNeedsRepair || $activeActivationNeedsRepair;
 
             if (! $changed) {
                 return $offering;
@@ -66,13 +66,16 @@ final readonly class RepairCommercialOfferingManifest
 
             $this->journal->recordOffering(
                 $offering,
-                'commercial.offering.baseline_manifest_repaired',
+                $manifestNeedsRepair
+                    ? 'commercial.offering.baseline_manifest_repaired'
+                    : 'commercial.offering.baseline_activation_repaired',
                 'commissioning-manifest',
                 $authorityReference,
                 [
                     'previous_snapshot_hash' => $previousSnapshotHash,
                     'previous_manifest_hash' => $previousHash,
                     'manifest_hash' => $manifest->hash,
+                    'activation_repaired' => $activeActivationNeedsRepair,
                 ],
                 $manifest->hash,
             );
