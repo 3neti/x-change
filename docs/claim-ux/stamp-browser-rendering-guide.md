@@ -111,10 +111,10 @@ changes. Its comparison site and temporary host wiring were removed afterward.
 
 **Documentation decision recorded 2026-10-21; implementation pending.** The
 portable source of truth is the owning x-stamp repository's
-`docs/rendering/PLAN.md` and `docs/rendering/COMPASS.md`, on documentation branch
-`docs/configurable-stamp-rendering`. These are cross-repository references, not
-files inside x-change. The documentation commits remain local until explicitly
-published; link published immutable references when releasing the implementation.
+[rendering plan](https://github.com/3neti/x-stamp/blob/v1.4.1/docs/rendering/PLAN.md)
+and [compass](https://github.com/3neti/x-stamp/blob/v1.4.1/docs/rendering/COMPASS.md).
+These immutable cross-repository references document the proposed implementation;
+publication of this guide does not enable provider switching.
 
 The target model separates quality (`standard`, `hd`) from provider (`gd`,
 `browsershot`, `cloudflare`, `auto`). It is not the configuration/API shipped in
