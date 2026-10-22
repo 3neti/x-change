@@ -2,7 +2,7 @@
 import { Head } from "@inertiajs/vue3";
 import OperationsEconomicsDashboard from "../../../components/x-change/OperationsEconomicsDashboard.vue";
 
-defineOptions({ layout: null });
+defineOptions({ layout: [] });
 defineProps<{ title: string; surface: string; operations_url: string; filters: { period: string; currency: string }; reports: any }>();
 </script>
 
