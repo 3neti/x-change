@@ -562,8 +562,8 @@ watch(
             <Button
                 ref="submitButton"
                 type="submit"
-                class="fixed inset-x-0 z-30 mx-auto h-11 w-[calc(100%-2.5rem)] max-w-md rounded-full shadow-lg shadow-foreground/10 sm:static sm:inset-auto sm:w-full sm:max-w-none sm:shadow-none"
-                style="bottom: max(0.2in, calc(env(safe-area-inset-bottom) + 1rem))"
+                class="fixed inset-x-0 z-30 mx-auto h-11 w-[calc(100%_-_2.5rem)] max-w-md rounded-full shadow-lg shadow-foreground/10 sm:static sm:inset-auto sm:w-full sm:max-w-none sm:shadow-none"
+                style="bottom: max(0.2in, calc(env(safe-area-inset-bottom) + 1rem)); margin-bottom: 0"
                 data-testid="claim-widget-submit-button"
                 :disabled="submitViewModel.disabled"
             >
