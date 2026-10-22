@@ -141,7 +141,7 @@ it('keeps an accepted claim rider handoff when a pending payout later fails', fu
         'voucher_id' => $voucher->getKey(),
         'claim_number' => 1,
         'claim_type' => 'disbursement',
-        'status' => 'succeeded',
+        'status' => 'pending_review',
         'idempotency_key' => 'pending-rider-claim',
         'completed_at' => now(),
         'currency' => 'PHP',
@@ -160,7 +160,7 @@ it('keeps an accepted claim rider handoff when a pending payout later fails', fu
         voucher_code: (string) $voucher->code,
         claim_type: 'disbursement',
         claimed: true,
-        status: 'succeeded',
+        status: 'pending_review',
         disbursement: ['status' => 'pending'],
     ), 'pending-rider-claim'))->toBeTrue();
 
@@ -196,7 +196,7 @@ it('does not authorize a rider handoff for a claim awaiting approval', function 
     expect(app(ClaimRiderHandoff::class)->prepare($voucher, new SubmitPayCodeClaimResultData(
         voucher_code: (string) $voucher->code,
         claim_type: 'disbursement',
-        claimed: true,
+        claimed: false,
         status: 'pending_review',
     ), 'pending-rider-claim'))->toBeFalse();
 

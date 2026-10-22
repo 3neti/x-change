@@ -269,7 +269,7 @@ it('hands an accepted claim with a pending payout to the rider redirect gate', f
                 'voucher_id' => $voucher->getKey(),
                 'claim_number' => 1,
                 'claim_type' => 'disbursement',
-                'status' => 'succeeded',
+                'status' => 'pending_review',
                 'idempotency_key' => data_get($payload, '_meta.idempotency_key'),
                 'completed_at' => now(),
                 'currency' => 'PHP',
@@ -279,7 +279,7 @@ it('hands an accepted claim with a pending payout to the rider redirect gate', f
                 voucher_code: (string) $actualVoucher->code,
                 claim_type: 'disbursement',
                 claimed: true,
-                status: 'succeeded',
+                status: 'pending_review',
                 disbursement: ['status' => 'pending'],
             );
         });

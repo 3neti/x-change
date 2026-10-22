@@ -32,7 +32,7 @@ final class ClaimRiderHandoff
     {
         if (! $result instanceof SubmitPayCodeClaimResultData
             || ! $result->claimed
-            || ! in_array($result->status, ['succeeded', 'redeemed', 'withdrawn'], true)
+            || ! in_array($result->status, ['succeeded', 'redeemed', 'withdrawn', 'pending_review'], true)
             || $result->voucher_code !== (string) $voucher->code
             || $idempotencyKey === ''
             || blank(data_get($voucher->instructions?->toArray(), 'rider.url'))
@@ -43,7 +43,7 @@ final class ClaimRiderHandoff
         $claim = VoucherClaim::query()
             ->where('voucher_id', $voucher->getKey())
             ->where('idempotency_key', $idempotencyKey)
-            ->whereIn('status', ['succeeded', 'redeemed', 'withdrawn'])
+            ->whereIn('status', ['succeeded', 'redeemed', 'withdrawn', 'pending_review'])
             ->latest('id')
             ->first();
 
