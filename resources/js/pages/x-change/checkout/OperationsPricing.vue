@@ -2,6 +2,8 @@
 import { Head, useForm } from "@inertiajs/vue3";
 import { computed } from "vue";
 
+defineOptions({ layout: null });
+
 type PricingItem = {
   reference: string;
   label: string;
