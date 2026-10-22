@@ -200,7 +200,7 @@ const activityNavigationContext = {
 };
 
 describe('Cockpit Pay Code Explorer hydration', () => {
-    it('falls back when saved thumbnail bytes are missing', async () => {
+    it('keeps the stamp detail accessible when saved thumbnail bytes are missing', async () => {
         const wrapper = mount(CockpitPayCodeStampThumbnail, {
             props: {
                 code: 'PC-HYDRATED-001',
@@ -209,11 +209,9 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         });
 
         await wrapper.get('img').trigger('error');
-        expect(wrapper.get('img').attributes('src'))
-            .toBe('/x/claim/PC-HYDRATED-001/share-card.png');
-
-        await wrapper.get('img').trigger('error');
-        expect(wrapper.get('[data-testid="cockpit-pay-code-stamp-placeholder"]').exists()).toBe(true);
+        expect(wrapper.get('[data-testid="cockpit-pay-code-stamp-thumbnail"]').attributes('href'))
+            .toBe('/x/cockpit/pay-codes/PC-HYDRATED-001?tab=stamp');
+        expect(wrapper.get('[data-testid="cockpit-pay-code-stamp-reconstruction-link"]').exists()).toBe(true);
     });
 
     it('hydrates explorer rows from sanitized list read model records', () => {
