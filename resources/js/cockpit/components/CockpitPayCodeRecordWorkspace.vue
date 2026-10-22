@@ -86,9 +86,25 @@ const engineeringLoading = ref(false);
 const engineeringError = ref<string | null>(null);
 const engineeringCopied = ref(false);
 const stampImageFailed = ref(false);
+const stampImageFallback = ref(false);
 
 const overview = computed(() => record(props.voucher?.overview));
 const stamp = computed(() => record(props.voucher?.stamp));
+const stampImageUrl = computed(() =>
+  stampImageFallback.value ? text(stamp.value.fallback_url) : text(stamp.value.image_url),
+);
+const stampDownloadUrl = computed(() =>
+  stampImageFallback.value ? text(stamp.value.fallback_url) : text(stamp.value.download_url),
+);
+
+function handleStampImageError(): void {
+  if (!stampImageFallback.value && text(stamp.value.fallback_url)) {
+    stampImageFallback.value = true;
+    return;
+  }
+
+  stampImageFailed.value = true;
+}
 const claimSummary = computed(() =>
   record(props.voucher?.claim_summary ?? overview.value.claim_summary),
 );
@@ -1209,15 +1225,16 @@ function number(value: unknown): number {
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 class="text-lg font-semibold text-slate-950 dark:text-white">
-              Issued stamp
+              {{ stampImageFallback ? "Current stamp rendering" : "Issued stamp" }}
             </h2>
             <p class="text-sm text-slate-500 dark:text-slate-400">
               {{ code }} · {{ status }}
             </p>
           </div>
           <a
-            v-if="stamp.available === true && !stampImageFailed && text(stamp.download_url)"
-            :href="text(stamp.download_url)"
+            v-if="stamp.available === true && !stampImageFailed && stampDownloadUrl"
+            :href="stampDownloadUrl"
+            :download="stampImageFallback ? `Pay-Code-${code}.png` : undefined"
             class="inline-flex items-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800"
             data-testid="pay-code-stamp-download"
           >
@@ -1225,16 +1242,16 @@ function number(value: unknown): number {
           </a>
         </div>
         <div
-          v-if="stamp.available === true && !stampImageFailed && text(stamp.image_url)"
+          v-if="stamp.available === true && !stampImageFailed && stampImageUrl"
           class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700"
         >
           <img
-            :src="text(stamp.image_url)"
-            :alt="`Issued stamp for Pay Code ${code}`"
+            :src="stampImageUrl"
+            :alt="`${stampImageFallback ? 'Current rendering of' : 'Issued stamp for'} Pay Code ${code}`"
             class="block aspect-[40/21] w-full object-contain"
             decoding="async"
             data-testid="pay-code-stamp-image"
-            @error="stampImageFailed = true"
+            @error="handleStampImageError"
           />
         </div>
         <div

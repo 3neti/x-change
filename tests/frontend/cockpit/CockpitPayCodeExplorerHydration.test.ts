@@ -2,6 +2,7 @@ import { router } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import PayCodeExplorer from '../../../resources/js/cockpit/pages/PayCodeExplorer.vue';
+import CockpitPayCodeStampThumbnail from '../../../resources/js/cockpit/components/CockpitPayCodeStampThumbnail.vue';
 import PayCodeExplorerRouteAdapter from '../../../resources/js/pages/x-change/cockpit/PayCodeExplorer.vue';
 
 const payCodesReadModel = {
@@ -72,6 +73,7 @@ const payCodesReadModel = {
             stamp: {
                 available: true,
                 thumbnail_url: '/x/cockpit/pay-codes/PC-HYDRATED-001/stamp/thumbnail/abc.png',
+                fallback_url: '/x/claim/PC-HYDRATED-001/share-card.png',
                 detail_url: '/x/cockpit/pay-codes/PC-HYDRATED-001?tab=stamp',
             },
             template: 'Money Changer',
@@ -198,6 +200,22 @@ const activityNavigationContext = {
 };
 
 describe('Cockpit Pay Code Explorer hydration', () => {
+    it('falls back when saved thumbnail bytes are missing', async () => {
+        const wrapper = mount(CockpitPayCodeStampThumbnail, {
+            props: {
+                code: 'PC-HYDRATED-001',
+                stamp: payCodesReadModel.records[0].stamp,
+            },
+        });
+
+        await wrapper.get('img').trigger('error');
+        expect(wrapper.get('img').attributes('src'))
+            .toBe('/x/claim/PC-HYDRATED-001/share-card.png');
+
+        await wrapper.get('img').trigger('error');
+        expect(wrapper.get('[data-testid="cockpit-pay-code-stamp-placeholder"]').exists()).toBe(true);
+    });
+
     it('hydrates explorer rows from sanitized list read model records', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {

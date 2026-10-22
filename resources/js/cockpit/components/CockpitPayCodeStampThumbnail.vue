@@ -1,15 +1,26 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { Image } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import type { CockpitPayCodeStamp } from '../types';
 
-defineProps<{
+const props = defineProps<{
     code: string;
     stamp?: CockpitPayCodeStamp;
 }>();
 
 const imageFailed = ref(false);
+const usingFallback = ref(false);
+const imageUrl = computed(() => usingFallback.value ? props.stamp?.fallback_url : props.stamp?.thumbnail_url);
+
+function handleImageError(): void {
+    if (!usingFallback.value && props.stamp?.fallback_url) {
+        usingFallback.value = true;
+        return;
+    }
+
+    imageFailed.value = true;
+}
 </script>
 
 <template>
@@ -21,12 +32,12 @@ const imageFailed = ref(false);
         data-testid="cockpit-pay-code-stamp-thumbnail"
     >
         <img
-            :src="stamp.thumbnail_url"
+            :src="imageUrl"
             alt=""
             loading="lazy"
             decoding="async"
             class="aspect-[40/21] w-full object-cover"
-            @error="imageFailed = true"
+            @error="handleImageError"
         />
     </Link>
     <span

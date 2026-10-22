@@ -41,6 +41,10 @@ it('shows the saved stamp in Cockpit projections and serves full and thumbnail i
         ->assertOk()
         ->assertJsonPath('props.read_model.voucher.stamp.image_url', $fullUrl);
 
+    $this->actingAs($owner)->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code]))
+        ->assertJsonPath('props.read_model.voucher.stamp.fallback_url', route('x-change.claim.share-card', ['code' => $voucher->code]));
+
     $full = $this->actingAs($owner)->get($fullUrl)
         ->assertOk()
         ->assertHeader('Content-Type', 'image/png');

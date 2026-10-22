@@ -171,6 +171,38 @@ describe("Cockpit Pay Code record workspace", () => {
       .toContain("Stamp unavailable");
   });
 
+  it("shows a current rendering when the saved stamp bytes are unavailable", async () => {
+    window.history.replaceState({}, "", "/x/cockpit/pay-codes/CAMP-CB2L?tab=stamp");
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "CAMP-CB2L",
+        status: "redeemed",
+        voucher: {
+          ...voucher,
+          stamp: {
+            available: true,
+            image_url: "/stamp/saved.png",
+            download_url: "/stamp/saved.png?download=1",
+            fallback_url: "/x/claim/CAMP-CB2L/share-card.png",
+          },
+        },
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+
+    await wrapper.get('[data-testid="pay-code-stamp-image"]').trigger("error");
+    expect(wrapper.get('[data-testid="pay-code-stamp-image"]').attributes("src"))
+      .toBe("/x/claim/CAMP-CB2L/share-card.png");
+    expect(wrapper.get('[data-testid="pay-code-stamp-tab"]').text())
+      .toContain("Current stamp rendering");
+    expect(wrapper.get('[data-testid="pay-code-stamp-download"]').attributes("href"))
+      .toBe("/x/claim/CAMP-CB2L/share-card.png");
+
+    await wrapper.get('[data-testid="pay-code-stamp-image"]').trigger("error");
+    expect(wrapper.get('[data-testid="pay-code-stamp-unavailable"]').exists()).toBe(true);
+  });
+
   it("loads the sanitized Engineering Preview only when its tab is opened", async () => {
     const fetch = vi.fn().mockResolvedValue({
       ok: true,

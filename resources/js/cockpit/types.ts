@@ -2198,6 +2198,7 @@ export type CockpitPayCodeStamp = {
   thumbnail_url?: string;
   image_url?: string;
   download_url?: string;
+  fallback_url?: string;
   detail_url?: string;
 };
 
