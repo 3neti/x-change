@@ -22,6 +22,7 @@ class CockpitVoucherReadModelData extends Data
      * @param  array<string, mixed>  $slices
      * @param  array<string, mixed>  $collection
      * @param  array<string, mixed>  $pos_reference
+     * @param  array<string, mixed>  $stamp
      */
     public function __construct(
         public readonly ?string $code,
@@ -40,5 +41,6 @@ class CockpitVoucherReadModelData extends Data
         public readonly array $collection = [],
         public readonly array $pos_reference = [],
         public readonly array $claim_summary = [],
+        public readonly array $stamp = [],
     ) {}
 }

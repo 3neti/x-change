@@ -46,6 +46,7 @@ import type {
 
 type WorkspaceTab =
   | "overview"
+  | "stamp"
   | "instructions"
   | "slices"
   | "claim"
@@ -84,8 +85,10 @@ const engineeringPreview = ref<Record<string, unknown> | null>(null);
 const engineeringLoading = ref(false);
 const engineeringError = ref<string | null>(null);
 const engineeringCopied = ref(false);
+const stampImageFailed = ref(false);
 
 const overview = computed(() => record(props.voucher?.overview));
+const stamp = computed(() => record(props.voucher?.stamp));
 const claimSummary = computed(() =>
   record(props.voucher?.claim_summary ?? overview.value.claim_summary),
 );
@@ -312,6 +315,12 @@ const tabs = computed(() => [
     key: "overview" as const,
     label: "Overview",
     icon: ReceiptText,
+    count: null,
+  },
+  {
+    key: "stamp" as const,
+    label: "Stamp",
+    icon: Image,
     count: null,
   },
   {
@@ -737,6 +746,7 @@ function workspaceTarget(): { tab: WorkspaceTab; claimId: number | null } {
   const query = new URLSearchParams(window.location.search);
   const allowedTabs: WorkspaceTab[] = [
     "overview",
+    "stamp",
     "instructions",
     "slices",
     "claim",
@@ -1188,6 +1198,51 @@ function number(value: unknown): number {
             :code="code"
             :control="terminalControl"
           />
+        </div>
+      </section>
+
+      <section
+        v-else-if="activeTab === 'stamp'"
+        class="mx-auto max-w-[1200px] space-y-4"
+        data-testid="pay-code-stamp-tab"
+      >
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-semibold text-slate-950 dark:text-white">
+              Issued stamp
+            </h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">
+              {{ code }} · {{ status }}
+            </p>
+          </div>
+          <a
+            v-if="stamp.available === true && !stampImageFailed && text(stamp.download_url)"
+            :href="text(stamp.download_url)"
+            class="inline-flex items-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800"
+            data-testid="pay-code-stamp-download"
+          >
+            Download PNG
+          </a>
+        </div>
+        <div
+          v-if="stamp.available === true && !stampImageFailed && text(stamp.image_url)"
+          class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700"
+        >
+          <img
+            :src="text(stamp.image_url)"
+            :alt="`Issued stamp for Pay Code ${code}`"
+            class="block aspect-[40/21] w-full object-contain"
+            decoding="async"
+            data-testid="pay-code-stamp-image"
+            @error="stampImageFailed = true"
+          />
+        </div>
+        <div
+          v-else
+          class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+          data-testid="pay-code-stamp-unavailable"
+        >
+          Stamp unavailable for this Pay Code.
         </div>
       </section>
 

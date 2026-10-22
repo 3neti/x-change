@@ -151,6 +151,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         $feedbackDeliveryIds = $integrationReferences->feedbackDeliveryIds($code);
         $voucherId = $this->nullableString($detail['voucher_id'] ?? $detail['id'] ?? null);
         $sliceProjection = [];
+        $voucher = null;
 
         if ($voucherId !== null && ctype_digit($voucherId)) {
             $voucher = Voucher::query()->find((int) $voucherId);
@@ -181,6 +182,9 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 claim_summary: $detailProjection->claimSummary($detail),
                 collection: $detailProjection->collection($detail),
                 pos_reference: $detailProjection->posReference($detail),
+                stamp: $voucher instanceof Voucher
+                    ? app(CockpitPayCodeStampProjection::class)->forVoucher($voucher)
+                    : ['available' => false],
                 evidence_summary: $this->voucherEvidenceSummary(
                     summary: $summary,
                     executionStatus: $execution->status,
@@ -1438,12 +1442,16 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             ->values();
         $sourceVouchers = $this->payCodeListVoucherModels($sourceVoucherIds);
         $posReferences = $this->posSaleReferenceService()->forVouchers($sourceVouchers);
-        $sourceRows = $sourceRows->map(function (array $row) use ($posReferences): array {
+        $sourceRows = $sourceRows->map(function (array $row) use ($posReferences, $sourceVouchers): array {
             $voucherId = (string) ($row['voucher_id'] ?? $row['id'] ?? '');
+            $voucher = $sourceVouchers->get($voucherId);
             $row['pos_reference'] = is_array($posReferences[$voucherId] ?? null)
                 ? $posReferences[$voucherId]
                 : [];
             $row['amount_presentation'] = $this->payCodeAmountPresentation($row);
+            if (! isset($row['stamp']) && $voucher instanceof Voucher) {
+                $row['stamp'] = app(CockpitPayCodeStampProjection::class)->forVoucher($voucher);
+            }
 
             return $row;
         });
@@ -1650,6 +1658,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             'id' => $voucher->id,
             'voucher_id' => $voucher->id,
             'code' => $voucher->code,
+            'stamp' => app(CockpitPayCodeStampProjection::class)->forVoucher($voucher),
             'template' => 'Pay Code',
             'amount' => $this->payCodeListAmount($voucher, $instructions),
             'currency' => $this->nullableString(data_get($instructions, 'cash.currency')) ?? 'PHP',
@@ -2394,6 +2403,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             claim_summary: is_array($row['claim_summary'] ?? null) ? $row['claim_summary'] : [],
             collection: is_array($row['collection'] ?? null) ? $row['collection'] : [],
             pos_reference: is_array($row['pos_reference'] ?? null) ? $row['pos_reference'] : [],
+            stamp: is_array($row['stamp'] ?? null) ? $row['stamp'] : ['available' => false],
         );
     }
 

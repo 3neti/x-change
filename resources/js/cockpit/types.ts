@@ -2014,6 +2014,7 @@ export type CockpitPayCodeExplorerStats = {
 
 export type CockpitPayCodeExplorerRecord = {
   code: string;
+  stamp?: CockpitPayCodeStamp;
   template: string;
   purpose: string | null;
   capability: {
@@ -2187,8 +2188,17 @@ export type CockpitVoucherReadModel = {
   pos_reference?: CockpitPosSaleReferenceReadModel;
   evidence_summary?: CockpitVoucherEvidenceSummary[];
   distribution_links?: Record<string, unknown>;
+  stamp?: CockpitPayCodeStamp;
   redactions?: CockpitReadModelRedactions;
   authorized?: boolean;
+};
+
+export type CockpitPayCodeStamp = {
+  available: boolean;
+  thumbnail_url?: string;
+  image_url?: string;
+  download_url?: string;
+  detail_url?: string;
 };
 
 export type CockpitPosSaleReferenceReadModel = {
@@ -2308,6 +2318,7 @@ export type CockpitMoneyIssuerOption = {
 
 export type CockpitPayCodeExplorerReadModelRecord = {
   code?: string | null;
+  stamp?: CockpitPayCodeStamp;
   template?: string | null;
   purpose?: string | null;
   amount?: string | number | null;

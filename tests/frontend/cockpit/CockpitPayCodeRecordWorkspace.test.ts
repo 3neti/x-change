@@ -130,6 +130,47 @@ describe("Cockpit Pay Code record workspace", () => {
     vi.unstubAllGlobals();
   });
 
+  it("opens the saved stamp from a deep link and keeps the download available", () => {
+    window.history.replaceState({}, "", "/x/cockpit/pay-codes/CAMP-CB2L?tab=stamp");
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "CAMP-CB2L",
+        status: "redeemed",
+        voucher: {
+          ...voucher,
+          stamp: {
+            available: true,
+            image_url: "/x/cockpit/pay-codes/CAMP-CB2L/stamp/full/abc.png",
+            download_url: "/x/cockpit/pay-codes/CAMP-CB2L/stamp/full/abc.png?download=1",
+          },
+        },
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+
+    expect(wrapper.get('[data-testid="pay-code-stamp-image"]').attributes("src"))
+      .toBe("/x/cockpit/pay-codes/CAMP-CB2L/stamp/full/abc.png");
+    expect(wrapper.get('[data-testid="pay-code-stamp-download"]').attributes("href"))
+      .toContain("download=1");
+  });
+
+  it("shows a neutral state when an older Pay Code has no saved stamp", async () => {
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "CAMP-CB2L",
+        status: "redeemed",
+        voucher,
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+
+    await wrapper.findAll('[role="tab"]').find((tab) => tab.text().includes("Stamp"))!.trigger("click");
+    expect(wrapper.get('[data-testid="pay-code-stamp-unavailable"]').text())
+      .toContain("Stamp unavailable");
+  });
+
   it("loads the sanitized Engineering Preview only when its tab is opened", async () => {
     const fetch = vi.fn().mockResolvedValue({
       ok: true,

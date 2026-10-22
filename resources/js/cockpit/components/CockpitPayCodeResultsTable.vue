@@ -11,6 +11,7 @@ import {
 import { computed, ref, watch } from 'vue';
 import CockpitPayCodeCopyButton from './CockpitPayCodeCopyButton.vue';
 import CockpitPayCodeQuickTerminalAction from './CockpitPayCodeQuickTerminalAction.vue';
+import CockpitPayCodeStampThumbnail from './CockpitPayCodeStampThumbnail.vue';
 import { usePayCodeExplorerClock } from '../composables/usePayCodeExplorerClock';
 import {
     formatAbsoluteTime,
@@ -409,6 +410,10 @@ function timingFacts(record: CockpitPayCodeExplorerRecord) {
                             {{ record.capability.voucherTypeLabel }}
                         </span>
                     </div>
+                    <CockpitPayCodeStampThumbnail
+                        :code="record.code"
+                        :stamp="record.stamp"
+                    />
                     <div class="shrink-0 text-right">
                         <span
                             :class="statusBadgeClass(record.status)"
@@ -704,6 +709,12 @@ function timingFacts(record: CockpitPayCodeExplorerRecord) {
                             class="min-w-0 px-4 py-2.5"
                             data-testid="cockpit-pay-code-row-identity"
                         >
+                            <div class="flex items-start gap-3">
+                                <CockpitPayCodeStampThumbnail
+                                    :code="record.code"
+                                    :stamp="record.stamp"
+                                />
+                                <div class="min-w-0">
                             <p
                                 v-if="record.posReference?.sale_reference"
                                 class="mt-0.5 truncate font-mono text-xs font-semibold text-emerald-700 dark:text-emerald-300"
@@ -739,6 +750,8 @@ function timingFacts(record: CockpitPayCodeExplorerRecord) {
                                     :key="`${record.code}-${fact.label}`"
                                     :title="fact.absolute"
                                 >{{ fact.label }} {{ fact.relative }}</span>
+                                </div>
+                            </div>
                             </div>
                             <span
                                 :class="

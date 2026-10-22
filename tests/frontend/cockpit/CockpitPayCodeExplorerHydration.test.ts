@@ -69,6 +69,11 @@ const payCodesReadModel = {
     records: [
         {
             code: 'PC-HYDRATED-001',
+            stamp: {
+                available: true,
+                thumbnail_url: '/x/cockpit/pay-codes/PC-HYDRATED-001/stamp/thumbnail/abc.png',
+                detail_url: '/x/cockpit/pay-codes/PC-HYDRATED-001?tab=stamp',
+            },
             template: 'Money Changer',
             purpose: 'School transport allowance',
             pos_reference: {
@@ -204,6 +209,9 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             'Search, inspect, and apply governed lifecycle controls.',
         );
         expect(wrapper.text()).toContain('PC-HYDRATED-001');
+        expect(wrapper.findAll('[data-testid="cockpit-pay-code-stamp-thumbnail"]')).toHaveLength(2);
+        expect(wrapper.get('[data-testid="cockpit-pay-code-stamp-thumbnail"]').attributes('href'))
+            .toBe('/x/cockpit/pay-codes/PC-HYDRATED-001?tab=stamp');
         expect(wrapper.text()).toContain('PC-HYDRATED-002');
         expect(wrapper.text()).toContain('Snacks');
         expect(wrapper.text()).toContain('POS-20260828-01HZZZZZZZZZZZZZZZZZZZZZZZ');

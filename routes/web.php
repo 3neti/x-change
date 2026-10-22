@@ -94,6 +94,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeFundingClaimCon
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeFundingInspectionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodePaymentTransactionsController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodePayoutCorrectionController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeStampController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeTemplateStoreController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeTemplateUpdateController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeTerminalStateController;
@@ -114,8 +115,8 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPrev
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewFrameController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewShowController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateClaimPreviewStepController;
-use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateInterpretController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateFundingPreflightController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateInterpretController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateMutationRouteShellController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGeneratePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitReviewedFundingPayCodeClaimController;
@@ -984,6 +985,11 @@ Route::prefix('x')->middleware([
         Route::get('diagnostics/runtime-profile', CockpitRuntimeProfilePageController::class)->name('x-change.cockpit.diagnostics.runtime-profile');
         Route::prefix('pay-codes')->group(function (): void {
             Route::get('/', CockpitPayCodeExplorerPageController::class)->name('x-change.cockpit.pay-codes.index');
+            Route::get('{code}/stamp/{size}/{sha256}.png', CockpitPayCodeStampController::class)
+                ->whereIn('size', ['full', 'thumbnail'])
+                ->where('sha256', '[a-f0-9]{64}')
+                ->middleware('throttle:240,1')
+                ->name('x-change.cockpit.pay-codes.stamp.show');
             Route::get('{code}/distribution', CockpitDistributionWorkspacePageController::class)->name('x-change.cockpit.pay-codes.distribution');
             Route::get(
                 '{code}/evidence/{source}/{evidence}',
