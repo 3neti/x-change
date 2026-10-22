@@ -21,6 +21,43 @@ beforeEach(function (): void {
     );
 });
 
+it('stores Splash artwork on the configured shared disk', function (): void {
+    Storage::fake('s3');
+    config()->set('x-change.claim.share.splash_artwork.disk', 's3');
+
+    $image = imagecreatetruecolor(8, 8);
+    ob_start();
+    imagepng($image);
+    $contents = ob_get_clean();
+    imagedestroy($image);
+
+    expect($contents)->toBeString()->not->toBeEmpty();
+
+    Http::fake([
+        'https://raw.githubusercontent.com/example/art/main/shared.png' => Http::response(
+            $contents,
+            200,
+            ['Content-Type' => 'image/png'],
+        ),
+    ]);
+
+    $input = validVoucherInstructions(overrides: [
+        'rider' => [
+            'splash' => '<img src="https://github.com/example/art/blob/main/shared.png?raw=true">',
+            'stamp' => ['version' => 2, 'artwork_source' => 'splash'],
+        ],
+    ])->toArray();
+    $prepared = app(RiderSplashArtworkSnapshotterContract::class)->prepare($input);
+    $snapshot = RiderSplashArtworkSnapshotData::fromArray(data_get(
+        $prepared,
+        'metadata.custom.rider_splash_artwork',
+    ));
+
+    expect($snapshot)->toBeInstanceOf(RiderSplashArtworkSnapshotData::class);
+    Storage::disk('s3')->assertExists('x-change/claim/splash-artwork/'.$snapshot->sha256.'.png');
+    Storage::disk('local')->assertMissing('x-change/claim/splash-artwork/'.$snapshot->sha256.'.png');
+});
+
 it('captures validated remote Splash artwork into private content-addressed storage', function (): void {
     $image = imagecreatetruecolor(8, 8);
     $red = imagecolorallocate($image, 244, 63, 94);

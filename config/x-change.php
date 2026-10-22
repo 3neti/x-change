@@ -2791,7 +2791,7 @@ return [
                 ),
                 'disk' => env(
                     'XCHANGE_CLAIM_SHARE_SPLASH_ARTWORK_DISK',
-                    'local',
+                    env('XCHANGE_CLAIM_SHARE_ARTIFACT_DISK', 'local'),
                 ),
                 'directory' => env(
                     'XCHANGE_CLAIM_SHARE_SPLASH_ARTWORK_DIRECTORY',
