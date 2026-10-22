@@ -228,7 +228,8 @@ describe('ClaimWidget compiled form flow rendering', () => {
         const submitButton = wrapper.get('[data-testid="claim-widget-submit-button"]');
 
         expect(submitButton.classes()).toContain('fixed');
-        expect(submitButton.classes()).toContain('w-[calc(100%_-_2.5rem)]');
+        expect(submitButton.classes()).toContain('inset-x-4');
+        expect(submitButton.classes()).toContain('w-auto');
         expect(submitButton.attributes('style')).toContain('margin-bottom: 0');
         expect(submitButton.classes()).toContain('sm:static');
         expect(submitButton.classes()).toContain('sm:w-full');
