@@ -1,5 +1,10 @@
 # Settlement Operating System Compass
 
+The Quick Generate Claim Experience workstream is governed by the
+[Cockpit plan](../ui-cockpit/CLAIM_EXPERIENCE_PLAN.md) and
+[compass](../ui-cockpit/CLAIM_EXPERIENCE_COMPASS.md); it does not move the
+Voucher or Form Flow package boundaries.
+
 MVP deployment and release readiness is governed by
 [`MVP_ALPHA_BETA_COMPASS.md`](MVP_ALPHA_BETA_COMPASS.md).
 

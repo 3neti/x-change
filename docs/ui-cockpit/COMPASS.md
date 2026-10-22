@@ -1,5 +1,10 @@
 # x-change Cockpit Compass
 
+The active Claim Experience editor workstream is tracked in
+[its plan](CLAIM_EXPERIENCE_PLAN.md) and
+[compass](CLAIM_EXPERIENCE_COMPASS.md). It preserves the Order and Pay Code
+card internals and uses the existing voucher-instruction draft.
+
 ## Current Objective
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.

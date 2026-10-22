@@ -97,6 +97,42 @@ it('issues a payable POS sale and prepares its operator-safe QR Ph attempt', fun
         ->assertJsonPath('props.pos_voucher.collection.is_fully_collected', false);
 });
 
+it('rejects incomplete claim area and daily window rules before issuance', function (): void {
+    actingAsTestUser();
+
+    $missingCenter = cockpitPosPayload();
+    data_set($missingCenter, 'validation.location', [
+        'required' => true,
+        'target_lat' => 0,
+        'target_lng' => 0,
+        'radius_meters' => 100,
+    ]);
+
+    $this->postJson(route('x-change.cockpit.quick-generate.store'), $missingCenter)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('validation.location');
+
+    $invalidWindow = cockpitPosPayload();
+    data_set($invalidWindow, 'validation.time.window', [
+        'start_time' => '09:00',
+        'end_time' => '09:00',
+        'timezone' => 'Asia/Manila',
+    ]);
+
+    $this->postJson(route('x-change.cockpit.quick-generate.store'), $invalidWindow)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('validation.time.window');
+
+    $unsupportedValueUse = cockpitPosPayload();
+    data_set($unsupportedValueUse, 'stored_value.enabled', true);
+    data_set($unsupportedValueUse, 'stored_value.replenishable', false);
+    data_set($unsupportedValueUse, 'stored_value.maximum_balance', 50);
+
+    $this->postJson(route('x-change.cockpit.quick-generate.store'), $unsupportedValueUse)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('stored_value');
+});
+
 it('keeps POS references canonical, repeatable, and replay safe', function (): void {
     actingAsTestUser();
     $payload = cockpitPosPayload();

@@ -47,6 +47,43 @@ class GeneratePayCodeRequest extends FormRequest
             ...$this->minimumWithdrawalPolicyValidators(),
             ...$this->cockpitPayeePolicyValidators(),
             function (Validator $validator): void {
+                if ($this->routeIs('x-change.cockpit.quick-generate.store')) {
+                    if ($this->isPayable() && $this->filled('slice_plan')) {
+                        $validator->errors()->add('slice_plan', 'Collect Pay Codes use one collection target without release slices.');
+                    }
+
+                    if (in_array($this->input('voucher_type'), ['payable', 'settlement'], true) && $this->boolean('stored_value.enabled')) {
+                        $validator->errors()->add('stored_value', 'Reusable balance is available only for Disburse Pay Codes.');
+                    }
+
+                    $location = $this->input('validation.location');
+
+                    if (is_array($location) && ($location['required'] ?? false) === true) {
+                        $latitude = $location['target_lat'] ?? null;
+                        $longitude = $location['target_lng'] ?? null;
+                        $radius = $location['radius_meters'] ?? null;
+
+                        if (! is_numeric($latitude) || ! is_numeric($longitude)
+                            || (float) $latitude < -90 || (float) $latitude > 90
+                            || (float) $longitude < -180 || (float) $longitude > 180
+                            || ((float) $latitude === 0.0 && (float) $longitude === 0.0)
+                            || ! is_numeric($radius) || (int) $radius < 1 || (int) $radius > 100000
+                        ) {
+                            $validator->errors()->add('validation.location', 'Choose an allowed location and a radius from 1 to 100,000 meters.');
+                        }
+                    }
+
+                    $window = $this->input('validation.time.window');
+
+                    if (is_array($window) && (
+                        ! isset($window['start_time'], $window['end_time'], $window['timezone'])
+                        || $window['start_time'] === $window['end_time']
+                        || ! in_array($window['timezone'], timezone_identifiers_list(), true)
+                    )) {
+                        $validator->errors()->add('validation.time.window', 'Choose different daily start and end times in a valid time zone.');
+                    }
+                }
+
                 if ($this->isPayable()) {
                     $targetAmount = $this->input('target_amount')
                         ?? $this->input('cash.target_amount')
@@ -181,6 +218,13 @@ class GeneratePayCodeRequest extends FormRequest
             'onboarding' => ['nullable', 'boolean'],
             'validation' => ['nullable', 'array'],
             'validation.*' => ['nullable'],
+            'validation.location.required' => ['nullable', 'boolean'],
+            'validation.location.target_lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'validation.location.target_lng' => ['nullable', 'numeric', 'between:-180,180'],
+            'validation.location.radius_meters' => ['nullable', 'integer', 'between:1,100000'],
+            'validation.time.window.start_time' => ['nullable', 'date_format:H:i'],
+            'validation.time.window.end_time' => ['nullable', 'date_format:H:i'],
+            'validation.time.window.timezone' => ['nullable', 'timezone'],
             'execution' => ['nullable', 'array'],
             'execution.schema' => ['nullable', 'string', 'max:120'],
             'execution.driver' => ['nullable', 'string', 'max:120'],

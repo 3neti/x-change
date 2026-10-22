@@ -727,6 +727,12 @@ const requireMobileValidation = ref(true);
 const requirePayableValidation = ref(false);
 const requireCountryValidation = ref(false);
 const requireLocationValidation = ref(false);
+const locationLatitude = ref("");
+const locationLongitude = ref("");
+const locationRadiusMeters = ref("100");
+const locationLookupError = ref<string | null>(null);
+const locationTestLatitude = ref("");
+const locationTestLongitude = ref("");
 const verificationKyc = ref(false);
 const verificationOtp = ref(false);
 const verificationSelfie = ref(false);
@@ -741,8 +747,9 @@ const timeValidationEnabled = ref(false);
 const timeWindowStart = ref("09:00");
 const timeWindowEnd = ref("17:00");
 const timeWindowTimezone = ref("Asia/Manila");
+const timeTestValue = ref("");
 const timeLimitMinutes = ref("10");
-const timeTrackDuration = ref(true);
+const timeTrackDuration = ref(false);
 const riderUrl = ref("");
 const riderUrlPreset = ref("");
 const riderRedirectTimeout = ref("");
@@ -895,6 +902,23 @@ const onDemandFundingDialogOpen = ref(false);
 const onDemandFundingProjection =
   ref<CockpitOnDemandIssuanceFundingProjection | null>(null);
 const instructionBuilderElement = ref<HTMLDetailsElement | null>(null);
+
+function openClaimEditorSection(sectionId: string): void {
+  const section = instructionBuilderElement.value?.querySelector<HTMLElement>(`#${sectionId}`);
+  if (!section) {
+    return;
+  }
+
+  if (section instanceof HTMLDetailsElement) {
+    section.open = true;
+  }
+  section.scrollIntoView?.({ behavior: "smooth", block: "start" });
+}
+
+function reviewClaimExperience(): void {
+  canvasView.value = "claim";
+  canvasSectionElement.value?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+}
 const canvasSectionElement = ref<HTMLElement | null>(null);
 const canvasView = ref<"stamp" | "design" | "claim" | "cost">("stamp");
 const costPreviewOpen = ref(false);
@@ -1050,6 +1074,12 @@ watch(claimOutcome, (outcome): void => {
   voucherType.value = "redeemable";
   settlementRail.value = "";
   feeStrategy.value = "absorb";
+});
+
+watch(voucherType, (type): void => {
+  if (type === "payable" && claimOutcome.value === "account_funding") {
+    claimOutcome.value = "provider_disbursement";
+  }
 });
 
 watch(onboardingEnabled, (enabled): void => {
@@ -1672,8 +1702,16 @@ function applyInstructionBlueprint(
   const selfie = instructionRecord(structuredValidation, ["selfie"]);
   const otp = instructionRecord(structuredValidation, ["otp"]);
   const faceMatch = instructionRecord(structuredValidation, ["face_match"]);
+  const location = instructionRecord(structuredValidation, ["location"]);
   const time = instructionRecord(structuredValidation, ["time"]);
   const timeWindow = instructionRecord(time, ["window"]);
+
+  if (location.required === true) {
+    requireLocationValidation.value = true;
+  }
+  locationLatitude.value = instructionString(location, ["target_lat"]);
+  locationLongitude.value = instructionString(location, ["target_lng"]);
+  locationRadiusMeters.value = instructionString(location, ["radius_meters"], "100");
 
   signatureRequired.value = signature.required === true;
   signatureFailure.value = signature.on_failure === "warn" ? "warn" : "block";
@@ -2213,6 +2251,128 @@ const feedbackValid = computed<boolean>(() => {
   return feedbackValidationErrors.value.length === 0;
 });
 
+const locationRuleError = computed<string | null>(() => {
+  if (!requireLocationValidation.value) {
+    return null;
+  }
+
+  const latitude = Number(locationLatitude.value);
+  const longitude = Number(locationLongitude.value);
+  const radius = Number(locationRadiusMeters.value);
+
+  if (
+    String(locationLatitude.value).trim() === "" ||
+    String(locationLongitude.value).trim() === "" ||
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < -90 || latitude > 90 ||
+    longitude < -180 || longitude > 180 ||
+    (latitude === 0 && longitude === 0)
+  ) {
+    return "Choose an allowed location with valid coordinates before issuing.";
+  }
+
+  if (!Number.isInteger(radius) || radius < 1 || radius > 100000) {
+    return "Enter an allowed radius from 1 to 100,000 meters.";
+  }
+
+  return null;
+});
+
+const locationTestResult = computed<string | null>(() => {
+  if (locationRuleError.value !== null ||
+    String(locationTestLatitude.value).trim() === "" ||
+    String(locationTestLongitude.value).trim() === "") {
+    return null;
+  }
+
+  const latitude = Number(locationTestLatitude.value);
+  const longitude = Number(locationTestLongitude.value);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude) ||
+    latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return "Enter valid test coordinates.";
+  }
+
+  const radians = Math.PI / 180;
+  const deltaLatitude = (latitude - Number(locationLatitude.value)) * radians;
+  const deltaLongitude = (longitude - Number(locationLongitude.value)) * radians;
+  const arc = Math.sin(deltaLatitude / 2) ** 2 +
+    Math.cos(Number(locationLatitude.value) * radians) *
+    Math.cos(latitude * radians) * Math.sin(deltaLongitude / 2) ** 2;
+  const distance = 6371000 * 2 * Math.atan2(Math.sqrt(arc), Math.sqrt(1 - arc));
+
+  return distance <= Number(locationRadiusMeters.value)
+    ? "Inside the allowed area"
+    : "Outside the allowed area";
+});
+
+const timeWindowError = computed<string | null>(() => {
+  if (!timeValidationEnabled.value) {
+    return null;
+  }
+
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(timeWindowStart.value) ||
+    !/^([01]\d|2[0-3]):[0-5]\d$/.test(timeWindowEnd.value) ||
+    timeWindowStart.value === timeWindowEnd.value) {
+    return "Choose different start and end times for the daily claim window.";
+  }
+
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: timeWindowTimezone.value });
+  } catch {
+    return "Choose a valid IANA time zone, such as Asia/Manila.";
+  }
+
+  if (timeTrackDuration.value && (!Number.isInteger(Number(timeLimitMinutes.value)) ||
+    Number(timeLimitMinutes.value) < 1 || Number(timeLimitMinutes.value) > 1440)) {
+    return "Enter a duration limit from 1 to 1,440 minutes.";
+  }
+
+  return null;
+});
+
+const timeTestResult = computed<string | null>(() => {
+  if (timeWindowError.value !== null || timeTestValue.value === "") {
+    return null;
+  }
+
+  const minutes = (value: string): number => {
+    const [hours, minute] = value.split(":").map(Number);
+    return hours * 60 + minute;
+  };
+  const start = minutes(timeWindowStart.value);
+  const end = minutes(timeWindowEnd.value);
+  const test = minutes(timeTestValue.value);
+  if (!Number.isFinite(test)) {
+    return "Choose a valid test time.";
+  }
+
+  const allowed = start < end
+    ? test >= start && test <= end
+    : test >= start || test <= end;
+
+  return allowed ? "Allowed claim time" : "Blocked outside the claim window";
+});
+
+function useCurrentLocation(): void {
+  locationLookupError.value = null;
+  if (typeof navigator === "undefined" || !navigator.geolocation) {
+    locationLookupError.value = "Location is unavailable in this browser. Enter coordinates instead.";
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (position): void => {
+      locationLatitude.value = String(position.coords.latitude);
+      locationLongitude.value = String(position.coords.longitude);
+    },
+    (): void => {
+      locationLookupError.value = "Location permission was not granted. Enter coordinates instead.";
+    },
+    { enableHighAccuracy: true, timeout: 10000 },
+  );
+}
+
 watch(feedbackEmail, (): void => {
   feedbackEmailEnabled.value = feedbackEmail.value.trim() !== "";
 });
@@ -2301,9 +2461,12 @@ const canSubmit = computed<boolean>(() => {
     selectedUnavailableCapabilities.value.length === 0 &&
     payeePolicy.value.issuable &&
     feedbackValid.value &&
+    locationRuleError.value === null &&
+    timeWindowError.value === null &&
     expirationValidationError.value === null &&
     namedClaimSliceValidationMessage.value === null &&
     storedValuePolicyError.value === null &&
+    valueUseModeError.value === null &&
     claimRecipientError.value === null &&
     settlementRailSelectionError.value === null &&
     payableAmountIsValid &&
@@ -2323,9 +2486,12 @@ const canGenerateClaimPreview = computed<boolean>(() => {
     normalizedAmount > 0 &&
     payeePolicy.value.issuable &&
     feedbackValid.value &&
+    locationRuleError.value === null &&
+    timeWindowError.value === null &&
     expirationValidationError.value === null &&
     namedClaimSliceValidationMessage.value === null &&
     storedValuePolicyError.value === null &&
+    valueUseModeError.value === null &&
     claimRecipientError.value === null &&
     settlementRailSelectionError.value === null
   );
@@ -2341,11 +2507,16 @@ const storedValueCapability = computed(() =>
 const storedValueAvailable = computed<boolean>(() => {
   return (
     storedValueCapability.value?.issuance_allowed === true &&
+    voucherType.value === "redeemable" &&
     !isAccountFundingClaim.value &&
     !onboardingEnabled.value
   );
 });
 const storedValueUnavailableReason = computed<string>(() => {
+  if (voucherType.value !== "redeemable") {
+    return "Reusable Balance is available only for Disburse Pay Codes.";
+  }
+
   if (isAccountFundingClaim.value) {
     return "Account Funding and Reusable Balance cannot be combined.";
   }
@@ -2401,6 +2572,12 @@ const storedValuePolicyError = computed<string | null>(() => {
 
   return null;
 });
+
+const valueUseModeError = computed<string | null>(() =>
+  voucherType.value === "payable" && (sliceMode.value !== "whole" || reusableBalance.value)
+    ? "Collect Pay Codes use one collection target. Choose Whole Amount before issuing."
+    : null,
+);
 
 const claimRecipientError = computed<string | null>(() => {
   if (
@@ -3033,6 +3210,10 @@ function isAutomaticInputField(field: string): boolean {
     return true;
   }
 
+  if (field === "location" && requireLocationValidation.value) {
+    return true;
+  }
+
   return (
     onboardingEnabled.value &&
     (["name", "email", "mobile"].includes(field) ||
@@ -3651,6 +3832,10 @@ const selectedInputFields = computed<string[]>(() => {
     fields.add("email");
   }
 
+  if (requireLocationValidation.value) {
+    fields.add("location");
+  }
+
   return voucherInputFieldPayloadOrder.filter((field) => fields.has(field));
 });
 
@@ -3726,7 +3911,7 @@ const validationSummary = computed<Record<string, unknown>>(() => {
       : {}),
     ...(requireCountryValidation.value ? { country: "PH" } : {}),
     ...(requireLocationValidation.value
-      ? { location: "required", radius: "100" }
+      ? { location: "required", radius: locationRadiusMeters.value }
       : {}),
     ...(effectiveVerificationOtp.value ? { mobile_verification: {} } : {}),
   };
@@ -3757,9 +3942,9 @@ const structuredValidationSummary = computed<Record<string, unknown>>(() => {
       ? {
           location: {
             required: true,
-            target_lat: 0,
-            target_lng: 0,
-            radius_meters: 100,
+            target_lat: Number(locationLatitude.value),
+            target_lng: Number(locationLongitude.value),
+            radius_meters: Number(locationRadiusMeters.value),
             on_failure: "block",
           },
         }
@@ -3789,7 +3974,10 @@ const structuredValidationSummary = computed<Record<string, unknown>>(() => {
               end_time: timeWindowEnd.value,
               timezone: timeWindowTimezone.value,
             },
-            limit_minutes: Number.isFinite(limitMinutes) ? limitMinutes : null,
+            limit_minutes:
+              timeTrackDuration.value && Number.isFinite(limitMinutes)
+                ? limitMinutes
+                : null,
             track_duration: timeTrackDuration.value,
           },
         }
@@ -3803,7 +3991,6 @@ const validationPreviewLabels: Record<string, string> = {
   payable: "require payable / vendor alias",
   country: "country: PH",
   location: "location radius",
-  radius: "radius: 100",
   mobile_verification: "OTP mobile verification",
 };
 
@@ -3817,8 +4004,10 @@ const structuredValidationPreviewLabels: Record<string, string> = {
 };
 
 const validationPreviewDisplay = computed<string>(() => {
-  const labels = Object.keys(validationSummary.value).map(
-    (key) => validationPreviewLabels[key] ?? key,
+  const labels = Object.keys(validationSummary.value).map((key) =>
+    key === "radius"
+      ? `radius: ${locationRadiusMeters.value} m`
+      : (validationPreviewLabels[key] ?? key),
   );
 
   if (labels.length === 0) {
@@ -6019,6 +6208,10 @@ function updateNamedClaimSlice(
 }
 
 function setSliceMode(mode: CockpitValueUseMode): void {
+  if (voucherType.value === "payable" && mode !== "whole") {
+    return;
+  }
+
   if (isAccountFundingClaim.value && mode !== "whole") {
     return;
   }
@@ -7317,7 +7510,6 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
             </fieldset>
           </div>
         </section>
-
         <section
           v-if="!publicMode"
           class="mt-4 border-t border-emerald-100 pt-4 dark:border-emerald-900/70"
@@ -7612,7 +7804,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
             <span
               class="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400"
             >
-              Optional requirements, checks, rider content, and advanced rules
+              Recipient journey, checks, value use, and rider content
             </span>
           </span>
           <span
@@ -7623,6 +7815,62 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
         </span>
       </summary>
       <div class="mt-4 grid gap-4">
+        <section
+          class="grid gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 text-sm text-slate-800 sm:grid-cols-[minmax(0,1fr)_auto] dark:border-emerald-900 dark:bg-emerald-950/20 dark:text-slate-100"
+          data-testid="cockpit-claim-experience-overview"
+        >
+          <div class="grid gap-1">
+            <p class="font-semibold">{{ voucherTypeOptions.find((option) => option.value === voucherType)?.label }} journey</p>
+            <p v-if="isPayableVoucher" class="text-xs text-slate-600 dark:text-slate-300">
+              Collect {{ formatAccountMoney(Number(amount) || 0) }} from the payer. No value is funded upfront.
+            </p>
+            <p v-else-if="isSettlementVoucher" class="text-xs text-slate-600 dark:text-slate-300">
+              Collect {{ formatAccountMoney(Number(targetAmount) || 0) }} and release {{ formatAccountMoney(Number(amount) || 0) }} under the settlement rules.
+            </p>
+            <p v-else class="text-xs text-slate-600 dark:text-slate-300">
+              Release {{ formatAccountMoney(Number(amount) || 0) }} after the recipient completes the claim.
+            </p>
+            <p class="text-xs text-slate-600 dark:text-slate-300">
+              Location and daily time rules govern claim or release steps. They cannot restrict a payment made outside this app.
+            </p>
+          </div>
+          <span class="self-start rounded-full bg-white px-3 py-1 text-xs font-semibold text-emerald-800 dark:bg-slate-900 dark:text-emerald-200">
+            {{ reusableBalance ? 'Reusable balance' : sliceMode === 'whole' ? 'Whole value' : sliceMode === 'fixed' ? 'Equal portions' : sliceMode === 'open' ? 'Flexible portions' : 'Scheduled portions' }}
+          </span>
+          <fieldset class="grid gap-2 border-t border-emerald-200 pt-3 sm:col-span-2 dark:border-emerald-900" data-testid="cockpit-claim-experience-mode">
+            <legend class="text-xs font-semibold">Value flow</legend>
+            <div class="grid gap-2 sm:grid-cols-3">
+              <label v-for="option in voucherTypeOptions" :key="option.value" class="flex cursor-pointer items-center gap-2 rounded-xl border border-emerald-200 bg-white p-3 text-xs font-semibold dark:border-emerald-900 dark:bg-slate-900">
+                <input v-model="voucherType" type="radio" name="claim-experience-voucher-type" :value="option.value" :disabled="processing" :data-testid="`cockpit-claim-experience-mode-${option.value}`" />
+                {{ option.label }}
+              </label>
+            </div>
+          </fieldset>
+        </section>
+        <nav class="flex gap-2 overflow-x-auto pb-1" aria-label="Claim Experience sections" data-testid="cockpit-claim-experience-navigation">
+          <button
+            v-for="section in [
+              { id: 'quick-generate-contract-money', label: 'Basics' },
+              { id: 'quick-generate-contract-inputs', label: 'Requirements' },
+              { id: 'quick-generate-contract-validation', label: 'When & where' },
+              { id: 'quick-generate-contract-value-use', label: 'Value use' },
+              { id: 'quick-generate-contract-rider', label: 'Rider' },
+              { id: 'quick-generate-contract-feedback', label: 'Updates' },
+              { id: 'quick-generate-contract-execution', label: 'Advanced' },
+            ]"
+            :key="section.id"
+            type="button"
+            class="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-400 hover:text-emerald-800 focus-visible:outline-2 focus-visible:outline-emerald-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+            :data-testid="`cockpit-claim-experience-nav-${section.id}`"
+            @click="openClaimEditorSection(section.id)"
+          >{{ section.label }}</button>
+          <button
+            type="button"
+            class="shrink-0 rounded-full bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-emerald-600"
+            data-testid="cockpit-claim-experience-review"
+            @click="reviewClaimExperience"
+          >Review claim</button>
+        </nav>
         <details
           id="quick-generate-contract-money"
           class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
@@ -7685,7 +7933,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
             <label
               class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
             >
-              Amount
+              {{ amountFieldLabel }}
               <div class="flex min-w-0 rounded-xl shadow-sm">
                 <span
                   class="inline-flex items-center rounded-l-xl border border-r-0 border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
@@ -7693,13 +7941,14 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                   ₱
                 </span>
                 <input
-                  v-model="amount"
+                  :value="amount"
                   type="number"
                   min="0.01"
                   step="0.01"
                   class="w-full min-w-0 border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                   data-testid="cockpit-quick-generate-submit-amount"
                   :disabled="processing"
+                  @input="amount = ($event.target as HTMLInputElement).value"
                 />
                 <input
                   v-model="currency"
@@ -7709,6 +7958,12 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                   :disabled="processing"
                 />
               </div>
+            </label>
+
+            <label v-if="isSettlementVoucher" class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300">
+              Collection target
+              <input v-model="targetAmount" type="number" min="0.01" step="0.01" class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50" data-testid="cockpit-claim-experience-target-amount" :disabled="processing" />
+              <span v-if="targetAmountError" class="text-rose-700 dark:text-rose-300">{{ targetAmountError }}</span>
             </label>
 
             <label
@@ -7742,6 +7997,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
             </label>
 
             <fieldset
+              v-if="!isPayableVoucher"
               id="quick-generate-claim-outcome"
               class="grid min-w-0 gap-2 lg:col-span-2"
               data-testid="cockpit-quick-generate-claim-outcome"
@@ -8375,6 +8631,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                     v-model="requireLocationValidation"
                     type="checkbox"
                     class="mt-0.5 rounded border-violet-300"
+                    data-testid="cockpit-quick-generate-location-validation-enabled"
                     :disabled="
                       capabilitySelectionDisabled(
                         'location',
@@ -8398,6 +8655,37 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                     </span>
                   </span>
                 </label>
+              </div>
+              <div
+                v-if="requireLocationValidation"
+                class="grid gap-3 rounded-xl border border-violet-200 bg-white p-3 sm:grid-cols-3 dark:border-violet-900 dark:bg-slate-950"
+                data-testid="cockpit-quick-generate-location-rule"
+              >
+                <div class="sm:col-span-3">
+                  <p class="text-xs font-semibold text-slate-900 dark:text-slate-100">Allowed claim area</p>
+                  <p class="text-xs text-slate-600 dark:text-slate-300">Set the center and radius. The recipient must share location during the claim.</p>
+                </div>
+                <label class="grid gap-1 text-xs text-slate-700 dark:text-slate-300">Latitude
+                  <input v-model="locationLatitude" type="number" min="-90" max="90" step="any" class="min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900" data-testid="cockpit-quick-generate-location-latitude" :disabled="processing" />
+                </label>
+                <label class="grid gap-1 text-xs text-slate-700 dark:text-slate-300">Longitude
+                  <input v-model="locationLongitude" type="number" min="-180" max="180" step="any" class="min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900" data-testid="cockpit-quick-generate-location-longitude" :disabled="processing" />
+                </label>
+                <label class="grid gap-1 text-xs text-slate-700 dark:text-slate-300">Radius (meters)
+                  <input v-model="locationRadiusMeters" type="number" min="1" max="100000" step="1" class="min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900" data-testid="cockpit-quick-generate-location-radius" :disabled="processing" />
+                </label>
+                <button type="button" class="w-fit rounded-lg border border-violet-300 px-3 py-2 text-xs font-semibold text-violet-800 dark:border-violet-700 dark:text-violet-200" :disabled="processing" @click="useCurrentLocation">Use my current location as center</button>
+                <p v-if="locationLookupError" class="text-xs text-rose-700 sm:col-span-3 dark:text-rose-300">{{ locationLookupError }}</p>
+                <p v-if="locationRuleError" class="text-xs font-semibold text-rose-700 sm:col-span-3 dark:text-rose-300" data-testid="cockpit-quick-generate-location-error">{{ locationRuleError }}</p>
+                <div v-else class="grid gap-2 border-t border-slate-200 pt-3 sm:col-span-3 sm:grid-cols-2 dark:border-slate-800">
+                  <label class="grid gap-1 text-xs text-slate-700 dark:text-slate-300">Test latitude
+                    <input v-model="locationTestLatitude" type="number" min="-90" max="90" step="any" class="min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900" data-testid="cockpit-quick-generate-location-test-latitude" />
+                  </label>
+                  <label class="grid gap-1 text-xs text-slate-700 dark:text-slate-300">Test longitude
+                    <input v-model="locationTestLongitude" type="number" min="-180" max="180" step="any" class="min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900" data-testid="cockpit-quick-generate-location-test-longitude" />
+                  </label>
+                  <p v-if="locationTestResult" class="text-xs font-semibold sm:col-span-2" data-testid="cockpit-quick-generate-location-test-result">{{ locationTestResult }}</p>
+                </div>
               </div>
             </div>
             <div
@@ -8642,6 +8930,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                   <input
                     v-model="timeWindowStart"
                     type="time"
+                    data-testid="cockpit-quick-generate-time-window-start"
                     class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                     :disabled="processing || !timeValidationEnabled"
                   />
@@ -8653,6 +8942,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                   <input
                     v-model="timeWindowEnd"
                     type="time"
+                    data-testid="cockpit-quick-generate-time-window-end"
                     class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                     :disabled="processing || !timeValidationEnabled"
                   />
@@ -8671,7 +8961,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                 <label
                   class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                 >
-                  Time Limit (Minutes)
+                  Minutes since Pay Code start
                   <input
                     v-model="timeLimitMinutes"
                     type="number"
@@ -8679,7 +8969,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                     max="1440"
                     step="1"
                     class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                    :disabled="processing || !timeValidationEnabled"
+                    :disabled="processing || !timeValidationEnabled || !timeTrackDuration"
                   />
                 </label>
                 <label
@@ -8691,8 +8981,17 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                     class="rounded border-slate-300"
                     :disabled="processing || !timeValidationEnabled"
                   />
-                  Track Claim Duration
+                  Enforce limit from Pay Code start time
                 </label>
+                <p v-if="timeValidationEnabled" class="text-xs leading-5 text-slate-600 sm:col-span-2 dark:text-slate-300" data-testid="cockpit-quick-generate-time-window-example">
+                  Claims are allowed daily from {{ timeWindowStart }} to {{ timeWindowEnd }} in {{ timeWindowTimezone }}. Outside this window, the claim is blocked. A duration limit applies only when a Pay Code start time is set.
+                </p>
+                <label v-if="timeValidationEnabled && !timeWindowError" class="grid gap-1 text-xs text-slate-700 dark:text-slate-300">
+                  Test a clock time in {{ timeWindowTimezone }}
+                  <input v-model="timeTestValue" type="time" class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900" data-testid="cockpit-quick-generate-time-test" />
+                </label>
+                <p v-if="timeTestResult" class="self-end text-xs font-semibold" data-testid="cockpit-quick-generate-time-test-result">{{ timeTestResult }}</p>
+                <p v-if="timeWindowError" class="text-xs font-semibold text-rose-700 sm:col-span-2 dark:text-rose-300" data-testid="cockpit-quick-generate-time-window-error">{{ timeWindowError }}</p>
               </div>
             </details>
             <details
@@ -8747,6 +9046,466 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
         </details>
 
         <section
+          id="quick-generate-contract-value-use"
+          class="grid gap-1 rounded-2xl border border-cyan-200 bg-cyan-50/60 p-4 text-xs text-slate-700 dark:border-cyan-900 dark:bg-cyan-950/20 dark:text-slate-200"
+          data-testid="cockpit-claim-experience-value-use-summary"
+        >
+          <h4 class="text-sm font-semibold text-slate-950 dark:text-slate-50">Value use</h4>
+          <p v-if="isPayableVoucher">The payer makes one collection payment. Release slices and reusable balance do not apply.</p>
+          <p v-else-if="reusableBalance">The recipient activates reusable balance under the commissioned wallet policy.</p>
+          <p v-else>{{ sliceMode === 'whole' ? 'One successful claim uses the full value.' : sliceMode === 'fixed' ? 'The value is released in equal claims.' : sliceMode === 'open' ? 'The recipient chooses an allowed amount per claim.' : 'Each portion has its own amount and schedule.' }}</p>
+          <p v-if="!storedValueAvailable">Reusable balance: {{ storedValueUnavailableReason }}</p>
+          <p v-if="valueUseModeError" class="font-semibold text-rose-700 dark:text-rose-300" data-testid="cockpit-claim-experience-value-use-error">{{ valueUseModeError }}</p>
+        </section>
+
+        <details
+          v-if="!reusableBalance"
+          id="quick-generate-contract-slices"
+          class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
+        >
+          <summary
+            class="flex min-w-0 cursor-pointer list-none items-center gap-3"
+          >
+            <span
+              class="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-100 text-sm font-bold text-cyan-700 dark:bg-cyan-900/60 dark:text-cyan-200"
+              >4</span
+            >
+            <div class="min-w-0 flex-1">
+              <h4
+                class="text-sm font-semibold text-slate-950 dark:text-slate-50"
+              >
+                Claim Schedule And Availability
+              </h4>
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                Choose whether the value is claimed once, in portions, or on a
+                schedule.
+              </p>
+            </div>
+          </summary>
+          <div class="mt-4 grid gap-4">
+            <div
+              class="grid grid-cols-1 gap-2 lg:grid-cols-4"
+              data-testid="cockpit-quick-generate-slice-mode-cards"
+            >
+              <button
+                v-for="option in [
+                  {
+                    value: 'whole',
+                    label: 'Whole Amount',
+                    helper: 'One claim uses the entire Pay Code.',
+                  },
+                  {
+                    value: 'fixed',
+                    label: 'Equal Portions',
+                    helper: 'Split the value into equal claims.',
+                  },
+                  {
+                    value: 'open',
+                    label: 'Flexible Amounts',
+                    helper: 'Let the recipient choose each partial amount.',
+                  },
+                  {
+                    value: 'named',
+                    label: 'Scheduled Portions',
+                    helper: 'Set each portion’s value, label, and dates.',
+                  },
+                ]"
+                :key="option.value"
+                type="button"
+                class="rounded-xl border p-3 text-left text-xs transition"
+                :class="
+                  sliceMode === option.value
+                    ? 'border-cyan-400 bg-cyan-50 text-cyan-950 ring-2 ring-cyan-100 dark:border-cyan-500 dark:bg-cyan-950/40 dark:text-cyan-100 dark:ring-cyan-950'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-cyan-200 hover:bg-cyan-50/50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-cyan-900'
+                "
+                :disabled="
+                  processing ||
+                  (isAccountFundingClaim && option.value !== 'whole') ||
+                  (isPayableVoucher && option.value !== 'whole')
+                "
+                :data-testid="`cockpit-quick-generate-slice-mode-${option.value}`"
+                @click="setSliceMode(option.value)"
+              >
+                <span class="block font-semibold">
+                  {{ option.label }}
+                </span>
+                <span class="mt-1 block leading-snug">
+                  {{ option.helper }}
+                </span>
+              </button>
+            </div>
+
+            <div
+              class="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60"
+            >
+              <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                <label
+                  class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                >
+                  Equal Portions
+                  <input
+                    v-model="slices"
+                    type="number"
+                    min="1"
+                    :max="maxValidClaimCount"
+                    step="1"
+                    inputmode="numeric"
+                    class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                    data-testid="cockpit-quick-generate-fixed-slices"
+                    :disabled="processing || sliceMode !== 'fixed'"
+                  />
+                  <span
+                    class="text-[11px] font-normal leading-snug text-slate-500 dark:text-slate-400"
+                  >
+                    Number of equal claims.
+                  </span>
+                </label>
+                <label
+                  class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                >
+                  Maximum Claims
+                  <input
+                    v-model="maxSlices"
+                    type="number"
+                    min="1"
+                    :max="maxValidClaimCount"
+                    step="1"
+                    inputmode="numeric"
+                    class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                    data-testid="cockpit-quick-generate-max-slices"
+                    :disabled="processing || sliceMode !== 'open'"
+                  />
+                  <span
+                    class="text-[11px] font-normal leading-snug text-slate-500 dark:text-slate-400"
+                  >
+                    Available only for Flexible Amounts.
+                  </span>
+                </label>
+                <label
+                  class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                >
+                  Minimum Claim Amount
+                  <div class="flex min-w-0 rounded-xl shadow-sm">
+                    <span
+                      class="inline-flex items-center rounded-l-xl border border-r-0 border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
+                    >
+                      ₱
+                    </span>
+                    <input
+                      v-model="minWithdrawal"
+                      type="number"
+                      :min="minimumWithdrawalFloor"
+                      step="0.01"
+                      inputmode="decimal"
+                      class="w-full min-w-0 border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                      data-testid="cockpit-quick-generate-min-withdrawal"
+                      :disabled="processing || sliceMode !== 'open'"
+                    />
+                    <span
+                      class="inline-flex w-24 min-w-0 items-center justify-center rounded-r-xl border border-l-0 border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold uppercase text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                      data-testid="cockpit-quick-generate-min-withdrawal-currency"
+                    >
+                      {{ currency || "PHP" }}
+                    </span>
+                  </div>
+                  <span
+                    class="text-[11px] font-normal leading-snug text-slate-500 dark:text-slate-400"
+                  >
+                    Smallest permitted claim amount, shown in
+                    {{ currency || "PHP" }}.
+                  </span>
+                </label>
+              </div>
+              <div
+                class="grid gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-[11px] leading-snug text-emerald-900 lg:grid-cols-3 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100"
+                data-testid="cockpit-quick-generate-minimum-withdrawal-policy"
+              >
+                <p>
+                  <span class="font-semibold">Effective Minimum</span>
+                  <span class="block">
+                    {{ currency || "PHP" }}
+                    {{ formatSliceAmount(minimumWithdrawalFloor) }}
+                  </span>
+                </p>
+                <p>
+                  <span class="font-semibold">Source</span>
+                  <span class="block capitalize">
+                    {{ minimumWithdrawalPolicySource }}
+                  </span>
+                </p>
+                <p>
+                  <span class="font-semibold">Maximum Claims</span>
+                  <span class="block">
+                    {{ maxValidClaimCount }}
+                  </span>
+                </p>
+              </div>
+              <p
+                class="text-[11px] leading-snug text-slate-500 dark:text-slate-400"
+              >
+                The selected plan controls how much may be claimed and how many
+                successful claims are allowed.
+              </p>
+            </div>
+
+            <div
+              class="rounded-xl border border-cyan-200 bg-cyan-50/70 p-3 dark:border-cyan-900/60 dark:bg-cyan-950/30"
+              data-testid="cockpit-quick-generate-named-slices-panel"
+            >
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p
+                    class="text-xs font-semibold text-cyan-950 dark:text-cyan-100"
+                  >
+                    Claim Plan
+                  </p>
+                  <p class="mt-1 text-[11px] text-cyan-800 dark:text-cyan-200">
+                    Review or customize the portions available to the recipient.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="rounded-full border border-cyan-200 bg-white px-3 py-1.5 text-xs font-semibold text-cyan-800 shadow-sm hover:bg-cyan-50 disabled:opacity-50 dark:border-cyan-800 dark:bg-slate-950 dark:text-cyan-100"
+                  data-testid="cockpit-quick-generate-add-named-slice"
+                  :disabled="addSliceDisabled"
+                  @click="addNamedClaimSlice"
+                >
+                  Add Portion
+                </button>
+              </div>
+              <p
+                v-if="addSliceDisabledReason"
+                class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
+                data-testid="cockpit-quick-generate-add-slice-warning"
+              >
+                {{ addSliceDisabledReason }}
+              </p>
+
+              <div class="mt-3 grid gap-3">
+                <div
+                  v-for="(slice, index) in namedClaimSlices"
+                  :key="slice.id || index"
+                  class="rounded-xl border border-cyan-100 bg-white p-3 shadow-sm dark:border-cyan-900/50 dark:bg-slate-950"
+                  :data-testid="`cockpit-quick-generate-named-slice-${index}`"
+                >
+                  <div class="mb-3 flex items-center justify-between gap-3">
+                    <p
+                      class="text-xs font-semibold text-slate-900 dark:text-slate-100"
+                    >
+                      {{
+                        sliceMode === "open"
+                          ? openSliceDescription
+                          : `Slice ${index + 1}`
+                      }}
+                    </p>
+                    <button
+                      type="button"
+                      class="text-[11px] font-semibold text-rose-600 disabled:text-slate-400 dark:text-rose-300"
+                      :data-testid="`cockpit-quick-generate-remove-named-slice-${index}`"
+                      :disabled="processing || namedClaimSlices.length <= 1"
+                      @click="removeNamedClaimSlice(index)"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <div class="grid grid-cols-1 gap-3 lg:grid-cols-6">
+                    <label
+                      class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-1 dark:text-slate-300"
+                    >
+                      Amount
+                      <input
+                        :value="slice.amount"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                        :data-testid="`cockpit-quick-generate-named-slice-${index}-amount`"
+                        :disabled="processing"
+                        @input="
+                          updateNamedClaimSlice(
+                            index,
+                            'amount',
+                            ($event.target as HTMLInputElement).value,
+                          )
+                        "
+                      />
+                    </label>
+                    <label
+                      class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-2 dark:text-slate-300"
+                    >
+                      Label
+                      <input
+                        :value="slice.description"
+                        type="text"
+                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                        :data-testid="`cockpit-quick-generate-named-slice-${index}-description`"
+                        :disabled="processing"
+                        @input="
+                          updateNamedClaimSlice(
+                            index,
+                            'description',
+                            ($event.target as HTMLInputElement).value,
+                          )
+                        "
+                      />
+                    </label>
+                    <label
+                      class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-1 dark:text-slate-300"
+                    >
+                      Category
+                      <input
+                        :value="slice.tag"
+                        type="text"
+                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                        :data-testid="`cockpit-quick-generate-named-slice-${index}-tag`"
+                        :disabled="processing"
+                        @input="
+                          updateNamedClaimSlice(
+                            index,
+                            'tag',
+                            ($event.target as HTMLInputElement).value,
+                          )
+                        "
+                      />
+                    </label>
+                    <label
+                      class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-1 dark:text-slate-300"
+                    >
+                      Available On
+                      <input
+                        :value="slice.claim_on"
+                        type="date"
+                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                        :data-testid="`cockpit-quick-generate-named-slice-${index}-claim-on`"
+                        :disabled="processing"
+                        @input="
+                          updateNamedClaimSlice(
+                            index,
+                            'claim_on',
+                            ($event.target as HTMLInputElement).value,
+                          )
+                        "
+                      />
+                    </label>
+                    <label
+                      class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-1 dark:text-slate-300"
+                    >
+                      Expires On
+                      <input
+                        :value="slice.claim_by"
+                        type="date"
+                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                        :data-testid="`cockpit-quick-generate-named-slice-${index}-claim-by`"
+                        :disabled="processing"
+                        @input="
+                          updateNamedClaimSlice(
+                            index,
+                            'claim_by',
+                            ($event.target as HTMLInputElement).value,
+                          )
+                        "
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-3 grid gap-2 text-xs lg:grid-cols-3">
+                <div class="rounded-lg bg-white p-3 dark:bg-slate-950">
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                    Scheduled Total
+                  </p>
+                  <p
+                    class="mt-1 font-semibold text-slate-950 dark:text-slate-50"
+                    data-testid="cockpit-quick-generate-named-slices-total"
+                  >
+                    {{ currency || "PHP" }}
+                    {{
+                      namedClaimSliceTotal.toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })
+                    }}
+                  </p>
+                </div>
+                <div class="rounded-lg bg-white p-3 dark:bg-slate-950">
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                    Unassigned Value
+                  </p>
+                  <p
+                    class="mt-1 font-semibold"
+                    :class="
+                      Math.abs(namedClaimSliceRemaining) < 0.01
+                        ? 'text-emerald-700 dark:text-emerald-300'
+                        : 'text-rose-700 dark:text-rose-300'
+                    "
+                    data-testid="cockpit-quick-generate-named-slices-remaining"
+                  >
+                    {{ currency || "PHP" }}
+                    {{
+                      namedClaimSliceRemaining.toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })
+                    }}
+                  </p>
+                </div>
+                <div class="rounded-lg bg-white p-3 dark:bg-slate-950">
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                    Claim Mode
+                  </p>
+                  <p
+                    class="mt-1 font-semibold text-cyan-800 dark:text-cyan-200"
+                  >
+                    {{
+                      sliceMode === "whole"
+                        ? "Whole Amount"
+                        : sliceMode === "fixed"
+                          ? "Equal Portions"
+                          : sliceMode === "open"
+                            ? "Flexible Amounts"
+                            : "Scheduled Portions"
+                    }}
+                  </p>
+                </div>
+              </div>
+              <p
+                v-if="namedClaimSliceValidationMessage"
+                class="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-2 text-xs text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-200"
+                data-testid="cockpit-quick-generate-named-slices-error"
+              >
+                {{ namedClaimSliceValidationMessage }}
+              </p>
+            </div>
+
+            <div
+              class="grid gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950 lg:grid-cols-3 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
+              data-testid="cockpit-quick-generate-availability-summary"
+            >
+              <div>
+                <p class="font-semibold">Availability Window</p>
+                <p class="mt-1 text-[11px]">
+                  Starts:
+                  {{ startsAt || "Immediately" }}
+                </p>
+              </div>
+              <div>
+                <p class="font-semibold">Effective Expiration</p>
+                <p class="mt-1 text-[11px]">
+                  {{ effectiveExpiry.label }}
+                </p>
+              </div>
+              <div>
+                <p class="font-semibold">Timing Priority</p>
+                <p class="mt-1 text-[11px]">
+                  Exact expiration, then custom duration, then preset.
+                </p>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <section
           id="quick-generate-contract-rider"
           class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
         >
@@ -8756,7 +9515,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
             <div class="flex min-w-0 flex-1 items-center gap-3">
               <span
                 class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-700 dark:bg-amber-900/60 dark:text-amber-200"
-                >4</span
+              >5</span
               >
               <div class="min-w-0 flex-1">
                 <h4
@@ -9749,7 +10508,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
           >
             <span
               class="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100 text-sm font-bold text-rose-700 dark:bg-rose-900/60 dark:text-rose-200"
-              >5</span
+              >6</span
             >
             <div class="min-w-0 flex-1">
               <h4
@@ -9949,452 +10708,6 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                   Webhook delivery must be configured separately.
                 </span>
               </label>
-            </div>
-          </div>
-        </details>
-
-        <details
-          v-if="!reusableBalance"
-          id="quick-generate-contract-slices"
-          class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
-        >
-          <summary
-            class="flex min-w-0 cursor-pointer list-none items-center gap-3"
-          >
-            <span
-              class="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-100 text-sm font-bold text-cyan-700 dark:bg-cyan-900/60 dark:text-cyan-200"
-              >6</span
-            >
-            <div class="min-w-0 flex-1">
-              <h4
-                class="text-sm font-semibold text-slate-950 dark:text-slate-50"
-              >
-                Claim Schedule And Availability
-              </h4>
-              <p class="text-xs text-slate-500 dark:text-slate-400">
-                Choose whether the value is claimed once, in portions, or on a
-                schedule.
-              </p>
-            </div>
-          </summary>
-          <div class="mt-4 grid gap-4">
-            <div
-              class="grid grid-cols-1 gap-2 lg:grid-cols-4"
-              data-testid="cockpit-quick-generate-slice-mode-cards"
-            >
-              <button
-                v-for="option in [
-                  {
-                    value: 'whole',
-                    label: 'Whole Amount',
-                    helper: 'One claim uses the entire Pay Code.',
-                  },
-                  {
-                    value: 'fixed',
-                    label: 'Equal Portions',
-                    helper: 'Split the value into equal claims.',
-                  },
-                  {
-                    value: 'open',
-                    label: 'Flexible Amounts',
-                    helper: 'Let the recipient choose each partial amount.',
-                  },
-                  {
-                    value: 'named',
-                    label: 'Scheduled Portions',
-                    helper: 'Set each portion’s value, label, and dates.',
-                  },
-                ]"
-                :key="option.value"
-                type="button"
-                class="rounded-xl border p-3 text-left text-xs transition"
-                :class="
-                  sliceMode === option.value
-                    ? 'border-cyan-400 bg-cyan-50 text-cyan-950 ring-2 ring-cyan-100 dark:border-cyan-500 dark:bg-cyan-950/40 dark:text-cyan-100 dark:ring-cyan-950'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-cyan-200 hover:bg-cyan-50/50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-cyan-900'
-                "
-                :disabled="
-                  processing ||
-                  (isAccountFundingClaim && option.value !== 'whole')
-                "
-                :data-testid="`cockpit-quick-generate-slice-mode-${option.value}`"
-                @click="setSliceMode(option.value)"
-              >
-                <span class="block font-semibold">
-                  {{ option.label }}
-                </span>
-                <span class="mt-1 block leading-snug">
-                  {{ option.helper }}
-                </span>
-              </button>
-            </div>
-
-            <div
-              class="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60"
-            >
-              <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
-                <label
-                  class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                >
-                  Equal Portions
-                  <input
-                    v-model="slices"
-                    type="number"
-                    min="1"
-                    :max="maxValidClaimCount"
-                    step="1"
-                    inputmode="numeric"
-                    class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                    data-testid="cockpit-quick-generate-fixed-slices"
-                    :disabled="processing || sliceMode !== 'fixed'"
-                  />
-                  <span
-                    class="text-[11px] font-normal leading-snug text-slate-500 dark:text-slate-400"
-                  >
-                    Number of equal claims.
-                  </span>
-                </label>
-                <label
-                  class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                >
-                  Maximum Claims
-                  <input
-                    v-model="maxSlices"
-                    type="number"
-                    min="1"
-                    :max="maxValidClaimCount"
-                    step="1"
-                    inputmode="numeric"
-                    class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                    data-testid="cockpit-quick-generate-max-slices"
-                    :disabled="processing || sliceMode !== 'open'"
-                  />
-                  <span
-                    class="text-[11px] font-normal leading-snug text-slate-500 dark:text-slate-400"
-                  >
-                    Available only for Flexible Amounts.
-                  </span>
-                </label>
-                <label
-                  class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                >
-                  Minimum Claim Amount
-                  <div class="flex min-w-0 rounded-xl shadow-sm">
-                    <span
-                      class="inline-flex items-center rounded-l-xl border border-r-0 border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
-                    >
-                      ₱
-                    </span>
-                    <input
-                      v-model="minWithdrawal"
-                      type="number"
-                      :min="minimumWithdrawalFloor"
-                      step="0.01"
-                      inputmode="decimal"
-                      class="w-full min-w-0 border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                      data-testid="cockpit-quick-generate-min-withdrawal"
-                      :disabled="processing || sliceMode !== 'open'"
-                    />
-                    <span
-                      class="inline-flex w-24 min-w-0 items-center justify-center rounded-r-xl border border-l-0 border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold uppercase text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
-                      data-testid="cockpit-quick-generate-min-withdrawal-currency"
-                    >
-                      {{ currency || "PHP" }}
-                    </span>
-                  </div>
-                  <span
-                    class="text-[11px] font-normal leading-snug text-slate-500 dark:text-slate-400"
-                  >
-                    Smallest permitted claim amount, shown in
-                    {{ currency || "PHP" }}.
-                  </span>
-                </label>
-              </div>
-              <div
-                class="grid gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-[11px] leading-snug text-emerald-900 lg:grid-cols-3 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100"
-                data-testid="cockpit-quick-generate-minimum-withdrawal-policy"
-              >
-                <p>
-                  <span class="font-semibold">Effective Minimum</span>
-                  <span class="block">
-                    {{ currency || "PHP" }}
-                    {{ formatSliceAmount(minimumWithdrawalFloor) }}
-                  </span>
-                </p>
-                <p>
-                  <span class="font-semibold">Source</span>
-                  <span class="block capitalize">
-                    {{ minimumWithdrawalPolicySource }}
-                  </span>
-                </p>
-                <p>
-                  <span class="font-semibold">Maximum Claims</span>
-                  <span class="block">
-                    {{ maxValidClaimCount }}
-                  </span>
-                </p>
-              </div>
-              <p
-                class="text-[11px] leading-snug text-slate-500 dark:text-slate-400"
-              >
-                The selected plan controls how much may be claimed and how many
-                successful claims are allowed.
-              </p>
-            </div>
-
-            <div
-              class="rounded-xl border border-cyan-200 bg-cyan-50/70 p-3 dark:border-cyan-900/60 dark:bg-cyan-950/30"
-              data-testid="cockpit-quick-generate-named-slices-panel"
-            >
-              <div class="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p
-                    class="text-xs font-semibold text-cyan-950 dark:text-cyan-100"
-                  >
-                    Claim Plan
-                  </p>
-                  <p class="mt-1 text-[11px] text-cyan-800 dark:text-cyan-200">
-                    Review or customize the portions available to the recipient.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  class="rounded-full border border-cyan-200 bg-white px-3 py-1.5 text-xs font-semibold text-cyan-800 shadow-sm hover:bg-cyan-50 disabled:opacity-50 dark:border-cyan-800 dark:bg-slate-950 dark:text-cyan-100"
-                  data-testid="cockpit-quick-generate-add-named-slice"
-                  :disabled="addSliceDisabled"
-                  @click="addNamedClaimSlice"
-                >
-                  Add Portion
-                </button>
-              </div>
-              <p
-                v-if="addSliceDisabledReason"
-                class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
-                data-testid="cockpit-quick-generate-add-slice-warning"
-              >
-                {{ addSliceDisabledReason }}
-              </p>
-
-              <div class="mt-3 grid gap-3">
-                <div
-                  v-for="(slice, index) in namedClaimSlices"
-                  :key="slice.id || index"
-                  class="rounded-xl border border-cyan-100 bg-white p-3 shadow-sm dark:border-cyan-900/50 dark:bg-slate-950"
-                  :data-testid="`cockpit-quick-generate-named-slice-${index}`"
-                >
-                  <div class="mb-3 flex items-center justify-between gap-3">
-                    <p
-                      class="text-xs font-semibold text-slate-900 dark:text-slate-100"
-                    >
-                      {{
-                        sliceMode === "open"
-                          ? openSliceDescription
-                          : `Slice ${index + 1}`
-                      }}
-                    </p>
-                    <button
-                      type="button"
-                      class="text-[11px] font-semibold text-rose-600 disabled:text-slate-400 dark:text-rose-300"
-                      :data-testid="`cockpit-quick-generate-remove-named-slice-${index}`"
-                      :disabled="processing || namedClaimSlices.length <= 1"
-                      @click="removeNamedClaimSlice(index)"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                  <div class="grid grid-cols-1 gap-3 lg:grid-cols-6">
-                    <label
-                      class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-1 dark:text-slate-300"
-                    >
-                      Amount
-                      <input
-                        :value="slice.amount"
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                        :data-testid="`cockpit-quick-generate-named-slice-${index}-amount`"
-                        :disabled="processing"
-                        @input="
-                          updateNamedClaimSlice(
-                            index,
-                            'amount',
-                            ($event.target as HTMLInputElement).value,
-                          )
-                        "
-                      />
-                    </label>
-                    <label
-                      class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-2 dark:text-slate-300"
-                    >
-                      Label
-                      <input
-                        :value="slice.description"
-                        type="text"
-                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                        :data-testid="`cockpit-quick-generate-named-slice-${index}-description`"
-                        :disabled="processing"
-                        @input="
-                          updateNamedClaimSlice(
-                            index,
-                            'description',
-                            ($event.target as HTMLInputElement).value,
-                          )
-                        "
-                      />
-                    </label>
-                    <label
-                      class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-1 dark:text-slate-300"
-                    >
-                      Category
-                      <input
-                        :value="slice.tag"
-                        type="text"
-                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                        :data-testid="`cockpit-quick-generate-named-slice-${index}-tag`"
-                        :disabled="processing"
-                        @input="
-                          updateNamedClaimSlice(
-                            index,
-                            'tag',
-                            ($event.target as HTMLInputElement).value,
-                          )
-                        "
-                      />
-                    </label>
-                    <label
-                      class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-1 dark:text-slate-300"
-                    >
-                      Available On
-                      <input
-                        :value="slice.claim_on"
-                        type="date"
-                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                        :data-testid="`cockpit-quick-generate-named-slice-${index}-claim-on`"
-                        :disabled="processing"
-                        @input="
-                          updateNamedClaimSlice(
-                            index,
-                            'claim_on',
-                            ($event.target as HTMLInputElement).value,
-                          )
-                        "
-                      />
-                    </label>
-                    <label
-                      class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-1 dark:text-slate-300"
-                    >
-                      Expires On
-                      <input
-                        :value="slice.claim_by"
-                        type="date"
-                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                        :data-testid="`cockpit-quick-generate-named-slice-${index}-claim-by`"
-                        :disabled="processing"
-                        @input="
-                          updateNamedClaimSlice(
-                            index,
-                            'claim_by',
-                            ($event.target as HTMLInputElement).value,
-                          )
-                        "
-                      />
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <div class="mt-3 grid gap-2 text-xs lg:grid-cols-3">
-                <div class="rounded-lg bg-white p-3 dark:bg-slate-950">
-                  <p class="text-[11px] text-slate-500 dark:text-slate-400">
-                    Scheduled Total
-                  </p>
-                  <p
-                    class="mt-1 font-semibold text-slate-950 dark:text-slate-50"
-                    data-testid="cockpit-quick-generate-named-slices-total"
-                  >
-                    {{ currency || "PHP" }}
-                    {{
-                      namedClaimSliceTotal.toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })
-                    }}
-                  </p>
-                </div>
-                <div class="rounded-lg bg-white p-3 dark:bg-slate-950">
-                  <p class="text-[11px] text-slate-500 dark:text-slate-400">
-                    Unassigned Value
-                  </p>
-                  <p
-                    class="mt-1 font-semibold"
-                    :class="
-                      Math.abs(namedClaimSliceRemaining) < 0.01
-                        ? 'text-emerald-700 dark:text-emerald-300'
-                        : 'text-rose-700 dark:text-rose-300'
-                    "
-                    data-testid="cockpit-quick-generate-named-slices-remaining"
-                  >
-                    {{ currency || "PHP" }}
-                    {{
-                      namedClaimSliceRemaining.toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })
-                    }}
-                  </p>
-                </div>
-                <div class="rounded-lg bg-white p-3 dark:bg-slate-950">
-                  <p class="text-[11px] text-slate-500 dark:text-slate-400">
-                    Claim Mode
-                  </p>
-                  <p
-                    class="mt-1 font-semibold text-cyan-800 dark:text-cyan-200"
-                  >
-                    {{
-                      sliceMode === "whole"
-                        ? "Whole Amount"
-                        : sliceMode === "fixed"
-                          ? "Equal Portions"
-                          : sliceMode === "open"
-                            ? "Flexible Amounts"
-                            : "Scheduled Portions"
-                    }}
-                  </p>
-                </div>
-              </div>
-              <p
-                v-if="namedClaimSliceValidationMessage"
-                class="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-2 text-xs text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-200"
-                data-testid="cockpit-quick-generate-named-slices-error"
-              >
-                {{ namedClaimSliceValidationMessage }}
-              </p>
-            </div>
-
-            <div
-              class="grid gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950 lg:grid-cols-3 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
-              data-testid="cockpit-quick-generate-availability-summary"
-            >
-              <div>
-                <p class="font-semibold">Availability Window</p>
-                <p class="mt-1 text-[11px]">
-                  Starts:
-                  {{ startsAt || "Immediately" }}
-                </p>
-              </div>
-              <div>
-                <p class="font-semibold">Effective Expiration</p>
-                <p class="mt-1 text-[11px]">
-                  {{ effectiveExpiry.label }}
-                </p>
-              </div>
-              <div>
-                <p class="font-semibold">Timing Priority</p>
-                <p class="mt-1 text-[11px]">
-                  Exact expiration, then custom duration, then preset.
-                </p>
-              </div>
             </div>
           </div>
         </details>

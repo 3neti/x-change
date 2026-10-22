@@ -34,7 +34,7 @@ optional requirements, checks, Rider content, and advanced rules
 
 ### Order
 
-**Order** is the primary authoring surface. It deliberately echoes the
+**Order** is the quick starting surface. It deliberately echoes the
 check-era idea of an order to pay, without describing a bank transfer or an
 already-executed payment.
 
@@ -93,8 +93,14 @@ preview.
 
 ### Claim Experience
 
-**Claim Experience** is the collapsed, optional control area. It groups
-everything that changes how a recipient may claim a Pay Code:
+The current implementation direction and boundaries are recorded in the
+[Claim Experience plan](CLAIM_EXPERIENCE_PLAN.md) and
+[compass](CLAIM_EXPERIENCE_COMPASS.md). The Order and Pay Code card internals
+remain protected while the editor becomes the authoritative instruction view.
+
+**Claim Experience** is the authoritative voucher-instruction editor. It
+starts collapsed for a simple Pay Code and expands into one guided sequence.
+It groups everything that changes how a recipient may claim a Pay Code:
 
 - issuance details and schedule;
 - recipient and claim requirements;
@@ -137,8 +143,8 @@ and accounting semantics remain unchanged.
 - Email Pay To values are recognized but fail closed until email OTP exists.
 - The right preview card remains **Pay Code** with the tab order **Stamp**,
   **Design**, **Claim**, **Cost**.
-- **Claim Experience** is collapsed by default and has a concise explanation
-  of optional controls.
+- **Claim Experience** is collapsed by default, then explains the selected
+  value flow and offers direct navigation among its instruction sections.
 - Templates, cost estimate, voucher kind, issuance controls, and all existing
   payload behavior remain available.
 - The host-published Cockpit mirror is generated from the package source; do
