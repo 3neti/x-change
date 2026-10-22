@@ -21,6 +21,22 @@ function payload(wrapper: ReturnType<typeof editor>): Record<string, any> {
 }
 
 describe('Claim Experience editor', () => {
+    it('keeps public checkout drafts in the supported Disburse flow', () => {
+        const wrapper = editor({
+            publicMode: true,
+            showEngineeringPreview: true,
+            checkoutDraft: {
+                reference: 'draft-1',
+                guest_token: 'guest-1',
+                instructions: { voucher_type: 'payable', cash: { amount: 25 }, target_amount: 25 },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="cockpit-claim-experience-mode"]').exists()).toBe(false);
+        expect(wrapper.get('[data-testid="cockpit-claim-experience-overview"]').text()).toContain('Disburse journey');
+        expect(payload(wrapper).voucher_type).toBeUndefined();
+    });
+
     it('requires an explicit center, compiles it into claim evidence, and tests the area', async () => {
         const wrapper = editor();
         await wrapper.get('[data-testid="cockpit-quick-generate-location-validation-enabled"]').setValue(true);

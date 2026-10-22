@@ -1219,6 +1219,9 @@ function initializeStartingPoint(): void {
       currency.value = props.publicPrefill.currency;
     }
 
+    voucherType.value = "redeemable";
+    targetAmount.value = "";
+
     return;
   }
 
@@ -7837,7 +7840,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
           <span class="self-start rounded-full bg-white px-3 py-1 text-xs font-semibold text-emerald-800 dark:bg-slate-900 dark:text-emerald-200">
             {{ reusableBalance ? 'Reusable balance' : sliceMode === 'whole' ? 'Whole value' : sliceMode === 'fixed' ? 'Equal portions' : sliceMode === 'open' ? 'Flexible portions' : 'Scheduled portions' }}
           </span>
-          <fieldset class="grid gap-2 border-t border-emerald-200 pt-3 sm:col-span-2 dark:border-emerald-900" data-testid="cockpit-claim-experience-mode">
+          <fieldset v-if="!publicMode" class="grid gap-2 border-t border-emerald-200 pt-3 sm:col-span-2 dark:border-emerald-900" data-testid="cockpit-claim-experience-mode">
             <legend class="text-xs font-semibold">Value flow</legend>
             <div class="grid gap-2 sm:grid-cols-3">
               <label v-for="option in voucherTypeOptions" :key="option.value" class="flex cursor-pointer items-center gap-2 rounded-xl border border-emerald-200 bg-white p-3 text-xs font-semibold dark:border-emerald-900 dark:bg-slate-900">
