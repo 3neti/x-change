@@ -4,7 +4,6 @@ import CockpitPayCodeRecordWorkspace from "../components/CockpitPayCodeRecordWor
 import CockpitLayout from "../layouts/CockpitLayout.vue";
 import type {
   CockpitCampaignNavigationContext,
-  CockpitReadModelRedactions,
   CockpitVoucherDetailPageProps,
 } from "../types";
 
@@ -32,9 +31,6 @@ const status = computed(
     stringValue(summary.value.status) ??
     voucher.value?.status ??
     "not_wired",
-);
-const redactions = computed<CockpitReadModelRedactions>(
-  () => voucher.value?.redactions ?? { payloads: "not-loaded" },
 );
 const distributionLinks = computed<Record<string, unknown> | null>(() => {
   const links = objectValue(voucher.value?.distribution_links);
@@ -215,84 +211,12 @@ function setParam(
   >
     <section class="space-y-6" data-testid="cockpit-voucher-detail-shell">
       <div
-        class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+        class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300"
         data-testid="cockpit-voucher-detail-header"
       >
-        <div
-          class="flex flex-col gap-3 lg:flex-row lg:items-center"
-          data-testid="cockpit-voucher-detail-header-row"
-        >
-          <div class="min-w-0 lg:w-64 lg:shrink-0 xl:w-72">
-            <div class="flex flex-wrap items-center gap-2">
-              <p
-                class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
-              >
-                Pay Code inspection
-              </p>
-              <span
-                class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-              >
-                read-only
-              </span>
-            </div>
-            <h2
-              class="mt-1 text-lg font-semibold leading-6 text-slate-950 dark:text-slate-50"
-            >
-              Pay Code Detail
-            </h2>
-            <p
-              class="mt-0.5 text-xs leading-4 text-slate-600 dark:text-slate-300"
-            >
-              Inspect lifecycle state, claim readiness, and connected evidence.
-            </p>
-          </div>
-          <dl
-            class="grid w-full gap-1.5 rounded-lg bg-slate-50 p-1.5 text-xs sm:grid-cols-3 lg:min-w-0 lg:flex-1 dark:bg-slate-950"
-            data-testid="cockpit-voucher-detail-header-facts"
-          >
-            <div
-              v-for="fact in [
-                { label: 'Pay Code', value: code },
-                { label: 'Lifecycle status', value: status },
-                {
-                  label: 'Payload policy',
-                  value: redactions.payloads ?? 'not-loaded',
-                },
-              ]"
-              :key="fact.label"
-              class="min-w-0 rounded-lg bg-white px-2.5 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
-              data-testid="cockpit-voucher-detail-header-fact"
-            >
-              <dt
-                class="text-[0.6rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
-              >
-                {{ fact.label }}
-              </dt>
-              <dd
-                class="truncate text-xs font-semibold leading-4 text-slate-950 dark:text-slate-50"
-              >
-                {{ fact.value }}
-              </dd>
-            </div>
-          </dl>
-        </div>
-        <details
-          class="mt-2 border-t border-slate-200 pt-2 dark:border-slate-800"
-          data-testid="cockpit-voucher-detail-boundary"
-        >
-          <summary
-            class="cursor-pointer text-[0.7rem] font-semibold text-slate-500 dark:text-slate-400"
-          >
-            Read-only limits
-          </summary>
-          <p
-            class="mt-2 max-w-4xl text-xs leading-5 text-slate-500 dark:text-slate-400"
-          >
-            Inspection only. This page can open or copy the claim URL, but it
-            cannot change the Pay Code, send messages, call providers, or move
-            money.
-          </p>
-        </details>
+        <h1 class="font-semibold text-slate-950 dark:text-white">Pay Code detail</h1>
+        <span aria-hidden="true">·</span>
+        <span>Read-only</span>
       </div>
 
       <section

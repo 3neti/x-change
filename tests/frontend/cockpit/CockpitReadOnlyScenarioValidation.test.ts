@@ -327,7 +327,7 @@ describe("Cockpit read-only UI/UX scenario validation checkpoint", () => {
 
     await wrapper
       .findAll('[role="tab"]')
-      .find((tab) => tab.text().includes("Audit"))!
+      .find((tab) => tab.text().includes("Activity"))!
       .trigger("click");
 
     const audit = wrapper.get('[data-testid="pay-code-audit-tab"]');

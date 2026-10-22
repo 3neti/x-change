@@ -261,27 +261,20 @@ describe("Cockpit Voucher Detail foundation", () => {
         .find('[data-testid="cockpit-voucher-detail-legacy-projection"]')
         .exists(),
     ).toBe(false);
-    expect(wrapper.text()).toContain("Pay Code Detail");
-    expect(wrapper.text()).toContain("Pay Code inspection");
-    expect(wrapper.text()).toContain(
-      "Inspect lifecycle state, claim readiness, and connected evidence",
-    );
+    expect(wrapper.text()).toContain("Pay Code detail");
+    expect(wrapper.text()).toContain("Read-only");
     expect(wrapper.text()).toContain("Overview");
-    expect(wrapper.text()).toContain("Instructions");
-    expect(wrapper.text()).toContain("Claim & Evidence");
-    expect(wrapper.text()).toContain("Settlement");
-    expect(wrapper.text()).toContain("Audit");
-    expect(wrapper.text()).toContain("Engineering");
+    expect(wrapper.text()).toContain("Claim rules");
+    expect(wrapper.text()).toContain("Claim & proof");
+    expect(wrapper.text()).toContain("Money");
+    expect(wrapper.text()).toContain("Activity");
+    expect(wrapper.text()).toContain("Technical");
     expect(wrapper.text()).toContain("Claim readiness");
     expect(wrapper.text()).toContain("Lifecycle");
     expect(wrapper.text()).toContain("Pay Codes");
     expect(wrapper.text()).toContain("Distribution");
     expect(wrapper.find('[data-testid="cockpit-layout"]').exists()).toBe(true);
-    expect(wrapper.text()).toContain("Inspection only");
-    expect(wrapper.text()).toContain("cannot change the Pay Code");
-    expect(wrapper.text()).toContain("send messages");
-    expect(wrapper.text()).toContain("call providers");
-    expect(wrapper.text()).toContain("move money");
+    expect(wrapper.text()).not.toContain("Inspect lifecycle state, claim readiness, and connected evidence");
   });
 
   it("renders the voucher shell as a sleek operational header", () => {
@@ -294,28 +287,11 @@ describe("Cockpit Voucher Detail foundation", () => {
     const header = wrapper.find(
       '[data-testid="cockpit-voucher-detail-header"]',
     );
-    const headerRow = wrapper.find(
-      '[data-testid="cockpit-voucher-detail-header-row"]',
-    );
-    const facts = wrapper.find(
-      '[data-testid="cockpit-voucher-detail-header-facts"]',
-    );
-    const boundary = wrapper.find(
-      '[data-testid="cockpit-voucher-detail-boundary"]',
-    );
-
-    expect(header.classes()).toContain("py-3");
-    expect(header.classes()).not.toContain("p-6");
-    expect(headerRow.classes()).toContain("lg:items-center");
-    expect(
-      facts.findAll('[data-testid="cockpit-voucher-detail-header-fact"]'),
-    ).toHaveLength(3);
-    expect(facts.classes()).toContain("p-1.5");
-    expect(boundary.element.tagName.toLowerCase()).toBe("details");
-    expect(boundary.find("summary").text()).toContain("Read-only limits");
-    expect(boundary.text()).toContain("open or copy the claim URL");
-    expect(boundary.text()).toContain("cannot change the Pay Code");
-    expect(boundary.text()).not.toContain("execute drivers");
+    expect(header.classes()).toContain("items-center");
+    expect(header.text()).toContain("Pay Code detail");
+    expect(header.text()).toContain("Read-only");
+    expect(header.text()).not.toContain("PC-DETAIL-001");
+    expect(wrapper.find('[data-testid="cockpit-voucher-detail-header-facts"]').exists()).toBe(false);
   });
 
   it("renders safe campaign recipient context on voucher detail without mutation controls", () => {

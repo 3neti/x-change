@@ -131,9 +131,7 @@ describe("Cockpit Voucher Detail hydration", () => {
       },
     });
 
-    expect(
-      wrapper.get('[data-testid="cockpit-voucher-detail-header"]').text(),
-    ).toContain("PC-HYDRATED-001");
+    expect(wrapper.get('[data-testid="cockpit-voucher-detail-header"]').text()).toContain("Pay Code detail");
     expect(
       wrapper.get('[data-testid="pay-code-record-workspace"]').text(),
     ).toContain("₱1,500.75");
@@ -143,7 +141,7 @@ describe("Cockpit Voucher Detail hydration", () => {
     expect(
       wrapper.get('[data-testid="cockpit-pay-code-share-card"]').text(),
     ).toContain("PC-HYDRATED-001");
-    expect(wrapper.text()).toContain("sanitized-summary-only");
+    expect(wrapper.text()).not.toContain("sanitized-summary-only");
     expect(
       wrapper
         .find('[data-testid="cockpit-voucher-detail-legacy-projection"]')
@@ -159,7 +157,7 @@ describe("Cockpit Voucher Detail hydration", () => {
     expect(wrapper.get('[data-testid="pay-code-overview-pos-reference"]').text()).toContain("Snacks");
   });
 
-  it("prefers canonical consumer status on collectible detail", () => {
+  it("prefers canonical consumer status on collectible detail", async () => {
     const wrapper = mount(VoucherDetail, {
       props: {
         context: { code: "PC-HYDRATED-001" },
@@ -186,9 +184,8 @@ describe("Cockpit Voucher Detail hydration", () => {
     expect(wrapper.get('[data-testid="pay-code-record-workspace"]').text()).toContain(
       "Processing",
     );
-    expect(
-      wrapper.get('[data-testid="pay-code-overview-collection-progress"]').text(),
-    ).toContain("₱1,000.75");
+    await wrapper.findAll('[role="tab"]').find((tab) => tab.text().includes("Money"))!.trigger("click");
+    expect(wrapper.get('[data-testid="pay-code-settlement-tab"]').text()).toContain("₱1,000.75");
   });
 
   it("labels a historical POS reference without fabricating a canonical sale reference", () => {
@@ -247,31 +244,28 @@ describe("Cockpit Voucher Detail hydration", () => {
 
     await wrapper
       .findAll('[role="tab"]')
-      .find((tab) => tab.text().includes("Instructions"))!
+      .find((tab) => tab.text().includes("Claim rules"))!
       .trigger("click");
 
     const instructions = wrapper.get(
       '[data-testid="pay-code-instructions-tab"]',
     );
 
-    expect(instructions.text()).toContain("Immutable Snapshot");
+    expect(instructions.text()).toContain("Saved at issuance");
     expect(instructions.text()).toContain(
-      "A plain-language guide to what the claimant will provide, verify, and see.",
+      "Verified mobile, One-time code and Selfie",
     );
     expect(instructions.text()).toContain(
-      "The claimant must verify their mobile number, enter the one-time code sent to that mobile and provide a selfie for identity verification.",
+      "Mobile and OTP",
     );
     expect(instructions.text()).toContain(
-      "The claim verifies Mobile and OTP before it can continue.",
+      "Verified mobile ending 1987",
     );
     expect(instructions.text()).toContain(
-      "Only the verified mobile number ending in 1987 may claim this Pay Code.",
+      "GCash payout account required",
     );
     expect(instructions.text()).toContain(
-      "The claimant must provide a GCash payout account.",
-    );
-    expect(instructions.text()).toContain(
-      "The claimant will see: “Bring a valid ID”",
+      "Bring a valid ID",
     );
     expect(instructions.text()).not.toContain("Required Inputs");
     expect(instructions.text()).not.toContain("Target Mobile");
@@ -309,11 +303,11 @@ describe("Cockpit Voucher Detail hydration", () => {
     const workspace = wrapper.get('[data-testid="pay-code-record-workspace"]');
 
     expect(workspace.text()).toContain("Overview");
-    expect(workspace.text()).toContain("Instructions");
-    expect(workspace.text()).toContain("Claim & Evidence");
-    expect(workspace.text()).toContain("Settlement");
-    expect(workspace.text()).toContain("Audit");
-    expect(workspace.text()).toContain("Engineering");
+    expect(workspace.text()).toContain("Claim rules");
+    expect(workspace.text()).toContain("Claim & proof");
+    expect(workspace.text()).toContain("Money");
+    expect(workspace.text()).toContain("Activity");
+    expect(workspace.text()).toContain("Technical");
     expect(workspace.text()).toContain("Pay Codes");
     expect(workspace.text()).toContain("Distribution");
     expect(

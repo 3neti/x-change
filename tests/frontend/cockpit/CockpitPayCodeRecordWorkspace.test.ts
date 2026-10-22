@@ -155,7 +155,7 @@ describe("Cockpit Pay Code record workspace", () => {
 
     await wrapper
       .findAll('[role="tab"]')
-      .find((tab) => tab.text().includes("Engineering"))!
+      .find((tab) => tab.text().includes("Technical"))!
       .trigger("click");
     await flushPromises();
 
@@ -291,12 +291,7 @@ describe("Cockpit Pay Code record workspace", () => {
     expect(backingDetails.attributes("open")).toBeUndefined();
     expect(backingDetails.text()).toContain("Technical backing details");
     expect(backingDetails.text()).toContain("Treasury Backing");
-    expect(
-      wrapper.get('[data-testid="pay-code-overview-tab"]').text(),
-    ).toContain("Authority: Treasury Position");
-    expect(
-      wrapper.get('[data-testid="pay-code-overview-tab"]').text(),
-    ).toContain("A legacy Cash entity is not the monetary authority.");
+    expect(wrapper.get('[data-testid="pay-code-overview-tab"]').text()).not.toContain("Authority: Treasury Position");
   });
 
   it("translates immutable instruction facts into claimant-facing language", async () => {
@@ -329,7 +324,7 @@ describe("Cockpit Pay Code record workspace", () => {
 
     await wrapper
       .findAll('[role="tab"]')
-      .find((tab) => tab.text().includes("Instructions"))!
+      .find((tab) => tab.text().includes("Claim rules"))!
       .trigger("click");
 
     const instructions = wrapper.get(
@@ -337,16 +332,16 @@ describe("Cockpit Pay Code record workspace", () => {
     );
 
     expect(instructions.text()).toContain(
-      "The claimant must verify their mobile number, enter the one-time code sent to that mobile and provide a selfie for identity verification.",
+      "Verified mobile, One-time code and Selfie",
     );
     expect(instructions.text()).toContain(
-      "Only the verified mobile number ending in 1987 may claim this Pay Code.",
+      "Verified mobile ending 1987",
     );
     expect(instructions.text()).toContain(
-      "The claimant must provide a GCash payout account.",
+      "GCash payout account required",
     );
     expect(instructions.text()).toContain(
-      "The claimant will see: “Bring a valid ID”",
+      "Bring a valid ID",
     );
     expect(instructions.text()).not.toContain("Required Inputs");
     expect(instructions.text()).not.toContain("Target Mobile");
@@ -374,14 +369,11 @@ describe("Cockpit Pay Code record workspace", () => {
       },
     });
 
-    await wrapper
-      .findAll('[role="tab"]')
-      .find((tab) => tab.text().includes("Instructions"))!
-      .trigger("click");
-
-    expect(
-      wrapper.get('[data-testid="pay-code-instructions-tab"]').text(),
-    ).toContain("The claimant can receive ₱1,000.00.");
+    await wrapper.findAll('[role="tab"]').find((tab) => tab.text().includes("Technical"))!.trigger("click");
+    const details = wrapper.get('[data-testid="pay-code-technical-details"]');
+    expect(details.text()).toContain("Amount");
+    expect(details.text()).toContain("1000");
+    expect(details.text()).toContain("PHP");
   });
 
   it("opens Settlement from the compact Overview teaser", async () => {
@@ -481,16 +473,17 @@ describe("Cockpit Pay Code record workspace", () => {
 
     const claimTab = wrapper
       .findAll('[role="tab"]')
-      .find((tab) => tab.text().includes("Claim & Evidence"));
+      .find((tab) => tab.text().includes("Claim & proof"));
     expect(claimTab).toBeDefined();
     await claimTab!.trigger("click");
 
     expect(wrapper.get('[data-testid="pay-code-claim-tab"]').text()).toContain(
-      "Access is recorded",
+      "Viewing protected images and maps is recorded.",
     );
     expect(
       wrapper.get('[data-testid="claim-evidence-coverage"]').text(),
-    ).toContain("1 of 1 required items captured");
+    ).toContain("1 record available");
+    expect(wrapper.get('[data-testid="claim-evidence-coverage"]').text()).toContain("1 required input configured");
     expect(wrapper.get('[data-testid="pay-code-claim-tab"]').text()).toContain(
       "Selfie & Signature",
     );
@@ -507,7 +500,7 @@ describe("Cockpit Pay Code record workspace", () => {
 
     const reveal = wrapper
       .findAll("button")
-      .find((button) => button.text().includes("Reveal Signature"));
+      .find((button) => button.text().includes("View Signature"));
     expect(reveal).toBeDefined();
     await reveal!.trigger("click");
 
@@ -516,6 +509,10 @@ describe("Cockpit Pay Code record workspace", () => {
         .get('img[src="/x/cockpit/pay-codes/CAMP-CB2L/evidence/input/44"]')
         .exists(),
     ).toBe(true);
+    expect(wrapper.findAll("button").some((button) => button.text().includes("View Signature"))).toBe(false);
+    await wrapper.get('img[src="/x/cockpit/pay-codes/CAMP-CB2L/evidence/input/44"]').trigger("error");
+    expect(wrapper.get('[data-testid="pay-code-evidence-unavailable-44"]').text()).toContain("Evidence unavailable");
+    expect(wrapper.findAll("button").some((button) => button.text().includes("View Signature"))).toBe(false);
   });
 
   it("explains retained evidence whose private artifact is unavailable", async () => {
@@ -538,7 +535,7 @@ describe("Cockpit Pay Code record workspace", () => {
 
     await wrapper
       .findAll('[role="tab"]')
-      .find((tab) => tab.text().includes("Claim & Evidence"))!
+      .find((tab) => tab.text().includes("Claim & proof"))!
       .trigger("click");
 
     const claimTab = wrapper.get('[data-testid="pay-code-claim-tab"]');
@@ -548,7 +545,7 @@ describe("Cockpit Pay Code record workspace", () => {
     expect(
       wrapper
         .findAll("button")
-        .some((button) => button.text().includes("Reveal Signature")),
+        .some((button) => button.text().includes("View Signature")),
     ).toBe(false);
   });
 
@@ -565,7 +562,7 @@ describe("Cockpit Pay Code record workspace", () => {
 
     const settlementTab = wrapper
       .findAll('[role="tab"]')
-      .find((tab) => tab.text().includes("Settlement"));
+      .find((tab) => tab.text().includes("Money"));
     await settlementTab!.trigger("click");
 
     const settlement = wrapper
@@ -573,9 +570,8 @@ describe("Cockpit Pay Code record workspace", () => {
       .text();
     expect(settlement).toContain("Required evidence");
     expect(settlement).toContain("100%");
-    expect(settlement).toContain(
-      "The Settlement Envelope proves readiness. Treasury Backing proves where the money is held.",
-    );
+    expect(settlement).toContain("From Treasury Position");
+    expect(settlement).toContain("Funds are recorded in this account’s Treasury position.");
   });
 
   it("uses consistent cards for settlement status, gates, and documents", async () => {
@@ -603,7 +599,7 @@ describe("Cockpit Pay Code record workspace", () => {
 
     await wrapper
       .findAll('[role="tab"]')
-      .find((tab) => tab.text().includes("Settlement"))!
+      .find((tab) => tab.text().includes("Money"))!
       .trigger("click");
 
     for (const testId of [
@@ -661,7 +657,7 @@ describe("Cockpit Pay Code record workspace", () => {
 
     await wrapper
       .findAll('[role="tab"]')
-      .find((tab) => tab.text().includes("Audit"))!
+      .find((tab) => tab.text().includes("Activity"))!
       .trigger("click");
 
     expect(
@@ -694,12 +690,12 @@ describe("Cockpit Pay Code record workspace", () => {
     expect(overview).toContain("Makati counter");
     expect(overview).not.toContain("Expires");
     expect(overview).toContain(
-      "Claimed marks the recipient-facing completion moment. Payout and evidence details remain available under Claim & Evidence.",
+      "Claimed. Payout and proof are in Claim & proof.",
     );
 
     await wrapper
       .findAll('[role="tab"]')
-      .find((tab) => tab.text().includes("Claim & Evidence"))!
+      .find((tab) => tab.text().includes("Claim & proof"))!
       .trigger("click");
 
     expect(wrapper.get('[data-testid="pay-code-claim-tab"]').text()).toContain(
@@ -870,7 +866,7 @@ describe("Cockpit Pay Code record workspace", () => {
 
     await wrapper
       .findAll('[role="tab"]')
-      .find((tab) => tab.text().includes("Audit"))!
+      .find((tab) => tab.text().includes("Activity"))!
       .trigger("click");
 
     const audit = wrapper.get('[data-testid="pay-code-audit-tab"]').text();
@@ -880,7 +876,36 @@ describe("Cockpit Pay Code record workspace", () => {
     expect(audit).toContain("Delivered");
   });
 
-  it("renders canonical collection progress for a collectible Pay Code", () => {
+  it("groups protected evidence views by day without hiding other activity", async () => {
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "CAMP-CB2L",
+        status: "redeemed",
+        voucher,
+        journal: {
+          status: "available",
+          entries: [
+            { id: "claim", event_type: "voucher.claimed", occurred_at: "2026-08-03T08:00:00+08:00" },
+            { id: "view-1", event_type: "pay_code.evidence.viewed", occurred_at: "2026-08-03T08:01:00+08:00" },
+            { id: "view-2", event_type: "pay_code.evidence.viewed", occurred_at: "2026-08-03T08:02:00+08:00" },
+            { id: "view-3", event_type: "pay_code.evidence.viewed", occurred_at: "2026-08-04T08:00:00+08:00" },
+          ],
+        },
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+
+    await wrapper.findAll('[role="tab"]').find((tab) => tab.text().includes("Activity"))!.trigger("click");
+
+    const groups = wrapper.findAll('[data-testid="pay-code-audit-evidence-views"]');
+    expect(groups).toHaveLength(2);
+    expect(groups[0].find("summary").text()).toContain("viewed 2 times");
+    expect(groups[1].find("summary").text()).toContain("viewed 1 time");
+    expect(wrapper.get('[data-testid="pay-code-audit-journal"]').text()).toContain("Voucher Claimed");
+  });
+
+  it("renders canonical collection progress for a collectible Pay Code", async () => {
     const wrapper = mount(CockpitPayCodeRecordWorkspace, {
       props: {
         code: "CAMP-CB2L",
@@ -904,15 +929,13 @@ describe("Cockpit Pay Code record workspace", () => {
       },
     });
 
-    const progress = wrapper.get(
-      '[data-testid="pay-code-overview-collection-progress"]',
-    );
+    await wrapper.findAll('[role="tab"]').find((tab) => tab.text().includes("Money"))!.trigger("click");
+    const progress = wrapper.get('[data-testid="pay-code-settlement-tab"]');
 
-    expect(progress.text()).toContain("Collection Progress");
-    expect(progress.text()).toContain("₱100.00");
+    expect(progress.text()).toContain("Collection");
     expect(progress.text()).toContain("₱40.00");
     expect(progress.text()).toContain("₱60.00");
-    expect(wrapper.text()).toContain("Collection status:");
+    expect(wrapper.text()).toContain("Collection:");
     expect(wrapper.text()).toContain("Processing");
   });
 });

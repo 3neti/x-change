@@ -392,7 +392,7 @@ describe("PublicIssuanceBatchDialog", () => {
 
     await new Promise((resolve) => window.setTimeout(resolve, 0));
     const claimTab = wrapper.findAll('button[role="tab"]')
-      .find((button) => button.text().includes('Claim & Evidence'));
+      .find((button) => button.text().includes('Claim & proof'));
     await claimTab?.trigger('click');
     await wrapper.get('[data-testid="pay-code-evidence-panel"] button').trigger("click");
 
