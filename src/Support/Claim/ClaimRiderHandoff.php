@@ -100,7 +100,6 @@ final class ClaimRiderHandoff
         }
 
         try {
-            $this->record($voucher, $claim, 'rider.handoff.prepared');
             $this->record($voucher, $claim, 'rider.redirect.started', (string) Str::uuid());
 
             return true;

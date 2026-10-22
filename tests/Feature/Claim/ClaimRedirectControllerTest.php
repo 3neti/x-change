@@ -105,7 +105,7 @@ it('redirects a completed claim from its authorized browser session', function (
         'currency' => 'PHP',
     ]);
     $journal = Mockery::mock(ExecutionJournalRecorder::class);
-    $journal->shouldReceive('record')->times(3)->andReturn(new ExecutionJournalEntry);
+    $journal->shouldReceive('record')->times(2)->andReturn(new ExecutionJournalEntry);
     $this->app->instance(ExecutionJournalRecorder::class, $journal);
 
     $prepared = app(ClaimRiderHandoff::class)->prepare($voucher, new SubmitPayCodeClaimResultData(
@@ -147,7 +147,7 @@ it('keeps an accepted claim rider handoff when a pending payout later fails', fu
         'currency' => 'PHP',
     ]);
     $journal = Mockery::mock(ExecutionJournalRecorder::class);
-    $journal->shouldReceive('record')->times(3)->andReturn(new ExecutionJournalEntry);
+    $journal->shouldReceive('record')->times(2)->andReturn(new ExecutionJournalEntry);
     $this->app->instance(ExecutionJournalRecorder::class, $journal);
     $analytics = Mockery::mock(RiderAnalyticsRecorderContract::class);
     $analytics->shouldReceive('record')->once()->withArgs(
@@ -224,7 +224,7 @@ it('redirects an accepted claim even when the provider immediately rejects payou
         'currency' => 'PHP',
     ]);
     $journal = Mockery::mock(ExecutionJournalRecorder::class);
-    $journal->shouldReceive('record')->times(3)->andReturn(new ExecutionJournalEntry);
+    $journal->shouldReceive('record')->times(2)->andReturn(new ExecutionJournalEntry);
     $this->app->instance(ExecutionJournalRecorder::class, $journal);
 
     expect(app(ClaimRiderHandoff::class)->prepare($voucher, new SubmitPayCodeClaimResultData(
