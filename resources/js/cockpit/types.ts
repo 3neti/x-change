@@ -2195,6 +2195,7 @@ export type CockpitVoucherReadModel = {
 
 export type CockpitPayCodeStamp = {
   available: boolean;
+  reconstructed?: boolean;
   thumbnail_url?: string;
   image_url?: string;
   download_url?: string;

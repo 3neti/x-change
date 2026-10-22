@@ -43,7 +43,11 @@ it('shows the saved stamp in Cockpit projections and serves full and thumbnail i
 
     $this->actingAs($owner)->withHeader('X-Inertia', 'true')
         ->get(route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code]))
-        ->assertJsonPath('props.read_model.voucher.stamp.fallback_url', route('x-change.claim.share-card', ['code' => $voucher->code]));
+        ->assertJsonPath('props.read_model.voucher.stamp.fallback_url', route('x-change.cockpit.pay-codes.stamp.show', [
+            'code' => $voucher->code,
+            'size' => 'full',
+            'sha256' => 'current',
+        ]));
 
     $full = $this->actingAs($owner)->get($fullUrl)
         ->assertOk()
@@ -112,14 +116,31 @@ it('keeps a collectible Pay Code stamp accessible in Cockpit after its collectio
     ]))->assertOk()->assertHeader('Content-Type', 'image/png');
 });
 
-it('shows a neutral stamp state for legacy vouchers and refuses missing stored bytes', function (): void {
+it('renders cached current thumbnails for legacy vouchers and missing issued bytes', function (): void {
     $owner = actingAsTestUser();
     $voucher = issueVoucher();
+    $currentThumbnailUrl = route('x-change.cockpit.pay-codes.stamp.show', [
+        'code' => $voucher->code,
+        'size' => 'thumbnail',
+        'sha256' => 'current',
+    ]);
 
     $this->actingAs($owner)->withHeader('X-Inertia', 'true')
         ->get(route('x-change.cockpit.pay-codes.show', $voucher->code))
         ->assertOk()
-        ->assertJsonPath('props.read_model.voucher.stamp.available', false);
+        ->assertJsonPath('props.read_model.voucher.stamp.available', true)
+        ->assertJsonPath('props.read_model.voucher.stamp.reconstructed', true)
+        ->assertJsonPath('props.read_model.voucher.stamp.thumbnail_url', $currentThumbnailUrl);
+
+    $currentThumbnail = $this->actingAs($owner)->get($currentThumbnailUrl)
+        ->assertOk()
+        ->assertHeader('Content-Type', 'image/png');
+    expect(getimagesizefromstring((string) $currentThumbnail->getContent()))->toMatchArray([320, 168]);
+    $this->actingAs($owner)->get(route('x-change.cockpit.pay-codes.stamp.show', [
+        'code' => $voucher->code,
+        'size' => 'full',
+        'sha256' => 'current',
+    ]))->assertOk()->assertHeader('Content-Type', 'image/png');
 
     $artifact = app(RiderStampArtifactStoreContract::class)->materialize(
         $voucher,
@@ -127,9 +148,23 @@ it('shows a neutral stamp state for legacy vouchers and refuses missing stored b
     );
     Storage::disk('local')->delete('x-change/claim/stamp-artifacts/'.$artifact->sha256.'.png');
 
+    $savedThumbnailUrl = route('x-change.cockpit.pay-codes.stamp.show', [
+        'code' => $voucher->code,
+        'size' => 'thumbnail',
+        'sha256' => $artifact->sha256,
+    ]);
+    $this->actingAs($owner)->get($savedThumbnailUrl)
+        ->assertOk()
+        ->assertHeader('Content-Type', 'image/png');
+
     $this->actingAs($owner)->get(route('x-change.cockpit.pay-codes.stamp.show', [
         'code' => $voucher->code,
         'size' => 'full',
         'sha256' => $artifact->sha256,
     ]))->assertNotFound();
+
+    auth()->logout();
+    Route::get('/login', static fn () => response('Login'))->name('login');
+    Route::getRoutes()->refreshNameLookups();
+    $this->get($currentThumbnailUrl)->assertRedirect(route('login'));
 });

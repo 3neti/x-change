@@ -987,7 +987,7 @@ Route::prefix('x')->middleware([
             Route::get('/', CockpitPayCodeExplorerPageController::class)->name('x-change.cockpit.pay-codes.index');
             Route::get('{code}/stamp/{size}/{sha256}.png', CockpitPayCodeStampController::class)
                 ->whereIn('size', ['full', 'thumbnail'])
-                ->where('sha256', '[a-f0-9]{64}')
+                ->where('sha256', '(?:[a-f0-9]{64}|current)')
                 ->middleware('throttle:240,1')
                 ->name('x-change.cockpit.pay-codes.stamp.show');
             Route::get('{code}/distribution', CockpitDistributionWorkspacePageController::class)->name('x-change.cockpit.pay-codes.distribution');

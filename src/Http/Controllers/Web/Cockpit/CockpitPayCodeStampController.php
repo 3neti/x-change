@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
+use LBHurtado\XChange\Contracts\ClaimShareCardRendererContract;
 use LBHurtado\XChange\Contracts\RiderStampArtifactStoreContract;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeDetailAccess;
@@ -15,10 +16,13 @@ use Throwable;
 
 final class CockpitPayCodeStampController extends Controller
 {
+    private const string CurrentThumbnailVersion = 'v1';
+
     public function __construct(
         private readonly VoucherAccessContract $vouchers,
         private readonly CockpitPayCodeDetailAccess $access,
         private readonly RiderStampArtifactStoreContract $artifacts,
+        private readonly ClaimShareCardRendererContract $renderer,
     ) {}
 
     public function __invoke(Request $request, string $code, string $size, string $sha256): Response
@@ -32,13 +36,13 @@ final class CockpitPayCodeStampController extends Controller
             404,
         );
 
+        $isCurrent = $sha256 === 'current';
         $artifact = $this->artifacts->descriptor($voucher);
-        abort_unless($artifact !== null && hash_equals($artifact->sha256, $sha256), 404);
+        abort_unless($isCurrent || ($artifact !== null && hash_equals($artifact->sha256, $sha256)), 404);
 
         $headers = [
             'Content-Type' => 'image/png',
             'Cache-Control' => 'private, max-age=3600',
-            'ETag' => '"'.$sha256.'-'.$size.'"',
             'X-Content-Type-Options' => 'nosniff',
             'X-Robots-Tag' => 'noindex, nofollow, noarchive',
         ];
@@ -48,29 +52,51 @@ final class CockpitPayCodeStampController extends Controller
             $headers['Content-Disposition'] = 'attachment; filename="Pay-Code-'.$safeCode.'.png"';
         }
 
-        $card = $this->artifacts->read($voucher);
-        abort_unless($card !== null, 404);
-
-        if ($request->header('If-None-Match') === $headers['ETag']) {
-            return response('', 304, $headers);
-        }
-
         if ($size === 'full') {
+            try {
+                $card = $isCurrent
+                    ? $this->renderer->render($voucher, route('x-change.claim.show', ['code' => $voucher->code]))
+                    : $this->artifacts->read($voucher);
+            } catch (Throwable) {
+                abort(404);
+            }
+            abort_unless($card !== null, 404);
+            $headers['ETag'] = $card->etag;
+
+            if ($isCurrent) {
+                $headers['Cache-Control'] = 'private, max-age=300';
+            }
+
+            if ($request->header('If-None-Match') === $headers['ETag']) {
+                return response('', 304, $headers);
+            }
+
             return response($card->contents, 200, $headers);
         }
 
+        $card = $isCurrent ? null : $this->artifacts->read($voucher);
+        $isCurrent = $isCurrent || $card === null;
         $disk = Storage::disk((string) config('x-change.claim.share.artifact.disk', 'local'));
-        $path = 'x-change/claim/stamp-thumbnails/'.$sha256.'.png';
+        $path = $isCurrent
+            ? 'x-change/claim/stamp-thumbnails/current/'.self::CurrentThumbnailVersion.'-'.hash('sha256', $voucher->code.'|'.$voucher->updated_at?->toIso8601String().'|'.json_encode($voucher->metadata)).'.png'
+            : 'x-change/claim/stamp-thumbnails/'.$sha256.'.png';
 
         try {
             $thumbnail = $disk->exists($path) ? $disk->get($path) : null;
 
             if (! is_string($thumbnail) || $thumbnail === '') {
+                $card ??= $this->renderer->render($voucher, route('x-change.claim.show', ['code' => $voucher->code]));
                 $thumbnail = $this->thumbnail($card->contents);
                 $disk->put($path, $thumbnail);
             }
         } catch (Throwable) {
             abort(404);
+        }
+
+        $headers['ETag'] = '"'.hash('sha256', $thumbnail).'"';
+
+        if ($request->header('If-None-Match') === $headers['ETag']) {
+            return response('', 304, $headers);
         }
 
         return response($thumbnail, 200, $headers);

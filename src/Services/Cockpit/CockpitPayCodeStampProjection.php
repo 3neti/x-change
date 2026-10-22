@@ -16,11 +16,7 @@ final readonly class CockpitPayCodeStampProjection
     {
         $artifact = $this->artifacts->descriptor($voucher);
 
-        if ($artifact === null) {
-            return ['available' => false];
-        }
-
-        $parameters = ['code' => $voucher->code, 'sha256' => $artifact->sha256];
+        $parameters = ['code' => $voucher->code, 'sha256' => $artifact?->sha256 ?? 'current'];
         $imageUrl = route('x-change.cockpit.pay-codes.stamp.show', [...$parameters, 'size' => 'full']);
 
         return [
@@ -28,7 +24,10 @@ final readonly class CockpitPayCodeStampProjection
             'thumbnail_url' => route('x-change.cockpit.pay-codes.stamp.show', [...$parameters, 'size' => 'thumbnail']),
             'image_url' => $imageUrl,
             'download_url' => $imageUrl.'?download=1',
-            'fallback_url' => route('x-change.claim.share-card', ['code' => $voucher->code]),
+            'fallback_url' => $artifact === null
+                ? null
+                : route('x-change.cockpit.pay-codes.stamp.show', ['code' => $voucher->code, 'size' => 'full', 'sha256' => 'current']),
+            'reconstructed' => $artifact === null,
             'detail_url' => route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code, 'tab' => 'stamp']),
         ];
     }

@@ -1225,10 +1225,16 @@ function number(value: unknown): number {
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 class="text-lg font-semibold text-slate-950 dark:text-white">
-              {{ stampImageFallback ? "Current stamp rendering" : "Issued stamp" }}
+              {{ stampImageFallback || stamp.reconstructed ? "Current stamp rendering" : "Issued stamp" }}
             </h2>
             <p class="text-sm text-slate-500 dark:text-slate-400">
               {{ code }} · {{ status }}
+            </p>
+            <p
+              v-if="stampImageFallback || stamp.reconstructed"
+              class="text-xs text-amber-700 dark:text-amber-300"
+            >
+              The issued image is unavailable; this rendering may differ from the original.
             </p>
           </div>
           <a
@@ -1247,7 +1253,7 @@ function number(value: unknown): number {
         >
           <img
             :src="stampImageUrl"
-            :alt="`${stampImageFallback ? 'Current rendering of' : 'Issued stamp for'} Pay Code ${code}`"
+            :alt="`${stampImageFallback || stamp.reconstructed ? 'Current rendering of' : 'Issued stamp for'} Pay Code ${code}`"
             class="block aspect-[40/21] w-full object-contain"
             decoding="async"
             data-testid="pay-code-stamp-image"

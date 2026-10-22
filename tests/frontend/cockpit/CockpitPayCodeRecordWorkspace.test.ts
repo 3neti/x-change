@@ -196,6 +196,8 @@ describe("Cockpit Pay Code record workspace", () => {
       .toBe("/x/claim/CAMP-CB2L/share-card.png");
     expect(wrapper.get('[data-testid="pay-code-stamp-tab"]').text())
       .toContain("Current stamp rendering");
+    expect(wrapper.get('[data-testid="pay-code-stamp-tab"]').text())
+      .toContain("may differ from the original");
     expect(wrapper.get('[data-testid="pay-code-stamp-download"]').attributes("href"))
       .toBe("/x/claim/CAMP-CB2L/share-card.png");
 
