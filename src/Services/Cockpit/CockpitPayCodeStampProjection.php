@@ -17,16 +17,18 @@ final readonly class CockpitPayCodeStampProjection
         $artifact = $this->artifacts->descriptor($voucher);
 
         $parameters = ['code' => $voucher->code, 'sha256' => $artifact?->sha256 ?? 'current'];
-        $imageUrl = route('x-change.cockpit.pay-codes.stamp.show', [...$parameters, 'size' => 'full']);
+        $revision = $voucher->updated_at?->format('Uu') ?? '0';
+        $currentQuery = $artifact === null ? ['revision' => $revision] : [];
+        $imageUrl = route('x-change.cockpit.pay-codes.stamp.show', [...$parameters, 'size' => 'full', ...$currentQuery]);
 
         return [
             'available' => true,
-            'thumbnail_url' => route('x-change.cockpit.pay-codes.stamp.show', [...$parameters, 'size' => 'thumbnail']),
+            'thumbnail_url' => route('x-change.cockpit.pay-codes.stamp.show', [...$parameters, 'size' => 'thumbnail', ...$currentQuery]),
             'image_url' => $imageUrl,
-            'download_url' => $imageUrl.'?download=1',
+            'download_url' => $imageUrl.($currentQuery === [] ? '?' : '&').'download=1',
             'fallback_url' => $artifact === null
                 ? null
-                : route('x-change.cockpit.pay-codes.stamp.show', ['code' => $voucher->code, 'size' => 'full', 'sha256' => 'current']),
+                : route('x-change.cockpit.pay-codes.stamp.show', ['code' => $voucher->code, 'size' => 'full', 'sha256' => 'current', 'revision' => $revision]),
             'reconstructed' => $artifact === null,
             'detail_url' => route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code, 'tab' => 'stamp']),
         ];

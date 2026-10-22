@@ -6,9 +6,24 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use LBHurtado\XChange\Contracts\RiderStampArtifactStoreContract;
 use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeDetailAccess;
+use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeStampProjection;
 
 beforeEach(function (): void {
     Storage::fake('local');
+});
+
+it('changes reconstructed image URLs when the voucher is updated', function (): void {
+    $voucher = issueVoucher();
+    $projection = app(CockpitPayCodeStampProjection::class);
+    $original = $projection->forVoucher($voucher);
+
+    $this->travel(1)->seconds();
+    $voucher->forceFill(['metadata' => [...$voucher->metadata, 'stamp_revision_test' => true]])->save();
+    $updated = $projection->forVoucher($voucher->fresh());
+
+    expect($original['image_url'])->not->toBe($updated['image_url'])
+        ->and($original['thumbnail_url'])->not->toBe($updated['thumbnail_url'])
+        ->and($updated['download_url'])->toContain('&download=1');
 });
 
 it('shows the saved stamp in Cockpit projections and serves full and thumbnail images', function (): void {
@@ -47,6 +62,7 @@ it('shows the saved stamp in Cockpit projections and serves full and thumbnail i
             'code' => $voucher->code,
             'size' => 'full',
             'sha256' => 'current',
+            'revision' => $voucher->fresh()->updated_at->format('Uu'),
         ]));
 
     $full = $this->actingAs($owner)->get($fullUrl)
@@ -123,6 +139,7 @@ it('renders cached current thumbnails for legacy vouchers and missing issued byt
         'code' => $voucher->code,
         'size' => 'thumbnail',
         'sha256' => 'current',
+        'revision' => $voucher->updated_at->format('Uu'),
     ]);
 
     $this->actingAs($owner)->withHeader('X-Inertia', 'true')
