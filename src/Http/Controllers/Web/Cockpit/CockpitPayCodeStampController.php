@@ -16,7 +16,7 @@ use Throwable;
 
 final class CockpitPayCodeStampController extends Controller
 {
-    private const string CurrentThumbnailVersion = 'v1';
+    private const string CurrentThumbnailVersion = 'v2';
 
     public function __construct(
         private readonly VoucherAccessContract $vouchers,

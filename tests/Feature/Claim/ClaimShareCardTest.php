@@ -210,8 +210,8 @@ it('paints known Rider emoji as a compact symbol row', function (): void {
     expect($card)->toBeInstanceOf(GdImage::class);
 
     $redPixels = 0;
-    $greenPixels = 0;
     $amberPixels = 0;
+    $bluePixels = 0;
 
     for ($y = 400; $y <= 445; $y++) {
         for ($x = 60; $x <= 330; $x++) {
@@ -225,27 +225,28 @@ it('paints known Rider emoji as a compact symbol row', function (): void {
             }
 
             if (
-                $color['green'] > 160
-                && $color['green'] > $color['red'] + 30
-            ) {
-                $greenPixels++;
-            }
-
-            if (
                 $color['red'] > 210
                 && $color['green'] > 150
                 && $color['blue'] < 100
             ) {
                 $amberPixels++;
             }
+
+            if ($color['blue'] > 120 && $color['blue'] > $color['red'] + 30) {
+                $bluePixels++;
+            }
         }
     }
 
+    $handshakeColor = imagecolorsforindex($card, imagecolorat($card, 87, 423));
     imagedestroy($card);
 
-    expect($redPixels)->toBeGreaterThan(40)
-        ->and($greenPixels)->toBeGreaterThan(40)
-        ->and($amberPixels)->toBeGreaterThan(20);
+    expect($handshakeColor['red'])->toBeGreaterThan(240)
+        ->and($handshakeColor['green'])->toBeGreaterThan(180)
+        ->and($handshakeColor['blue'])->toBeLessThan(60)
+        ->and($redPixels)->toBeGreaterThan(40)
+        ->and($amberPixels)->toBeGreaterThan(20)
+        ->and($bluePixels)->toBeGreaterThan(40);
     Http::assertNothingSent();
 });
 

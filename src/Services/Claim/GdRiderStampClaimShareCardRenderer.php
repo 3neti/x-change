@@ -36,7 +36,7 @@ use RuntimeException;
 
 final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCardRendererContract, RiderStampClaimCardComposerContract
 {
-    private const string CacheVersion = 'v24';
+    private const string CacheVersion = 'v25';
 
     private const int Width = 1200;
 
@@ -1168,6 +1168,16 @@ final readonly class GdRiderStampClaimShareCardRenderer implements ClaimShareCar
         int $x,
         int $y,
     ): void {
+        $imagePath = dirname(__DIR__, 3).'/resources/assets/images/rider-splash-symbols/'.$symbol.'.png';
+        $image = is_file($imagePath) ? @imagecreatefrompng($imagePath) : false;
+
+        if ($image instanceof GdImage) {
+            imagecopyresampled($canvas, $image, $x, $y, 0, 0, 30, 30, imagesx($image), imagesy($image));
+            imagedestroy($image);
+
+            return;
+        }
+
         match ($symbol) {
             'heart' => $this->paintHeart($canvas, $x, $y),
             'peace' => $this->paintPeace($canvas, $x, $y),

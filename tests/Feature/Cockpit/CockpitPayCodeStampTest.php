@@ -62,7 +62,7 @@ it('shows the saved stamp in Cockpit projections and serves full and thumbnail i
             'code' => $voucher->code,
             'size' => 'full',
             'sha256' => 'current',
-            'revision' => $voucher->fresh()->updated_at->format('Uu'),
+            'revision' => 'v2-'.$voucher->fresh()->updated_at->format('Uu'),
         ]));
 
     $full = $this->actingAs($owner)->get($fullUrl)
@@ -139,7 +139,7 @@ it('renders cached current thumbnails for legacy vouchers and missing issued byt
         'code' => $voucher->code,
         'size' => 'thumbnail',
         'sha256' => 'current',
-        'revision' => $voucher->updated_at->format('Uu'),
+        'revision' => 'v2-'.$voucher->updated_at->format('Uu'),
     ]);
 
     $this->actingAs($owner)->withHeader('X-Inertia', 'true')

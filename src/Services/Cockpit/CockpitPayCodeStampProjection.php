@@ -9,6 +9,8 @@ use LBHurtado\XChange\Contracts\RiderStampArtifactStoreContract;
 
 final readonly class CockpitPayCodeStampProjection
 {
+    private const string CurrentRenderingVersion = 'v2';
+
     public function __construct(private RiderStampArtifactStoreContract $artifacts) {}
 
     /** @return array{available: bool, thumbnail_url?: string, image_url?: string, download_url?: string, fallback_url?: string, detail_url?: string} */
@@ -17,7 +19,7 @@ final readonly class CockpitPayCodeStampProjection
         $artifact = $this->artifacts->descriptor($voucher);
 
         $parameters = ['code' => $voucher->code, 'sha256' => $artifact?->sha256 ?? 'current'];
-        $revision = $voucher->updated_at?->format('Uu') ?? '0';
+        $revision = self::CurrentRenderingVersion.'-'.($voucher->updated_at?->format('Uu') ?? '0');
         $currentQuery = $artifact === null ? ['revision' => $revision] : [];
         $imageUrl = route('x-change.cockpit.pay-codes.stamp.show', [...$parameters, 'size' => 'full', ...$currentQuery]);
 
