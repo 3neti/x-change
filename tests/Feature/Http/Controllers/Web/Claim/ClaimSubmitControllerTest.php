@@ -249,6 +249,55 @@ it('hands a successful rider claim to the browser redirect gate without showing 
         ]));
 });
 
+it('hands an accepted claim with a pending payout to the rider redirect gate', function (): void {
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => ['url' => 'https://example.com/after-claim'],
+    ]));
+    $state = [
+        'flow_id' => 'pending-rider-claim-flow',
+        'collected_data' => ['mobile' => '+639173011987'],
+    ];
+    $this->formFlowService->shouldReceive('getFlowState')->once()->andReturn($state);
+    $this->payloadNormalizer->shouldReceive('normalize')->once()->andReturn([
+        'mobile' => '+639173011987',
+        'country' => 'PH',
+    ]);
+    $this->evidenceSynchronizer->shouldReceive('sync')->once();
+    $this->submitAction->shouldReceive('handle')->once()
+        ->andReturnUsing(function (Voucher $actualVoucher, array $payload) use ($voucher): SubmitPayCodeClaimResultData {
+            VoucherClaim::query()->create([
+                'voucher_id' => $voucher->getKey(),
+                'claim_number' => 1,
+                'claim_type' => 'disbursement',
+                'status' => 'succeeded',
+                'idempotency_key' => data_get($payload, '_meta.idempotency_key'),
+                'completed_at' => now(),
+                'currency' => 'PHP',
+            ]);
+
+            return new SubmitPayCodeClaimResultData(
+                voucher_code: (string) $actualVoucher->code,
+                claim_type: 'disbursement',
+                claimed: true,
+                status: 'succeeded',
+                disbursement: ['status' => 'pending'],
+            );
+        });
+    $this->formFlowService->shouldReceive('clearFlow')->once()->with('pending-rider-claim-flow');
+    $journal = Mockery::mock(ExecutionJournalRecorder::class);
+    $journal->shouldReceive('record')->once()->andReturn(new ExecutionJournalEntry);
+    $this->app->instance(ExecutionJournalRecorder::class, $journal);
+
+    $this->withHeader('X-Inertia', 'true')
+        ->post(route('x-change.claim.submit', ['code' => $voucher->code]), [
+            'flow_id' => 'pending-rider-claim-flow',
+        ])
+        ->assertStatus(409)
+        ->assertHeader('X-Inertia-Location', route('x-change.claim.redirect', [
+            'code' => $voucher->code,
+        ]));
+});
+
 it('supplies the same server-owned idempotency key when a claim flow is retried', function (): void {
     $voucher = claimSubmitTestVoucher();
 

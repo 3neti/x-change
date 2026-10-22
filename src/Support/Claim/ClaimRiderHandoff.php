@@ -14,13 +14,11 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Models\VoucherClaim;
-use LBHurtado\XChange\Support\Rider\XChangeRiderOutcomeResolver;
 use LBHurtado\XJournal\Data\ExecutionActorData;
 use LBHurtado\XJournal\Data\ExecutionJournalEntryData;
 use LBHurtado\XJournal\Data\ExecutionReferenceData;
 use LBHurtado\XJournal\Data\ExecutionSubjectData;
 use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
-use LBHurtado\XRider\Enums\RiderOutcomeState;
 use Symfony\Component\HttpFoundation\Response;
 
 final class ClaimRiderHandoff
@@ -29,6 +27,7 @@ final class ClaimRiderHandoff
 
     public function __construct(private readonly ExecutionJournalRecorder $journal) {}
 
+    /** Payout settlement is reconciled separately after the claim is accepted. */
     public function prepare(Voucher $voucher, mixed $result, string $idempotencyKey): bool
     {
         if (! $result instanceof SubmitPayCodeClaimResultData
@@ -36,13 +35,8 @@ final class ClaimRiderHandoff
             || ! in_array($result->status, ['succeeded', 'redeemed', 'withdrawn'], true)
             || $result->voucher_code !== (string) $voucher->code
             || $idempotencyKey === ''
-            || in_array((string) data_get($result->disbursement, 'status'), [
-                'pending', 'processing', 'queued', 'requested', 'for_reconciliation', 'reconciling',
-                'failed', 'rejected',
-            ], true)
             || blank(data_get($voucher->instructions?->toArray(), 'rider.url'))
-            || app(ClaimWorkflowResolverContract::class)->resolve($voucher)->key !== 'disbursement.v1'
-            || app(XChangeRiderOutcomeResolver::class)->forVoucher($voucher) !== RiderOutcomeState::AcceptedSuccess) {
+            || app(ClaimWorkflowResolverContract::class)->resolve($voucher)->key !== 'disbursement.v1') {
             return false;
         }
 
@@ -94,14 +88,14 @@ final class ClaimRiderHandoff
         return VoucherClaim::query()
             ->whereKey($receipt['claim_id'] ?? null)
             ->where('voucher_id', $voucher->getKey())
-            ->whereIn('status', ['succeeded', 'redeemed', 'withdrawn'])
             ->whereNotNull('completed_at')
             ->first();
     }
 
+    /** A later provider outcome does not revoke a completed claim's rider handoff. */
     public function recordRedirect(Voucher $voucher, VoucherClaim $claim): bool
     {
-        if (app(XChangeRiderOutcomeResolver::class)->forVoucher($voucher) !== RiderOutcomeState::AcceptedSuccess) {
+        if ($claim->completed_at === null) {
             return false;
         }
 

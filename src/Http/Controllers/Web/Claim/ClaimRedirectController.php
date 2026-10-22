@@ -13,6 +13,7 @@ use LBHurtado\XRider\Contracts\RiderAnalyticsRecorderContract;
 use LBHurtado\XRider\Contracts\RiderExperienceResolverContract;
 use LBHurtado\XRider\Contracts\SuccessRedirectResolverContract;
 use LBHurtado\XRider\Data\RiderAnalyticsEventData;
+use LBHurtado\XRider\Enums\RiderOutcomeState;
 
 class ClaimRedirectController
 {
@@ -34,14 +35,17 @@ class ClaimRedirectController
         abort_unless($claim !== null, 404);
 
         $subject = $subjects->fromVoucher($voucher);
-        $state = $outcomes->forVoucher($voucher);
+        $outcome = $outcomes->forVoucher($voucher);
+        $riderState = $outcome === RiderOutcomeState::RejectedFailure
+            ? RiderOutcomeState::AcceptedPending
+            : $outcome;
         $instructions = $voucher->instructions?->toArray() ?? [];
 
         abort_unless($riderFallbacks->shouldResolve($instructions), 404);
 
         try {
             $experience = $riders->resolve($subject, [
-                'state' => $state->value,
+                'state' => $riderState->value,
                 'rider' => data_get($instructions, 'rider', []),
                 'meta' => [
                     'source' => 'x-change',
@@ -75,7 +79,7 @@ class ClaimRedirectController
                 sourceType: $subject->type,
                 sourceId: $subject->id,
                 context: [
-                    'claim_outcome' => $state->value,
+                    'claim_outcome' => $outcome->value,
                 ],
                 meta: [
                     'voucher_code' => (string) $voucher->code,

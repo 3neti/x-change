@@ -27,11 +27,12 @@ beforeEach(function () {
             public function resolve(RiderSubjectData $subject, array $context = []): RiderExperienceData
             {
                 $url = data_get($context, 'rider.url');
+                $state = RiderOutcomeState::tryFrom((string) data_get($context, 'state')) ?? RiderOutcomeState::AcceptedSuccess;
 
                 return new RiderExperienceData(
-                    state: RiderOutcomeState::AcceptedSuccess,
+                    state: $state,
                     subject: $subject,
-                    redirect: filled($url)
+                    redirect: filled($url) && $state->riderMayRun()
                         ? new RiderRedirectData(
                             enabled: true,
                             url: $url,
@@ -126,7 +127,54 @@ it('redirects a completed claim from its authorized browser session', function (
         ->assertRedirect(route('x-change.claim.success', ['code' => $voucher->code]));
 });
 
-it('does not authorize a rider handoff for a pending payout', function () {
+it('keeps an accepted claim rider handoff when a pending payout later fails', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => ['url' => 'https://example.com/after-claim'],
+    ]));
+    $metadata = $voucher->metadata ?? [];
+    data_set($metadata, 'disbursement.status', 'pending');
+    $voucher->metadata = $metadata;
+    $voucher->save();
+    $claim = VoucherClaim::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'claim_number' => 1,
+        'claim_type' => 'disbursement',
+        'status' => 'succeeded',
+        'idempotency_key' => 'pending-rider-claim',
+        'completed_at' => now(),
+        'currency' => 'PHP',
+    ]);
+    $journal = Mockery::mock(ExecutionJournalRecorder::class);
+    $journal->shouldReceive('record')->times(3)->andReturn(new ExecutionJournalEntry);
+    $this->app->instance(ExecutionJournalRecorder::class, $journal);
+    $analytics = Mockery::mock(RiderAnalyticsRecorderContract::class);
+    $analytics->shouldReceive('record')->once()->withArgs(
+        fn (RiderAnalyticsEventData $event): bool => $event->event === 'rider.redirect.started'
+            && data_get($event->context, 'claim_outcome') === RiderOutcomeState::RejectedFailure->value
+    );
+    $this->app->instance(RiderAnalyticsRecorderContract::class, $analytics);
+
+    expect(app(ClaimRiderHandoff::class)->prepare($voucher, new SubmitPayCodeClaimResultData(
+        voucher_code: (string) $voucher->code,
+        claim_type: 'disbursement',
+        claimed: true,
+        status: 'succeeded',
+        disbursement: ['status' => 'pending'],
+    ), 'pending-rider-claim'))->toBeTrue();
+
+    $metadata = $voucher->metadata ?? [];
+    data_set($metadata, 'disbursement.status', 'failed');
+    $voucher->metadata = $metadata;
+    $voucher->save();
+    $claim->update(['status' => 'payout_rejected']);
+
+    $this->get(route('x-change.claim.redirect', ['code' => $voucher->code]))
+        ->assertRedirect('https://example.com/after-claim');
+});
+
+it('does not authorize a rider handoff for a claim awaiting approval', function () {
     $this->withoutMiddleware();
 
     $voucher = issueVoucher(validVoucherInstructions(overrides: [
@@ -154,6 +202,41 @@ it('does not authorize a rider handoff for a pending payout', function () {
 
     $this->get(route('x-change.claim.redirect', ['code' => $voucher->code]))
         ->assertNotFound();
+});
+
+it('redirects an accepted claim even when the provider immediately rejects payout', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => ['url' => 'https://example.com/after-claim'],
+    ]));
+    $metadata = $voucher->metadata ?? [];
+    data_set($metadata, 'disbursement.status', 'failed');
+    $voucher->metadata = $metadata;
+    $voucher->save();
+    VoucherClaim::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'claim_number' => 1,
+        'claim_type' => 'disbursement',
+        'status' => 'succeeded',
+        'idempotency_key' => 'rejected-rider-claim',
+        'completed_at' => now(),
+        'currency' => 'PHP',
+    ]);
+    $journal = Mockery::mock(ExecutionJournalRecorder::class);
+    $journal->shouldReceive('record')->times(3)->andReturn(new ExecutionJournalEntry);
+    $this->app->instance(ExecutionJournalRecorder::class, $journal);
+
+    expect(app(ClaimRiderHandoff::class)->prepare($voucher, new SubmitPayCodeClaimResultData(
+        voucher_code: (string) $voucher->code,
+        claim_type: 'disbursement',
+        claimed: true,
+        status: 'succeeded',
+        disbursement: ['status' => 'FAILED'],
+    ), 'rejected-rider-claim'))->toBeTrue();
+
+    $this->get(route('x-change.claim.redirect', ['code' => $voucher->code]))
+        ->assertRedirect('https://example.com/after-claim');
 });
 
 it('returns not found when voucher does not exist', function () {

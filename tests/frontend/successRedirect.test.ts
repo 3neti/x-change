@@ -34,6 +34,22 @@ describe('success redirect', () => {
         })).toBe(false);
     });
 
+    it('leaves a backend-owned rider handoff to the server without client navigation', () => {
+        expect(resolveSuccessRedirect(
+            {
+                enabled: true,
+                url: 'https://example.com/after-claim',
+                delay_seconds: 5,
+            },
+            {
+                owner: 'x-rider',
+                show_countdown: false,
+                delay_seconds: 0,
+            },
+            '/x/claim/TEST123/redirect',
+        )).toBeNull();
+    });
+
     it('does not render countdown when countdown is disabled', () => {
         expect(shouldRenderSuccessRedirectCountdown({
             owner: 'claim-widget',

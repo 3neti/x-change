@@ -39,6 +39,10 @@ export function resolveSuccessRedirect(
         return null;
     }
 
+    if (redirect?.owner && redirect.owner !== SUCCESS_REDIRECT_OWNER_CLAIM_WIDGET) {
+        return null;
+    }
+
     if (riderRedirect?.enabled && riderRedirect.url) {
         return {
             enabled: true,
