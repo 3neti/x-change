@@ -1037,6 +1037,7 @@ function number(value: unknown): number {
               </dl>
             </article>
             <article
+              v-if="!hasClaimSummary"
               class="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
             >
               <div
@@ -1050,7 +1051,7 @@ function number(value: unknown): number {
                 {{ text(party.primary) || "Open claim" }}
               </p>
               <p
-                v-if="party.secondary && !hasClaimSummary"
+                v-if="party.secondary"
                 class="mt-1 text-xs text-slate-500 dark:text-slate-400"
               >
                 {{ text(party.secondary) }}
@@ -1573,15 +1574,14 @@ function number(value: unknown): number {
                   >
                 </div>
                 <div
-                  v-if="number(record(claim.evidence).required_count) > 0"
+                  v-if="number(record(claim.evidence).captured_count) > 0"
                   class="mt-3 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs dark:bg-slate-950/60"
                 >
                   <span class="text-slate-500 dark:text-slate-400"
-                    >Evidence</span
+                    >Evidence records</span
                   >
                   <strong class="text-slate-800 dark:text-slate-100">
-                    {{ number(record(claim.evidence).captured_count) }} /
-                    {{ number(record(claim.evidence).required_count) }}
+                    {{ number(record(claim.evidence).captured_count) }} captured
                   </strong>
                 </div>
                 <dl class="mt-3 grid grid-cols-2 gap-3 text-xs">

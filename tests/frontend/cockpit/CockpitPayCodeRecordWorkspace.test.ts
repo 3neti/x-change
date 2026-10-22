@@ -294,6 +294,23 @@ describe("Cockpit Pay Code record workspace", () => {
     expect(wrapper.get('[data-testid="pay-code-overview-tab"]').text()).not.toContain("Authority: Treasury Position");
   });
 
+  it("does not show stale availability as the recipient after a claim", () => {
+    const claimedVoucher = structuredClone(voucher);
+    claimedVoucher.overview.party.primary = "Expired";
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "CAMP-CB2L",
+        status: "redeemed",
+        voucher: claimedVoucher,
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+      },
+    });
+
+    expect(wrapper.get('[data-testid="pay-code-overview-tab"]').text()).toContain("Claimed");
+    expect(wrapper.get('[data-testid="pay-code-overview-tab"]').text()).not.toContain("RecipientExpired");
+  });
+
   it("translates immutable instruction facts into claimant-facing language", async () => {
     const claimantVoucher = structuredClone(voucher);
     claimantVoucher.instructions.groups = [
@@ -484,6 +501,8 @@ describe("Cockpit Pay Code record workspace", () => {
       wrapper.get('[data-testid="claim-evidence-coverage"]').text(),
     ).toContain("1 record available");
     expect(wrapper.get('[data-testid="claim-evidence-coverage"]').text()).toContain("1 required input configured");
+    expect(wrapper.get('[data-testid="pay-code-claims-panel"]').text()).toContain("1 captured");
+    expect(wrapper.get('[data-testid="pay-code-claims-panel"]').text()).not.toContain("1 / 1");
     expect(wrapper.get('[data-testid="pay-code-claim-tab"]').text()).toContain(
       "Selfie & Signature",
     );
