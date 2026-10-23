@@ -147,6 +147,35 @@ it('gives the issuer an issuer console surface once their Pay Code has been clai
         ->and($surface->headline)->toBe('Your Pay Code was claimed');
 });
 
+it('keeps a failed reusable balance activation claimable for issuer and guest', function (): void {
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(100, 'INSTAPAY', [
+        'execution' => ['driver' => 'stored_value'],
+        'inputs' => ['fields' => ['mobile', 'otp']],
+    ]));
+    VoucherClaim::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'claim_number' => 1,
+        'claim_type' => 'stored_value_activation',
+        'status' => 'execution_failed',
+        'currency' => 'PHP',
+        'reference' => 'failed-activation:'.$voucher->getKey(),
+    ]);
+
+    $issuerSurface = claimSurfaceResolver()->resolve($voucher, $issuer);
+    auth()->logout();
+    $guestSurface = claimSurfaceResolver()->resolve($voucher, null);
+
+    foreach ([$issuerSurface, $guestSurface] as $surface) {
+        expect($surface->state->key)->toBe('active')
+            ->and($surface->state->can_claim)->toBeTrue()
+            ->and($surface->headline)->toBe('Ready to claim')
+            ->and($surface->visibility)->toBe('public_preview')
+            ->and(collect($surface->components)->pluck('type'))->toContain('xray_preview')
+            ->not->toContain('claim_requirement_summary', 'outcome_panel');
+    }
+});
+
 it('includes the claim requirement summary component for a claimed Pay Code issuer view', function () {
     $issuer = actingAsTestUser();
     $voucher = issueVoucher(validVoucherInstructions(100, 'INSTAPAY', [

@@ -33,7 +33,8 @@ final class XRayPreviewContributor implements ClaimSurfaceContributor
 
     public function contribute(ClaimSurfaceBuilder $surface, ClaimSurfaceContextData $context): void
     {
-        if (! in_array($context->viewer->role, self::ELIGIBLE_ROLES, true)) {
+        if (! in_array($context->viewer->role, self::ELIGIBLE_ROLES, true)
+            && ! ($context->viewer->role === 'issuer' && $context->isStoredValueActivationRetry())) {
             return;
         }
 

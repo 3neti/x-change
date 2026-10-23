@@ -9,6 +9,7 @@ use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Contracts\VoucherOperationalStatusResolverContract;
 use LBHurtado\XChange\Data\PayCode\PayCodeOperationalStatusData;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Models\StoredValueHolderBinding;
 use LBHurtado\XChange\Models\VoucherClaim;
 
 class DefaultVoucherOperationalStatusResolver implements VoucherOperationalStatusResolverContract
@@ -28,6 +29,14 @@ class DefaultVoucherOperationalStatusResolver implements VoucherOperationalStatu
             ->latest('id')
             ->first();
         $claimStatus = $this->normalize($claim?->status);
+        if ($claimStatus === 'execution_failed'
+            && data_get($voucher->metadata, 'instructions.execution.driver') === 'stored_value'
+            && ! StoredValueHolderBinding::query()
+                ->where('voucher_id', $voucher->getKey())
+                ->where('status', 'active')
+                ->exists()) {
+            $claimed = false;
+        }
         $payoutStatus = $this->normalize($reconciliation?->status);
         $internalStatus = $this->normalize($reconciliation?->internal_status);
         $voucherState = $this->normalize($voucher->state->value) ?? 'active';

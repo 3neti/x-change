@@ -248,6 +248,28 @@ it('shows reusable balance claim entry to an unauthenticated redeemer', function
         ->assertJsonPath('component', 'x-change/claim/Entry');
 });
 
+it('offers claim retry after failed reusable balance activation', function (): void {
+    $voucher = issueVoucher(validVoucherInstructions(100, 'INSTAPAY', [
+        'execution' => ['driver' => 'stored_value'],
+        'inputs' => ['fields' => ['mobile', 'otp']],
+    ]));
+    VoucherClaim::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'claim_number' => 1,
+        'claim_type' => 'stored_value_activation',
+        'status' => 'execution_failed',
+        'currency' => 'PHP',
+        'reference' => 'failed-activation:'.$voucher->getKey(),
+    ]);
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.claim.show', ['code' => $voucher->code]))
+        ->assertOk()
+        ->assertJsonPath('props.claim_surface.visibility', 'public_preview')
+        ->assertJsonPath('props.claim_surface.state.key', 'active')
+        ->assertJsonPath('props.claim_surface.state.can_claim', true);
+});
+
 it('lets the issuer see the issuer console for their own already-claimed Pay Code', function () {
     $issuer = actingAsTestUser();
     $voucher = issueVoucher(validVoucherInstructions(100));
