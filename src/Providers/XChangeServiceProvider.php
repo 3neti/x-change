@@ -504,6 +504,7 @@ use LBHurtado\XChange\Services\Disbursement\UnavailableProviderPayoutDestination
 use LBHurtado\XChange\Services\EventLifecycleService;
 use LBHurtado\XChange\Services\Execution\AuthenticatedStoredValueHolderAuthority;
 use LBHurtado\XChange\Services\Execution\CampaignCoverageCompletionExecutionDriver;
+use LBHurtado\XChange\Services\Execution\CollectionStoredValueDestinationAuthority;
 use LBHurtado\XChange\Services\Execution\ExecutionAwarePostRedemptionGate;
 use LBHurtado\XChange\Services\Execution\ExecutionResultHandoffPipeline;
 use LBHurtado\XChange\Services\Execution\LifecycleExecutionCashDisbursementPoller;
@@ -513,7 +514,6 @@ use LBHurtado\XChange\Services\Execution\NullExecutionResultFeedbackHandoff;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultHandoffSummaryJournalWriter;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultJournalHandoff;
 use LBHurtado\XChange\Services\Execution\OnboardingAccountProvisioningExecutionDriver;
-use LBHurtado\XChange\Services\Execution\PartnerApiStoredValueDestinationAuthority;
 use LBHurtado\XChange\Services\Execution\WalletPayableCollectionExecutionGateway;
 use LBHurtado\XChange\Services\Execution\WalletStoredValueExecutionGateway;
 use LBHurtado\XChange\Services\Execution\XChangeLiveCashExecutionDriver;
@@ -1612,7 +1612,7 @@ class XChangeServiceProvider extends ServiceProvider
 
         $this->app->scoped(
             StoredValueDestinationAuthorityContract::class,
-            PartnerApiStoredValueDestinationAuthority::class,
+            CollectionStoredValueDestinationAuthority::class,
         );
 
         $this->app->scoped(

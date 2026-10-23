@@ -83,7 +83,16 @@ final class PublishXChangeCommand extends Command
                 );
 
                 if (! $result['verification']['passed']) {
-                    throw new \RuntimeException($result['verification']['message']);
+                    $failedResources = array_filter(
+                        $result['verification']['resources'],
+                        static fn (array $resource): bool => ! $resource['passed'],
+                    );
+                    $details = array_map(
+                        static fn (array $resource): string => $resource['id'].': '.$resource['message'],
+                        $failedResources,
+                    );
+
+                    throw new \RuntimeException($result['verification']['message'].' '.implode(' ', $details));
                 }
             }
         } catch (Throwable $exception) {

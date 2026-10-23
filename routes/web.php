@@ -173,6 +173,7 @@ use LBHurtado\XChange\Http\Controllers\Web\PublicOnboarding\AutoRegisterPageCont
 use LBHurtado\XChange\Http\Controllers\Web\PublicPricingPageController;
 use LBHurtado\XChange\Http\Controllers\Web\StampPreviewController;
 use LBHurtado\XChange\Http\Controllers\Web\StampRenderingComparisonController;
+use LBHurtado\XChange\Http\Controllers\Web\StoredValueCollectionController;
 use LBHurtado\XChange\Http\Controllers\Web\StoredValueInstrumentPageController;
 use LBHurtado\XChange\Http\Middleware\AuthorizePublicIssuanceOrderAccess;
 use LBHurtado\XChange\Http\Middleware\GuardPairedCampaignClaim;
@@ -225,6 +226,13 @@ Route::middleware(['web', ShareXChangeBranding::class])->group(function (): void
 });
 
 Route::prefix('x/operations')->middleware(['web', ShareXChangeBranding::class])->group(function (): void {
+    Route::prefix('stored-value-collections')->group(function (): void {
+        Route::get('/', [StoredValueCollectionController::class, 'page'])->defaults('collection_channel', 'operations')->name('x-change.operations.stored-value-collections.index');
+        Route::post('/', [StoredValueCollectionController::class, 'start'])->defaults('collection_channel', 'operations')->middleware('throttle:6,1')->name('x-change.operations.stored-value-collections.store');
+        Route::get('{reference}', [StoredValueCollectionController::class, 'status'])->defaults('collection_channel', 'operations')->whereUlid('reference')->name('x-change.operations.stored-value-collections.show');
+        Route::post('{reference}/verification', [StoredValueCollectionController::class, 'verify'])->defaults('collection_channel', 'operations')->middleware('throttle:6,1')->whereUlid('reference')->name('x-change.operations.stored-value-collections.verify');
+        Route::post('{reference}/commit', [StoredValueCollectionController::class, 'commit'])->defaults('collection_channel', 'operations')->middleware('throttle:6,1')->whereUlid('reference')->name('x-change.operations.stored-value-collections.commit');
+    });
     Route::get('/', [CheckoutConsoleController::class, 'show'])->name('x-change.operations.show');
     Route::get('economics', [OperationsEconomicsController::class, 'show'])
         ->name('x-change.operations.economics');
@@ -447,6 +455,13 @@ Route::prefix('x')->middleware([
     Route::get('dashboard', DashboardPageController::class)->name('x-change.dashboard');
 
     Route::prefix('cockpit')->middleware(ShareCockpitHeaderReadModel::class)->group(function (): void {
+        Route::prefix('stored-value-collections')->group(function (): void {
+            Route::get('/', [StoredValueCollectionController::class, 'page'])->defaults('collection_channel', 'cockpit')->name('x-change.cockpit.stored-value-collections.index');
+            Route::post('/', [StoredValueCollectionController::class, 'start'])->defaults('collection_channel', 'cockpit')->middleware('throttle:6,1')->name('x-change.cockpit.stored-value-collections.store');
+            Route::get('{reference}', [StoredValueCollectionController::class, 'status'])->defaults('collection_channel', 'cockpit')->whereUlid('reference')->name('x-change.cockpit.stored-value-collections.show');
+            Route::post('{reference}/verification', [StoredValueCollectionController::class, 'verify'])->defaults('collection_channel', 'cockpit')->middleware('throttle:6,1')->whereUlid('reference')->name('x-change.cockpit.stored-value-collections.verify');
+            Route::post('{reference}/commit', [StoredValueCollectionController::class, 'commit'])->defaults('collection_channel', 'cockpit')->middleware('throttle:6,1')->whereUlid('reference')->name('x-change.cockpit.stored-value-collections.commit');
+        });
         Route::get('/', CockpitEntryPageController::class)->name('x-change.cockpit.entry');
         Route::get('overview', CockpitDashboardPageController::class)->name('x-change.cockpit.dashboard');
         Route::get('operations-economics', [OperationsEconomicsController::class, 'cockpit'])

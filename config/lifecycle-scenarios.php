@@ -2106,6 +2106,33 @@ return [
             ],
         ],
 
+        'stored_value_collection_simulation' => [
+            'label' => 'Stored Value Pay Code Collection Simulation',
+            'description' => 'Issues and activates a stored value Pay Code, then simulates marked-code collection, holder OTP, one Treasury draw, and replay with rollback.',
+            'category' => 'execution-engine',
+            'tags' => ['execution-engine', 'stored-value', 'collection', 'simulation'],
+            'mode' => 'stored_value_collection_simulation',
+            'amount' => 100,
+            'currency' => 'PHP',
+            'cash' => [
+                'settlement_rail' => 'INSTAPAY',
+                'fee_strategy' => 'absorb',
+                'validation' => ['country' => 'PH'],
+            ],
+            'inputs' => ['fields' => ['mobile']],
+            'stored_value' => [
+                'enabled' => true,
+                'replenishable' => true,
+                'maximum_balance' => 100,
+                'otp_required_above' => 50,
+            ],
+            'stored_value_collection' => [
+                'holder_email' => env('X_CHANGE_LIFECYCLE_STORED_VALUE_HOLDER_EMAIL'),
+                'collector_email' => env('X_CHANGE_LIFECYCLE_STORED_VALUE_COLLECTOR_EMAIL'),
+                'amount_minor' => 2500,
+            ],
+        ],
+
         'execution_engine_basic_cash_live_transfer' => [
             'label' => 'Execution Engine Basic Cash Live Transfer',
             'description' => 'Issues a basic cash Pay Code with an explicit x_change_live_cash execution instruction and executes it through the voucher-owned engine into the existing x-change live payout path.',

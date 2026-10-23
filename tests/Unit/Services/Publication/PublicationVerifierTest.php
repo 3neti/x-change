@@ -8,6 +8,7 @@ use LBHurtado\XChange\Data\Publication\PublicationDefinitionData;
 use LBHurtado\XChange\Enums\PublicationInvocation;
 use LBHurtado\XChange\Enums\PublicationOverwritePolicy;
 use LBHurtado\XChange\Enums\PublicationScope;
+use LBHurtado\XChange\Services\Configuration\FrontendRuntimeDependencies;
 use LBHurtado\XChange\Services\Publication\PublicationCatalog;
 use LBHurtado\XChange\Services\Publication\PublicationVerifier;
 use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
@@ -129,4 +130,56 @@ it('reports an unavailable optional build publication without failing verificati
     expect($result['passed'])->toBeTrue()
         ->and($result['summary']['unavailable'])->toBe(1)
         ->and($result['resources'][0]['passed'])->toBeTrue();
+});
+
+it('fails a synchronized UI publication when the host npm requirements are missing', function (): void {
+    $source = publicationVerifierTempPath('source');
+    $target = publicationVerifierTempPath('target');
+    $hostPath = publicationVerifierTempPath('host');
+    mkdir($source, 0777, true);
+    mkdir($target, 0777, true);
+    mkdir($hostPath, 0777, true);
+    file_put_contents($source.'/Generated.vue', '<template>Generated</template>');
+    file_put_contents($target.'/Generated.vue', '<template>Generated</template>');
+    file_put_contents($hostPath.'/package.json', '{"dependencies":{"vue":"^3.5.40"}}');
+
+    $provider = new class(app()) extends ServiceProvider
+    {
+        /** @param array<string, string> $paths */
+        public function registerPublications(array $paths): void
+        {
+            $this->publishes($paths, 'publication-verifier-ui-test');
+        }
+    };
+    $provider->registerPublications([$source => $target]);
+
+    $catalog = new PublicationCatalog([
+        new class implements XChangePublicationContributor
+        {
+            public function publications(): iterable
+            {
+                yield new PublicationDefinitionData(
+                    id: 'x-change.ui',
+                    owner: '3neti/x-change',
+                    scope: PublicationScope::Build,
+                    invocation: PublicationInvocation::Tag,
+                    target: 'publication-verifier-ui-test',
+                    overwritePolicy: PublicationOverwritePolicy::AlwaysGenerated,
+                    description: 'Test UI.',
+                    generated: true,
+                );
+            }
+        },
+    ]);
+
+    $result = (new PublicationVerifier(
+        $catalog,
+        new PublishedAssetDriftDetector,
+        new FrontendRuntimeDependencies,
+        $hostPath,
+    ))->inspectBuild();
+
+    expect($result['passed'])->toBeFalse()
+        ->and($result['summary']['stale'])->toBe(0)
+        ->and($result['resources'][0]['message'])->toContain('tesseract.js', '@inertiajs/core', 'npm install');
 });

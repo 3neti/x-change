@@ -1268,17 +1268,29 @@ function stringValue(value: unknown): string | null {
             }}
           </p>
         </div>
-        <Link
-          v-if="!publicAutoGenerate"
-          :href="fundingIndex()"
-          prefetch
-          class="inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-emerald-400 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300"
-          data-testid="cockpit-quick-generate-funding-link"
-        >
-          <Landmark class="size-3.5" aria-hidden="true" />
-          Funding
-        </Link>
+        <div class="flex items-center gap-2">
+          <Link v-if="props.stored_value_collect_url" :href="props.stored_value_collect_url"
+            class="inline-flex shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm hover:border-emerald-400 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
+            Collect stored value
+          </Link>
+          <Link
+            v-if="!publicAutoGenerate"
+            :href="fundingIndex()"
+            prefetch
+            class="inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-emerald-400 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300"
+            data-testid="cockpit-quick-generate-funding-link"
+          >
+            <Landmark class="size-3.5" aria-hidden="true" />
+            Funding
+          </Link>
+        </div>
       </header>
+
+      <Link v-if="!publicAutoGenerate && props.stored_value_collect_url"
+        :href="props.stored_value_collect_url"
+        class="inline-flex w-fit items-center rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm md:hidden">
+        Collect stored value
+      </Link>
 
       <div
         class="space-y-3"

@@ -49,6 +49,7 @@ class CockpitQuickGeneratePageController extends Controller
         }
 
         return Inertia::render('x-change/cockpit/QuickGenerate', [
+            'stored_value_collect_url' => route('x-change.cockpit.stored-value-collections.index', [], false),
             'display_campaigns' => fn (): array => $displays->campaignsFor($request->user()),
             'display_session' => $display === null ? null : $displays->present($display),
             ...$this->props->toQuickGenerateArray(

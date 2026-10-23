@@ -38,6 +38,24 @@ afterEach(() => {
 });
 
 describe('Cockpit Quick Generate POS mode', () => {
+    it('links the stored value collector from desktop and mobile Cockpit layouts', () => {
+        const wrapper = shallowMount(QuickGenerate, {
+            props: {
+                stored_value_collect_url: '/x/cockpit/stored-value-collections',
+                quick_generate_read_model: {
+                    status: 'available', authorized: true, mutation_contract: mutationContract,
+                },
+            },
+            global: {
+                stubs: { CockpitLayout: { template: '<main><slot /></main>' } },
+            },
+        });
+
+        const links = wrapper.findAll('[href="/x/cockpit/stored-value-collections"]');
+        expect(links).toHaveLength(2);
+        expect(links[1].classes()).toContain('md:hidden');
+    });
+
     it('switches the existing Issuance surface between Composer and POS', async () => {
         const wrapper = shallowMount(QuickGenerate, {
             props: {

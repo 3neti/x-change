@@ -17,6 +17,7 @@ use LBHurtado\XChange\Enums\PartnerApiProductionMandateStatus;
 use LBHurtado\XChange\Models\PartnerApiClient;
 use LBHurtado\XChange\Models\PartnerApiOperation;
 use LBHurtado\XChange\Models\PartnerApiProductionMandate;
+use LBHurtado\XChange\Models\StoredValueCollection;
 use LBHurtado\XChange\Models\StoredValueHolderBinding;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiRequestContext;
 use Throwable;
@@ -125,6 +126,14 @@ final class PartnerApiStoredValueDestinationAuthority implements StoredValueDest
             ->where('currency', $currency)
             ->where('occurred_at', '>=', now()->utc()->startOfDay())
             ->sum('principal_minor');
+        $usedToday += (int) StoredValueCollection::query()
+            ->where('collector_channel', 'partner')
+            ->where('collector_type', $client->getMorphClass())
+            ->where('collector_id', (string) $client->getKey())
+            ->where('status', 'committed')
+            ->where('currency', $currency)
+            ->where('committed_at', '>=', now()->utc()->startOfDay())
+            ->sum('amount_minor');
 
         if ($daily <= 0 || $usedToday + $amountMinor > $daily) {
             throw new StoredValueSpendRejectedException(

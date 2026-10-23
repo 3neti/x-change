@@ -14,6 +14,7 @@ use LBHurtado\XChange\Data\Execution\StoredValueHolderAuthorityData;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityIssuanceGuard;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegistry;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityRequirementResolver;
+use LBHurtado\XChange\Services\Execution\UnavailableStoredValueHolderAuthority;
 
 beforeEach(function (): void {
     config()->set('location-handler.map_provider', 'mapbox');
@@ -117,6 +118,7 @@ it('rejects unavailable evidence before issuance can mutate state', function ():
 
 it('keeps stored value unavailable until its authorities are commissioned', function (): void {
     config()->set('x-change.execution.stored_value.issuance_enabled', true);
+    app()->instance(StoredValueHolderAuthorityContract::class, new UnavailableStoredValueHolderAuthority);
 
     $demoCapability = app(InstructionCapabilityReadinessRegistry::class)
         ->find('stored_value');
@@ -248,6 +250,7 @@ it('keeps stored value unavailable without commissioned destination authority', 
 
 it('keeps stored value unavailable without commissioned holder authority', function (): void {
     config()->set('x-change.execution.stored_value.issuance_enabled', true);
+    app()->instance(StoredValueHolderAuthorityContract::class, new UnavailableStoredValueHolderAuthority);
     app()->instance(
         StoredValueExecutionGateway::class,
         new class implements DurableStoredValueExecutionGatewayContract

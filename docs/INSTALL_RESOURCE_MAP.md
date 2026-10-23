@@ -192,17 +192,15 @@ These are NOT published by any package and must be copied manually if needed:
 
 ## npm Dependencies
 
-The following npm packages are required by the published frontend files:
+`FrontendRuntimeDependencies` declares the npm packages needed by x-change's published Vue and TypeScript files: `@inertiajs/core`, `@inertiajs/vue3`, `@laravel/echo-vue`, `@vueuse/core`, `lucide-vue-next`, `marked`, `reka-ui`, `tesseract.js`, and `vue`. It also retains `axios` and `dompurify` for the Form Flow assets installed by x-change setup.
 
-| Package | Required by | Purpose |
-|---|---|---|
-| `marked` | `claim/Success.vue` | Render rider messages as markdown |
-| `dompurify` | `form-flow/core/Splash.vue` | Sanitize HTML content |
-| `axios` | `form-flow/location/` | HTTP client for geocoding API |
+The host must declare these packages directly in `package.json` and resolve them in `package-lock.json`. `x-change:publish --scope=build --force --verify` and the build-input doctor check report missing entries. A package test scans x-change frontend imports to catch newly introduced npm packages that have not been declared in the contract.
 
-These must be in the host app's `package.json`. Install with:
+For local setup, `x-change:setup` installs the declared package versions. For an existing host, add the missing packages reported by publication verification, commit the updated npm manifest and lockfile, then run `npm ci` and `npm run build`.
+
+For example, to add the OCR dependency alone:
 ```bash
-npm install marked dompurify axios
+npm install tesseract.js@^6.0.1
 ```
 
 ---

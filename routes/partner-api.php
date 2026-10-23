@@ -16,6 +16,7 @@ use LBHurtado\XChange\Http\Controllers\PartnerApi\ShowPartnerPayCodeByReferenceC
 use LBHurtado\XChange\Http\Controllers\PartnerApi\ShowPartnerPayCodeController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\SpendStoredValueInstrumentController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\VerifyStoredValueSpendChallengeController;
+use LBHurtado\XChange\Http\Controllers\Web\StoredValueCollectionController;
 use LBHurtado\XChange\Http\Middleware\EnsurePartnerApiClient;
 use LBHurtado\XChange\Http\Middleware\EnsurePartnerFundedOrderCreationEnabled;
 
@@ -25,6 +26,14 @@ Route::prefix($prefix)
     ->as('x-change.partner-api.')
     ->middleware('throttle:x-change-partner-api')
     ->group(function (): void {
+        Route::prefix('stored-value-collections')
+            ->middleware(EnsurePartnerApiClient::using('stored-value:spend'))
+            ->group(function (): void {
+                Route::post('/', [StoredValueCollectionController::class, 'start'])->defaults('collection_channel', 'partner')->name('stored-value-collections.store');
+                Route::get('{reference}', [StoredValueCollectionController::class, 'status'])->defaults('collection_channel', 'partner')->whereUlid('reference')->name('stored-value-collections.show');
+                Route::post('{reference}/verification', [StoredValueCollectionController::class, 'verify'])->defaults('collection_channel', 'partner')->whereUlid('reference')->name('stored-value-collections.verify');
+                Route::post('{reference}/commit', [StoredValueCollectionController::class, 'commit'])->defaults('collection_channel', 'partner')->whereUlid('reference')->name('stored-value-collections.commit');
+            });
         Route::middleware(EnsurePartnerApiClient::using('funded-orders:create'))
             ->post('/funded-orders', CreatePartnerFundedOrderController::class)
             ->middleware(EnsurePartnerFundedOrderCreationEnabled::class)

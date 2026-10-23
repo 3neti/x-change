@@ -8,6 +8,7 @@ use Illuminate\Support\ServiceProvider;
 use LBHurtado\XChange\Data\Publication\PublicationDefinitionData;
 use LBHurtado\XChange\Enums\PublicationInvocation;
 use LBHurtado\XChange\Enums\PublicationScope;
+use LBHurtado\XChange\Services\Configuration\FrontendRuntimeDependencies;
 use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 
 final readonly class PublicationVerifier
@@ -15,6 +16,8 @@ final readonly class PublicationVerifier
     public function __construct(
         private PublicationCatalog $catalog,
         private PublishedAssetDriftDetector $driftDetector,
+        private FrontendRuntimeDependencies $frontendDependencies = new FrontendRuntimeDependencies,
+        private ?string $hostPath = null,
     ) {}
 
     /**
@@ -90,12 +93,28 @@ final readonly class PublicationVerifier
             $passed = $relevantFiles->every(
                 static fn (array $file): bool => $file['status'] === 'ok',
             );
+            $message = $passed
+                ? 'published build inputs match package source'
+                : 'published build inputs are missing or stale';
+
+            if ($definition->id === 'x-change.ui') {
+                $dependencies = $this->frontendDependencies->inspectHost($this->hostPath ?? base_path());
+
+                if (! $dependencies['passed']) {
+                    $passed = false;
+                    $message = sprintf(
+                        'host npm requirements are incomplete (package.json missing: %s; package-lock.json missing: %s); run %s',
+                        implode(', ', $dependencies['missing']) ?: 'none',
+                        implode(', ', $dependencies['unlocked']) ?: 'none',
+                        implode(' ', $this->frontendDependencies->npmInstallCommand()),
+                    );
+                }
+            }
+
             $resources[] = $this->resourceResult(
                 $definition,
                 $passed,
-                $passed
-                    ? 'published build inputs match package source'
-                    : 'published build inputs are missing or stale',
+                $message,
             );
         }
 
@@ -108,7 +127,7 @@ final readonly class PublicationVerifier
             'passed' => $passed,
             'message' => $passed
                 ? 'all declared generated build inputs match package source'
-                : 'generated build inputs are incomplete or have drift; run php artisan x-change:publish --scope=build --force --verify --no-interaction',
+                : 'generated build inputs are incomplete, have drift, or host npm requirements are missing; inspect resource messages and run php artisan x-change:publish --scope=build --force --verify --no-interaction',
             'summary' => $summary,
             'resources' => $resources,
             'files' => $files,

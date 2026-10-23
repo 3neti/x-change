@@ -49,6 +49,7 @@ final readonly class CheckoutConsoleAccess
 
         $request->session()->regenerate();
         $request->session()->put('x-change.checkout.owner', hash_hmac('sha256', $principal->reference, $password));
+        $request->session()->put('x-change.checkout.collection_nonce', bin2hex(random_bytes(32)));
         $this->audit($request, $principal, 'owner_unlocked');
 
         return true;
