@@ -11,6 +11,7 @@ vi.mock("@inertiajs/vue3", () => ({
   router: {
     reload: vi.fn(),
   },
+  usePage: () => ({ props: {} }),
 }));
 
 config.global.stubs = {
@@ -407,6 +408,7 @@ describe("Cockpit Quick Generate value use", () => {
       maximum_balance: storedValuePreview.cash.amount,
       otp_required_above: null,
     });
+    expect(storedValuePreview.inputs.fields).toContain("mobile", "otp");
     expect(storedValuePreview.cash).not.toHaveProperty("slice_mode");
     expect(storedValuePreview.cash).not.toHaveProperty("settlement_rail");
     expect(storedValuePreview.metadata.custom.cockpit).not.toHaveProperty(

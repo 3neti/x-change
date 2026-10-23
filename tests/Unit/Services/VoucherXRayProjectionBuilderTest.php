@@ -249,6 +249,24 @@ it('projects partially claimed vouchers as partially claimable', function (): vo
     expect($projection['status'])->toBe('partially_claimable');
 });
 
+it('does not call a failed reusable balance activation partially claimable', function (): void {
+    $voucher = issueVoucher(validVoucherInstructions(100, 'INSTAPAY', [
+        'execution' => ['driver' => 'stored_value'],
+        'inputs' => ['fields' => ['mobile', 'otp']],
+    ]));
+    $projection = app(VoucherXRayProjectionBuilder::class)->build((object) [
+        'code' => $voucher->code,
+        'amount' => 100,
+        'currency' => 'PHP',
+        'status' => 'issued',
+        'claimed' => true,
+        'fully_claimed' => false,
+        'instructions' => data_get($voucher->metadata, 'instructions'),
+    ], $voucher);
+
+    expect($projection['status'])->toBe('claimable');
+});
+
 it('projects payable vouchers with collection progress and pay action', function (): void {
     $user = actingAsTestUser();
     $voucher = issueVoucher(validVoucherInstructions(

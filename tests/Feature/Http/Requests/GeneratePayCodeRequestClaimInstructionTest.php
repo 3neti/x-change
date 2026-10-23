@@ -136,3 +136,21 @@ it('accepts only the typed Reusable Balance policy at the request boundary', fun
     expect($valid->errors()->all())->toBeEmpty()
         ->and($unknown->errors()->has('stored_value'))->toBeTrue();
 });
+
+it('preserves the Reusable Balance policy when validating an estimate', function (): void {
+    $payload = validClaimInstructionPayload([
+        'outcomes' => [['key' => 'provider_disbursement']],
+        'default_outcome' => 'provider_disbursement',
+    ]);
+    $payload['stored_value'] = [
+        'enabled' => true,
+        'replenishable' => false,
+        'maximum_balance' => 125,
+        'otp_required_above' => null,
+    ];
+
+    $validator = validateClaimInstructionRequest(EstimatePayCodeRequest::class, $payload);
+
+    expect($validator->errors()->all())->toBeEmpty()
+        ->and(data_get($validator->validated(), 'stored_value.enabled'))->toBeTrue();
+});

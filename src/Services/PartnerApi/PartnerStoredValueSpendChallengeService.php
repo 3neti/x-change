@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\PartnerApi;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +17,7 @@ use LBHurtado\XChange\Models\PartnerApiOperation;
 use LBHurtado\XChange\Models\PartnerApiProductionMandate;
 use LBHurtado\XChange\Models\StoredValueHolderBinding;
 use LBHurtado\XChange\Models\StoredValueSpendChallenge;
-use LBHurtado\XChange\Support\Auth\MobileNumber;
+use LBHurtado\XChange\Services\StoredValue\StoredValueHolderMobile;
 use LogicException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
@@ -367,15 +366,7 @@ final readonly class PartnerStoredValueSpendChallengeService
 
     private function verifiedHolderMobile(StoredValueHolderBinding $binding): string
     {
-        $holder = $binding->holder;
-
-        if (! $holder instanceof Model || $holder->getAttribute('mobile_verified_at') === null) {
-            throw new NotFoundHttpException;
-        }
-
-        $mobile = MobileNumber::normalize($holder->getRawOriginal('mobile'));
-
-        return $mobile ?? throw new NotFoundHttpException;
+        return app(StoredValueHolderMobile::class)->verified($binding);
     }
 
     private function validatedProof(

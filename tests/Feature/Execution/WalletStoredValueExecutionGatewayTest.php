@@ -22,10 +22,13 @@ use LBHurtado\XChange\Data\Execution\StoredValueHolderAuthorityData;
 use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
 use LBHurtado\XChange\Models\StoredValueHolderBinding;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\Execution\AuthenticatedStoredValueHolderAuthority;
 use LBHurtado\XChange\Services\Execution\UnavailableStoredValueDestinationAuthority;
 use LBHurtado\XChange\Services\Execution\WalletStoredValueExecutionGateway;
+use LBHurtado\XChange\Services\Treasury\PayCodeFundingPrincipalResolver;
 use LBHurtado\XChange\Services\Treasury\PayCodeTerminalReleaseJournal;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
+use LBHurtado\XChange\Support\Claim\VerifiedStoredValueClaim;
 
 it('activates one wallet-backed allocation and replays the immutable holder binding', function (): void {
     $holder = actingAsTestUser();
@@ -80,6 +83,62 @@ it('activates one wallet-backed allocation and replays the immutable holder bind
         ->and((string) $binding->holder_id)->toBe((string) $holder->getKey())
         ->and($binding->reservation_operation_reference)->toBe('reservation:stored-value:1')
         ->and(StoredValueHolderBinding::query()->count())->toBe(1);
+});
+
+it('activates a wallet-backed balance for an accountless OTP verified contact', function (): void {
+    $voucher = storedValueVoucher();
+    $contact = Contact::fromPhoneNumber(phone('09173011987', 'PH'));
+    auth()->logout();
+    $proof = new VerifiedStoredValueClaim;
+    $proof->establish(['flow_id' => 'flow-123'], [
+        'mobile' => '+639173011987',
+        'inputs' => ['otp' => [
+            'verified' => true,
+            'mobile' => '09173011987',
+            'reference_id' => 'flow-123',
+            'verification_reference' => 'otp-123',
+            'verification_purpose' => 'form_flow.otp',
+            'verified_at' => now()->toIso8601String(),
+        ]],
+    ]);
+    $principals = Mockery::mock(TreasuryPrincipalReferenceResolverContract::class);
+    $principals->shouldReceive('resolve')->twice()->with($contact)->andReturn('principal:contact:one');
+    $operations = Mockery::mock(TreasuryAllocationOperationContract::class);
+    $operations->shouldReceive('activate')->once()->andReturn(storedValueOperation(
+        type: TreasuryAllocationOperationType::Activation,
+        amountMinor: 100_000,
+        balanceBeforeMinor: 0,
+        balanceAfterMinor: 100_000,
+    ));
+    $readModel = Mockery::mock(TreasuryAllocationReadModelContract::class);
+    $readModel->shouldReceive('read')->once()->andReturn(storedValueReadModel(100_000));
+    $gateway = new WalletStoredValueExecutionGateway(
+        allocationOperations: $operations,
+        allocationReadModel: $readModel,
+        holderAuthority: new AuthenticatedStoredValueHolderAuthority($principals, $proof),
+        destinationAuthority: new UnavailableStoredValueDestinationAuthority,
+        principalReferences: $principals,
+    );
+    $context = new ExecutionContextData(
+        contact: $contact,
+        voucherCode: $voucher->code,
+        voucher: $voucher,
+        instruction: new ExecutionInstructionData(
+            driver: 'stored_value',
+            metadata: ['stored_value' => [
+                'initial_balance' => 100_000,
+                'max_balance' => 100_000,
+                'replenishable' => false,
+            ]],
+        ),
+        correlation: ['execution_id' => 'public-activation-1'],
+    );
+
+    $gateway->activate($context, 'public-activation-1');
+
+    $binding = StoredValueHolderBinding::query()->sole();
+    expect($binding->holder_type)->toBe($contact->getMorphClass())
+        ->and((string) $binding->holder_id)->toBe((string) $contact->getKey());
 });
 
 it('requires a caller supplied stable identity before a spend can reach Treasury', function (): void {
@@ -244,6 +303,7 @@ it('releases only the allocation remainder when an activated balance expires', f
         accounting: app(TreasuryPayCodeAccountingService::class),
         journal: app(PayCodeTerminalReleaseJournal::class),
         allocationOperations: $operations,
+        fundingPrincipals: app(PayCodeFundingPrincipalResolver::class),
     ))->handle($voucher, 'expired');
 
     expect($result->amountMinor)->toBe(97_500)
@@ -265,6 +325,7 @@ it('requires governed revocation instead of cancelling an activated balance', fu
         accounting: app(TreasuryPayCodeAccountingService::class),
         journal: app(PayCodeTerminalReleaseJournal::class),
         allocationOperations: $operations,
+        fundingPrincipals: app(PayCodeFundingPrincipalResolver::class),
     );
 
     expect(fn () => $action->handle($voucher, 'cancelled'))->toThrow(
@@ -297,6 +358,7 @@ it('allows expiry to release an activated balance despite its activation claim',
         accounting: app(TreasuryPayCodeAccountingService::class),
         journal: app(PayCodeTerminalReleaseJournal::class),
         allocationOperations: $operations,
+        fundingPrincipals: app(PayCodeFundingPrincipalResolver::class),
     );
 
     $result = (new ReleaseExpiredPayCodeReserve($terminal))->handle($voucher);

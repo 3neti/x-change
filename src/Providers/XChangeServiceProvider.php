@@ -613,6 +613,7 @@ use LBHurtado\XChange\Services\XChangeWithdrawalIntervalEnforcer;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalPendingOtpStore;
 use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
 use LBHurtado\XChange\Support\Claim\DefaultClaimApprovalStatusResolver;
+use LBHurtado\XChange\Support\Claim\VerifiedStoredValueClaim;
 use LBHurtado\XChange\Support\Cockpit\DefaultCockpitRedactor;
 use LBHurtado\XChange\Support\Funding\QrPhFundingSimulatorGuard;
 use LBHurtado\XChange\Support\Logging\CacheEventStore;
@@ -1619,6 +1620,8 @@ class XChangeServiceProvider extends ServiceProvider
             StoredValueHolderAuthorityContract::class,
             AuthenticatedStoredValueHolderAuthority::class,
         );
+
+        $this->app->scoped(VerifiedStoredValueClaim::class);
 
         $this->app->bind(
             ExecutionCashDisbursementPollerContract::class,

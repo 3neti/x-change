@@ -235,6 +235,19 @@ it('requires the Account Funding claimant to sign in before starting the claim',
         ->assertJsonPath('props.workflow.key', 'account-funding.v1');
 });
 
+it('shows reusable balance claim entry to an unauthenticated redeemer', function (): void {
+    $voucher = issueVoucher(validVoucherInstructions(100, 'INSTAPAY', [
+        'execution' => ['driver' => 'stored_value'],
+        'inputs' => ['fields' => ['mobile', 'otp']],
+    ]));
+    auth()->logout();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.claim.show', ['code' => $voucher->code]))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/claim/Entry');
+});
+
 it('lets the issuer see the issuer console for their own already-claimed Pay Code', function () {
     $issuer = actingAsTestUser();
     $voucher = issueVoucher(validVoucherInstructions(100));

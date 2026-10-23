@@ -42,6 +42,19 @@ function claimVoucherWithoutRiderSplash(): Voucher
     ));
 }
 
+it('starts reusable balance activation without signing in', function (): void {
+    $voucher = issueVoucher(validVoucherInstructions(100, 'INSTAPAY', [
+        'execution' => ['driver' => 'stored_value'],
+        'inputs' => ['fields' => ['mobile', 'otp']],
+    ]));
+    auth()->logout();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->post('/x/claim', ['code' => $voucher->code])
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/claim/Entry');
+});
+
 function splashStep(): array
 {
     return [

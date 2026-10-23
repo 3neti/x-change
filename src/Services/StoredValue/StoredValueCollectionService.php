@@ -23,7 +23,6 @@ use LBHurtado\XChange\Models\PartnerApiOperation;
 use LBHurtado\XChange\Models\PartnerApiProductionMandate;
 use LBHurtado\XChange\Models\StoredValueCollection;
 use LBHurtado\XChange\Models\StoredValueHolderBinding;
-use LBHurtado\XChange\Support\Auth\MobileNumber;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
@@ -34,6 +33,7 @@ final readonly class StoredValueCollectionService
         private ExecutionEngine $engine,
         private TreasuryAllocationReadModelContract $balances,
         private AppendableEventStoreContract $events,
+        private ?StoredValueHolderMobile $holderMobile = null,
     ) {}
 
     /** @return array<string, mixed> */
@@ -347,12 +347,7 @@ final readonly class StoredValueCollectionService
 
     private function verifiedMobile(StoredValueHolderBinding $binding): string
     {
-        $holder = $binding->holder;
-        if (! $holder instanceof Model || $holder->getAttribute('mobile_verified_at') === null) {
-            throw new NotFoundHttpException;
-        }
-
-        return MobileNumber::normalize($holder->getRawOriginal('mobile')) ?? throw new NotFoundHttpException;
+        return ($this->holderMobile ?? app(StoredValueHolderMobile::class))->verified($binding);
     }
 
     private function available(StoredValueHolderBinding $binding): int

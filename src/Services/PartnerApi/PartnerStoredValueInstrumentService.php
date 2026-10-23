@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\PartnerApi;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -20,6 +19,7 @@ use LBHurtado\XChange\Models\PartnerApiOperation;
 use LBHurtado\XChange\Models\PartnerApiProductionMandate;
 use LBHurtado\XChange\Models\StoredValueHolderBinding;
 use LBHurtado\XChange\Models\StoredValueSpendChallenge;
+use LBHurtado\XChange\Services\StoredValue\StoredValueHolderMobile;
 use RuntimeException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -97,17 +97,7 @@ final readonly class PartnerStoredValueInstrumentService
                 challengeReference: $challengeReference,
             );
 
-            $holder = $binding->holder;
-
-            if (! $holder instanceof Model) {
-                throw new NotFoundHttpException;
-            }
-
-            $holderMobile = $holder->getAttribute('mobile');
-
-            if (! is_string($holderMobile) || trim($holderMobile) === '') {
-                throw new NotFoundHttpException;
-            }
+            $holderMobile = app(StoredValueHolderMobile::class)->verified($binding);
 
             $contact = new Contact(['mobile' => $holderMobile, 'country' => 'PH']);
             $executionId = hash('sha256', implode('|', [

@@ -23,6 +23,7 @@ use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
 use LBHurtado\XChange\Support\Claim\CompletionClaimReceipt;
 use LBHurtado\XChange\Support\Claim\FormFlowClaimPayloadNormalizer;
+use LBHurtado\XChange\Support\Claim\VerifiedStoredValueClaim;
 use Symfony\Component\HttpFoundation\Response;
 
 class ClaimSubmitController extends Controller
@@ -115,6 +116,9 @@ class ClaimSubmitController extends Controller
 
         $payload['mobile'] = phone($mobile, $country)->formatE164();
 
+        $storedValueClaim = app(VerifiedStoredValueClaim::class);
+        $storedValueClaim->establish($state, $payload);
+
         Log::info('[ClaimSubmitController] Submitting claim', [
             'voucher_code' => $code,
             'has_kyc' => isset($payload['inputs']['kyc']),
@@ -190,6 +194,8 @@ class ClaimSubmitController extends Controller
                     'failed' => 1,
                 ])
                 ->withErrors(['code' => $this->claimErrorMessage($e)]);
+        } finally {
+            $storedValueClaim->clear();
         }
     }
 

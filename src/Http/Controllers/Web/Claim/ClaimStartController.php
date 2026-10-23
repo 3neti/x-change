@@ -91,13 +91,6 @@ class ClaimStartController extends Controller
                 ]);
             }
 
-            if ($preparedWorkflow->key === 'stored-value.activation.v1'
-                && $request->user()?->getAttribute('mobile_verified_at') === null) {
-                return back()->withErrors([
-                    'code' => 'Your Account needs a verified mobile number before it can activate a reusable balance.',
-                ]);
-            }
-
             if (
                 $this->voucherRequiresSecret($prepared->voucher)
                 && ! $this->claimSecretMatches($prepared->voucher, $preparedData->inputs['secret'] ?? null)
@@ -219,15 +212,11 @@ class ClaimStartController extends Controller
                 ]);
             }
 
-            if ($workflow->key === 'stored-value.activation.v1'
-                && $officer->getAttribute('mobile_verified_at') === null) {
-                return back()->withErrors([
-                    'code' => 'Your Account needs a verified mobile number before it can activate a reusable balance.',
-                ]);
-            }
         }
 
-        if ($authenticatedMobile === null && $request->user()?->getAttribute('mobile_verified_at') !== null) {
+        if ($workflow->key !== 'stored-value.activation.v1'
+            && $authenticatedMobile === null
+            && $request->user()?->getAttribute('mobile_verified_at') !== null) {
             $verifiedMobile = $request->user()->getAttribute('mobile');
             $authenticatedMobile = is_string($verifiedMobile) ? $verifiedMobile : null;
         }
@@ -324,7 +313,7 @@ class ClaimStartController extends Controller
         ClaimAuthenticationMode $authenticationMode,
     ): bool {
         return $authenticationMode === ClaimAuthenticationMode::AuthenticatedOfficer
-            || in_array($workflowKey, ['account-funding.v1', 'stored-value.activation.v1'], true);
+            || $workflowKey === 'account-funding.v1';
     }
 
     /**

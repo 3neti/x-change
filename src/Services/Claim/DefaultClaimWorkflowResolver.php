@@ -93,7 +93,7 @@ final class DefaultClaimWorkflowResolver implements ClaimWorkflowResolverContrac
                 requires_destination: false,
                 requires_amount: false,
                 title: 'Activate Reusable Balance',
-                description: 'Sign in and verify your mobile number to bind this reusable balance to your Account.',
+                description: 'Verify your mobile number to activate this reusable balance.',
                 confirmation_label: 'Activate My Balance',
                 authentication_mode: ClaimAuthenticationMode::ClaimantHandoff,
                 required_claim_fields: ['mobile', 'otp'],

@@ -93,16 +93,6 @@ class ClaimPageController extends Controller
             }
         }
 
-        if (
-            $workflow->key === 'stored-value.activation.v1'
-            && $request->user()?->getAttribute('mobile_verified_at') === null
-        ) {
-            return $responses->error(
-                message: 'Your Account needs a verified mobile number before it can activate a reusable balance.',
-                code: $code,
-            );
-        }
-
         // Viewer-aware claim surface: this is the only place that decides
         // what this specific visitor is allowed to see. An issuer opening
         // their own already-claimed Pay Code always gets the issuer
@@ -140,7 +130,7 @@ class ClaimPageController extends Controller
         ClaimAuthenticationMode $authenticationMode,
     ): bool {
         return $authenticationMode === ClaimAuthenticationMode::AuthenticatedOfficer
-            || in_array($workflowKey, ['account-funding.v1', 'stored-value.activation.v1'], true);
+            || $workflowKey === 'account-funding.v1';
     }
 
     private function renderEntry(

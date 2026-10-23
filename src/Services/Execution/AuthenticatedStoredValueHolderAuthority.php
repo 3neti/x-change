@@ -7,12 +7,14 @@ namespace LBHurtado\XChange\Services\Execution;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
+use LBHurtado\Contact\Models\Contact;
 use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Exceptions\StoredValueSpendRejectedException;
 use LBHurtado\XChange\Contracts\Execution\StoredValueHolderAuthorityContract;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Data\Execution\StoredValueHolderAuthorityData;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
+use LBHurtado\XChange\Support\Claim\VerifiedStoredValueClaim;
 
 final class AuthenticatedStoredValueHolderAuthority implements StoredValueHolderAuthorityContract
 {
@@ -20,6 +22,7 @@ final class AuthenticatedStoredValueHolderAuthority implements StoredValueHolder
 
     public function __construct(
         private readonly TreasuryPrincipalReferenceResolverContract $principalReferences,
+        private readonly ?VerifiedStoredValueClaim $claim = null,
     ) {}
 
     public function isReady(): bool
@@ -29,16 +32,7 @@ final class AuthenticatedStoredValueHolderAuthority implements StoredValueHolder
         }
 
         try {
-            $modelClass = config('x-change.onboarding.issuer_model');
-
-            if (! is_string($modelClass) || ! class_exists($modelClass)) {
-                return $this->ready = false;
-            }
-
-            $model = new $modelClass;
-
-            return $this->ready = $model instanceof Model
-                && Schema::hasColumns($model->getTable(), ['mobile', 'mobile_verified_at']);
+            return $this->ready = Schema::hasColumns((new Contact)->getTable(), ['mobile', 'country']);
         } catch (\Throwable) {
             return $this->ready = false;
         }
@@ -46,6 +40,26 @@ final class AuthenticatedStoredValueHolderAuthority implements StoredValueHolder
 
     public function authorize(ExecutionContextData $context): StoredValueHolderAuthorityData
     {
+        if ($this->claim?->isPublicClaim() === true) {
+            $verifiedMobile = $this->claim->verifiedMobile();
+            $contactMobile = MobileNumber::normalize($context->contact->mobile);
+
+            if ($verifiedMobile === null || $contactMobile === null
+                || ! hash_equals($verifiedMobile, $contactMobile)
+                || ! $context->contact instanceof Contact
+                || ! $context->contact->exists) {
+                throw new StoredValueSpendRejectedException('Verify your mobile number to activate Reusable Balance.');
+            }
+
+            $principalReference = $this->principalReferences->resolve($context->contact);
+
+            return new StoredValueHolderAuthorityData(
+                holder: $context->contact,
+                authorityReference: 'stored-value-holder:verified-contact:'.hash_hmac('sha256', $verifiedMobile, (string) config('app.key')),
+                principalReference: $principalReference,
+            );
+        }
+
         $holder = Auth::user();
 
         if (! $holder instanceof Model || ! $holder->exists) {

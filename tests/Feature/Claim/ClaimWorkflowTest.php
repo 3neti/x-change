@@ -479,7 +479,7 @@ it('keeps the campaign payout recovery otp action visible inline', function (): 
         ->and($payload['steps'][1]['config']['action_placement'])->toBe('inline');
 });
 
-it('requires authenticated mobile and otp activation for reusable balance', function (): void {
+it('requires mobile and OTP for accountless reusable balance activation', function (): void {
     $voucher = Mockery::mock(Voucher::class);
     $voucher->shouldReceive('getAttribute')->with('metadata')->andReturn([
         'instructions' => ['execution' => ['driver' => 'stored_value']],

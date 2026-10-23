@@ -12,6 +12,7 @@ use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Data\Claim\ClaimWorkflowDescriptorData;
 use LBHurtado\XChange\Data\Claim\ClaimWorkflowInterpretationData;
 use LBHurtado\XChange\Models\DeferredOnboardingFunding;
+use LBHurtado\XChange\Models\StoredValueHolderBinding;
 use LBHurtado\XChange\Services\Claim\ClaimWorkflowReadModelProjector;
 use LBHurtado\XChange\Services\Claim\CoverageCompletionSuccessPresentation;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
@@ -52,6 +53,15 @@ class VoucherXRayProjectionBuilder
                     ? $sliceVoucher
                     : $voucher,
             );
+        }
+        if ($status === 'partially_claimable'
+            && $sliceVoucher instanceof Voucher
+            && data_get($sliceVoucher->metadata, 'instructions.execution.driver') === 'stored_value'
+            && ! StoredValueHolderBinding::query()
+                ->where('voucher_id', $sliceVoucher->getKey())
+                ->where('status', 'active')
+                ->exists()) {
+            $status = 'claimable';
         }
         $slicePlan = $sliceVoucher instanceof Voucher
             ? $this->slicePlans->forVoucher($sliceVoucher)
