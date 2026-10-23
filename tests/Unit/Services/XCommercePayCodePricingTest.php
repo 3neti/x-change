@@ -115,7 +115,7 @@ it('uses the immutable x-commerce catalog for Pay Code pricing and projections',
             'rider.message',
         ])
         ->and($first['catalog_reference'])->toBe('pay-code')
-        ->and($first['catalog_version'])->toBe(3)
+        ->and($first['catalog_version'])->toBe(4)
         ->and($first['commercial_offering_reference'])->toBe('commercial-offering:pay_code')
         ->and($first['commercial_offering_version'])->toBe(1)
         ->and($first['commercial_offering_snapshot_hash'])->toHaveLength(64)
@@ -169,7 +169,7 @@ it('prices onboarding as an explicit versioned commercial instruction', function
 
     $charges = collect($estimate['charges'])->keyBy('catalog_item_reference');
 
-    expect($estimate['catalog_version'])->toBe(3)
+    expect($estimate['catalog_version'])->toBe(4)
         ->and($estimate['total_minor'])->toBe(2_500)
         ->and($estimate['charges'])->toHaveCount(2)
         ->and($charges->get('onboarding.enabled')['label'])->toBe('Account Onboarding')

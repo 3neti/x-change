@@ -11,7 +11,7 @@ it('reconciles the approved beta schedule while withholding customer charging', 
 
     expect($status)->toMatchArray([
         'reference' => 'beta-pricing-schedule-v1',
-        'version' => 1,
+        'version' => 2,
         'status' => 'approved',
         'effective_at' => '2026-09-27T00:00:00+08:00',
         'currency' => 'PHP',
@@ -20,7 +20,7 @@ it('reconciles the approved beta schedule while withholding customer charging', 
         'customer_charging_authorized' => false,
     ])->and($status['catalog'])->toMatchArray([
         'reference' => 'pay-code',
-        'version' => 3,
+        'version' => 4,
         'matches_approved_schedule' => true,
     ])->and($status['principal'])->toMatchArray([
         'treatment' => 'excluded',
