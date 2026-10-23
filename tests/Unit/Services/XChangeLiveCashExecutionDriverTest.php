@@ -109,13 +109,45 @@ it('fails when the voucher default driver rejects redemption before polling', fu
     $claims = Mockery::mock(SubmitPayCodeClaim::class);
     $claims->shouldNotReceive('handle');
 
+    $voucher = Voucher::query()->create([
+        'code' => 'TEST-LIVE',
+        'metadata' => ['instructions' => validVoucherInstructions()->toArray()],
+        'state' => 'active',
+    ]);
     $result = (new XChangeLiveCashExecutionDriver($default, $poller, $claims))->execute(new ExecutionContextData(
         contact: new Contact(['mobile' => '09173011987']),
         voucherCode: 'TEST-LIVE',
+        voucher: $voucher,
     ));
 
     expect($result->successful)->toBeFalse()
         ->and($result->driver)->toBe('x_change_live_cash')
         ->and($result->failure)->toBe('compatibility_redemption_rejected')
         ->and($result->events)->toContain('x_change_live_cash.redemption_rejected');
+});
+
+it('rejects missing claim evidence before invoking the default voucher driver', function (): void {
+    $voucher = Voucher::query()->create([
+        'code' => 'TEST-LIVE-EVIDENCE',
+        'metadata' => ['instructions' => validVoucherInstructions(overrides: [
+            'inputs' => ['fields' => ['signature']],
+        ])->toArray()],
+        'state' => 'active',
+    ]);
+    $default = Mockery::mock(DefaultExecutionDriver::class);
+    $default->shouldNotReceive('execute');
+    $poller = Mockery::mock(ExecutionCashDisbursementPollerContract::class);
+    $poller->shouldNotReceive('poll');
+    $claims = Mockery::mock(SubmitPayCodeClaim::class);
+    $claims->shouldNotReceive('handle');
+
+    $result = (new XChangeLiveCashExecutionDriver($default, $poller, $claims))->execute(new ExecutionContextData(
+        contact: new Contact(['mobile' => '09173011987']),
+        voucherCode: $voucher->code,
+        meta: ['inputs' => []],
+        voucher: $voucher,
+    ));
+
+    expect($result->successful)->toBeFalse()
+        ->and($result->failure)->toBe('redemption_exception');
 });

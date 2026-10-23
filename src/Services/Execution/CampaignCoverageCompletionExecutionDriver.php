@@ -7,8 +7,11 @@ namespace LBHurtado\XChange\Services\Execution;
 use LBHurtado\Voucher\Contracts\ExecutionDriverContract;
 use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Data\ExecutionResultData;
+use LBHurtado\Voucher\Exceptions\VoucherRedemptionContractViolationException;
 use LBHurtado\Voucher\Services\DefaultExecutionDriver;
+use LBHurtado\XChange\Exceptions\IncompleteClaimEvidence;
 use LBHurtado\XChange\Models\CompletionPayCodeIssuance;
+use LBHurtado\XChange\Services\Claim\ClaimExecutionPreflight;
 use LBHurtado\XChange\Services\Settlement\CampaignWalletPayerMobile;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 
@@ -51,6 +54,14 @@ final readonly class CampaignCoverageCompletionExecutionDriver implements Execut
             return ExecutionResultData::failed($this->key(), 'completion_mobile_mismatch');
         }
 
+        try {
+            app(ClaimExecutionPreflight::class)->assertExecutable($context->voucher, [
+                'inputs' => (array) data_get($context->meta, 'inputs', []),
+                'mobile' => $context->contact?->mobile,
+            ]);
+        } catch (IncompleteClaimEvidence|VoucherRedemptionContractViolationException) {
+            return ExecutionResultData::failed($this->key(), 'claim_validation_failed');
+        }
         $result = $this->defaultDriver->execute($context);
 
         if (! $result->successful) {

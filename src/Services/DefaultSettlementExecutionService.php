@@ -8,6 +8,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
 use LBHurtado\XChange\Contracts\SettlementExecutionContract;
 use LBHurtado\XChange\Data\Settlement\SettlementExecutionResultData;
+use LBHurtado\XChange\Services\Claim\ClaimExecutionPreflight;
 
 class DefaultSettlementExecutionService implements SettlementExecutionContract
 {
@@ -20,6 +21,7 @@ class DefaultSettlementExecutionService implements SettlementExecutionContract
      */
     public function execute(Voucher $voucher, array $payload): SettlementExecutionResultData
     {
+        app(ClaimExecutionPreflight::class)->assertExecutable($voucher, $payload);
         $envelope = $this->envelopeReadiness->check($voucher);
 
         if (! $envelope->ready) {

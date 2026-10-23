@@ -10,6 +10,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Campaigns\ApproveCampaignWorksheetAuthorization;
 use LBHurtado\XChange\Contracts\SettlementExecutionContract;
 use LBHurtado\XChange\Data\Settlement\SettlementExecutionResultData;
+use LBHurtado\XChange\Services\Claim\ClaimExecutionPreflight;
 use RuntimeException;
 
 final readonly class CampaignWorksheetAuthorizationExecutionService implements SettlementExecutionContract
@@ -25,6 +26,7 @@ final readonly class CampaignWorksheetAuthorizationExecutionService implements S
             throw new RuntimeException('An authenticated officer is required to approve a campaign worksheet.');
         }
 
+        app(ClaimExecutionPreflight::class)->assertExecutable($voucher, $payload);
         $this->assertOfficerMobileMatchesClaim($officer, $payload);
         $this->assertRequiredOtp($voucher, $payload);
 

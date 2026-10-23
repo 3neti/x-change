@@ -28,7 +28,7 @@ use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Models\VoucherSliceExecution;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
-use LBHurtado\XChange\Services\Claim\ClaimEvidenceRequirements;
+use LBHurtado\XChange\Services\Claim\ClaimExecutionPreflight;
 use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
 use LBHurtado\XChange\Services\ResumeProviderProvisioningFromOnboarding;
@@ -74,9 +74,12 @@ class SubmitPayCodeClaim
 
         $this->guardClaimantProvisioning($voucher, $payload);
 
-        app(ClaimEvidenceRequirements::class)->assertComplete($voucher, $payload);
+        $validationDecision = app(ClaimExecutionPreflight::class)->assertExecutable($voucher, $payload);
 
         $preparedClaim = app(PrepareVoucherClaimEvidence::class)->handle($voucher, $payload);
+        if ($preparedClaim instanceof VoucherClaim) {
+            $validationDecision->forceFill(['voucher_claim_id' => $preparedClaim->getKey()])->save();
+        }
 
         app(CampaignDisplaySessions::class)->recordIntake($voucher);
 
@@ -166,6 +169,9 @@ class SubmitPayCodeClaim
         }
 
         $claim = $this->recordVoucherClaim->handle($voucher, $normalized, $payload);
+        if ($claim->exists) {
+            $validationDecision->forceFill(['voucher_claim_id' => $claim->getKey()])->save();
+        }
         $this->completionClaimEvidenceProjector?->handle($claim);
 
         if ($sliceReservation !== null) {

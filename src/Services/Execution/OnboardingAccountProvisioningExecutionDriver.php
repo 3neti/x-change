@@ -13,13 +13,16 @@ use LBHurtado\Onboarding\Actions\PromoteContactToUser;
 use LBHurtado\Voucher\Contracts\ExecutionDriverContract;
 use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Data\ExecutionResultData;
+use LBHurtado\Voucher\Exceptions\VoucherRedemptionContractViolationException;
 use LBHurtado\Voucher\Services\DefaultExecutionDriver;
 use LBHurtado\XChange\Actions\Affiliation\ActivateVoucherSponsorship;
 use LBHurtado\XChange\Actions\Claim\DispatchVoucherClaimOutcome;
 use LBHurtado\XChange\Actions\Funding\RefreshFundingLiquidity;
 use LBHurtado\XChange\Actions\Legal\DeferOnboardingFundingUntilAgreement;
+use LBHurtado\XChange\Exceptions\IncompleteClaimEvidence;
 use LBHurtado\XChange\Exceptions\OnboardingVoucherExecutionFailed;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\Claim\ClaimExecutionPreflight;
 use LBHurtado\XChange\Services\Onboarding\OnboardingVoucherClaimantAuthenticator;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
@@ -65,6 +68,18 @@ final readonly class OnboardingAccountProvisioningExecutionDriver implements Exe
             return ExecutionResultData::failed(
                 driver: $this->key(),
                 failure: 'mobile_verification_required',
+            );
+        }
+
+        try {
+            app(ClaimExecutionPreflight::class)->assertExecutable($context->voucher, [
+                'inputs' => $inputs,
+                'mobile' => $context->contact?->mobile,
+            ]);
+        } catch (IncompleteClaimEvidence|VoucherRedemptionContractViolationException) {
+            return ExecutionResultData::failed(
+                driver: $this->key(),
+                failure: 'claim_validation_failed',
             );
         }
 

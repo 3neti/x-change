@@ -9,7 +9,11 @@ use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
 use LBHurtado\XChange\Services\DefaultWithdrawalExecutionService;
 
 it('validates and processes withdrawal through package services', function () {
-    $voucher = Mockery::mock(Voucher::class);
+    $voucher = Voucher::query()->create([
+        'code' => 'TEST-1234',
+        'metadata' => ['instructions' => validVoucherInstructions()->toArray()],
+        'state' => 'active',
+    ]);
 
     $payload = [
         'mobile' => '09171234567',

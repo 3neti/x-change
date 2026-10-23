@@ -85,6 +85,7 @@ use LBHurtado\XChange\Console\Commands\Campaigns\SyncCampaignPaymentAddressesCom
 use LBHurtado\XChange\Console\Commands\Checkout\BackfillPublicCheckoutsCommand;
 use LBHurtado\XChange\Console\Commands\Checkout\ManageCheckoutViewerLinkCommand;
 use LBHurtado\XChange\Console\Commands\Claim\ClaimWalkthroughCommand;
+use LBHurtado\XChange\Console\Commands\Claim\DeliverClaimValidationJournalCommand;
 use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionContextCommand;
 use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
 use LBHurtado\XChange\Console\Commands\Claim\SnapshotRiderSplashArtworkCommand;
@@ -101,11 +102,11 @@ use LBHurtado\XChange\Console\Commands\Commercial\ProvisionCommercialBaselinesCo
 use LBHurtado\XChange\Console\Commands\Commercial\ProvisionCommercialPrincipalCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ProvisionPublicIssuanceEscrowPrincipalCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ReconcileCommercialComponentEconomicsCommand;
-use LBHurtado\XChange\Console\Commands\Commercial\RepairCommercialOfferingManifestCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ReconcileCommercialProfilesCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ReconcilePartnerCommissionPayoutBatchCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ReconcilePendingPartnerCommissionPayoutsCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\RecordProviderCostBatchCommand;
+use LBHurtado\XChange\Console\Commands\Commercial\RepairCommercialOfferingManifestCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ReportCommercialSaleCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\RequestPartnerCommissionPayoutBatchCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\SubmitPartnerCommissionPayoutBatchCommand;
@@ -1883,6 +1884,7 @@ class XChangeServiceProvider extends ServiceProvider
                 AuthorizeProvisioningOperatorCommand::class,
                 ExpireProvisioningOffersCommand::class,
                 DeliverVoucherSliceExecutionJournalCommand::class,
+                DeliverClaimValidationJournalCommand::class,
                 ProcessCampaignBatchFulfillmentOutboxCommand::class,
                 ShowCampaignPayoutRecoveryDeliveriesCommand::class,
 
@@ -2135,6 +2137,15 @@ class XChangeServiceProvider extends ServiceProvider
                     ->withoutOverlapping(5);
             });
         }
+
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            $schedule
+                ->command('x-change:claim:deliver-validation-journal --limit=100')
+                ->name('x-change:claim:deliver-validation-journal')
+                ->everyMinute()
+                ->onOneServer()
+                ->withoutOverlapping(5);
+        });
 
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
             $schedule

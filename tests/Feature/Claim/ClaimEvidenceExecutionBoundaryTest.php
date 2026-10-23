@@ -9,6 +9,7 @@ use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\ClaimExecutorContract;
 use LBHurtado\XChange\Data\Redemption\RedeemPayCodeResultData;
+use LBHurtado\XChange\Models\ClaimValidationDecision;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Models\VoucherClaimEvidence;
 
@@ -59,6 +60,8 @@ it('durably captures required evidence before invoking the execution driver', fu
 
     expect($result->claimed)->toBeTrue()
         ->and($claim->status)->toBe('redeemed')
+        ->and(ClaimValidationDecision::query()->where('voucher_id', $voucher->getKey())->sole()->voucher_claim_id)
+        ->toBe($claim->getKey())
         ->and(data_get($claim->meta, 'evidence.execution_status'))->toBe('finalized')
         ->and($claim->evidence()->count())->toBe(2);
 });

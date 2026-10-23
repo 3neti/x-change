@@ -8,10 +8,11 @@ use LBHurtado\XChange\Data\Settlement\SettlementEnvelopeReadinessData;
 use LBHurtado\XChange\Services\DefaultSettlementExecutionService;
 
 it('returns pending settlement execution result when envelope is ready', function () {
-    $voucher = new Voucher;
-    $voucher->forceFill([
+    $voucher = Voucher::query()->create([
         'code' => 'SETTLE-1234',
         'voucher_type' => 'settlement',
+        'metadata' => ['instructions' => validVoucherInstructions()->toArray()],
+        'state' => 'active',
     ]);
 
     $envelope = Mockery::mock(SettlementEnvelopeReadinessContract::class);
@@ -46,10 +47,11 @@ it('returns pending settlement execution result when envelope is ready', functio
 });
 
 it('blocks settlement execution when envelope is not ready', function () {
-    $voucher = new Voucher;
-    $voucher->forceFill([
+    $voucher = Voucher::query()->create([
         'code' => 'SETTLE-1234',
         'voucher_type' => 'settlement',
+        'metadata' => ['instructions' => validVoucherInstructions()->toArray()],
+        'state' => 'active',
     ]);
 
     $envelope = Mockery::mock(SettlementEnvelopeReadinessContract::class);

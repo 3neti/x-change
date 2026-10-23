@@ -10,6 +10,7 @@ use LBHurtado\XChange\Contracts\RedemptionExecutionContract;
 use LBHurtado\XChange\Contracts\RedemptionProcessorContract;
 use LBHurtado\XChange\Contracts\RedemptionValidationContract;
 use LBHurtado\XChange\Data\Redemption\RedeemPayCodeResultData;
+use LBHurtado\XChange\Services\Claim\ClaimExecutionPreflight;
 use RuntimeException;
 
 class DefaultRedemptionExecutionService implements RedemptionExecutionContract
@@ -34,6 +35,8 @@ class DefaultRedemptionExecutionService implements RedemptionExecutionContract
 
         /** @var array<string, mixed> $bankAccount */
         $bankAccount = (array) data_get($payload, 'bank_account', []);
+
+        app(ClaimExecutionPreflight::class)->assertExecutable($voucher, $payload);
 
         $context = $this->contextResolver->resolve($payload);
 

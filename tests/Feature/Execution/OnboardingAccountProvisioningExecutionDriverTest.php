@@ -33,16 +33,17 @@ use Propaganistas\LaravelPhone\PhoneNumber;
 function onboardingExecutionContext(array $inputs, bool $verificationRequired = true): ExecutionContextData
 {
     $contact = Contact::fromPhoneNumber(new PhoneNumber('09173011987', 'PH'));
-    $voucher = (new Voucher)->forceFill([
+    $voucher = Voucher::query()->create([
         'code' => 'ONBD-1234',
         'metadata' => [
-            'instructions' => [
+            'instructions' => validVoucherInstructions(overrides: [
                 'execution' => [
                     'schema' => ExecutionInstructionData::SCHEMA,
                     'driver' => OnboardingVoucherInstructionPolicy::ExecutionDriver,
                 ],
-            ],
+            ])->toArray(),
         ],
+        'state' => 'active',
     ]);
 
     return new ExecutionContextData(
@@ -112,6 +113,35 @@ it('fails before account mutation when required mobile verification evidence is 
 
     expect($result->successful)->toBeFalse()
         ->and($result->failure)->toBe('mobile_verification_required');
+});
+
+it('fails before account mutation when a blocking claim input is missing', function (): void {
+    $provisioner = Mockery::mock(ContactUserProvisionerContract::class);
+    $provisioner->shouldNotReceive('provision');
+    $defaultDriver = Mockery::mock(DefaultExecutionDriver::class);
+    $defaultDriver->shouldNotReceive('execute');
+    $context = onboardingExecutionContext([
+        'full_name' => 'Maria Santos',
+        'email' => 'maria@example.test',
+    ], verificationRequired: false);
+    $metadata = (array) $context->voucher->metadata;
+    data_set($metadata, 'instructions.inputs.fields', ['signature']);
+    $context->voucher->forceFill(['metadata' => $metadata])->save();
+    $driver = new OnboardingAccountProvisioningExecutionDriver(
+        new PromoteContactToUser($provisioner),
+        $defaultDriver,
+        app(DispatchVoucherClaimOutcome::class),
+        app(DeferOnboardingFundingUntilAgreement::class),
+        app(OnboardingVoucherClaimantAuthenticator::class),
+        app(RefreshFundingLiquidity::class),
+        app(ActivateVoucherSponsorship::class),
+        Request::create('/x/claim/ONBD-1234'),
+    );
+
+    $result = $driver->execute($context);
+
+    expect($result->successful)->toBeFalse()
+        ->and($result->failure)->toBe('claim_validation_failed');
 });
 
 it('provisions the account from structured proof and strips provider evidence before Voucher redemption', function () {

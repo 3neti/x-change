@@ -29,21 +29,23 @@ use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
 use LBHurtado\XChange\Services\ResumeProviderProvisioningFromOnboarding;
 
+function submitClaimTestVoucher(string $code): Voucher
+{
+    return Voucher::query()->create([
+        'code' => $code,
+        'metadata' => ['instructions' => validVoucherInstructions()->toArray()],
+        'state' => 'active',
+    ]);
+}
+
 it('blocks preview Pay Codes before selecting an execution path', function (): void {
-    $voucher = (new Voucher)->forceFill([
+    $instructions = validVoucherInstructions()->toArray();
+    data_set($instructions, 'metadata.custom.walkthrough.preview', true);
+    data_set($instructions, 'metadata.custom.walkthrough.money_movement', false);
+    $voucher = Voucher::query()->create([
         'code' => 'PV1234',
-        'metadata' => [
-            'instructions' => [
-                'metadata' => [
-                    'custom' => [
-                        'walkthrough' => [
-                            'preview' => true,
-                            'money_movement' => false,
-                        ],
-                    ],
-                ],
-            ],
-        ],
+        'metadata' => ['instructions' => $instructions],
+        'state' => 'active',
     ]);
     $factory = Mockery::mock(ClaimExecutionFactoryContract::class);
     $factory->shouldNotReceive('make');
@@ -59,18 +61,14 @@ it('blocks preview Pay Codes before selecting an execution path', function (): v
 });
 
 it('blocks execution before selecting an executor when required evidence is missing', function (): void {
-    $voucher = (new Voucher)->forceFill([
+    $instructions = validVoucherInstructions(overrides: [
+        'inputs' => ['fields' => ['name', 'selfie', 'signature']],
+    ])->toArray();
+    data_set($instructions, 'metadata.custom.claim_evidence.requirements', ['name', 'selfie', 'signature']);
+    $voucher = Voucher::query()->create([
         'code' => 'EVID-MISSING',
-        'metadata' => [
-            'instructions' => [
-                'inputs' => ['fields' => ['name', 'selfie', 'signature']],
-                'metadata' => [
-                    'claim_evidence' => [
-                        'requirements' => ['name', 'selfie', 'signature'],
-                    ],
-                ],
-            ],
-        ],
+        'metadata' => ['instructions' => $instructions],
+        'state' => 'active',
     ]);
     $factory = Mockery::mock(ClaimExecutionFactoryContract::class);
     $factory->shouldNotReceive('make');
@@ -86,8 +84,7 @@ it('blocks execution before selecting an executor when required evidence is miss
 });
 
 it('submits a claim through the selected executor and normalizes redeem result', function () {
-    $voucher = new Voucher;
-    $voucher->code = 'TEST-1234';
+    $voucher = submitClaimTestVoucher('TEST-1234');
 
     $payload = [
         'mobile' => '09171234567',
@@ -166,8 +163,7 @@ it('submits a claim through the selected executor and normalizes redeem result',
 });
 
 it('submits a claim through the selected executor and normalizes withdraw result', function () {
-    $voucher = new Voucher;
-    $voucher->code = 'TEST-9999';
+    $voucher = submitClaimTestVoucher('TEST-9999');
 
     $payload = [
         'mobile' => '09171234567',
@@ -246,8 +242,7 @@ it('submits a claim through the selected executor and normalizes withdraw result
 });
 
 it('throws for unsupported executor result types', function () {
-    $voucher = new Voucher;
-    $voucher->code = 'TEST-UNSUPPORTED';
+    $voucher = submitClaimTestVoucher('TEST-UNSUPPORTED');
 
     $payload = [
         'mobile' => '09171234567',
@@ -280,8 +275,7 @@ it('throws for unsupported executor result types', function () {
 });
 
 it('submits settlement claims through the selected settlement executor and normalizes result', function () {
-    $voucher = new Voucher;
-    $voucher->code = 'SETTLE-1234';
+    $voucher = submitClaimTestVoucher('SETTLE-1234');
 
     $executor = Mockery::mock(SettlementExecutionContract::class);
 
@@ -430,8 +424,7 @@ it('throws provisioning required when claimant bank-account readiness is missing
 });
 
 it('initiates approval workflow when withdrawal result requires approval', function () {
-    $voucher = new Voucher;
-    $voucher->code = 'APPROVAL-1234';
+    $voucher = submitClaimTestVoucher('APPROVAL-1234');
 
     $payload = [
         'mobile' => '639171234567',
@@ -522,8 +515,7 @@ it('initiates approval workflow when withdrawal result requires approval', funct
 });
 
 it('does not initiate approval workflow during approval replay', function () {
-    $voucher = new Voucher;
-    $voucher->code = 'REPLAY-1234';
+    $voucher = submitClaimTestVoucher('REPLAY-1234');
 
     $payload = [
         'mobile' => '639171234567',

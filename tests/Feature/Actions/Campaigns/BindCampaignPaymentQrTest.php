@@ -1292,7 +1292,12 @@ it('does not save a suggested contact name when completion redemption fails', fu
     $default->shouldReceive('execute')->once()->andReturn(ExecutionResultData::failed('default', 'redemption_rejected'));
     $result = (new CampaignCoverageCompletionExecutionDriver($default))->execute(
         ExecutionContextData::fromRedemption($voucher, $contact, $voucher->code, [
-            'inputs' => ['name' => 'Confirmed Beneficiary'],
+            'inputs' => [
+                'name' => 'Confirmed Beneficiary',
+                'email' => 'confirmed@example.test',
+                'address' => 'Makati City',
+                'birth_date' => '1990-01-01',
+            ],
         ]),
     );
 
@@ -1344,6 +1349,27 @@ it('rejects a different payer mobile in the completion execution driver', functi
     Http::assertNothingSent();
 });
 
+it('rejects completion redemption before the voucher driver when required claim evidence is absent', function (): void {
+    Queue::fake();
+    [$recognition] = auiRecognizedPaymentForContinuation([
+        'payer_institution_ciphertext' => 'GXCHPHM2XXX',
+        'payer_account_ciphertext' => '09173011987',
+    ]);
+    app()->call([new AdvanceCampaignPaymentLifecycleJob($recognition->reference), 'handle']);
+    $voucher = $recognition->provisionalCoverage->completionPayCodeIssuance->voucher;
+    $default = Mockery::mock(DefaultExecutionDriver::class);
+    $default->shouldNotReceive('execute');
+    $contact = (new Contact)->forceFill(['mobile' => '09173011987']);
+
+    $result = (new CampaignCoverageCompletionExecutionDriver($default))->execute(
+        ExecutionContextData::fromRedemption($voucher, $contact, $voucher->code),
+    );
+
+    expect($result->successful)->toBeFalse()
+        ->and($result->failure)->toBe('claim_validation_failed');
+    Http::assertNothingSent();
+});
+
 it('accepts the bound payer mobile without payout details or financial movement', function (string $mobile): void {
     Queue::fake();
     [$recognition] = auiRecognizedPaymentForContinuation([
@@ -1357,7 +1383,14 @@ it('accepts the bound payer mobile without payout details or financial movement'
     $driver = new CampaignCoverageCompletionExecutionDriver($default);
     $contact = (new Contact)->forceFill(['mobile' => $mobile]);
     $before = campaignPaymentFinancialCounts();
-    $result = $driver->execute(ExecutionContextData::fromRedemption($voucher, $contact, $voucher->code));
+    $result = $driver->execute(ExecutionContextData::fromRedemption($voucher, $contact, $voucher->code, [
+        'inputs' => [
+            'name' => 'Confirmed Beneficiary',
+            'email' => 'confirmed@example.test',
+            'address' => 'Makati City',
+            'birth_date' => '1990-01-01',
+        ],
+    ]));
     expect($result->successful)->toBeTrue()
         ->and(campaignPaymentFinancialCounts())->toBe($before);
     Http::assertNothingSent();

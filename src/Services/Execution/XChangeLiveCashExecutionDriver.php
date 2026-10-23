@@ -11,6 +11,7 @@ use LBHurtado\Voucher\Services\DefaultExecutionDriver;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Contracts\ExecutionCashDisbursementPollerContract;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
+use LBHurtado\XChange\Services\Claim\ClaimExecutionPreflight;
 use Throwable;
 
 final class XChangeLiveCashExecutionDriver implements ExecutionDriverContract
@@ -33,7 +34,7 @@ final class XChangeLiveCashExecutionDriver implements ExecutionDriverContract
 
         try {
             $result = data_get($context->meta, 'claim.amount') === null
-                ? $this->defaultDriver->execute($normalized)
+                ? $this->executeDefaultClaim($context, $normalized)
                 : $this->executeAmountClaim($context);
         } catch (Throwable $exception) {
             return ExecutionResultData::failed(
@@ -92,6 +93,22 @@ final class XChangeLiveCashExecutionDriver implements ExecutionDriverContract
                 'destination_account' => $disbursement['destination_account'] ?? null,
             ],
         );
+    }
+
+    private function executeDefaultClaim(
+        ExecutionContextData $context,
+        ExecutionContextData $normalized,
+    ): ExecutionResultData {
+        if ($context->voucher === null) {
+            return ExecutionResultData::failed($this->key(), 'missing_voucher');
+        }
+
+        $claim = (array) data_get($context->meta, 'claim', []);
+        $claim['inputs'] ??= (array) data_get($context->meta, 'inputs', []);
+        $claim['mobile'] ??= $context->contact?->mobile;
+        app(ClaimExecutionPreflight::class)->assertExecutable($context->voucher, $claim);
+
+        return $this->defaultDriver->execute($normalized);
     }
 
     private function executeAmountClaim(
