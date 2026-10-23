@@ -1,0 +1,14 @@
+[
+  { "requirement": "mobile", "step": "wallet_info", "field": "mobile" },
+  { "requirement": "email", "step": "bio_fields", "field": "email" },
+  { "requirement": "reference_code", "step": "bio_fields", "field": "reference_code" },
+  { "requirement": "signature", "step": "signature_capture" },
+  { "requirement": "kyc", "step": "kyc_verification" },
+  { "requirement": "name", "step": "bio_fields", "field": "full_name" },
+  { "requirement": "address", "step": "bio_fields", "field": "address" },
+  { "requirement": "birth_date", "step": "bio_fields", "field": "birth_date" },
+  { "requirement": "gross_monthly_income", "step": "bio_fields", "field": "gross_monthly_income" },
+  { "requirement": "location", "step": "location_capture" },
+  { "requirement": "otp", "step": "otp_verification" },
+  { "requirement": "selfie", "step": "selfie_capture" }
+]

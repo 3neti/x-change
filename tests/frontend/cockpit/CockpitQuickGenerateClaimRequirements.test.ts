@@ -4,6 +4,19 @@ import { describe, expect, it, vi } from 'vitest';
 import CockpitQuickGenerateSubmitPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateSubmitPanel.vue';
 import { cockpitQuickGenerateTemplates } from '../../../resources/js/cockpit/quickGenerateDefaults';
 
+vi.mock('@inertiajs/vue3', () => ({
+    Link: { props: ['href'], template: '<a :href="href?.url ?? href"><slot /></a>' },
+    router: { reload: vi.fn() },
+    usePage: vi.fn(() => ({ props: {} })),
+}));
+
+function mountClaimRequirements(options: { props: Record<string, unknown> }) {
+    return mount(CockpitQuickGenerateSubmitPanel, {
+        ...options,
+        global: { stubs: { Teleport: true, CockpitPayCodeCanvas: true } },
+    });
+}
+
 function quickGenerateEngineeringPreview(
     wrapper: VueWrapper,
 ): Record<string, any> {
@@ -34,7 +47,7 @@ async function openClaimRequirementsPopover(
 
 describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
     it('renders the compact control inside the Order card', () => {
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+        const wrapper = mountClaimRequirements({
             props: { templates: cockpitQuickGenerateTemplates },
         });
         const orderCard = wrapper.get(
@@ -49,7 +62,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
     });
 
     it('groups Evidence before Verification and Details without changing the requirement catalog', async () => {
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+        const wrapper = mountClaimRequirements({
             props: { templates: cockpitQuickGenerateTemplates },
         });
 
@@ -96,7 +109,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
     });
 
     it('selecting a requirement in the Order card selects it in the detailed controls', async () => {
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+        const wrapper = mountClaimRequirements({
             props: { templates: cockpitQuickGenerateTemplates },
         });
 
@@ -121,7 +134,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
     });
 
     it('removing an optional requirement chip updates the detailed controls', async () => {
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+        const wrapper = mountClaimRequirements({
             props: { templates: cockpitQuickGenerateTemplates },
         });
 
@@ -151,7 +164,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
     });
 
     it('changing the detailed controls updates the Order chips', async () => {
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+        const wrapper = mountClaimRequirements({
             props: { templates: cockpitQuickGenerateTemplates },
         });
 
@@ -173,7 +186,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
     });
 
     it('locks Mobile and OTP as unremovable chips with a visible reason as soon as Pay To is a mobile number, and unlocks them when Pay To changes', async () => {
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+        const wrapper = mountClaimRequirements({
             props: { templates: cockpitQuickGenerateTemplates },
         });
 
@@ -217,7 +230,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
     });
 
     it('Blank Pay Code clears manually selected optional requirements, and inference still locks Mobile/OTP immediately afterwards', async () => {
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+        const wrapper = mountClaimRequirements({
             props: { templates: cockpitQuickGenerateTemplates },
         });
 
@@ -234,6 +247,11 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
         ).toBe(true);
 
         await wrapper
+            .get('[data-testid="cockpit-quick-generate-face-match-required"]')
+            .setValue(true);
+        expect(quickGenerateEngineeringPreview(wrapper).inputs.fields).toContain('kyc');
+
+        await wrapper
             .get('[data-testid="cockpit-quick-generate-start-blank"]')
             .trigger('click');
 
@@ -244,6 +262,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
                 )
                 .exists(),
         ).toBe(false);
+        expect(quickGenerateEngineeringPreview(wrapper).inputs.fields).not.toContain('kyc');
 
         // The inference rule itself (not a stale lock) is preserved: setting
         // a mobile Pay To right after Blank still locks Mobile + OTP.
@@ -264,7 +283,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
     });
 
     it('Repeat Last preloads the correct chips from the last successful instructions', async () => {
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+        const wrapper = mountClaimRequirements({
             props: {
                 templates: cockpitQuickGenerateTemplates,
                 lastInstructions: {
@@ -298,7 +317,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
     });
 
     it('keeps an unavailable capability disabled and never inserts it into inputs.fields, while canonical inputs.fields still reach the engineering preview', async () => {
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+        const wrapper = mountClaimRequirements({
             props: {
                 templates: cockpitQuickGenerateTemplates,
                 instructionCapabilities: {
@@ -365,7 +384,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
         });
         vi.stubGlobal('fetch', fetchMock);
 
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+        const wrapper = mountClaimRequirements({
             props: {
                 clientFundsMinor: 100_000,
                 templates: cockpitQuickGenerateTemplates,
@@ -452,7 +471,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
         });
         vi.stubGlobal('fetch', fetchMock);
 
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+        const wrapper = mountClaimRequirements({
             props: {
                 clientFundsMinor: 100_000,
                 templates: cockpitQuickGenerateTemplates,

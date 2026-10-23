@@ -18,7 +18,15 @@ vi.mock('@inertiajs/vue3', () => ({
         post,
         reload: vi.fn(),
     },
+    usePage: vi.fn(() => ({ props: {} })),
 }));
+
+function mountSavedTemplates(options: { props: Record<string, unknown>; attachTo?: Element }) {
+    return mount(CockpitQuickGenerateSubmitPanel, {
+        ...options,
+        global: { stubs: { Teleport: true, CockpitPayCodeCanvas: true } },
+    });
+}
 
 describe('Quick Generate saved templates', () => {
     beforeEach(() => {
@@ -27,7 +35,7 @@ describe('Quick Generate saved templates', () => {
     });
 
     it('applies an owner template without restoring recipient details', async () => {
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+        const wrapper = mountSavedTemplates({
             attachTo: document.body,
             props: {
                 templates: cockpitQuickGenerateTemplates,
@@ -121,7 +129,7 @@ describe('Quick Generate saved templates', () => {
     });
 
     it('submits a sanitized reusable blueprint through Wayfinder', async () => {
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+        const wrapper = mountSavedTemplates({
             props: {
                 templates: cockpitQuickGenerateTemplates,
             },
@@ -199,7 +207,7 @@ describe('Quick Generate saved templates', () => {
                 },
             },
         };
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+        const wrapper = mountSavedTemplates({
             props: {
                 templates: cockpitQuickGenerateTemplates,
                 savedTemplates: [savedTemplate],
@@ -293,7 +301,7 @@ describe('Quick Generate saved templates', () => {
     });
 
     it('can save the active personal template as a new template', async () => {
-        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+        const wrapper = mountSavedTemplates({
             props: {
                 templates: cockpitQuickGenerateTemplates,
                 savedTemplates: [
