@@ -15,9 +15,14 @@ type Collection = {
     balance_after_minor?: number;
     expires_at: string;
 };
+type CollectionSummary = Pick<Collection, 'reference' | 'status' | 'amount_minor' | 'currency' | 'authorization_method'> & {
+    created_at: string | null;
+};
 
 const props = defineProps<{
     channel: 'cockpit' | 'operations';
+    view?: 'collect' | 'activity' | 'exceptions';
+    recent_collections?: CollectionSummary[];
     fixed_amount_minor: number;
     endpoints: { start: string; status: string; verify: string; commit: string };
 }>();
@@ -27,6 +32,7 @@ const amount = ref('');
 const otp = ref('');
 const resumeReference = ref('');
 const collection = ref<Collection | null>(null);
+const showCollector = ref(false);
 const busy = ref(false);
 const scanning = ref(false);
 const error = ref('');
@@ -109,6 +115,11 @@ async function resume(): Promise<void> {
     }
 }
 
+async function openCollection(reference: string): Promise<void> {
+    resumeReference.value = reference;
+    await resume();
+}
+
 async function verify(): Promise<void> {
     if (!collection.value) return;
     error.value = '';
@@ -164,6 +175,7 @@ async function scan(event: Event): Promise<void> {
 }
 
 function reset(): void {
+    showCollector.value = true;
     collection.value = null;
     input.value = '';
     amount.value = '';
@@ -180,11 +192,25 @@ function reset(): void {
         <div class="mx-auto w-full max-w-lg space-y-6">
             <header>
                 <p class="text-sm font-semibold uppercase tracking-widest text-slate-500">Pay Code · Stored value</p>
-                <h1 class="mt-2 text-3xl font-semibold">Collect a payment</h1>
-                <p class="mt-2 text-sm text-slate-600">{{ props.fixed_amount_minor > 0 ? 'Enter or scan the marked Pay Code to collect the configured fare.' : 'Enter or scan the marked Pay Code, then set the amount to collect.' }}</p>
+                <h1 class="mt-2 text-3xl font-semibold">{{ props.view === 'activity' ? 'Collection activity' : props.view === 'exceptions' ? 'Unfinished collections' : 'Collect a payment' }}</h1>
+                <p v-if="!props.view || props.view === 'collect'" class="mt-2 text-sm text-slate-600">{{ props.fixed_amount_minor > 0 ? 'Enter or scan the marked Pay Code to collect the configured fare.' : 'Enter or scan the marked Pay Code, then set the amount to collect.' }}</p>
+                <button v-else type="button" class="mt-3 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold" @click="reset">New collection</button>
             </header>
 
-            <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+            <section v-if="props.view === 'activity' || props.view === 'exceptions'" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7" data-testid="stored-value-collection-activity">
+                <p v-if="!props.recent_collections?.length" class="text-sm text-slate-600">No collections in this view.</p>
+                <ul v-else class="divide-y divide-slate-200">
+                    <li v-for="item in props.recent_collections" :key="item.reference" class="flex items-center justify-between gap-3 py-3 text-sm">
+                        <div class="min-w-0">
+                            <p class="font-mono text-xs text-slate-500">{{ item.reference }}</p>
+                            <p class="font-semibold">{{ money(item.amount_minor) }} · {{ item.status }}</p>
+                        </div>
+                        <button type="button" class="rounded-lg border border-slate-300 px-3 py-2 font-semibold" :disabled="busy" @click="openCollection(item.reference)">Open</button>
+                    </li>
+                </ul>
+            </section>
+
+            <section v-if="!props.view || props.view === 'collect' || showCollector || collection" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
                 <form v-if="!collection" class="space-y-5" @submit.prevent="start">
                     <div>
                         <label for="collection-code" class="block text-sm font-medium">Pay Code</label>
@@ -238,11 +264,11 @@ function reset(): void {
                 </div>
                 <p v-if="error" role="alert" class="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">{{ error }}</p>
             </section>
-            <form v-if="!collection" class="flex gap-2" @submit.prevent="resume">
+            <form v-if="!collection && (!props.view || props.view === 'collect')" class="flex gap-2" @submit.prevent="resume">
                 <input v-model="resumeReference" aria-label="Collection reference" placeholder="Resume by reference" class="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" />
                 <button type="submit" :disabled="busy" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">Resume</button>
             </form>
-            <p class="text-center text-xs text-slate-500">The balance is shown after collection authorization. Camera text recognition runs on this device.</p>
+            <p v-if="!props.view || props.view === 'collect'" class="text-center text-xs text-slate-500">The balance is shown after collection authorization. Camera text recognition runs on this device.</p>
         </div>
     </main>
 </template>

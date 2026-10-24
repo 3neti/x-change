@@ -404,6 +404,15 @@ it('collects scanned stored value through OTP and frozen collector authorization
         ->assertJsonPath('data.status', 'ready')
         ->assertJsonPath('data.authorization_method', 'collector');
     $readyReference = $ready->json('data.reference');
+    $this->withHeader('X-Inertia', 'true')
+        ->get('/x/cockpit/stored-value-collections?journey=collection_exception')
+        ->assertOk()
+        ->assertJsonPath('props.recent_collections.0.reference', $readyReference);
+    $this->actingAs($issuer)->get('/x/cockpit/stored-value-collections?journey=collection_exception')
+        ->assertOk()
+        ->assertDontSee($readyReference);
+    $this->actingAs($collector);
+    $this->withoutHeader('X-Inertia');
     $this->postJson('/x/cockpit/stored-value-collections/'.$readyReference.'/verification', [
         'code' => '000000',
     ])->assertUnprocessable();
@@ -414,6 +423,14 @@ it('collects scanned stored value through OTP and frozen collector authorization
     $this->postJson('/x/cockpit/stored-value-collections/'.$readyReference.'/commit')
         ->assertOk()
         ->assertJsonPath('data.receipt.authorization_method', 'collector');
+    $this->withHeader('X-Inertia', 'true')
+        ->get('/x/cockpit/stored-value-collections?journey=tap_activity')
+        ->assertOk()
+        ->assertJsonPath('props.recent_collections.0.reference', $readyReference);
+    $this->get('/x/cockpit/stored-value-collections?journey=collection_exception')
+        ->assertOk()
+        ->assertDontSee($readyReference);
+    $this->withoutHeader('X-Inertia');
     $this->postJson('/x/cockpit/stored-value-collections/'.$readyReference.'/commit')
         ->assertOk()
         ->assertJsonPath('data.receipt.authorization_method', 'collector');

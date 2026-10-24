@@ -11,6 +11,7 @@ use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\XChange\Models\CommercialPrincipal;
+use LBHurtado\XChange\Models\StoredValueCollection;
 use LBHurtado\XChange\Services\Checkout\CheckoutConsoleAccess;
 use LBHurtado\XChange\Services\Commercial\ConfiguredPublicIssuanceEscrowPrincipalResolver;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiRequestContext;
@@ -28,7 +29,31 @@ final class StoredValueCollectionController extends Controller
     public function page(Request $request): Response
     {
         $channel = $this->channel($request);
-        $this->collector($request, $channel);
+        $collector = $this->collector($request, $channel);
+        $journey = $channel === 'cockpit' ? $request->query('journey') : null;
+        $view = match ($journey) {
+            'tap_activity', 'sale_activity' => 'activity',
+            'collection_exception' => 'exceptions',
+            default => 'collect',
+        };
+        $recentCollections = $channel === 'cockpit' && $view !== 'collect'
+            ? StoredValueCollection::query()
+                ->where('collector_channel', 'cockpit')
+                ->where('collector_type', $collector->getMorphClass())
+                ->where('collector_id', (string) $collector->getKey())
+                ->when($view === 'exceptions', fn ($query) => $query->where('status', '!=', 'committed'))
+                ->latest('id')
+                ->limit(30)
+                ->get(['reference', 'status', 'amount_minor', 'currency', 'authorization_method', 'created_at'])
+                ->map(fn (StoredValueCollection $collection): array => [
+                    'reference' => $collection->reference,
+                    'status' => $collection->status,
+                    'amount_minor' => $collection->amount_minor,
+                    'currency' => $collection->currency,
+                    'authorization_method' => $collection->authorization_method,
+                    'created_at' => $collection->created_at?->toIso8601String(),
+                ])->all()
+            : [];
         $base = $channel === 'operations'
             ? route('x-change.operations.stored-value-collections.store', [], false)
             : route('x-change.cockpit.stored-value-collections.store', [], false);
@@ -38,6 +63,8 @@ final class StoredValueCollectionController extends Controller
 
         return Inertia::render('x-change/pos/CollectStoredValue', [
             'channel' => $channel,
+            'view' => $view,
+            'recent_collections' => $recentCollections,
             'fixed_amount_minor' => max(0, (int) config('x-change.execution.stored_value.collection.fixed_amount_minor', 0)),
             'endpoints' => [
                 'start' => $base,

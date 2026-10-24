@@ -75,4 +75,35 @@ describe('stored value collection page', () => {
         expect(page.text()).toContain('Payment collected');
         expect(fetch).toHaveBeenCalledTimes(2);
     });
+
+    it('opens an unfinished collection from the exception view', async () => {
+        const reference = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+        const fetch = vi.fn().mockResolvedValueOnce(reply({
+            reference,
+            status: 'ready',
+            amount_minor: 2500,
+            currency: 'PHP',
+            available_minor: 10000,
+        }));
+        vi.stubGlobal('fetch', fetch);
+        const page = mount(CollectStoredValue, {
+            props: {
+                channel: 'cockpit',
+                endpoints,
+                fixed_amount_minor: 2500,
+                view: 'exceptions',
+                recent_collections: [{ reference, status: 'ready', amount_minor: 2500, currency: 'PHP', created_at: null }],
+            },
+        });
+
+        expect(page.get('[data-testid="stored-value-collection-activity"]').text()).toContain(reference);
+        expect(page.find('#collection-code').exists()).toBe(false);
+        await page.get('[data-testid="stored-value-collection-activity"] button').trigger('click');
+        await flushPromises();
+
+        expect(fetch.mock.calls[0][0]).toBe(`/x/cockpit/stored-value-collections/${reference}`);
+        expect(page.text()).toContain('Collect ₱25.00');
+        await page.findAll('button').find((button) => button.text() === 'Start a new collection')!.trigger('click');
+        expect(page.find('#collection-code').exists()).toBe(true);
+    });
 });
