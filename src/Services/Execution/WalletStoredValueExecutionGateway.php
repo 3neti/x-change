@@ -184,6 +184,7 @@ final readonly class WalletStoredValueExecutionGateway implements DurableStoredV
             'remaining_balance' => $operation->balanceAfterMinor,
             'last_spend_execution_id' => $callerExecutionId,
             'operation_reference' => $operation->operationReference,
+            'destination_principal_reference' => $destination->principalReference,
         ];
     }
 

@@ -355,10 +355,23 @@ it('collects scanned stored value through OTP and frozen collector authorization
         'mode' => 'otp_above_threshold',
     ]);
     $voucher->forceFill(['metadata' => $metadata])->save();
+    $farePrincipal = CommercialPrincipal::query()->create([
+        'reference' => 'fare-commercial',
+        'legal_name' => 'Fare Commercial Principal',
+        'authorization_reference' => 'fare-commercial-authority',
+        'active' => true,
+    ]);
+    config()->set('x-change.commercial.principal.reference', 'fare-commercial');
+    $farePortfolio = $portfolios->provision($farePrincipal, ['netbank-primary']);
+    $farePosition = collect($farePortfolio->positions)->firstWhere('purpose', TreasuryPositionPurpose::ClientFunds);
+    $fareLedger = Wallet::query()->findOrFail(TreasuryPosition::query()
+        ->where('position_reference', $farePosition->positionReference)
+        ->sole()->internal_ledger_id);
     config()->set('x-change.execution.stored_value.collection.staff', [
         'enabled' => true,
         'maximum_amount_minor' => 50,
         'daily_amount_minor' => 1_000,
+        'destination' => 'commercial_principal',
     ]);
     config()->set('x-change.execution.stored_value.collection.fixed_amount_minor', 50);
     Gate::define('x-change.stored-value.collect', fn (User $operator): bool => $operator->is($collector));
@@ -386,6 +399,7 @@ it('collects scanned stored value through OTP and frozen collector authorization
     expect($collectorScenario->payload['success'])->toBeTrue()
         ->and($collectorScenario->payload['authorization_method'])->toBe('collector')
         ->and($collectorScenario->payload['rollback_completed'])->toBeTrue();
+    $collectorBalanceBefore = treasuryClientFundsLedger($collector)->getBalanceIntAttribute();
 
     $this->actingAs($issuer)->postJson('/x/cockpit/stored-value-collections', [
         'code' => (string) $voucher->code,
@@ -422,7 +436,8 @@ it('collects scanned stored value through OTP and frozen collector authorization
     config()->set('x-change.execution.stored_value.collection.staff.enabled', true);
     $this->postJson('/x/cockpit/stored-value-collections/'.$readyReference.'/commit')
         ->assertOk()
-        ->assertJsonPath('data.receipt.authorization_method', 'collector');
+        ->assertJsonPath('data.receipt.authorization_method', 'collector')
+        ->assertJsonPath('data.receipt.destination_principal_reference', $farePosition->principalReference);
     $this->withHeader('X-Inertia', 'true')
         ->get('/x/cockpit/stored-value-collections?journey=tap_activity')
         ->assertOk()
@@ -435,7 +450,11 @@ it('collects scanned stored value through OTP and frozen collector authorization
         ->assertOk()
         ->assertJsonPath('data.receipt.authorization_method', 'collector');
     expect(TreasuryAllocationOperation::query()->where('operation_type', TreasuryAllocationOperationType::Draw)->count())->toBe(4)
-        ->and(StoredValueCollection::query()->where('reference', $readyReference)->sole()->proof_reference_hash)->toBeNull();
+        ->and(StoredValueCollection::query()->where('reference', $readyReference)->sole()->proof_reference_hash)->toBeNull()
+        ->and($fareLedger->fresh()->getBalanceIntAttribute())->toBe(50)
+        ->and(treasuryClientFundsLedger($collector)->getBalanceIntAttribute())->toBe($collectorBalanceBefore)
+        ->and(ExecutionJournalEntry::query()->where('event_type', 'stored_value.collection.committed')->get()
+            ->contains(fn (ExecutionJournalEntry $entry): bool => data_get($entry->payload, 'destination_principal_reference') === $farePosition->principalReference))->toBeTrue();
     config()->set('x-change.execution.stored_value.collection.staff.daily_amount_minor', 550);
     $this->postJson('/x/cockpit/stored-value-collections', [
         'code' => (string) $voucher->code,

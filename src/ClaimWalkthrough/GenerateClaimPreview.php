@@ -46,7 +46,7 @@ final class GenerateClaimPreview
 
         $payload = $this->normalizePayloadForIssuance($request->validated());
         if ($this->context->isPublic($request)) {
-            $this->publicPolicy->assertAllowed($payload);
+            $this->publicPolicy->assertAllowed($payload, allowCommissionedStoredValue: true);
         }
 
         $key = $this->idempotency->extractKey($request);
@@ -63,7 +63,7 @@ final class GenerateClaimPreview
         $payload = $this->claimPolicy->handle($payload);
 
         if ($this->context->isPublic($request)) {
-            $this->publicPolicy->assertAllowed($payload);
+            $this->publicPolicy->assertAllowed($payload, allowCommissionedStoredValue: true);
         }
 
         if ($request->user()?->getAuthIdentifier() !== null) {

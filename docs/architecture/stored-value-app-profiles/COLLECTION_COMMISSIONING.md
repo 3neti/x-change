@@ -8,6 +8,8 @@ Set `XCHANGE_STORED_VALUE_COLLECTION_FIXED_AMOUNT_MINOR` to a positive PHP minor
 
 For Cockpit staff collection, `XCHANGE_STORED_VALUE_STAFF_COLLECTION_ENABLED=true` and positive `XCHANGE_STORED_VALUE_STAFF_COLLECTION_MAXIMUM_AMOUNT_MINOR` and `XCHANGE_STORED_VALUE_STAFF_COLLECTION_DAILY_AMOUNT_MINOR` are necessary but not sufficient. The host must explicitly grant the `x-change.stored-value.collect` Gate ability to each approved authenticated operator. No default grant is supplied. Review staff grants and limits before enabling this path.
 
+`XCHANGE_STORED_VALUE_STAFF_COLLECTION_DESTINATION=collector` credits the operator's Client Funds position. Set it to `commercial_principal` to credit the commissioned commercial principal's Client Funds position instead, while retaining the authenticated operator as the collection actor. The receipt and journal record the destination principal reference. A host choosing the commercial destination must have an active commercial principal and a compatible treasury connection. Public Reusable Balance issuance is offered only when issuance and a collection destination are commissioned; the funded order must still be paid before a Pay Code is issued.
+
 For Partner API collection, use an active client with the `stored-value:spend` scope and an enabled `stored_value_spend` mandate containing PHP, a positive maximum amount, and a positive daily amount. Production clients additionally require an activated production mandate.
 
 ## Issuance and compatibility

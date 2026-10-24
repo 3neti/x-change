@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\PublicIssuance;
 
 use Illuminate\Validation\ValidationException;
+use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegistry;
 
 final readonly class PublicIssuanceInstructionPolicy
 {
+    public function __construct(private InstructionCapabilityReadinessRegistry $capabilities) {}
+
     /**
      * @param  array<string, mixed>  $payload
      */
-    public function assertAllowed(array $payload): void
+    public function assertAllowed(array $payload, bool $allowCommissionedStoredValue = false): void
     {
         $errors = [];
 
@@ -28,7 +31,11 @@ final readonly class PublicIssuanceInstructionPolicy
         }
 
         if ((bool) data_get($payload, 'stored_value.enabled', false)) {
-            $errors['stored_value'][] = 'Stored-value Pay Codes require an x-change Account.';
+            if (! $allowCommissionedStoredValue) {
+                $errors['stored_value'][] = 'Stored-value Pay Codes require an x-change Account.';
+            } elseif ($this->capabilities->find('stored_value')?->issuanceAllowed !== true) {
+                $errors['stored_value'][] = 'Reusable Balance is not commissioned for public issuance.';
+            }
         }
 
         if ((int) data_get($payload, 'count', 1) !== 1) {

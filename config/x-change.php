@@ -3109,6 +3109,7 @@ return [
                     'enabled' => (bool) env('XCHANGE_STORED_VALUE_STAFF_COLLECTION_ENABLED', false),
                     'maximum_amount_minor' => (int) env('XCHANGE_STORED_VALUE_STAFF_COLLECTION_MAXIMUM_AMOUNT_MINOR', 0),
                     'daily_amount_minor' => (int) env('XCHANGE_STORED_VALUE_STAFF_COLLECTION_DAILY_AMOUNT_MINOR', 0),
+                    'destination' => env('XCHANGE_STORED_VALUE_STAFF_COLLECTION_DESTINATION', 'collector'),
                 ],
             ],
             'otp' => [

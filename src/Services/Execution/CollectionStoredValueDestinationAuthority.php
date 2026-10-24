@@ -5,28 +5,57 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Execution;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Gate;
 use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Exceptions\StoredValueSpendRejectedException;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryAllocation;
+use LBHurtado\XChange\Contracts\CommercialPrincipalResolverContract;
 use LBHurtado\XChange\Contracts\Execution\StoredValueDestinationAuthorityContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Data\Execution\StoredValueDestinationAuthorityData;
 use LBHurtado\XChange\Models\PartnerApiClient;
 use LBHurtado\XChange\Models\StoredValueCollection;
+use Throwable;
 
 final readonly class CollectionStoredValueDestinationAuthority implements StoredValueDestinationAuthorityContract
 {
     public function __construct(
         private PartnerApiStoredValueDestinationAuthority $partner,
+        private CommercialPrincipalResolverContract $commercialPrincipal,
         private TreasuryAccountPortfolioProvisioningContract $portfolios,
         private TreasuryPrincipalReferenceResolverContract $principals,
     ) {}
 
     public function isReady(): bool
     {
-        return $this->partner->isReady();
+        if ($this->partner->isReady()) {
+            return true;
+        }
+
+        $staff = (array) config('x-change.execution.stored_value.collection.staff', []);
+        if (($staff['enabled'] ?? false) !== true
+            || (int) ($staff['maximum_amount_minor'] ?? 0) <= 0
+            || (int) ($staff['daily_amount_minor'] ?? 0) <= 0
+            || ! Gate::has('x-change.stored-value.collect')) {
+            return false;
+        }
+
+        $destination = (string) ($staff['destination'] ?? 'collector');
+        if ($destination === 'collector') {
+            return true;
+        }
+
+        if ($destination !== 'commercial_principal') {
+            return false;
+        }
+
+        try {
+            return $this->commercialPrincipal->resolve()->exists;
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     public function authorize(ExecutionContextData $context, int $amountMinor): StoredValueDestinationAuthorityData
@@ -56,6 +85,17 @@ final readonly class CollectionStoredValueDestinationAuthority implements Stored
         }
 
         $principal = $collector instanceof PartnerApiClient ? $collector->issuer : $collector;
+        if ($collection->collector_channel === 'cockpit'
+            && config('x-change.execution.stored_value.collection.staff.destination', 'collector') === 'commercial_principal') {
+            try {
+                $principal = $this->commercialPrincipal->resolve();
+            } catch (Throwable $exception) {
+                throw new StoredValueSpendRejectedException(
+                    'The commissioned fare destination is unavailable.',
+                    previous: $exception,
+                );
+            }
+        }
         if (! $principal instanceof Model || ! $principal->exists) {
             throw new StoredValueSpendRejectedException('The collecting Account cannot be resolved.');
         }

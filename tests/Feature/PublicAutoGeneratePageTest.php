@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Http\Request;
 use Illuminate\Session\ArraySessionHandler;
 use Illuminate\Session\Store;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Funding\TransitionPayCodeIssuanceFundingOrder;
@@ -76,6 +77,90 @@ it('renders the public issuance surface without cockpit navigation', function ()
         ->assertJsonPath('props.public_navigation.login_url', null)
         ->assertJsonPath('props.commercial_principal.reference', 'public-issuance-escrow');
 });
+
+it('offers reusable balance on the public surface only when staff collection is commissioned', function (): void {
+    commissionPublicStoredValueForTest();
+
+    $this->withHeaders([
+        'X-Inertia' => 'true',
+        'Accept' => 'text/html, application/xhtml+xml',
+    ])->get(route('x-change.public-auto-generate.show'))
+        ->assertOk()
+        ->assertJsonPath('props.instruction_capabilities.stored_value.issuance_allowed', true);
+});
+
+it('holds public reusable balance issuance behind the full funding order', function (): void {
+    commissionPublicStoredValueForTest();
+    $estimate = Mockery::mock(EstimatePayCodeCost::class);
+    $estimate->shouldReceive('handle')->andReturn(new PricingEstimateData(
+        total: 15.0,
+        pay_code_value: 100.0,
+        account_debit: 115.0,
+    ));
+    $this->app->instance(EstimatePayCodeCost::class, $estimate);
+
+    $this->postJson(route('x-change.public-auto-generate.store'), [
+        'cash' => ['amount' => 100, 'currency' => 'PHP'],
+        'voucher_type' => 'redeemable',
+        'stored_value' => [
+            'enabled' => true,
+            'replenishable' => false,
+            'maximum_balance' => 100,
+            'otp_required_above' => 0,
+        ],
+        'inputs' => ['fields' => []],
+        'feedback' => ['email' => null],
+        'rider' => ['message' => null],
+    ], ['Idempotency-Key' => 'public-reusable-balance-001'])
+        ->assertStatus(202);
+
+    expect(PayCodeIssuanceFundingOrder::query()->count())->toBe(1)
+        ->and(PayCodeIssuanceFundingOrder::query()->sole()->on_demand_amount_minor)->toBe(11_500)
+        ->and(Voucher::query()->count())->toBe(0);
+});
+
+it('does not open a public reusable balance funding order when collection authority is disabled', function (): void {
+    commissionPublicStoredValueForTest();
+    config()->set('x-change.execution.stored_value.collection.staff.enabled', false);
+
+    $this->postJson(route('x-change.public-auto-generate.store'), [
+        'cash' => ['amount' => 100, 'currency' => 'PHP'],
+        'voucher_type' => 'redeemable',
+        'stored_value' => [
+            'enabled' => true,
+            'replenishable' => false,
+            'maximum_balance' => 100,
+            'otp_required_above' => 0,
+        ],
+        'inputs' => ['fields' => []],
+        'feedback' => ['email' => null],
+        'rider' => ['message' => null],
+    ], ['Idempotency-Key' => 'public-reusable-balance-disabled'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('stored_value');
+
+    expect(PayCodeIssuanceFundingOrder::query()->count())->toBe(0);
+});
+
+function commissionPublicStoredValueForTest(): void
+{
+    CommercialPrincipal::query()->create([
+        'reference' => 'commercial-public',
+        'legal_name' => '3neti R&D OPC',
+        'authorization_reference' => 'commissioning:commercial-public:v1',
+        'active' => true,
+    ]);
+    config()->set('x-change.partner_api.enabled', false);
+    config()->set('x-change.funding.providers.netbank.enabled', true);
+    config()->set('x-change.execution.stored_value.issuance_enabled', true);
+    config()->set('x-change.execution.stored_value.collection.staff', [
+        'enabled' => true,
+        'maximum_amount_minor' => 10_000,
+        'daily_amount_minor' => 100_000,
+        'destination' => 'commercial_principal',
+    ]);
+    Gate::define('x-change.stored-value.collect', static fn (): bool => true);
+}
 
 it('opens the public issuance surface in the requested workspace', function (): void {
     CommercialPrincipal::query()->create([

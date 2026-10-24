@@ -252,6 +252,8 @@ final readonly class StoredValueCollectionService
                 'amount_minor' => $collection->amount_minor,
                 'currency' => $collection->currency,
                 'authorization_method' => $collection->authorization_method,
+                'collector_reference' => $channel.':'.$collector->getMorphClass().':'.$collector->getKey(),
+                'destination_principal_reference' => data_get($result->metadata, 'destination_principal_reference'),
                 'balance_after_minor' => $balanceAfter,
                 'collected_at' => now()->utc()->toIso8601String(),
             ];
@@ -283,6 +285,7 @@ final readonly class StoredValueCollectionService
                     'amount_minor' => $receipt['amount_minor'],
                     'currency' => $receipt['currency'],
                     'authorization_method' => $receipt['authorization_method'],
+                    'destination_principal_reference' => $receipt['destination_principal_reference'],
                     'balance_after_minor' => $receipt['balance_after_minor'],
                 ],
             ]);

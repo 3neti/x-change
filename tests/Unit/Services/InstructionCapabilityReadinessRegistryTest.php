@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\Voucher\Contracts\StoredValueExecutionGateway;
 use LBHurtado\Voucher\Data\ExecutionContextData;
@@ -11,6 +12,7 @@ use LBHurtado\XChange\Contracts\Execution\StoredValueDestinationAuthorityContrac
 use LBHurtado\XChange\Contracts\Execution\StoredValueHolderAuthorityContract;
 use LBHurtado\XChange\Data\Execution\StoredValueDestinationAuthorityData;
 use LBHurtado\XChange\Data\Execution\StoredValueHolderAuthorityData;
+use LBHurtado\XChange\Models\CommercialPrincipal;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityIssuanceGuard;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegistry;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityRequirementResolver;
@@ -129,6 +131,30 @@ it('keeps stored value unavailable until its authorities are commissioned', func
         ->toContain('STORED_VALUE_DESTINATION_AUTHORITY')
         ->toContain('STORED_VALUE_HOLDER_AUTHORITY')
         ->not->toContain('DURABLE_STORED_VALUE_GATEWAY');
+});
+
+it('accepts a commissioned staff collector with a commercial destination without a Partner API client', function (): void {
+    config()->set('x-change.partner_api.enabled', false);
+    config()->set('x-change.execution.stored_value.issuance_enabled', true);
+    config()->set('x-change.execution.stored_value.collection.staff', [
+        'enabled' => true,
+        'maximum_amount_minor' => 10_000,
+        'daily_amount_minor' => 100_000,
+        'destination' => 'commercial_principal',
+    ]);
+    config()->set('x-change.commercial.principal.reference', 'fare-commercial');
+    CommercialPrincipal::query()->create([
+        'reference' => 'fare-commercial',
+        'legal_name' => 'Fare Commercial Principal',
+        'authorization_reference' => 'fare-commercial-authority',
+        'active' => true,
+    ]);
+    Gate::define('x-change.stored-value.collect', static fn (): bool => true);
+
+    $capability = app(InstructionCapabilityReadinessRegistry::class)->find('stored_value');
+
+    expect($capability?->issuanceAllowed)->toBeTrue()
+        ->and($capability?->missingConfiguration)->toBe([]);
 });
 
 it('allows stored value only through the explicit durable gateway contract', function (): void {

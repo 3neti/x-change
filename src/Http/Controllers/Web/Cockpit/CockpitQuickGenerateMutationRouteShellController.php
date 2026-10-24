@@ -99,7 +99,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         $payload = $journeyInstructions->validateAndCompile($payload, $publicAutoGenerate);
 
         if ($publicAutoGenerate) {
-            $publicIssuancePolicy->assertAllowed($payload);
+            $publicIssuancePolicy->assertAllowed($payload, allowCommissionedStoredValue: true);
         }
 
         $validatedPayload = $payload;
