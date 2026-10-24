@@ -60,11 +60,14 @@ describe('stored value collection page', () => {
         await page.get('#collection-code').setValue('|| ABCD-1234 ||');
         expect(page.find('#collection-amount').exists()).toBe(false);
         expect(page.text()).toContain('Fare · ₱25.00');
+        expect(page.text()).toContain('configured fare');
+        expect(page.text()).toContain('balance is shown after collection authorization');
         await page.get('form').trigger('submit');
         await flushPromises();
 
         expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({ code: 'ABCD-1234', currency: 'PHP' });
         expect(page.text()).toContain('Collector authorized.');
+        expect(page.text()).toContain('Check the amount before collecting.');
         expect(page.find('#collection-otp').exists()).toBe(false);
 
         await page.findAll('button').find((button) => button.text().includes('Collect ₱25.00'))!.trigger('click');

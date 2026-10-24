@@ -181,7 +181,7 @@ function reset(): void {
             <header>
                 <p class="text-sm font-semibold uppercase tracking-widest text-slate-500">Pay Code · Stored value</p>
                 <h1 class="mt-2 text-3xl font-semibold">Collect a payment</h1>
-                <p class="mt-2 text-sm text-slate-600">Enter or scan the marked Pay Code, then set the amount to collect.</p>
+                <p class="mt-2 text-sm text-slate-600">{{ props.fixed_amount_minor > 0 ? 'Enter or scan the marked Pay Code to collect the configured fare.' : 'Enter or scan the marked Pay Code, then set the amount to collect.' }}</p>
             </header>
 
             <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
@@ -225,7 +225,7 @@ function reset(): void {
                     <template v-else-if="collection.status === 'verified' || collection.status === 'ready'">
                         <p class="text-sm">{{ collection.status === 'verified' ? 'Holder approved.' : 'Collector authorized.' }} Available balance: <strong>{{ money(collection.available_minor ?? 0) }}</strong></p>
                         <p v-if="(collection.available_minor ?? 0) < collection.amount_minor" class="text-sm font-medium text-red-700">The available balance is below the collection amount. Start a new collection for a lower amount.</p>
-                        <p v-else class="text-sm">Confirm the amount with the holder before collecting.</p>
+                        <p v-else class="text-sm">Check the amount before collecting.</p>
                         <button type="button" :disabled="busy || (collection.available_minor ?? 0) < collection.amount_minor" class="w-full rounded-xl bg-slate-950 px-4 py-3 font-semibold text-white disabled:opacity-50" @click="commit">{{ busy ? 'Collecting…' : `Collect ${formattedAmount}` }}</button>
                         <button type="button" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold" @click="reset">Start a new collection</button>
                     </template>
@@ -242,7 +242,7 @@ function reset(): void {
                 <input v-model="resumeReference" aria-label="Collection reference" placeholder="Resume by reference" class="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" />
                 <button type="submit" :disabled="busy" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">Resume</button>
             </form>
-            <p class="text-center text-xs text-slate-500">The balance is shown after the holder approves. Camera text recognition runs on this device.</p>
+            <p class="text-center text-xs text-slate-500">The balance is shown after collection authorization. Camera text recognition runs on this device.</p>
         </div>
     </main>
 </template>
