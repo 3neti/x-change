@@ -8,12 +8,45 @@ use Illuminate\Support\Arr;
 use LBHurtado\Contact\Classes\BankAccount;
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Services\Execution\ValueFlowAddressResolver;
+use LBHurtado\XChange\Services\Execution\VoucherValueFlowPolicy;
 use RuntimeException;
 
 class WithdrawalBankAccountResolver
 {
+    public function __construct(
+        protected VoucherValueFlowPolicy $valueFlows,
+        protected ValueFlowAddressResolver $addresses,
+    ) {}
+
     public function resolve(Voucher $voucher, Contact $contact, array $payload): BankAccount
     {
+        $destinationAddress = $this->valueFlows->destination($voucher);
+
+        if ($destinationAddress !== null) {
+            $destination = $this->addresses->instapayDestination($destinationAddress);
+            $bankAccount = BankAccount::fromBankAccount(
+                $destination->bankCode.':'.$destination->accountNumber,
+            );
+            $requested = $this->requestedBankAccount($payload);
+
+            if (! $requested instanceof BankAccount) {
+                $redeemer = $this->persistedRedeemer($voucher);
+                $persisted = Arr::get($redeemer?->metadata ?? [], 'redemption.bank_account');
+                $requested = $this->requestedBankAccount(['bank_account' => $persisted]);
+            }
+
+            if ($requested instanceof BankAccount
+                && (strtoupper($requested->getBankCode()) !== $bankAccount->getBankCode()
+                    || $requested->getAccountNumber() !== $bankAccount->getAccountNumber())) {
+                throw new RuntimeException(
+                    'Claim destination does not match the voucher value flow destination.',
+                );
+            }
+
+            return $bankAccount;
+        }
+
         $rawBank = data_get($payload, 'bank_account');
         $bankAccount = null;
 
@@ -85,6 +118,35 @@ class WithdrawalBankAccountResolver
         }
 
         return $bankAccount;
+    }
+
+    private function requestedBankAccount(array $payload): ?BankAccount
+    {
+        $raw = data_get($payload, 'bank_account');
+
+        if (is_array($raw)) {
+            $bankCode = data_get($raw, 'bank_code');
+            $accountNumber = data_get($raw, 'account_number');
+
+            if (is_string($bankCode) && is_string($accountNumber)
+                && trim($bankCode) !== '' && trim($accountNumber) !== '') {
+                return BankAccount::fromBankAccount($bankCode.':'.$accountNumber);
+            }
+        }
+
+        if (is_string($raw) && trim($raw) !== '') {
+            return BankAccount::fromBankAccount($raw);
+        }
+
+        $bankCode = data_get($payload, 'bank_code');
+        $accountNumber = data_get($payload, 'account_number');
+
+        if (is_string($bankCode) && is_string($accountNumber)
+            && trim($bankCode) !== '' && trim($accountNumber) !== '') {
+            return BankAccount::fromBankAccount($bankCode.':'.$accountNumber);
+        }
+
+        return null;
     }
 
     private function persistedRedeemer(Voucher $voucher): ?object

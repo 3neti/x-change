@@ -12,6 +12,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Data\Payment\ConfirmedVoucherCollectionData;
 use LBHurtado\XChange\Exceptions\VoucherCollectionConflict;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Services\Execution\VoucherValueFlowPolicy;
 use LBHurtado\XChange\Services\Payment\PartnerPaymentEventOutbox;
 use LBHurtado\XChange\Services\Payment\VoucherCollectionJournal;
 use LBHurtado\XChange\Services\Payment\VoucherCollectionPostingRegistry;
@@ -28,6 +29,7 @@ final readonly class CompleteVoucherCollection
         private VoucherCollectionProgressService $progress,
         private VoucherCollectionPostingRegistry $postings,
         private VoucherCollectionJournal $journal,
+        private VoucherValueFlowPolicy $valueFlows,
     ) {}
 
     public function handle(
@@ -80,6 +82,14 @@ final readonly class CompleteVoucherCollection
                 voucher: $locked,
                 context: $this->settlementCollectionGate->contextFromVoucher($locked),
             );
+
+            if ($data->executionDriver !== 'provider_wallet'
+                && ($this->valueFlows->source($locked) !== null
+                    || $this->valueFlows->destination($locked) !== null)) {
+                throw new RuntimeException(
+                    'This collection execution driver does not support explicit value flow addresses.',
+                );
+            }
 
             $progress = $this->progress->compute($locked);
             $currency = mb_strtoupper(trim($data->currency));
