@@ -323,7 +323,12 @@ it('preserves the AUI settlement target from the endpoint template and offers sa
             'email' => 'apple.hurtado@example.test',
             'address' => 'AUI scenario test address',
             'birth_date' => '1990-01-01',
-            'otp' => ['verified' => true],
+            'otp' => [
+                'verified' => true,
+                'verification_reference' => 'scenario-completion-otp',
+                'verification_purpose' => 'claim',
+                'verified_at' => now()->toIso8601String(),
+            ],
         ],
     ]);
     $completionClaim = $completion->voucher->claims()->sole();
