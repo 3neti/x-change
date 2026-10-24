@@ -56,6 +56,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialProviderCost
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDistributionWorkspacePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDocumentationPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitEnrollmentOfferController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitEntryPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingDestinationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingInstructionController;
@@ -138,6 +139,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliation
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliationRunExecutionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitVoucherDetailPageController;
 use LBHurtado\XChange\Http\Controllers\Web\DashboardPageController;
+use LBHurtado\XChange\Http\Controllers\Web\EnrollmentController;
 use LBHurtado\XChange\Http\Controllers\Web\Leads\LeadCampaignEndpointController;
 use LBHurtado\XChange\Http\Controllers\Web\Legal\AcceptAgreementController;
 use LBHurtado\XChange\Http\Controllers\Web\Legal\AgreementPageController;
@@ -455,6 +457,10 @@ Route::prefix('x')->middleware([
     Route::get('dashboard', DashboardPageController::class)->name('x-change.dashboard');
 
     Route::prefix('cockpit')->middleware(ShareCockpitHeaderReadModel::class)->group(function (): void {
+        Route::get('enrollments', [CockpitEnrollmentOfferController::class, 'index'])
+            ->name('x-change.cockpit.enrollments.index');
+        Route::post('enrollments', [CockpitEnrollmentOfferController::class, 'store'])
+            ->name('x-change.cockpit.enrollments.store');
         Route::prefix('stored-value-collections')->group(function (): void {
             Route::get('/', [StoredValueCollectionController::class, 'page'])->defaults('collection_channel', 'cockpit')->name('x-change.cockpit.stored-value-collections.index');
             Route::post('/', [StoredValueCollectionController::class, 'start'])->defaults('collection_channel', 'cockpit')->middleware('throttle:6,1')->name('x-change.cockpit.stored-value-collections.store');
@@ -1063,6 +1069,13 @@ Route::get('x/demo/policies/{outcome:reference}', DemonstrationPolicySummaryCont
 
 // Public claim routes (no auth required)
 Route::prefix('x')->middleware(['web', ShareXChangeBranding::class, GuardPairedCampaignClaim::class])->group(function (): void {
+    Route::get('enroll/{reference}', [EnrollmentController::class, 'show'])
+        ->whereUlid('reference')
+        ->name('x-change.enrollment.show');
+    Route::post('enroll/{reference}', [EnrollmentController::class, 'store'])
+        ->whereUlid('reference')
+        ->middleware('throttle:6,1')
+        ->name('x-change.enrollment.store');
     Route::get('pay/{code}', PaymentPageController::class)
         ->middleware((array) config('x-change.payment.attempts.public_read_middleware', []))
         ->name('x-change.pay.show');
