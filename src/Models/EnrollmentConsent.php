@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
+use LogicException;
 
 final class EnrollmentConsent extends Model
 {
@@ -14,7 +15,7 @@ final class EnrollmentConsent extends Model
 
     protected $fillable = [
         'reference', 'enrollment_offer_id', 'name_ciphertext', 'mobile_ciphertext',
-        'mobile_hash', 'consent_version', 'statement_hash', 'consented_at',
+        'mobile_hash', 'consent_version', 'consent_statement', 'statement_hash', 'consented_at',
     ];
 
     protected $hidden = ['name_ciphertext', 'mobile_ciphertext', 'mobile_hash'];
@@ -23,6 +24,12 @@ final class EnrollmentConsent extends Model
     {
         self::creating(function (self $consent): void {
             $consent->reference ??= (string) Str::ulid();
+        });
+        self::updating(function (): never {
+            throw new LogicException('Recorded enrollment consent is immutable.');
+        });
+        self::deleting(function (): never {
+            throw new LogicException('Recorded enrollment consent is immutable.');
         });
     }
 

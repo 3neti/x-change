@@ -62,6 +62,7 @@ final class EnrollmentController extends Controller
                 'mobile_ciphertext' => $mobile,
                 'mobile_hash' => $mobileHash,
                 'consent_version' => $offer->consent_version,
+                'consent_statement' => $offer->consent_statement,
                 'statement_hash' => hash('sha256', $offer->consent_statement),
                 'consented_at' => now(),
             ]), true];

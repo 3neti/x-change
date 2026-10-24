@@ -32,9 +32,12 @@ it('records a versioned opt-in once without issuing a Pay Code', function (): vo
 
     $consent = EnrollmentConsent::query()->sole();
     expect($consent->consent_version)->toBe('2026-10')
+        ->and($consent->consent_statement)->toBe($offer->consent_statement)
         ->and($consent->statement_hash)->toBe(hash('sha256', $offer->consent_statement))
         ->and($consent->mobile_ciphertext)->toBe('+639173011987')
         ->and($consent->getRawOriginal('mobile_ciphertext'))->not->toContain('09173011987');
+    expect(fn () => $consent->update(['consent_version' => 'rewritten']))
+        ->toThrow(LogicException::class);
 
     $this->actingAs($owner);
     $this->withHeader('X-Inertia', 'true')

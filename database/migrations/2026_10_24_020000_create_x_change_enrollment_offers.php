@@ -31,6 +31,7 @@ return new class extends Migration
             $table->text('mobile_ciphertext');
             $table->char('mobile_hash', 64);
             $table->string('consent_version', 40);
+            $table->text('consent_statement');
             $table->char('statement_hash', 64);
             $table->timestampTz('consented_at', 6);
             $table->timestampsTz(6);
