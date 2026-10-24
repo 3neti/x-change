@@ -5,6 +5,26 @@ declare(strict_types=1);
 use LBHurtado\Voucher\Enums\VoucherInputField;
 use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeDetailProjection;
 
+it('shows frozen specialized issuance context without exposing unrelated metadata', function (): void {
+    $projection = (new CockpitPayCodeDetailProjection)->instructions([
+        'instructions' => [
+            'metadata' => ['custom' => ['app_journey' => [
+                'key' => 'exchange_payout',
+                'reference' => 'QUOTE-42',
+                'source_currency' => 'USD',
+                'source_amount' => '100.00',
+                'secret' => 'never project',
+            ]]],
+        ],
+    ]);
+
+    $context = collect($projection['groups'])->firstWhere('key', 'journey');
+    expect($context['facts'])->toContainEqual(['label' => 'Journey', 'value' => 'Exchange Payout'])
+        ->toContainEqual(['label' => 'Reference', 'value' => 'QUOTE-42'])
+        ->toContainEqual(['label' => 'Quoted Source Amount', 'value' => 'USD 100.00']);
+    expect(json_encode($projection))->not->toContain('never project');
+});
+
 it('presents claim requirements from supported instruction input shapes', function (array $inputs): void {
     $projection = new CockpitPayCodeDetailProjection;
 

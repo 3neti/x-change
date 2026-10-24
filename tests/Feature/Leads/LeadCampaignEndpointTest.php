@@ -441,6 +441,32 @@ it('records configured endpoint campaign usage metadata on generated pay codes',
         ->and(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.pay_code_generation'))->toBe('on_invoice_or_scan');
 });
 
+it('freezes digital marketing usage and the selected template when a public campaign starts', function (): void {
+    $operator = leadCampaignOperator('Campaign Operator');
+    $template = leadCampaignTemplate($operator);
+    $campaign = app(CreateLeadCampaign::class)->handle($operator, $template, [
+        'title' => 'Summer Benefit',
+        'endpoint_slug' => 'summer-benefit',
+        'settings' => [
+            'usage_key' => 'promo',
+            'usage_label' => 'Promo',
+            'capabilities' => ['public_endpoint', 'distribution', 'claim_limits'],
+        ],
+    ]);
+    $fakeIssuer = leadCampaignFakeGeneratePayCode('PROMO-1');
+    app()->instance(GeneratePayCode::class, $fakeIssuer);
+
+    $this->post(route('x-change.leads.start.submit', [
+        'merchant_slug' => $campaign->merchant_slug,
+        'endpoint_slug' => $campaign->endpoint_slug,
+    ]))->assertRedirect(route('x-change.claim.show', ['code' => 'PROMO-1']));
+
+    expect(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.kind'))->toBe('promo')
+        ->and(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.capabilities'))->toBe(['public_endpoint', 'distribution', 'claim_limits'])
+        ->and(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.template_reference'))->toBe($template->reference)
+        ->and(data_get($fakeIssuer->payloads[0], 'metadata.custom.lead_campaign.template_version_id'))->toBe($campaign->active_template_version_id);
+});
+
 function leadCampaignOperator(string $name): User
 {
     $operator = actingAsTestUser();

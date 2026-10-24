@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Data\DebitData;
 use LBHurtado\XChange\Data\IssuerData;
@@ -250,6 +251,37 @@ it('issues a settlement envelope quick generate payload through the real issuanc
         ->assertJsonPath('result.links.redeem_path', fn (string $path): bool => ! str_ends_with($path, '/experience'))
         ->assertJsonPath('result.links.redeem', fn (string $url): bool => str_contains($url, '/x/claim/'))
         ->assertJsonPath('result.links.redeem', fn (string $url): bool => ! str_ends_with($url, '/experience'));
+});
+
+it('freezes specialized journey evidence on a real issued Pay Code', function () {
+    config()->set('x-change.app_profile.primary', 'lending-center');
+    actingAsTestUser();
+
+    $response = $this->withHeaders([
+        'Accept' => 'application/json',
+        'Idempotency-Key' => 'real-loan-journey-42',
+    ])->post(route('x-change.cockpit.quick-generate.store'), [
+        'cash' => ['amount' => 25, 'currency' => 'PHP', 'validation' => ['country' => 'PH']],
+        'inputs' => ['fields' => []],
+        'feedback' => ['mobile' => '09173011987'],
+        'rider' => ['message' => null],
+        'claim' => [
+            'outcomes' => [['key' => 'provider_disbursement']],
+            'selection' => 'server',
+            'consumption' => 'one_of',
+            'default_outcome' => 'provider_disbursement',
+        ],
+        'metadata' => ['custom' => ['app_journey' => [
+            'key' => 'loan_disbursement',
+            'reference' => 'LOAN-42',
+        ]]],
+    ])->assertCreated()->assertJsonPath('status', 'issued');
+
+    $voucher = Voucher::query()->where('code', $response->json('result.code'))->sole();
+    expect(data_get($voucher->metadata, 'instructions.metadata.custom.app_journey'))->toBe([
+        'key' => 'loan_disbursement',
+        'reference' => 'LOAN-42',
+    ]);
 });
 
 it('fails closed before issuance when the quick generate draft template is unknown', function () {

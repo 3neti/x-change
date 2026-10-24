@@ -125,6 +125,7 @@ final class CockpitPayCodeDetailProjection
         $feedback = $this->array($instructions['feedback'] ?? []);
         $rider = $this->array($instructions['rider'] ?? []);
         $execution = $this->array($instructions['execution'] ?? []);
+        $journey = $this->array(data_get($instructions, 'metadata.custom.app_journey'));
 
         return [
             'schema' => 'x-change.cockpit.pay-code-instructions.v1',
@@ -147,6 +148,14 @@ final class CockpitPayCodeDetailProjection
                     $this->fact('Action Link', $this->safeUrl($rider['url'] ?? null)),
                     $this->fact('Splash', filled($rider['splash'] ?? null) ? 'Configured' : null),
                     $this->fact('Stamp', $this->stampLabel($rider['stamp'] ?? null)),
+                ]),
+                $this->group('journey', 'Business Context', 'briefcase-business', [
+                    $this->fact('Journey', filled($journey['key'] ?? null) ? Str::headline((string) $journey['key']) : null),
+                    $this->fact('Reference', $journey['reference'] ?? null),
+                    $this->fact('Origin Country', $journey['origin_country'] ?? null),
+                    $this->fact('Quoted Source Amount', filled($journey['source_amount'] ?? null)
+                        ? trim((string) ($journey['source_currency'] ?? '').' '.(string) $journey['source_amount'])
+                        : null),
                 ]),
                 $this->group('delivery', 'Notifications', 'send', [
                     $this->fact('Channels', $this->configuredKeys($feedback)),
