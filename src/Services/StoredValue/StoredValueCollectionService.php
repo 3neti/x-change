@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\FormHandlerOtp\Contracts\OtpChallengeGateway;
@@ -63,6 +64,10 @@ final readonly class StoredValueCollectionService
             ->where('status', 'active')
             ->first() ?? throw new NotFoundHttpException;
         $this->assertBinding($binding, $currency);
+        $authorizationMethod = $this->authorizationMethod($binding, $channel, $amountMinor);
+        if ($authorizationMethod === 'collector') {
+            $this->assertCollectorOnly($collector, $channel, $amountMinor, $currency);
+        }
         $mobile = $this->verifiedMobile($binding);
         $keyHash = $this->hash($idempotencyKey);
         $requestHash = $this->hash(implode("\0", [
@@ -73,7 +78,7 @@ final readonly class StoredValueCollectionService
 
         return Cache::lock($lockKey, 30)->block(5, function () use (
             $binding, $channel, $collector, $sessionHash, $keyHash, $requestHash,
-            $amountMinor, $currency, $mobile, $scope,
+            $amountMinor, $currency, $mobile, $scope, $authorizationMethod,
         ): array {
             $existing = StoredValueCollection::query()
                 ->where('collector_channel', $scope[0])
@@ -106,11 +111,16 @@ final readonly class StoredValueCollectionService
                 'amount_minor' => $amountMinor,
                 'currency' => $currency,
                 'status' => 'delivery_pending',
+                'authorization_method' => $authorizationMethod,
                 'holder_mobile_hash' => $this->hash($mobile),
                 'expires_at' => now()->utc()->addMinutes(max(1, (int) config('x-change.execution.stored_value.otp.ttl_minutes', 10))),
             ]);
 
-            $this->deliverChallenge($collection, $mobile);
+            if ($authorizationMethod === 'collector') {
+                $collection->forceFill(['status' => 'ready'])->save();
+            } else {
+                $this->deliverChallenge($collection, $mobile);
+            }
 
             return $this->present($collection);
         });
@@ -182,23 +192,30 @@ final readonly class StoredValueCollectionService
     public function commit(Model $collector, string $channel, string $reference, ?string $sessionHash = null): array
     {
         $result = DB::transaction(function () use ($collector, $channel, $reference, $sessionHash): array {
-            if ($channel === 'partner' && $collector instanceof PartnerApiClient) {
-                $collector = PartnerApiClient::query()->lockForUpdate()->findOrFail($collector->getKey());
-            }
+            $collector = $collector->newQuery()->lockForUpdate()->findOrFail($collector->getKey());
             $collection = $this->owned($collector, $channel, $reference, $sessionHash, lock: true);
 
             if ($collection->status === 'committed') {
                 return $this->present($collection);
             }
 
-            if ($collection->status !== 'verified' || $collection->expires_at->isPast()) {
-                throw ValidationException::withMessages(['reference' => ['Holder approval is required for this collection.']]);
+            if (! in_array($collection->status, ['verified', 'ready'], true) || $collection->expires_at->isPast()) {
+                throw ValidationException::withMessages(['reference' => ['Collection authorization is required.']]);
             }
 
             $this->assertCollector($collector, $channel, $collection->amount_minor, $collection->currency);
             $collection->loadMissing('binding.holder', 'binding.voucher');
             $binding = $collection->binding;
             $this->assertBinding($binding, $collection->currency);
+            if ($collection->authorization_method === 'collector') {
+                if ($collection->status !== 'ready'
+                    || $this->authorizationMethod($binding, $channel, $collection->amount_minor) !== 'collector') {
+                    throw ValidationException::withMessages(['reference' => ['Collection authorization changed. Start again.']]);
+                }
+                $this->assertCollectorOnly($collector, $channel, $collection->amount_minor, $collection->currency);
+            } elseif ($collection->status !== 'verified') {
+                throw ValidationException::withMessages(['reference' => ['Holder approval is required for this collection.']]);
+            }
             if (! hash_equals($collection->holder_mobile_hash, $this->hash($this->verifiedMobile($binding)))) {
                 throw ValidationException::withMessages(['reference' => ['The holder identity changed.']]);
             }
@@ -216,7 +233,7 @@ final readonly class StoredValueCollectionService
                 meta: [
                     'operation' => 'spend',
                     'amount' => $collection->amount_minor,
-                    'otp_verified' => true,
+                    'otp_verified' => $collection->authorization_method === 'holder_otp',
                     'collection_reference' => $collection->reference,
                 ],
                 correlation: ['execution_id' => 'stored-value-collection:'.$collection->reference],
@@ -234,6 +251,7 @@ final readonly class StoredValueCollectionService
                 'status' => 'committed',
                 'amount_minor' => $collection->amount_minor,
                 'currency' => $collection->currency,
+                'authorization_method' => $collection->authorization_method,
                 'balance_after_minor' => $balanceAfter,
                 'collected_at' => now()->utc()->toIso8601String(),
             ];
@@ -264,6 +282,7 @@ final readonly class StoredValueCollectionService
                     'channel' => $channel,
                     'amount_minor' => $receipt['amount_minor'],
                     'currency' => $receipt['currency'],
+                    'authorization_method' => $receipt['authorization_method'],
                     'balance_after_minor' => $receipt['balance_after_minor'],
                 ],
             ]);
@@ -301,6 +320,10 @@ final readonly class StoredValueCollectionService
         if ($amountMinor <= 0 || $currency !== 'PHP' || ! in_array($channel, ['cockpit', 'operations', 'partner'], true)) {
             throw ValidationException::withMessages(['amount_minor' => ['Enter a positive PHP amount.']]);
         }
+        $fixedAmount = (int) config('x-change.execution.stored_value.collection.fixed_amount_minor', 0);
+        if ($fixedAmount > 0 && $amountMinor !== $fixedAmount) {
+            throw ValidationException::withMessages(['amount_minor' => ['This collector requires the configured fare.']]);
+        }
         if ($channel !== 'partner') {
             return;
         }
@@ -331,6 +354,54 @@ final readonly class StoredValueCollectionService
         if (! in_array($currency, $currencies, true) || $amountMinor > $maximum || $daily <= 0
             || $usedCollections + $usedApi + $amountMinor > $daily) {
             throw ValidationException::withMessages(['amount_minor' => ['This collection exceeds the Partner mandate.']]);
+        }
+    }
+
+    private function authorizationMethod(StoredValueHolderBinding $binding, string $channel, int $amountMinor): string
+    {
+        if ($channel === 'operations') {
+            return 'holder_otp';
+        }
+
+        $policy = data_get($binding->voucher->metadata, 'instructions.execution.metadata.stored_value.collection_authorization');
+        if (! is_array($policy)
+            || ($policy['schema'] ?? null) !== 'x-change.stored-value-collection-authorization.v1') {
+            return 'holder_otp';
+        }
+
+        $threshold = (int) data_get($binding->voucher->metadata, 'instructions.execution.metadata.stored_value.otp_required_above', 0);
+
+        return match ($policy['mode'] ?? null) {
+            'collector' => $threshold === 0 ? 'collector' : 'holder_otp',
+            'otp_above_threshold' => $threshold > 0 && $amountMinor <= $threshold ? 'collector' : 'holder_otp',
+            default => 'holder_otp',
+        };
+    }
+
+    private function assertCollectorOnly(Model $collector, string $channel, int $amountMinor, string $currency): void
+    {
+        if ($channel === 'partner') {
+            return;
+        }
+
+        $policy = (array) config('x-change.execution.stored_value.collection.staff', []);
+        if ($channel !== 'cockpit' || ($policy['enabled'] ?? false) !== true
+            || ! Gate::forUser($collector)->allows('x-change.stored-value.collect')) {
+            throw new NotFoundHttpException;
+        }
+
+        $maximum = (int) ($policy['maximum_amount_minor'] ?? 0);
+        $daily = (int) ($policy['daily_amount_minor'] ?? 0);
+        $used = (int) StoredValueCollection::query()
+            ->where('collector_channel', 'cockpit')
+            ->where('collector_type', $collector->getMorphClass())
+            ->where('collector_id', (string) $collector->getKey())
+            ->where('status', 'committed')
+            ->where('currency', $currency)
+            ->where('committed_at', '>=', now()->utc()->startOfDay())
+            ->sum('amount_minor');
+        if ($maximum <= 0 || $daily <= 0 || $amountMinor > $maximum || $used + $amountMinor > $daily) {
+            throw ValidationException::withMessages(['amount_minor' => ['This collection exceeds the staff limit.']]);
         }
     }
 
@@ -393,9 +464,10 @@ final readonly class StoredValueCollectionService
             'status' => $collection->status,
             'amount_minor' => $collection->amount_minor,
             'currency' => $collection->currency,
+            'authorization_method' => $collection->authorization_method,
             'expires_at' => $collection->expires_at->toIso8601String(),
         ];
-        if (in_array($collection->status, ['verified', 'committed'], true)) {
+        if (in_array($collection->status, ['ready', 'verified', 'committed'], true)) {
             $collection->loadMissing('binding');
             $data['available_minor'] = $collection->status === 'committed'
                 ? $collection->balance_after_minor

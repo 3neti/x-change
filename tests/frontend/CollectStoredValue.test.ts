@@ -26,7 +26,7 @@ describe('stored value collection page', () => {
             .mockResolvedValueOnce(reply({ reference: '01TEST', status: 'verified', amount_minor: 2500, currency: 'PHP', available_minor: 10000 }))
             .mockResolvedValueOnce(reply({ reference: '01TEST', status: 'committed', amount_minor: 2500, currency: 'PHP', balance_after_minor: 7500 }));
         vi.stubGlobal('fetch', fetch);
-        const page = mount(CollectStoredValue, { props: { channel: 'cockpit', endpoints } });
+        const page = mount(CollectStoredValue, { props: { channel: 'cockpit', endpoints, fixed_amount_minor: 0 } });
 
         await page.get('#collection-code').setValue('|| ABCD-1234 ||');
         await page.get('#collection-amount').setValue('25.00');
@@ -48,5 +48,28 @@ describe('stored value collection page', () => {
         expect(page.text()).toContain('Payment collected');
         expect(page.text()).toContain('₱75.00');
         expect(fetch.mock.calls[2][0]).toBe('/x/cockpit/stored-value-collections/01TEST/commit');
+    });
+
+    it('uses the configured fare and collects an authorized scan without OTP', async () => {
+        const fetch = vi.fn()
+            .mockResolvedValueOnce(reply({ reference: '01FARE', status: 'ready', authorization_method: 'collector', amount_minor: 2500, currency: 'PHP', available_minor: 10000 }))
+            .mockResolvedValueOnce(reply({ reference: '01FARE', status: 'committed', authorization_method: 'collector', amount_minor: 2500, currency: 'PHP', balance_after_minor: 7500 }));
+        vi.stubGlobal('fetch', fetch);
+        const page = mount(CollectStoredValue, { props: { channel: 'cockpit', endpoints, fixed_amount_minor: 2500 } });
+
+        await page.get('#collection-code').setValue('|| ABCD-1234 ||');
+        expect(page.find('#collection-amount').exists()).toBe(false);
+        expect(page.text()).toContain('Fare · ₱25.00');
+        await page.get('form').trigger('submit');
+        await flushPromises();
+
+        expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({ code: 'ABCD-1234', currency: 'PHP' });
+        expect(page.text()).toContain('Collector authorized.');
+        expect(page.find('#collection-otp').exists()).toBe(false);
+
+        await page.findAll('button').find((button) => button.text().includes('Collect ₱25.00'))!.trigger('click');
+        await flushPromises();
+        expect(page.text()).toContain('Payment collected');
+        expect(fetch).toHaveBeenCalledTimes(2);
     });
 });

@@ -99,6 +99,10 @@ final class StoredValueIssuancePolicy
                     'max_balance' => $maximumBalance,
                     'replenishable' => $replenishable,
                     'otp_required_above' => $otpRequiredAbove,
+                    'collection_authorization' => [
+                        'schema' => 'x-change.stored-value-collection-authorization.v1',
+                        'mode' => $otpRequiredAbove > 0 ? 'otp_above_threshold' : 'collector',
+                    ],
                 ],
                 'post_redemption' => [
                     'mode' => OnboardingVoucherInstructionPolicy::PostRedemptionMode,

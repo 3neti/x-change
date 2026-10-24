@@ -262,6 +262,10 @@ it('compiles the typed Reusable Balance policy into execution-only stored value'
                 'max_balance' => 100_000,
                 'replenishable' => false,
                 'otp_required_above' => 50_000,
+                'collection_authorization' => [
+                    'schema' => 'x-change.stored-value-collection-authorization.v1',
+                    'mode' => 'otp_above_threshold',
+                ],
             ],
             'post_redemption' => [
                 'mode' => 'execution_only',
@@ -273,6 +277,18 @@ it('compiles the typed Reusable Balance policy into execution-only stored value'
         ->and(data_get($normalized, 'validation.otp.required'))->toBeTrue()
         ->and(data_get($normalized, 'validation.otp.on_failure'))->toBe('block')
         ->and($replayed)->toBe($normalized);
+});
+
+it('freezes collector authorization for newly issued reusable balances without an OTP threshold', function (): void {
+    $normalized = app(VoucherIssuancePayloadNormalizer::class)->normalize([
+        'cash' => ['amount' => '100.00', 'currency' => 'PHP'],
+        'stored_value' => ['enabled' => true],
+    ]);
+
+    expect(data_get($normalized, 'execution.metadata.stored_value.collection_authorization.mode'))
+        ->toBe('collector')
+        ->and(data_get($normalized, 'execution.metadata.stored_value.otp_required_above'))
+        ->toBe(0);
 });
 
 it('rejects stored value policy conflicts and direct generic-driver bypasses', function (): void {

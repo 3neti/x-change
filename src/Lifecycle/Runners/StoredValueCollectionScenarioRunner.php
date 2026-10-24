@@ -119,20 +119,24 @@ final readonly class StoredValueCollectionScenarioRunner implements ScenarioRunn
         $service = new StoredValueCollectionService($this->otp, $this->engine, $this->balances, $this->events);
         $pending = $service->start($collector, 'cockpit', '|| '.$voucher->code.' ||', $amountMinor, $binding->currency, $context->idempotencyKey);
         $reference = $pending['data']['reference'];
+        $otpRequired = $pending['data']['status'] === 'pending';
         $balanceHidden = ! array_key_exists('available_minor', $pending['data']);
         $blockedBeforeOtp = false;
-        try {
-            $service->commit($collector, 'cockpit', $reference);
-        } catch (ValidationException) {
-            $blockedBeforeOtp = true;
+        $verified = $pending;
+        if ($otpRequired) {
+            try {
+                $service->commit($collector, 'cockpit', $reference);
+            } catch (ValidationException) {
+                $blockedBeforeOtp = true;
+            }
+            $verified = $service->verify($collector, 'cockpit', $reference, '000000');
         }
-        $verified = $service->verify($collector, 'cockpit', $reference, '000000');
         $committed = $service->commit($collector, 'cockpit', $reference);
         $replayed = $service->commit($collector, 'cockpit', $reference);
         $after = $this->balances->read(new TreasuryAllocationReadModelQueryData($binding->allocation_reference, $binding->currency));
         $drawsAfter = TreasuryAllocationOperation::query()->where('operation_type', TreasuryAllocationOperationType::Draw)->count();
         $inventoryAfter = (int) TreasuryInventory::query()->sum('balance_minor');
-        $passed = $balanceHidden && $blockedBeforeOtp
+        $passed = ($otpRequired ? $balanceHidden && $blockedBeforeOtp : ! $balanceHidden && ! $blockedBeforeOtp)
             && $verified['data']['available_minor'] === $before->usableAmountMinor
             && $committed === $replayed
             && $after->usableAmountMinor === $before->usableAmountMinor - $amountMinor
@@ -148,6 +152,7 @@ final readonly class StoredValueCollectionScenarioRunner implements ScenarioRunn
             'balance_after_minor' => $after->usableAmountMinor,
             'balance_hidden_until_otp' => $balanceHidden,
             'commit_blocked_before_otp' => $blockedBeforeOtp,
+            'authorization_method' => $pending['data']['authorization_method'],
             'draws_added' => $drawsAfter - $drawsBefore,
             'replay_preserved_receipt' => $committed === $replayed,
             'inventory_unchanged' => $inventoryAfter === $inventoryBefore,

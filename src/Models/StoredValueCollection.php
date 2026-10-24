@@ -19,6 +19,7 @@ final class StoredValueCollection extends Model
         'idempotency_key_hash', 'request_hash', 'amount_minor', 'currency',
         'status', 'provider_reference_ciphertext', 'provider_reference_hash',
         'holder_mobile_hash', 'proof_reference_hash', 'attempts', 'expires_at',
+        'authorization_method',
         'verified_at', 'committed_at', 'balance_after_minor',
         'treasury_operation_reference_hash', 'receipt',
     ];

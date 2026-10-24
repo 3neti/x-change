@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Bavix\Wallet\Models\Wallet;
 use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Passport\Client;
 use Laravel\Passport\Passport;
@@ -148,7 +149,7 @@ it('moves one OTP-authorized Partner API fare through the real wallet allocation
         ->and((int) TreasuryInventory::query()->sum('balance_minor'))->toBe($inventoryBalanceBefore);
 });
 
-it('collects a scanned stored value Pay Code into the authenticated Account exactly once', function (): void {
+it('collects scanned stored value through OTP and frozen collector authorization exactly once', function (): void {
     $this->withoutMiddleware(ThrottleRequests::class);
     $issuer = storedValueAcceptanceUser('Scan Issuer');
     $holder = storedValueAcceptanceUser('Scan Holder', '09173011987');
@@ -347,6 +348,96 @@ it('collects a scanned stored value Pay Code into the authenticated Account exac
     $retried = $retryService->start($collector, 'cockpit', (string) $voucher->code, 50, 'PHP', 'flaky-delivery');
     expect($retried['data']['status'])->toBe('pending')
         ->and(StoredValueCollection::query()->where('collector_channel', 'cockpit')->where('amount_minor', 50)->count())->toBe(1);
+
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.execution.metadata.stored_value.collection_authorization', [
+        'schema' => 'x-change.stored-value-collection-authorization.v1',
+        'mode' => 'otp_above_threshold',
+    ]);
+    $voucher->forceFill(['metadata' => $metadata])->save();
+    config()->set('x-change.execution.stored_value.collection.staff', [
+        'enabled' => true,
+        'maximum_amount_minor' => 50,
+        'daily_amount_minor' => 1_000,
+    ]);
+    config()->set('x-change.execution.stored_value.collection.fixed_amount_minor', 50);
+    Gate::define('x-change.stored-value.collect', fn (User $operator): bool => $operator->is($collector));
+    $noOtp = Mockery::mock(OtpChallengeGateway::class);
+    $noOtp->shouldNotReceive('create');
+    $this->app->instance(OtpChallengeGateway::class, $noOtp);
+
+    $collectorScenario = app(StoredValueCollectionScenarioRunner::class)->run(new ScenarioRunContext(
+        output: new NullLifecycleOutput,
+        scenarioKey: 'stored_value_collection_simulation',
+        scenario: ['stored_value_collection' => [
+            'holder_email' => $holder->email,
+            'collector_email' => $collector->email,
+            'amount_minor' => 50,
+        ]],
+        issuer: $issuer,
+        generated: null,
+        voucher: $voucher,
+        attempts: [],
+        baseClaimMobile: '09173011987',
+        estimate: [],
+        idempotencyKey: 'stored-value-collector-scenario',
+        readiness: app(SettlementEnvelopeReadinessContract::class),
+    ));
+    expect($collectorScenario->payload['success'])->toBeTrue()
+        ->and($collectorScenario->payload['authorization_method'])->toBe('collector')
+        ->and($collectorScenario->payload['rollback_completed'])->toBeTrue();
+
+    $this->actingAs($issuer)->postJson('/x/cockpit/stored-value-collections', [
+        'code' => (string) $voucher->code,
+        'currency' => 'PHP',
+    ], ['Idempotency-Key' => 'unapproved-staff'])->assertNotFound();
+    $this->actingAs($collector)->postJson('/x/cockpit/stored-value-collections', [
+        'code' => (string) $voucher->code,
+        'amount_minor' => 51,
+        'currency' => 'PHP',
+    ], ['Idempotency-Key' => 'wrong-fare'])->assertUnprocessable();
+    $ready = $this->postJson('/x/cockpit/stored-value-collections', [
+        'code' => '|| '.$voucher->code.' ||',
+        'currency' => 'PHP',
+    ], ['Idempotency-Key' => 'collector-only-001'])
+        ->assertCreated()
+        ->assertJsonPath('data.status', 'ready')
+        ->assertJsonPath('data.authorization_method', 'collector');
+    $readyReference = $ready->json('data.reference');
+    $this->postJson('/x/cockpit/stored-value-collections/'.$readyReference.'/verification', [
+        'code' => '000000',
+    ])->assertUnprocessable();
+    config()->set('x-change.execution.stored_value.collection.staff.enabled', false);
+    $this->postJson('/x/cockpit/stored-value-collections/'.$readyReference.'/commit')
+        ->assertNotFound();
+    config()->set('x-change.execution.stored_value.collection.staff.enabled', true);
+    $this->postJson('/x/cockpit/stored-value-collections/'.$readyReference.'/commit')
+        ->assertOk()
+        ->assertJsonPath('data.receipt.authorization_method', 'collector');
+    $this->postJson('/x/cockpit/stored-value-collections/'.$readyReference.'/commit')
+        ->assertOk()
+        ->assertJsonPath('data.receipt.authorization_method', 'collector');
+    expect(TreasuryAllocationOperation::query()->where('operation_type', TreasuryAllocationOperationType::Draw)->count())->toBe(4)
+        ->and(StoredValueCollection::query()->where('reference', $readyReference)->sole()->proof_reference_hash)->toBeNull();
+    config()->set('x-change.execution.stored_value.collection.staff.daily_amount_minor', 550);
+    $this->postJson('/x/cockpit/stored-value-collections', [
+        'code' => (string) $voucher->code,
+        'currency' => 'PHP',
+    ], ['Idempotency-Key' => 'daily-limit'])->assertUnprocessable();
+
+    $this->app['auth']->guard('api')->forgetUser();
+    Passport::actingAsClient(Client::query()->findOrFail($credential->client_id), ['stored-value:spend']);
+    $partnerReady = $this->postJson($partnerUrl, [
+        'code' => (string) $voucher->code,
+        'amount_minor' => 50,
+        'currency' => 'PHP',
+    ], ['Idempotency-Key' => 'partner-collector-only-001'])
+        ->assertCreated()
+        ->assertJsonPath('data.status', 'ready')
+        ->assertJsonPath('data.authorization_method', 'collector');
+    $this->postJson($partnerUrl.'/'.$partnerReady->json('data.reference').'/commit')
+        ->assertOk()
+        ->assertJsonPath('data.receipt.authorization_method', 'collector');
 });
 
 it('limits the operations collection page to the password-unlocked escrow owner session', function (): void {

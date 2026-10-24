@@ -10,6 +10,7 @@ type Collection = {
     status: string;
     amount_minor: number;
     currency: string;
+    authorization_method?: 'collector' | 'holder_otp';
     available_minor?: number;
     balance_after_minor?: number;
     expires_at: string;
@@ -17,6 +18,7 @@ type Collection = {
 
 const props = defineProps<{
     channel: 'cockpit' | 'operations';
+    fixed_amount_minor: number;
     endpoints: { start: string; status: string; verify: string; commit: string };
 }>();
 
@@ -63,7 +65,7 @@ async function submit(url: string, payload: Record<string, unknown>, key?: strin
 
 async function start(): Promise<void> {
     const code = parsePayCodeInput(input.value);
-    const amountText = String(amount.value).trim();
+    const amountText = props.fixed_amount_minor > 0 ? String(props.fixed_amount_minor / 100) : String(amount.value).trim();
     const validAmount = /^\d+(?:\.\d{1,2})?$/.test(amountText);
     const [whole, fraction = ''] = amountText.split('.');
     const amountMinor = Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
@@ -77,7 +79,7 @@ async function start(): Promise<void> {
     try {
         collection.value = await submit(props.endpoints.start, {
             code,
-            amount_minor: amountMinor,
+            ...(props.fixed_amount_minor > 0 ? {} : { amount_minor: amountMinor }),
             currency: 'PHP',
         }, idempotencyKey.value);
         confirmedCode.value = code;
@@ -122,7 +124,7 @@ async function verify(): Promise<void> {
 }
 
 async function commit(): Promise<void> {
-    if (!collection.value || collection.value.status !== 'verified') return;
+    if (!collection.value || !['ready', 'verified'].includes(collection.value.status)) return;
     error.value = '';
     busy.value = true;
     try {
@@ -194,13 +196,16 @@ function reset(): void {
                             <input class="sr-only" type="file" accept="image/*" capture="environment" :disabled="scanning || busy" @change="scan" />
                         </label>
                     </div>
-                    <div>
+                    <div v-if="props.fixed_amount_minor > 0" class="rounded-xl bg-slate-100 px-4 py-3 text-lg font-semibold">
+                        Fare · {{ money(props.fixed_amount_minor) }}
+                    </div>
+                    <div v-else>
                         <label for="collection-amount" class="block text-sm font-medium">Amount to collect · PHP</label>
                         <input id="collection-amount" v-model="amount" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="25.00"
                             class="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-lg focus:border-slate-950 focus:outline-none"
                             @input="idempotencyKey = ''" />
                     </div>
-                    <button type="submit" :disabled="busy || scanning" class="w-full rounded-xl bg-slate-950 px-4 py-3 font-semibold text-white disabled:opacity-50">{{ busy ? 'Starting…' : 'Request holder approval' }}</button>
+                    <button type="submit" :disabled="busy || scanning" class="w-full rounded-xl bg-slate-950 px-4 py-3 font-semibold text-white disabled:opacity-50">{{ busy ? 'Starting…' : 'Review collection' }}</button>
                 </form>
 
                 <div v-else class="space-y-5" aria-live="polite">
@@ -217,8 +222,8 @@ function reset(): void {
                             <button type="submit" :disabled="busy" class="w-full rounded-xl bg-slate-950 px-4 py-3 font-semibold text-white disabled:opacity-50">Verify holder</button>
                         </form>
                     </template>
-                    <template v-else-if="collection.status === 'verified'">
-                        <p class="text-sm">Holder approved. Available balance: <strong>{{ money(collection.available_minor ?? 0) }}</strong></p>
+                    <template v-else-if="collection.status === 'verified' || collection.status === 'ready'">
+                        <p class="text-sm">{{ collection.status === 'verified' ? 'Holder approved.' : 'Collector authorized.' }} Available balance: <strong>{{ money(collection.available_minor ?? 0) }}</strong></p>
                         <p v-if="(collection.available_minor ?? 0) < collection.amount_minor" class="text-sm font-medium text-red-700">The available balance is below the collection amount. Start a new collection for a lower amount.</p>
                         <p v-else class="text-sm">Confirm the amount with the holder before collecting.</p>
                         <button type="button" :disabled="busy || (collection.available_minor ?? 0) < collection.amount_minor" class="w-full rounded-xl bg-slate-950 px-4 py-3 font-semibold text-white disabled:opacity-50" @click="commit">{{ busy ? 'Collecting…' : `Collect ${formattedAmount}` }}</button>

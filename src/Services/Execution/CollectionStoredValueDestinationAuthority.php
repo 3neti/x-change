@@ -40,14 +40,17 @@ final readonly class CollectionStoredValueDestinationAuthority implements Stored
         $collection = StoredValueCollection::query()
             ->with(['binding', 'collector'])
             ->where('reference', $reference)
-            ->where('status', 'verified')
+            ->whereIn('status', ['verified', 'ready'])
             ->first();
         $collector = $collection?->collector;
         if (! $collection instanceof StoredValueCollection
             || ! $collector instanceof Model
             || $collection->binding?->voucher_id !== $context->voucher?->getKey()
             || $collection->amount_minor !== $amountMinor
-            || $collection->verified_at === null
+            || ! in_array($collection->authorization_method, ['holder_otp', 'collector'], true)
+            || ($collection->authorization_method === 'holder_otp'
+                && ($collection->status !== 'verified' || $collection->verified_at === null))
+            || ($collection->authorization_method === 'collector' && $collection->status !== 'ready')
             || $collection->expires_at->isPast()) {
             throw new StoredValueSpendRejectedException('The collection has no valid destination authority.');
         }

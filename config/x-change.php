@@ -3095,6 +3095,14 @@ return [
                 'XCHANGE_STORED_VALUE_ISSUANCE_ENABLED',
                 false,
             ),
+            'collection' => [
+                'fixed_amount_minor' => (int) env('XCHANGE_STORED_VALUE_COLLECTION_FIXED_AMOUNT_MINOR', 0),
+                'staff' => [
+                    'enabled' => (bool) env('XCHANGE_STORED_VALUE_STAFF_COLLECTION_ENABLED', false),
+                    'maximum_amount_minor' => (int) env('XCHANGE_STORED_VALUE_STAFF_COLLECTION_MAXIMUM_AMOUNT_MINOR', 0),
+                    'daily_amount_minor' => (int) env('XCHANGE_STORED_VALUE_STAFF_COLLECTION_DAILY_AMOUNT_MINOR', 0),
+                ],
+            ],
             'otp' => [
                 'purpose' => env('XCHANGE_STORED_VALUE_OTP_PURPOSE', 'stored-value.spend.v1'),
                 'ttl_minutes' => (int) env('XCHANGE_STORED_VALUE_OTP_TTL_MINUTES', 10),

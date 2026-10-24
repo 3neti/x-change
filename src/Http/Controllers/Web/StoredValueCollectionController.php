@@ -38,6 +38,7 @@ final class StoredValueCollectionController extends Controller
 
         return Inertia::render('x-change/pos/CollectStoredValue', [
             'channel' => $channel,
+            'fixed_amount_minor' => max(0, (int) config('x-change.execution.stored_value.collection.fixed_amount_minor', 0)),
             'endpoints' => [
                 'start' => $base,
                 'status' => route($routePrefix.'show', ['reference' => '__REFERENCE__'], false),
@@ -51,9 +52,15 @@ final class StoredValueCollectionController extends Controller
     {
         $validated = $request->validate([
             'code' => ['required', 'string', 'max:80'],
-            'amount_minor' => ['required', 'integer', 'min:1'],
+            'amount_minor' => ['nullable', 'integer', 'min:1'],
             'currency' => ['required', 'in:PHP'],
         ]);
+        $fixedAmount = (int) config('x-change.execution.stored_value.collection.fixed_amount_minor', 0);
+        if ($fixedAmount <= 0) {
+            abort_unless(isset($validated['amount_minor']), 422, 'An amount is required.');
+        } elseif (isset($validated['amount_minor']) && (int) $validated['amount_minor'] !== $fixedAmount) {
+            abort(422, 'The configured fare cannot be changed.');
+        }
         $key = trim((string) $request->header('Idempotency-Key'));
         abort_if($key === '' || strlen($key) > 160, 422, 'A bounded Idempotency-Key is required.');
         $channel = $this->channel($request);
@@ -61,7 +68,7 @@ final class StoredValueCollectionController extends Controller
             $this->collector($request, $channel),
             $channel,
             $validated['code'],
-            (int) $validated['amount_minor'],
+            $fixedAmount > 0 ? $fixedAmount : (int) $validated['amount_minor'],
             $validated['currency'],
             $key,
             $this->sessionHash($request, $channel),
