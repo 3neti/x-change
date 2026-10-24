@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1a4b023be5ad2d2528d4fbb5fa50f6d0",
+    "content-hash": "4c0148d4b022f300a4713208944ccd69",
     "packages": [
         {
             "name": "3neti/cash",
@@ -1614,11 +1614,11 @@
         },
         {
             "name": "3neti/x-campaign",
-            "version": "v1.1.2",
+            "version": "v1.1.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/x-campaign.git",
-                "reference": "cb67ed6944527efb7693cd618820ee008eb04d1b"
+                "reference": "83f632c3fb93ecae0cf2a67cac47835c1243e0bf"
             },
             "require": {
                 "illuminate/support": "^12.0 || ^13.0",
@@ -1638,6 +1638,9 @@
                     "providers": [
                         "LBHurtado\\XCampaign\\XCampaignServiceProvider"
                     ]
+                },
+                "settlement-os": {
+                    "queue-manifest": "resources/settlement-os/queues.php"
                 },
                 "branch-alias": {
                     "dev-main": "1.x-dev"
@@ -1674,7 +1677,7 @@
                 }
             ],
             "description": "Beneficiary distribution and campaign orchestration package for the x-change Settlement Operating System",
-            "time": "2026-09-18T22:38:05+00:00"
+            "time": "2026-10-24T07:20:23+00:00"
         },
         {
             "name": "3neti/x-commerce",
