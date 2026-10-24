@@ -30,6 +30,7 @@ const props = withDefaults(
         storedValueReplenishable: boolean;
         storedValueMaximumBalance: number;
         storedValueOtpAbove: number | null;
+        allowReplenishment?: boolean;
         disabled?: boolean;
     }>(),
     {
@@ -37,6 +38,7 @@ const props = withDefaults(
         scheduledAddDisabledReason: null,
         scheduledUnavailableReason: null,
         scheduledValidationMessage: null,
+        allowReplenishment: true,
         disabled: false,
     },
 );
@@ -473,6 +475,7 @@ function toggleReusableBalance(event: Event): void {
                             />
                         </label>
                         <label
+                            v-if="allowReplenishment"
                             class="inline-flex items-center gap-2 text-xs font-medium"
                         >
                             <input

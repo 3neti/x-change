@@ -7510,7 +7510,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
               </span>
             </label>
 
-            <div v-if="!publicMode" class="min-w-0">
+            <div v-if="!publicMode || storedValueAvailable" class="min-w-0">
               <CockpitValueUseControl
                 :mode="sliceMode"
                 :amount="normalizedPayCodeAmount()"
@@ -7535,6 +7535,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                 :stored-value-available="storedValueAvailable"
                 :stored-value-unavailable-reason="storedValueUnavailableReason"
                 :stored-value-replenishable="storedValueReplenishable"
+                :allow-replenishment="!publicMode"
                 :stored-value-maximum-balance="
                   normalizedStoredValueMaximumBalance
                 "

@@ -196,4 +196,40 @@ describe("Public Auto Generate surface", () => {
     expect(wrapper.emitted("create")).toHaveLength(1);
     expect(wrapper.emitted("create")?.[0]?.[0]).toBe(primaryAction.element);
   });
+
+  it("offers commissioned Reusable Balance without a top-up control", async () => {
+    const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+      props: {
+        templates: cockpitQuickGenerateTemplates,
+        publicMode: true,
+        instructionCapabilities: {
+          stored_value: {
+            key: "stored_value",
+            label: "Reusable Balance",
+            status: "ready",
+            issuance_allowed: true,
+            claim_retryable: false,
+            missing_configuration: [],
+            source: "wallet-stored-value",
+          },
+        },
+      },
+    });
+
+    await wrapper
+      .get('[data-testid="cockpit-quick-generate-order-options-toggle"]')
+      .trigger("click");
+    const reusableBalance = wrapper.get<HTMLInputElement>(
+      '[data-testid="cockpit-value-use-reusable-balance"]',
+    );
+
+    expect(reusableBalance.element.disabled).toBe(false);
+    await reusableBalance.setValue(true);
+    await wrapper.get('[data-testid="cockpit-value-use-trigger"]').trigger("click");
+
+    expect(
+      wrapper.get('[data-testid="cockpit-value-use-stored-value-settings"]').text(),
+    ).toContain("Starting balance");
+    expect(wrapper.find('[data-testid="cockpit-value-use-replenishable"]').exists()).toBe(false);
+  });
 });
