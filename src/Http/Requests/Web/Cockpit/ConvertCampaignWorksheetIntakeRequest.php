@@ -11,7 +11,10 @@ class ConvertCampaignWorksheetIntakeRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
-        $this->merge(['name' => trim((string) $this->input('name'))]);
+        $this->merge([
+            'name' => trim((string) $this->input('name')),
+            'event_reference' => trim((string) $this->input('event_reference')),
+        ]);
     }
 
     public function authorize(): bool
@@ -23,7 +26,8 @@ class ConvertCampaignWorksheetIntakeRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'min:3', 'max:160'],
-            'profile' => ['required', Rule::in(['payroll', 'assistance'])],
+            'profile' => ['required', Rule::in(['payroll', 'assistance', 'gaming'])],
+            'event_reference' => ['required_if:profile,gaming', 'nullable', 'string', 'max:191'],
             'fulfillment_mode' => ['required', Rule::in(['pay_code_distribution', 'direct_bank_transfer'])],
             'included_source_rows' => ['required', 'array', 'min:1', 'max:10000'],
             'included_source_rows.*' => ['integer', 'min:2', 'distinct'],

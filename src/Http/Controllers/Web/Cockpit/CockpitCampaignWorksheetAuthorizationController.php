@@ -9,6 +9,7 @@ use Illuminate\Routing\Controller;
 use InvalidArgumentException;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetImportRepository;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
+use LBHurtado\XChange\Actions\Campaigns\AuthorizeCampaignWorksheetDirectly;
 use LBHurtado\XChange\Actions\Campaigns\IssueCampaignWorksheetApprovalPayCode;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\AuthorizeCampaignWorksheetRequest;
 use LBHurtado\XChange\Services\Campaigns\CampaignLifecycleJournal;
@@ -21,6 +22,7 @@ class CockpitCampaignWorksheetAuthorizationController extends Controller
         private readonly CampaignWorksheetRepository $worksheets,
         private readonly CampaignWorksheetImportRepository $imports,
         private readonly IssueCampaignWorksheetApprovalPayCode $approvalPayCodes,
+        private readonly AuthorizeCampaignWorksheetDirectly $directAuthorization,
         private readonly InstructionCapabilityIssuanceGuard $instructionCapabilities,
         private readonly CampaignLifecycleJournal $journal,
     ) {}
@@ -28,6 +30,7 @@ class CockpitCampaignWorksheetAuthorizationController extends Controller
     public function store(AuthorizeCampaignWorksheetRequest $request, string $worksheet): RedirectResponse
     {
         $owner = $request->user();
+        $approvalMode = $request->validated('approval_mode');
 
         try {
             $hasUnappliedValidRows = collect($this->imports->forOwner(
@@ -56,16 +59,26 @@ class CockpitCampaignWorksheetAuthorizationController extends Controller
 
             $this->instructionCapabilities->ensureAvailable($campaign->instructionBlueprint);
 
-            $this->worksheets->freeze($worksheet, $owner->getMorphClass(), (string) $owner->getAuthIdentifier());
-            $authorization = $this->approvalPayCodes->handle($worksheet, $owner);
-            $this->journal->recordAuthorization('campaign.approval.requested', $authorization, $owner);
+            if ($campaign->status === 'draft') {
+                $this->worksheets->freeze($worksheet, $owner->getMorphClass(), (string) $owner->getAuthIdentifier());
+            } elseif ($campaign->status !== 'awaiting_authorization'
+                && ! ($campaign->status === 'authorized' && $approvalMode === 'direct')) {
+                throw new InvalidArgumentException('This worksheet cannot be authorized in its current state.');
+            }
+            if ($approvalMode === 'maker_checker') {
+                $authorization = $this->approvalPayCodes->handle($worksheet, $owner);
+                $this->journal->recordAuthorization('campaign.approval.requested', $authorization, $owner);
+            } else {
+                $authorization = $this->directAuthorization->handle($worksheet, $owner);
+            }
         } catch (InvalidArgumentException|RuntimeException $exception) {
             return to_route('x-change.cockpit.campaigns.show', $worksheet)->with('campaign_notice', $exception->getMessage());
         }
 
-        return to_route('x-change.cockpit.campaigns.show', $worksheet)->with(
-            'campaign_notice',
-            sprintf('Worksheet frozen. Officer approval Pay Code %s is ready to share.', $authorization->approval_pay_code),
-        );
+        $notice = $approvalMode === 'maker_checker'
+            ? sprintf('Worksheet frozen. Officer approval Pay Code %s is ready to share.', $authorization->approval_pay_code)
+            : 'Worksheet authorized. Beneficiary payouts are ready to issue.';
+
+        return to_route('x-change.cockpit.campaigns.show', $worksheet)->with('campaign_notice', $notice);
     }
 }

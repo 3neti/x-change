@@ -82,6 +82,7 @@ use LBHurtado\XChange\Console\Commands\BootstrapXChangeFromManifestCommand;
 use LBHurtado\XChange\Console\Commands\Campaigns\ProcessCampaignBatchFulfillmentOutboxCommand;
 use LBHurtado\XChange\Console\Commands\Campaigns\ShowCampaignPayoutRecoveryDeliveriesCommand;
 use LBHurtado\XChange\Console\Commands\Campaigns\SyncCampaignPaymentAddressesCommand;
+use LBHurtado\XChange\Console\Commands\CheckApplicationProfilesCommand;
 use LBHurtado\XChange\Console\Commands\Checkout\BackfillPublicCheckoutsCommand;
 use LBHurtado\XChange\Console\Commands\Checkout\ManageCheckoutViewerLinkCommand;
 use LBHurtado\XChange\Console\Commands\Claim\ClaimWalkthroughCommand;
@@ -1953,6 +1954,7 @@ class XChangeServiceProvider extends ServiceProvider
                 ValidatePolicyCompletionTransportDispositionCommand::class,
                 InspectXChangeConfigurationCommand::class,
                 DoctorXChangeCommand::class,
+                CheckApplicationProfilesCommand::class,
                 CommissioningStatusCommand::class,
                 AdoptCommissioningManifestCommand::class,
                 RefreshCommissioningReleaseCommand::class,

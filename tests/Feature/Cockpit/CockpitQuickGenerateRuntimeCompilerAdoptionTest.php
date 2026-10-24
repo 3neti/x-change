@@ -114,6 +114,59 @@ it('uses the quick generate draft factory validator and compiler before existing
         ->and(data_get($fakeGeneratePayCode->payloads[0], '_meta.correlation_id'))->toBe('corr-wave-10b');
 });
 
+it('preserves a configured loan journey reference through the issuance compiler', function () {
+    config()->set('x-change.app_profile.primary', 'lending-center');
+    $fakeGeneratePayCode = new class extends GeneratePayCode
+    {
+        public array $payloads = [];
+
+        public function __construct() {}
+
+        public function handle(array $input): GeneratePayCodeResultData
+        {
+            $this->payloads[] = $input;
+
+            return new GeneratePayCodeResultData(
+                voucher_id: 12346,
+                code: 'LOAN42',
+                amount: $input['cash']['amount'],
+                currency: $input['cash']['currency'],
+                issuer: new IssuerData(id: data_get($input, 'metadata.issuer_id')),
+                cost: new PricingEstimateData(currency: 'PHP', base_fee: 1.25, total: 1.25),
+                wallet: ['balance_before' => 100000, 'balance_after' => 99975],
+                debit: new DebitData(id: 988, amount: 25),
+                links: new PayCodeLinksData(redeem: 'https://example.test/r/LOAN42', redeem_path: '/r/LOAN42'),
+            );
+        }
+    };
+    app()->instance(GeneratePayCode::class, $fakeGeneratePayCode);
+    actingAsTestUser();
+
+    $this->withHeaders(['Accept' => 'application/json', 'Idempotency-Key' => 'loan-journey-42'])
+        ->post(route('x-change.cockpit.quick-generate.store'), [
+            'cash' => ['amount' => 25, 'currency' => 'PHP', 'validation' => ['country' => 'PH']],
+            'inputs' => ['fields' => []],
+            'feedback' => ['mobile' => '09173011987'],
+            'rider' => ['message' => null],
+            'claim' => [
+                'outcomes' => [['key' => 'provider_disbursement']],
+                'selection' => 'server',
+                'consumption' => 'one_of',
+                'default_outcome' => 'provider_disbursement',
+            ],
+            'metadata' => ['custom' => ['app_journey' => [
+                'key' => 'loan_disbursement',
+                'reference' => 'LOAN-42',
+            ]]],
+        ])
+        ->assertCreated()
+        ->assertJsonPath('result.code', 'LOAN42');
+
+    expect($fakeGeneratePayCode->payloads)->toHaveCount(1)
+        ->and(data_get($fakeGeneratePayCode->payloads[0], 'metadata.custom.app_journey.reference'))->toBe('LOAN-42')
+        ->and(data_get($fakeGeneratePayCode->payloads[0], 'rider.message'))->toBe('Loan disbursement LOAN-42');
+});
+
 it('preserves settlement envelope advanced instruction fields through the existing issuance handoff', function () {
     $fakeGeneratePayCode = new class extends GeneratePayCode
     {

@@ -7,21 +7,40 @@ import CockpitGlobalHeader from '../../../resources/js/cockpit/components/Cockpi
 import CockpitLayout from '../../../resources/js/cockpit/layouts/CockpitLayout.vue';
 import { cockpitNavigationItems } from '../../../resources/js/cockpit/navigation';
 
+const sharedPageProps = vi.hoisted(() => ({ application_profile: undefined as undefined | { primary: string; navigation: Array<{ key: string; label: string; href: string }> } }));
+
 vi.mock('@inertiajs/vue3', () => ({
     Link: {
         props: ['href'],
         template: '<a :href="href?.url ?? href"><slot /></a>',
     },
     router: { reload: vi.fn() },
-    usePage: () => ({ props: {} }),
+    usePage: () => ({ props: sharedPageProps }),
 }));
 vi.mock('@laravel/echo-vue', () => ({
     useEcho: vi.fn(),
 }));
 
 afterEach(() => {
+    sharedPageProps.application_profile = undefined;
     vi.clearAllMocks();
     vi.useRealTimers();
+});
+
+it('renders compiled primary and additional app journeys', () => {
+    sharedPageProps.application_profile = {
+        primary: 'payout',
+        navigation: [
+            { key: 'salary_payout', label: 'Salary Payout', href: '/x/cockpit/campaigns' },
+            { key: 'fare_collection', label: 'Fare Collection', href: '/x/cockpit/stored-value-collections' },
+        ],
+    };
+
+    const wrapper = mount(CockpitLayout);
+
+    expect(wrapper.get('[data-testid="app-profile-navigation"]').text()).toContain('Salary Payout');
+    expect(wrapper.get('[data-testid="app-profile-navigation"]').text()).toContain('Fare Collection');
+    expect(wrapper.get('[data-testid="app-profile-navigation"] a[href="/x/cockpit/stored-value-collections"]').exists()).toBe(true);
 });
 
 describe('Cockpit shell layout baseline', () => {

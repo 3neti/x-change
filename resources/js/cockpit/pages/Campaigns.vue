@@ -47,7 +47,7 @@ import type { CockpitHeaderPageProps } from '../types';
 
 type CampaignWorksheet = {
     reference: string;
-    profile: 'payroll' | 'assistance';
+    profile: 'payroll' | 'assistance' | 'gaming';
     name: string;
     currency: string;
     status: string;
@@ -173,6 +173,7 @@ type EndpointCampaign = {
 };
 
 type CampaignsPageProps = CockpitHeaderPageProps & {
+    application_journey?: { key: string; label: string } | null;
     worksheets: CampaignWorksheet[];
     active_intake?: Record<string, unknown>;
     campaign_usage_profiles?: CampaignUsageProfile[];
@@ -194,9 +195,40 @@ type CampaignFlavor = CampaignWorksheet['profile'] | 'endpoints';
 const campaignFlavors: CampaignFlavor[] = [
     'payroll',
     'assistance',
+    'gaming',
     'endpoints',
 ];
-const activeFlavor = ref<CampaignFlavor>('payroll');
+function flavorForJourney(journeyKey?: string): CampaignFlavor {
+    if (journeyKey === 'ayuda_payout') {
+        return 'assistance';
+    }
+    if (journeyKey === 'gaming_payout') {
+        return 'gaming';
+    }
+
+    if (
+        ['campaign_distribution', 'campaign_activity', 'lead_capture',
+            'lead_activity', 'product_enrollment', 'enrollment_activity'].includes(journeyKey ?? '')
+    ) {
+        return 'endpoints';
+    }
+
+    return 'payroll';
+}
+
+function usageForJourney(journeyKey?: string): string | null {
+    if (journeyKey === 'campaign_distribution') {
+        return 'promo';
+    }
+
+    if (journeyKey === 'lead_capture') {
+        return 'lead';
+    }
+
+    return null;
+}
+
+const activeFlavor = ref<CampaignFlavor>(flavorForJourney(props.application_journey?.key));
 const flavorCopy: Record<
     CampaignFlavor,
     {
@@ -250,6 +282,21 @@ const flavorCopy: Record<
         emptyBatchTitle: 'Start Empty Distribution',
         namePlaceholder: 'August assistance',
     },
+    gaming: {
+        eyebrow: 'Gaming',
+        title: 'Gaming Payouts',
+        description: 'Prepare beneficiary payouts for a completed game or event.',
+        listTitle: 'Payout Batches',
+        people: 'Recipients',
+        person: 'recipient',
+        total: 'Payout Total',
+        emptyTitle: 'No gaming payouts yet',
+        emptyDescription: 'Upload a recipient list or start an empty gaming payout.',
+        importTitle: 'Upload Payout List',
+        importDescription: 'Add CSV or XLSX payout rows, then review every recipient and amount.',
+        emptyBatchTitle: 'Start Gaming Payout',
+        namePlaceholder: 'October event payouts',
+    },
     endpoints: {
         eyebrow: 'Endpoints',
         title: 'Endpoint Campaigns',
@@ -286,6 +333,7 @@ const visiblePeopleCount = computed(() =>
 
 const form = useForm({
     name: '',
+    event_reference: '',
     profile: 'payroll',
     fulfillment_mode: 'pay_code_distribution',
     delivery_plan: ['csv'],
@@ -302,11 +350,15 @@ const payCodeTemplates = computed<CampaignPayCodeTemplate[]>(
 const endpointCampaigns = computed<EndpointCampaign[]>(
     () => props.endpoint_campaigns ?? [],
 );
+const initialEndpointUsage =
+    usageProfiles.value.find(
+        (profile) => profile.key === usageForJourney(props.application_journey?.key),
+    ) ?? usageProfiles.value[0];
 const endpointForm = useForm({
     title: '',
     description: '',
-    usage_key: usageProfiles.value[0]?.key ?? 'lead',
-    capabilities: usageProfiles.value[0]?.default_capabilities ?? [],
+    usage_key: initialEndpointUsage?.key ?? 'lead',
+    capabilities: initialEndpointUsage?.default_capabilities ?? [],
     pay_code_template_id: payCodeTemplates.value[0]?.id ?? null,
     endpoint_slug: '',
     starts_limit: null as number | null,
@@ -321,7 +373,7 @@ const endpointForm = useForm({
         'UTC',
 });
 const deleteForm = useForm({});
-const authorizationForm = useForm({});
+const authorizationForm = useForm({ approval_mode: 'direct' });
 const endpointStatusForm = useForm({});
 const endpointTemplateForm = useForm({
     pay_code_template_id: null as number | null,
@@ -350,6 +402,17 @@ watch(activeFlavor, (profile) => {
         form.profile = profile;
     }
 });
+
+watch(
+    () => props.application_journey?.key,
+    (journeyKey) => {
+        activeFlavor.value = flavorForJourney(journeyKey);
+        const usage = usageForJourney(journeyKey);
+        if (usage && usageProfiles.value.some((profile) => profile.key === usage)) {
+            endpointForm.usage_key = usage;
+        }
+    },
+);
 
 watch(
     () => endpointForm.usage_key,
@@ -522,7 +585,7 @@ onBeforeUnmount(() => window.removeEventListener('paste', pasteIntakeFromPage));
 function createWorksheet(): void {
     form.post(store().url, {
         preserveScroll: true,
-        onSuccess: () => form.reset('name'),
+        onSuccess: () => form.reset('name', 'event_reference'),
     });
 }
 
@@ -563,7 +626,7 @@ function deleteWorksheet(worksheet: CampaignWorksheet): void {
     });
 }
 
-function createApprovalPayCode(worksheet: CampaignWorksheet): void {
+function authorizeWorksheet(worksheet: CampaignWorksheet): void {
     if (
         worksheet.status !== 'draft' ||
         worksheet.beneficiary_count === 0 ||
@@ -933,7 +996,7 @@ function statusClasses(status: string): string {
 function batchActionLabel(worksheet: CampaignWorksheet): string {
     if (worksheet.status === 'draft') {
         return worksheet.beneficiary_count > 0
-            ? 'Request Approval'
+            ? 'Authorize Batch'
             : 'Continue';
     }
 
@@ -1025,7 +1088,7 @@ const updatedRelativeTime = (value: string | null): string =>
                     </dl>
                 </div>
                 <div
-                    class="mt-4 grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-950"
+                    class="mt-4 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 sm:grid-cols-4 dark:bg-slate-950"
                     role="group"
                     aria-label="Campaign flavor"
                     data-testid="campaign-flavor-switch"
@@ -1054,13 +1117,20 @@ const updatedRelativeTime = (value: string | null): string =>
                             class="size-4"
                             aria-hidden="true"
                         />
+                        <PlayCircle
+                            v-else-if="flavor === 'gaming'"
+                            class="size-4"
+                            aria-hidden="true"
+                        />
                         <QrCode v-else class="size-4" aria-hidden="true" />
                         {{
                             flavor === 'payroll'
                                 ? 'Payroll'
                                 : flavor === 'assistance'
                                   ? 'Ayuda'
-                                  : 'Endpoints'
+                                  : flavor === 'gaming'
+                                    ? 'Gaming'
+                                    : 'Endpoints'
                         }}
                     </button>
                 </div>
@@ -1207,10 +1277,10 @@ const updatedRelativeTime = (value: string | null): string =>
                                         type="button"
                                         :data-testid="`campaign-activity-create-approval-${worksheet.reference}`"
                                         :disabled="authorizationForm.processing"
-                                        title="Lock this recipient list and prepare its officer Approval Pay Code."
+                                        title="Freeze this recipient list and authorize its payouts."
                                         class="@xl:flex-none inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg bg-slate-950 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white"
                                         @click="
-                                            createApprovalPayCode(worksheet)
+                                            authorizeWorksheet(worksheet)
                                         "
                                     >
                                         <LockKeyhole
@@ -1420,6 +1490,22 @@ const updatedRelativeTime = (value: string | null): string =>
                                         class="text-xs font-normal text-rose-600 dark:text-rose-300"
                                         >{{ form.errors.name }}</span
                                     >
+                                </label>
+
+                                <label
+                                    v-if="activeFlavor === 'gaming'"
+                                    class="grid gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
+                                >
+                                    Game or event reference
+                                    <input
+                                        v-model="form.event_reference"
+                                        type="text"
+                                        maxlength="191"
+                                        required
+                                        placeholder="EVENT-2026-001"
+                                        class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50"
+                                    />
+                                    <span v-if="form.errors.event_reference" class="text-xs text-rose-600 dark:text-rose-300">{{ form.errors.event_reference }}</span>
                                 </label>
 
                                 <label

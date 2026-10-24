@@ -22,6 +22,15 @@ const worksheet = {
 
 const usageProfiles = [
     {
+        key: 'promo',
+        label: 'Promo',
+        description: 'Public claim endpoint.',
+        entry_point: 'public_qr_link',
+        person_type: 'prospect',
+        pay_code_generation: 'on_scan',
+        default_capabilities: ['public_endpoint', 'distribution'],
+    },
+    {
         key: 'lead',
         label: 'Lead',
         description:
@@ -120,6 +129,43 @@ const endpointCampaign = {
 };
 
 describe('Cockpit campaign worksheets', () => {
+    it.each([
+        ['campaign_distribution', 'promo'],
+        ['lead_capture', 'lead'],
+    ])('prefills the %s endpoint with %s usage', async (key, usage) => {
+        const wrapper = mount(Campaigns, {
+            props: {
+                worksheets: [],
+                application_journey: { key, label: key },
+                campaign_usage_profiles: usageProfiles,
+            },
+        });
+
+        expect(
+            (wrapper.vm as unknown as { endpointForm: { usage_key: string } })
+                .endpointForm.usage_key,
+        ).toBe(usage);
+    });
+
+    it.each([
+        ['salary_payout', 'Payroll Payouts'],
+        ['ayuda_payout', 'Ayuda Distribution'],
+        ['campaign_distribution', 'Endpoint Campaigns'],
+        ['lead_capture', 'Endpoint Campaigns'],
+        ['product_enrollment', 'Endpoint Campaigns'],
+    ])('opens %s in its matching campaign view', async (key, title) => {
+        const wrapper = mount(Campaigns, {
+            props: { worksheets: [], application_journey: { key, label: key } },
+        });
+
+        expect(wrapper.text()).toContain(title);
+
+        await wrapper.setProps({
+            application_journey: { key: 'ayuda_payout', label: 'Ayuda Payout' },
+        });
+        expect(wrapper.text()).toContain('Ayuda Distribution');
+    });
+
     it('shows payment first milestones instead of endpoint starts and links to campaign scoped activity', async () => {
         const campaign = {
             ...endpointCampaign,
@@ -458,7 +504,7 @@ describe('Cockpit campaign worksheets', () => {
         expect(wrapper.text()).toContain('Start Empty');
     });
 
-    it('switches between Payroll and Ayuda using existing worksheet profiles', async () => {
+    it('switches between Payroll, Ayuda, and Gaming worksheets', async () => {
         const assistanceWorksheet = {
             ...worksheet,
             reference: '01KYCAMPAIGNASSISTANCE00000',
@@ -495,6 +541,16 @@ describe('Cockpit campaign worksheets', () => {
             (wrapper.vm as unknown as { form: { profile: string } }).form
                 .profile,
         ).toBe('assistance');
+
+        await wrapper
+            .get('[data-testid="campaign-flavor-gaming"]')
+            .trigger('click');
+
+        expect(wrapper.text()).toContain('Gaming Payouts');
+        expect(
+            (wrapper.vm as unknown as { form: { profile: string } }).form
+                .profile,
+        ).toBe('gaming');
     });
 
     it('creates and monitors endpoint campaigns from Pay Code templates', async () => {
@@ -818,7 +874,7 @@ describe('Cockpit campaign worksheets', () => {
         );
 
         expect(action.attributes('disabled')).toBeUndefined();
-        expect(action.text()).toContain('Request Approval');
+        expect(action.text()).toContain('Authorize Batch');
         await action.trigger('click');
 
         expect(post).toHaveBeenCalledOnce();
@@ -1377,8 +1433,9 @@ describe('Cockpit campaign worksheets', () => {
         expect(page).toContain(
             'data-testid="campaign-create-approval-pay-code"',
         );
-        expect(page).toContain('ready for approval.');
-        expect(page.match(/Request Approval/g)).toHaveLength(1);
+        expect(page).toContain('ready for authorization.');
+        expect(page).toContain('data-testid="campaign-approval-mode"');
+        expect(page).toContain('Authorize Batch');
         expect(
             page.indexOf('data-testid="campaign-create-approval-pay-code"'),
         ).toBeLessThan(page.indexOf('<CockpitCampaignImportWorkspace'));

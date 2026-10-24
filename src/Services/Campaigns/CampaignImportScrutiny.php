@@ -20,12 +20,16 @@ final class CampaignImportScrutiny
             ->replace(['_', '-', '.'], ' ')
             ->squish()
             ->value();
-        $profile = $this->containsAny($searchable, ['ayuda', 'aid', 'assistance', 'relief', 'benefit'])
-            ? 'assistance'
-            : 'payroll';
-        $profileReason = $profile === 'assistance'
-            ? 'The file name or columns look like an assistance list.'
-            : 'The file name or columns look like a payroll or general beneficiary list.';
+        $profile = $this->containsAny($searchable, ['gaming', 'game', 'tournament', 'prize'])
+            ? 'gaming'
+            : ($this->containsAny($searchable, ['ayuda', 'aid', 'assistance', 'relief', 'benefit'])
+                ? 'assistance'
+                : 'payroll');
+        $profileReason = match ($profile) {
+            'gaming' => 'The file name or columns look like a gaming payout list.',
+            'assistance' => 'The file name or columns look like an assistance list.',
+            default => 'The file name or columns look like a payroll or general beneficiary list.',
+        };
 
         $hasBankDestination = isset($mapping['institution']) || isset($mapping['bank_account']);
         $hasMessageDestination = isset($mapping['mobile']) || isset($mapping['email']);

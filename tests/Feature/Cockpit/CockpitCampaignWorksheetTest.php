@@ -18,6 +18,8 @@ use LBHurtado\XCampaign\Contracts\CampaignWorksheetIntakeRepository;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
 use LBHurtado\XCampaign\Data\CampaignWorksheetData;
 use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
+use LBHurtado\XCampaign\Models\CampaignWorksheet;
+use LBHurtado\XChange\Actions\Campaigns\AuthorizeCampaignWorksheetDirectly;
 use LBHurtado\XChange\Actions\Campaigns\ConvergeCampaignFeedbackDelivery;
 use LBHurtado\XChange\Actions\Campaigns\DispatchCampaignFeedback;
 use LBHurtado\XChange\Actions\Campaigns\DispatchCampaignPayCodeDeliveries;
@@ -109,6 +111,75 @@ it('shows only the authenticated owner campaign worksheet summaries', function (
         ->assertJsonPath('props.worksheets.0.name', 'July Payroll')
         ->assertJsonPath('props.worksheets.0.beneficiary_count', 0)
         ->assertJsonMissingPath('props.worksheets.0.beneficiary');
+});
+
+it('requires an event reference and records it in gaming payout instructions', function () {
+    $owner = actingAsTestUser();
+
+    $this->post(route('x-change.cockpit.campaigns.store'), [
+        'name' => 'October Finals',
+        'profile' => 'gaming',
+        'fulfillment_mode' => 'pay_code_distribution',
+        'delivery_plan' => ['csv'],
+    ])->assertSessionHasErrors('event_reference');
+
+    $this->post(route('x-change.cockpit.campaigns.store'), [
+        'name' => 'October Finals',
+        'profile' => 'gaming',
+        'event_reference' => 'FINAL-42',
+        'fulfillment_mode' => 'pay_code_distribution',
+        'delivery_plan' => ['csv'],
+    ])->assertRedirect(route('x-change.cockpit.campaigns.index'));
+
+    $worksheet = CampaignWorksheet::query()
+        ->where('owner_type', $owner->getMorphClass())
+        ->where('owner_id', (string) $owner->getKey())
+        ->sole();
+
+    expect($worksheet->profile)->toBe('gaming')
+        ->and(data_get($worksheet->metadata, 'gaming.event_reference'))->toBe('FINAL-42')
+        ->and(data_get($worksheet->instruction_blueprint_ciphertext, 'rider.message'))
+        ->toBe('Gaming payout FINAL-42');
+});
+
+it('converts gaming payout imports only with an event reference', function () {
+    $owner = actingAsTestUser();
+
+    $this->post(route('x-change.cockpit.campaigns.intakes.store'), [
+        'file' => UploadedFile::fake()->createWithContent(
+            'gaming-payout.csv',
+            "mobile,amount,external_reference\n09173011987,25.00,WIN-42\n",
+        ),
+    ])->assertRedirect();
+
+    $intake = app(CampaignWorksheetIntakeRepository::class)
+        ->activeForOwner($owner->getMorphClass(), (string) $owner->getKey());
+
+    expect(data_get($intake->suggestion, 'profile'))->toBe('gaming');
+
+    $payload = [
+        'name' => 'October Finals',
+        'profile' => 'gaming',
+        'fulfillment_mode' => 'pay_code_distribution',
+        'included_source_rows' => [2],
+        'exclude_invalid_rows' => false,
+    ];
+
+    $this->post(route('x-change.cockpit.campaigns.intakes.convert', $intake->reference), $payload)
+        ->assertSessionHasErrors('event_reference');
+
+    $this->post(route('x-change.cockpit.campaigns.intakes.convert', $intake->reference), [
+        ...$payload,
+        'event_reference' => 'FINAL-42',
+    ])->assertRedirect();
+
+    $worksheet = CampaignWorksheet::query()
+        ->where('owner_type', $owner->getMorphClass())
+        ->where('owner_id', (string) $owner->getKey())
+        ->sole();
+
+    expect($worksheet->profile)->toBe('gaming')
+        ->and(data_get($worksheet->metadata, 'gaming.event_reference'))->toBe('FINAL-42');
 });
 
 it('exposes endpoint campaign profiles, active templates, and existing public endpoints', function (): void {
@@ -1036,6 +1107,86 @@ it('blocks worksheet freezing while valid imported rows remain unapplied', funct
     expect(app(CampaignWorksheetRepository::class)
         ->findForOwner('campaign-import-freeze', $owner->getMorphClass(), (string) $owner->getKey())
         ?->status)->toBe('draft');
+});
+
+it('directly authorizes a frozen worksheet and plans its payout without an officer Pay Code', function () {
+    $owner = actingAsTestUser();
+    $worksheet = app(CampaignWorksheetRepository::class)->put(new CampaignWorksheetData(
+        reference: 'campaign-direct-approval-01',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'payroll',
+        name: 'Direct Payroll',
+        rows: [new CampaignWorksheetRowData(null, 1, ['mobile' => '09173011987'], 2_500)],
+    ));
+
+    $this->post(route('x-change.cockpit.campaigns.authorizations.store', $worksheet->reference))
+        ->assertRedirect(route('x-change.cockpit.campaigns.show', $worksheet->reference))
+        ->assertSessionHas('campaign_notice', 'Worksheet authorized. Beneficiary payouts are ready to issue.');
+
+    $record = CampaignWorksheet::query()->where('reference', $worksheet->reference)->sole();
+    $authorization = $record->authorizations()->sole();
+
+    expect($record->status)->toBe('authorized')
+        ->and($authorization->status)->toBe('authorized')
+        ->and($authorization->approval_pay_code)->toBeNull()
+        ->and($authorization->approved_by_type)->toBe($owner->getMorphClass())
+        ->and((string) $authorization->approved_by_id)->toBe((string) $owner->getKey())
+        ->and($authorization->fulfillments()->count())->toBe(1)
+        ->and(Voucher::query()->count())->toBe(0);
+
+    $replayed = app(AuthorizeCampaignWorksheetDirectly::class)->handle((string) $worksheet->reference, $owner);
+
+    expect($replayed->getKey())->toBe($authorization->getKey())
+        ->and($record->authorizations()->count())->toBe(1)
+        ->and($authorization->fulfillments()->count())->toBe(1);
+
+    $this->post(route('x-change.cockpit.campaigns.authorizations.store', $worksheet->reference))
+        ->assertSessionHas('campaign_notice', 'Worksheet authorized. Beneficiary payouts are ready to issue.');
+
+    expect($record->authorizations()->count())->toBe(1);
+});
+
+it('rejects an invalid approval mode without freezing the worksheet', function () {
+    $owner = actingAsTestUser();
+    $worksheet = app(CampaignWorksheetRepository::class)->put(new CampaignWorksheetData(
+        reference: 'campaign-invalid-approval-01',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'payroll',
+        name: 'Invalid Approval Payroll',
+        rows: [new CampaignWorksheetRowData(null, 1, ['mobile' => '09173011987'], 2_500)],
+    ));
+
+    $this->post(route('x-change.cockpit.campaigns.authorizations.store', $worksheet->reference), [
+        'approval_mode' => 'skip_checks',
+    ])->assertSessionHasErrors('approval_mode');
+
+    expect(CampaignWorksheet::query()->where('reference', $worksheet->reference)->sole()->status)->toBe('draft');
+});
+
+it('keeps officer approval as an explicit campaign authorization mode', function () {
+    $owner = actingAsTestUser();
+    $worksheet = app(CampaignWorksheetRepository::class)->put(new CampaignWorksheetData(
+        reference: 'campaign-checker-approval-01',
+        ownerType: $owner->getMorphClass(),
+        ownerId: (string) $owner->getKey(),
+        profile: 'payroll',
+        name: 'Checker Payroll',
+        rows: [new CampaignWorksheetRowData(null, 1, ['mobile' => '09173011987'], 2_500)],
+    ));
+
+    $this->post(route('x-change.cockpit.campaigns.authorizations.store', $worksheet->reference), [
+        'approval_mode' => 'maker_checker',
+    ])->assertRedirect(route('x-change.cockpit.campaigns.show', $worksheet->reference));
+
+    $record = CampaignWorksheet::query()->where('reference', $worksheet->reference)->sole();
+    $authorization = $record->authorizations()->sole();
+
+    expect($record->status)->toBe('awaiting_authorization')
+        ->and($authorization->status)->toBe('awaiting_officer')
+        ->and($authorization->approval_pay_code)->not->toBeNull()
+        ->and($authorization->fulfillments()->count())->toBe(0);
 });
 
 it('issues one zero-value settlement approval Pay Code for a frozen worksheet', function () {

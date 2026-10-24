@@ -156,6 +156,12 @@ class CockpitCampaignWorksheetIntakeController extends Controller
                     ownerId: (string) $owner->getAuthIdentifier(),
                     profile: $validated['profile'],
                     name: $validated['name'],
+                    metadata: $validated['profile'] === 'gaming'
+                        ? ['gaming' => ['event_reference' => $validated['event_reference']]]
+                        : [],
+                    instructionBlueprint: $validated['profile'] === 'gaming'
+                        ? ['rider' => ['message' => 'Gaming payout '.$validated['event_reference']]]
+                        : [],
                     fulfillmentMode: $validated['fulfillment_mode'],
                     deliveryPlan: ['csv'],
                 ),

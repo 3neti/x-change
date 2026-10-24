@@ -19,6 +19,7 @@ class CreateCampaignWorksheetRequest extends FormRequest
     {
         $this->merge([
             'name' => trim((string) $this->input('name')),
+            'event_reference' => trim((string) $this->input('event_reference')),
             'profile' => mb_strtolower(trim((string) $this->input('profile', 'payroll'))),
             'fulfillment_mode' => mb_strtolower(trim((string) $this->input(
                 'fulfillment_mode',
@@ -38,7 +39,8 @@ class CreateCampaignWorksheetRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'min:3', 'max:160'],
-            'profile' => ['required', Rule::in(['payroll', 'assistance'])],
+            'profile' => ['required', Rule::in(['payroll', 'assistance', 'gaming'])],
+            'event_reference' => ['required_if:profile,gaming', 'nullable', 'string', 'max:191'],
             'fulfillment_mode' => [
                 'required',
                 Rule::in(['pay_code_distribution', 'direct_bank_transfer']),

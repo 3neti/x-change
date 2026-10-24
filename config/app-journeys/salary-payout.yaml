@@ -1,0 +1,15 @@
+# Static journey definition for review. No runtime resolver consumes this file.
+schema: x-change.app-journey.v1
+key: salary_payout
+label: Salary Payout
+kind: issue_batch
+instruction_contract: voucher
+
+workflow: campaign_worksheet
+intake: payroll_rows
+approval: direct
+instruction_compiler: campaign_voucher
+fulfillment:
+  - pay_code_distribution
+  - direct_bank_transfer_with_pay_code_recovery
+result: batch_status_and_reconciliation

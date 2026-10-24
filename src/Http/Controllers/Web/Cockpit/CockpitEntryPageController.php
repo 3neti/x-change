@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use LBHurtado\XChange\Services\Cockpit\CockpitEntryDestinationResolver;
+use LBHurtado\XChange\Services\Configuration\ApplicationProfileCompiler;
 
 class CockpitEntryPageController extends Controller
 {
@@ -15,10 +16,16 @@ class CockpitEntryPageController extends Controller
 
     public function __construct(
         private readonly CockpitEntryDestinationResolver $destinations,
+        private readonly ApplicationProfileCompiler $profiles,
     ) {}
 
     public function __invoke(Request $request): RedirectResponse
     {
+        $profile = $this->profiles->fromConfig();
+        if ($profile->primaryKey !== 'default') {
+            return redirect()->to($profile->homeHref);
+        }
+
         $destination = $this->destinations->resolve($request->user());
 
         return redirect()

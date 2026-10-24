@@ -130,6 +130,7 @@ const props = withDefaults(
     claimPreviewContract?: CockpitQuickGenerateClaimPreviewContract;
     draftContract?: CockpitQuickGenerateDraftContract;
     campaignContext?: CockpitQuickGenerateCampaignContext;
+    applicationJourney?: { key: string; label: string; kind: string } | null;
     feedbackDefaults?: CockpitQuickGenerateFeedbackDefaults;
     onboardingOtpRequired?: boolean;
     onboardingPreset?: boolean;
@@ -184,6 +185,27 @@ const props = withDefaults(
 );
 
 const { currentTheme } = useTheme();
+
+const specializedJourney = computed(() => {
+  const key = props.applicationJourney?.key;
+  return key === 'loan_disbursement' || key === 'exchange_payout' ||
+    key === 'send_local_remittance' || key === 'send_offshore_remittance'
+    ? key
+    : null;
+});
+const journeyReference = ref('');
+const journeyOriginCountry = ref('');
+const journeySourceCurrency = ref('');
+const journeySourceAmount = ref('');
+const specializedJourneyReady = computed(() => {
+  if (specializedJourney.value === null) return true;
+  if (journeyReference.value.trim() === '') return false;
+  if (specializedJourney.value === 'send_offshore_remittance' && journeyOriginCountry.value.trim() === '') return false;
+  if (specializedJourney.value === 'exchange_payout' &&
+      (!/^[A-Z]{3}$/.test(journeySourceCurrency.value.trim().toUpperCase()) ||
+        !Number.isFinite(Number(journeySourceAmount.value)) || Number(journeySourceAmount.value) <= 0)) return false;
+  return true;
+});
 
 function capabilityReadiness(
   key: string,
@@ -2476,6 +2498,8 @@ const canSubmit = computed<boolean>(() => {
     valueUseModeError.value === null &&
     claimRecipientError.value === null &&
     settlementRailSelectionError.value === null &&
+    specializedJourneyReady.value &&
+    (specializedJourney.value === null || (voucherType.value === 'redeemable' && count.value === '1' && claimOutcome.value === 'provider_disbursement')) &&
     payableAmountIsValid &&
     settlementTargetIsValid &&
     onDemandFundingProjection.value === null &&
@@ -5582,6 +5606,15 @@ function buildPayloadShape(
     metadata: {
       ...(campaign === null ? {} : { campaign }),
       custom: {
+        ...(specializedJourney.value === null ? {} : { app_journey: {
+          key: specializedJourney.value,
+          reference: journeyReference.value.trim(),
+          ...(specializedJourney.value === 'send_offshore_remittance' ? { origin_country: journeyOriginCountry.value.trim().toUpperCase() } : {}),
+          ...(specializedJourney.value === 'exchange_payout' ? {
+            source_currency: journeySourceCurrency.value.trim().toUpperCase(),
+            source_amount: String(journeySourceAmount.value).trim(),
+          } : {}),
+        } }),
         ...(stampPresentation.value && !usesRiderArtwork.value ? { stamp_presentation: stampPresentation.value } : {}),
         cockpit: {
           template_key: selectedTemplate.value,
@@ -6900,6 +6933,22 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
           class="mt-4 grid min-w-0 items-start gap-3 sm:grid-cols-[minmax(0,18rem)_minmax(0,18rem)]"
           data-testid="cockpit-quick-generate-order-fields"
         >
+          <section v-if="specializedJourney" class="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:col-span-2 dark:border-slate-700 dark:bg-slate-900" data-testid="cockpit-app-journey-intake">
+            <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ applicationJourney?.label }}</p>
+            <label class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-200">
+              {{ specializedJourney === 'loan_disbursement' ? 'Loan reference' : specializedJourney === 'exchange_payout' ? 'External quote reference' : 'Remittance origin reference' }}
+              <input v-model="journeyReference" required maxlength="120" data-testid="cockpit-app-journey-reference" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" />
+            </label>
+            <label v-if="specializedJourney === 'send_offshore_remittance'" class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-200">
+              Origin country
+              <input v-model="journeyOriginCountry" required maxlength="2" placeholder="US" data-testid="cockpit-app-journey-origin-country" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm uppercase dark:border-slate-700 dark:bg-slate-950" />
+            </label>
+            <div v-if="specializedJourney === 'exchange_payout'" class="grid gap-3 sm:grid-cols-2">
+              <label class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-200">Source currency<input v-model="journeySourceCurrency" required maxlength="3" placeholder="USD" data-testid="cockpit-app-journey-source-currency" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm uppercase dark:border-slate-700 dark:bg-slate-950" /></label>
+              <label class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-200">Source amount<input v-model="journeySourceAmount" required type="text" inputmode="decimal" data-testid="cockpit-app-journey-source-amount" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" /></label>
+              <p class="text-xs text-slate-500 sm:col-span-2 dark:text-slate-400">The Pay Code amount below is the externally quoted PHP payout. No exchange rate is calculated here.</p>
+            </div>
+          </section>
           <div
             class="grid min-w-0 gap-1.5 text-xs font-medium text-slate-700 sm:col-span-2 dark:text-slate-300"
             data-testid="cockpit-quick-generate-amount-field"

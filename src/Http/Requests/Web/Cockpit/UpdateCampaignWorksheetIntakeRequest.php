@@ -17,7 +17,7 @@ class UpdateCampaignWorksheetIntakeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'profile' => ['required', Rule::in(['payroll', 'assistance'])],
+            'profile' => ['required', Rule::in(['payroll', 'assistance', 'gaming'])],
             'fulfillment_mode' => ['required', Rule::in(['pay_code_distribution', 'direct_bank_transfer'])],
             'mapping' => ['required', 'array'],
             'mapping.*' => ['nullable', 'string', 'max:255'],

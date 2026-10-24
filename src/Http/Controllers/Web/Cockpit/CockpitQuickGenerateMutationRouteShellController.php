@@ -35,6 +35,7 @@ use LBHurtado\XChange\Services\Cockpit\CockpitPosSaleReferenceService;
 use LBHurtado\XChange\Services\Cockpit\CompileCockpitQuickGenerateClaimPolicy;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Cockpit\QuickGenerateLastInstructionsStore;
+use LBHurtado\XChange\Services\Configuration\ApplicationJourneyInstructionGuard;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingPolicy;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingRequirement;
 use LBHurtado\XChange\Services\IdempotencyService;
@@ -76,6 +77,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         PublicIssuanceTurnstileVerifier $turnstile,
         CheckoutLifecycle $checkouts,
         PublicCheckoutDraftAccess $checkoutDrafts,
+        ApplicationJourneyInstructionGuard $journeyInstructions,
     ): JsonResponse {
         $publicAutoGenerate = $request->attributes->get('x_change_public_auto_generate') === true;
 
@@ -94,6 +96,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         }
         $payload = $this->posSaleReferences->sanitizeBrowserPayload($request->validated());
         $payload = $this->normalizePayloadForIssuance($payload);
+        $payload = $journeyInstructions->validateAndCompile($payload, $publicAutoGenerate);
 
         if ($publicAutoGenerate) {
             $publicIssuancePolicy->assertAllowed($payload);

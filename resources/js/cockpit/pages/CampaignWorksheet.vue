@@ -36,6 +36,7 @@ type Worksheet = {
     reference: string;
     profile: string;
     name: string;
+    event_reference?: string | null;
     currency: string;
     status: string;
     fulfillment_mode: string;
@@ -111,7 +112,9 @@ const form = useForm({
     external_reference: '',
     delivery_preference: 'manual',
 });
-const authorizationForm = useForm({});
+const authorizationForm = useForm({
+    approval_mode: 'direct' as 'direct' | 'maker_checker',
+});
 const fulfillmentForm = useForm({});
 const transferForm = useForm({
     confirm_live_transfer: '',
@@ -165,7 +168,13 @@ const worksheetTotalMinor = computed(() =>
     props.worksheet.rows.reduce((total, row) => total + row.amount_minor, 0),
 );
 const isPayroll = computed(() => props.worksheet.profile === 'payroll');
-const profileLabel = computed(() => (isPayroll.value ? 'Payroll' : 'Ayuda'));
+const profileLabel = computed(() =>
+    isPayroll.value
+        ? 'Payroll'
+        : props.worksheet.profile === 'gaming'
+          ? 'Gaming payout'
+          : 'Ayuda',
+);
 const peopleLabel = computed(() =>
     isPayroll.value ? 'Employees' : 'Beneficiaries',
 );
@@ -328,6 +337,9 @@ const sendApproval = (): void => {
                             >
                                 {{ props.worksheet.name }}
                             </h1>
+                            <p v-if="props.worksheet.event_reference" class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                Event {{ props.worksheet.event_reference }}
+                            </p>
                         </div>
                         <dl
                             class="grid w-full min-w-0 grid-cols-1 gap-2 text-left min-[360px]:grid-cols-3 2xl:w-auto 2xl:min-w-[21rem] 2xl:text-right"
@@ -438,10 +450,22 @@ const sendApproval = (): void => {
                                         ? `Add at least one ${personLabel}.`
                                         : hasPendingImportRows
                                           ? 'Finish or discard the pending import.'
-                                          : `${props.worksheet.rows.length} ${props.worksheet.rows.length === 1 ? personLabel : `${personLabel}s`} ready for approval.`
+                                        : `${props.worksheet.rows.length} ${props.worksheet.rows.length === 1 ? personLabel : `${personLabel}s`} ready for authorization.`
                                 }}
                             </p>
                         </div>
+                        <div v-if="isDraft()" class="flex flex-wrap items-end gap-2">
+                            <label class="grid gap-1 text-xs font-medium text-slate-600 dark:text-slate-300">
+                                Approval
+                                <select
+                                    v-model="authorizationForm.approval_mode"
+                                    data-testid="campaign-approval-mode"
+                                    class="rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50"
+                                >
+                                    <option value="direct">Authorize directly</option>
+                                    <option value="maker_checker">Request officer approval</option>
+                                </select>
+                            </label>
                         <button
                             v-if="isDraft()"
                             type="button"
@@ -460,9 +484,12 @@ const sendApproval = (): void => {
                             {{
                                 authorizationForm.processing
                                     ? 'Preparing…'
-                                    : 'Request Approval'
+                                    : authorizationForm.approval_mode === 'direct'
+                                      ? 'Authorize Batch'
+                                      : 'Request Approval'
                             }}
                         </button>
+                        </div>
                     </div>
                     <div
                         v-if="

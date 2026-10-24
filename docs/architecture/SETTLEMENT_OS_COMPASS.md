@@ -1,5 +1,10 @@
 # Settlement Operating System Compass
 
+Stored-value collection and compiled app profiles are governed by the
+[master plan](stored-value-app-profiles/MASTER_PLAN.md),
+[collection compass](stored-value-app-profiles/COLLECTION_COMPASS.md), and
+[app-profile compass](stored-value-app-profiles/APP_PROFILE_COMPASS.md).
+
 The Quick Generate Claim Experience workstream is governed by the
 [Cockpit plan](../ui-cockpit/CLAIM_EXPERIENCE_PLAN.md) and
 [compass](../ui-cockpit/CLAIM_EXPERIENCE_COMPASS.md); it does not move the

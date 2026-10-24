@@ -3089,6 +3089,14 @@ return [
         ],
     ],
 
+    'app_profile' => [
+        'primary' => env('XCHANGE_APP_PROFILE', 'default'),
+        'addons' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('XCHANGE_APP_PROFILE_ADDONS', '')),
+        ))),
+    ],
+
     'execution' => [
         'stored_value' => [
             'issuance_enabled' => (bool) env(

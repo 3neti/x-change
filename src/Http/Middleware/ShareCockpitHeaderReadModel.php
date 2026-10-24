@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use LBHurtado\XChange\Contracts\CockpitHeaderReadModelProviderContract;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitEntryPageController;
+use LBHurtado\XChange\Services\Configuration\ApplicationProfileCompiler;
 use LBHurtado\XChange\Services\Funding\FundingProjectionChannel;
 use LBHurtado\XChange\Services\QrArtifactFactory;
 use Symfony\Component\HttpFoundation\Response;
@@ -20,6 +21,7 @@ class ShareCockpitHeaderReadModel
         private readonly CockpitHeaderReadModelProviderContract $headerReadModels,
         private readonly FundingProjectionChannel $fundingChannels,
         private readonly QrArtifactFactory $qrArtifacts,
+        private readonly ApplicationProfileCompiler $profiles,
     ) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -48,6 +50,27 @@ class ShareCockpitHeaderReadModel
         Inertia::share(
             'cockpit_claim_entry_artifact',
             fn (): array => $this->qrArtifacts->claimEntry()->toArray(),
+        );
+        Inertia::share(
+            'application_profile',
+            fn (): array => $this->profiles->fromConfig()->toArray(),
+        );
+        Inertia::share(
+            'application_journey',
+            function () use ($request): ?array {
+                $requested = $request->query('journey');
+                if (! is_string($requested)) {
+                    return null;
+                }
+
+                foreach ($this->profiles->fromConfig()->navigation as $journey) {
+                    if ($journey['key'] === $requested) {
+                        return $journey;
+                    }
+                }
+
+                return null;
+            },
         );
 
         return $next($request);

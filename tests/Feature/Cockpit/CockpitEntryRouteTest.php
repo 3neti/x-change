@@ -63,3 +63,25 @@ it('shares the one-time entry explanation with the destination page', function (
         ->assertOk()
         ->assertJsonPath('props.cockpit_entry_notice', $notice);
 });
+
+it('uses the primary app profile home and shares additional journeys', function (): void {
+    configureCockpitEntrySystemPrincipal();
+    actingAsTestUser();
+    config()->set('x-change.app_profile.primary', 'payout');
+    config()->set('x-change.app_profile.addons', ['transport-pos']);
+
+    $this->get(route('x-change.cockpit.entry'))
+        ->assertRedirect(route('x-change.cockpit.campaigns.index', ['journey' => 'salary_payout']));
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.funding.index'))
+        ->assertOk()
+        ->assertJsonPath('props.application_profile.primary', 'payout')
+        ->assertJsonPath('props.application_profile.profiles.1', 'transport-pos')
+        ->assertJsonPath('props.application_profile.navigation.4.key', 'fare_collection');
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.funding.index', ['journey' => 'fare_collection']))
+        ->assertOk()
+        ->assertJsonPath('props.application_journey.label', 'Fare Collection');
+});

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { router, usePage } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import { useEcho } from '@laravel/echo-vue';
 import { computed, onUnmounted } from 'vue';
 import CockpitGlobalHeader from '../components/CockpitGlobalHeader.vue';
@@ -33,12 +33,21 @@ const props = withDefaults(
 
 type CockpitSharedProps = {
     cockpit_claim_entry_artifact?: XChangeQrArtifactData | null;
+    application_profile?: {
+        primary: string;
+        navigation: Array<{ key: string; label: string; href: string }>;
+    };
+    application_journey?: { key: string; label: string } | null;
 };
 
 const page = usePage<CockpitSharedProps>();
 const claimEntryArtifact = computed(
     () => page.props?.cockpit_claim_entry_artifact ?? null,
 );
+const profileNavigation = computed(
+    () => page.props?.application_profile?.navigation ?? [],
+);
+const activeJourney = computed(() => page.props?.application_journey ?? null);
 
 const headerBalances = computed(() => {
     if (Array.isArray(props.balances) && props.balances.length > 0) {
@@ -130,6 +139,27 @@ onUnmounted(() => {
                     :balances="headerBalances"
                 />
             </div>
+
+            <nav
+                v-if="profileNavigation.length > 0"
+                class="flex gap-2 overflow-x-auto border-b border-border bg-card px-4 py-2"
+                aria-label="App journeys"
+                data-testid="app-profile-navigation"
+            >
+                <Link
+                    v-for="journey in profileNavigation"
+                    :key="journey.key"
+                    :href="journey.href"
+                    class="shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary"
+                    :class="activeJourney?.key === journey.key ? 'bg-primary/10 text-primary' : ''"
+                    :aria-current="activeJourney?.key === journey.key ? 'page' : undefined"
+                >
+                    {{ journey.label }}
+                </Link>
+            </nav>
+            <p v-if="activeJourney" class="border-b border-border px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground" data-testid="active-app-journey">
+                {{ activeJourney.label }}
+            </p>
 
             <div
                 v-if="cockpitEntryNotice"

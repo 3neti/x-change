@@ -1307,6 +1307,7 @@ function stringValue(value: unknown): string | null {
           :claim-preview-contract="claimPreviewContract"
           :draft-contract="draftContract"
           :campaign-context="campaignContext"
+          :application-journey="props.application_journey"
           :feedback-defaults="props.feedback_defaults"
           :onboarding-otp-required="
             props.onboarding_policy?.otp_required ?? true

@@ -1,21 +1,21 @@
 schema: x-change.app-profile.v1
 key: offshore-remittance
 label: Offshore Remittance Center
-home: send_remittance
+home: send_offshore_remittance
 navigation:
-  - send_remittance
-  - receive_remittance
-  - remittance_activity
+  - send_offshore_remittance
+  - receive_offshore_remittance
+  - offshore_remittance_activity
 journeys:
-  - key: send_remittance
+  - key: send_offshore_remittance
     label: Send Remittance
     kind: fund_and_issue
     instruction_contract: voucher
-  - key: receive_remittance
+  - key: receive_offshore_remittance
     label: Receive Remittance
     kind: claim
     instruction_contract: voucher
-  - key: remittance_activity
+  - key: offshore_remittance_activity
     label: Remittance Activity
     kind: inspect
     instruction_contract: none

@@ -343,6 +343,11 @@ export type CockpitVocabularyTerm = {
 export type CockpitHeaderPageProps = {
   cockpit_header_read_model?: CockpitHeaderReadModel;
   cockpit_entry_notice?: CockpitEntryNotice | null;
+  application_journey?: {
+    key: string;
+    label: string;
+    kind: string;
+  } | null;
 };
 
 export type CockpitEntryNotice = {

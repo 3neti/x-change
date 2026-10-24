@@ -98,6 +98,12 @@ class CockpitCampaignWorksheetController extends Controller
             ownerId: (string) $owner->getAuthIdentifier(),
             profile: $validated['profile'],
             name: $validated['name'],
+            metadata: $validated['profile'] === 'gaming'
+                ? ['gaming' => ['event_reference' => $validated['event_reference']]]
+                : [],
+            instructionBlueprint: $validated['profile'] === 'gaming'
+                ? ['rider' => ['message' => 'Gaming payout '.$validated['event_reference']]]
+                : [],
             fulfillmentMode: $validated['fulfillment_mode'],
             deliveryPlan: $validated['delivery_plan'],
         ));
@@ -604,6 +610,7 @@ class CockpitCampaignWorksheetController extends Controller
             'reference' => $worksheet->reference,
             'profile' => $worksheet->profile,
             'name' => $worksheet->name,
+            'event_reference' => data_get($worksheet->metadata, 'gaming.event_reference'),
             'currency' => $worksheet->currency,
             'status' => $worksheet->status,
             'fulfillment_mode' => $worksheet->fulfillmentMode,
