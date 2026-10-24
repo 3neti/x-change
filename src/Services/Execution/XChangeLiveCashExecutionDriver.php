@@ -11,6 +11,7 @@ use LBHurtado\Voucher\Services\DefaultExecutionDriver;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Contracts\ExecutionCashDisbursementPollerContract;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
+use LBHurtado\XChange\Services\Campaigns\CampaignDirectTransferAuthority;
 use LBHurtado\XChange\Services\Claim\ClaimExecutionPreflight;
 use Throwable;
 
@@ -106,7 +107,11 @@ final class XChangeLiveCashExecutionDriver implements ExecutionDriverContract
         $claim = (array) data_get($context->meta, 'claim', []);
         $claim['inputs'] ??= (array) data_get($context->meta, 'inputs', []);
         $claim['mobile'] ??= $context->contact?->mobile;
-        app(ClaimExecutionPreflight::class)->assertExecutable($context->voucher, $claim);
+        if (data_get($context->correlation, 'scenario') === 'campaign_batch') {
+            app(CampaignDirectTransferAuthority::class)->assertAuthorized($context);
+        } else {
+            app(ClaimExecutionPreflight::class)->assertExecutable($context->voucher, $claim);
+        }
 
         return $this->defaultDriver->execute($normalized);
     }

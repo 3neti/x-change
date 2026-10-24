@@ -346,6 +346,9 @@ it('rejects a recovery claim whose verified otp mobile is not the frozen benefic
                 'otp' => [
                     'verified' => true,
                     'mobile' => '09173011987',
+                    'verification_reference' => 'recovery-wrong-beneficiary-otp',
+                    'verification_purpose' => 'claim',
+                    'verified_at' => now()->toIso8601String(),
                 ],
             ],
         ],

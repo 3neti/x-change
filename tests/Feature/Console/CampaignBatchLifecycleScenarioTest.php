@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
+use LBHurtado\Contact\Models\Contact;
+use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
@@ -19,9 +21,12 @@ use LBHurtado\XChange\Jobs\Campaigns\DispatchCampaignFeedbackJob;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioEngine;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRunOptions;
 use LBHurtado\XChange\Models\CampaignBatchFulfillmentOutbox;
+use LBHurtado\XChange\Models\ClaimValidationDecision;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\Campaigns\CampaignDirectTransferAuthority;
 use LBHurtado\XChange\Tests\Fakes\User;
+use Propaganistas\LaravelPhone\PhoneNumber;
 
 function campaignBatchLifecycleCommand(): Command
 {
@@ -432,6 +437,12 @@ it('executes an approved direct-transfer batch once through Treasury-backed Pay 
         ->and(VoucherClaim::query()->where('voucher_id', $voucher->getKey())->sole()->status)->toBe('succeeded')
         ->and(VoucherClaim::query()->where('voucher_id', $voucher->getKey())->sole()->disbursed_amount_minor)->toBe(2500)
         ->and(VoucherClaim::query()->where('voucher_id', $voucher->getKey())->sole()->remaining_balance_minor)->toBe(0);
+    expect(ClaimValidationDecision::query()->where('voucher_id', $voucher->getKey())->sole()->issues)
+        ->toContain([
+            'field' => 'campaign_authorization',
+            'code' => 'approved_direct_transfer',
+            'severity' => 'info',
+        ]);
     $provider->assertDisburseCalledTimes(1);
 
     $replay = app(LifecycleScenarioEngine::class)->run(
@@ -449,6 +460,27 @@ it('executes an approved direct-transfer batch once through Treasury-backed Pay 
         ),
     );
     expect($replay->payload['phase'])->toBe('fulfilled');
+    $provider->assertDisburseCalledTimes(1);
+
+    $fulfillment->forceFill(['status' => 'executing'])->save();
+    $changedDestination = ExecutionContextData::fromRedemption(
+        voucher: $voucher,
+        contact: Contact::fromPhoneNumber(new PhoneNumber('09170000011', 'PH')),
+        voucherCode: (string) $voucher->code,
+        meta: ['claim' => [
+            'mobile' => '09170000011',
+            'bank_account' => ['bank_code' => 'GCASH', 'account_number' => '09170000012'],
+            '_meta' => ['idempotency_key' => 'campaign-direct-transfer:'.$fulfillment->reference],
+        ]],
+        correlation: [
+            'scenario' => 'campaign_batch',
+            'authorization_reference' => (string) $fulfillment->authorization->reference,
+            'fulfillment_reference' => (string) $fulfillment->reference,
+            'idempotency_key' => 'campaign-direct-transfer:'.$fulfillment->reference,
+        ],
+    );
+    expect(fn () => app(CampaignDirectTransferAuthority::class)->assertAuthorized($changedDestination))
+        ->toThrow(RuntimeException::class, 'frozen destination is invalid');
     $provider->assertDisburseCalledTimes(1);
 });
 
