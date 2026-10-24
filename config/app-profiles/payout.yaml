@@ -1,0 +1,26 @@
+schema: x-change.app-profile.v1
+key: payout
+label: Payout
+home: salary_payout
+navigation:
+  - salary_payout
+  - gaming_payout
+  - ayuda_payout
+  - pay_code_activity
+journeys:
+  - key: salary_payout
+    label: Salary Payout
+    kind: issue_batch
+    instruction_contract: voucher
+  - key: gaming_payout
+    label: Gaming Payout
+    kind: issue_batch
+    instruction_contract: voucher
+  - key: ayuda_payout
+    label: Ayuda Payout
+    kind: issue_batch
+    instruction_contract: voucher
+  - key: pay_code_activity
+    label: Pay Code Activity
+    kind: inspect
+    instruction_contract: none

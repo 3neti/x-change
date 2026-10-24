@@ -1,0 +1,16 @@
+schema: x-change.app-profile.v1
+key: digital-marketing
+label: Digital Marketing
+home: campaign_distribution
+navigation:
+  - campaign_distribution
+  - campaign_activity
+journeys:
+  - key: campaign_distribution
+    label: Campaign Distribution
+    kind: issue_batch
+    instruction_contract: voucher
+  - key: campaign_activity
+    label: Campaign Activity
+    kind: inspect
+    instruction_contract: none

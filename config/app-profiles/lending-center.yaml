@@ -1,0 +1,21 @@
+schema: x-change.app-profile.v1
+key: lending-center
+label: Small-Scale Lending Center
+home: loan_disbursement
+navigation:
+  - loan_disbursement
+  - claim_disbursement
+  - disbursement_activity
+journeys:
+  - key: loan_disbursement
+    label: Loan Disbursement
+    kind: issue_single
+    instruction_contract: voucher
+  - key: claim_disbursement
+    label: Claim Disbursement
+    kind: claim
+    instruction_contract: voucher
+  - key: disbursement_activity
+    label: Disbursement Activity
+    kind: inspect
+    instruction_contract: none

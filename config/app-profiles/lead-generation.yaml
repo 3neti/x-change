@@ -1,0 +1,16 @@
+schema: x-change.app-profile.v1
+key: lead-generation
+label: Lead Generation
+home: lead_capture
+navigation:
+  - lead_capture
+  - lead_activity
+journeys:
+  - key: lead_capture
+    label: Lead Capture
+    kind: capture_and_qualify
+    instruction_contract: record
+  - key: lead_activity
+    label: Lead Activity
+    kind: inspect
+    instruction_contract: none

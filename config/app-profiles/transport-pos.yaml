@@ -1,0 +1,21 @@
+schema: x-change.app-profile.v1
+key: transport-pos
+label: Transport POS
+home: fare_collection
+navigation:
+  - fare_collection
+  - tap_activity
+  - collection_exception
+journeys:
+  - key: fare_collection
+    label: Fare Collection
+    kind: collect
+    instruction_contract: stored_value_collection
+  - key: tap_activity
+    label: Tap Activity
+    kind: inspect
+    instruction_contract: none
+  - key: collection_exception
+    label: Collection Exception
+    kind: resolve_exception
+    instruction_contract: none

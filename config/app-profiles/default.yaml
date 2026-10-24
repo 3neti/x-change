@@ -1,0 +1,11 @@
+schema: x-change.app-profile.v1
+key: default
+label: Default
+home: overview
+navigation:
+  - overview
+journeys:
+  - key: overview
+    label: Overview
+    kind: inspect
+    instruction_contract: none

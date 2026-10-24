@@ -1,0 +1,21 @@
+schema: x-change.app-profile.v1
+key: bank
+label: Bank Pay Code
+home: issue_pay_code
+navigation:
+  - issue_pay_code
+  - claim_pay_code
+  - pay_code_activity
+journeys:
+  - key: issue_pay_code
+    label: Issue Pay Code
+    kind: issue_single
+    instruction_contract: voucher
+  - key: claim_pay_code
+    label: Claim Pay Code
+    kind: claim
+    instruction_contract: voucher
+  - key: pay_code_activity
+    label: Pay Code Activity
+    kind: inspect
+    instruction_contract: none

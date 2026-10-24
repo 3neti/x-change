@@ -1,0 +1,16 @@
+schema: x-change.app-profile.v1
+key: opt-in
+label: Opt-In Products
+home: product_enrollment
+navigation:
+  - product_enrollment
+  - enrollment_activity
+journeys:
+  - key: product_enrollment
+    label: Product Enrollment
+    kind: enroll
+    instruction_contract: record
+  - key: enrollment_activity
+    label: Enrollment Activity
+    kind: inspect
+    instruction_contract: none

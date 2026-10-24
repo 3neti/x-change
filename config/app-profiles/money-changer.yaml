@@ -1,0 +1,21 @@
+schema: x-change.app-profile.v1
+key: money-changer
+label: Money Changer
+home: exchange_payout
+navigation:
+  - exchange_payout
+  - claim_exchange
+  - exchange_activity
+journeys:
+  - key: exchange_payout
+    label: Exchange Payout
+    kind: issue_single
+    instruction_contract: voucher
+  - key: claim_exchange
+    label: Claim Exchange
+    kind: claim
+    instruction_contract: voucher
+  - key: exchange_activity
+    label: Exchange Activity
+    kind: inspect
+    instruction_contract: none

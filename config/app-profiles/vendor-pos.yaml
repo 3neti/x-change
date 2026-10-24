@@ -1,0 +1,21 @@
+schema: x-change.app-profile.v1
+key: vendor-pos
+label: Vendor POS
+home: sale_collection
+navigation:
+  - sale_collection
+  - sale_activity
+  - collection_exception
+journeys:
+  - key: sale_collection
+    label: Sale Collection
+    kind: collect
+    instruction_contract: stored_value_collection
+  - key: sale_activity
+    label: Sale Activity
+    kind: inspect
+    instruction_contract: none
+  - key: collection_exception
+    label: Collection Exception
+    kind: resolve_exception
+    instruction_contract: none
