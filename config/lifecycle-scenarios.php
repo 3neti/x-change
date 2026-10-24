@@ -1065,6 +1065,35 @@ return [
             ],
         ],
 
+        'payment_voucher_explicit_value_flow' => [
+            'label' => 'Payment Voucher Explicit Value Flow',
+            'mode' => 'payment_voucher_collection',
+            'amount' => 0,
+            'target_amount' => 100,
+            'currency' => 'PHP',
+            'prefix' => 'PAY',
+            'mask' => '****',
+            'execution' => [
+                'driver' => 'payable_collection',
+                'metadata' => [
+                    'value_flow' => [
+                        'destination' => env(
+                            'XCHANGE_LIFECYCLE_VALUE_FLOW_DESTINATION',
+                            'account.mobile:'.env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987').'.client_funds',
+                        ),
+                    ],
+                ],
+            ],
+            'payment' => [
+                'provider' => env('X_CHANGE_PAYMENT_ATTEMPT_PROVIDER', 'netbank'),
+                'verify' => false,
+            ],
+            'meta' => [
+                'family' => 'payment',
+                'tags' => ['payable', 'collectible', 'value-flow', 'payment-attempt'],
+            ],
+        ],
+
         /*
         |--------------------------------------------------------------------------
         | Contract-bridge lifecycle scenarios
