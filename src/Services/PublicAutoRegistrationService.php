@@ -7,15 +7,15 @@ namespace LBHurtado\XChange\Services;
 use DateTimeImmutable;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\Contact\Models\Contact;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
+use LBHurtado\Wallet\Treasury\Data\TreasuryPositionData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionReleaseData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionReservationData;
-use LBHurtado\Wallet\Treasury\Data\TreasuryPositionData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
-use LBHurtado\Contact\Models\Contact;
-use LBHurtado\EmiCore\Data\Funding\ProviderPayerIdentityData;
 use LBHurtado\XChange\Actions\Auth\CreateNewMobileFirstUser;
 use LBHurtado\XChange\Actions\Funding\CreateFundingIntent;
 use LBHurtado\XChange\Actions\Funding\IssueFundingInstructions;
@@ -23,9 +23,11 @@ use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\Funding\CreateFundingIntentData;
+use LBHurtado\XChange\Data\Treasury\TreasuryProviderConnectionData;
 use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\PublicAutoRegistrationStatus;
+use LBHurtado\XChange\Jobs\Onboarding\SendPublicAutoRegistrationSmsJob;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\PublicAutoRegistration;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceTurnstileVerifier;
@@ -48,7 +50,7 @@ final readonly class PublicAutoRegistrationService
         private TreasuryPositionOperationContract $operations,
     ) {}
 
-    public function start(Model|Authenticatable $operator, string $idempotencyKey, ?\Illuminate\Http\Request $request = null): PublicAutoRegistration
+    public function start(Model|Authenticatable $operator, string $idempotencyKey, ?Request $request = null): PublicAutoRegistration
     {
         $request?->attributes->get('x_change_public_auto_register') === true && $this->turnstile->verify($request, 'public_auto_register');
         $amount = (int) config('x-change.public_auto_register.amount_minor', 10000);
@@ -98,7 +100,8 @@ final readonly class PublicAutoRegistrationService
             throw ValidationException::withMessages(['pin' => 'PIN must contain 4 to 8 digits.']);
         }
 
-        return DB::transaction(function () use ($registration, $pin): PublicAutoRegistration {
+        $activated = false;
+        $completed = DB::transaction(function () use ($registration, $pin, &$activated): PublicAutoRegistration {
             $locked = PublicAutoRegistration::query()->with('fundingIntent.settlement')->lockForUpdate()->findOrFail($registration->getKey());
             $intent = $locked->fundingIntent;
             if (! $intent instanceof FundingIntent || $intent->status !== FundingIntentStatus::Settled) {
@@ -165,8 +168,16 @@ final readonly class PublicAutoRegistrationService
                 ],
             ])->save();
 
+            $activated = true;
+
             return $locked->fresh(['fundingIntent']);
         });
+
+        if ($activated && (bool) config('x-change.public_auto_register.sms.enabled', false)) {
+            SendPublicAutoRegistrationSmsJob::dispatch($completed->reference)->afterCommit();
+        }
+
+        return $completed;
     }
 
     /** @return array<string, mixed> */
@@ -179,6 +190,7 @@ final readonly class PublicAutoRegistrationService
         if ($status !== $registration->status) {
             $registration->forceFill(['status' => $status, 'paid_at' => $intent?->settled_at ?? now()])->saveQuietly();
         }
+
         return [
             'reference' => $registration->reference,
             'status' => $status->value,
@@ -303,7 +315,7 @@ final readonly class PublicAutoRegistrationService
         return $operator;
     }
 
-    private function connection(FundingIntent $intent): \LBHurtado\XChange\Data\Treasury\TreasuryProviderConnectionData
+    private function connection(FundingIntent $intent): TreasuryProviderConnectionData
     {
         $configuredReference = trim((string) config('x-change.public_auto_register.treasury_connection_reference', ''));
 

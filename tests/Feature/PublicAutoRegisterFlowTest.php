@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use LBHurtado\EmiCore\Actions\Funding\StoreProviderWebhookReceipt;
 use LBHurtado\EmiCore\Data\Funding\ProviderWebhookReceiptData;
 use LBHurtado\EmiCore\Data\Funding\ProviderWebhookRequestData;
@@ -12,6 +13,7 @@ use LBHurtado\XChange\Actions\Funding\SimulateQrPhPayment;
 use LBHurtado\XChange\Actions\Funding\VerifyFundingWebhookReceipt;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingWebhookReceiptJob;
+use LBHurtado\XChange\Jobs\Onboarding\SendPublicAutoRegistrationSmsJob;
 use LBHurtado\XChange\Models\CommercialPrincipal;
 use LBHurtado\XChange\Models\PublicAutoRegistration;
 use LBHurtado\XChange\Services\Commercial\CommercialPrincipalProvisioningService;
@@ -20,8 +22,10 @@ use LBHurtado\XChange\Services\Funding\QrPhSimulatorFundingProviderAdapter;
 use LBHurtado\XChange\Services\Funding\StandingFundingSyncAdmission;
 use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 
-it('reproduces public auto-registration through its HTTP endpoints and mocked provider boundary', function () {
+it('queues account-ready sms only for a newly activated public registration', function (bool $smsEnabled) {
     Http::preventStrayRequests();
+    Queue::fake([SendPublicAutoRegistrationSmsJob::class]);
+    config()->set('x-change.public_auto_register.sms.enabled', $smsEnabled);
     config()->set('x-change.public_auto_register.provider', 'qrph_simulator');
     config()->set('x-change.onboarding.email_fallback_domain', 'example.test');
     config()->set('x-change.public_auto_register.amount_minor', 10_000);
@@ -116,4 +120,14 @@ it('reproduces public auto-registration through its HTTP endpoints and mocked pr
 
     expect(app(AccountBalanceReadModelContract::class)->balanceMinor($user, 'PHP'))->toBe(10_000)
         ->and(data_get($registration->metadata, 'initial_client_funding.operation_reference'))->toBeString();
-});
+
+    $this->postJson(
+        route('x-change.public-auto-register.complete', ['registration' => $reference]),
+        ['pin' => '1234'],
+    )->assertOk()->assertJsonPath('account.id', (string) $user->getKey());
+
+    Queue::assertPushed(SendPublicAutoRegistrationSmsJob::class, $smsEnabled ? 1 : 0);
+})->with([
+    'sms disabled by default' => false,
+    'sms enabled by host' => true,
+]);
