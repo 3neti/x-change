@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
 use LBHurtado\XChange\Models\CommercialOffering;
@@ -26,6 +27,10 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
+    if (isset($this->sidebarFixturePath)) {
+        File::delete($this->sidebarFixturePath);
+    }
+
     if (! isset($this->npmFixturePath)) {
         return;
     }
@@ -198,6 +203,13 @@ it('requires installer system-principal controls to travel together', function (
 });
 
 it('allows the installer to provision the sole fresh-database Account without a seeder', function () {
+    $sidebarPath = resource_path('js/components/AppSidebar.vue');
+    if (! File::exists($sidebarPath)) {
+        File::ensureDirectoryExists(dirname($sidebarPath));
+        expect(File::copy(__DIR__.'/../../../stubs/resources/js/components/AppSidebar.vue.stub', $sidebarPath))->toBeTrue();
+        $this->sidebarFixturePath = $sidebarPath;
+    }
+
     config()->set('x-change.deployment.profile', 'development');
     config()->set('x-change.treasury.connections', []);
     config()->set('x-change.treasury.legal_entity_reference', 'legal-entity:test');
