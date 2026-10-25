@@ -18,11 +18,13 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: bcmath, fileinfo, gd, intl, mbstring, pdo_sqlite, pcntl, zip
+          extensions: bcmath, fileinfo, gd, imagick, intl, mbstring, pdo_sqlite, pcntl, zip
           coverage: none
           tools: composer:v2
       - run: composer validate --strict --no-check-publish
       - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: mkdir -p vendor/orchestra/testbench-core/laravel/config/form-flow-drivers && cp config/form-flow-drivers/*.yaml vendor/orchestra/testbench-core/laravel/config/form-flow-drivers/
+      - run: composer test -- tests/Feature/Claim/StampPreviewTest.php tests/Feature/Claim/ClaimPaymentHandoffTest.php tests/Feature/Console/SystemPrincipalProvisioningTest.php --compact
       - run: composer test -- --parallel --processes=4 --compact
 
   frontend:

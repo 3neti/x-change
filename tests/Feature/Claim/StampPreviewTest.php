@@ -165,7 +165,7 @@ it('keeps the themed QR scannable in the exported Stamp', function (): void {
     $paper = imagecolorsforindex($image, imagecolorat($image, 964, 389));
     expect([$paper['red'], $paper['green'], $paper['blue']])->toBe([245, 239, 230]);
     imagedestroy($image);
-    $decoded = new QrReader($artifact->contents, QrReader::SOURCE_TYPE_BLOB, false);
+    $decoded = new QrReader($artifact->contents, QrReader::SOURCE_TYPE_BLOB);
     expect($decoded->text())->toContain((string) $voucher->code);
 });
 
@@ -217,7 +217,7 @@ it('pins issued provider identity and ignores recipient bank and subsequent defa
     $voucher->metadata = $metadata;
     $resolver = app(StampProviderIdentity::class);
     expect($resolver->forVoucher($voucher)['code'])->toBe('netbank');
-    $reader = new QrReader($artifact->contents, QrReader::SOURCE_TYPE_BLOB, false);
+    $reader = new QrReader($artifact->contents, QrReader::SOURCE_TYPE_BLOB);
     expect($reader->text())->toContain($voucher->code);
     $image = imagecreatefromstring($artifact->contents);
     $logo = imagecolorsforindex($image, imagecolorat($image, 89, 86));
@@ -317,7 +317,7 @@ it('shows artwork through the QR and its bounding box while keeping the exported
     $trim = imagecolorsforindex($image, imagecolorat($image, $x, $y));
     expect([$trim['red'], $trim['green'], $trim['blue']])->not->toBe([221, 187, 132]);
     imagedestroy($image);
-    $decoded = new QrReader($artifact->contents, QrReader::SOURCE_TYPE_BLOB, false);
+    $decoded = new QrReader($artifact->contents, QrReader::SOURCE_TYPE_BLOB);
     expect($decoded->text())->toContain((string) $voucher->code);
 })->with([
     ['cats', 6, 'bottom_right'], ['steampunk', 7, 'bottom_right'],
@@ -369,7 +369,7 @@ it('shows a branded sample identifier without using it as the draft QR destinati
     ])->assertOk()->assertJsonPath('identifier.label', '|| AA317 ||')->assertJsonPath('identifier.sample', true);
     expect($response->json('marker_bounds.y'))->toBeGreaterThanOrEqual($response->json('identifier.bounds.y') + $response->json('identifier.bounds.height'));
     $bytes = base64_decode(explode(',', $response->json('image'), 2)[1]);
-    $decoded = (new QrReader($bytes, QrReader::SOURCE_TYPE_BLOB, false))->text();
+    $decoded = (new QrReader($bytes, QrReader::SOURCE_TYPE_BLOB))->text();
     expect($decoded)->toContain('/x/claim')->not->toContain('AA317');
     expect(Voucher::count())->toBe($before);
     $this->postJson(route('x-change.stamps.preview'), [

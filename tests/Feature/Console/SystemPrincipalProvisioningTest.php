@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Console\Command;
 use Illuminate\Console\Events\CommandStarting;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
@@ -15,6 +16,7 @@ use LBHurtado\XChange\Services\Publication\PublicationVerifier;
 use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 use LBHurtado\XChange\Tests\Fakes\UncastUser;
 use LBHurtado\XChange\Tests\Fakes\User;
+use Symfony\Component\Console\Output\BufferedOutput;
 
 beforeEach(function (): void {
     config()->set('x-change.onboarding.issuer_model', User::class);
@@ -219,7 +221,8 @@ it('allows the installer to provision the sole fresh-database Account without a 
         $this->npmFixturePath,
     ));
 
-    $this->artisan('x-change:install', [
+    $consoleOutput = new BufferedOutput;
+    $exitCode = Artisan::call('x-change:install', [
         '--fresh-database' => true,
         '--confirm-database-reset' => true,
         '--provision-system-principal' => true,
@@ -236,9 +239,11 @@ it('allows the installer to provision the sole fresh-database Account without a 
         '--no-x-ray' => true,
         '--defer-operational-manifest' => true,
         '--no-interaction' => true,
-    ])
-        ->expectsOutputToContain('X-Change installed successfully.')
-        ->assertSuccessful();
+    ], $consoleOutput);
+
+    $output = $consoleOutput->fetch();
+    $this->assertSame(0, $exitCode, $output);
+    expect($output)->toContain('X-Change installed successfully.');
 
     $principal = User::query()->sole();
 
