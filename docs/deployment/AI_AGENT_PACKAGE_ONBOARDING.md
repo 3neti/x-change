@@ -139,6 +139,9 @@ git -C /Users/rli/PhpstormProjects/x-change-sandbox status --short
 ```
 
 6. Confirm the current branch and recent commits.
+   For package changes, create an isolated worktree from the fetched GitHub
+   `main` as described in the [branch SOP](./PACKAGE_DEVELOPMENT_WORKFLOW.md#branch-and-pull-request-sop).
+   Do not switch or pull a dirty checkout to begin a task.
 7. Search for existing components, actions, contracts, and tests before
    creating new ones.
 8. Preserve all unrelated changes and untracked files.
@@ -230,17 +233,19 @@ Unless the specific task says otherwise:
 
 The normal reviewed release sequence is:
 
-1. Implement and test in the package repository.
-2. Commit the tested package slice locally.
-3. Report for review.
-4. After explicit approval, push the package commit.
-5. Create a new immutable package tag; never move an existing tag.
-6. Update the host through Composer.
-7. Publish the tagged package's build inputs.
-8. Run host tests, asset doctor, and the production build.
-9. Commit the host lockfile and generated asset snapshot separately.
-10. Deploy the tested host commit.
-11. Perform browser acceptance against the deployed environment.
+1. Implement and test in an isolated package branch and worktree.
+2. Commit the tested package slice locally and report it for review.
+3. After explicit authorization, push the branch and open a pull request.
+4. Require the pull request's PHP and Vue CI checks to pass. The repository
+   owner reviews the diff and performs the squash merge, or explicitly
+   delegates that PR's merge to an agent after its gates pass.
+5. Verify CI on the merged `main` commit before creating a new immutable
+   package tag. Never move an existing tag.
+6. Update the host through Composer and publish the tagged package's build
+   inputs.
+7. Run host tests, asset doctor, and the production build.
+8. Commit the host lockfile and generated asset snapshot separately.
+9. Deploy the tested host commit and perform browser acceptance.
 
 A task-specific instruction may narrow these permissions further. It never
 silently broadens them.

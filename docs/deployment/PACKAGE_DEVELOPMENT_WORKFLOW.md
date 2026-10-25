@@ -32,18 +32,34 @@ Use a sibling package workspace rather than editing the host or `vendor/`:
 cd /Users/rli/PhpstormProjects/packages
 git clone git@github.com:3neti/x-change.git x-change
 cd x-change
-git switch -c codex/short-purpose
 ```
 
-If the repository already exists:
+## Branch and pull request SOP
+
+Treat every task as an isolated branch, including AI-agent tasks. Before
+editing, read `AGENTS.md`, inspect `git status --short --branch`, check the
+worktree owner, and identify any unpushed commits. Preserve all existing work.
+The shared local `main` may be dirty or behind GitHub; never switch it, pull
+into it, reset it, clean it, or use it as the branch base.
+
+Fetch GitHub `main`, then create a uniquely named worktree from that remote
+ref. Use `feature/<purpose>`, `fix/<purpose>`, or `docs/<purpose>` for the branch.
+In a clone whose GitHub remote is named `origin`:
 
 ```bash
 cd /Users/rli/PhpstormProjects/packages/x-change
 git fetch origin --tags
-git switch main
-git pull --ff-only
-git switch -c codex/short-purpose
+git worktree add -b feature/short-purpose ../x-change-short-purpose origin/main
+cd ../x-change-short-purpose
+git status --short --branch
 ```
+
+If the branch or worktree name is taken, choose another descriptive name.
+Do not reuse another agent's worktree. Keep the task's changes and commits in
+that worktree. If a task starts from an existing branch, confirm its current
+remote base and ownership before continuing. Never cherry-pick an unpushed
+local commit simply because its subject resembles a GitHub commit; compare
+content and ancestry first.
 
 Then:
 
@@ -51,10 +67,29 @@ Then:
 2. Confirm the package and host worktrees before editing.
 3. Change the owning package source, not its installed or published copies.
 4. Add focused tests and run them with the package's documented PHP memory limit.
-5. Commit each tested slice in the package repository.
-6. Push the branch for review or integration testing.
-7. Merge to `main`, rerun release acceptance, and create a new immutable tag.
-8. Update the host to that tag, republish required UI build inputs, and run host acceptance.
+5. Commit each tested slice on the task branch; check `git diff --check` and
+   confirm the worktree is clean before handoff.
+6. Push only when the task authorizes it. Open a pull request to GitHub `main`
+   and report its scope, changed contracts, tests, and risks. Require the PR's
+   `PHP tests` and `Vue tests` checks to pass. A branch push run alone is not
+   sufficient.
+7. The repository owner reviews and squash-merges the PR, or explicitly
+   delegates that specific PR's merge to an agent after its checks pass. AI
+   agents using the shared `3neti` credential do not merge by default or
+   bypass the main ruleset. GitHub cannot count a PR author's own approval, so
+   the ruleset requires PR and CI without an approval count; the owner controls
+   the final merge.
+8. Verify CI on the resulting `main` commit, then perform release acceptance
+   and create a new immutable tag when the release is authorized.
+9. Update the host to that tag, republish required UI build inputs, and run
+   host acceptance.
+
+After merge, verify the PR is merged and its diff is present on `main` before
+deleting its remote ref. A squash merge changes commit identity, so do not
+rely on `--merged` alone. Remove
+only the task's own worktree after confirming it is clean. Audit divergent
+branches and their tags before deleting them; never bulk-merge old release
+branches or discard another agent's work.
 
 Example package verification:
 
@@ -116,10 +151,10 @@ Example release:
 
 ```bash
 cd /Users/rli/PhpstormProjects/packages/x-change
-git switch main
-git pull --ff-only
+git fetch origin --tags
+git worktree add --detach ../x-change-release origin/main
+cd ../x-change-release
 git tag -a v1.0.0-beta.5 -m "x-change v1.0.0-beta.5"
-git push origin main
 git push origin v1.0.0-beta.5
 ```
 
@@ -167,6 +202,8 @@ An AI agent working on package code must:
 6. keep credentials out of source, tests, logs, `.env.example`, commits, and prompts;
 7. commit only a tested slice and name the owning repository in its hand-off;
 8. push a branch or tag only after its verification gate passes;
+   open a PR for branch changes and merge only with explicit PR-specific
+   authorization after required checks pass;
 9. restore the host to tagged Composer resolution before final acceptance;
 10. report any remaining local path, mutable branch, stale UI mirror, or published configuration override.
 

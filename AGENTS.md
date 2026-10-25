@@ -8,6 +8,18 @@ before inspecting or changing code. It defines repository ownership,
 generated-host boundaries, local integration, verification, and release
 authority. The host and its `vendor/` tree are never durable package source.
 
+## Branch and pull request discipline
+
+Read the [branch SOP](./docs/deployment/PACKAGE_DEVELOPMENT_WORKFLOW.md#branch-and-pull-request-sop)
+before changing package source. Start each task in its own branch and isolated
+worktree from the current GitHub `main`. Never switch, pull, reset, or clean a
+checkout containing another agent's work. Check status and branch ownership
+before editing; preserve uncommitted and unpushed work. Push only with task
+authorization and use a pull request with required CI. The repository owner
+performs the final merge unless they explicitly delegate that PR's merge to an
+agent after its gates pass. A passing branch run does not replace PR checks or
+post-merge verification.
+
 ## Setup and deployment
 
 Use [DEPLOYMENT.md](./DEPLOYMENT.md) as the canonical deployment runbook.
