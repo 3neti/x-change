@@ -217,5 +217,31 @@ function legacyTimestampPrecisionLossInspection(): array
         claimant: $recipient,
     );
 
+    $previousHash = $integrity['hash'];
+    foreach (ExecutionJournalEntry::query()->where('id', '>', $inspection->getKey())->orderBy('id')->get() as $entry) {
+        $entryData = ExecutionJournalEntryData::fromArray([
+            'reference_number' => $entry->reference_number,
+            'event_type' => $entry->event_type,
+            'occurred_at' => $entry->occurred_at,
+            'actor' => $entry->actor,
+            'subject' => $entry->subject,
+            'money' => $entry->money,
+            'references' => $entry->references,
+            'payload' => $entry->payload,
+            'integrity' => $entry->integrity,
+            'metadata' => $entry->metadata,
+            'idempotency_key' => $entry->idempotency_key,
+        ]);
+        $entryIntegrity = $entry->integrity;
+        $entryIntegrity['previous_hash'] = $previousHash;
+        $entryIntegrity['hash'] = app(ExecutionJournalIntegrityHasher::class)
+            ->hash($entryData, ['previous_hash' => $previousHash]);
+        DB::table('execution_journal_entries')->where('id', $entry->getKey())->update([
+            'integrity' => json_encode($entryIntegrity, JSON_THROW_ON_ERROR),
+        ]);
+        $previousHash = $entryIntegrity['hash'];
+    }
+    DB::table('execution_journal_heads')->where('id', 1)->update(['current_hash' => $previousHash]);
+
     return [$issuance, $inspection->fresh()];
 }

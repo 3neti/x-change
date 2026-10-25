@@ -11,6 +11,7 @@ use LBHurtado\Voucher\Exceptions\VoucherRedemptionContractViolationException;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
+use LBHurtado\XChange\Exceptions\IncompleteClaimEvidence;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 beforeEach(function () {
@@ -19,6 +20,8 @@ beforeEach(function () {
     date_default_timezone_set('Asia/Manila');
     Date::setTestNow();
     CarbonImmutable::setTestNow();
+
+    provisionTestCommercialOfferings();
 
     $this->issuer = actingAsTestUser();
     $this->vouchers = app(VoucherAccessContract::class);
@@ -42,6 +45,11 @@ function makeClaimPayload(array $overrides = []): array
         ],
         'inputs' => [],
     ], $overrides);
+}
+
+function validClaimEvidenceImage(): string
+{
+    return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
 }
 
 it('persists starts_at on generated voucher', function () {
@@ -154,7 +162,7 @@ it('requires configured input fields before completion', function () {
                 'name' => 'Juan Dela Cruz',
             ],
         ])
-    ))->toThrow(RedemptionException::class, 'Missing required fields: Email and Birth Date.');
+    ))->toThrow(IncompleteClaimEvidence::class, 'Required claim evidence is incomplete: email, birth_date.');
 });
 
 /** new tests */
@@ -268,8 +276,8 @@ it('requires otp when configured', function () {
         $voucher,
         makeClaimPayload()
     ))->toThrow(
-        RedemptionException::class,
-        'Missing required fields: Otp.'
+        IncompleteClaimEvidence::class,
+        'Required claim evidence is incomplete: otp.'
     );
 });
 
@@ -291,7 +299,10 @@ it('accepts otp when configured and provided', function () {
             'inputs' => [
                 'otp' => [
                     'otp_code' => '123456',
+                    'verified' => true,
                     'verified_at' => now()->toIso8601String(),
+                    'verification_reference' => 'simulation:redemption-contract',
+                    'verification_purpose' => 'form_flow.otp',
                 ],
             ],
         ])
@@ -312,8 +323,8 @@ it('requires signature when configured', function () {
         $voucher,
         makeClaimPayload()
     ))->toThrow(
-        VoucherRedemptionContractViolationException::class,
-        'Voucher redemption contract validation failed.'
+        IncompleteClaimEvidence::class,
+        'Required claim evidence is incomplete: signature.'
     );
 });
 
@@ -329,7 +340,7 @@ it('accepts signature when configured and provided', function () {
         $voucher,
         makeClaimPayload([
             'inputs' => [
-                'signature' => 'data:image/png;base64,DEMO_SIGNATURE',
+                'signature' => validClaimEvidenceImage(),
             ],
         ])
     );
@@ -349,8 +360,8 @@ it('requires selfie when configured', function () {
         $voucher,
         makeClaimPayload()
     ))->toThrow(
-        VoucherRedemptionContractViolationException::class,
-        'Voucher redemption contract validation failed.'
+        IncompleteClaimEvidence::class,
+        'Required claim evidence is incomplete: selfie.'
     );
 });
 
@@ -366,7 +377,7 @@ it('accepts selfie when configured and provided', function () {
         $voucher,
         makeClaimPayload([
             'inputs' => [
-                'selfie' => 'data:image/jpeg;base64,DEMO_SELFIE',
+                'selfie' => validClaimEvidenceImage(),
             ],
         ])
     );
@@ -386,8 +397,8 @@ it('requires location when configured', function () {
         $voucher,
         makeClaimPayload()
     ))->toThrow(
-        RedemptionException::class,
-        'Location data is required for this voucher.'
+        IncompleteClaimEvidence::class,
+        'Required claim evidence is incomplete: location.'
     );
 });
 
@@ -404,8 +415,8 @@ it('accepts location when configured and provided', function () {
         makeClaimPayload([
             'inputs' => [
                 'location' => [
-                    'lat' => 14.5995,
-                    'lng' => 120.9842,
+                    'latitude' => 14.5995,
+                    'longitude' => 120.9842,
                 ],
             ],
         ])
@@ -434,8 +445,8 @@ it('blocks redemption when location validation is configured and claimant is out
         makeClaimPayload([
             'inputs' => [
                 'location' => [
-                    'lat' => 14.6095,
-                    'lng' => 120.9942,
+                    'latitude' => 14.6095,
+                    'longitude' => 120.9942,
                 ],
             ],
         ])
@@ -465,8 +476,8 @@ it('accepts redemption when location validation is configured and claimant is wi
         makeClaimPayload([
             'inputs' => [
                 'location' => [
-                    'lat' => 14.59955,
-                    'lng' => 120.98425,
+                    'latitude' => 14.59955,
+                    'longitude' => 120.98425,
                 ],
             ],
         ])
@@ -487,8 +498,8 @@ it('requires kyc when configured', function () {
         $voucher,
         makeClaimPayload()
     ))->toThrow(
-        RedemptionException::class,
-        'KYC verification is required but not approved. Please complete identity verification.'
+        IncompleteClaimEvidence::class,
+        'Required claim evidence is incomplete: kyc.'
     );
 });
 

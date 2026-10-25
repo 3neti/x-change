@@ -18,6 +18,7 @@ beforeEach(function () {
     Artisan::call('xchange:lifecycle:prepare', [
         '--seed' => true,
     ]);
+    provisionTestCommercialOfferings();
 });
 
 it('runs the turnkey mobile boot scenario without voucher issuance', function () {

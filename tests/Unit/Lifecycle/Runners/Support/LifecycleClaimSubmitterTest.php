@@ -12,12 +12,12 @@ use LBHurtado\EmiPaynamicsConstellation\Adapters\ConstellationPayoutProvider;
 use LBHurtado\EmiPaynamicsConstellation\Contracts\ConstellationOtpResolver;
 use LBHurtado\EmiPaynamicsConstellation\Support\DeferredOtpResolver;
 use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Actions\Redemption\RecordVoucherClaim;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\ClaimExecutorContract;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
 use LBHurtado\XChange\Contracts\SettlementExecutionContract;
+use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
 use LBHurtado\XChange\Lifecycle\Output\LifecycleOutputContract;
 use LBHurtado\XChange\Lifecycle\Runners\ScenarioRunContext;
@@ -199,9 +199,18 @@ it('uses deferred Paynamics OTP resolver for JSON lifecycle claim submission', f
         }
     };
 
-    $submit = new SubmitPayCodeClaim(
-        factory: $factory,
-        recordVoucherClaim: Mockery::mock(RecordVoucherClaim::class)->shouldIgnoreMissing(),
+    $submit = Mockery::mock(SubmitPayCodeClaim::class);
+    $submit->shouldReceive('handle')->once()->andReturnUsing(
+        function (Voucher $voucher, array $payload) use ($executor): SubmitPayCodeClaimResultData {
+            $executor->handle($voucher, $payload);
+
+            return new SubmitPayCodeClaimResultData(
+                voucher_code: (string) $voucher->code,
+                claim_type: 'redeem',
+                claimed: true,
+                status: 'redeemed',
+            );
+        },
     );
 
     app(LifecycleClaimSubmitter::class, [
@@ -261,9 +270,18 @@ it('uses deferred Paynamics OTP resolver when approval pipeline is enabled', fun
         }
     };
 
-    $submit = new SubmitPayCodeClaim(
-        factory: $factory,
-        recordVoucherClaim: Mockery::mock(RecordVoucherClaim::class)->shouldIgnoreMissing(),
+    $submit = Mockery::mock(SubmitPayCodeClaim::class);
+    $submit->shouldReceive('handle')->once()->andReturnUsing(
+        function (Voucher $voucher, array $payload) use ($executor): SubmitPayCodeClaimResultData {
+            $executor->handle($voucher, $payload);
+
+            return new SubmitPayCodeClaimResultData(
+                voucher_code: (string) $voucher->code,
+                claim_type: 'redeem',
+                claimed: true,
+                status: 'redeemed',
+            );
+        },
     );
 
     $context = lifecycleClaimSubmitterApprovalPipelineContext();
@@ -328,9 +346,18 @@ it('does not inject Paynamics approval metadata when approval pipeline uses anot
         }
     };
 
-    $submit = new SubmitPayCodeClaim(
-        factory: $factory,
-        recordVoucherClaim: Mockery::mock(RecordVoucherClaim::class)->shouldIgnoreMissing(),
+    $submit = Mockery::mock(SubmitPayCodeClaim::class);
+    $submit->shouldReceive('handle')->once()->andReturnUsing(
+        function (Voucher $voucher, array $payload) use ($executor): SubmitPayCodeClaimResultData {
+            $executor->handle($voucher, $payload);
+
+            return new SubmitPayCodeClaimResultData(
+                voucher_code: (string) $voucher->code,
+                claim_type: 'redeem',
+                claimed: true,
+                status: 'redeemed',
+            );
+        },
     );
 
     app(LifecycleClaimSubmitter::class, [

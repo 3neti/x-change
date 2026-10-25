@@ -26,6 +26,10 @@ beforeEach(function () {
     ]);
 });
 
+beforeEach(function (): void {
+    provisionTestCommercialOfferings();
+});
+
 it('records execution result handoff into x-journal during lifecycle scenario execution', function () {
     $exitCode = Artisan::call('xchange:lifecycle:run', [
         'scenario' => 'execution_settlement_envelope_contract_demo',
@@ -33,7 +37,10 @@ it('records execution result handoff into x-journal during lifecycle scenario ex
     ]);
 
     $json = json_decode(Artisan::output(), true);
-    $entry = ExecutionJournalEntry::query()->sole();
+    $entry = ExecutionJournalEntry::query()
+        ->where('event_type', 'execution.result.recorded')
+        ->where('subject_id', data_get($json, 'voucher_code'))
+        ->sole();
 
     expect($exitCode)->toBe(0)
         ->and(data_get($json, 'execution.handoffs.blocks_execution'))->toBeFalse()

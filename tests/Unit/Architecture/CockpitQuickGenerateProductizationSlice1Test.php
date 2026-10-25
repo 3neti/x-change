@@ -23,8 +23,7 @@ it('documents quick generate productization slice one', function (): void {
         ->toContain('cockpit-quick-generate-productized-result-card')
         ->toContain('generationSummary')
         ->toContain('Generated through the existing x-change issuance')
-        ->toContain('handoff. Cockpit presents the result')
-        ->toContain('copy the beneficiary URL')
+        ->toContain('Copy beneficiary URL')
         ->toContain('approved external')
         ->toContain('distribution workflow.');
 

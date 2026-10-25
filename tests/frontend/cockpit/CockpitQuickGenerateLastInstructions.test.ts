@@ -4,6 +4,7 @@ import CockpitQuickGenerateSubmitPanel from '../../../resources/js/cockpit/compo
 import { cockpitQuickGenerateTemplates } from '../../../resources/js/cockpit/quickGenerateDefaults';
 
 vi.mock('@inertiajs/vue3', () => ({
+    usePage: () => ({ props: {} }),
     Link: {
         props: ['href'],
         template: '<a :href="href?.url ?? href"><slot /></a>',
@@ -341,7 +342,7 @@ describe('Quick Generate last instructions', () => {
         expect(preview.cash.validation).not.toHaveProperty('secret');
         expect(preview.cash.validation).not.toHaveProperty('mobile');
         expect(preview.inputs).toEqual({
-            fields: ['mobile', 'signature', 'name'],
+            fields: ['mobile', 'signature', 'kyc', 'name'],
             requirements: ['kyc', 'otp'],
         });
         expect(preview.rider).toMatchObject({

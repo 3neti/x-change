@@ -19,6 +19,7 @@ beforeEach(function () {
     Artisan::call('xchange:lifecycle:prepare', [
         '--seed' => true,
     ]);
+    provisionTestCommercialOfferings();
 });
 
 it('runs a legacy lifecycle scenario through issuance successfully', function () {

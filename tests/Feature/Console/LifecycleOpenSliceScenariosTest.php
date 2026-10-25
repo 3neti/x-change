@@ -14,7 +14,10 @@ beforeEach(function () {
     config([
         'x-change.lifecycle.defaults.user_model' => FakeLifecycleUser::class,
         'x-change.withdrawal.open_slice_min_interval_seconds' => 0,
+        'x-change.payout.provider' => 'manual',
     ]);
+
+    bindTestManualSettlementRails();
 
     expect(config('x-change.lifecycle.defaults.user_model'))->toBe(FakeLifecycleUser::class);
     expect(class_exists((string) config('x-change.lifecycle.defaults.user_model')))->toBeTrue();
@@ -51,6 +54,10 @@ function fastForwardScenario(string $key): void
 
     config()->set("x-change.lifecycle.scenarios.{$key}", $scenario);
 }
+
+beforeEach(function (): void {
+    provisionTestCommercialOfferings();
+});
 
 it('runs the divisible open two slices scenario successfully', function () {
     $exitCode = Artisan::call('xchange:lifecycle:run', [

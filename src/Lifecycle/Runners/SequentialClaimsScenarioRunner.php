@@ -73,6 +73,8 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
                 scenario: $scenario,
                 claim: $claim,
                 mobile: $claimMobile,
+                voucherCode: (string) $context->voucher->code,
+                claimKey: (string) $claimKey,
             );
 
             try {
@@ -225,15 +227,15 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
     private function resolveClaimMobile(array $scenario, array $claim, string $defaultMobile): string
     {
         return (string) (
-        data_get($claim, 'mobile')
-            ?: data_get($claim, 'claim.mobile')
-            ?: data_get($scenario, 'claim.mobile')
-                ?: data_get($scenario, 'mobile')
-                    ?: $defaultMobile
+            data_get($claim, 'mobile')
+                ?: data_get($claim, 'claim.mobile')
+                ?: data_get($scenario, 'claim.mobile')
+                    ?: data_get($scenario, 'mobile')
+                        ?: $defaultMobile
         );
     }
 
-    private function buildClaimPayload(array $scenario, array $claim, string $mobile): array
+    private function buildClaimPayload(array $scenario, array $claim, string $mobile, string $voucherCode, string $claimKey): array
     {
         $payload = array_replace_recursive(
             [
@@ -251,6 +253,10 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
 
         if (data_get($payload, 'amount') !== null) {
             $payload['amount'] = (float) data_get($payload, 'amount');
+        }
+
+        if (! filled(data_get($payload, '_meta.idempotency_key'))) {
+            data_set($payload, '_meta.idempotency_key', 'lifecycle-claim:'.$voucherCode.':'.$claimKey);
         }
 
         return $payload;

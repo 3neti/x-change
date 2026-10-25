@@ -70,6 +70,7 @@ function affiliationTestVoucher(string $code): Voucher
         'state' => 'active',
         'metadata' => [
             'instructions' => [
+                ...validVoucherInstructions(amount: 1)->toArray(),
                 'onboarding' => true,
             ],
         ],
@@ -88,6 +89,7 @@ function affiliationOnboardingContext(Voucher $voucher, string $mobile): Executi
                 'mobile' => $mobile,
                 'otp' => [
                     'mobile' => $mobile,
+                    'verified' => true,
                     'verified_at' => now()->toIso8601String(),
                     'verification_reference' => 'otp-affiliation-live-path',
                     'verification_purpose' => 'onboarding.account',

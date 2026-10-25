@@ -25,6 +25,10 @@ function prepareEngineLifecycleIssuer(): FakeLifecycleUser
     return $issuer;
 }
 
+beforeEach(function (): void {
+    provisionTestCommercialOfferings();
+});
+
 it('returns failure result for unknown lifecycle scenario', function () {
     $command = new class extends Command
     {

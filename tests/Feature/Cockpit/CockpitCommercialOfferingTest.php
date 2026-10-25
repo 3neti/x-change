@@ -256,7 +256,7 @@ it('submits and independently publishes a new offering from the Cockpit', functi
 
     expect($pending->status)->toBe(CommercialOfferingStatus::PendingApproval)
         ->and($pending->created_by_id)->toBe($maker->getKey())
-        ->and($pending->offering()->catalog->version)->toBe(4)
+        ->and($pending->offering()->catalog->version)->toBe(5)
         ->and(collect($pending->offering()->catalog->items)
             ->firstWhere('reference', 'voucher_type.payable')?->unitPriceMinor)->toBe(0)
         ->and(collect($pending->offering()->catalog->items)
@@ -285,7 +285,7 @@ it('submits and independently publishes a new offering from the Cockpit', functi
 
     expect($pending->currentActivation()->exists())->toBeTrue()
         ->and($economics?->commercial_offering_id)->toBe($pending->getKey())
-        ->and($economics?->economics()->catalogVersion)->toBe(4)
+        ->and($economics?->economics()->catalogVersion)->toBe(5)
         ->and(collect($economics?->economics()->components)
             ->firstWhere('componentReference', 'voucher_type.payable')?->isBillable())->toBeFalse()
         ->and(collect($economics?->economics()->components)
@@ -315,7 +315,7 @@ it('retains the catalog version when a new offering does not change prices', fun
         ->where('status', CommercialOfferingStatus::PendingApproval->value)
         ->sole();
 
-    expect($pending->offering()->catalog->version)->toBe(3);
+    expect($pending->offering()->catalog->version)->toBe(4);
 });
 
 it('reclassifies eligible component fees when Product revenue economics is configured', function (): void {

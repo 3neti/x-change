@@ -5,6 +5,10 @@ declare(strict_types=1);
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 
+beforeEach(function (): void {
+    provisionTestCommercialOfferings();
+});
+
 it('logs generate requested and succeeded events', function () {
     $user = actingAsTestUser(1_000_000);
 

@@ -54,6 +54,10 @@ beforeEach(function () {
     ]);
 });
 
+beforeEach(function (): void {
+    provisionTestCommercialOfferings();
+});
+
 it('records a sanitized post pipeline execution handoff summary into x-journal', function () {
     $exitCode = Artisan::call('xchange:lifecycle:run', [
         'scenario' => 'execution_settlement_envelope_contract_demo',
@@ -62,6 +66,8 @@ it('records a sanitized post pipeline execution handoff summary into x-journal',
 
     $json = json_decode(Artisan::output(), true);
     $entries = ExecutionJournalEntry::query()
+        ->where('subject_id', data_get($json, 'voucher_code'))
+        ->whereIn('event_type', ['execution.result.recorded', 'execution.handoff.summary.recorded'])
         ->orderBy('id')
         ->get();
     $resultEntry = $entries->firstWhere('event_type', 'execution.result.recorded');

@@ -246,7 +246,7 @@ it('requires independent approval then pays the requester-owned PAYABLE once fro
         ->toBe(250_000);
 
     fakePayoutProvider()->assertNoDisbursementAttempted();
-    Event::assertDispatchedTimes(FundingProjectionChanged::class, 1);
+    Event::assertDispatchedTimes(FundingProjectionChanged::class, 2);
 });
 
 it('does not allow system Treasury payment before maker-checker approval', function () {

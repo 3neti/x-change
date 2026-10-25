@@ -6,9 +6,11 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Tests\Fakes\User;
+use Symfony\Component\Console\Output\BufferedOutput;
 
 beforeEach(function () {
-    config()->set('x-change.lifecycle.defaults.user_model', \LBHurtado\XChange\Tests\Fakes\User::class);
+    config()->set('x-change.lifecycle.defaults.user_model', User::class);
     config()->set('x-change.lifecycle.defaults.system_user_email', 'system@example.test');
     config()->set('x-change.lifecycle.defaults.test_user_email', 'lester@hurtado.ph');
     config()->set('x-change.lifecycle.defaults.test_user_mobile', '09173011987');
@@ -24,22 +26,27 @@ beforeEach(function () {
     expect(Schema::hasTable('contacts'))->toBeTrue();
 });
 
+beforeEach(function (): void {
+    provisionTestCommercialOfferings();
+});
+
 it('records a reconciliation entry that requires review', function () {
-    fakePayoutProvider()->willReturnFailedResult(
+    fakePayoutProvider()->willReturnPendingResult(
         transactionId: 'REVIEW-REQ-001',
         uuid: '11111111-1111-1111-1111-111111111111',
         provider: 'fake',
-    );
+    )->willResolveCheckStatusAsFailed(transactionId: 'REVIEW-REQ-001', provider: 'fake');
 
+    $buffer = new BufferedOutput;
     $exitCode = Artisan::call('xchange:lifecycle:run', [
         'scenario' => 'reconciliation_review_required',
         '--timeout' => 1,
         '--poll' => 1,
         '--accept-pending' => true,
         '--json' => true,
-    ]);
+    ], $buffer);
 
-    $output = Artisan::output();
+    $output = $buffer->fetch();
     $payload = $output !== '' ? json_decode($output, true) : null;
 
     $voucher = Voucher::query()->latest('id')->first();
@@ -48,7 +55,7 @@ it('records a reconciliation entry that requires review', function () {
         ->latest('id')
         ->first();
 
-    expect($exitCode)->toBe(0);
+    expect($exitCode)->toBe(0, $output);
     expect($voucher)->not->toBeNull();
     expect($voucher->redeemed_at)->not->toBeNull();
 
@@ -64,21 +71,22 @@ it('records a reconciliation entry that requires review', function () {
 });
 
 it('records provider failure metadata for reconciliation follow-up', function () {
-    fakePayoutProvider()->willReturnFailedResult(
+    fakePayoutProvider()->willReturnPendingResult(
         transactionId: 'PROVIDER-FAIL-001',
         uuid: '22222222-2222-2222-2222-222222222222',
         provider: 'fake',
-    );
+    )->willResolveCheckStatusAsFailed(transactionId: 'PROVIDER-FAIL-001', provider: 'fake');
 
+    $buffer = new BufferedOutput;
     $exitCode = Artisan::call('xchange:lifecycle:run', [
         'scenario' => 'reconciliation_provider_failed_recorded',
         '--timeout' => 1,
         '--poll' => 1,
         '--accept-pending' => true,
         '--json' => true,
-    ]);
+    ], $buffer);
 
-    $output = Artisan::output();
+    $output = $buffer->fetch();
     $payload = $output !== '' ? json_decode($output, true) : null;
 
     $voucher = Voucher::query()->latest('id')->first();
@@ -87,7 +95,7 @@ it('records provider failure metadata for reconciliation follow-up', function ()
         ->latest('id')
         ->first();
 
-    expect($exitCode)->toBe(0);
+    expect($exitCode)->toBe(0, $output);
     expect($voucher)->not->toBeNull();
     expect($voucher->redeemed_at)->not->toBeNull();
 

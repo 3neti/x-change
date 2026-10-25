@@ -102,6 +102,7 @@ it('resolves settlement type from persisted voucher instruction metadata', funct
     $voucher = issueVoucher(validVoucherInstructions(100.00, 'INSTAPAY', [
         'voucher_type' => 'settlement',
         'target_amount' => 100.00,
+        'metadata' => ['collection_wallet_id' => 'test-collection-wallet'],
     ]));
 
     $voucher = Voucher::query()

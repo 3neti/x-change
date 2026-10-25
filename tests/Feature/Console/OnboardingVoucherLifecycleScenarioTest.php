@@ -43,6 +43,10 @@ beforeEach(function (): void {
     );
 });
 
+beforeEach(function (): void {
+    provisionTestCommercialOfferings();
+});
+
 it('reuses the system issuer balance without inflating it on repeat', function (): void {
     $issuer = User::query()->where('email', 'system@example.test')->sole();
     $balanceBefore = (float) $issuer->wallet->balanceFloat;

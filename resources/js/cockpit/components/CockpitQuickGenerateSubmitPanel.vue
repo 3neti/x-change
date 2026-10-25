@@ -9654,7 +9654,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
           </div>
           <Teleport
             v-if="
-              riderDesignTeleportReady
+              riderDesignTeleportReady && canvasView === 'design'
             "
             to="#quick-generate-rider-design-editor"
           >

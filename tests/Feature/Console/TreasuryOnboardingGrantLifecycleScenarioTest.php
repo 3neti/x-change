@@ -118,6 +118,8 @@ it('claims the grant into the newly provisioned Sofia Account without changing I
         ->and(data_get($replay, 'payload.controls.claim_count'))->toBe(2)
         ->and(data_get($run, 'payload.controls.journal_events'))->toBe([
             'account_funding.pay_code.issued',
+            'claim.validation.passed',
+            'claim.validation.passed',
             'account_funding.pay_code.outcome_selected',
             'account_funding.pay_code.applied',
         ])
@@ -143,6 +145,8 @@ it('supplies canonical mobile verification evidence when the onboarding grant re
         '--run-reference' => 'treasury-onboarding-grant-verified-claim-20260927-001',
         '--json' => true,
     ]);
+
+    expect($run['exit_code'])->toBe(0, $run['rendered']);
 
     $recipient = User::query()
         ->where('mobile', '639285243657')

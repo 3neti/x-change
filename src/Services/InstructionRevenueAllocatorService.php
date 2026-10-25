@@ -75,15 +75,16 @@ class InstructionRevenueAllocatorService
 
             $amount = $amountMinor / 100;
 
+            $allocationKey = trim((string) data_get($context, 'idempotency_key'));
+            $allocationKey = ($allocationKey !== ''
+                ? $allocationKey
+                : 'instruction-revenue:'.$issuer->getKey().':'.$amountMinor).':'.$index;
+
             $transfer = ($this->productTransfers ??= app(ProductWalletTransferContract::class))->transfer(
                 source: $issuer,
                 product: $instructionItem,
                 amountMinor: $amountMinor,
-                idempotencyKey: (string) data_get(
-                    $context,
-                    'idempotency_key',
-                    'instruction-revenue:'.$issuer->getKey().':'.$index.':'.$amountMinor,
-                ),
+                idempotencyKey: $allocationKey,
                 metadata: $this->buildTransferMeta($charge, $context),
             );
 

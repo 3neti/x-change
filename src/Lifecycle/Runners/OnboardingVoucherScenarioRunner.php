@@ -247,6 +247,8 @@ final readonly class OnboardingVoucherScenarioRunner implements ScenarioRunnerCo
         return [
             'otp' => [
                 'mobile' => $mobile,
+                'value' => 'verified',
+                'verified' => true,
                 'verified_at' => $verifiedAt,
                 'verification_reference' => 'simulation:'.hash('sha256', $verifiedAt),
                 'verification_purpose' => (string) config(

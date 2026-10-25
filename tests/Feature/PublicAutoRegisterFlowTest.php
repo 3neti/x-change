@@ -6,16 +6,19 @@ use Illuminate\Support\Facades\Http;
 use LBHurtado\EmiCore\Actions\Funding\StoreProviderWebhookReceipt;
 use LBHurtado\EmiCore\Data\Funding\ProviderWebhookReceiptData;
 use LBHurtado\EmiCore\Data\Funding\ProviderWebhookRequestData;
+use LBHurtado\XChange\Actions\Funding\FinalizeFundingSuspenseMonitoring;
+use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Actions\Funding\SimulateQrPhPayment;
 use LBHurtado\XChange\Actions\Funding\VerifyFundingWebhookReceipt;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingWebhookReceiptJob;
+use LBHurtado\XChange\Models\CommercialPrincipal;
 use LBHurtado\XChange\Models\PublicAutoRegistration;
-use LBHurtado\XChange\Actions\Funding\FinalizeFundingSuspenseMonitoring;
-use LBHurtado\XChange\Services\Funding\QrPhSimulatorFundingProviderAdapter;
-use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 use LBHurtado\XChange\Services\Commercial\CommercialPrincipalProvisioningService;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
+use LBHurtado\XChange\Services\Funding\QrPhSimulatorFundingProviderAdapter;
+use LBHurtado\XChange\Services\Funding\StandingFundingSyncAdmission;
+use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 
 it('reproduces public auto-registration through its HTTP endpoints and mocked provider boundary', function () {
     Http::preventStrayRequests();
@@ -39,6 +42,17 @@ it('reproduces public auto-registration through its HTTP endpoints and mocked pr
     config()->set('x-change.commercial.principal.reference', 'public-auto-register-http-commercial');
     config()->set('x-change.commercial.principal.legal_name', 'Public Auto-Register HTTP Commercial Principal');
     config()->set('x-change.commercial.principal.authorization_reference', 'commissioning:public-auto-register-http:test');
+    config()->set('x-change.public_issuance_escrow.enabled', true);
+    config()->set('x-change.public_issuance_escrow.principal.reference', 'public-auto-register-http-escrow');
+    config()->set('x-change.public_issuance_escrow.principal.legal_name', 'Public Auto-Register HTTP Escrow');
+    config()->set('x-change.public_issuance_escrow.principal.authorization_reference', 'commissioning:public-auto-register-http:escrow');
+    CommercialPrincipal::query()->create([
+        'reference' => 'public-auto-register-http-escrow',
+        'legal_name' => 'Public Auto-Register HTTP Escrow',
+        'authorization_reference' => 'commissioning:public-auto-register-http:escrow',
+        'active' => true,
+        'metadata' => ['interactive_login' => false],
+    ]);
     app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:public-auto-register-http-test');
     app(CommercialPrincipalProvisioningService::class)->provision();
 
@@ -51,7 +65,7 @@ it('reproduces public auto-registration through its HTTP endpoints and mocked pr
     ]);
     fundTestUserWallet($operator);
     fundTestUserClientFunds($operator, 10_000);
-    fundTestUserClientFunds(app(\LBHurtado\XChange\Contracts\CommercialPrincipalResolverContract::class)->resolve(), 10_000);
+    fundTestUserClientFunds(CommercialPrincipal::query()->where('reference', 'public-auto-register-http-escrow')->firstOrFail(), 10_000);
     $this->actingAs($operator);
 
     $start = $this->postJson(route('x-change.public-auto-register.start'), [
@@ -83,9 +97,9 @@ it('reproduces public auto-registration through its HTTP endpoints and mocked pr
 
     (new VerifyFundingWebhookReceiptJob($receipt->getKey()))->handle(
         app(VerifyFundingWebhookReceipt::class),
-        app(\LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent::class),
+        app(SettleVerifiedFundingIntent::class),
         app(FinalizeFundingSuspenseMonitoring::class),
-        app(\LBHurtado\XChange\Services\Funding\StandingFundingSyncAdmission::class),
+        app(StandingFundingSyncAdmission::class),
     );
 
     $this->getJson(route('x-change.public-auto-register.status', ['registration' => $reference]))

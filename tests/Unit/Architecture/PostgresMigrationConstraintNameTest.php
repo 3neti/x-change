@@ -152,7 +152,10 @@ it('compiles every create migration without PostgreSQL identifier collisions', f
 
                 foreach ($matches[1] as $identifier) {
                     $postgresIdentifier = substr($identifier, 0, 63);
-                    $identifiersByPostgresName[$postgresIdentifier][] = basename($migrationPath).': '.$identifier;
+                    $identifiersByPostgresName[$postgresIdentifier][] = [
+                        'migration' => basename($migrationPath),
+                        'identifier' => $identifier,
+                    ];
                 }
             }
         }
@@ -162,7 +165,7 @@ it('compiles every create migration without PostgreSQL identifier collisions', f
 
     $collisions = array_filter(
         $identifiersByPostgresName,
-        static fn (array $identifiers): bool => count(array_unique($identifiers)) > 1,
+        static fn (array $identifiers): bool => count(array_unique(array_column($identifiers, 'identifier'))) > 1,
     );
 
     expect($collisions)->toBe([]);

@@ -19,12 +19,42 @@ use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
 use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
+use LBHurtado\XChange\Services\Configuration\FrontendRuntimeDependencies;
+use LBHurtado\XChange\Services\Publication\PublicationCatalog;
+use LBHurtado\XChange\Services\Publication\PublicationVerifier;
+use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 use LBHurtado\XChange\Services\Treasury\TreasuryInitializationStateService;
 use LBHurtado\XChange\Services\Treasury\TreasuryOpeningBalanceReconciliationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
 use LBHurtado\XChange\Tests\Fakes\User;
+
+beforeEach(function (): void {
+    $this->npmFixturePath = sys_get_temp_dir().'/x-change-installer-npm-'.bin2hex(random_bytes(6));
+    mkdir($this->npmFixturePath);
+
+    $requirements = app(FrontendRuntimeDependencies::class)->requirements();
+    $lockedPackages = ['' => ['dependencies' => $requirements]];
+    foreach (array_keys($requirements) as $packageName) {
+        $lockedPackages['node_modules/'.$packageName] = [];
+    }
+    file_put_contents($this->npmFixturePath.'/package.json', json_encode(['dependencies' => $requirements], JSON_THROW_ON_ERROR));
+    file_put_contents($this->npmFixturePath.'/package-lock.json', json_encode(['packages' => $lockedPackages], JSON_THROW_ON_ERROR));
+
+    app()->instance(PublicationVerifier::class, new PublicationVerifier(
+        app(PublicationCatalog::class),
+        app(PublishedAssetDriftDetector::class),
+        app(FrontendRuntimeDependencies::class),
+        $this->npmFixturePath,
+    ));
+});
+
+afterEach(function (): void {
+    unlink($this->npmFixturePath.'/package.json');
+    unlink($this->npmFixturePath.'/package-lock.json');
+    rmdir($this->npmFixturePath);
+});
 
 it('stops a forced non-interactive install before every side effect when required live preflight fails', function () {
     enableNetbankTreasuryForTests();
@@ -294,7 +324,7 @@ it('resets initialized Treasury and recognizes the current provider balance from
         ->where('position_reference', 'position:system:netbank:netbank-primary:php:unattributed')
         ->firstOrFail();
 
-    expect(TreasuryPosition::query()->count())->toBe(10)
+    expect(TreasuryPosition::query()->count())->toBe(11)
         ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
         ->and(TreasuryInventoryOperation::query()->sum('amount_minor'))->toBe(95_632)
         ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(95_632)
@@ -357,7 +387,7 @@ it('continues with healthy required connections and skips a failed optional conn
         TreasuryPosition::query()
             ->where('connection_reference', 'netbank-primary')
             ->count(),
-    )->toBe(10)
+    )->toBe(11)
         ->and(
             TreasuryPosition::query()
                 ->where('connection_reference', 'netbank-optional')
@@ -635,6 +665,7 @@ function installerTestOptions(): array
 {
     return [
         '--force' => true,
+        '--defer-operational-manifest' => true,
         '--no-migrate' => true,
         '--no-auth' => true,
         '--no-settings' => true,

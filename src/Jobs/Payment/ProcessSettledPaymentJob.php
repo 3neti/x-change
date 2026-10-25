@@ -30,4 +30,10 @@ final class ProcessSettledPaymentJob implements ShouldQueue
     {
         $pipeline->handle($this->processId);
     }
+
+    /** @return list<string> */
+    public function tags(): array
+    {
+        return ['package:x-change', 'lane:feedback', 'job:ProcessSettledPaymentJob'];
+    }
 }

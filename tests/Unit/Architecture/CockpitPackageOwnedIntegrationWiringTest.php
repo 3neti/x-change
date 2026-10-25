@@ -43,8 +43,8 @@ it('declares read-only integration packages as x-change runtime dependencies', f
 
     expect($composer['require'])->toMatchArray([
         '3neti/x-action' => '^1.0',
-        '3neti/x-campaign' => '^1.0',
-        '3neti/x-feedback' => '^1.0',
-        '3neti/x-journal' => '^1.0',
+        '3neti/x-campaign' => '^1.1.4',
+        '3neti/x-feedback' => '^1.1.4',
+        '3neti/x-journal' => '^1.1',
     ]);
 });

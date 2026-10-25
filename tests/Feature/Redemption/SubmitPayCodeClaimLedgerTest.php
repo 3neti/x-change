@@ -26,6 +26,10 @@ beforeEach(function () {
     expect(Schema::hasTable('contacts'))->toBeTrue();
 });
 
+beforeEach(function (): void {
+    provisionTestCommercialOfferings();
+});
+
 it('records a voucher claim row when a real redeem claim is submitted', function () {
     $issuer = User::query()->firstOrCreate(
         ['email' => 'system@example.test'],

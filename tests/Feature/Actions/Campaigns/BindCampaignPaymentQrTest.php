@@ -1464,7 +1464,12 @@ it('projects only declared completion evidence from the compiled browser claim a
     $inputs = [
         'name' => 'Browser Applicant', 'mobile' => $mobile,
         'email' => 'applicant@example.test', 'address' => 'Test address', 'birth_date' => '1990-01-01',
-        'otp' => ['verified' => true], 'otp_verified' => true,
+        'otp' => [
+            'verified' => true,
+            'verified_at' => now()->toIso8601String(),
+            'verification_reference' => 'simulation:campaign-completion',
+            'verification_purpose' => 'form_flow.otp',
+        ], 'otp_verified' => true,
         '_step_name' => 'confirmation',
         'completed_at' => now()->toIso8601String(), 'full_name' => 'Browser Applicant',
         'kyc' => [], 'splash_viewed' => true, 'viewed_at' => now()->toIso8601String(),
@@ -1640,7 +1645,7 @@ it('fails closed for unavailable, duplicate, and mismatched policy completion dr
     ]);
 
     expect(fn () => $driver->prepare(CompletionClaimEvidenceProjection::query()->sole()))
-        ->toThrow(InvalidArgumentException::class, 'reserved driver identity');
+        ->toThrow(InvalidArgumentException::class, 'exact driver identity');
 });
 
 it('governs durable policy completion requests and terminal outcomes without transport', function (): void {
@@ -2309,6 +2314,8 @@ it('inspects an exact recognized payment and dispatches recovery only when reque
 
 it('reports campaign SMS timing without replaying payment or exposing payer evidence', function (): void {
     Queue::fake();
+    config()->set('x-change.payment_feedback.sms.enabled', true);
+    config()->set('x-change.payment_feedback.sms.flows.campaign_qr_ph', true);
     [$recognition] = auiRecognizedPaymentForContinuation([
         'payer_institution_ciphertext' => 'GXCHPHM2XXX',
         'payer_account_ciphertext' => '09173011987',
@@ -2342,6 +2349,8 @@ it('reports campaign SMS timing without replaying payment or exposing payer evid
 
 it('does not report queued SMS attempts as successful submissions', function (): void {
     Queue::fake();
+    config()->set('x-change.payment_feedback.sms.enabled', true);
+    config()->set('x-change.payment_feedback.sms.flows.campaign_qr_ph', true);
     [$recognition] = auiRecognizedPaymentForContinuation([
         'payer_institution_ciphertext' => 'GXCHPHM2XXX',
         'payer_account_ciphertext' => '09173011987',
@@ -3046,6 +3055,8 @@ it('automatically completes an opted in demo claim without a checker and queues 
 
 it('completes a Medicard demonstration outcome once without changing AUI semantics', function (): void {
     Queue::fake();
+    config()->set('x-change.payment_feedback.sms.enabled', true);
+    config()->set('x-change.payment_feedback.sms.flows.campaign_qr_ph', true);
     config()->set('x-feedback.transports.sms.driver', 'engagespark');
     configureCampaignCoverageTestDriver();
     [$recognition, $binding] = recognizedCampaignPayment(5000, [

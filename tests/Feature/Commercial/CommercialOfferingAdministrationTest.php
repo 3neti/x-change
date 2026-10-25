@@ -307,6 +307,8 @@ it('fails closed for unauthorized operators and same-person approval', function 
 
     grantCommercialCapability($maker, CommercialOperatorCapability::ManageOfferings);
     grantCommercialCapability($maker, CommercialOperatorCapability::ApproveOfferings);
+    app()->forgetScopedInstances();
+    $action = app(ManageCommercialOffering::class);
 
     $submitted = $action->submit($maker, $action->createDraft(
         $maker,

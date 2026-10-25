@@ -49,4 +49,10 @@ final class LinkSettledCheckoutContactJob implements ShouldBeUnique, ShouldQueue
 
         $checkouts->settled($order, $observation);
     }
+
+    /** @return list<string> */
+    public function tags(): array
+    {
+        return ['package:x-change', 'lane:issuance', 'job:LinkSettledCheckoutContactJob'];
+    }
 }

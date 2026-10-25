@@ -5,9 +5,10 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Tests\Fakes\User;
 
 beforeEach(function () {
-    config()->set('x-change.lifecycle.defaults.user_model', \LBHurtado\XChange\Tests\Fakes\User::class);
+    config()->set('x-change.lifecycle.defaults.user_model', User::class);
     config()->set('x-change.lifecycle.defaults.system_user_email', 'system@example.test');
     config()->set('x-change.lifecycle.defaults.test_user_email', 'lester@hurtado.ph');
     config()->set('x-change.lifecycle.defaults.test_user_mobile', '09173011987');
@@ -19,6 +20,10 @@ beforeEach(function () {
 
     expect(Schema::hasTable('inputs'))->toBeTrue();
     expect(Schema::hasTable('contacts'))->toBeTrue();
+});
+
+beforeEach(function (): void {
+    provisionTestCommercialOfferings();
 });
 
 it('runs the signature required scenario and reports expected outcomes', function () {

@@ -1204,7 +1204,7 @@ return [
                     ],
                     'expect' => [
                         'status' => 'failed',
-                        'message_contains' => ['email', 'birth date'],
+                        'message_contains' => ['email', 'birth_date'],
                     ],
                 ],
                 'complete_fields_succeed' => [
@@ -1273,6 +1273,8 @@ return [
                                 'otp_code' => '123456',
                                 'verified' => true,
                                 'verified_at' => '2026-04-19T10:30:00+08:00',
+                                'verification_reference' => 'simulation:otp-required',
+                                'verification_purpose' => 'form_flow.otp',
                             ],
                         ],
                     ],
@@ -1311,7 +1313,7 @@ return [
                 'provided_signature_succeeds' => [
                     'claim' => [
                         'inputs' => [
-                            'signature' => 'data:image/png;base64,DEMO_SIGNATURE',
+                            'signature' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
                         ],
                     ],
                     'expect' => [
@@ -1349,7 +1351,7 @@ return [
                 'provided_selfie_succeeds' => [
                     'claim' => [
                         'inputs' => [
-                            'selfie' => 'data:image/jpeg;base64,DEMO_SELFIE',
+                            'selfie' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
                         ],
                     ],
                     'expect' => [
@@ -1389,8 +1391,8 @@ return [
                     'claim' => [
                         'inputs' => [
                             'location' => [
-                                'lat' => 14.5995,
-                                'lng' => 120.9842,
+                                'latitude' => 14.5995,
+                                'longitude' => 120.9842,
                             ],
                         ],
                     ],
@@ -1431,8 +1433,8 @@ return [
                     'claim' => [
                         'inputs' => [
                             'location' => [
-                                'lat' => 14.6095,
-                                'lng' => 120.9942,
+                                'latitude' => 14.6095,
+                                'longitude' => 120.9942,
                             ],
                         ],
                     ],
@@ -1444,8 +1446,8 @@ return [
                     'claim' => [
                         'inputs' => [
                             'location' => [
-                                'lat' => 14.5995,
-                                'lng' => 120.9842,
+                                'latitude' => 14.5995,
+                                'longitude' => 120.9842,
                             ],
                         ],
                     ],

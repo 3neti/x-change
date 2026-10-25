@@ -13,7 +13,7 @@ it('documents the public claim payment and topup boundaries', function () {
         ->toContain('/x/cockpit/funding')
         ->toContain('machine-readable claim-experience')
         ->toContain('Account Funding Receipt')
-        ->toContain('fresh pre-transaction validation token')
+        ->toContain('pre-transaction token')
         ->toContain('Retrying the same payment attempt');
 });
 
@@ -28,8 +28,8 @@ it('documents authoritative Payment Attempts and keeps them separate from Accoun
         ->toContain('Check NetBank')
         ->toContain('provider status is `settled`')
         ->toContain('xchange:payments:verify-open')
-        ->toContain('does not overwrite or invalidate an existing')
-        ->toContain('long-lived Account Funding QR does not consume a new token')
+        ->toContain('long-lived and unchanged')
+        ->toContain('long-lived Account Funding QR remains tokenless and reusable')
         ->toContain('provider_instruction_failed')
         ->toContain('x-change/claim/Payment')
         ->toContain('1280×900 and 390×844');

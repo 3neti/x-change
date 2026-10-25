@@ -58,14 +58,36 @@ function quickGenerateEngineeringPreview(
     );
 }
 
+async function openRiderDesign(
+    wrapper: VueWrapper,
+    tab: 'appearance' | 'message' | 'link' | 'splash' = 'appearance',
+): Promise<void> {
+    await wrapper
+        .get('[data-testid="cockpit-quick-generate-open-design-button"]')
+        .trigger('click');
+    await flushPromises();
+
+    if (tab !== 'appearance') {
+        await wrapper
+            .get(`[data-testid="cockpit-quick-generate-rider-design-${tab}-tab"]`)
+            .trigger('click');
+    }
+}
+
+async function showStamp(wrapper: VueWrapper): Promise<void> {
+    await wrapper
+        .get('[data-testid="cockpit-pay-code-canvas-front-button"]')
+        .trigger('click');
+}
+
 describe('Cockpit Quick Generate foundation', () => {
     it('updates the Stamp expiration and requirements from the Order', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: { templates: cockpitQuickGenerateTemplates },
             global: { stubs: { CockpitPayCodeCanvas: true } },
         });
-        const canvas = wrapper.findComponent(CockpitPayCodeCanvas);
-        expect(canvas.props('expiry')).toBe('No Expiration');
+        const canvas = () => wrapper.findComponent(CockpitPayCodeCanvas);
+        expect(canvas().props('expiry')).toBe('No Expiration');
 
         await wrapper
             .get('[data-testid="cockpit-quick-generate-expiry-preset"]')
@@ -75,32 +97,32 @@ describe('Cockpit Quick Generate foundation', () => {
                 '[data-testid="cockpit-quick-generate-input-fields"] input[value="name"]',
             )
             .setValue(true);
-        expect(canvas.props('expiry')).toBe('3 Days');
-        expect(canvas.props('instructionKeys')).toContain('input.name');
+        expect(canvas().props('expiry')).toBe('3 Days');
+        expect(canvas().props('instructionKeys')).toContain('input.name');
 
         const duration = wrapper.get('[data-testid="cockpit-quick-generate-ttl"]');
         await duration.setValue('2 hours');
-        expect(canvas.props('expiry')).toBe('Duration: 2 hours');
+        expect(canvas().props('expiry')).toBe('Duration: 2 hours');
         await duration.setValue('1 day');
-        expect(canvas.props('expiry')).toBe('Duration: 1 day');
+        expect(canvas().props('expiry')).toBe('Duration: 1 day');
 
         const expiration = wrapper.get(
             '[data-testid="cockpit-quick-generate-expires-at"]',
         );
         await expiration.setValue('2026-12-24T18:00');
-        expect(canvas.props('expiry')).toBe('Expires 2026-12-24 18:00');
+        expect(canvas().props('expiry')).toBe('Expires 2026-12-24 18:00');
         await expiration.setValue('2026-12-25T20:30');
-        expect(canvas.props('expiry')).toBe('Expires 2026-12-25 20:30');
+        expect(canvas().props('expiry')).toBe('Expires 2026-12-25 20:30');
         await expiration.setValue('');
-        expect(canvas.props('expiry')).toBe('Duration: 1 day');
+        expect(canvas().props('expiry')).toBe('Duration: 1 day');
         await duration.setValue('');
-        expect(canvas.props('expiry')).toBe('3 Days');
+        expect(canvas().props('expiry')).toBe('3 Days');
         await wrapper
             .get(
                 '[data-testid="cockpit-quick-generate-input-fields"] input[value="name"]',
             )
             .setValue(false);
-        expect(canvas.props('instructionKeys')).not.toContain('input.name');
+        expect(canvas().props('instructionKeys')).not.toContain('input.name');
         wrapper.unmount();
     });
 
@@ -1028,13 +1050,8 @@ describe('Cockpit Quick Generate foundation', () => {
 
         expect(designPanel.attributes('role')).toBe('tabpanel');
         expect(designPanel.classes()).toContain('w-full');
-        expect(designPanel.classes()).toContain('h-[clamp(24rem,58vh,36rem)]');
-        expect(designPanel.classes()).toContain(
-            'xl:h-[clamp(28rem,64vh,42rem)]',
-        );
-        expect(designPanel.classes()).toContain(
-            '2xl:h-[clamp(28rem,64vh,38rem)]',
-        );
+        expect(designPanel.classes()).toContain('max-h-[64vh]');
+        expect(designPanel.classes()).toContain('overflow-y-auto');
         expect(designPanel.classes()).not.toContain('aspect-[1.72/1]');
         expect(designPanel.text()).toContain('Rider editor');
         expect(
@@ -1157,6 +1174,7 @@ describe('Cockpit Quick Generate foundation', () => {
 
     it('opens the Rider editors inside the live Design view', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            attachTo: document.body,
             props: {
                 templates: cockpitQuickGenerateTemplates,
                 mutationContract: {
@@ -1175,20 +1193,16 @@ describe('Cockpit Quick Generate foundation', () => {
 
         await flushPromises();
 
-        expect(
-            wrapper
-                .get(
-                    '[data-testid="cockpit-quick-generate-rider-design-editor"]',
-                )
-                .find(
-                    '[data-testid="cockpit-quick-generate-rider-design-tabs"]',
-                )
-                .exists(),
-        ).toBe(true);
-
         await wrapper
             .get('[data-testid="cockpit-quick-generate-open-design-button"]')
             .trigger('click');
+
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-quick-generate-rider-design-editor"]')
+                .find('[data-testid="cockpit-quick-generate-rider-design-tabs"]')
+                .exists(),
+        ).toBe(true);
 
         expect(
             wrapper
@@ -1761,7 +1775,7 @@ describe('Cockpit Quick Generate foundation', () => {
             wrapper
                 .get('[data-testid="cockpit-pay-code-canvas-claim-qr"]')
                 .attributes('alt'),
-        ).toBe('Claim PAY-QR-1');
+        ).toBe('Claim Pay Code QR');
         expect(
             wrapper
                 .get('[data-testid="cockpit-pay-code-canvas-claim-code"]')
@@ -2240,6 +2254,7 @@ describe('Cockpit Quick Generate foundation', () => {
 
         await flushPromises();
 
+        await openRiderDesign(wrapper, 'splash');
         await wrapper
             .find('[data-testid="cockpit-quick-generate-rider-splash-body"]')
             .setValue('A distinct beneficiary splash');
@@ -2248,21 +2263,19 @@ describe('Cockpit Quick Generate foundation', () => {
             .find('[data-testid="cockpit-quick-generate-primary-purpose"]')
             .setValue('A purpose-led Rider Stamp');
 
+        await showStamp(wrapper);
         expect(
             wrapper
                 .find('[data-testid="cockpit-pay-code-canvas-rider-og-design"]')
                 .exists(),
         ).toBe(false);
         expect(
-            wrapper
-                .find('[data-testid="cockpit-pay-code-canvas-logo"]')
-                .exists(),
+            wrapper.find('[data-testid="canonical-stamp-preview"]').exists(),
         ).toBe(true);
-        expect(
-            wrapper
-                .find('[data-testid="cockpit-pay-code-canvas-stamp-copy"]')
-                .text(),
-        ).toContain('A purpose-led Rider Stamp');
+        expect(wrapper.findComponent(CockpitPayCodeCanvas).props('purpose')).toBe(
+            'A purpose-led Rider Stamp',
+        );
+        await openRiderDesign(wrapper, 'splash');
         const splashPreview = wrapper.find(
             '[data-testid="cockpit-quick-generate-rider-splash-html-preview"]',
         );
@@ -2279,17 +2292,13 @@ describe('Cockpit Quick Generate foundation', () => {
                 .exists(),
         ).toBe(false);
 
+        await openRiderDesign(wrapper);
         await wrapper
             .find(
                 '[data-testid="cockpit-quick-generate-rider-stamp-source-splash"]',
             )
             .setValue();
 
-        const design = wrapper.find(
-            '[data-testid="cockpit-pay-code-canvas-rider-og-design"]',
-        );
-
-        expect(design.exists()).toBe(true);
         expect(
             wrapper
                 .find(
@@ -2297,15 +2306,11 @@ describe('Cockpit Quick Generate foundation', () => {
                 )
                 .exists(),
         ).toBe(true);
-        expect(design.attributes('srcdoc')).toContain('stamp-abstract-splash');
-        expect(design.attributes('srcdoc')).not.toContain(
-            'A purpose-led Rider Stamp',
-        );
-        expect(
-            wrapper
-                .find('[data-testid="cockpit-pay-code-canvas-stamp-copy"]')
-                .text(),
-        ).toContain('A purpose-led Rider Stamp');
+        await showStamp(wrapper);
+        const canvas = wrapper.findComponent(CockpitPayCodeCanvas);
+        expect(wrapper.find('[data-testid="canonical-stamp-preview"]').exists()).toBe(true);
+        expect(JSON.stringify(canvas.props('stampInstructions'))).toContain('A distinct beneficiary splash');
+        expect(canvas.props('purpose')).toBe('A purpose-led Rider Stamp');
     });
 
     it('promotes the first Rider Splash entered on a blank Pay Code to Stamp artwork', async () => {
@@ -2324,6 +2329,7 @@ describe('Cockpit Quick Generate foundation', () => {
         await wrapper
             .get('[data-testid="cockpit-quick-generate-start-blank"]')
             .trigger('click');
+        await openRiderDesign(wrapper, 'splash');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-rider-splash-format"]')
             .get('input[value="html"]')
@@ -2334,6 +2340,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 '<img src="https://i.imgur.com/L76d0pN.jpeg" alt="Failure of Simultaneity" />',
             );
 
+        await openRiderDesign(wrapper);
         expect(
             (
                 wrapper.get(
@@ -2341,10 +2348,10 @@ describe('Cockpit Quick Generate foundation', () => {
                 ).element as HTMLInputElement
             ).value,
         ).toBe('splash');
+        await showStamp(wrapper);
+        expect(wrapper.find('[data-testid="canonical-stamp-preview"]').exists()).toBe(true);
         expect(
-            wrapper
-                .get('[data-testid="cockpit-pay-code-canvas-rider-og-design"]')
-                .attributes('srcdoc'),
+            JSON.stringify(wrapper.findComponent(CockpitPayCodeCanvas).props('stampInstructions')),
         ).toContain('https://i.imgur.com/L76d0pN.jpeg');
     });
 
@@ -2364,6 +2371,7 @@ describe('Cockpit Quick Generate foundation', () => {
         await wrapper
             .get('[data-testid="cockpit-quick-generate-start-blank"]')
             .trigger('click');
+        await openRiderDesign(wrapper);
         await wrapper
             .get(
                 '[data-testid="cockpit-quick-generate-rider-stamp-source-none"]',
@@ -2375,9 +2383,13 @@ describe('Cockpit Quick Generate foundation', () => {
             )
             .setValue();
         await wrapper
+            .get('[data-testid="cockpit-quick-generate-rider-design-splash-tab"]')
+            .trigger('click');
+        await wrapper
             .get('[data-testid="cockpit-quick-generate-rider-splash-body"]')
             .setValue('Introduction only');
 
+        await openRiderDesign(wrapper);
         expect(
             (
                 wrapper.get(
@@ -2422,11 +2434,13 @@ describe('Cockpit Quick Generate foundation', () => {
 
         await flushPromises();
 
+        await openRiderDesign(wrapper, 'link');
         await wrapper
             .find('[data-testid="cockpit-quick-generate-rider-url"]')
             .setValue(
                 'https://open.spotify.com/track/6CKoWCWAqEVWVjpeoJXyNH?si=tracking',
             );
+        await openRiderDesign(wrapper);
         await wrapper
             .find(
                 '[data-testid="cockpit-quick-generate-rider-stamp-source-url"]',
@@ -2444,11 +2458,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 }),
             }),
         );
-        expect(
-            wrapper
-                .find('[data-testid="cockpit-pay-code-canvas-rider-og-design"]')
-                .attributes('srcdoc'),
-        ).toContain('class="artwork-cover"');
+        await openRiderDesign(wrapper, 'link');
         expect(
             wrapper
                 .find(
@@ -2470,6 +2480,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 )
                 .text(),
         ).toContain('Spotify artwork ready.');
+        await openRiderDesign(wrapper);
         expect(
             wrapper
                 .find(
@@ -2478,6 +2489,11 @@ describe('Cockpit Quick Generate foundation', () => {
                 .exists(),
         ).toBe(true);
 
+        await showStamp(wrapper);
+        expect(
+            wrapper.findComponent(CockpitPayCodeCanvas).props('riderStamp').fit,
+        ).toBe('cover');
+        await openRiderDesign(wrapper);
         await wrapper
             .find(
                 '[data-testid="cockpit-quick-generate-rider-stamp-fit-contain"]',
@@ -2486,22 +2502,16 @@ describe('Cockpit Quick Generate foundation', () => {
 
         expect(
             wrapper
-                .find('[data-testid="cockpit-pay-code-canvas-rider-og-design"]')
-                .attributes('srcdoc'),
-        ).toContain('class="artwork-contain"');
-        expect(
-            wrapper
-                .find('[data-testid="cockpit-pay-code-canvas-stamp-copy"]')
-                .text(),
-        ).toContain('An Example Track');
-        expect(
-            wrapper
-                .find(
-                    '[data-testid="cockpit-quick-generate-rider-artwork-status"]',
-                )
+                .find('[data-testid="cockpit-quick-generate-rider-artwork-status"]')
                 .text(),
         ).toContain('Spotify artwork ready.');
-
+        await showStamp(wrapper);
+        expect(
+            wrapper.findComponent(CockpitPayCodeCanvas).props('riderStamp').fit,
+        ).toBe('contain');
+        expect(
+            wrapper.findComponent(CockpitPayCodeCanvas).props('riderStamp').title,
+        ).toContain('An Example Track');
         wrapper.unmount();
         vi.unstubAllGlobals();
         vi.useRealTimers();
@@ -2537,9 +2547,11 @@ describe('Cockpit Quick Generate foundation', () => {
 
         await flushPromises();
 
+        await openRiderDesign(wrapper, 'link');
         await wrapper
             .find('[data-testid="cockpit-quick-generate-rider-url"]')
             .setValue('https://youtu.be/Hz_wdBH0fTo?si=KnyudYHL2qXGXtb5');
+        await openRiderDesign(wrapper);
         await wrapper
             .find(
                 '[data-testid="cockpit-quick-generate-rider-stamp-source-url"]',
@@ -2557,11 +2569,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 }),
             }),
         );
-        expect(
-            wrapper
-                .find('[data-testid="cockpit-pay-code-canvas-rider-og-design"]')
-                .attributes('srcdoc'),
-        ).toContain('class="artwork-cover"');
+        await openRiderDesign(wrapper, 'link');
         expect(
             wrapper
                 .find(
@@ -2576,10 +2584,12 @@ describe('Cockpit Quick Generate foundation', () => {
                 )
                 .text(),
         ).toContain('YouTube artwork ready.');
+        await showStamp(wrapper);
         expect(
-            wrapper
-                .find('[data-testid="cockpit-pay-code-canvas-stamp-copy"]')
-                .text(),
+            wrapper.findComponent(CockpitPayCodeCanvas).props('riderStamp').imageUrl,
+        ).toBe('https://i.ytimg.com/vi/Hz_wdBH0fTo/hqdefault.jpg');
+        expect(
+            wrapper.findComponent(CockpitPayCodeCanvas).props('riderStamp').title,
         ).toContain('The Killers - I Want to Hold Your Hand');
 
         wrapper.unmount();
@@ -5320,12 +5330,6 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(instructionBuilderText).toContain('Claim Requirements');
         expect(instructionBuilderText).toContain('Validation And Verification');
         expect(instructionBuilderText).toContain('Rider');
-        expect(instructionBuilderText).toContain('Rider Message');
-        expect(instructionBuilderText).toContain('Rider URL');
-        expect(instructionBuilderText).toContain('Rider Splash');
-        expect(instructionBuilderText).toContain('Stamp Appearance');
-        expect(instructionBuilderText).toContain('Artwork');
-        expect(instructionBuilderText).toContain('Claim Splash Preview');
         expect(instructionBuilderText).not.toContain('Claim Introduction');
         expect(instructionBuilderText).not.toContain('Action Link');
         expect(instructionBuilderText).not.toContain('Message Body');

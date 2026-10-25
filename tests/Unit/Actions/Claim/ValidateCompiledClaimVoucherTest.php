@@ -1,10 +1,15 @@
 <?php
 
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
+use LBHurtado\Voucher\Enums\VoucherSliceSelectionPolicy;
 use LBHurtado\Voucher\Enums\VoucherState;
+use LBHurtado\Voucher\Services\VoucherSlicePlanFactory;
 use LBHurtado\Wallet\Actions\WithdrawCash;
 use LBHurtado\XChange\Actions\Claim\ValidateCompiledClaimVoucher;
-use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Models\VoucherSliceExecution;
+use LBHurtado\XChange\Models\VoucherSliceExecutionItem;
+use LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator;
 
 it('rejects missing voucher', function () {
     expect(app(ValidateCompiledClaimVoucher::class)->handle(null))
@@ -23,60 +28,60 @@ it('rejects redeemed voucher', function () {
 });
 
 it('accepts redeemed named slice voucher while slices remain unclaimed', function () {
+    $plan = app(VoucherSlicePlanFactory::class)->scheduled(
+        totalMinor: 15_500,
+        currency: 'PHP',
+        slices: [
+            ['id' => 'slice_1', 'label' => 'Buy coffee', 'amount_minor' => 8_000],
+            ['id' => 'slice_2', 'label' => 'Buy doughnut', 'amount_minor' => 7_500],
+        ],
+        selection: VoucherSliceSelectionPolicy::OneOrMany,
+    );
     $voucher = issueVoucher(validVoucherInstructions(
         amount: 155,
         overrides: [
             'cash' => [
                 'amount' => 155,
                 'currency' => 'PHP',
-                'slice_mode' => 'open',
-                'max_slices' => 2,
-                'min_withdrawal' => 75,
                 'validation' => [
                     'country' => 'PH',
                 ],
             ],
+            'slice_plan' => $plan->canonicalArray(),
         ],
     ));
 
-    $metadata = $voucher->metadata ?? [];
-    data_set($metadata, 'instructions.metadata.custom.named_slices', [
-        [
-            'id' => 'slice_1',
-            'amount' => 80,
-            'description' => 'Buy coffee',
-        ],
-        [
-            'id' => 'slice_2',
-            'amount' => 75,
-            'description' => 'Buy doughnut',
-        ],
-    ]);
-    data_set($metadata, 'instructions.metadata.custom.named_slice_policy', [
-        'mode' => 'named',
-        'selection' => 'one_or_many',
-        'enforced' => true,
-    ]);
-
     $voucher->forceFill([
-        'metadata' => $metadata,
         'redeemed_at' => now(),
         'state' => VoucherState::ACTIVE,
         'expires_at' => Carbon::now()->addDay(),
     ])->save();
 
-    VoucherClaim::query()->create([
+    $reference = (string) Str::ulid();
+    $execution = VoucherSliceExecution::query()->create([
+        'reference' => $reference,
         'voucher_id' => $voucher->getKey(),
+        'plan_fingerprint' => app(VoucherSliceExecutionCoordinator::class)->plan($voucher)->hash(),
+        'idempotency_key_hash' => hash('sha256', $reference),
+        'request_fingerprint' => hash('sha256', 'request-'.$reference),
+        'provider_operation_reference' => 'slice-'.$reference,
         'claim_number' => 1,
-        'claim_type' => 'withdraw',
-        'status' => 'withdrawn',
+        'status' => 'succeeded',
+        'amount_minor' => 8_000,
         'currency' => 'PHP',
-        'attempted_at' => now(),
-        'meta' => [
-            'named_slices' => [
-                'selected_ids' => ['slice_1'],
-            ],
-        ],
+        'reserved_at' => now(),
+        'settled_at' => now(),
+    ]);
+    VoucherSliceExecutionItem::query()->create([
+        'execution_id' => $execution->getKey(),
+        'voucher_id' => $voucher->getKey(),
+        'slice_id' => 'slice_1',
+        'label' => 'Buy coffee',
+        'sequence' => 1,
+        'amount_minor' => 8_000,
+        'status' => 'consumed',
+        'reserved_at' => now(),
+        'consumed_at' => now(),
     ]);
 
     expect(app(ValidateCompiledClaimVoucher::class)->handle($voucher->fresh()))

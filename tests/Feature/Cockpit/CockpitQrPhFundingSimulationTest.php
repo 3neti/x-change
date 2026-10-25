@@ -9,6 +9,7 @@ use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Models\SimulatedFundingTransaction;
+use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 
 it('publishes a verified and rate-limited Cockpit QR Ph simulation route', function () {
     $route = Route::getRoutes()->getByName(
@@ -44,6 +45,10 @@ it('renders the rollback-only QR Ph simulator controls without a monetary QR pay
 
 it('runs the Cockpit QR Ph funding simulation without durable state or duplicate credit', function () {
     Http::preventStrayRequests();
+    enableNetbankTreasuryForTests();
+    app()->instance(TreasuryProviderConnectionCatalog::class, new TreasuryProviderConnectionCatalog(
+        config('x-change.treasury.connections'),
+    ));
     config()->set('x-change.cockpit.qrph_funding_simulation.enabled', true);
     config()->set('x-change.lifecycle.qrph_funding_simulation.enabled', true);
     $owner = actingAsTestUser();
@@ -102,6 +107,10 @@ it('requires an already verified mobile for the Cockpit QR Ph simulation', funct
 
 it('runs the package-owned on-demand fixed QR lifecycle from the Cockpit', function () {
     Http::preventStrayRequests();
+    enableNetbankTreasuryForTests();
+    app()->instance(TreasuryProviderConnectionCatalog::class, new TreasuryProviderConnectionCatalog(
+        config('x-change.treasury.connections'),
+    ));
     config()->set('x-change.cockpit.qrph_funding_simulation.enabled', true);
     config()->set('x-change.lifecycle.qrph_funding_simulation.enabled', true);
     $owner = actingAsTestUser();

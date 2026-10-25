@@ -49,6 +49,10 @@ beforeEach(function () {
     ]);
 });
 
+beforeEach(function (): void {
+    provisionTestCommercialOfferings();
+});
+
 it('reports combined journal action and feedback execution result handoffs without blocking execution', function () {
     $exitCode = Artisan::call('xchange:lifecycle:run', [
         'scenario' => 'execution_settlement_envelope_contract_demo',
@@ -56,7 +60,10 @@ it('reports combined journal action and feedback execution result handoffs witho
     ]);
 
     $json = json_decode(Artisan::output(), true);
-    $entry = ExecutionJournalEntry::query()->sole();
+    $entry = ExecutionJournalEntry::query()
+        ->where('event_type', 'execution.result.recorded')
+        ->where('subject_id', data_get($json, 'voucher_code'))
+        ->sole();
 
     expect($exitCode)->toBe(0)
         ->and(data_get($json, 'execution.handoffs.blocks_execution'))->toBeFalse()

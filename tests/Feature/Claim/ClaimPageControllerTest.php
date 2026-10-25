@@ -126,6 +126,7 @@ it('hands a collectible Pay Code to the payment experience', function () {
         'target_amount' => 100,
         'metadata' => [
             'flow_type' => 'collectible',
+            'collection_wallet_id' => testCollectionWalletId(),
         ],
     ]));
 
@@ -155,6 +156,7 @@ it('admits legacy campaign fulfillment Pay Codes into the outward claim experien
 
 it('routes unauthenticated campaign officer authorization to an explicit login handoff', function () {
     $issuer = campaignAuthorizationClaimPageUser();
+    fundTestUserWallet($issuer, 1_000_000);
     $repository = app(CampaignWorksheetRepository::class);
 
     $worksheet = $repository->put(new CampaignWorksheetData(

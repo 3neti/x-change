@@ -233,7 +233,7 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
             $settlements = [];
             $afterClaims = [];
 
-            foreach ($this->sliceOperations($context) as $index => $slice) {
+            foreach ($this->sliceOperations($context, (string) $bootstrap->voucher->code) as $index => $slice) {
                 $waitBeforeSeconds = $this->waitBeforeSeconds(
                     $context,
                     $slice,
@@ -314,7 +314,7 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
                 $settlements[] = $settlement;
             }
 
-            $expectedSliceCount = count($this->sliceOperations($context));
+            $expectedSliceCount = count($this->sliceOperations($context, (string) $bootstrap->voucher->code));
             $transferSucceeded = count($settlements) === $expectedSliceCount;
             $postTransfer = $this->openingBalances->observe([$connectionReference]);
             $afterClaim = $this->accounting->capture(
@@ -589,7 +589,7 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
     /**
      * @return list<array{key: string, operation: array<string, mixed>}>
      */
-    private function sliceOperations(ScenarioRunContext $context): array
+    private function sliceOperations(ScenarioRunContext $context, string $voucherCode): array
     {
         $baseOperation = (array) data_get(
             $context->scenario,
@@ -617,6 +617,9 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
                 ...(array) data_get($baseOperation, 'claim', []),
                 ...(array) data_get($claim, 'claim', []),
             ];
+            if (! filled(data_get($operation, 'claim._meta.idempotency_key'))) {
+                data_set($operation, 'claim._meta.idempotency_key', 'lifecycle-claim:'.$voucherCode.':'.$key);
+            }
             $operations[] = [
                 'key' => (string) $key,
                 'operation' => $operation,

@@ -13,6 +13,9 @@ use Throwable;
 
 final class TreasuryOperatorAuthority
 {
+    /** @var array<string, array<string, true>> */
+    private array $capabilityCache = [];
+
     private ?bool $storageReady = null;
 
     private bool $systemResolved = false;
@@ -75,7 +78,13 @@ final class TreasuryOperatorAuthority
      */
     private function capabilitiesFor(Model $operator): array
     {
-        return TreasuryOperatorAuthorization::query()
+        $key = $operator->getMorphClass().':'.$operator->getKey();
+
+        if (array_key_exists($key, $this->capabilityCache)) {
+            return $this->capabilityCache[$key];
+        }
+
+        return $this->capabilityCache[$key] = TreasuryOperatorAuthorization::query()
             ->where('operator_type', $operator->getMorphClass())
             ->where('operator_id', $operator->getKey())
             ->currentlyValid()

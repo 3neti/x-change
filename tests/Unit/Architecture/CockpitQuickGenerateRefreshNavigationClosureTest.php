@@ -21,6 +21,6 @@ it('documents and protects quick generate refresh and navigation closure', funct
         ->and($controller)->toContain("'cockpit_detail' => Route::has('x-change.cockpit.pay-codes.show')")
         ->and($component)->toContain('data-testid="cockpit-quick-generate-result-link"')
         ->and($component)->toContain('data-testid="cockpit-quick-generate-refresh-button"')
-        ->and($component)->toContain("only: ['quick_generate_read_model']")
+        ->and($component)->toContain('only: ["quick_generate_read_model"]')
         ->and($component)->toContain('No automatic redirect is performed');
 });

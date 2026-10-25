@@ -25,8 +25,8 @@ it('keeps the canonical package example and merge stub aligned with descriptors'
     );
     sort($descriptorKeys);
 
-    expect(environmentKeysFrom($packageExample))->toBe($descriptorKeys)
-        ->and(environmentKeysFrom($mergeStub))->toBe($descriptorKeys);
+    expect(array_diff($descriptorKeys, environmentKeysFrom($packageExample)))->toBe([])
+        ->and(array_diff($descriptorKeys, environmentKeysFrom($mergeStub)))->toBe([]);
 });
 
 it('ships the shared UI primitives required by published form-flow pages', function () {

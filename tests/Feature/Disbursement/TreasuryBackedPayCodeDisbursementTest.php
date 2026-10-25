@@ -29,6 +29,7 @@ use LBHurtado\XChange\Models\PayoutDestinationRevision;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Execution\TreasuryBackedPayCodeDisbursement;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
+use LBHurtado\XJournal\Data\ExecutionJournalEntryData;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
 
@@ -573,6 +574,9 @@ it('lets the canonical otp claim flow correct the same rejected campaign pay cod
             'otp' => [
                 'verified' => true,
                 'mobile' => '09175180722',
+                'verified_at' => now()->toIso8601String(),
+                'verification_reference' => 'simulation:campaign-recovery',
+                'verification_purpose' => 'form_flow.otp',
             ],
         ],
     ]);
@@ -866,9 +870,17 @@ it('retries a provider-confirmed settlement when its journal write initially fai
     );
     $realRecorder = app(ExecutionJournalRecorder::class);
     $failingRecorder = Mockery::mock(ExecutionJournalRecorder::class);
+    $failedSettlementWrite = false;
     $failingRecorder->shouldReceive('record')
-        ->once()
-        ->andThrow(new RuntimeException('Synthetic journal outage.'));
+        ->andReturnUsing(function (ExecutionJournalEntryData $entry) use ($realRecorder, &$failedSettlementWrite) {
+            if ($entry->eventType === 'pay_code.disbursement.settled' && ! $failedSettlementWrite) {
+                $failedSettlementWrite = true;
+
+                throw new RuntimeException('Synthetic journal outage.');
+            }
+
+            return $realRecorder->record($entry);
+        });
     $this->app->instance(ExecutionJournalRecorder::class, $failingRecorder);
     $reserveBefore = treasuryBackedPayoutPositionBalance(
         $issuer,
@@ -902,7 +914,7 @@ it('retries a provider-confirmed settlement when its journal write initially fai
         ))->toBe($reserveBefore - 2_000)
         ->and((int) TreasuryInventory::query()->sum('balance_minor'))
         ->toBe($inventoryBefore - 2_000)
-        ->and(ExecutionJournalEntry::query()->count())->toBe(0)
+        ->and(ExecutionJournalEntry::query()->where('event_type', 'pay_code.disbursement.settled')->count())->toBe(0)
         ->and($provider->disburseCallCount)->toBe(1);
 
     $this->app->instance(ExecutionJournalRecorder::class, $realRecorder);

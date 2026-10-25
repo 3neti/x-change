@@ -190,6 +190,7 @@ it('blocks collectible vouchers from lifecycle claim submission', function () {
     $voucher = issueVoucher(validVoucherInstructions(100.00, 'INSTAPAY', [
         'voucher_type' => 'payable',
         'target_amount' => 100,
+        'metadata' => ['collection_wallet_id' => testCollectionWalletId()],
     ]));
 
     $response = $this->postJson(route('api.x.v1.vouchers.claim.submit', [

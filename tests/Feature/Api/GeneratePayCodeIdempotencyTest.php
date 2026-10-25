@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 use LBHurtado\Voucher\Models\Voucher;
 
+beforeEach(function (): void {
+    provisionTestCommercialOfferings();
+});
+
 it('replays the same pay code response for the same idempotency key and payload', function () {
     $user = actingAsTestUser(1_000_000);
 

@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+beforeEach(function (): void {
+    provisionTestCommercialOfferings();
+});
+
 it('maps missing voucher to voucher not found response', function () {
     $response = $this->getJson(route('api.x.v1.vouchers.payment-qr.show', [
         'code' => 'MISSING',
@@ -16,6 +20,7 @@ it('maps collectible claim submission block to cannot disburse response', functi
     $voucher = issueVoucher(validVoucherInstructions(100.00, 'INSTAPAY', [
         'voucher_type' => 'payable',
         'target_amount' => 100,
+        'metadata' => ['collection_wallet_id' => testCollectionWalletId()],
     ]));
 
     $response = $this->postJson(route('api.x.v1.vouchers.claim.submit', [

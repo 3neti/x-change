@@ -554,7 +554,7 @@ it('characterizes the complete Treasury issuance waterfall and cancellation boun
             'currency' => 'PHP',
             'product_reference' => 'product:pay-code',
             'recognition_policy_reference' => 'recognition:pay-code-issuance:v1',
-            'expected_provider_cost_minor' => 0,
+            'expected_provider_cost_minor' => 1,
         ])
         ->and($allocationTotalMinor)->toBe($commercialChargeMinor)
         ->and(CommercialAllocation::query()->where('commercial_sale_id', $sale->getKey())->count())

@@ -210,10 +210,11 @@ it('excludes a collectible target from the account debit', function () {
     expect($result->account_debit)->toBe(15.0);
 });
 
-it('requires only the commercial charge for collection voucher types', function (string $voucherType): void {
+it('requires only the commercial charge for collection voucher types', function (string $voucherType, float $expectedPayCodeValue): void {
     $input = validPayCodePayload(1000, 'INSTAPAY', [
         'voucher_type' => $voucherType,
         'target_amount' => 1000,
+        'metadata' => ['collection_wallet_id' => 'test-collection-wallet'],
         'inputs' => ['fields' => []],
         'feedback' => [
             'email' => null,
@@ -237,7 +238,10 @@ it('requires only the commercial charge for collection voucher types', function 
 
     $result = (new EstimatePayCodeCost($pricing))->handle($input);
 
-    expect($result->pay_code_value)->toBe(1000.0)
+    expect($result->pay_code_value)->toBe($expectedPayCodeValue)
         ->and($result->total)->toBe(2.5)
         ->and($result->account_debit)->toBe(2.5);
-})->with(['payable', 'settlement']);
+})->with([
+    'payable' => ['payable', 0.0],
+    'settlement' => ['settlement', 1000.0],
+]);

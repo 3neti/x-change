@@ -137,6 +137,9 @@ final readonly class VoucherCollectionTreasuryCorrectionService
                         metadata: $metadata,
                     ),
                 );
+                if (method_exists($this->balances, 'forget')) {
+                    $this->balances->forget($owner, $plan->currency, $plan->provider);
+                }
 
                 if (
                     ! $wallet->refreshBalance()

@@ -35,11 +35,11 @@ it('moves only the planned Product revenue amount and preserves metadata', funct
     $productTransfers = Mockery::mock(ProductWalletTransferContract::class);
     $positions->shouldReceive('resolve')->once()->with('treasury:product')->andReturn($source);
     $products->shouldReceive('resolve')->once()->with('product:pay-code')->andReturn($product);
-    $productTransfers->shouldReceive('transfer')->once()->withArgs(function (...$args) use ($source, $product): bool {
-        return $args['source'] === $source
-            && $args['product'] === $product
-            && $args['amountMinor'] === 800
-            && $args['idempotencyKey'] === 'transfer-key';
+    $productTransfers->shouldReceive('transfer')->once()->withArgs(function (Wallet $receivedSource, ProductInterface $receivedProduct, int $amountMinor, string $idempotencyKey) use ($source, $product): bool {
+        return $receivedSource === $source
+            && $receivedProduct === $product
+            && $amountMinor === 800
+            && $idempotencyKey === 'transfer-key';
     })->andReturn($transfer);
 
     $result = (new BavixCommercialProductRevenueMovement($positions, $products, $productTransfers))

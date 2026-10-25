@@ -1,11 +1,12 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, nextTick } from 'vue';
 import CockpitQuickGenerateSubmitPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateSubmitPanel.vue';
 import CockpitRiderLibrary from '../../../resources/js/cockpit/components/CockpitRiderLibrary.vue';
 import { cockpitQuickGenerateTemplates } from '../../../resources/js/cockpit/quickGenerateDefaults';
 
 vi.mock('@inertiajs/vue3', () => ({
+    usePage: () => ({ props: {} }),
     Link: defineComponent({
         props: ['href'],
         template: '<a :href="href?.url ?? href"><slot /></a>',
@@ -18,9 +19,17 @@ vi.mock('@inertiajs/vue3', () => ({
     },
 }));
 
+const activeWrappers: Array<ReturnType<typeof mount>> = [];
+
+afterEach(() => {
+    activeWrappers.forEach((wrapper) => wrapper.unmount());
+    activeWrappers.length = 0;
+});
+
 describe('Quick Generate Rider Library integration', () => {
     it('passes one owner library to both Rider editors', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            attachTo: document.body,
             props: {
                 templates: cockpitQuickGenerateTemplates,
                 riderLibrary: [
@@ -45,6 +54,7 @@ describe('Quick Generate Rider Library integration', () => {
                 ],
             },
         });
+        activeWrappers.push(wrapper);
 
         await nextTick();
         await wrapper
@@ -63,10 +73,12 @@ describe('Quick Generate Rider Library integration', () => {
 
     it('applies library payloads to the existing reactive Rider editors', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            attachTo: document.body,
             props: {
                 templates: cockpitQuickGenerateTemplates,
             },
         });
+        activeWrappers.push(wrapper);
 
         await nextTick();
         await wrapper

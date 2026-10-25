@@ -20,7 +20,7 @@ it('documents and protects the quick generate ui submit enablement boundary', fu
         ->and($settlementCompass)->toContain('x-change Cockpit Mutation Wave 1E — UI Submit Enablement')
         ->and($settlementCompass)->toContain('../ui-cockpit/reports/047-quick-generate-ui-submit-enablement.md')
         ->and($component)->toContain('data-testid="cockpit-quick-generate-submit-panel"')
-        ->and($component)->toContain("'Idempotency-Key'")
+        ->and($component)->toContain('"Idempotency-Key": idempotencyKey')
         ->and($component)->toContain('processing.value')
         ->and($component)->toContain('metadata')
         ->and($page)->toContain('CockpitQuickGenerateSubmitPanel')
