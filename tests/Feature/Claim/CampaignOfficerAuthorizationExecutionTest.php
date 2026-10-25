@@ -11,6 +11,7 @@ use LBHurtado\XCampaign\Data\CampaignWorksheetRowData;
 use LBHurtado\XChange\Actions\Campaigns\IssueCampaignWorksheetApprovalPayCode;
 use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetAuthorizationExecutionService;
 use LBHurtado\XChange\Tests\Fakes\User;
+use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
 it('plans beneficiaries after a distinct authenticated officer authorizes the approval Pay Code', function () {
     $issuer = campaignOfficerAuthorizationUser();
@@ -111,6 +112,7 @@ it('replays an officer authorization without duplicating the beneficiary fulfill
 
     $this->actingAs($officer);
     $first = app(CampaignWorksheetAuthorizationExecutionService::class)->execute($voucher, ['mobile' => '09173011987']);
+    $this->travel(2)->seconds();
     $second = app(CampaignWorksheetAuthorizationExecutionService::class)->execute($voucher, ['mobile' => '09173011987']);
 
     $authorization->refresh();
@@ -119,6 +121,7 @@ it('replays an officer authorization without duplicating the beneficiary fulfill
         ->and($second->meta['planned_count'])->toBe(2)
         ->and($authorization->fulfillments()->count())->toBe(2)
         ->and($authorization->fulfillments()->where('status', 'planned')->count())->toBe(2)
+        ->and(ExecutionJournalEntry::query()->where('event_type', 'campaign.checker.approved')->count())->toBe(1)
         ->and($authorization->fulfillments()->whereNotNull('pay_code')->count())->toBe(0)
         ->and($authorization->fulfillments()->whereNotNull('provider_transfer_reference')->count())->toBe(0);
 });

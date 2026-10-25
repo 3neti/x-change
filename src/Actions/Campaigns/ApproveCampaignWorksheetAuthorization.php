@@ -75,11 +75,10 @@ final class ApproveCampaignWorksheetAuthorization
             $authorization->worksheet->forceFill(['status' => 'authorized'])->save();
             $this->fulfillmentPlanner->handle((string) $authorization->reference);
             $this->queueAutomaticFulfillment($authorization);
+            $this->journal->recordAuthorization('campaign.checker.approved', $authorization, $officer);
 
             return $authorization->refresh();
         });
-
-        $this->journal->recordAuthorization('campaign.checker.approved', $authorization, $officer);
 
         return $authorization;
     }
