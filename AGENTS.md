@@ -15,8 +15,9 @@ before changing package source. Start each task in its own branch and isolated
 worktree from the current GitHub `main`. Never switch, pull, reset, or clean a
 checkout containing another agent's work. Check status and branch ownership
 before editing; preserve uncommitted and unpushed work. Push only with task
-authorization, use a pull request with required CI, and leave the final merge
-to the repository owner. A passing branch run does not replace PR checks or
+authorization and use a pull request with required CI. The repository owner
+performs the final merge unless they explicitly delegate that PR's merge to an
+agent after its gates pass. A passing branch run does not replace PR checks or
 post-merge verification.
 
 ## Setup and deployment

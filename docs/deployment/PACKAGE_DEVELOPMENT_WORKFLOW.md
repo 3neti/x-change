@@ -73,10 +73,12 @@ Then:
    and report its scope, changed contracts, tests, and risks. Require the PR's
    `PHP tests` and `Vue tests` checks to pass. A branch push run alone is not
    sufficient.
-7. The repository owner reviews and squash-merges the PR. AI agents using the
-   shared `3neti` credential do not merge or bypass the main ruleset. GitHub
-   cannot count a PR author's own approval, so the ruleset requires PR and CI
-   without an approval count; the owner performs the final review and merge.
+7. The repository owner reviews and squash-merges the PR, or explicitly
+   delegates that specific PR's merge to an agent after its checks pass. AI
+   agents using the shared `3neti` credential do not merge by default or
+   bypass the main ruleset. GitHub cannot count a PR author's own approval, so
+   the ruleset requires PR and CI without an approval count; the owner controls
+   the final merge.
 8. Verify CI on the resulting `main` commit, then perform release acceptance
    and create a new immutable tag when the release is authorized.
 9. Update the host to that tag, republish required UI build inputs, and run
@@ -200,7 +202,8 @@ An AI agent working on package code must:
 6. keep credentials out of source, tests, logs, `.env.example`, commits, and prompts;
 7. commit only a tested slice and name the owning repository in its hand-off;
 8. push a branch or tag only after its verification gate passes;
-   open a PR for branch changes and leave the final merge to the owner;
+   open a PR for branch changes and merge only with explicit PR-specific
+   authorization after required checks pass;
 9. restore the host to tagged Composer resolution before final acceptance;
 10. report any remaining local path, mutable branch, stale UI mirror, or published configuration override.
 

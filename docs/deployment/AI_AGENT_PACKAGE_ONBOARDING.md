@@ -237,7 +237,8 @@ The normal reviewed release sequence is:
 2. Commit the tested package slice locally and report it for review.
 3. After explicit authorization, push the branch and open a pull request.
 4. Require the pull request's PHP and Vue CI checks to pass. The repository
-   owner reviews the diff and performs the squash merge; agents do not merge.
+   owner reviews the diff and performs the squash merge, or explicitly
+   delegates that PR's merge to an agent after its gates pass.
 5. Verify CI on the merged `main` commit before creating a new immutable
    package tag. Never move an existing tag.
 6. Update the host through Composer and publish the tagged package's build
