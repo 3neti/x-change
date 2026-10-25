@@ -2104,10 +2104,9 @@ return [
             'tags' => ['execution-engine', 'stored-value', 'contract'],
             'mode' => 'execution_engine_contract_demo',
             'amount' => 100,
+            'voucher_type' => 'redeemable',
             'currency' => 'PHP',
             'cash' => [
-                'settlement_rail' => 'INSTAPAY',
-                'fee_strategy' => 'absorb',
                 'validation' => [
                     'country' => 'PH',
                 ],
@@ -2117,7 +2116,7 @@ return [
             ],
             'stored_value' => [
                 'enabled' => true,
-                'replenishable' => true,
+                'replenishable' => false,
                 'maximum_balance' => 100,
                 'otp_required_above' => 50,
             ],

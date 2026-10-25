@@ -8,6 +8,7 @@ use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Enums\VoucherFlowType;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 
 beforeEach(function () {
@@ -24,6 +25,7 @@ beforeEach(function () {
     Artisan::call('xchange:lifecycle:prepare', [
         '--seed' => true,
     ]);
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:collectible-scenarios-test');
 });
 
 it('runs collectible basic payment scenario without withdrawal claims', function () {
