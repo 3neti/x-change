@@ -15,6 +15,7 @@ use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
 use LBHurtado\XChange\Jobs\Funding\SyncStandingFundingAddressJob;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingIntentJob;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingWebhookReceiptJob;
+use LBHurtado\XChange\Jobs\Onboarding\SendPublicAutoRegistrationSmsJob;
 use LBHurtado\XChange\Jobs\Payment\DeliverPartnerPaymentEvent;
 use LBHurtado\XChange\Jobs\Payment\MonitorPaymentAttemptJob;
 use LBHurtado\XChange\Jobs\Payment\ProcessSettledPaymentJob;
@@ -79,6 +80,9 @@ return [
                     'configuration_key' => 'x-change.redemption.feedback.queue',
                 ],
                 DeliverQueuedFeedbackSmsJob::class => [
+                    'configuration_key' => 'x-change.redemption.feedback.queue',
+                ],
+                SendPublicAutoRegistrationSmsJob::class => [
                     'configuration_key' => 'x-change.redemption.feedback.queue',
                 ],
                 ProcessSettledPaymentJob::class => [],
