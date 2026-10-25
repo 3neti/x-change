@@ -246,6 +246,7 @@ it('replays only Paynamics payout when approval OTP resumes an already redeemed 
     $voucher = issueVoucher();
     $voucher->code = 'TEST-9UB7';
     $voucher->metadata = [
+        ...(array) $voucher->metadata,
         'disbursement' => [
             'transaction_id' => 'TEST-9UB7-09171234567',
             'amount' => 12.50,

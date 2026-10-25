@@ -109,17 +109,18 @@ it('provisions one zero-balance client funds position for each ready provider co
     $second = $service->provision($accountOwner);
 
     expect($first->principalReference)->toStartWith('principal:account:')
-        ->and($first->positions)->toHaveCount(4)
-        ->and($second->positions)->toHaveCount(4)
+        ->and($first->positions)->toHaveCount(6)
+        ->and($second->positions)->toHaveCount(6)
         ->and(collect($first->positions)->pluck('provider')->all())
-        ->toBe(['future_bank', 'future_bank', 'future_emi', 'future_emi'])
+        ->toBe(['future_bank', 'future_bank', 'future_bank', 'future_emi', 'future_emi', 'future_emi'])
         ->and(collect($first->positions)->pluck('purpose')->unique()->all())
         ->toBe([
             TreasuryPositionPurpose::ClientFunds,
             TreasuryPositionPurpose::PayCodeReserve,
+            TreasuryPositionPurpose::BeneficiaryPayoutPayable,
         ])
         ->and(collect($first->positions)->pluck('balanceMinor')->unique()->all())
         ->toBe([0])
-        ->and(TreasuryPosition::query()->count())->toBe(4)
+        ->and(TreasuryPosition::query()->count())->toBe(6)
         ->and(Transaction::query()->count())->toBe($transactionsBefore);
 });

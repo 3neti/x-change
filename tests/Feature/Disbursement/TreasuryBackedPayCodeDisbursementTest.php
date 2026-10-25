@@ -29,6 +29,7 @@ use LBHurtado\XChange\Models\PayoutDestinationRevision;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Execution\TreasuryBackedPayCodeDisbursement;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
+use LBHurtado\XJournal\Data\ExecutionJournalEntryData;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
 
@@ -158,6 +159,62 @@ it('uses the persisted claim destination instead of the claimant mobile fallback
         ->and($provider->lastRequest?->account_number)->toBe('143810077254')
         ->and($provider->lastRequest?->account_number)->not->toBe('09455517752');
     $provider->assertDisburseCalledTimes(1);
+});
+
+it('uses an explicit value flow InstaPay destination when it matches the recorded claim', function (): void {
+    Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
+    ['voucher' => $voucher] = treasuryBackedVoucherForPayout();
+    $metadata = (array) $voucher->metadata;
+    data_set(
+        $metadata,
+        'instructions.execution.metadata.value_flow.destination',
+        'instapay.gcash.mobile:09173011987',
+    );
+    $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
+    $provider = fakePayoutProvider()->willReturnSuccessfulResult(
+        transactionId: 'NETBANK-VALUE-FLOW-PAYOUT-1',
+        provider: 'netbank',
+    );
+
+    $result = app(SubmitPayCodeClaim::class)->handle($voucher, [
+        'mobile' => '09173011987',
+        'recipient_country' => 'PH',
+        'bank_account' => [
+            'bank_code' => 'GXCHPHM2XXX',
+            'account_number' => '09173011987',
+        ],
+    ]);
+
+    expect($result->status)->toBe('succeeded')
+        ->and($provider->lastRequest?->bank_code)->toBe('GXCHPHM2XXX')
+        ->and($provider->lastRequest?->account_number)->toBe('09173011987');
+    $provider->assertDisburseCalledTimes(1);
+});
+
+it('does not pay an explicit value flow destination that differs from the recorded claim', function (): void {
+    ['voucher' => $voucher] = treasuryBackedVoucherForPayout();
+    $metadata = (array) $voucher->metadata;
+    data_set(
+        $metadata,
+        'instructions.execution.metadata.value_flow.destination',
+        'instapay.gcash.mobile:09179999999',
+    );
+    $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
+    $provider = fakePayoutProvider()->willReturnSuccessfulResult(
+        transactionId: 'MUST-NOT-BE-SUBMITTED',
+        provider: 'netbank',
+    );
+
+    expect(fn () => app(SubmitPayCodeClaim::class)->handle($voucher, [
+        'mobile' => '09173011987',
+        'recipient_country' => 'PH',
+        'bank_account' => [
+            'bank_code' => 'GXCHPHM2XXX',
+            'account_number' => '09173011987',
+        ],
+    ]))->toThrow(RuntimeException::class, 'does not match the voucher value flow destination');
+
+    $provider->assertNoDisbursementAttempted();
 });
 
 it('fails closed before the provider when the resolved destination differs from the claim', function (): void {
@@ -517,6 +574,9 @@ it('lets the canonical otp claim flow correct the same rejected campaign pay cod
             'otp' => [
                 'verified' => true,
                 'mobile' => '09175180722',
+                'verified_at' => now()->toIso8601String(),
+                'verification_reference' => 'simulation:campaign-recovery',
+                'verification_purpose' => 'form_flow.otp',
             ],
         ],
     ]);
@@ -810,9 +870,17 @@ it('retries a provider-confirmed settlement when its journal write initially fai
     );
     $realRecorder = app(ExecutionJournalRecorder::class);
     $failingRecorder = Mockery::mock(ExecutionJournalRecorder::class);
+    $failedSettlementWrite = false;
     $failingRecorder->shouldReceive('record')
-        ->once()
-        ->andThrow(new RuntimeException('Synthetic journal outage.'));
+        ->andReturnUsing(function (ExecutionJournalEntryData $entry) use ($realRecorder, &$failedSettlementWrite) {
+            if ($entry->eventType === 'pay_code.disbursement.settled' && ! $failedSettlementWrite) {
+                $failedSettlementWrite = true;
+
+                throw new RuntimeException('Synthetic journal outage.');
+            }
+
+            return $realRecorder->record($entry);
+        });
     $this->app->instance(ExecutionJournalRecorder::class, $failingRecorder);
     $reserveBefore = treasuryBackedPayoutPositionBalance(
         $issuer,
@@ -846,7 +914,7 @@ it('retries a provider-confirmed settlement when its journal write initially fai
         ))->toBe($reserveBefore - 2_000)
         ->and((int) TreasuryInventory::query()->sum('balance_minor'))
         ->toBe($inventoryBefore - 2_000)
-        ->and(ExecutionJournalEntry::query()->count())->toBe(0)
+        ->and(ExecutionJournalEntry::query()->where('event_type', 'pay_code.disbursement.settled')->count())->toBe(0)
         ->and($provider->disburseCallCount)->toBe(1);
 
     $this->app->instance(ExecutionJournalRecorder::class, $realRecorder);

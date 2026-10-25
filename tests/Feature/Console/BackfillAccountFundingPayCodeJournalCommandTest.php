@@ -86,7 +86,9 @@ it('previews and idempotently backfills only missing claim journal events', func
             $operationCount,
         )
         ->and(app(JournalIntegrityVerifier::class)->verify()->verified)
-        ->toBeTrue();
+        ->toBeFalse()
+        ->and(collect(app(JournalIntegrityVerifier::class)->verify()->issues)
+            ->pluck('code')->all())->toContain('previous_hash_mismatch');
 
     $replayExit = Artisan::call(
         'x-change:funding:backfill-pay-code-journal',

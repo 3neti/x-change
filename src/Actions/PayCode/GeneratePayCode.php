@@ -298,12 +298,13 @@ class GeneratePayCode
      * @param  array<string, mixed>  $input
      * @return array<string, mixed>
      */
-    protected function buildAllocationContext(array $input, PricingEstimateData $estimate): array
+    protected function buildAllocationContext(array $input, array $issued, PricingEstimateData $estimate): array
     {
         return [
             'requested_amount' => data_get($input, 'cash.amount'),
             'requested_currency' => data_get($input, 'cash.currency'),
-            'idempotency_key' => data_get($input, '_meta.idempotency_key'),
+            'idempotency_key' => data_get($input, '_meta.idempotency_key')
+                ?: 'pay-code-issuance:'.data_get($issued, 'code'),
             'correlation_id' => data_get($input, '_meta.correlation_id'),
             'cost' => [
                 'currency' => $estimate->currency,
@@ -390,7 +391,7 @@ class GeneratePayCode
         return $this->allocator->allocate(
             issuer: $this->assertWalletableIssuer($issuer),
             estimate: $estimate,
-            context: $this->buildAllocationContext($input, $estimate),
+            context: $this->buildAllocationContext($input, $issued, $estimate),
         );
     }
 

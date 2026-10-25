@@ -1065,6 +1065,35 @@ return [
             ],
         ],
 
+        'payment_voucher_explicit_value_flow' => [
+            'label' => 'Payment Voucher Explicit Value Flow',
+            'mode' => 'payment_voucher_collection',
+            'amount' => 0,
+            'target_amount' => 100,
+            'currency' => 'PHP',
+            'prefix' => 'PAY',
+            'mask' => '****',
+            'execution' => [
+                'driver' => 'payable_collection',
+                'metadata' => [
+                    'value_flow' => [
+                        'destination' => env(
+                            'XCHANGE_LIFECYCLE_VALUE_FLOW_DESTINATION',
+                            'account.mobile:'.env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987').'.client_funds',
+                        ),
+                    ],
+                ],
+            ],
+            'payment' => [
+                'provider' => env('X_CHANGE_PAYMENT_ATTEMPT_PROVIDER', 'netbank'),
+                'verify' => false,
+            ],
+            'meta' => [
+                'family' => 'payment',
+                'tags' => ['payable', 'collectible', 'value-flow', 'payment-attempt'],
+            ],
+        ],
+
         /*
         |--------------------------------------------------------------------------
         | Contract-bridge lifecycle scenarios
@@ -1175,7 +1204,7 @@ return [
                     ],
                     'expect' => [
                         'status' => 'failed',
-                        'message_contains' => ['email', 'birth date'],
+                        'message_contains' => ['email', 'birth_date'],
                     ],
                 ],
                 'complete_fields_succeed' => [
@@ -1244,6 +1273,8 @@ return [
                                 'otp_code' => '123456',
                                 'verified' => true,
                                 'verified_at' => '2026-04-19T10:30:00+08:00',
+                                'verification_reference' => 'simulation:otp-required',
+                                'verification_purpose' => 'form_flow.otp',
                             ],
                         ],
                     ],
@@ -1282,7 +1313,7 @@ return [
                 'provided_signature_succeeds' => [
                     'claim' => [
                         'inputs' => [
-                            'signature' => 'data:image/png;base64,DEMO_SIGNATURE',
+                            'signature' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
                         ],
                     ],
                     'expect' => [
@@ -1320,7 +1351,7 @@ return [
                 'provided_selfie_succeeds' => [
                     'claim' => [
                         'inputs' => [
-                            'selfie' => 'data:image/jpeg;base64,DEMO_SELFIE',
+                            'selfie' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
                         ],
                     ],
                     'expect' => [
@@ -1360,8 +1391,8 @@ return [
                     'claim' => [
                         'inputs' => [
                             'location' => [
-                                'lat' => 14.5995,
-                                'lng' => 120.9842,
+                                'latitude' => 14.5995,
+                                'longitude' => 120.9842,
                             ],
                         ],
                     ],
@@ -1402,8 +1433,8 @@ return [
                     'claim' => [
                         'inputs' => [
                             'location' => [
-                                'lat' => 14.6095,
-                                'lng' => 120.9942,
+                                'latitude' => 14.6095,
+                                'longitude' => 120.9942,
                             ],
                         ],
                     ],
@@ -1415,8 +1446,8 @@ return [
                     'claim' => [
                         'inputs' => [
                             'location' => [
-                                'lat' => 14.5995,
-                                'lng' => 120.9842,
+                                'latitude' => 14.5995,
+                                'longitude' => 120.9842,
                             ],
                         ],
                     ],
@@ -2075,10 +2106,9 @@ return [
             'tags' => ['execution-engine', 'stored-value', 'contract'],
             'mode' => 'execution_engine_contract_demo',
             'amount' => 100,
+            'voucher_type' => 'redeemable',
             'currency' => 'PHP',
             'cash' => [
-                'settlement_rail' => 'INSTAPAY',
-                'fee_strategy' => 'absorb',
                 'validation' => [
                     'country' => 'PH',
                 ],
@@ -2088,7 +2118,7 @@ return [
             ],
             'stored_value' => [
                 'enabled' => true,
-                'replenishable' => true,
+                'replenishable' => false,
                 'maximum_balance' => 100,
                 'otp_required_above' => 50,
             ],

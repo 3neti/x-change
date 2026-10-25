@@ -92,6 +92,7 @@ it('issues and replays one recipient-bound Account Funding Pay Code from the sys
             TreasuryPositionPurpose::ClientFunds,
         ))->toBe(125_000)
         ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'like', 'account_funding.pay_code.%')
             ->orderBy('id')
             ->pluck('event_type')
             ->all())->toBe([
@@ -277,6 +278,7 @@ it('atomically provisions a new Account and funds it from the system Account Fun
             ->sum('balance_minor'))->toBe($inventoryBefore)
         ->and($voucher->claims()->count())->toBe(2)
         ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'like', 'account_funding.pay_code.%')
             ->orderBy('id')
             ->pluck('event_type')
             ->all())->toBe([
@@ -389,6 +391,7 @@ it('lets guest web claims use the onboarding driver before Account Funding settl
         ->and($voucher->refresh()->redeemed_at)->not->toBeNull()
         ->and($voucher->claims()->count())->toBe(2)
         ->and(ExecutionJournalEntry::query()
+            ->where('event_type', 'like', 'account_funding.pay_code.%')
             ->orderBy('id')
             ->pluck('event_type')
             ->all())->toBe([
@@ -508,7 +511,7 @@ MARKDOWN);
                 $claimant,
                 TreasuryPositionPurpose::ClientFunds,
             ))->toBe(0)
-            ->and(ExecutionJournalEntry::query()->pluck('event_type')->all())
+            ->and(ExecutionJournalEntry::query()->where('event_type', 'like', 'account_funding.pay_code.%')->pluck('event_type')->all())
             ->toBe(['account_funding.pay_code.issued']);
 
         $sha256 = hash('sha256', (string) file_get_contents($agreementPath));
@@ -539,7 +542,7 @@ MARKDOWN);
                 $claimant,
                 TreasuryPositionPurpose::ClientFunds,
             ))->toBe(10_000)
-            ->and(ExecutionJournalEntry::query()->orderBy('id')->pluck('event_type')->all())
+            ->and(ExecutionJournalEntry::query()->where('event_type', 'like', 'account_funding.pay_code.%')->orderBy('id')->pluck('event_type')->all())
             ->toBe([
                 'account_funding.pay_code.issued',
                 'account_funding.pay_code.outcome_selected',

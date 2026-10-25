@@ -99,7 +99,10 @@ describe("Cockpit Quick Generate value use", () => {
       .trigger("submit");
     await flushPromises();
 
-    const [, options] = fetchMock.mock.calls.at(-1)!;
+    const [, options] = fetchMock.mock.calls.find(
+      ([url, request]) =>
+        url === "/x/cockpit/quick-generate" && request.method === "POST",
+    )!;
     const payload = JSON.parse(options.body);
 
     expect(payload.slice_plan).toMatchObject({
@@ -224,7 +227,10 @@ describe("Cockpit Quick Generate value use", () => {
       .trigger("submit");
     await flushPromises();
 
-    const [, options] = fetchMock.mock.calls.at(-1)!;
+    const [, options] = fetchMock.mock.calls.find(
+      ([url, request]) =>
+        url === "/x/cockpit/quick-generate" && request.method === "POST",
+    )!;
     const payload = JSON.parse(options.body);
 
     expect(payload.slice_plan).toMatchObject({

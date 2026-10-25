@@ -7,6 +7,10 @@ use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
 use LBHurtado\XChange\Exceptions\VoucherCollectionConflict;
 use LBHurtado\XChange\Models\VoucherCollection;
 
+beforeEach(function (): void {
+    actingAsTestUser();
+});
+
 it('records collection row after successful payment confirmation', function () {
     $voucher = issueVoucher(validVoucherInstructions(
         amount: 0.00,

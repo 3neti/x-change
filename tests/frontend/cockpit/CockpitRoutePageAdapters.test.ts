@@ -13,6 +13,7 @@ const routerPostMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@inertiajs/vue3', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@inertiajs/vue3')>()),
+    usePage: () => ({ props: {} }),
     Head: { template: '<div><slot /></div>' },
     router: { post: routerPostMock },
 }));

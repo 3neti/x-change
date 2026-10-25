@@ -32,6 +32,10 @@ final class ExportPartnerOpenApiCommand extends Command
         $requiredPaths = [
             '/funded-orders' => 'post',
             '/funded-orders/{reference}' => 'get',
+            '/stored-value-collections' => 'post',
+            '/stored-value-collections/{reference}' => 'get',
+            '/stored-value-collections/{reference}/verification' => 'post',
+            '/stored-value-collections/{reference}/commit' => 'post',
         ];
 
         foreach (array_keys((array) ($baseline['paths'] ?? [])) as $path) {
@@ -60,6 +64,19 @@ final class ExportPartnerOpenApiCommand extends Command
         if (data_get($generated, 'paths./funded-orders.post.security.0.partnerOAuth') !== ['funded-orders:create']
             || data_get($generated, 'paths./funded-orders/{reference}.get.security.0.partnerOAuth') !== ['funded-orders:read']) {
             throw new RuntimeException('Generated funded-order OAuth scopes do not match the Partner contract.');
+        }
+
+        foreach ([
+            '/stored-value-collections' => 'post',
+            '/stored-value-collections/{reference}' => 'get',
+            '/stored-value-collections/{reference}/verification' => 'post',
+            '/stored-value-collections/{reference}/commit' => 'post',
+        ] as $path => $method) {
+            if (data_get($generated, "paths.{$path}.{$method}.security.0.partnerOAuth") !== ['stored-value:spend']) {
+                throw new RuntimeException("Generated stored-value collection scope for {$method} {$path} is not authorized.");
+            }
+
+            $baseline['paths'][$path] = [$method => $generated['paths'][$path][$method]];
         }
 
         $baseline['info']['version'] = '1.5.0';

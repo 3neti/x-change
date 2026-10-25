@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 use LBHurtado\Voucher\Models\Voucher;
 
+beforeEach(function (): void {
+    provisionTestCommercialOfferings();
+});
+
 it('generates a pay code end to end via api and debits the issuer wallet', function () {
     $user = actingAsTestUser(1_000_000);
 

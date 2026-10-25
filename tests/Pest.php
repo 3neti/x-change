@@ -6,6 +6,7 @@ use Bavix\Wallet\Interfaces\Wallet;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Laravel\Fortify\Contracts\CreatesNewUsers;
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\EmiCore\Contracts\ProviderReadinessProbe;
 use LBHurtado\EmiCore\Contracts\SettlementProvider;
@@ -17,6 +18,7 @@ use LBHurtado\EmiCore\Data\Providers\ProviderCapabilityReadinessData;
 use LBHurtado\EmiCore\Data\Providers\ProviderReadinessRequestData;
 use LBHurtado\EmiCore\Enums\PayoutStatus;
 use LBHurtado\EmiCore\Enums\ProviderCapability;
+use LBHurtado\EmiCore\Enums\SettlementRail;
 use LBHurtado\EmiCore\Support\SettlementProviderRegistry;
 use LBHurtado\Voucher\Actions\GenerateVouchers;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
@@ -27,11 +29,14 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryPositionAllocationData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionRecognitionData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
+use LBHurtado\XChange\Contracts\SettlementRailCapabilityRegistryContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
+use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\WithdrawalDisbursementExecutionData;
 use LBHurtado\XChange\Services\Commercial\CommercialBillingPolicy;
 use LBHurtado\XChange\Services\Commercial\CommercialPrincipalProvisioningService;
+use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Treasury\SystemPrincipalProvisioningService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
@@ -45,7 +50,7 @@ use Propaganistas\LaravelPhone\PhoneNumber;
 
 uses(TestCase::class)->in('Unit', 'Feature');
 
-if (! interface_exists(\Laravel\Fortify\Contracts\CreatesNewUsers::class)) {
+if (! interface_exists(CreatesNewUsers::class)) {
     eval('namespace Laravel\\Fortify\\Contracts; interface CreatesNewUsers {}');
 }
 
@@ -83,6 +88,36 @@ function actingAsTestUser(int $amount = 1_000_000): User
     return $user;
 }
 
+function testCollectionWalletId(): string
+{
+    $user = auth()->user() ?: actingAsTestUser();
+
+    return (string) app(WalletAccessContract::class)
+        ->resolveForUser($user)
+        ->getKey();
+}
+
+function bindTestManualSettlementRails(): void
+{
+    app()->instance(
+        SettlementRailCapabilityRegistryContract::class,
+        new class implements SettlementRailCapabilityRegistryContract
+        {
+            public function sanitized(): array
+            {
+                return ['provider' => ['code' => 'manual'], 'rails' => []];
+            }
+
+            public function rail(SettlementRail $rail): ?array
+            {
+                return ['code' => $rail->value, 'enabled' => true];
+            }
+
+            public function assertSupports(PayoutRequestData $request): void {}
+        },
+    );
+}
+
 function provisionTestSystemPrincipalForCommissioning(): User
 {
     config()->set('x-change.payout.system_user_column', 'email');
@@ -97,6 +132,11 @@ function provisionTestSystemPrincipalForCommissioning(): User
     }
 
     return User::query()->where('email', 'system@example.test')->sole();
+}
+
+function provisionTestCommercialOfferings(): void
+{
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:test-suite');
 }
 
 function fundTestUserWallet(User $user, int $amount = 1_000_000): void

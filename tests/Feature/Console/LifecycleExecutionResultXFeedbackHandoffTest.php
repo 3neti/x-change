@@ -25,6 +25,10 @@ beforeEach(function () {
     ]);
 });
 
+beforeEach(function (): void {
+    provisionTestCommercialOfferings();
+});
+
 it('reports x-feedback delivery planning in lifecycle scenario execution without sending feedback', function () {
     $exitCode = Artisan::call('xchange:lifecycle:run', [
         'scenario' => 'execution_settlement_envelope_contract_demo',

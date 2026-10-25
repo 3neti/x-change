@@ -227,6 +227,8 @@ it('serializes GeneratePayCodeResultData in a success response', function () {
         'links' => [
             'redeem' => 'https://example.test/disburse?code=TEST-1234',
             'redeem_path' => '/disburse?code=TEST-1234',
+            'pay' => null,
+            'pay_path' => null,
         ],
         'wallet' => [
             'balance_before' => 1000,

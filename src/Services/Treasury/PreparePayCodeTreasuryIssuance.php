@@ -7,9 +7,12 @@ namespace LBHurtado\XChange\Services\Treasury;
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Data\FundingDecisionData;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Services\Claim\VoucherClaimPolicyResolver;
+use LBHurtado\XChange\Services\Execution\ValueFlowAddressResolver;
+use LBHurtado\XChange\Services\Execution\VoucherValueFlowPolicy;
 
 final readonly class PreparePayCodeTreasuryIssuance
 {
@@ -17,6 +20,9 @@ final readonly class PreparePayCodeTreasuryIssuance
         private TreasuryProviderConnectionCatalog $connections,
         private TreasuryPayCodeAccountingService $accounting,
         private VoucherClaimPolicyResolver $claimPolicies,
+        private VoucherValueFlowPolicy $valueFlows,
+        private ValueFlowAddressResolver $addresses,
+        private TreasuryPrincipalReferenceResolverContract $principals,
     ) {}
 
     /**
@@ -69,6 +75,28 @@ final readonly class PreparePayCodeTreasuryIssuance
             throw new PayCodeIssuanceFailed(
                 'Pay Code issuance requires exactly one active Treasury connection.',
             );
+        }
+
+        $sourceAddress = $this->valueFlows->source($voucher);
+
+        if ($sourceAddress !== null) {
+            $source = $this->addresses->clientFunds(
+                $sourceAddress,
+                $connections->sole()->reference,
+                $currency,
+            );
+
+            if ($source->principalReference !== $this->principals->resolve($issuer)) {
+                throw new PayCodeIssuanceFailed(
+                    'The value flow source must be the funded issuing Account.',
+                );
+            }
+        }
+
+        $destinationAddress = $this->valueFlows->destination($voucher);
+
+        if ($destinationAddress !== null) {
+            $this->addresses->instapayDestination($destinationAddress);
         }
 
         $this->accounting->reserve(

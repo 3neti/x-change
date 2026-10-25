@@ -23,6 +23,10 @@ beforeEach(function () {
     ]);
 });
 
+beforeEach(function (): void {
+    provisionTestCommercialOfferings();
+});
+
 it('runs the philhealth bst three party settlement lifecycle scenario', function () {
     $exitCode = Artisan::call('xchange:lifecycle:run', [
         'scenario' => 'settlement_philhealth_bst_three_party',
@@ -57,7 +61,7 @@ it('runs the philhealth bst three party settlement lifecycle scenario', function
         ->and(data_get($metadata, 'settlement_payload.patient_name'))->toBe('Juan Dela Cruz')
         ->and(data_get($metadata, 'settlement_documents.loa'))->toBe('demo://documents/loa.pdf')
         ->and(data_get($metadata, 'settlement_checklist.amount_verified'))->toBeTrue();
-    ;
+
 });
 
 it('shows patient attestation separate from settlement payment', function () {
@@ -119,4 +123,3 @@ it('uses real settlement attestation to persist patient evidence before readines
         ->and($json['phases']['evaluate_before_completion']['settlement']['missing'])
         ->toContain('amount_verified');
 });
-

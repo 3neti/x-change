@@ -10,10 +10,11 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Contracts\VoucherCollectionPostingContract;
-use LBHurtado\XChange\Contracts\VoucherCollectionWalletResolverContract;
 use LBHurtado\XChange\Data\Payment\ConfirmedVoucherCollectionData;
 use LBHurtado\XChange\Data\Payment\VoucherCollectionPostingData;
 use LBHurtado\XChange\Services\Cockpit\CockpitPosSaleReferenceService;
+use LBHurtado\XChange\Services\Execution\VoucherCollectionWalletSelector;
+use LBHurtado\XChange\Services\Execution\VoucherValueFlowPolicy;
 use LBHurtado\XChange\Services\Treasury\TreasuryInventoryRegistrationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use RuntimeException;
@@ -21,7 +22,8 @@ use RuntimeException;
 final readonly class ProviderWalletCollectionPosting implements VoucherCollectionPostingContract
 {
     public function __construct(
-        private VoucherCollectionWalletResolverContract $wallets,
+        private VoucherCollectionWalletSelector $wallets,
+        private VoucherValueFlowPolicy $valueFlows,
         private TreasuryProviderConnectionCatalog $connections,
         private TreasuryInventoryOperationContract $treasury,
         private TreasuryInventoryRegistrationService $inventoryRegistration,
@@ -38,6 +40,12 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
         Voucher $voucher,
         ConfirmedVoucherCollectionData $collection,
     ): VoucherCollectionPostingData {
+        if ($this->valueFlows->source($voucher) !== null) {
+            throw new RuntimeException(
+                'Explicit collection sources require provider-verified payer account evidence.',
+            );
+        }
+
         $provider = mb_strtolower(trim((string) $collection->provider));
         $currency = mb_strtoupper(trim($collection->currency));
         $connections = collect($this->connections->active())
@@ -58,7 +66,7 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
         }
 
         $connection = $connections->sole();
-        $wallet = $this->wallets->resolve($voucher);
+        $wallet = $this->wallets->resolve($voucher, $provider, $currency);
         $walletUuid = data_get($wallet, 'uuid');
         $accountReference = is_string($walletUuid) && trim($walletUuid) !== ''
             ? 'wallet:'.trim($walletUuid)
@@ -153,7 +161,11 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
         Voucher $voucher,
         ConfirmedVoucherCollectionData $collection,
     ): VoucherCollectionPostingData {
-        $transaction = $this->wallets->resolve($voucher)->deposit(
+        $transaction = $this->wallets->resolve(
+            $voucher,
+            (string) $collection->provider,
+            $collection->currency,
+        )->deposit(
             $collection->amountMinor,
             [
                 'reason' => 'voucher_collection',

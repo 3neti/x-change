@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Gate;
 use LBHurtado\Voucher\Contracts\StoredValueExecutionGateway;
 use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\Execution\DurableStoredValueExecutionGatewayContract;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Execution\XChangeStoredValueExecutionGateway;
 use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 
@@ -26,6 +28,7 @@ beforeEach(function () {
     Artisan::call('xchange:lifecycle:prepare', [
         '--seed' => true,
     ]);
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:execution-engine-contract-test');
 });
 
 it('runs settlement envelope execution through the voucher engine and x-change gateway binding', function () {
@@ -57,6 +60,13 @@ it('runs settlement envelope execution through the voucher engine and x-change g
 
 it('runs stored value activation and spend through the voucher engine and x-change gateway binding', function () {
     config()->set('x-change.execution.stored_value.issuance_enabled', true);
+    config()->set('x-change.execution.stored_value.collection.staff', [
+        'enabled' => true,
+        'maximum_amount_minor' => 10_000,
+        'daily_amount_minor' => 100_000,
+        'destination' => 'collector',
+    ]);
+    Gate::define('x-change.stored-value.collect', static fn (): bool => true);
     $demo = new XChangeStoredValueExecutionGateway;
     app()->instance(
         StoredValueExecutionGateway::class,

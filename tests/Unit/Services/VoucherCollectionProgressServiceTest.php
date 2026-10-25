@@ -7,6 +7,10 @@ use LBHurtado\XChange\Actions\Payment\RecordVoucherCollection;
 use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 
+beforeEach(function (): void {
+    actingAsTestUser();
+});
+
 it('computes partial collection progress', function () {
     $voucher = issueCollectibleVoucherForProgressTest(100.00);
 

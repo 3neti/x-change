@@ -61,5 +61,5 @@ it('rejects an unresolvable governed Account reference', function (): void {
             'wallet:missing-commercial-recipient',
             'principal:missing-commercial-recipient',
             $connection,
-        ))->toThrow(FundingSettlementDenied::class, 'could not be resolved');
+        ))->toThrow(FundingSettlementDenied::class, 'wallet reference is invalid');
 });

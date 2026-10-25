@@ -7,6 +7,7 @@ use LBHurtado\XChange\Jobs\Campaigns\CompleteAutomaticDemonstrationPolicyJob;
 use LBHurtado\XChange\Jobs\Campaigns\ConvergeCampaignFeedbackDeliveryJob;
 use LBHurtado\XChange\Jobs\Campaigns\DispatchCampaignFeedbackJob;
 use LBHurtado\XChange\Jobs\Campaigns\SendDemonstrationPolicySummaryJob;
+use LBHurtado\XChange\Jobs\Checkout\LinkSettledCheckoutContactJob;
 use LBHurtado\XChange\Jobs\Commercial\ReconcilePartnerCommissionPayoutBatchJob;
 use LBHurtado\XChange\Jobs\Feedback\DeliverQueuedFeedbackSmsJob;
 use LBHurtado\XChange\Jobs\Funding\PayApprovedFundingRequestJob;
@@ -16,6 +17,9 @@ use LBHurtado\XChange\Jobs\Funding\VerifyFundingIntentJob;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingWebhookReceiptJob;
 use LBHurtado\XChange\Jobs\Payment\DeliverPartnerPaymentEvent;
 use LBHurtado\XChange\Jobs\Payment\MonitorPaymentAttemptJob;
+use LBHurtado\XChange\Jobs\Payment\ProcessSettledPaymentJob;
+use LBHurtado\XChange\Jobs\Payment\QueueIssuedPayCodeSmsJob;
+use LBHurtado\XChange\Jobs\Payment\RecoverSettledPayerIdentityJob;
 use LBHurtado\XChange\Jobs\Payment\VerifyPaymentAttemptJob;
 use LBHurtado\XChange\Jobs\Provisioning\DeliverProvisioningOfferJob;
 use LBHurtado\XChange\Jobs\Redemption\DispatchVoucherRedemptionFeedbackJob;
@@ -77,6 +81,9 @@ return [
                 DeliverQueuedFeedbackSmsJob::class => [
                     'configuration_key' => 'x-change.redemption.feedback.queue',
                 ],
+                ProcessSettledPaymentJob::class => [],
+                QueueIssuedPayCodeSmsJob::class => [],
+                RecoverSettledPayerIdentityJob::class => [],
                 DeliverProvisioningOfferJob::class => [],
                 DispatchVoucherRedemptionFeedbackJob::class => [
                     'configuration_key' => 'x-change.redemption.feedback.queue',
@@ -118,6 +125,9 @@ return [
             ],
             'tags' => ['package:x-change', 'lane:issuance'],
             'jobs' => [
+                LinkSettledCheckoutContactJob::class => [
+                    'configuration_key' => 'x-change.issuance_funding.on_demand.queue',
+                ],
                 ResumeOnDemandPayCodeIssuanceJob::class => [
                     'configuration_key' => 'x-change.issuance_funding.on_demand.queue',
                 ],

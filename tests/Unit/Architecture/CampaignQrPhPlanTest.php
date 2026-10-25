@@ -12,7 +12,7 @@ it('locks the campaign QR Ph architecture and current compass checkpoint', funct
     );
 
     expect($plan)
-        ->toContain('| Endpoint | Web link or ordinary QR |')
+        ->toMatch('/\| Endpoint\s+\| Web link or ordinary QR \|/')
         ->toContain('Campaign QR Ph')
         ->toContain('ProvisionalCoverage')
         ->toContain('Coverage and the first envelope version commit atomically')

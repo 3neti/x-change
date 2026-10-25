@@ -132,7 +132,13 @@ it('conceals Treasury Operations from ordinary Account holders and exposes it to
 
     $this->get(route('x-change.cockpit.treasury.account-grants.index'))->assertNotFound();
 
-    authorizeTreasuryOperator($ordinary, TreasuryOperatorCapability::ViewAccountGrants);
+    $operator = User::query()->create([
+        'name' => 'Treasury Operator',
+        'email' => 'treasury-operator@example.test',
+        'password' => 'password',
+    ]);
+    authorizeTreasuryOperator($operator, TreasuryOperatorCapability::ViewAccountGrants);
+    $this->actingAs($operator);
 
     $this->withHeader('X-Inertia', 'true')
         ->get(route('x-change.cockpit.treasury.account-grants.index'))

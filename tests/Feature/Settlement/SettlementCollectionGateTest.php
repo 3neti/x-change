@@ -68,7 +68,12 @@ it('requires verified OTP evidence when the intake instruction asks for it', fun
     expect(fn () => $gate->ensureCollectibleSettlementIsReady($voucher))
         ->toThrow(VoucherRequiresSettlementEnvelope::class);
     app(PrepareVoucherClaimEvidence::class)->handle($voucher, ['inputs' => [
-        ...claimIntakeSettlementInputs(), 'otp' => ['verified' => true],
+        ...claimIntakeSettlementInputs(), 'otp' => [
+            'verified' => true,
+            'verification_reference' => 'test-otp-verification',
+            'verification_purpose' => 'claim',
+            'verified_at' => now()->toIso8601String(),
+        ],
     ]]);
     $gate->ensureCollectibleSettlementIsReady($voucher);
 });

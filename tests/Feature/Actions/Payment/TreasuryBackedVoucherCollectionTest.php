@@ -2,14 +2,19 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Contact\Models\Contact;
 use LBHurtado\Voucher\Actions\GenerateVouchers;
+use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Voucher\Services\ExecutionEngine;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
 use LBHurtado\XChange\Actions\Payment\CollectVoucherFunds;
+use LBHurtado\XChange\Actions\Payment\CompleteVoucherCollection;
 use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Data\FundingDecisionData;
+use LBHurtado\XChange\Data\Payment\ConfirmedVoucherCollectionData;
 use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
 use LBHurtado\XChange\Models\PosSaleReference;
 use LBHurtado\XChange\Models\VoucherCollection;
@@ -102,10 +107,147 @@ it('uses the collection wallet uuid as the Treasury account reference', function
     expect(VoucherCollection::query()->count())->toBe(1);
 });
 
+it('credits the instructed Client Funds destination and leaves the issuer unchanged', function (): void {
+    $issuer = actingAsTestUser(0);
+    fundTestUserClientFunds($issuer, 100);
+    $collector = User::query()->create([
+        'name' => 'Collector',
+        'email' => 'collector@example.test',
+        'password' => 'not-a-login-credential',
+    ]);
+    $collector->forceFill(['mobile' => '09173011987'])->save();
+    fundTestUserWallet($collector, 0);
+    fundTestUserClientFunds($collector, 100);
+    $voucher = treasuryBackedCollectionVoucher(
+        $issuer,
+        'account.mobile:09173011987.client_funds',
+    );
+
+    app(CollectVoucherFunds::class)->collectConfirmed(
+        $voucher,
+        treasuryBackedCollectionResult($voucher),
+        treasuryBackedCollectionPayload(),
+    );
+
+    expect(treasuryClientFundsLedger($collector)->balanceInt)->toBe(10_100)
+        ->and(treasuryClientFundsLedger($issuer)->balanceInt)->toBe(100)
+        ->and(VoucherCollection::query()->sole()->treasury_operation_reference)->not->toBeNull();
+});
+
+it('routes an instructed payable collection through the voucher execution engine', function (): void {
+    $issuer = actingAsTestUser(0);
+    fundTestUserClientFunds($issuer, 100);
+    $collector = User::query()->create([
+        'name' => 'Collector',
+        'email' => 'engine-collector@example.test',
+        'password' => 'not-a-login-credential',
+    ]);
+    $collector->forceFill(['mobile' => '09173011987'])->save();
+    fundTestUserWallet($collector, 0);
+    fundTestUserClientFunds($collector, 100);
+    $voucher = treasuryBackedCollectionVoucher(
+        $issuer,
+        'account.mobile:09173011987.client_funds',
+    );
+    $context = ExecutionContextData::fromRedemption(
+        $voucher,
+        new Contact,
+        $voucher->code,
+        [
+            'operation' => 'collect',
+            'amount_minor' => 10_000,
+            'currency' => 'PHP',
+            'provider' => 'netbank',
+            'provider_reference' => 'NETBANK-ATTEMPT-ENGINE-1',
+            'provider_transaction_id' => 'NETBANK-TRANSACTION-ENGINE-1',
+            'idempotency_key' => 'value-flow-engine-1',
+        ],
+        ['execution_id' => 'value-flow-engine-1'],
+    );
+
+    $result = app(ExecutionEngine::class)->execute($context);
+
+    expect($result->successful)->toBeTrue()
+        ->and($result->driver)->toBe('payable_collection')
+        ->and(treasuryClientFundsLedger($collector)->balanceInt)->toBe(10_100)
+        ->and(treasuryClientFundsLedger($issuer)->balanceInt)->toBe(100);
+});
+
+it('keeps the issuer destination default when the payable execution instruction omits value flow', function (): void {
+    $issuer = actingAsTestUser(0);
+    fundTestUserClientFunds($issuer, 100);
+    $voucher = treasuryBackedCollectionVoucher($issuer);
+    $metadata = (array) $voucher->metadata;
+    data_set($metadata, 'instructions.execution.driver', 'payable_collection');
+    $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
+    $context = ExecutionContextData::fromRedemption(
+        $voucher,
+        new Contact,
+        $voucher->code,
+        [
+            'operation' => 'collect',
+            'amount_minor' => 10_000,
+            'currency' => 'PHP',
+            'provider' => 'netbank',
+            'provider_reference' => 'NETBANK-ATTEMPT-DEFAULT-1',
+            'provider_transaction_id' => 'NETBANK-TRANSACTION-DEFAULT-1',
+            'idempotency_key' => 'value-flow-default-1',
+        ],
+        ['execution_id' => 'value-flow-default-1'],
+    );
+
+    $result = app(ExecutionEngine::class)->execute($context);
+
+    expect($result->successful)->toBeTrue()
+        ->and(treasuryClientFundsLedger($issuer)->balanceInt)->toBe(10_100);
+});
+
+it('does not collect from an explicit payer address without provider account evidence', function (): void {
+    $issuer = actingAsTestUser(0);
+    $voucher = treasuryBackedCollectionVoucher($issuer);
+    $metadata = (array) $voucher->metadata;
+    data_set(
+        $metadata,
+        'instructions.execution.metadata.value_flow.source',
+        'instapay.gcash.mobile:09179999999',
+    );
+    $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
+
+    expect(fn () => app(CollectVoucherFunds::class)->collectConfirmed(
+        $voucher,
+        treasuryBackedCollectionResult($voucher),
+        treasuryBackedCollectionPayload(),
+    ))->toThrow(RuntimeException::class, 'provider-verified payer account evidence');
+
+    expect(VoucherCollection::query()->count())->toBe(0);
+});
+
+it('rejects explicit routing on a collection driver that cannot interpret it', function (): void {
+    $issuer = actingAsTestUser(0);
+    $voucher = treasuryBackedCollectionVoucher(
+        $issuer,
+        'account.mobile:09173011987.client_funds',
+    );
+
+    expect(fn () => app(CompleteVoucherCollection::class)->handle(
+        $voucher,
+        new ConfirmedVoucherCollectionData(
+            amountMinor: 10_000,
+            currency: 'PHP',
+            executionDriver: 'x_change_account_funding',
+            authority: 'authoritative_provider',
+            authorityReference: 'provider-payment-1',
+            idempotencyKey: 'unsupported-value-flow-driver-1',
+        ),
+    ))->toThrow(RuntimeException::class, 'does not support explicit value flow addresses');
+
+    expect(VoucherCollection::query()->count())->toBe(0);
+});
+
 /**
  * @param  User  $issuer
  */
-function treasuryBackedCollectionVoucher($issuer): Voucher
+function treasuryBackedCollectionVoucher($issuer, ?string $destinationAddress = null): Voucher
 {
     $voucher = GenerateVouchers::run(validVoucherInstructions(
         amount: 0,
@@ -117,6 +259,14 @@ function treasuryBackedCollectionVoucher($issuer): Voucher
                 'issuer_id' => (string) $issuer->getKey(),
                 'collection_wallet_id' => (string) $issuer->wallet()->where('slug', 'platform')->sole()->getKey(),
             ],
+            ...($destinationAddress === null ? [] : [
+                'execution' => [
+                    'driver' => 'payable_collection',
+                    'metadata' => [
+                        'value_flow' => ['destination' => $destinationAddress],
+                    ],
+                ],
+            ]),
         ],
     ))->sole();
 

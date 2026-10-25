@@ -23,6 +23,10 @@ function prepareApiLifecycleIssuer(): FakeLifecycleUser
     return $issuer;
 }
 
+beforeEach(function (): void {
+    provisionTestCommercialOfferings();
+});
+
 it('runs a lifecycle scenario through the lifecycle API (no-claim fast path)', function () {
     $issuer = prepareApiLifecycleIssuer();
 

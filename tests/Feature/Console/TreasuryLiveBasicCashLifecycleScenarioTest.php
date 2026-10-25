@@ -38,6 +38,16 @@ beforeEach(function () {
         'x-change.withdrawal.open_slice_min_interval_seconds' => 0,
         'x-change.settlement.default_driver' => 'philhealth-bst',
         'x-change.settlement.drivers_path' => settlementEnvelopeDriversPath(),
+        'x-change.provider_runtime.default_provider' => 'netbank',
+        'x-change.provider_runtime.providers.netbank.enabled' => true,
+        'x-change.provider_runtime.providers.netbank.source_account_readiness.account_number' => '113001000019',
+        'x-change.provider_runtime.providers.netbank.source_account_readiness.enabled' => false,
+        'omnipay.gateways.netbank.options.rails.INSTAPAY' => [
+            'enabled' => true,
+            'min_amount' => 1,
+            'max_amount' => 5_000_000,
+            'fee' => 1_000,
+        ],
         'queue.default' => 'sync',
     ]);
 
@@ -57,6 +67,10 @@ beforeEach(function () {
         'x-change.lifecycle.scenarios.treasury_live_basic_cash',
         $scenario,
     );
+});
+
+beforeEach(function (): void {
+    provisionTestCommercialOfferings();
 });
 
 it('fails closed with a concise scenario-specific response before provider access', function () {

@@ -1,7 +1,12 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import QuickGenerate from '../../../resources/js/cockpit/pages/QuickGenerate.vue';
 import RouteQuickGenerate from '../../../resources/js/pages/x-change/cockpit/QuickGenerate.vue';
+
+vi.mock('@inertiajs/vue3', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@inertiajs/vue3')>()),
+    usePage: () => ({ props: {} }),
+}));
 
 const quickGenerateReadModel = {
     status: 'available',

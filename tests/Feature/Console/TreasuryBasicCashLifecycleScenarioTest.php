@@ -15,6 +15,7 @@ use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRunOptions;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Providers\XChangeServiceProvider;
+use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 
 function prepareTreasuryBasicCashIssuer(): FakeLifecycleUser
@@ -30,6 +31,7 @@ function prepareTreasuryBasicCashIssuer(): FakeLifecycleUser
         ['testing'],
     );
     enableNetbankTreasuryForTests();
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:treasury-basic-cash-test');
     config()->set('x-change.treasury.legal_entity_reference', null);
 
     $issuer = FakeLifecycleUser::query()->create([
@@ -142,7 +144,7 @@ it('funds Treasury, issues basic_cash, proves replay safety, and rolls back', fu
             'commercial_sale.allocation_total_minor',
         ))->toBe(1_500)
         ->and(data_get($result->payload, 'commercial_sale.allocation_count'))
-        ->toBe(3)
+        ->toBe(1)
         ->and(data_get($result->payload, 'commercial_sale.offering.reference'))
         ->toBe('commercial-offering:pay_code')
         ->and(data_get($result->payload, 'commercial_sale.offering.version'))
@@ -154,7 +156,7 @@ it('funds Treasury, issues basic_cash, proves replay safety, and rolls back', fu
         ->and(data_get($result->payload, 'commercial_sale.accounting_context.schema_version'))
         ->toBe(2)
         ->and(data_get($result->payload, 'commercial_sale.accounting_context.expected_provider_cost_minor'))
-        ->toBe(1_000)
+        ->toBe(0)
         ->and(data_get($result->payload, 'commercial_sale.attestation.ready'))
         ->toBeTrue()
         ->and(data_get($result->payload, 'commercial_sale.attestation.issue_count'))

@@ -6,6 +6,7 @@ it('returns settlement preparation metadata via the lifecycle route surface', fu
     $voucher = issueVoucher(validVoucherInstructions(100.00, 'INSTAPAY', [
         'voucher_type' => 'settlement',
         'target_amount' => 100.00,
+        'metadata' => ['collection_wallet_id' => testCollectionWalletId()],
     ]));
 
     $voucher->forceFill([

@@ -38,4 +38,10 @@ final class RecoverSettledPayerIdentityJob implements ShouldQueue
     {
         report($exception);
     }
+
+    /** @return list<string> */
+    public function tags(): array
+    {
+        return ['package:x-change', 'lane:feedback', 'job:RecoverSettledPayerIdentityJob'];
+    }
 }

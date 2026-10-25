@@ -342,7 +342,12 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
             && $commercialSale->total_price_minor === $compatibilityFeeMinor
             && $commercialAllocationMinor === $compatibilityFeeMinor
             && $commercialAttestation['ready'] === true
-            && count($commercialJournalEvents) === 2 + $commercialSale->allocations->count();
+            && in_array('commercial.sale.accepted', $commercialJournalEvents, true)
+            && in_array('commercial.charge.posted', $commercialJournalEvents, true)
+            && count(array_filter(
+                $commercialJournalEvents,
+                static fn (string $event): bool => $event === 'commercial.allocation.posted',
+            )) === $commercialSale->allocations->count();
 
         return [
             'success' => $success,

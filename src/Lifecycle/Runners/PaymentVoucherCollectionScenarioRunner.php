@@ -14,8 +14,8 @@ use LBHurtado\XChange\Data\Payment\RenderedVoucherPaymentQrData;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Models\PaymentAttempt;
-use LBHurtado\XChange\Services\VoucherPaymentQrRendererFactory;
 use LBHurtado\XChange\Services\PayCodeIssuanceService;
+use LBHurtado\XChange\Services\VoucherPaymentQrRendererFactory;
 use Throwable;
 
 final readonly class PaymentVoucherCollectionScenarioRunner implements ScenarioRunnerContract
@@ -134,6 +134,9 @@ final readonly class PaymentVoucherCollectionScenarioRunner implements ScenarioR
             'prefix' => (string) data_get($context->scenario, 'prefix', 'PAY'),
             'mask' => (string) data_get($context->scenario, 'mask', '****'),
             'voucher_type' => 'payable',
+            ...((array) data_get($context->scenario, 'execution', []) === [] ? [] : [
+                'execution' => (array) data_get($context->scenario, 'execution'),
+            ]),
             'target_amount' => (float) data_get($context->scenario, 'target_amount', 100),
             'rules' => [
                 'min_payment' => (float) data_get($context->scenario, 'target_amount', 100),

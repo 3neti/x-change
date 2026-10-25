@@ -172,7 +172,7 @@ it('reports active baseline issuance while locking price changes', function (): 
         ])
         ->and($status['pricing_schedule'])->toMatchArray([
             'reference' => 'beta-pricing-schedule-v1',
-            'version' => 1,
+            'version' => 2,
             'schedule_ready' => true,
             'customer_charging_ready' => false,
         ])

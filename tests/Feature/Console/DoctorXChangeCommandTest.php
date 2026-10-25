@@ -351,9 +351,9 @@ it('reports unsafe synchronous queues and local scheduler locks', function () {
 
     expect($queue['passed'])->toBeFalse()
         ->and($queue['meta']['required_queues'])->toBe([
-            'default',
             'x-change-feedback',
             'x-change-funding',
+            'x-change-issuance',
         ])
         ->and($cache['passed'])->toBeFalse();
 });

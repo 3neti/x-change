@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+beforeEach(function (): void {
+    provisionTestCommercialOfferings();
+});
+
 it('logs estimate requested and succeeded events', function () {
     actingAsTestUser();
 

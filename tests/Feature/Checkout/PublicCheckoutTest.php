@@ -32,7 +32,6 @@ use LBHurtado\XChange\Services\Checkout\CheckoutLifecycle;
 use LBHurtado\XChange\Services\Checkout\PublicCheckoutDraftAccess;
 use LBHurtado\XChange\Services\Checkout\ReverifyCheckoutQrPayer;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
-use LBHurtado\XChange\Services\Commercial\ConfiguredCommercialPrincipalResolver;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XFeedback\Models\FeedbackDeliveryRecord;
 
@@ -387,7 +386,8 @@ it('keeps the bank method route behind the existing guest possession token', fun
 });
 
 it('gates the monitor and keeps expiring viewer links read only', function (): void {
-    $principal = checkoutTestPrincipal();
+    checkoutTestPrincipal();
+    $principal = checkoutTestEscrowPrincipal();
     app(CheckoutLifecycle::class)->place(checkoutTestOrder($principal));
 
     $headers = ['X-Inertia' => 'true', 'Accept' => 'text/html, application/xhtml+xml'];
@@ -505,7 +505,8 @@ it('keeps all owner rows visible after computing attention totals', function ():
 });
 
 it('shows an issued Pay Code value separately from its payment and reveals the full code only to the owner', function (): void {
-    $principal = checkoutTestPrincipal();
+    checkoutTestPrincipal();
+    $principal = checkoutTestEscrowPrincipal();
     $order = checkoutTestOrder($principal);
     $checkout = app(CheckoutLifecycle::class)->place($order);
     $voucher = Voucher::query()->create(['code' => 'READY-XYZ123']);
@@ -556,7 +557,8 @@ it('leaves Pay Code details empty while checkout issuance is pending', function 
 });
 
 it('creates and revokes a viewer link scoped to the commissioned owner', function (): void {
-    $principal = checkoutTestPrincipal();
+    checkoutTestPrincipal();
+    $principal = checkoutTestEscrowPrincipal();
 
     $this->artisan('x-change:checkout:viewer-link', ['label' => 'Acceptance viewer', '--days' => 1])
         ->assertSuccessful();
@@ -590,7 +592,7 @@ it('saves an editable checkout draft while new placement is paused and requires 
     $request->setLaravelSession(app('session')->driver());
     $request->headers->set(PublicCheckoutDraftAccess::TokenHeader, $token);
     $drafts = app(PublicCheckoutDraftAccess::class);
-    $principal = app(ConfiguredCommercialPrincipalResolver::class)->resolve();
+    $principal = checkoutTestEscrowPrincipal();
     expect($drafts->active($request, $principal)['checkout']->reference)->toBe($reference);
 
     $saved = $drafts->save($request, $principal, ['cash' => ['amount' => 75, 'currency' => 'PHP']]);
@@ -605,7 +607,7 @@ it('stores public checkout drafts against the dedicated escrow principal after c
     config()->set('x-change.public_issuance_escrow.enabled', true);
     config()->set('x-change.public_issuance_escrow.principal.reference', 'public-issuance-escrow');
 
-    $escrow = CommercialPrincipal::query()->create([
+    $escrow = CommercialPrincipal::query()->firstOrCreate(['reference' => 'public-issuance-escrow'], [
         'reference' => 'public-issuance-escrow',
         'legal_name' => 'Public Issuance Escrow',
         'authorization_reference' => 'commissioning:public-issuance-escrow:v1',
@@ -639,7 +641,8 @@ it('backfills existing public orders without duplicating checkout history', func
 });
 
 it('flags a paid expired order for manual refund review without offering issuance retry', function (): void {
-    $principal = checkoutTestPrincipal();
+    checkoutTestPrincipal();
+    $principal = checkoutTestEscrowPrincipal();
     $order = checkoutTestOrder($principal);
     $intent = FundingIntent::query()->create([
         'account_reference' => $order->account_reference,
@@ -707,7 +710,8 @@ it('flags a paid expired order for manual refund review without offering issuanc
 });
 
 it('rejects a manual refund case for an expired order without settlement', function (): void {
-    $order = checkoutTestOrder(checkoutTestPrincipal());
+    checkoutTestPrincipal();
+    $order = checkoutTestOrder(checkoutTestEscrowPrincipal());
     $order->forceFill(['status' => 'expired'])->saveQuietly();
     $checkout = app(CheckoutLifecycle::class)->place($order);
 
@@ -779,6 +783,17 @@ it('blocks issuance when a refund case exists for the same checkout', function (
 
 function checkoutTestPrincipal(): CommercialPrincipal
 {
+    config()->set('x-change.public_issuance_escrow.enabled', true);
+    config()->set('x-change.public_issuance_escrow.principal.reference', 'public-issuance-escrow');
+    config()->set('x-change.public_issuance_escrow.principal.legal_name', 'Public Issuance Escrow');
+    config()->set('x-change.public_issuance_escrow.principal.authorization_reference', 'commissioning:public-issuance-escrow:v1');
+    CommercialPrincipal::query()->firstOrCreate(['reference' => 'public-issuance-escrow'], [
+        'legal_name' => 'Public Issuance Escrow',
+        'authorization_reference' => 'commissioning:public-issuance-escrow:v1',
+        'active' => true,
+        'metadata' => ['interactive_login' => false],
+    ]);
+
     return CommercialPrincipal::query()->create([
         'reference' => 'commercial-public',
         'legal_name' => '3neti R&D OPC',
@@ -786,6 +801,11 @@ function checkoutTestPrincipal(): CommercialPrincipal
         'active' => true,
         'metadata' => ['interactive_login' => false],
     ]);
+}
+
+function checkoutTestEscrowPrincipal(): CommercialPrincipal
+{
+    return CommercialPrincipal::query()->where('reference', 'public-issuance-escrow')->firstOrFail();
 }
 
 function checkoutTestOrder(CommercialPrincipal $principal): PayCodeIssuanceFundingOrder

@@ -701,6 +701,321 @@
                 }
             }
         },
+        "/stored-value-collections": {
+            "post": {
+                "operationId": "x-change.partner-api.stored-value-collections.store",
+                "tags": [
+                    "StoredValueCollection"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "code": {
+                                        "type": "string",
+                                        "maxLength": 80
+                                    },
+                                    "amount_minor": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ],
+                                        "minimum": 1
+                                    },
+                                    "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                            "PHP"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "code",
+                                    "currency"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                },
+                "security": [
+                    {
+                        "partnerOAuth": [
+                            "stored-value:spend"
+                        ]
+                    }
+                ]
+            }
+        },
+        "/stored-value-collections/{reference}": {
+            "get": {
+                "operationId": "x-change.partner-api.stored-value-collections.show",
+                "tags": [
+                    "StoredValueCollection"
+                ],
+                "parameters": [
+                    {
+                        "name": "reference",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "reference": {
+                                                    "type": "string"
+                                                },
+                                                "status": {
+                                                    "type": "string"
+                                                },
+                                                "amount_minor": {
+                                                    "type": "integer"
+                                                },
+                                                "currency": {
+                                                    "type": "string"
+                                                },
+                                                "authorization_method": {
+                                                    "type": "string"
+                                                },
+                                                "expires_at": {
+                                                    "type": "string"
+                                                },
+                                                "available_minor": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "balance_after_minor": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "receipt": {
+                                                    "type": [
+                                                        "array",
+                                                        "null"
+                                                    ],
+                                                    "items": {}
+                                                }
+                                            },
+                                            "required": [
+                                                "reference",
+                                                "status",
+                                                "amount_minor",
+                                                "currency",
+                                                "authorization_method",
+                                                "expires_at",
+                                                "available_minor",
+                                                "balance_after_minor",
+                                                "receipt"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "partnerOAuth": [
+                            "stored-value:spend"
+                        ]
+                    }
+                ]
+            }
+        },
+        "/stored-value-collections/{reference}/verification": {
+            "post": {
+                "operationId": "x-change.partner-api.stored-value-collections.verify",
+                "tags": [
+                    "StoredValueCollection"
+                ],
+                "parameters": [
+                    {
+                        "name": "reference",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "code": {
+                                        "type": "string",
+                                        "minLength": 4,
+                                        "maxLength": 12
+                                    }
+                                },
+                                "required": [
+                                    "code"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                },
+                "security": [
+                    {
+                        "partnerOAuth": [
+                            "stored-value:spend"
+                        ]
+                    }
+                ]
+            }
+        },
+        "/stored-value-collections/{reference}/commit": {
+            "post": {
+                "operationId": "x-change.partner-api.stored-value-collections.commit",
+                "tags": [
+                    "StoredValueCollection"
+                ],
+                "parameters": [
+                    {
+                        "name": "reference",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "reference": {
+                                                    "type": "string"
+                                                },
+                                                "status": {
+                                                    "type": "string"
+                                                },
+                                                "amount_minor": {
+                                                    "type": "integer"
+                                                },
+                                                "currency": {
+                                                    "type": "string"
+                                                },
+                                                "authorization_method": {
+                                                    "type": "string"
+                                                },
+                                                "expires_at": {
+                                                    "type": "string"
+                                                },
+                                                "available_minor": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "balance_after_minor": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "receipt": {
+                                                    "type": [
+                                                        "array",
+                                                        "null"
+                                                    ],
+                                                    "items": {}
+                                                }
+                                            },
+                                            "required": [
+                                                "reference",
+                                                "status",
+                                                "amount_minor",
+                                                "currency",
+                                                "authorization_method",
+                                                "expires_at",
+                                                "available_minor",
+                                                "balance_after_minor",
+                                                "receipt"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "partnerOAuth": [
+                            "stored-value:spend"
+                        ]
+                    }
+                ]
+            }
+        },
         "/funded-orders": {
             "post": {
                 "operationId": "createPartnerFundedOrder",

@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  php:
+    name: PHP tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: bcmath, fileinfo, gd, imagick, intl, mbstring, pdo_sqlite, pcntl, zip
+          coverage: none
+          tools: composer:v2
+      - run: composer validate --strict --no-check-publish
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: mkdir -p vendor/orchestra/testbench-core/laravel/config/form-flow-drivers && cp config/form-flow-drivers/*.yaml vendor/orchestra/testbench-core/laravel/config/form-flow-drivers/
+      - run: composer test -- tests/Feature/Claim/StampPreviewTest.php tests/Feature/Claim/ClaimPaymentHandoffTest.php tests/Feature/Claim/CampaignOfficerAuthorizationExecutionTest.php tests/Feature/Console/SystemPrincipalProvisioningTest.php --compact
+      - run: composer test -- --parallel --processes=6 --compact
+
+  frontend:
+    name: Vue tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run test:frontend

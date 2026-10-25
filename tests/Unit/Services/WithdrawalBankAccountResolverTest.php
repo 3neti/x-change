@@ -8,7 +8,7 @@ use LBHurtado\XChange\Services\WithdrawalBankAccountResolver;
 
 function bankAccountResolver(): WithdrawalBankAccountResolver
 {
-    return new WithdrawalBankAccountResolver;
+    return app(WithdrawalBankAccountResolver::class);
 }
 
 function fakeBankAccountContact(?string $bankAccount = null): Contact
@@ -21,7 +21,7 @@ function fakeBankAccountContact(?string $bankAccount = null): Contact
 
 it('resolves bank account from nested bank_account payload', function () {
     $bankAccount = bankAccountResolver()->resolve(
-        Mockery::mock(Voucher::class),
+        new Voucher,
         fakeBankAccountContact(),
         [
             'bank_account' => [
@@ -37,7 +37,7 @@ it('resolves bank account from nested bank_account payload', function () {
 
 it('resolves bank account from top-level bank code and account number', function () {
     $bankAccount = bankAccountResolver()->resolve(
-        Mockery::mock(Voucher::class),
+        new Voucher,
         fakeBankAccountContact(),
         [
             'bank_code' => 'GXCHPHM2XXX',
@@ -51,7 +51,7 @@ it('resolves bank account from top-level bank code and account number', function
 
 it('falls back to contact bank account', function () {
     $bankAccount = bankAccountResolver()->resolve(
-        Mockery::mock(Voucher::class),
+        new Voucher,
         fakeBankAccountContact('GXCHPHM2XXX:09173011987'),
         [],
     );
@@ -62,7 +62,7 @@ it('falls back to contact bank account', function () {
 
 it('throws when bank account cannot be resolved', function () {
     bankAccountResolver()->resolve(
-        Mockery::mock(Voucher::class),
+        new Voucher,
         fakeBankAccountContact(),
         [],
     );

@@ -406,6 +406,8 @@ final readonly class TreasuryOnboardingGrantScenarioRunner implements ScenarioRu
         return [
             'otp' => [
                 'mobile' => $mobile,
+                'verified' => true,
+                'value' => 'verified',
                 'verified_at' => $verifiedAt,
                 'verification_reference' => 'simulation:'.hash('sha256', $verifiedAt),
                 'verification_purpose' => (string) config(

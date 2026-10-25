@@ -12,6 +12,7 @@ it('shows settlement readiness through the lifecycle route surface', function ()
         'metadata' => [
             'flow_type' => 'settlement',
             'settlement_driver' => 'philhealth-bst',
+            'collection_wallet_id' => testCollectionWalletId(),
         ],
     ]));
 
@@ -20,10 +21,12 @@ it('shows settlement readiness through the lifecycle route surface', function ()
         'metadata' => [
             'flow_type' => 'settlement',
             'settlement_driver' => 'philhealth-bst',
+            'collection_wallet_id' => testCollectionWalletId(),
         ],
     ])->save();
 
-    app()->bind(SettlementEnvelopeReadinessContract::class, fn () => new class implements SettlementEnvelopeReadinessContract {
+    app()->bind(SettlementEnvelopeReadinessContract::class, fn () => new class implements SettlementEnvelopeReadinessContract
+    {
         public function check(mixed $voucher, string $gate = 'settleable', array $context = []): SettlementEnvelopeReadinessData
         {
             return $this->evaluate($voucher, $gate, $context);
@@ -90,6 +93,7 @@ it('passes custom gate and driver query parameters to settlement readiness evalu
         'metadata' => [
             'flow_type' => 'settlement',
             'settlement_driver' => 'philhealth-bst',
+            'collection_wallet_id' => testCollectionWalletId(),
         ],
     ]));
 
@@ -98,10 +102,12 @@ it('passes custom gate and driver query parameters to settlement readiness evalu
         'metadata' => [
             'flow_type' => 'settlement',
             'settlement_driver' => 'philhealth-bst',
+            'collection_wallet_id' => testCollectionWalletId(),
         ],
     ])->save();
 
-    app()->bind(SettlementEnvelopeReadinessContract::class, fn () => new class implements SettlementEnvelopeReadinessContract {
+    app()->bind(SettlementEnvelopeReadinessContract::class, fn () => new class implements SettlementEnvelopeReadinessContract
+    {
         public function check(mixed $voucher, string $gate = 'settleable', array $context = []): SettlementEnvelopeReadinessData
         {
             return $this->evaluate($voucher, $gate, $context);

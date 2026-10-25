@@ -68,8 +68,18 @@ function flowResolverFor(VoucherFlowType $type, bool $canDisburse): VoucherFlowC
     return $resolver;
 }
 
+function mockFlowVoucher(): Voucher
+{
+    $voucher = Mockery::mock(Voucher::class)->makePartial();
+    $voucher->setRawAttributes([
+        'instructions' => json_encode(validVoucherInstructions()->toArray()),
+    ]);
+
+    return $voucher;
+}
+
 it('returns redeem executor for a normal voucher', function () {
-    $voucher = Mockery::mock(Voucher::class);
+    $voucher = mockFlowVoucher();
     $voucher->shouldReceive('isDivisible')->once()->andReturn(false);
     $voucher->shouldReceive('isRedeemed')->once()->andReturn(false);
     $voucher->shouldReceive('canWithdraw')->never();
@@ -91,7 +101,7 @@ it('returns redeem executor for a normal voucher', function () {
 });
 
 it('returns withdraw executor when voucher is withdrawable', function () {
-    $voucher = Mockery::mock(Voucher::class);
+    $voucher = mockFlowVoucher();
     $voucher->shouldReceive('isDivisible')->once()->andReturn(false);
     $voucher->shouldReceive('isRedeemed')->once()->andReturn(true);
     $voucher->shouldReceive('canWithdraw')->once()->andReturn(true);
@@ -115,7 +125,7 @@ it('returns withdraw executor when voucher is withdrawable', function () {
 });
 
 it('returns redeem executor when voucher is redeemed but not withdrawable', function () {
-    $voucher = Mockery::mock(Voucher::class);
+    $voucher = mockFlowVoucher();
     $voucher->shouldReceive('isDivisible')->once()->andReturn(false);
     $voucher->shouldReceive('isRedeemed')->once()->andReturn(true);
     $voucher->shouldReceive('canWithdraw')->once()->andReturn(false);
@@ -150,7 +160,7 @@ it('rejects collectible vouchers for outward claim execution', function () {
 });
 
 it('routes open-slice disbursable vouchers to withdrawal executor', function () {
-    $voucher = Mockery::mock(Voucher::class);
+    $voucher = mockFlowVoucher();
 
     $voucher->shouldReceive('isDivisible')->once()->andReturn(true);
     $voucher->shouldReceive('getSliceMode')->once()->andReturn('open');
@@ -187,7 +197,7 @@ it('rejects legacy payable vouchers for outward claim execution', function () {
 });
 
 it('allows legacy redeemable vouchers for outward claim execution', function () {
-    $voucher = Mockery::mock(Voucher::class);
+    $voucher = mockFlowVoucher();
 
     $voucher->shouldReceive('isDivisible')->once()->andReturn(false);
     $voucher->shouldReceive('isRedeemed')->once()->andReturn(false);

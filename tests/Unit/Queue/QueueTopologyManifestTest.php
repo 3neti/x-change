@@ -50,7 +50,7 @@ it('declares every package queued job exactly once', function (): void {
     sort($declared);
 
     expect($declared)->toBe($discovered)
-        ->and($declared)->toHaveCount(17);
+        ->and($declared)->toHaveCount(21);
 });
 
 it('resolves configurable queue selectors without silently merging lanes', function (): void {

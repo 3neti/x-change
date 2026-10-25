@@ -26,7 +26,6 @@ it('keeps the shared header read model wired across every cockpit page', functio
 
     foreach ([
         'Dashboard.vue',
-        'QuickGenerate.vue',
         'RuntimeProfile.vue',
         'PayCodeExplorer.vue',
         'VoucherDetail.vue',
@@ -35,6 +34,9 @@ it('keeps the shared header read model wired across every cockpit page', functio
         expect(file_get_contents($packageRoot.'/resources/js/cockpit/pages/'.$page))
             ->toContain(':cockpit-header-read-model="props.cockpit_header_read_model"');
     }
+
+    expect(file_get_contents($packageRoot.'/resources/js/cockpit/pages/QuickGenerate.vue'))
+        ->toContain('cockpitHeaderReadModel: props.cockpit_header_read_model');
 
     expect($provider)
         ->toContain("config('x-change.cockpit.header_provider_balance.enabled', true)")

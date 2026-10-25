@@ -40,6 +40,10 @@ beforeEach(function () {
     ]);
 });
 
+beforeEach(function (): void {
+    provisionTestCommercialOfferings();
+});
+
 it('reports x-action continuation planning in lifecycle scenario execution without executing actions', function () {
     $exitCode = Artisan::call('xchange:lifecycle:run', [
         'scenario' => 'execution_settlement_envelope_contract_demo',

@@ -1,0 +1,50 @@
+<?php
+
+declare(strict_types=1);
+
+namespace LBHurtado\XChange\Services\Execution;
+
+use InvalidArgumentException;
+use LBHurtado\Voucher\Models\Voucher;
+
+final class VoucherValueFlowPolicy
+{
+    public function source(Voucher $voucher): ?string
+    {
+        return $this->address($voucher, 'source');
+    }
+
+    public function destination(Voucher $voucher): ?string
+    {
+        return $this->address($voucher, 'destination');
+    }
+
+    private function address(Voucher $voucher, string $role): ?string
+    {
+        $flow = data_get($voucher->metadata, 'instructions.execution.metadata.value_flow');
+
+        if ($flow === null) {
+            return null;
+        }
+
+        if (! is_array($flow)) {
+            throw new InvalidArgumentException('Voucher value_flow must be an object.');
+        }
+
+        if (array_diff(array_keys($flow), ['source', 'destination']) !== []) {
+            throw new InvalidArgumentException('Voucher value_flow supports only source and destination addresses.');
+        }
+
+        $address = $flow[$role] ?? null;
+
+        if ($address === null) {
+            return null;
+        }
+
+        if (! is_string($address) || trim($address) === '') {
+            throw new InvalidArgumentException("Voucher value_flow.{$role} must be an address.");
+        }
+
+        return trim($address);
+    }
+}

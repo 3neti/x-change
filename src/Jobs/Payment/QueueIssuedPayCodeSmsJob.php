@@ -45,4 +45,10 @@ final class QueueIssuedPayCodeSmsJob implements ShouldQueue
             $sms->handle($process, static fn (SettledPaymentProcess $process): null => null);
         }
     }
+
+    /** @return list<string> */
+    public function tags(): array
+    {
+        return ['package:x-change', 'lane:feedback', 'job:QueueIssuedPayCodeSmsJob'];
+    }
 }

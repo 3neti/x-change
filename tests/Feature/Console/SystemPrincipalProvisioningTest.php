@@ -4,19 +4,40 @@ declare(strict_types=1);
 
 use Illuminate\Console\Command;
 use Illuminate\Console\Events\CommandStarting;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
 use LBHurtado\XChange\Models\CommercialOffering;
 use LBHurtado\XChange\Models\CommercialOfferingActivation;
+use LBHurtado\XChange\Services\Configuration\FrontendRuntimeDependencies;
+use LBHurtado\XChange\Services\Publication\PublicationCatalog;
+use LBHurtado\XChange\Services\Publication\PublicationVerifier;
+use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 use LBHurtado\XChange\Tests\Fakes\UncastUser;
 use LBHurtado\XChange\Tests\Fakes\User;
+use Symfony\Component\Console\Output\BufferedOutput;
 
 beforeEach(function (): void {
     config()->set('x-change.onboarding.issuer_model', User::class);
     config()->set('x-change.payout.system_user_column', 'email');
     config()->set('x-change.payout.system_user_id', 'system-alpha@example.test');
     config()->set('x-change.payout.system_wallet_slug', 'platform');
+});
+
+afterEach(function (): void {
+    if (isset($this->sidebarFixturePath)) {
+        File::delete($this->sidebarFixturePath);
+    }
+
+    if (! isset($this->npmFixturePath)) {
+        return;
+    }
+
+    unlink($this->npmFixturePath.'/package.json');
+    unlink($this->npmFixturePath.'/package-lock.json');
+    rmdir($this->npmFixturePath);
 });
 
 it('previews system-principal creation without mutating an Account', function () {
@@ -182,6 +203,13 @@ it('requires installer system-principal controls to travel together', function (
 });
 
 it('allows the installer to provision the sole fresh-database Account without a seeder', function () {
+    $sidebarPath = resource_path('js/components/AppSidebar.vue');
+    if (! File::exists($sidebarPath)) {
+        File::ensureDirectoryExists(dirname($sidebarPath));
+        expect(File::copy(__DIR__.'/../../../stubs/resources/js/components/AppSidebar.vue.stub', $sidebarPath))->toBeTrue();
+        $this->sidebarFixturePath = $sidebarPath;
+    }
+
     config()->set('x-change.deployment.profile', 'development');
     config()->set('x-change.treasury.connections', []);
     config()->set('x-change.treasury.legal_entity_reference', 'legal-entity:test');
@@ -189,7 +217,24 @@ it('allows the installer to provision the sole fresh-database Account without a 
     config()->set('x-change.treasury.legal_profile_version', '2026-07-24.1');
     app('migrator')->path(Orchestra\Testbench\default_migration_path());
 
-    $this->artisan('x-change:install', [
+    $this->npmFixturePath = sys_get_temp_dir().'/x-change-system-principal-npm-'.bin2hex(random_bytes(6));
+    mkdir($this->npmFixturePath);
+    $requirements = app(FrontendRuntimeDependencies::class)->requirements();
+    $lockedPackages = ['' => ['dependencies' => $requirements]];
+    foreach (array_keys($requirements) as $packageName) {
+        $lockedPackages['node_modules/'.$packageName] = [];
+    }
+    file_put_contents($this->npmFixturePath.'/package.json', json_encode(['dependencies' => $requirements], JSON_THROW_ON_ERROR));
+    file_put_contents($this->npmFixturePath.'/package-lock.json', json_encode(['packages' => $lockedPackages], JSON_THROW_ON_ERROR));
+    app()->instance(PublicationVerifier::class, new PublicationVerifier(
+        app(PublicationCatalog::class),
+        app(PublishedAssetDriftDetector::class),
+        app(FrontendRuntimeDependencies::class),
+        $this->npmFixturePath,
+    ));
+
+    $consoleOutput = new BufferedOutput;
+    $exitCode = Artisan::call('x-change:install', [
         '--fresh-database' => true,
         '--confirm-database-reset' => true,
         '--provision-system-principal' => true,
@@ -204,17 +249,20 @@ it('allows the installer to provision the sole fresh-database Account without a 
         '--no-handlers' => true,
         '--no-rider' => true,
         '--no-x-ray' => true,
+        '--defer-operational-manifest' => true,
         '--no-interaction' => true,
-    ])
-        ->expectsOutputToContain('X-Change installed successfully.')
-        ->assertSuccessful();
+    ], $consoleOutput);
+
+    $output = $consoleOutput->fetch();
+    $this->assertSame(0, $exitCode, $output);
+    expect($output)->toContain('X-Change installed successfully.');
 
     $principal = User::query()->sole();
 
     expect($principal->email)->toBe('system-alpha@example.test')
         ->and($principal->wallet()->where('slug', 'platform')->count())->toBe(1)
-        ->and(CommercialOffering::query()->count())->toBe(2)
-        ->and(CommercialOfferingActivation::query()->count())->toBe(2)
+        ->and(CommercialOffering::query()->count())->toBe(0)
+        ->and(CommercialOfferingActivation::query()->count())->toBe(0)
         ->and(data_get(
             $principal->onboarding_meta,
             'system_principal.interactive_login',

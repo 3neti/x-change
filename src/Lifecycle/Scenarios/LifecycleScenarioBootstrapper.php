@@ -280,7 +280,11 @@ final class LifecycleScenarioBootstrapper
                     'radius' => data_get($scenario, 'cash.validation.radius'),
                     'mobile_verification' => data_get($scenario, 'cash.validation.mobile_verification'),
                 ],
-                'settlement_rail' => data_get($scenario, 'cash.settlement_rail', 'INSTAPAY'),
+                'settlement_rail' => data_get(
+                    $scenario,
+                    'cash.settlement_rail',
+                    data_get($scenario, 'stored_value.enabled', false) ? null : 'INSTAPAY',
+                ),
                 'fee_strategy' => data_get($scenario, 'cash.fee_strategy', 'absorb'),
                 'slice_mode' => data_get($scenario, 'cash.slice_mode'),
                 'slices' => data_get($scenario, 'cash.slices'),

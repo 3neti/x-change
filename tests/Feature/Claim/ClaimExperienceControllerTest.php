@@ -2,48 +2,36 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Voucher\Enums\VoucherSliceSelectionPolicy;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Voucher\Services\VoucherSlicePlanFactory;
 
 function issuedNamedSliceVoucherForExperience(): Voucher
 {
+    $plan = app(VoucherSlicePlanFactory::class)->scheduled(
+        totalMinor: 15_500,
+        currency: 'PHP',
+        slices: [
+            ['id' => 'slice_1', 'label' => 'Buy coffee', 'amount_minor' => 8_000],
+            ['id' => 'slice_2', 'label' => 'Buy doughnut', 'amount_minor' => 7_500],
+        ],
+        selection: VoucherSliceSelectionPolicy::OneOrMany,
+    );
     $voucher = issueVoucher(validVoucherInstructions(
         amount: 155,
         overrides: [
             'cash' => [
                 'amount' => 155,
                 'currency' => 'PHP',
-                'slice_mode' => 'open',
-                'max_slices' => 2,
-                'min_withdrawal' => 75,
                 'validation' => [
                     'country' => 'PH',
                 ],
             ],
+            'slice_plan' => $plan->canonicalArray(),
         ],
     ));
 
-    $metadata = $voucher->metadata ?? [];
-    data_set($metadata, 'instructions.metadata.custom.named_slices', [
-        [
-            'id' => 'slice_1',
-            'amount' => 80,
-            'description' => 'Buy coffee',
-        ],
-        [
-            'id' => 'slice_2',
-            'amount' => 75,
-            'description' => 'Buy doughnut',
-        ],
-    ]);
-    data_set($metadata, 'instructions.metadata.custom.named_slice_policy', [
-        'mode' => 'named',
-        'selection' => 'one_or_many',
-        'enforced' => true,
-    ]);
-
-    $voucher->forceFill(['metadata' => $metadata])->save();
-
-    return $voucher->fresh();
+    return $voucher;
 }
 
 it('returns claim experience for a claimable named slice voucher', function () {

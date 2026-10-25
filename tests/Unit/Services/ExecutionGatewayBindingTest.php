@@ -13,7 +13,7 @@ use LBHurtado\Voucher\Services\ExecutionDriverRegistry;
 use LBHurtado\XChange\Contracts\Execution\StoredValueDestinationAuthorityContract;
 use LBHurtado\XChange\Contracts\Execution\StoredValueHolderAuthorityContract;
 use LBHurtado\XChange\Services\Execution\AuthenticatedStoredValueHolderAuthority;
-use LBHurtado\XChange\Services\Execution\PartnerApiStoredValueDestinationAuthority;
+use LBHurtado\XChange\Services\Execution\CollectionStoredValueDestinationAuthority;
 use LBHurtado\XChange\Services\Execution\WalletPayableCollectionExecutionGateway;
 use LBHurtado\XChange\Services\Execution\WalletStoredValueExecutionGateway;
 use LBHurtado\XChange\Services\Execution\XChangeLiveCashExecutionDriver;
@@ -79,7 +79,7 @@ it('binds stored value destination authority to the fail closed Partner API mand
     $authority = app(StoredValueDestinationAuthorityContract::class);
 
     expect($authority)
-        ->toBeInstanceOf(PartnerApiStoredValueDestinationAuthority::class)
+        ->toBeInstanceOf(CollectionStoredValueDestinationAuthority::class)
         ->and($authority->isReady())->toBeFalse()
         ->and(fn () => $authority->authorize(
             new ExecutionContextData(

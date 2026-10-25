@@ -26,6 +26,10 @@ beforeEach(function () {
     ]);
 });
 
+beforeEach(function (): void {
+    provisionTestCommercialOfferings();
+});
+
 it('runs the philhealth bst settlement envelope lifecycle scenario', function () {
     $exitCode = Artisan::call('xchange:lifecycle:run', [
         'scenario' => 'settlement_philhealth_bst',

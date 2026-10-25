@@ -48,6 +48,10 @@ it('serves a valid curated OpenAPI contract without unsafe lifecycle operations'
             '/stored-value-instruments/{instrument}/spend-challenges/{challenge}/verification',
             '/stored-value-instruments/{instrument}/spends',
             '/stored-value-instruments/{instrument}/transactions',
+            '/stored-value-collections',
+            '/stored-value-collections/{reference}',
+            '/stored-value-collections/{reference}/verification',
+            '/stored-value-collections/{reference}/commit',
             '/funded-orders',
             '/funded-orders/{reference}',
         )
@@ -55,6 +59,8 @@ it('serves a valid curated OpenAPI contract without unsafe lifecycle operations'
         ->toBe(['funded-orders:create'])
         ->and(data_get($document, 'paths./funded-orders/{reference}.get.security.0.partnerOAuth'))
         ->toBe(['funded-orders:read'])
+        ->and(data_get($document, 'paths./stored-value-collections.post.security.0.partnerOAuth'))
+        ->toBe(['stored-value:spend'])
         ->and(collect(data_get($document, 'paths./pay-codes/{code}/cancellation.post.parameters'))
             ->firstWhere('name', 'Idempotency-Key'))
         ->toMatchArray(['in' => 'header', 'required' => true])

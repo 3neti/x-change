@@ -18,13 +18,13 @@ return new class extends Migration
         try {
             Schema::create('x_change_commercial_product_revenue_reversals', function (Blueprint $table): void {
                 $table->id();
-                $table->foreignId('commercial_sale_id')->constrained('x_change_commercial_sales')->restrictOnDelete();
-                $table->foreignId('commercial_allocation_id')->constrained('x_change_commercial_allocations')->restrictOnDelete();
+                $table->foreignId('commercial_sale_id')->constrained('x_change_commercial_sales', indexName: 'xchg_product_reversal_sale_fk')->restrictOnDelete();
+                $table->foreignId('commercial_allocation_id')->constrained('x_change_commercial_allocations', indexName: 'xchg_product_reversal_allocation_fk')->restrictOnDelete();
                 $table->string('reason_reference');
                 $table->unsignedBigInteger('amount_minor');
                 $table->char('currency', 3);
-                $table->string('reverse_operation_reference')->unique();
-                $table->string('status')->index();
+                $table->string('reverse_operation_reference')->unique('xchg_product_reversal_operation_unique');
+                $table->string('status')->index('xchg_product_reversal_status_index');
                 $table->timestampTz('reversed_at');
                 $table->timestampsTz();
             });
