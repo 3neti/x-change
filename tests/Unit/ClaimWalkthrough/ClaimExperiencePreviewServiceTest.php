@@ -13,6 +13,7 @@ use LBHurtado\Voucher\Events\VouchersGenerated;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimExperiencePreviewOptions;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimExperiencePreviewService;
+use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewArtifactFingerprint;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewVoucherDisposer;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewVoucherIssuer;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewVoucherPayloadFactory;
@@ -75,6 +76,11 @@ it('renders and caches preview artifacts from voucher instructions', function ()
         ->and($result['cache_hit'])->toBeFalse()
         ->and(data_get($result, 'journey.schema'))->toBe('x-change.claim-experience-preview.journey.v2')
         ->and(data_get($result, 'journey.steps.0.key'))->toBe('claim-entry')
+        ->and(data_get($result, 'journey.steps.0.screen.code'))->toBe('AA317')
+        ->and(data_get($result, 'journey.steps.0.screen.fields.0.value'))->toBe('AA317')
+        ->and(data_get($result, 'journey.presentation.appearance.mode'))->toBe('dark')
+        ->and(collect(data_get($result, 'journey.steps'))->firstWhere('key', 'pre-claim-rider-splash')['screen']['component'])->toBe('form-flow/core/Splash')
+        ->and(collect(data_get($result, 'journey.steps'))->firstWhere('key', 'pre-claim-rider-splash')['screen']['props']['voucher_code'])->toBe('AA317')
         ->and(collect(data_get($result, 'journey.steps'))->pluck('key')->all())
         ->not->toContain('og-social-preview')
         ->and(data_get($result, 'artifacts.storyboard_pdf'))->toBeFile()
@@ -102,7 +108,22 @@ it('renders and caches preview artifacts from voucher instructions', function ()
     ));
 
     expect($cached['cache_hit'])->toBeTrue()
-        ->and($cached['fingerprint'])->toBe($result['fingerprint']);
+        ->and($cached['fingerprint'])->toBe($result['fingerprint'])
+        ->and(data_get($cached, 'journey.steps.0.screen.code'))->toBe('AA317');
+});
+
+it('changes preview artifact identity when the render contract changes', function (): void {
+    $fingerprints = app(ClaimPreviewArtifactFingerprint::class);
+    $scenario = ['key' => 'sample-claim', 'version' => 1];
+
+    $current = $fingerprints->make($scenario, ['render_mode' => 'compiled_claim_screen_v2']);
+    $previous = $fingerprints->make($scenario, ['render_mode' => 'compiled_claim_screen_v1']);
+    config()->set('form-flow.presentation.profiles.guided-claim-v1.appearance.mode', 'light');
+    $newPresentation = $fingerprints->make($scenario, ['render_mode' => 'compiled_claim_screen_v2']);
+
+    expect($current['payload']['sample_code'])->toBe('AA317')
+        ->and($current['fingerprint'])->not->toBe($previous['fingerprint'])
+        ->and($current['fingerprint'])->not->toBe($newPresentation['fingerprint']);
 });
 
 it('compiles conditional redeemer journey steps from the instruction contract', function (): void {

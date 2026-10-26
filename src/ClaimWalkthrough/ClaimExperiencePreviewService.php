@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\ClaimWalkthrough;
 
 use InvalidArgumentException;
+use LBHurtado\FormFlowManager\Data\FormFlowPreviewStepData;
+use LBHurtado\FormFlowManager\Services\FormFlowPresentationResolver;
 use LBHurtado\FormFlowManager\Services\FormFlowPreviewCompiler;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Models\Voucher;
@@ -48,7 +50,7 @@ final class ClaimExperiencePreviewService
             'storage_scope' => $options->storageScope,
             'profile' => $options->profile,
             'dry_run' => $options->dryRun,
-            'render_mode' => 'compiled_claim_screen_v2',
+            'render_mode' => 'compiled_claim_screen_v3',
             'submit_claim' => false,
             'mobile' => $options->mobile,
             'bank_code' => $options->bankCode,
@@ -94,6 +96,7 @@ final class ClaimExperiencePreviewService
                 $options->progressState,
             );
             $screens = [];
+            $compiled = null;
 
             if (! $workflow->requiresAttention()) {
                 $compiled = $this->claimFlows->compile($previewVoucher);
@@ -101,12 +104,12 @@ final class ClaimExperiencePreviewService
                     $instructions,
                     $compiled->experience->toArray(),
                 );
-                $screens = $this->formFlowPreviews->compile($compiled->instructions, [
+                $screens = $this->sampleCodeScreens($this->formFlowPreviews->compile($compiled->instructions, [
                     'mobile' => $options->mobile,
                     'preview_mobile' => $options->mobile,
                     'voucher_code' => $payCode,
                     'claim_experience' => $compiled->experience->toArray(),
-                ]);
+                ]), $payCode);
             }
 
             $report = $captureAvailable
@@ -126,12 +129,17 @@ final class ClaimExperiencePreviewService
                         : 'compiled_claim_flow',
                 );
 
+            $presentation = app(FormFlowPresentationResolver::class)->resolve(
+                $compiled?->instructions->presentation ?? ['profile' => 'guided-claim-v1'],
+            );
             $journey = $this->journeys->fromReport(
                 $report,
                 $scenario,
                 $screens,
                 $simulation,
+                $presentation,
             );
+            $journey['presentation'] = $presentation;
             $artifact = $this->cache->rememberRendered(
                 scenario: $scenario,
                 fingerprint: $context['fingerprint'],
@@ -155,6 +163,32 @@ final class ClaimExperiencePreviewService
         } finally {
             $this->previewVouchers->dispose($previewVoucherId);
         }
+    }
+
+    /**
+     * @param  array<int, FormFlowPreviewStepData>  $screens
+     * @return array<int, FormFlowPreviewStepData>
+     */
+    private function sampleCodeScreens(array $screens, string $temporaryCode): array
+    {
+        $replace = static function (mixed $value) use (&$replace, $temporaryCode): mixed {
+            if (is_string($value)) {
+                return str_replace($temporaryCode, ClaimPreviewJourneyManifestFactory::SampleCode, $value);
+            }
+
+            if (is_array($value)) {
+                return array_map($replace, $value);
+            }
+
+            return $value;
+        };
+
+        return array_map(static fn (FormFlowPreviewStepData $screen): FormFlowPreviewStepData => new FormFlowPreviewStepData(
+            index: $screen->index,
+            handler: $screen->handler,
+            component: $screen->component,
+            props: $replace($screen->props),
+        ), $screens);
     }
 
     /**

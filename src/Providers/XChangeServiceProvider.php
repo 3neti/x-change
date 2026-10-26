@@ -627,6 +627,7 @@ use LBHurtado\XProvisioning\Contracts\ProvisioningActivatorContract;
 use LBHurtado\XProvisioning\Contracts\ProvisioningActorGuardContract;
 use LBHurtado\XProvisioning\Contracts\ProvisioningEvidenceVerifierContract;
 use LBHurtado\XProvisioning\Contracts\ProvisioningRevokerContract;
+use Symfony\Component\Yaml\Yaml;
 
 class XChangeServiceProvider extends ServiceProvider
 {
@@ -2649,6 +2650,15 @@ class XChangeServiceProvider extends ServiceProvider
 
     protected function bootConfig(): void
     {
+        config()->set('form-flow.presentation.screen_keys', array_values(array_unique([
+            ...(array) config('form-flow.presentation.screen_keys', []),
+            'entry',
+        ])));
+        if (config('form-flow.presentation.profiles.guided-claim-v1') === null) {
+            $profile = Yaml::parseFile($this->packagePath('config/form-flow-presentations/guided-claim-v1.yaml'));
+            config()->set('form-flow.presentation.profiles.guided-claim-v1', $profile);
+        }
+
         $this->publishes([
             $this->packagePath('config/x-change.php') => config_path('x-change.php'),
         ], 'x-change-config');
@@ -2661,6 +2671,10 @@ class XChangeServiceProvider extends ServiceProvider
             $this->packagePath('config/form-flow-drivers/voucher-redemption.yaml') => config_path('form-flow-drivers/voucher-redemption.yaml'),
             $this->packagePath('config/form-flow-drivers/campaign-payment-completion.yaml') => config_path('form-flow-drivers/campaign-payment-completion.yaml'),
         ], 'x-change-form-flow-drivers');
+
+        $this->publishes([
+            $this->packagePath('config/form-flow-presentations/guided-claim-v1.yaml') => config_path('form-flow-presentations/guided-claim-v1.yaml'),
+        ], 'x-change-form-flow-presentations');
 
         $this->publishes([
             $this->packagePath('config/link-preview-drivers') => config_path('link-preview-drivers'),
