@@ -25,6 +25,7 @@ use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Execution\AuthenticatedStoredValueHolderAuthority;
 use LBHurtado\XChange\Services\Execution\UnavailableStoredValueDestinationAuthority;
 use LBHurtado\XChange\Services\Execution\WalletStoredValueExecutionGateway;
+use LBHurtado\XChange\Services\StoredValue\StoredValueAuditJournal;
 use LBHurtado\XChange\Services\Treasury\PayCodeFundingPrincipalResolver;
 use LBHurtado\XChange\Services\Treasury\PayCodeTerminalReleaseJournal;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
@@ -70,6 +71,7 @@ it('activates one wallet-backed allocation and replays the immutable holder bind
         holderAuthority: $holderAuthority,
         destinationAuthority: new UnavailableStoredValueDestinationAuthority,
         principalReferences: $principalReferences,
+        auditJournal: app(StoredValueAuditJournal::class),
     );
 
     $first = $gateway->activate($context, 'activation-1');
@@ -118,6 +120,7 @@ it('activates a wallet-backed balance for an accountless OTP verified contact', 
         holderAuthority: new AuthenticatedStoredValueHolderAuthority($principals, $proof),
         destinationAuthority: new UnavailableStoredValueDestinationAuthority,
         principalReferences: $principals,
+        auditJournal: app(StoredValueAuditJournal::class),
     );
     $context = new ExecutionContextData(
         contact: $contact,
@@ -154,6 +157,7 @@ it('requires a caller supplied stable identity before a spend can reach Treasury
         holderAuthority: Mockery::mock(StoredValueHolderAuthorityContract::class),
         destinationAuthority: Mockery::mock(StoredValueDestinationAuthorityContract::class),
         principalReferences: Mockery::mock(TreasuryPrincipalReferenceResolverContract::class),
+        auditJournal: app(StoredValueAuditJournal::class),
     );
 
     expect(fn () => $gateway->spend(
@@ -190,6 +194,7 @@ it('rejects activation replay by a different holder before Treasury mutation', f
         holderAuthority: $holderAuthority,
         destinationAuthority: new UnavailableStoredValueDestinationAuthority,
         principalReferences: $principalReferences,
+        auditJournal: app(StoredValueAuditJournal::class),
     );
 
     expect(fn () => $gateway->activate(
@@ -248,6 +253,7 @@ it('draws an authorized amount using the caller identity as replay scope', funct
         holderAuthority: Mockery::mock(StoredValueHolderAuthorityContract::class),
         destinationAuthority: $destinationAuthority,
         principalReferences: Mockery::mock(TreasuryPrincipalReferenceResolverContract::class),
+        auditJournal: app(StoredValueAuditJournal::class),
     );
 
     $result = $gateway->spend(
@@ -270,6 +276,7 @@ it('keeps replenishment fail closed until funding authority is commissioned', fu
         holderAuthority: Mockery::mock(StoredValueHolderAuthorityContract::class),
         destinationAuthority: Mockery::mock(StoredValueDestinationAuthorityContract::class),
         principalReferences: Mockery::mock(TreasuryPrincipalReferenceResolverContract::class),
+        auditJournal: app(StoredValueAuditJournal::class),
     );
 
     expect(fn () => $gateway->replenish(

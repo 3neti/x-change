@@ -25,7 +25,6 @@ use LBHurtado\Wallet\Treasury\Models\TreasuryAllocationOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\XChange\Actions\PartnerApi\CreatePartnerApiClient;
-use LBHurtado\XChange\Contracts\AppendableEventStoreContract;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
@@ -35,8 +34,10 @@ use LBHurtado\XChange\Lifecycle\Runners\ScenarioRunnerRegistry;
 use LBHurtado\XChange\Lifecycle\Runners\StoredValueCollectionScenarioRunner;
 use LBHurtado\XChange\Models\CommercialPrincipal;
 use LBHurtado\XChange\Models\PartnerApiOperation;
+use LBHurtado\XChange\Models\StoredValueAuditEvent;
 use LBHurtado\XChange\Models\StoredValueCollection;
 use LBHurtado\XChange\Models\StoredValueHolderBinding;
+use LBHurtado\XChange\Services\StoredValue\StoredValueAuditJournal;
 use LBHurtado\XChange\Services\StoredValue\StoredValueCollectionService;
 use LBHurtado\XChange\Tests\Fakes\FakeOtpChallengeGateway;
 use LBHurtado\XChange\Tests\Fakes\User;
@@ -302,6 +303,18 @@ it('collects scanned stored value through OTP and frozen collector authorization
     $this->post('/x/operations/unlock', ['password' => 'local-test-password'])->assertRedirect();
     $this->getJson($operationsUrl.'/'.$operationsReference)->assertNotFound();
     expect(ExecutionJournalEntry::query()->where('event_type', 'stored_value.collection.committed')->count())->toBe(3);
+    expect(ExecutionJournalEntry::query()->where('event_type', 'stored_value.activated')->count())->toBe(1)
+        ->and(StoredValueAuditEvent::query()->where('journal_status', 'delivered')->count())->toBe(4);
+    $this->artisan('x-change:stored-value:reconcile-audit')->assertExitCode(0);
+    StoredValueAuditEvent::query()->delete();
+    $this->artisan('x-change:stored-value:reconcile-audit')->assertExitCode(1);
+    $this->artisan('x-change:stored-value:backfill-audit --limit=10')->assertExitCode(0);
+    expect(StoredValueAuditEvent::query()->count())->toBe(0);
+    $this->artisan('x-change:stored-value:backfill-audit --limit=10 --commit')->assertExitCode(0);
+    $this->artisan('x-change:stored-value:deliver-audit-journal --limit=10')->assertExitCode(0);
+    $this->artisan('x-change:stored-value:reconcile-audit')->assertExitCode(0);
+    expect(ExecutionJournalEntry::query()->where('event_type', 'stored_value.collection.committed')->count())->toBe(3)
+        ->and(ExecutionJournalEntry::query()->where('event_type', 'stored_value.activated')->count())->toBe(1);
     $journalPayload = ExecutionJournalEntry::query()
         ->where('event_type', 'stored_value.collection.committed')
         ->firstOrFail()->payload;
@@ -338,7 +351,7 @@ it('collects scanned stored value through OTP and frozen collector authorization
         $flakyOtp,
         app(ExecutionEngine::class),
         app(TreasuryAllocationReadModelContract::class),
-        app(AppendableEventStoreContract::class),
+        app(StoredValueAuditJournal::class),
     );
     expect(fn () => $retryService->start($collector, 'cockpit', (string) $voucher->code, 50, 'PHP', 'flaky-delivery'))
         ->toThrow(RuntimeException::class);
@@ -454,7 +467,8 @@ it('collects scanned stored value through OTP and frozen collector authorization
         ->and($fareLedger->fresh()->getBalanceIntAttribute())->toBe(50)
         ->and(treasuryClientFundsLedger($collector)->getBalanceIntAttribute())->toBe($collectorBalanceBefore)
         ->and(ExecutionJournalEntry::query()->where('event_type', 'stored_value.collection.committed')->get()
-            ->contains(fn (ExecutionJournalEntry $entry): bool => data_get($entry->payload, 'destination_principal_reference') === $farePosition->principalReference))->toBeTrue();
+            ->contains(fn (ExecutionJournalEntry $entry): bool => data_get($entry->payload, 'destination_principal_reference') === $farePosition->principalReference
+                && data_get($entry->payload, 'authorization_method') === 'collector'))->toBeTrue();
     config()->set('x-change.execution.stored_value.collection.staff.daily_amount_minor', 550);
     $this->postJson('/x/cockpit/stored-value-collections', [
         'code' => (string) $voucher->code,
