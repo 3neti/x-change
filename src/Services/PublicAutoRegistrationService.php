@@ -81,6 +81,13 @@ final readonly class PublicAutoRegistrationService
             destination: $this->destinations->resolve($operator, $provider, $accountReference),
             purpose: FundingIntentPurpose::AccountFunding,
         ));
+
+        if ($intent->status === FundingIntentStatus::Expired || $intent->expires_at?->isPast()) {
+            throw ValidationException::withMessages([
+                'idempotency_key' => 'This registration attempt expired. Start a new attempt.',
+            ]);
+        }
+
         $intent = $this->issueFundingInstructions->handle($intent, $operator::class, (string) $operator->getAuthIdentifier());
 
         return PublicAutoRegistration::query()->create([

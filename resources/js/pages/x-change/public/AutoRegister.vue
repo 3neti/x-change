@@ -9,6 +9,8 @@ const pin = ref('');
 const loading = ref(false);
 const error = ref('');
 const turnstileToken = ref('');
+const attemptKeyStorage = 'x-change.public-auto-register.idempotency-key';
+const registrationStorage = 'x-change.public-auto-register.reference';
 let statusTimer: ReturnType<typeof setInterval> | null = null;
 const amount = computed(() => `${props.currency} ${(props.amount_minor / 100).toFixed(2)}`);
 const qrSource = computed(() => {
@@ -75,21 +77,34 @@ function beginStatusPolling(): void {
 async function start() {
     loading.value = true; error.value = '';
     try {
-        const response = await fetch(props.endpoints.start, { method: 'POST', headers: { 'X-XSRF-TOKEN': csrfToken(), 'Accept': 'application/json', 'Content-Type': 'application/json', ...(turnstileToken.value ? { 'X-Turnstile-Token': turnstileToken.value } : {}) }, body: JSON.stringify({ idempotency_key: crypto.randomUUID() }) });
+        let attemptKey = sessionStorage.getItem(attemptKeyStorage);
+
+        if (!attemptKey) {
+            attemptKey = crypto.randomUUID();
+            sessionStorage.setItem(attemptKeyStorage, attemptKey);
+        }
+
+        const response = await fetch(props.endpoints.start, { method: 'POST', headers: { 'X-XSRF-TOKEN': csrfToken(), 'Accept': 'application/json', 'Content-Type': 'application/json', ...(turnstileToken.value ? { 'X-Turnstile-Token': turnstileToken.value } : {}) }, body: JSON.stringify({ idempotency_key: attemptKey }) });
         const body = await response.json().catch(() => ({}));
+        if (response.status === 422 && body.errors?.idempotency_key) {
+            sessionStorage.removeItem(attemptKeyStorage);
+        }
         if (!response.ok) throw new Error(body.message ?? 'Unable to start registration.');
         registration.value = body;
-        sessionStorage.setItem('x-change.public-auto-register.reference', body.reference);
+        sessionStorage.setItem(registrationStorage, body.reference);
+        sessionStorage.removeItem(attemptKeyStorage);
         beginStatusPolling();
     } catch (e: any) { error.value = e.message; } finally { loading.value = false; }
 }
 
 onMounted(async () => {
-    const reference = sessionStorage.getItem('x-change.public-auto-register.reference');
+    const reference = sessionStorage.getItem(registrationStorage);
 
     if (!reference) {
         return;
     }
+
+    sessionStorage.removeItem(attemptKeyStorage);
 
     registration.value = { reference, status: 'checking_payment' };
     await refreshStatus();

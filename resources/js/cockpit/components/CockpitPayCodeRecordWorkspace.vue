@@ -5,7 +5,7 @@ import BankEMISelect from "@/components/financial/BankEMISelect.vue";
 import CockpitPayCodeShareCard from "./CockpitPayCodeShareCard.vue";
 import CockpitPayCodeTerminalControls from "./CockpitPayCodeTerminalControls.vue";
 import CockpitManualCopyButton from "./CockpitManualCopyButton.vue";
-import { Form } from "@inertiajs/vue3";
+import { Form, Link } from "@inertiajs/vue3";
 import {
   Activity,
   BadgeCheck,
@@ -72,6 +72,7 @@ const props = defineProps<{
   distributionUrl: string;
   explorerUrl: string;
   terminalControl?: CockpitPayCodeTerminalControl;
+  storedValue?: { activated: boolean; holder_url: string | null };
 }>();
 
 const initialTarget = workspaceTarget();
@@ -855,20 +856,27 @@ function number(value: unknown): number {
               {{ code }}
             </h2>
             <span class="text-sm font-semibold text-slate-300">{{
-              ["paid", "redeemed", "completed"].includes(text(status).toLowerCase())
+              props.storedValue?.activated
+                ? "Stored value activated"
+                : ["paid", "redeemed", "completed"].includes(text(status).toLowerCase())
                 ? "Claimed and paid"
                 : title(status)
             }}</span>
           </div>
           <p class="mt-2 flex items-center gap-2 text-sm text-slate-300">
             <ShieldCheck class="h-4 w-4" />
-            <span>{{ hasCollection ? "Collection:" : "Availability:" }}</span>
+            <span>{{ props.storedValue?.activated ? "Initial claim:" : hasCollection ? "Collection:" : "Availability:" }}</span>
             <strong class="text-white">{{
+              (props.storedValue?.activated && "Complete") ||
               (consumerStatus && title(consumerStatus)) ||
               text(availability.label) ||
               title(status) ||
               "Not available"
             }}</strong>
+          </p>
+          <p v-if="props.storedValue?.activated" class="mt-2 text-sm text-slate-300">
+            The initial claim activated reusable balance. A collector checks availability when accepting this Pay Code.
+            <Link v-if="props.storedValue.holder_url" :href="props.storedValue.holder_url" class="font-semibold text-white underline">View your balance</Link>
           </p>
         </div>
         <div class="flex items-end justify-between gap-5 xl:justify-end">

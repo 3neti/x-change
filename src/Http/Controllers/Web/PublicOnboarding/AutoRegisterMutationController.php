@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Http\Controllers\Web\PublicOnboarding;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
+use LBHurtado\PaymentGateway\Exceptions\NetbankFundingRequestFailed;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\FundingVerificationTrigger;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingIntentJob;
@@ -20,10 +22,19 @@ final class AutoRegisterMutationController extends Controller
     public function start(Request $request, PublicAutoRegistrationService $registrations): JsonResponse
     {
         $operator = $request->user();
-        abort_unless($operator instanceof \Illuminate\Database\Eloquent\Model, 503, 'Registration is temporarily unavailable.');
+        abort_unless($operator instanceof Model, 503, 'Registration is temporarily unavailable.');
         $request->validate(['idempotency_key' => ['nullable', 'string', 'max:128']]);
         $request->attributes->set('x_change_public_auto_register', true);
-        $registration = $registrations->start($operator, (string) ($request->input('idempotency_key') ?: Str::ulid()), $request);
+        try {
+            $registration = $registrations->start($operator, (string) ($request->input('idempotency_key') ?: Str::ulid()), $request);
+        } catch (NetbankFundingRequestFailed $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => 'Payment setup is temporarily unavailable. Please retry this registration. No payment has been requested.',
+            ], 503);
+        }
+
         return response()->json($registrations->present($registration), 201);
     }
 
@@ -52,6 +63,7 @@ final class AutoRegisterMutationController extends Controller
     {
         $request->validate(['pin' => ['required', 'digits_between:4,8']]);
         $registration = $registrations->complete($registration, (string) $request->string('pin'));
+
         return response()->json($registrations->present($registration), 200);
     }
 }

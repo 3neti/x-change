@@ -72,6 +72,7 @@ use LBHurtado\XChange\Data\Cockpit\CockpitVoucherEvidenceSummaryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitVoucherReadModelData;
 use LBHurtado\XChange\Data\Payment\VoucherCollectionProgressData;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
+use LBHurtado\XChange\Models\StoredValueHolderBinding;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
@@ -1441,10 +1442,16 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             ->unique()
             ->values();
         $sourceVouchers = $this->payCodeListVoucherModels($sourceVoucherIds);
+        $activatedStoredValueVoucherIds = StoredValueHolderBinding::query()
+            ->whereIn('voucher_id', $sourceVoucherIds->all())
+            ->where('status', 'active')
+            ->pluck('voucher_id')
+            ->mapWithKeys(fn (int $id): array => [(string) $id => true]);
         $posReferences = $this->posSaleReferenceService()->forVouchers($sourceVouchers);
-        $sourceRows = $sourceRows->map(function (array $row) use ($posReferences, $sourceVouchers): array {
+        $sourceRows = $sourceRows->map(function (array $row) use ($posReferences, $sourceVouchers, $activatedStoredValueVoucherIds): array {
             $voucherId = (string) ($row['voucher_id'] ?? $row['id'] ?? '');
             $voucher = $sourceVouchers->get($voucherId);
+            $row['stored_value_activated'] = $activatedStoredValueVoucherIds->has($voucherId);
             $row['pos_reference'] = is_array($posReferences[$voucherId] ?? null)
                 ? $posReferences[$voucherId]
                 : [];
@@ -2404,6 +2411,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             collection: is_array($row['collection'] ?? null) ? $row['collection'] : [],
             pos_reference: is_array($row['pos_reference'] ?? null) ? $row['pos_reference'] : [],
             stamp: is_array($row['stamp'] ?? null) ? $row['stamp'] : ['available' => false],
+            stored_value_activated: ($row['stored_value_activated'] ?? false) === true,
         );
     }
 

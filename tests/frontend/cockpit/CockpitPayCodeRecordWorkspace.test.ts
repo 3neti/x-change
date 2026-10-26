@@ -130,6 +130,23 @@ describe("Cockpit Pay Code record workspace", () => {
     vi.unstubAllGlobals();
   });
 
+  it("separates completed activation from ongoing stored value availability", () => {
+    const wrapper = mount(CockpitPayCodeRecordWorkspace, {
+      props: {
+        code: "CAMP-CB2L",
+        status: "redeemed",
+        voucher,
+        distributionUrl: "/distribution",
+        explorerUrl: "/pay-codes",
+        storedValue: { activated: true, holder_url: "/x/balances/reusable/holder-instrument" },
+      },
+    });
+
+    expect(wrapper.text()).toContain("Stored value activated");
+    expect(wrapper.text()).toContain("Initial claim:Complete");
+    expect(wrapper.get('a[href="/x/balances/reusable/holder-instrument"]').text()).toBe("View your balance");
+  });
+
   it("opens the saved stamp from a deep link and keeps the download available", () => {
     window.history.replaceState({}, "", "/x/cockpit/pay-codes/CAMP-CB2L?tab=stamp");
     const wrapper = mount(CockpitPayCodeRecordWorkspace, {

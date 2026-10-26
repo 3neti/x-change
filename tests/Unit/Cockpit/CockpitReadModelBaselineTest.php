@@ -1423,6 +1423,7 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
                     'collection' => [],
                     'pos_reference' => [],
                     'stamp' => ['available' => false],
+                    'stored_value_activated' => false,
                 ],
                 [
                     'code' => 'PC-LIST-002',
@@ -1501,6 +1502,7 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
                     'collection' => [],
                     'pos_reference' => [],
                     'stamp' => ['available' => false],
+                    'stored_value_activated' => false,
                 ],
             ],
             'redactions' => [
