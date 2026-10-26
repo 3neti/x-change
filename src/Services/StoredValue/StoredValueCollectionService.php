@@ -18,7 +18,6 @@ use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Services\ExecutionEngine;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryAllocationReadModelContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryAllocationReadModelQueryData;
-use LBHurtado\XChange\Contracts\AppendableEventStoreContract;
 use LBHurtado\XChange\Models\PartnerApiClient;
 use LBHurtado\XChange\Models\PartnerApiOperation;
 use LBHurtado\XChange\Models\PartnerApiProductionMandate;
@@ -33,7 +32,7 @@ final readonly class StoredValueCollectionService
         private OtpChallengeGateway $otp,
         private ExecutionEngine $engine,
         private TreasuryAllocationReadModelContract $balances,
-        private AppendableEventStoreContract $events,
+        private StoredValueAuditJournal $auditJournal,
         private ?StoredValueHolderMobile $holderMobile = null,
     ) {}
 
@@ -265,31 +264,12 @@ final readonly class StoredValueCollectionService
                 'receipt' => $receipt,
             ])->save();
 
+            $this->auditJournal->captureCollection($collection);
+
             return $this->present($collection);
         }, attempts: 5);
 
-        $receipt = $result['data']['receipt'] ?? null;
-        if (is_array($receipt)) {
-            $this->events->append([
-                'id' => 'stored-value-collection:'.$reference.':committed',
-                'type' => 'stored_value.collection.committed',
-                'status' => 'recorded',
-                'actor' => $channel.':'.$collector->getMorphClass().':'.$collector->getKey(),
-                'resource_type' => 'stored_value_collection',
-                'resource_id' => $reference,
-                'correlation_id' => $reference,
-                'idempotency_key' => $reference,
-                'occurred_at' => $receipt['collected_at'] ?? now()->utc()->toIso8601String(),
-                'payload' => [
-                    'channel' => $channel,
-                    'amount_minor' => $receipt['amount_minor'],
-                    'currency' => $receipt['currency'],
-                    'authorization_method' => $receipt['authorization_method'],
-                    'destination_principal_reference' => $receipt['destination_principal_reference'],
-                    'balance_after_minor' => $receipt['balance_after_minor'],
-                ],
-            ]);
-        }
+        $this->auditJournal->deliverForCollection($reference);
 
         return $result;
     }

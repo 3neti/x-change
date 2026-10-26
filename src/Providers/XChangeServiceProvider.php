@@ -192,6 +192,9 @@ use LBHurtado\XChange\Console\Commands\Settlement\EvaluateSettlementEnvelopeComm
 use LBHurtado\XChange\Console\Commands\Settlement\ResumeCampaignPaymentLifecycleCommand;
 use LBHurtado\XChange\Console\Commands\SetupXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Slices\DeliverVoucherSliceExecutionJournalCommand;
+use LBHurtado\XChange\Console\Commands\StoredValue\BackfillStoredValueAuditCommand;
+use LBHurtado\XChange\Console\Commands\StoredValue\DeliverStoredValueAuditJournalCommand;
+use LBHurtado\XChange\Console\Commands\StoredValue\ReconcileStoredValueAuditCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\AttestCommercialAccountingCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\AuditProviderAttributionCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\AuthorizeTreasuryOperatorCommand;
@@ -1889,6 +1892,9 @@ class XChangeServiceProvider extends ServiceProvider
                 ExpireProvisioningOffersCommand::class,
                 DeliverVoucherSliceExecutionJournalCommand::class,
                 DeliverClaimValidationJournalCommand::class,
+                DeliverStoredValueAuditJournalCommand::class,
+                BackfillStoredValueAuditCommand::class,
+                ReconcileStoredValueAuditCommand::class,
                 ProcessCampaignBatchFulfillmentOutboxCommand::class,
                 ShowCampaignPayoutRecoveryDeliveriesCommand::class,
 
@@ -2147,6 +2153,15 @@ class XChangeServiceProvider extends ServiceProvider
             $schedule
                 ->command('x-change:claim:deliver-validation-journal --limit=100')
                 ->name('x-change:claim:deliver-validation-journal')
+                ->everyMinute()
+                ->onOneServer()
+                ->withoutOverlapping(5);
+        });
+
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            $schedule
+                ->command('x-change:stored-value:deliver-audit-journal --limit=100')
+                ->name('x-change:stored-value:deliver-audit-journal')
                 ->everyMinute()
                 ->onOneServer()
                 ->withoutOverlapping(5);

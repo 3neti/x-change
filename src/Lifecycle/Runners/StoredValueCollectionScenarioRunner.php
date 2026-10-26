@@ -20,9 +20,9 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryAllocationReadModelQueryData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryAllocationOperationType;
 use LBHurtado\Wallet\Treasury\Models\TreasuryAllocationOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
-use LBHurtado\XChange\Contracts\AppendableEventStoreContract;
 use LBHurtado\XChange\Lifecycle\Support\SimulatedIdentityOtpChallengeGateway;
 use LBHurtado\XChange\Models\StoredValueHolderBinding;
+use LBHurtado\XChange\Services\StoredValue\StoredValueAuditJournal;
 use LBHurtado\XChange\Services\StoredValue\StoredValueCollectionService;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use RuntimeException;
@@ -33,7 +33,7 @@ final readonly class StoredValueCollectionScenarioRunner implements ScenarioRunn
     public function __construct(
         private ExecutionEngine $engine,
         private TreasuryAllocationReadModelContract $balances,
-        private AppendableEventStoreContract $events,
+        private StoredValueAuditJournal $auditJournal,
         private SimulatedIdentityOtpChallengeGateway $otp,
     ) {}
 
@@ -116,7 +116,7 @@ final readonly class StoredValueCollectionScenarioRunner implements ScenarioRunn
         $before = $this->balances->read(new TreasuryAllocationReadModelQueryData($binding->allocation_reference, $binding->currency));
         $drawsBefore = TreasuryAllocationOperation::query()->where('operation_type', TreasuryAllocationOperationType::Draw)->count();
         $inventoryBefore = (int) TreasuryInventory::query()->sum('balance_minor');
-        $service = new StoredValueCollectionService($this->otp, $this->engine, $this->balances, $this->events);
+        $service = new StoredValueCollectionService($this->otp, $this->engine, $this->balances, $this->auditJournal);
         $pending = $service->start($collector, 'cockpit', '|| '.$voucher->code.' ||', $amountMinor, $binding->currency, $context->idempotencyKey);
         $reference = $pending['data']['reference'];
         $otpRequired = $pending['data']['status'] === 'pending';

@@ -21,6 +21,7 @@ use LBHurtado\XChange\Contracts\Execution\StoredValueDestinationAuthorityContrac
 use LBHurtado\XChange\Contracts\Execution\StoredValueHolderAuthorityContract;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Models\StoredValueHolderBinding;
+use LBHurtado\XChange\Services\StoredValue\StoredValueAuditJournal;
 use RuntimeException;
 
 final readonly class WalletStoredValueExecutionGateway implements DurableStoredValueExecutionGatewayContract
@@ -31,6 +32,7 @@ final readonly class WalletStoredValueExecutionGateway implements DurableStoredV
         private StoredValueHolderAuthorityContract $holderAuthority,
         private StoredValueDestinationAuthorityContract $destinationAuthority,
         private TreasuryPrincipalReferenceResolverContract $principalReferences,
+        private StoredValueAuditJournal $auditJournal,
     ) {}
 
     public function activate(ExecutionContextData $context, string $executionId): array
@@ -126,6 +128,9 @@ final readonly class WalletStoredValueExecutionGateway implements DurableStoredV
                     'currency' => $reservation['currency'],
                     'activated_at' => now(),
                 ]);
+
+                $this->auditJournal->captureActivation($binding, $initialAmountMinor);
+                DB::afterCommit(fn () => $this->auditJournal->deliverForBinding($binding->reference));
 
                 return $this->state($binding, 'activation_execution_id', $executionId);
             }, attempts: 5);
