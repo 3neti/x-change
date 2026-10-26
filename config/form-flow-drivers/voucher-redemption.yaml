@@ -23,6 +23,9 @@ mappings: {}
 # Used for callback lookup via: session('form_flow_ref.{reference_id}')
 reference_id: "claim-{{ code }}-{{ timestamp }}"
 
+presentation:
+  profile: guided-claim-v1
+
 # Callback URLs
 # -------------
 # Webhooks triggered at different flow stages
@@ -87,6 +90,13 @@ steps:
     title: "Disbursement Details"                         # Page title
     description: "Redeeming voucher {{ code }} from {{ owner_name }}"  # Subtitle
     config:
+      presentation:
+        actions:
+          roles:
+            submit:
+              label: Confirm Details
+            continue:
+              label: Confirm Details
       auto_sync:                                         # Explicitly disabled payout-field copying
         enabled: false
         source_field: "mobile"

@@ -1,0 +1,59 @@
+schema: form-flow.presentation.v1
+tokens:
+  content_width: standard
+  spacing: spacious
+  typography: standard
+  control_size: large
+actions:
+  placement: viewport_bottom
+brand:
+  name: Pay Code
+  placement: center
+layout:
+  artwork_aspect_ratio: natural
+artwork:
+  background:
+    enabled: false
+    opacity: 0.55
+    blur: 18
+    overlay: 0.8
+  foreground:
+    position: top
+    top_spacing: 32
+    gap: 20
+    padding: 20
+    max_width: 672
+appearance:
+  mode: dark
+  light:
+    canvas: '#ffffff'
+    surface: '#ffffff'
+    foreground: '#0f172a'
+    muted: '#64748b'
+    border: '#e2e8f0'
+    accent: '#0f172a'
+    accent_foreground: '#ffffff'
+  dark:
+    canvas: '#0c1020'
+    surface: '#191f32'
+    foreground: '#f5f6fc'
+    muted: '#a9b1c8'
+    border: '#46516c'
+    accent: '#b8c6ff'
+    accent_foreground: '#0c1020'
+icons:
+  size: 48
+  review: { name: receipt, color: foreground }
+  pending: { name: clock, color: '#d97706' }
+  success: { name: circle-check, color: '#16a34a' }
+  attention: { name: triangle-alert, color: '#d97706' }
+  error: { name: circle-alert, color: '#dc2626' }
+
+# Screen identities are presentation only; they never select a workflow or action.
+screens:
+  entry:
+    brand:
+      logo: /vendor/x-change/images/pay-code/pay-code-mark.svg
+      placement: center
+      logo_height: 80
+      logo_max_width: 80

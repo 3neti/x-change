@@ -1,5 +1,21 @@
 import { router } from '@inertiajs/vue3';
 import '../experience/themes.css';
+import '../experience/claim-midnight.css';
+
+type ClaimAppearance = {
+    mode?: 'light' | 'dark' | 'system';
+    light?: Record<string, string>;
+    dark?: Record<string, string>;
+};
+
+const claimTokens = ['canvas', 'surface', 'foreground', 'muted', 'border', 'accent', 'accent_foreground'] as const;
+const midnightAppearance: ClaimAppearance = {
+    mode: 'dark',
+    dark: {
+        canvas: '#0c1020', surface: '#191f32', foreground: '#f5f6fc',
+        muted: '#a9b1c8', border: '#46516c', accent: '#b8c6ff', accent_foreground: '#0c1020',
+    },
+};
 
 type ClaimPage = {
     component: string;
@@ -15,6 +31,19 @@ function hasClaimContext(props: Record<string, unknown>): boolean {
         || props.claim_experience != null;
 }
 
+function appearanceForPage(page: ClaimPage): ClaimAppearance {
+    const props = page.props as {
+        step?: { screen?: { props?: { presentation?: { appearance?: ClaimAppearance } } } };
+        presentation?: { appearance?: ClaimAppearance };
+        claim_ui?: { appearance?: ClaimAppearance };
+    };
+
+    return props.step?.screen?.props?.presentation?.appearance
+        ?? props.presentation?.appearance
+        ?? props.claim_ui?.appearance
+        ?? midnightAppearance;
+}
+
 export function isPublicClaimPage(page: ClaimPage): boolean {
     return page.component.startsWith('x-change/claim/')
         || (page.component.startsWith('form-flow/') && hasClaimContext(page.props));
@@ -26,13 +55,23 @@ export function initializePublicClaimAppearance(initialPage: ClaimPage): () => v
     let previousTheme: string | undefined;
     let previousColorScheme = '';
     let active = false;
+    let appearance: ClaimAppearance = midnightAppearance;
+    const previousVariables = new Map<string, string>();
 
     const apply = () => {
         if (!active) return;
-        if (root.classList.contains('dark')) root.classList.remove('dark');
+        const scheme = appearance.mode === 'dark'
+            || (appearance.mode === 'system' && systemAppearance.matches) ? 'dark' : 'light';
+        if (root.classList.contains('dark') !== (scheme === 'dark')) root.classList.toggle('dark', scheme === 'dark');
         if (root.dataset.xChangeTheme !== 'default') root.dataset.xChangeTheme = 'default';
-        if (root.dataset.xChangeClaimAppearance !== 'light') root.dataset.xChangeClaimAppearance = 'light';
-        if (root.style.colorScheme !== 'light') root.style.colorScheme = 'light';
+        if (root.dataset.xChangeClaimAppearance !== scheme) root.dataset.xChangeClaimAppearance = scheme;
+        if (root.style.colorScheme !== scheme) root.style.colorScheme = scheme;
+        for (const token of claimTokens) {
+            const key = `--x-claim-${token.replaceAll('_', '-')}`;
+            const value = appearance[scheme]?.[token];
+            if (value && root.style.getPropertyValue(key) !== value) root.style.setProperty(key, value);
+            else if (!value && root.style.getPropertyValue(key)) root.style.removeProperty(key);
+        }
     };
 
     const restore = () => {
@@ -41,6 +80,10 @@ export function initializePublicClaimAppearance(initialPage: ClaimPage): () => v
         root.style.colorScheme = previousColorScheme;
         if (previousTheme === undefined) delete root.dataset.xChangeTheme;
         else root.dataset.xChangeTheme = previousTheme;
+        for (const [key, value] of previousVariables) {
+            if (value) root.style.setProperty(key, value);
+            else root.style.removeProperty(key);
+        }
 
         let storedAppearance: string | null = null;
         try { storedAppearance = localStorage.getItem('appearance'); } catch { /* Guest storage may be disabled. */ }
@@ -54,8 +97,13 @@ export function initializePublicClaimAppearance(initialPage: ClaimPage): () => v
             if (!active) {
                 previousTheme = root.dataset.xChangeTheme;
                 previousColorScheme = root.style.colorScheme;
+                for (const token of claimTokens) {
+                    const key = `--x-claim-${token.replaceAll('_', '-')}`;
+                    previousVariables.set(key, root.style.getPropertyValue(key));
+                }
             }
             active = true;
+            appearance = appearanceForPage(page);
             apply();
         } else if (active) {
             restore();

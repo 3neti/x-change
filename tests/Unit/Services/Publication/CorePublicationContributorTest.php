@@ -21,6 +21,7 @@ it('classifies the complete package publication inventory by ownership boundary'
             'x-change.ui',
             'x-change.assets',
             'x-change.form-flow-driver',
+            'x-change.form-flow-presentation',
             'x-change.link-preview-drivers',
             'x-change.envelope-driver',
             'form-flow.drivers',
@@ -79,6 +80,16 @@ it('publishes both voucher and campaign completion Form Flow drivers', function 
     );
 });
 
+it('publishes the guided claim presentation as a build input', function (): void {
+    $build = (new PublicationCatalog([new CorePublicationContributor]))
+        ->definitions(PublicationScope::Build);
+    $definition = collect($build)->firstWhere('id', 'x-change.form-flow-presentation');
+
+    expect($definition?->verificationPaths ?? [])->toContain(
+        config_path('form-flow-presentations/guided-claim-v1.yaml'),
+    );
+});
+
 it('publishes every packaged link-preview driver as a build input', function (): void {
     $build = (new PublicationCatalog([new CorePublicationContributor]))
         ->definitions(PublicationScope::Build);
@@ -106,6 +117,7 @@ it('publishes the versioned experience registry and theme tokens as build inputs
     expect($definition?->verificationPaths ?? [])->toContain(
         resource_path('js/experience/themes.ts'),
         resource_path('js/experience/themes.css'),
+        resource_path('js/experience/claim-midnight.css'),
     );
 });
 

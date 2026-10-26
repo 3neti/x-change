@@ -15,6 +15,8 @@ final class ClaimPreviewArtifactFingerprint
     {
         $payload = $this->canonicalize([
             'schema_version' => 'x-change.claim-preview.fingerprint.v2',
+            'render_mode' => $options['render_mode'] ?? 'compiled_claim_screen_v3',
+            'sample_code' => ClaimPreviewJourneyManifestFactory::SampleCode,
             'scenario_key' => $scenario['key'] ?? null,
             'scenario_version' => $scenario['version'] ?? 1,
             'fixture' => $scenario['fixture'] ?? [],
@@ -30,6 +32,7 @@ final class ClaimPreviewArtifactFingerprint
             'viewport' => $options['viewport'] ?? 'desktop',
             'locale' => app()->getLocale(),
             'asset_fingerprint' => $this->assetFingerprint(),
+            'presentation_fingerprint' => $this->presentationFingerprint(),
         ]);
 
         return [
@@ -66,5 +69,23 @@ final class ClaimPreviewArtifactFingerprint
         }
 
         return hash_file('sha256', $manifest) ?: null;
+    }
+
+    private function presentationFingerprint(): string
+    {
+        $packageRoot = dirname(__DIR__, 2);
+
+        return hash('sha256', json_encode([
+            'profiles' => config('form-flow.presentation.profiles', []),
+            'package_profile' => $this->fileFingerprint($packageRoot.'/config/form-flow-presentations/guided-claim-v1.yaml'),
+            'host_profile' => $this->fileFingerprint(config_path('form-flow-presentations/guided-claim-v1.yaml')),
+            'package_driver' => $this->fileFingerprint($packageRoot.'/config/form-flow-drivers/voucher-redemption.yaml'),
+            'host_driver' => $this->fileFingerprint(config_path('form-flow-drivers/voucher-redemption.yaml')),
+        ], JSON_THROW_ON_ERROR));
+    }
+
+    private function fileFingerprint(string $path): ?string
+    {
+        return is_file($path) ? (hash_file('sha256', $path) ?: null) : null;
     }
 }

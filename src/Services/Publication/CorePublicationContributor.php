@@ -28,6 +28,7 @@ final class CorePublicationContributor implements XChangePublicationContributor
             resource_path('js/pages/x-change'),
             resource_path('js/experience/themes.ts'),
             resource_path('js/experience/themes.css'),
+            resource_path('js/experience/claim-midnight.css'),
         ]);
         yield $this->build('x-stamp.assets', '3neti/x-stamp-designs', 'x-stamp-assets', 'Versioned Stamp collection assets.', [
             public_path('vendor/x-stamp/collection.json'),
@@ -45,6 +46,9 @@ final class CorePublicationContributor implements XChangePublicationContributor
         yield $this->build('x-change.form-flow-driver', '3neti/x-change', 'x-change-form-flow-drivers', 'Voucher and campaign completion Form Flow drivers.', [
             config_path('form-flow-drivers/voucher-redemption.yaml'),
             config_path('form-flow-drivers/campaign-payment-completion.yaml'),
+        ]);
+        yield $this->build('x-change.form-flow-presentation', '3neti/x-change', 'x-change-form-flow-presentations', 'Guided claim presentation profile.', [
+            config_path('form-flow-presentations/guided-claim-v1.yaml'),
         ]);
         yield $this->build('x-change.link-preview-drivers', '3neti/x-change', 'x-change-link-preview-drivers', 'Safe URL artwork preview drivers.', [
             config_path('link-preview-drivers/spotify.yaml'),
