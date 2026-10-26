@@ -334,6 +334,7 @@ function setParam(
         :distribution-url="distributionWorkspaceHref"
         :explorer-url="explorerHref"
         :terminal-control="props.terminal_control"
+        :stored-value="props.stored_value"
       />
     </section>
   </CockpitLayout>

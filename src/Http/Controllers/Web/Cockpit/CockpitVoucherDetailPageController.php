@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Http\Controllers\Web\Cockpit;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
+use LBHurtado\XChange\Models\StoredValueHolderBinding;
 use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeDetailAccess;
 use LBHurtado\XChange\Services\Cockpit\PayCodeTerminalControlReadModel;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
@@ -49,6 +51,21 @@ class CockpitVoucherDetailPageController extends Controller
                 $voucher,
                 $request->user(),
             );
+
+            $binding = StoredValueHolderBinding::query()
+                ->where('voucher_id', $voucher->getKey())
+                ->where('status', 'active')
+                ->first(['reference', 'holder_type', 'holder_id']);
+            $holder = $request->user();
+            $props['stored_value'] = [
+                'activated' => $binding !== null,
+                'holder_url' => $binding !== null
+                    && $holder instanceof Model
+                    && $binding->holder_type === $holder->getMorphClass()
+                    && $binding->holder_id === (string) $holder->getKey()
+                        ? route('x-change.balances.reusable.show', ['instrument' => $binding->reference], false)
+                        : null,
+            ];
         }
 
         return Inertia::render('x-change/cockpit/VoucherDetail', $props);

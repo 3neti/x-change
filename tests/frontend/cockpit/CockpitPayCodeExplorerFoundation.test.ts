@@ -167,6 +167,22 @@ describe('Cockpit Pay Code Explorer foundation', () => {
         expect(mobileAmountCells[2].text()).toContain('₱100.50 → ₱100.00');
     });
 
+    it('identifies an activated reusable balance without changing the voucher status', () => {
+        const wrapper = mount(CockpitPayCodeResultsTable, {
+            props: {
+                records: [{
+                    ...cockpitPayCodeExplorerRecords[0],
+                    status: 'redeemed',
+                    storedValueActivated: true,
+                }],
+                actions: cockpitPayCodeRowActions,
+            },
+        });
+
+        expect(wrapper.find('[data-testid="cockpit-pay-code-status-badge"]').text())
+            .toBe('Stored value activated');
+    });
+
     it('renders the full explorer page with active navigation and side-effect boundaries', () => {
         const wrapper = mount(PayCodeExplorer);
 

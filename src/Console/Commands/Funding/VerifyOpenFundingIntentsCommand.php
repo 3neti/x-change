@@ -61,6 +61,23 @@ class VerifyOpenFundingIntentsCommand extends Command
                 &$queued,
                 &$expired,
             ): void {
+                if ($intent->status === FundingIntentStatus::PendingInstructions) {
+                    $transition->handle($intent, new FundingIntentTransitionData(
+                        status: FundingIntentStatus::Expired,
+                        eventType: 'funding_instructions_expired_unissued',
+                        actorType: 'system',
+                        actorId: 'funding-scheduler',
+                        expectedVersion: $intent->version,
+                        metadata: [
+                            'trigger' => FundingVerificationTrigger::Schedule->value,
+                            'provider_code' => $providerCode,
+                        ],
+                    ));
+                    $expired++;
+
+                    return;
+                }
+
                 if ($this->canExpireAfterConclusiveCheck($intent, $graceSeconds)) {
                     $transition->handle($intent, new FundingIntentTransitionData(
                         status: FundingIntentStatus::Expired,
@@ -101,12 +118,17 @@ class VerifyOpenFundingIntentsCommand extends Command
         return FundingIntent::query()
             ->where('provider_code', $providerCode)
             ->whereNotNull('expires_at')
-            ->whereIn('status', [
-                FundingIntentStatus::AwaitingFunds,
-                FundingIntentStatus::EvidenceReceived,
-                FundingIntentStatus::Verifying,
-                FundingIntentStatus::Verified,
-            ])
+            ->where(function (Builder $builder): void {
+                $builder->whereIn('status', [
+                    FundingIntentStatus::AwaitingFunds,
+                    FundingIntentStatus::EvidenceReceived,
+                    FundingIntentStatus::Verifying,
+                    FundingIntentStatus::Verified,
+                ])->orWhere(function (Builder $pending): void {
+                    $pending->where('status', FundingIntentStatus::PendingInstructions)
+                        ->where('expires_at', '<=', now());
+                });
+            })
             ->oldest('expires_at')
             ->oldest('id')
             ->limit($limit);

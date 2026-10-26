@@ -40,5 +40,6 @@ class CockpitPayCodeListRecordData extends Data
         public readonly array $collection = [],
         public readonly array $pos_reference = [],
         public readonly array $stamp = [],
+        public readonly bool $stored_value_activated = false,
     ) {}
 }

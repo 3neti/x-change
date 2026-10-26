@@ -149,6 +149,10 @@ function displayStatus(status: string): string {
 }
 
 function statusLabel(record: CockpitPayCodeExplorerRecord): string {
+    if (record.storedValueActivated) {
+        return 'Stored value activated';
+    }
+
     return record.consumerStatus
         ? displayStatus(record.consumerStatus)
         : record.operationalStatus.label || displayStatus(record.status);

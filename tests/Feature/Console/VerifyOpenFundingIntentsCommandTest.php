@@ -68,6 +68,27 @@ it('performs a final provider check after grace before expiring an intent', func
     );
 });
 
+it('expires an unissued funding intent after its deadline without a provider check', function () {
+    $expired = scheduledFundingIntent(
+        status: FundingIntentStatus::PendingInstructions,
+        expiresAt: now()->subMinute(),
+    );
+    $open = scheduledFundingIntent(
+        status: FundingIntentStatus::PendingInstructions,
+        expiresAt: now()->addMinute(),
+    );
+
+    $this->artisan('xchange:funding:verify-open')->assertSuccessful();
+
+    $expired = $expired->refresh()->load('events');
+
+    expect($expired->status)->toBe(FundingIntentStatus::Expired)
+        ->and($expired->events->last()?->event_type)
+        ->toBe('funding_instructions_expired_unissued')
+        ->and($open->refresh()->status)->toBe(FundingIntentStatus::PendingInstructions);
+    Queue::assertNotPushed(VerifyFundingIntentJob::class);
+});
+
 it('expires only after a conclusive no-funds observation beyond grace', function () {
     $intent = scheduledFundingIntent(expiresAt: now()->subMinutes(10));
     scheduledFundingEvent(

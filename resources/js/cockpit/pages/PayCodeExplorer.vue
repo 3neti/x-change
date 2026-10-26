@@ -453,6 +453,7 @@ function sanitizeRecord(
 
     return {
         code,
+        storedValueActivated: record.stored_value_activated === true,
         stamp: sanitizeStamp(record.stamp),
         template: stringValue(record.template) ?? 'Template pending',
         purpose:
