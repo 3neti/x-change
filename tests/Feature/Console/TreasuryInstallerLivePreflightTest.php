@@ -30,6 +30,8 @@ use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
 use LBHurtado\XChange\Tests\Fakes\User;
 
+uses()->group('installer-preflight-serial');
+
 beforeEach(function (): void {
     $this->npmFixturePath = sys_get_temp_dir().'/x-change-installer-npm-'.bin2hex(random_bytes(6));
     mkdir($this->npmFixturePath);
