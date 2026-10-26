@@ -20,6 +20,7 @@
     <groups>
         <exclude>
             <group>embedded-host-layout</group>
+            <group>installer-preflight-serial</group>
         </exclude>
     </groups>
     <php>

@@ -26,6 +26,7 @@ jobs:
       - run: mkdir -p vendor/orchestra/testbench-core/laravel/config/form-flow-drivers && cp config/form-flow-drivers/*.yaml vendor/orchestra/testbench-core/laravel/config/form-flow-drivers/
       - run: composer test -- tests/Feature/Claim/StampPreviewTest.php tests/Feature/Claim/ClaimPaymentHandoffTest.php tests/Feature/Claim/CampaignOfficerAuthorizationExecutionTest.php tests/Feature/Console/SystemPrincipalProvisioningTest.php --compact
       - run: composer test -- --parallel --processes=6 --compact
+      - run: composer test -- tests/Feature/Console/TreasuryInstallerLivePreflightTest.php --group=installer-preflight-serial --compact
 
   frontend:
     name: Vue tests
