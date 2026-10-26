@@ -3081,6 +3081,11 @@ return [
         'currency' => env('XCHANGE_PUBLIC_AUTO_REGISTER_CURRENCY', 'PHP'),
         'provider' => env('XCHANGE_PUBLIC_AUTO_REGISTER_PROVIDER', 'netbank'),
         'ttl_seconds' => (int) env('XCHANGE_PUBLIC_AUTO_REGISTER_TTL_SECONDS', 1800),
+        'sms' => [
+            'enabled' => (bool) env('XCHANGE_PUBLIC_AUTO_REGISTER_SMS_ENABLED', false),
+            'title' => 'Your x-change account is ready',
+            'body' => 'Your x-change account is ready. Sign in to your cockpit: :url',
+        ],
         'turnstile' => [
             'enabled' => (bool) env('XCHANGE_PUBLIC_AUTO_REGISTER_TURNSTILE_ENABLED', env('XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_ENABLED', false)),
             'site_key' => env('XCHANGE_PUBLIC_AUTO_REGISTER_TURNSTILE_SITE_KEY', env('XCHANGE_PUBLIC_AUTO_GENERATE_TURNSTILE_SITE_KEY')),
