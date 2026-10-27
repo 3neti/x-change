@@ -214,6 +214,9 @@ After acceptance, restore the host to its committed Composer state:
 ```bash
 rm -f composer.local.json composer.local.lock
 composer install --no-interaction
+php artisan x-change:publish --scope=build --force --verify --no-interaction
+php artisan x-change:doctor --assets --strict --no-interaction
+npm run build
 ```
 
 The alternate Composer files, path repository, and symlink must never be

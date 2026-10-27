@@ -1,0 +1,37 @@
+name: Release verification
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  verify:
+    name: Verify tagged main CI
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Resolve tag and verify main ancestry
+        id: revision
+        run: |
+          sha=$(git rev-parse 'HEAD^{commit}')
+          git fetch origin main
+          git merge-base --is-ancestor "$sha" origin/main
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Verify exact-commit main CI evidence
+        uses: actions/github-script@v8
+        env:
+          TAG_SHA: ${{ steps.revision.outputs.sha }}
+        with:
+          script: |
+            const { verifyReleaseEvidence } = await import(`${process.env.GITHUB_WORKSPACE}/scripts/ci-release-evidence.mjs`);
+            const run = await verifyReleaseEvidence(github, context.repo, process.env.TAG_SHA);
+            await core.summary.addHeading('Release CI evidence')
+              .addRaw(`Commit: ${process.env.TAG_SHA}\n\n`)
+              .addLink('Successful main CI run', run.html_url).write();
