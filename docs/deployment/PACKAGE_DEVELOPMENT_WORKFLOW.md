@@ -100,6 +100,64 @@ composer validate --strict
 git diff --check
 ```
 
+## CI feedback and release evidence
+
+Full CI runs for pull requests targeting `main`, pushes to `main`, and manual
+workflow dispatch. Feature branch pushes do not also run a duplicate suite.
+Open a PR to obtain required checks; use manual dispatch for deliberate branch
+verification. A new PR commit cancels the previous run for that PR only. Main
+and manual runs have independent concurrency groups.
+
+`PHP tests` remains the required check, backed by four PHP shards and a separate
+verification job. Every shard uses the locked Pest version's native `--shard=N/4`
+for discovery and six parallel workers for execution. A small runner translates
+the selected inventory into explicit test files and an exact class filter because
+Pest 4.7.5 leaks
+`--processes` into its serial discovery subprocess when combined with `--shard`.
+Explicit files also avoid nonzero parallel exits from unrelated, fully filtered
+test files. A temporary PHPUnit configuration preserves the original settings
+and replaces only suite discovery with the selected files; it is removed after
+execution. The runner fails if a selected class cannot be mapped to its test
+file. No vendor changes or dependency upgrades are needed. The verification job runs the existing four-file
+regression check followed by the serial installer preflight. Existing excluded
+groups remain unchanged. All shards finish even when one fails. The aggregate
+check rejects failed, cancelled, skipped, missing, or malformed evidence.
+
+Each shard records the unsharded and selected test inventories. The aggregate
+checks their exact union, rejects overlaps, compares execution counts against
+selected inventories, and rejects duplicate executed identities across shards.
+The preliminary regression check intentionally repeats tests from the full suite.
+
+JUnit reports and inventories are uploaded as separate artifacts for 14 days,
+including on failure. The `PHP tests` job summary lists test results, the slowest
+20 tests, and completed-job elapsed times when the GitHub API is available.
+Summed test durations are not parallel wall time; summed job elapsed times are
+runner consumption estimates, not billing totals. Initially shards use native
+deterministic partitioning without historical timing files. Review actual
+imbalance before introducing timing-based partitioning. The feedback target is
+under 30 minutes excluding queue time; do not reduce coverage to meet it.
+
+Version-tag pushes run lightweight release verification rather than repeating
+full CI. The tagged commit must be an ancestor of current GitHub `main`, and its
+latest matching main-push CI run must have completed successfully with successful
+`PHP tests` and `Vue tests` jobs. PR, manual, other-commit, and pending runs are
+not release evidence. Missing evidence fails verification. This workflow does
+not create tags, publish packages, or deploy. Keep the existing owner-controlled
+merge and explicit release authorization requirements.
+
+CI changes are developed and reviewed separately from application features.
+After merge, verify the new main run before starting dependent feature branches.
+Local CI tooling checks are:
+
+```bash
+python3 -B -m unittest discover -s scripts -p 'test_ci_*.py' -v
+node --test scripts/ci-release-evidence.test.mjs
+```
+
+When restoring a temporary path installation, republish and rebuild from the
+locked package as shown below. Composer restoration alone leaves previously
+published frontend files in the host.
+
 ## Optional live integration through a local path
 
 Most backend work should be proven in package tests before involving the host. When a change genuinely needs the running host or browser before it is tagged, Composer may temporarily symlink the host's installed package to the sibling clone.
@@ -133,6 +191,9 @@ After local integration, remove the alternate manifest and restore the host from
 ```bash
 rm -f composer.local.json composer.local.lock
 composer install --no-interaction
+php artisan x-change:publish --scope=build --force --verify --no-interaction
+php artisan x-change:doctor --assets --strict --no-interaction
+npm run build
 ```
 
 Confirm that Composer no longer resolves x-change from a local path:

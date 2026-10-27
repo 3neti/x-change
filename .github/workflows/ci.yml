@@ -2,17 +2,27 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  php:
-    name: PHP tests
+  php-shards:
+    name: PHP shard ${{ matrix.shard }}/4
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
@@ -24,9 +34,96 @@ jobs:
       - run: composer validate --strict --no-check-publish
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: mkdir -p vendor/orchestra/testbench-core/laravel/config/form-flow-drivers && cp config/form-flow-drivers/*.yaml vendor/orchestra/testbench-core/laravel/config/form-flow-drivers/
-      - run: composer test -- tests/Feature/Claim/StampPreviewTest.php tests/Feature/Claim/ClaimPaymentHandoffTest.php tests/Feature/Claim/CampaignOfficerAuthorizationExecutionTest.php tests/Feature/Console/SystemPrincipalProvisioningTest.php --compact
-      - run: composer test -- --parallel --processes=6 --compact
-      - run: composer test -- tests/Feature/Console/TreasuryInstallerLivePreflightTest.php --group=installer-preflight-serial --compact
+      - name: Record test inventory
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          mkdir -p reports
+          composer test -- --list-tests-xml reports/inventory-all.xml
+          composer test -- --shard="$SHARD/4" --list-tests-xml "reports/inventory-$SHARD.xml"
+      - name: Run PHP shard
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: python3 scripts/ci_reports.py run-shard "reports/inventory-$SHARD.xml" --report "reports/php-$SHARD.xml"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: php-shard-${{ matrix.shard }}
+          path: reports/*.xml
+          retention-days: 14
+          if-no-files-found: error
+
+  php-verification:
+    name: PHP verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: bcmath, fileinfo, gd, imagick, intl, mbstring, pdo_sqlite, pcntl, zip
+          coverage: none
+          tools: composer:v2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Test CI tooling
+        run: |
+          python3 -B -m unittest discover -s scripts -p 'test_ci_*.py' -v
+          node --test scripts/ci-release-evidence.test.mjs
+      - run: composer validate --strict --no-check-publish
+      - id: install
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - run: mkdir -p reports vendor/orchestra/testbench-core/laravel/config/form-flow-drivers && cp config/form-flow-drivers/*.yaml vendor/orchestra/testbench-core/laravel/config/form-flow-drivers/
+      - name: Verify preliminary PHP regressions
+        run: composer test -- tests/Feature/Claim/StampPreviewTest.php tests/Feature/Claim/ClaimPaymentHandoffTest.php tests/Feature/Claim/CampaignOfficerAuthorizationExecutionTest.php tests/Feature/Console/SystemPrincipalProvisioningTest.php --compact --log-junit reports/php-preliminary.xml
+      - name: Verify serial installer preflight
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: composer test -- tests/Feature/Console/TreasuryInstallerLivePreflightTest.php --group=installer-preflight-serial --compact --log-junit reports/php-serial.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: php-verification
+          path: reports/*.xml
+          retention-days: 14
+          if-no-files-found: error
+
+  php:
+    name: PHP tests
+    if: always()
+    needs: [php-shards, php-verification]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: php-*
+          path: reports
+      - name: Collect job timings
+        if: always()
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('node:fs');
+            try {
+              const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRunAttempt, {
+                ...context.repo, run_id: context.runId, attempt_number: Number(process.env.GITHUB_RUN_ATTEMPT), per_page: 100,
+              });
+              fs.mkdirSync('reports', { recursive: true });
+              fs.writeFileSync('reports/jobs.json', JSON.stringify(jobs));
+            } catch (error) {
+              core.warning(`Job timing API unavailable: ${error.message}`);
+            }
+      - name: Validate PHP results and publish timings
+        if: always()
+        env:
+          PHP_NEEDS: ${{ toJSON(needs) }}
+        run: python3 scripts/ci_reports.py summarize reports --summary "$GITHUB_STEP_SUMMARY"
 
   frontend:
     name: Vue tests
