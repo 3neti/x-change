@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Queue\ShouldQueue;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
+use LBHurtado\XChange\Jobs\SubmitValueFlowPayout;
 use LBHurtado\XChange\Queue\QueueTopologyManifest;
 
 it('advertises and loads the versioned package queue manifest', function (): void {
@@ -50,7 +51,7 @@ it('declares every package queued job exactly once', function (): void {
     sort($declared);
 
     expect($declared)->toBe($discovered)
-        ->and($declared)->toHaveCount(22);
+        ->and($declared)->toHaveCount(23);
 });
 
 it('resolves configurable queue selectors without silently merging lanes', function (): void {
@@ -97,4 +98,13 @@ it('keeps Horizon optional for the reusable x-change package', function (): void
 
     expect(data_get($composer, 'require.laravel/horizon'))->toBeNull()
         ->and(data_get($composer, 'suggest.laravel/horizon'))->toBeString();
+});
+
+it('routes value-flow payouts through the commissioned funding lane', function (): void {
+    $job = new SubmitValueFlowPayout(123);
+    expect($job->queue)->toBe('x-change-funding')
+        ->and($job->tries)->toBe(1)
+        ->and($job->timeout)->toBe(60)
+        ->and($job->failOnTimeout)->toBeTrue()
+        ->and($job->tags())->toBe(['package:x-change', 'lane:funding', 'job:SubmitValueFlowPayout']);
 });
