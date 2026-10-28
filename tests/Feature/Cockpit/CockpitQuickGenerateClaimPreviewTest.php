@@ -194,7 +194,14 @@ it('falls back to a useful storyboard when browser capture is unavailable', func
         ->assertJsonPath('journey.steps.0.screen.kind', 'claim_entry')
         ->assertJsonPath('journey.steps.0.screen.title', 'Claim Pay Code')
         ->assertJsonPath('journey.steps.0.screen.code', 'AA317')
+        ->assertJsonPath('journey.steps.0.screen.xray.audience', 'guest')
+        ->assertJsonPath('journey.steps.0.screen.xray.status', 'claimable')
         ->assertJsonPath('journey.steps.0.screen.fields.0.value', 'AA317');
+
+    $disclosures = collect($response->json('journey.steps.0.screen.xray.disclosures'))->keyBy('key');
+
+    expect(data_get($disclosures->get('reference'), 'value'))->toBe('AA317')
+        ->and((string) data_get($disclosures->get('amount'), 'value'))->toContain('25.00');
 
     $screens = collect($response->json('journey.steps'))
         ->where('phase', 'form_flow');

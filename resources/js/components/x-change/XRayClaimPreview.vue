@@ -8,37 +8,7 @@ import {
     resolveXRayRequirementViewModel,
     resolveXRayStatusViewModel,
 } from '@/components/x-change/xrayClaimPreviewViewModel';
-
-interface XRayDisclosure {
-    key: string;
-    label?: string | null;
-    value?: unknown;
-}
-
-interface XRayRequirement {
-    key: string;
-    label?: string | null;
-    description?: string | null;
-}
-
-interface XRayStage {
-    type?: string | null;
-    key?: string | null;
-    payload?: Record<string, unknown> | null;
-    message?: string | null;
-    body?: string | null;
-    title?: string | null;
-}
-
-interface XRayResult {
-    visible?: boolean;
-    status?: string | null;
-    disclosures?: XRayDisclosure[];
-    requirements?: XRayRequirement[];
-    stages?: XRayStage[];
-    redactions?: Record<string, unknown>[];
-    warnings?: string[];
-}
+import type { XRayClaimPreviewResult } from '@/components/x-change/xrayClaimPreviewViewModel';
 
 interface XRayServiceInfo {
     host_name?: string;
@@ -64,20 +34,23 @@ interface XRaySliceRow {
 }
 
 const props = withDefaults(defineProps<{
-    result?: XRayResult | null;
+    result?: XRayClaimPreviewResult | null;
     loading?: boolean;
     error?: string | null;
     hideSlicePlan?: boolean;
+    compact?: boolean;
 }>(), {
     hideSlicePlan: false,
+    compact: false,
 });
 const activeTab = ref<'instructions' | 'system-info'>('instructions');
+const expanded = ref(!props.compact);
 function switchTab(tab: 'instructions' | 'system-info', event: KeyboardEvent): void {
     activeTab.value = tab;
     const target = event.currentTarget as HTMLElement;
     target.parentElement?.querySelector<HTMLElement>(`#xray-${tab}-tab`)?.focus();
 }
-const disclosure = (key: string): XRayDisclosure | undefined =>
+const disclosure = (key: string): NonNullable<XRayClaimPreviewResult['disclosures']>[number] | undefined =>
     props.result?.disclosures?.find((item) => item.key === key);
 const amount = computed(() => disclosure('amount')?.value);
 const expiresAt = computed(() => disclosure('expires_at')?.value);
@@ -132,6 +105,16 @@ const inputRequirements = computed(() =>
         !['assigned_mobile', 'secret', 'passcode'].includes(item.key),
     ),
 );
+const requirementSummary = computed(() => {
+    if (requirements.value.length === 0) {
+        return 'No additional information required';
+    }
+
+    const labels = requirements.value.slice(0, 3).map((item) => item.label);
+    const remaining = requirements.value.length - labels.length;
+
+    return `${labels.join(' · ')}${remaining > 0 ? ` · +${remaining} more` : ''}`;
+});
 const formattedExpiry = computed(() => {
     if (!expiresAt.value) return null;
 
@@ -207,7 +190,7 @@ const headingLabel = computed(() =>
 );
 const showStatusBadge = computed(() => !isPlainClaimable.value);
 
-function stageText(stage: XRayStage): string {
+function stageText(stage: NonNullable<XRayClaimPreviewResult['stages']>[number]): string {
     const payload = stage.payload ?? {};
     const raw = String(
         payload.message ??
@@ -288,12 +271,28 @@ function stageText(stage: XRayStage): string {
                         <p class="mt-1 text-2xl font-bold tabular-nums text-foreground">{{ amount }}</p>
                     </div>
 
-                    <div class="grid grid-cols-2 rounded-lg bg-muted/50 p-1" role="tablist" aria-label="Pay Code details">
+                    <button
+                        v-if="compact"
+                        type="button"
+                        class="w-full rounded-xl border p-3 text-left transition hover:bg-muted/30 focus-visible:outline-2 focus-visible:outline-primary"
+                        :aria-expanded="expanded"
+                        aria-controls="xray-instructions-panel xray-system-info-panel"
+                        data-testid="xray-requirements-toggle"
+                        @click="expanded = !expanded"
+                    >
+                        <span class="flex items-center justify-between gap-3 text-sm font-semibold text-foreground">
+                            <span>What you'll need</span>
+                            <span class="text-xs text-muted-foreground">{{ expanded ? 'Hide details' : 'Review details' }}</span>
+                        </span>
+                        <span class="mt-1 block text-xs leading-5 text-muted-foreground" data-testid="xray-requirements-summary">{{ requirementSummary }}</span>
+                    </button>
+
+                    <div v-if="!compact || expanded" class="grid grid-cols-2 rounded-lg bg-muted/50 p-1" role="tablist" aria-label="Pay Code details">
                         <button type="button" role="tab" id="xray-instructions-tab" aria-controls="xray-instructions-panel" :aria-selected="activeTab === 'instructions'" :tabindex="activeTab === 'instructions' ? 0 : -1" class="min-h-10 rounded-md px-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary" :class="activeTab === 'instructions' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'" @click="activeTab = 'instructions'" @keydown.right.prevent="switchTab('system-info', $event)" @keydown.left.prevent="switchTab('system-info', $event)">Instructions</button>
                         <button type="button" role="tab" id="xray-system-info-tab" aria-controls="xray-system-info-panel" :aria-selected="activeTab === 'system-info'" :tabindex="activeTab === 'system-info' ? 0 : -1" class="min-h-10 rounded-md px-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary" :class="activeTab === 'system-info' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'" @click="activeTab = 'system-info'" @keydown.right.prevent="switchTab('instructions', $event)" @keydown.left.prevent="switchTab('instructions', $event)">System Info</button>
                     </div>
 
-                    <div v-show="activeTab === 'instructions'" id="xray-instructions-panel" role="tabpanel" aria-labelledby="xray-instructions-tab" class="space-y-4">
+                    <div v-show="(!compact || expanded) && activeTab === 'instructions'" id="xray-instructions-panel" role="tabpanel" aria-labelledby="xray-instructions-tab" class="space-y-4">
 
                     <section v-if="formattedExpiry" class="rounded-xl border p-4" data-testid="xray-validity">
                         <div class="flex items-start gap-3">
@@ -452,7 +451,7 @@ function stageText(stage: XRayStage): string {
                     </div>
                     </div>
 
-                    <div v-show="activeTab === 'system-info'" id="xray-system-info-panel" role="tabpanel" aria-labelledby="xray-system-info-tab" class="space-y-4">
+                    <div v-show="(!compact || expanded) && activeTab === 'system-info'" id="xray-system-info-panel" role="tabpanel" aria-labelledby="xray-system-info-tab" class="space-y-4">
                         <dl v-if="systemDisclosures.length || extraDisclosures.length" class="divide-y rounded-xl border px-4">
                             <div v-for="item in [...systemDisclosures, ...extraDisclosures]" :key="item.key" class="flex items-start justify-between gap-4 py-3 text-sm">
                                 <dt class="text-muted-foreground">{{ item.label || item.key }}</dt>

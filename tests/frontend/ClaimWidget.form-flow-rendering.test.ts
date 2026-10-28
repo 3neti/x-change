@@ -244,7 +244,8 @@ describe('ClaimWidget compiled form flow rendering', () => {
         expect(submitButton.classes()).toContain('sm:w-full');
         expect(submitButton.classes()).toContain('sm:max-w-none');
         expect(submitButton.classes()).toContain('sm:shadow-none');
-        expect(wrapper.find('form > .h-24.shrink-0').classes()).toContain('sm:hidden');
+        expect(wrapper.classes()).toContain('pb-28');
+        expect(wrapper.find('form > .h-24.shrink-0').exists()).toBe(false);
     });
 
     it('ignores inactive compiled form_flow phase', () => {

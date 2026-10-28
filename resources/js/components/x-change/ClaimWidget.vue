@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/experience/claim-midnight.css';
 import InputError from '@/components/InputError.vue';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -519,7 +520,10 @@ watch(
 </script>
 
 <template>
-    <div class="flex flex-col gap-6">
+    <div
+        class="flex flex-col gap-6"
+        :class="!previewViewModel.isNonActive && !surfaceTakesOver ? 'pb-28 sm:pb-0' : ''"
+    >
         <Head :title="claimTitle" />
 
         <!-- Viewer-aware claim surface: issuer console takes over entirely
@@ -562,15 +566,13 @@ watch(
             <Button
                 ref="submitButton"
                 type="submit"
-                class="fixed inset-x-4 z-30 mx-auto h-11 w-auto max-w-md rounded-full shadow-lg shadow-foreground/10 sm:static sm:inset-auto sm:w-full sm:max-w-none sm:shadow-none"
+                class="fixed inset-x-4 z-30 mx-auto h-14 w-auto max-w-md rounded-2xl text-base font-bold shadow-lg shadow-foreground/20 sm:static sm:inset-auto sm:w-full sm:max-w-none sm:shadow-none"
                 style="bottom: max(0.2in, calc(env(safe-area-inset-bottom) + 1rem)); margin-bottom: 0"
                 data-testid="claim-widget-submit-button"
                 :disabled="submitViewModel.disabled"
             >
                 {{ submitViewModel.label }}
             </Button>
-
-            <div class="h-24 shrink-0 sm:hidden" aria-hidden="true" />
 
             <p
                 v-if="claimExperienceLoading"
@@ -595,6 +597,7 @@ watch(
             :loading="xrayLoading && !resolvedXRay"
             :error="xrayError"
             :hide-slice-plan="hasSliceSelector"
+            compact
             data-testid="claim-widget-server-xray"
         />
 

@@ -57,6 +57,36 @@ vi.mock('lucide-vue-next', () => ({
 }));
 
 describe('XRayClaimPreview', () => {
+    it('keeps the claim summary visible while details expand on request', async () => {
+        const wrapper = mount(XRayClaimPreview, {
+            props: {
+                compact: true,
+                result: {
+                    visible: true,
+                    status: 'claimable',
+                    disclosures: [{ key: 'amount', value: '₱50.00' }],
+                    requirements: [
+                        { key: 'mobile', label: 'Mobile number' },
+                        { key: 'location', label: 'Location' },
+                        { key: 'selfie', label: 'Selfie' },
+                        { key: 'signature', label: 'Signature' },
+                    ],
+                },
+            },
+        });
+
+        expect(wrapper.get('[data-testid="xray-claim-amount"]').text()).toContain('₱50.00');
+        expect(wrapper.get('[data-testid="xray-requirements-summary"]').text()).toContain('Mobile number · Location · Selfie · +1 more');
+        expect(wrapper.get('[data-testid="xray-requirements-toggle"]').attributes('aria-expanded')).toBe('false');
+        expect((wrapper.get('#xray-instructions-panel').element as HTMLElement).style.display).toBe('none');
+
+        await wrapper.get('[data-testid="xray-requirements-toggle"]').trigger('click');
+
+        expect(wrapper.get('[data-testid="xray-requirements-toggle"]').attributes('aria-expanded')).toBe('true');
+        expect((wrapper.get('#xray-instructions-panel').element as HTMLElement).style.display).toBe('');
+        expect(wrapper.get('[data-testid="xray-required-inputs"]').text()).toContain('Signature');
+    });
+
     it('presents disclosed money details and service information in separate tabs', async () => {
         const wrapper = mount(XRayClaimPreview, {
             props: {

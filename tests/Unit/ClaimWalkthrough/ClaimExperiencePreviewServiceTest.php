@@ -77,6 +77,8 @@ it('renders and caches preview artifacts from voucher instructions', function ()
         ->and(data_get($result, 'journey.schema'))->toBe('x-change.claim-experience-preview.journey.v2')
         ->and(data_get($result, 'journey.steps.0.key'))->toBe('claim-entry')
         ->and(data_get($result, 'journey.steps.0.screen.code'))->toBe('AA317')
+        ->and(data_get($result, 'journey.steps.0.screen.xray.audience'))->toBe('guest')
+        ->and(data_get($result, 'journey.steps.0.screen.xray.status'))->toBe('claimable')
         ->and(data_get($result, 'journey.steps.0.screen.fields.0.value'))->toBe('AA317')
         ->and(data_get($result, 'journey.presentation.appearance.mode'))->toBe('dark')
         ->and(collect(data_get($result, 'journey.steps'))->firstWhere('key', 'pre-claim-rider-splash')['screen']['component'])->toBe('form-flow/core/Splash')
@@ -86,6 +88,12 @@ it('renders and caches preview artifacts from voucher instructions', function ()
         ->and(data_get($result, 'artifacts.storyboard_pdf'))->toBeFile()
         ->and(data_get($result, 'artifacts.storyboard_html'))->toBeFile()
         ->and(data_get($result, 'artifacts.view_options.default.label'))->toBe('Default PDF');
+
+    $disclosures = collect(data_get($result, 'journey.steps.0.screen.xray.disclosures'))->keyBy('key');
+
+    expect(data_get($disclosures->get('reference'), 'value'))->toBe('AA317')
+        ->and((string) data_get($disclosures->get('amount'), 'value'))->toContain('42.00')
+        ->and($disclosures->has('redirect_url'))->toBeFalse();
 
     $storyboard = json_decode(file_get_contents(data_get($result, 'artifacts.storyboard_json')), true);
 
@@ -163,6 +171,9 @@ it('compiles conditional redeemer journey steps from the instruction contract', 
     );
 
     $steps = collect(data_get($result, 'journey.steps'));
+
+    expect(collect(data_get($result, 'journey.steps.0.screen.xray.requirements'))->pluck('key')->all())
+        ->toContain('mobile', 'kyc', 'selfie', 'signature', 'location');
 
     expect($steps->pluck('key')->all())
         ->toContain(
