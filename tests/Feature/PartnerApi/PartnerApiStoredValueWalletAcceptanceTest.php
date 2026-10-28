@@ -6,6 +6,8 @@ use Bavix\Wallet\Models\Wallet;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Validation\ValidationException;
 use Laravel\Passport\Client;
 use Laravel\Passport\Passport;
 use LBHurtado\Contact\Models\Contact;
@@ -16,8 +18,11 @@ use LBHurtado\Voucher\Data\ExecutionInstructionData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\Services\ExecutionEngine;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryAllocationReadModelContract;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryAllocationReadModelQueryData;
+use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
+use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionReservationData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryAllocationOperationType;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
@@ -33,12 +38,15 @@ use LBHurtado\XChange\Lifecycle\Runners\ScenarioRunContext;
 use LBHurtado\XChange\Lifecycle\Runners\ScenarioRunnerRegistry;
 use LBHurtado\XChange\Lifecycle\Runners\StoredValueCollectionScenarioRunner;
 use LBHurtado\XChange\Models\CommercialPrincipal;
+use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PartnerApiOperation;
 use LBHurtado\XChange\Models\StoredValueAuditEvent;
 use LBHurtado\XChange\Models\StoredValueCollection;
 use LBHurtado\XChange\Models\StoredValueHolderBinding;
+use LBHurtado\XChange\Services\Execution\ValueFlowPayoutService;
 use LBHurtado\XChange\Services\StoredValue\StoredValueAuditJournal;
 use LBHurtado\XChange\Services\StoredValue\StoredValueCollectionService;
+use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 use LBHurtado\XChange\Tests\Fakes\FakeOtpChallengeGateway;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
@@ -564,3 +572,84 @@ function storedValueAcceptanceVoucher(): Voucher
         ],
     ]);
 }
+
+it('routes four fixed 25 peso collections from a 100 peso stored value voucher to its GCash destination', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    config()->set('omnipay.gateways.netbank.options.rails.INSTAPAY', ['enabled' => true, 'min_amount' => 100, 'max_amount' => 5_000_000]);
+    $issuer = storedValueAcceptanceUser('Fixed destination issuer');
+    $holder = storedValueAcceptanceUser('Fixed destination holder', '09173011987');
+    $collector = storedValueAcceptanceUser('Fixed destination collector');
+    fundTestUserClientFunds($issuer, 10_000);
+    config()->set('x-change.execution.stored_value.collection.staff', [
+        'enabled' => true, 'user_ids' => [(string) $collector->getKey()],
+        'maximum_amount_minor' => 2_500, 'daily_amount_minor' => 20_000, 'destination' => 'collector',
+    ]);
+    config()->set('x-change.execution.stored_value.collection.fixed_amount_minor', 2_500);
+    expect(Gate::forUser($collector)->allows('x-change.stored-value.collect'))->toBeTrue()
+        ->and(Gate::forUser($issuer)->allows('x-change.stored-value.collect'))->toBeFalse();
+    $voucher = storedValueAcceptanceVoucher();
+    $voucher->owner()->associate($issuer);
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.execution.metadata.stored_value', [
+        'initial_balance' => 10_000, 'max_balance' => 10_000, 'replenishable' => false, 'otp_required_above' => 0,
+        'collection_authorization' => ['schema' => 'x-change.stored-value-collection-authorization.v1', 'mode' => 'collector'],
+    ]);
+    data_set($metadata, 'instructions.execution.metadata.value_flow.destination', 'instapay.gxchphm2xxx.account:09179999999');
+    $voucher->forceFill(['metadata' => $metadata])->save();
+    $reservation = app(TreasuryPayCodeAccountingService::class)
+        ->reserve($issuer, $voucher, 'netbank-primary', 10_000, 'PHP');
+    $metadata = $voucher->fresh()->metadata;
+    data_set($metadata, 'treasury.pay_code_reservation', [
+        'status' => 'reserved', 'operation_reference' => $reservation->operationReference, 'amount_minor' => 10_000, 'currency' => 'PHP',
+    ]);
+    $voucher->forceFill(['metadata' => $metadata])->save();
+    $inventory = app(TreasuryInventoryOperationContract::class);
+    $inventory->registerInventory(new TreasuryInventoryData(
+        inventoryReference: 'inventory:netbank:vca-cash', resourceType: 'cash_at_bank', currency: 'PHP',
+        capacityMinor: 0, status: 'requested', idempotencyKey: 'register:fixed-fare', externalReference: 'resource:netbank:corporate-vca',
+    ));
+    $inventory->recognize(new TreasuryInventoryRecognitionData(
+        operationReference: 'fixed-fare-funding', inventoryReference: 'inventory:netbank:vca-cash',
+        settlementResourceReference: 'resource:netbank:corporate-vca', amountMinor: 10_000, currency: 'PHP',
+        status: 'requested', idempotencyKey: 'fixed-fare-funding', externalReference: 'fixed-fare-funding',
+    ));
+    $this->actingAs($holder);
+    $activation = app(ExecutionEngine::class)->execute(new ExecutionContextData(
+        contact: new Contact(['mobile' => '+639173011987', 'country' => 'PH']), voucherCode: $voucher->code, voucher: $voucher,
+        instruction: ExecutionInstructionData::from(data_get($voucher->metadata, 'instructions.execution')),
+        correlation: ['execution_id' => 'fixed-fare-activation'],
+    ));
+    expect($activation->successful)->toBeTrue();
+    $service = app(StoredValueCollectionService::class);
+    expect(fn () => $service->start($collector, 'cockpit', $voucher->code, 2_400, 'PHP', 'wrong-fare'))
+        ->toThrow(ValidationException::class);
+    $provider = fakePayoutProvider()->willReturnSuccessfulResult(provider: 'netbank');
+    for ($index = 1; $index <= 4; $index++) {
+        $pending = $service->start($collector, 'cockpit', $voucher->code, 2_500, 'PHP', 'fixed-fare-'.$index);
+        $reference = $pending['data']['reference'];
+        expect($pending['data']['status'])->toBe('ready');
+        $first = $service->commit($collector, 'cockpit', $reference);
+        $replay = $service->commit($collector, 'cockpit', $reference);
+        expect($first['data']['balance_after_minor'])->toBe(10_000 - $index * 2_500)
+            ->and($replay['data']['balance_after_minor'])->toBe($first['data']['balance_after_minor']);
+        $payout = DisbursementReconciliation::query()
+            ->where('provider_reference', $first['data']['receipt']['payout_reference'])->sole();
+        $payouts = app(ValueFlowPayoutService::class);
+        $payouts->submit($payout->id);
+        $payouts->submit($payout->id);
+        expect($payout->fresh()->internal_status)->toBe('finalized')
+            ->and($provider->lastRequest->account_number)->toBe('09179999999');
+    }
+    expect($provider->disburseCallCount)->toBe(4)
+        ->and(treasuryClientFundsLedger($issuer)->balanceInt)->toBe(0)
+        ->and(treasuryClientFundsLedger($collector)->balanceInt)->toBe(0)
+        ->and((int) TreasuryInventory::query()->sum('balance_minor'))->toBe(0);
+    $fifth = $service->start($collector, 'cockpit', $voucher->code, 2_500, 'PHP', 'fixed-fare-five');
+    expect(fn () => $service->commit($collector, 'cockpit', $fifth['data']['reference']))
+        ->toThrow(ValidationException::class, 'insufficient');
+    expect($provider->disburseCallCount)->toBe(4);
+    config()->set('x-change.execution.stored_value.collection.staff.enabled', false);
+    expect(Gate::forUser($collector)->allows('x-change.stored-value.collect'))->toBeFalse();
+});

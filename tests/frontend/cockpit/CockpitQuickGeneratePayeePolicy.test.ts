@@ -100,7 +100,7 @@ describe('Cockpit Quick Generate payee policy', () => {
         ).toBeDefined();
     });
 
-    it('treats a quoted mobile as a redacted release secret', async () => {
+    it('shows a quoted mobile as a release secret in Engineering Preview', async () => {
         const wrapper = mountPanel();
 
         await wrapper
@@ -110,13 +110,13 @@ describe('Cockpit Quick Generate payee policy', () => {
 
         const payload = preview(wrapper);
 
-        expect(payload.cash.validation.secret).toBe('[redacted secret]');
+        expect(payload.cash.validation.secret).toBe('09173011987');
         expect(payload.cash.validation.mobile).toBeUndefined();
         expect(payload.metadata.custom.cockpit.payee).toEqual({
             kind: 'secret',
             explicit_secret: true,
         });
-        expect(JSON.stringify(payload)).not.toContain('09173011987');
+        expect(JSON.stringify(payload)).toContain('09173011987');
     });
 
     it('recognizes email but keeps issuance unavailable until email OTP exists', async () => {

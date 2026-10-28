@@ -12,6 +12,7 @@ use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Jobs\Redemption\DispatchVoucherRedemptionFeedbackJob;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\Execution\ValueFlowPayoutService;
 use LBHurtado\XChange\Services\Treasury\PayCodeDisbursementSettlementJournal;
 use LBHurtado\XChange\Services\Treasury\PayCodeFundingPrincipalResolver;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
@@ -20,6 +21,7 @@ use Throwable;
 final readonly class HandleConfirmedDisbursement
 {
     public function __construct(
+        private ValueFlowPayoutService $valueFlowPayouts,
         private TreasuryPayCodeAccountingService $accounting,
         private PayCodeDisbursementSettlementJournal $journal,
         private PayCodeFundingPrincipalResolver $fundingPrincipals,
@@ -28,6 +30,12 @@ final readonly class HandleConfirmedDisbursement
     public function handle(DisbursementConfirmed $event): void
     {
         $reconciliation = $event->reconciliation->fresh();
+
+        if ($reconciliation->claim_type === 'value_flow') {
+            $this->valueFlowPayouts->converge($reconciliation);
+
+            return;
+        }
         $voucher = Voucher::query()->find($reconciliation->voucher_id);
 
         if (! $voucher instanceof Voucher) {

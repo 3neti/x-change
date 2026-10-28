@@ -107,3 +107,19 @@ describe('stored value collection page', () => {
         expect(page.find('#collection-code').exists()).toBe(true);
     });
 });
+
+it('distinguishes a committed spend from a pending external payout', async () => {
+    vi.stubGlobal('crypto', { randomUUID: () => 'fixed-destination-spend' });
+    vi.stubGlobal('fetch', vi.fn()
+        .mockResolvedValueOnce(reply({ reference: '01FIXED', status: 'ready', amount_minor: 2500, currency: 'PHP', available_minor: 10000 }))
+        .mockResolvedValueOnce(reply({ reference: '01FIXED', status: 'committed', amount_minor: 2500, currency: 'PHP', balance_after_minor: 7500,
+            receipt: { payout_reference: 'vf-fixed', payout_status: 'pending' } })));
+    const page = mount(CollectStoredValue, { props: { channel: 'cockpit', endpoints, fixed_amount_minor: 2500 } });
+    await page.get('#collection-code').setValue('ABCD1234');
+    await page.get('form').trigger('submit');
+    await flushPromises();
+    await page.findAll('button').find(button => button.text().includes('Collect ₱25.00'))!.trigger('click');
+    await flushPromises();
+    expect(page.get('[data-testid="collection-payout-status"]').text()).toContain('awaiting confirmation');
+    expect(page.text()).toContain('₱75.00');
+});

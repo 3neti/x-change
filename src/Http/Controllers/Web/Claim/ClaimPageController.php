@@ -20,6 +20,7 @@ use LBHurtado\XChange\Data\Claim\ClaimSurfaceData;
 use LBHurtado\XChange\Enums\ClaimAuthenticationMode;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Services\Payment\PaymentReceiptReadModel;
+use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
 
@@ -50,6 +51,10 @@ class ClaimPageController extends Controller
         }
 
         $flowCapabilities = $capabilities->resolve($voucher);
+        if (SettlementRepaymentPolicy::forVoucher($voucher)
+            && SettlementRepaymentPolicy::disbursed($voucher)) {
+            return redirect()->route('x-change.pay.show', ['code' => $voucher->code]);
+        }
 
         if (! $flowCapabilities->can_disburse) {
             if ($flowCapabilities->can_collect) {

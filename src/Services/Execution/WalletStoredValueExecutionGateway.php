@@ -16,10 +16,12 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryAllocationMovementData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryAllocationReadModelData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryAllocationReadModelQueryData;
 use LBHurtado\Wallet\Treasury\Exceptions\TreasuryAllocationConflict;
+use LBHurtado\Wallet\Treasury\Models\TreasuryAllocation;
 use LBHurtado\XChange\Contracts\Execution\DurableStoredValueExecutionGatewayContract;
 use LBHurtado\XChange\Contracts\Execution\StoredValueDestinationAuthorityContract;
 use LBHurtado\XChange\Contracts\Execution\StoredValueHolderAuthorityContract;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
+use LBHurtado\XChange\Data\Execution\StoredValueDestinationAuthorityData;
 use LBHurtado\XChange\Models\StoredValueHolderBinding;
 use LBHurtado\XChange\Services\StoredValue\StoredValueAuditJournal;
 use RuntimeException;
@@ -33,6 +35,9 @@ final readonly class WalletStoredValueExecutionGateway implements DurableStoredV
         private StoredValueDestinationAuthorityContract $destinationAuthority,
         private TreasuryPrincipalReferenceResolverContract $principalReferences,
         private StoredValueAuditJournal $auditJournal,
+        private VoucherValueFlowPolicy $valueFlows,
+        private ValueFlowAddressResolver $addresses,
+        private ValueFlowPayoutService $payouts,
     ) {}
 
     public function activate(ExecutionContextData $context, string $executionId): array
@@ -152,7 +157,8 @@ final readonly class WalletStoredValueExecutionGateway implements DurableStoredV
             throw new StoredValueSpendRejectedException('Stored value spend amount must be positive.');
         }
 
-        $binding = $this->binding($this->voucher($context));
+        $voucher = $this->voucher($context);
+        $binding = $this->binding($voucher);
         $destination = $this->destinationAuthority->authorize($context, $amount);
         $scope = hash('sha256', implode('|', [
             $binding->allocation_reference,
@@ -161,22 +167,44 @@ final readonly class WalletStoredValueExecutionGateway implements DurableStoredV
         ]));
 
         try {
-            $operation = $this->allocationOperations->draw(
-                new TreasuryAllocationMovementData(
-                    operationReference: 'stored-value-spend:'.$scope,
-                    allocationReference: $binding->allocation_reference,
-                    counterpartyPositionReference: $destination->counterpartyPositionReference,
-                    amountMinor: $amount,
-                    currency: $binding->currency,
-                    idempotencyKey: 'stored-value-spend:'.$scope,
-                    externalReference: 'stored-value-execution:'.hash('sha256', $callerExecutionId),
-                    metadata: [
-                        'source' => 'x_change_stored_value_spend',
-                        'destination_authority_reference' => $destination->authorityReference,
-                        'destination_principal_reference' => $destination->principalReference,
-                    ],
-                ),
-            );
+            [$operation, $destination, $payout] = DB::transaction(function () use ($voucher, $binding, $destination, $amount, $scope, $callerExecutionId): array {
+                $fixed = $this->valueFlows->destination($voucher);
+                $position = null;
+                if ($fixed !== null) {
+                    $allocation = TreasuryAllocation::query()
+                        ->with('reservePosition')->where('allocation_reference', $binding->allocation_reference)->sole();
+                    $connection = $allocation->reservePosition->connection_reference;
+                    $position = $this->payouts->isExternal($voucher)
+                        ? $this->payouts->bridge($voucher, $connection, $binding->currency)
+                        : $this->addresses->clientFunds($fixed, $connection, $binding->currency);
+                    $destination = new StoredValueDestinationAuthorityData(
+                        counterpartyPositionReference: $position->positionReference,
+                        authorityReference: $destination->authorityReference,
+                        principalReference: $position->principalReference,
+                    );
+                }
+                $operation = $this->allocationOperations->draw(
+                    new TreasuryAllocationMovementData(
+                        operationReference: 'stored-value-spend:'.$scope,
+                        allocationReference: $binding->allocation_reference,
+                        counterpartyPositionReference: $destination->counterpartyPositionReference,
+                        amountMinor: $amount,
+                        currency: $binding->currency,
+                        idempotencyKey: 'stored-value-spend:'.$scope,
+                        externalReference: 'stored-value-execution:'.hash('sha256', $callerExecutionId),
+                        metadata: [
+                            'source' => 'x_change_stored_value_spend',
+                            'destination_authority_reference' => $destination->authorityReference,
+                            'destination_principal_reference' => $destination->principalReference,
+                        ],
+                    ),
+                );
+                $payout = $position !== null && $this->payouts->isExternal($voucher)
+                    ? $this->payouts->prepare($voucher, $position, $amount, 'stored-value-spend:'.$scope)
+                    : null;
+
+                return [$operation, $destination, $payout];
+            }, attempts: 5);
         } catch (TreasuryAllocationConflict|RuntimeException $exception) {
             throw new StoredValueSpendRejectedException(
                 'Stored value spend could not be committed safely.',
@@ -190,6 +218,7 @@ final readonly class WalletStoredValueExecutionGateway implements DurableStoredV
             'last_spend_execution_id' => $callerExecutionId,
             'operation_reference' => $operation->operationReference,
             'destination_principal_reference' => $destination->principalReference,
+            ...($payout === null ? [] : ['payout_reference' => $payout->provider_reference, 'payout_status' => $payout->status]),
         ];
     }
 

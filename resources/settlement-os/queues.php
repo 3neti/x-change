@@ -24,6 +24,7 @@ use LBHurtado\XChange\Jobs\Payment\RecoverSettledPayerIdentityJob;
 use LBHurtado\XChange\Jobs\Payment\VerifyPaymentAttemptJob;
 use LBHurtado\XChange\Jobs\Provisioning\DeliverProvisioningOfferJob;
 use LBHurtado\XChange\Jobs\Redemption\DispatchVoucherRedemptionFeedbackJob;
+use LBHurtado\XChange\Jobs\SubmitValueFlowPayout;
 
 return [
     'schema' => 'settlement-os.queue-topology.v1',
@@ -54,6 +55,7 @@ return [
                 VerifyFundingWebhookReceiptJob::class => [],
                 MonitorPaymentAttemptJob::class => [],
                 VerifyPaymentAttemptJob::class => [],
+                SubmitValueFlowPayout::class => [],
             ],
         ],
         'feedback' => [

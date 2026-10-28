@@ -21,6 +21,7 @@ use LBHurtado\XChange\Services\Commercial\CommercialRecipientDesignationAuthorit
 use LBHurtado\XCommerce\Data\CommercialAllocationLineData;
 use LBHurtado\XCommerce\Data\CommercialSaleSnapshotData;
 use LBHurtado\XCommerce\Enums\CommercialAllocationDestinationKind;
+use LBHurtado\XProvisioning\Enums\CommercialSettlementDisposition;
 
 final readonly class PostCommercialSale
 {
@@ -45,6 +46,7 @@ final readonly class PostCommercialSale
         string $commercialClearingPositionReference,
         array $destinationPositionReferences,
         array $dispositionPlans = [],
+        bool $deferCharge = false,
     ): CommercialSale {
         $this->assertDispositionPlans($snapshot, $dispositionPlans);
         $snapshotArray = $snapshot->toArray();
@@ -57,12 +59,20 @@ final readonly class PostCommercialSale
             ->sortKeys()
             ->all();
         $snapshotArray['recipient_designation_governance'] = $dispositionEvidence;
+        if ($deferCharge) {
+            $snapshotArray['collection_disposition_plans'] = collect($dispositionPlans)
+                ->map(static fn (CommercialAllocationDispositionPlanData $plan): array => [
+                    ...get_object_vars($plan),
+                    'disposition' => $plan->disposition->value,
+                ])->all();
+        }
         $snapshotHash = hash(
             'sha256',
             json_encode($snapshotArray, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES),
         );
 
         return DB::transaction(function () use (
+            $deferCharge,
             $commercialClearingPositionReference,
             $destinationPositionReferences,
             $dispositionPlans,
@@ -123,25 +133,50 @@ final readonly class PostCommercialSale
             }
 
             $this->billableEvents->recordForSale($sale, $snapshot);
+            if ($deferCharge) {
+                return $sale->load(['allocations', 'billableEvents']);
+            }
+
+            return $this->settleAccepted($sale, $dispositionPlans);
+        }, attempts: 5);
+    }
+
+    /** @param array<string, CommercialAllocationDispositionPlanData>|null $dispositionPlans */
+    public function settleAccepted(CommercialSale $sale, ?array $dispositionPlans = null): CommercialSale
+    {
+        return DB::transaction(function () use ($sale, $dispositionPlans): CommercialSale {
+            $sale = CommercialSale::query()->lockForUpdate()->findOrFail($sale->getKey());
+            if ($sale->status === 'posted') {
+                return $sale->load(['allocations', 'billableEvents']);
+            }
+            if ($sale->status !== 'accepted') {
+                throw new CommercialSaleConflict('Only an accepted sale can be collected.');
+            }
+            $dispositionPlans ??= collect(data_get($sale->snapshot, 'collection_disposition_plans', []))
+                ->map(static function (array $plan): CommercialAllocationDispositionPlanData {
+                    $plan['disposition'] = CommercialSettlementDisposition::from($plan['disposition']);
+
+                    return new CommercialAllocationDispositionPlanData(...$plan);
+                })->all();
             $this->assertCurrentDispositionAuthorities($dispositionPlans);
 
-            $scope = hash('sha256', $snapshot->reference);
+            $scope = hash('sha256', $sale->reference);
             $chargeOperationReference = null;
 
-            if ($snapshot->quoteSnapshot->totalPriceMinor > 0) {
+            if ($sale->total_price_minor > 0) {
                 $charge = $this->positionOperations->charge(
                     new TreasuryPositionCommercialChargeData(
                         operationReference: 'commercial-charge:'.$scope,
-                        sourcePositionReference: $sourceClientFundsPositionReference,
-                        destinationPositionReference: $commercialClearingPositionReference,
-                        amountMinor: $snapshot->quoteSnapshot->totalPriceMinor,
-                        currency: $snapshot->quoteSnapshot->currency,
+                        sourcePositionReference: $sale->source_client_funds_position_reference,
+                        destinationPositionReference: $sale->commercial_clearing_position_reference,
+                        amountMinor: $sale->total_price_minor,
+                        currency: $sale->currency,
                         idempotencyKey: 'commercial-charge-key:'.$scope,
-                        externalReference: $snapshot->reference,
+                        externalReference: $sale->reference,
                         metadata: [
                             'source' => 'x_change_commercial_sale',
-                            'commercial_sale_reference' => $snapshot->reference,
-                            'quote_reference' => $snapshot->quoteSnapshot->reference,
+                            'commercial_sale_reference' => $sale->reference,
+                            'quote_reference' => $sale->quote_reference,
                         ],
                     ),
                 );
@@ -158,19 +193,19 @@ final readonly class PostCommercialSale
                 $operationReference = null;
 
                 if ($allocation->amount_minor > 0) {
-                    $allocationScope = hash('sha256', $snapshot->reference.'|'.$allocation->policy_rule_reference);
+                    $allocationScope = hash('sha256', $sale->reference.'|'.$allocation->policy_rule_reference);
                     $operation = $this->positionOperations->allocate(
                         new TreasuryPositionAllocationData(
                             operationReference: 'commercial-allocation:'.$allocationScope,
-                            sourcePositionReference: $commercialClearingPositionReference,
+                            sourcePositionReference: $sale->commercial_clearing_position_reference,
                             destinationPositionReference: $allocation->destination_position_reference,
                             amountMinor: $allocation->amount_minor,
                             currency: $allocation->currency,
                             idempotencyKey: 'commercial-allocation-key:'.$allocationScope,
-                            externalReference: $snapshot->reference,
+                            externalReference: $sale->reference,
                             metadata: [
                                 'source' => 'x_change_commercial_waterfall',
-                                'commercial_sale_reference' => $snapshot->reference,
+                                'commercial_sale_reference' => $sale->reference,
                                 'policy_rule_reference' => $allocation->policy_rule_reference,
                                 'category' => $allocation->category,
                                 'recipient_reference' => $allocation->recipient_reference,

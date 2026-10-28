@@ -12,11 +12,13 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Data\Payment\ConfirmedVoucherCollectionData;
 use LBHurtado\XChange\Exceptions\VoucherCollectionConflict;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\Execution\VoucherValueFlowPolicy;
 use LBHurtado\XChange\Services\Payment\PartnerPaymentEventOutbox;
 use LBHurtado\XChange\Services\Payment\VoucherCollectionJournal;
 use LBHurtado\XChange\Services\Payment\VoucherCollectionPostingRegistry;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
+use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
 use LBHurtado\XChange\Services\VoucherCapabilityGuard;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use RuntimeException;
@@ -105,6 +107,18 @@ final readonly class CompleteVoucherCollection
                 );
             }
 
+            $feeMinor = app(PayCodeCommercialSaleService::class)
+                ->outstandingCollectionFee($locked);
+            $principalMinor = $data->amountMinor - $feeMinor;
+            if ($principalMinor <= 0 || ($feeMinor > 0 && $data->executionDriver !== 'provider_wallet')) {
+                throw new RuntimeException('Payment must cover the service fee and a positive principal through the provider.');
+            }
+
+            if (SettlementRepaymentPolicy::forVoucher($locked)
+                && $principalMinor !== SettlementRepaymentPolicy::paymentMinor($locked)) {
+                throw new RuntimeException('The repayment must match the fixed installment amount.');
+            }
+
             $allowOverpayment = (bool) Arr::get(
                 $rules,
                 'allow_overpayment',
@@ -114,7 +128,7 @@ final readonly class CompleteVoucherCollection
             if (
                 $usesTypedCollectionLifecycle
                 && ! $allowOverpayment
-                && $data->amountMinor > $progress->remaining_to_collect_minor
+                && $principalMinor > $progress->remaining_to_collect_minor
             ) {
                 throw new RuntimeException(
                     'Confirmed collection exceeds the remaining Pay Code target.',
@@ -132,7 +146,7 @@ final readonly class CompleteVoucherCollection
                 'collection_number' => $collectionNumber,
                 'status' => 'collected',
                 'requested_amount_minor' => $data->amountMinor,
-                'collected_amount_minor' => $data->amountMinor,
+                'collected_amount_minor' => $principalMinor,
                 'currency' => $currency,
                 'provider' => $data->provider,
                 'provider_reference' => $data->providerReference,
@@ -147,6 +161,9 @@ final readonly class CompleteVoucherCollection
                 'attempted_at' => now(),
                 'completed_at' => now(),
                 'meta' => [
+                    'gross_amount_minor' => $data->amountMinor,
+                    'fee_amount_minor' => $feeMinor,
+                    'principal_amount_minor' => $principalMinor,
                     'payload' => data_get(
                         $data->metadata,
                         'confirmed_payload',
@@ -154,7 +171,7 @@ final readonly class CompleteVoucherCollection
                     ),
                     'result' => [
                         'status' => 'collected',
-                        'amount' => $data->amountMinor / 100,
+                        'amount' => $principalMinor / 100,
                         'currency' => $currency,
                         'provider' => $data->provider,
                         'provider_reference' => $data->providerReference,

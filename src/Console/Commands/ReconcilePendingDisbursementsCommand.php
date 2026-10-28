@@ -7,11 +7,15 @@ namespace LBHurtado\XChange\Console\Commands;
 use Illuminate\Console\Command;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Services\Execution\ValueFlowPayoutService;
 
 class ReconcilePendingDisbursementsCommand extends Command
 {
     protected $signature = 'xchange:reconcile:pending
         {--limit=50 : Maximum number of records to process}
+        {--voucher= : Restrict reconciliation to one Pay Code}
+        {--id= : Restrict reconciliation to one record}
+        {--status-only : Only query existing provider transfers; never submit payouts}
         {--json : Output JSON}
         {--pretty : Pretty-print JSON output}';
 
@@ -22,8 +26,17 @@ class ReconcilePendingDisbursementsCommand extends Command
         $limit = max(1, (int) $this->option('limit'));
 
         $rows = DisbursementReconciliation::query()
+            ->when($this->option('voucher') !== null, fn ($query) => $query->where('voucher_code', strtoupper(trim((string) $this->option('voucher')))))
+            ->when($this->option('id') !== null, fn ($query) => $query->whereKey((int) $this->option('id')))
+            ->when($this->option('status-only'), fn ($query) => $query->whereNotNull('provider_transaction_id')->whereNotIn('status', ['intent', 'failed']))
             ->where(function ($query) {
-                $query->whereIn('status', ['pending', 'unknown'])
+                $query->where(function ($query): void {
+                    $query->where('claim_type', 'value_flow')->where(function ($query): void {
+                        $query->where('status', 'intent')->orWhere(function ($query): void {
+                            $query->where('status', 'failed')->where('internal_status', 'reserved');
+                        });
+                    });
+                })->orWhereIn('status', ['pending', 'unknown'])
                     ->orWhere(function ($subQuery) {
                         $subQuery->where('status', 'failed')
                             ->where('needs_review', true);
@@ -37,7 +50,11 @@ class ReconcilePendingDisbursementsCommand extends Command
                             });
                     });
             })
-            ->whereNotNull('provider_transaction_id')
+            ->where(function ($query): void {
+                $query->whereNotNull('provider_transaction_id')->orWhere(function ($query): void {
+                    $query->where('claim_type', 'value_flow')->whereIn('status', ['intent', 'failed']);
+                });
+            })
             ->orderBy('attempted_at')
             ->orderBy('id')
             ->limit($limit)
@@ -48,7 +65,22 @@ class ReconcilePendingDisbursementsCommand extends Command
 
         foreach ($rows as $row) {
             try {
-                $result = $reconciler->reconcile($row->fresh());
+                if ($row->claim_type === 'value_flow' && in_array($row->status, ['intent', 'failed'], true) && ! $row->needs_review) {
+                    $valueFlows = app(ValueFlowPayoutService::class);
+                    if ($row->status === 'intent') {
+                        $valueFlows->submit((int) $row->getKey());
+                    } else {
+                        $valueFlows->converge($row);
+                    }
+                    $fresh = $row->fresh();
+                    $result = [
+                        'before_status' => $row->status,
+                        'resolved_status' => $fresh->status,
+                        'updated' => $row->status !== $fresh->status || $row->internal_status !== $fresh->internal_status,
+                    ];
+                } else {
+                    $result = $reconciler->reconcile($row->fresh());
+                }
 
                 $results[] = [
                     'voucher_code' => $row->voucher_code,

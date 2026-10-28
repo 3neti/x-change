@@ -19,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pipeline\Pipeline;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -216,6 +217,7 @@ use LBHurtado\XChange\Console\Commands\Treasury\RepairMissingDisbursementPosting
 use LBHurtado\XChange\Console\Commands\Treasury\SimulateTreasuryProviderDepositCommand;
 use LBHurtado\XChange\Console\Commands\ValidateDeploymentManifestCommand;
 use LBHurtado\XChange\Console\Commands\ValidatePolicyCompletionTransportDispositionCommand;
+use LBHurtado\XChange\Console\Commands\ValueFlowPayoutRecoveryCommand;
 use LBHurtado\XChange\Console\Commands\Wallet\GetWalletBalanceCommand;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\AccountProvisioningContract;
@@ -1772,6 +1774,7 @@ class XChangeServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->bootStoredValueCollectorGate();
         $stampCollection = InstalledVersions::getInstallPath('3neti/x-stamp-designs');
         if ($stampCollection !== null) {
             $this->publishes([
@@ -1800,6 +1803,7 @@ class XChangeServiceProvider extends ServiceProvider
         $this->bootLeadCampaignEndpointRateLimiter();
         $this->bootFundingVerificationRateLimiter();
         $this->bootPaymentVerificationRateLimiter();
+        $this->bootPaymentPageRateLimiters();
         $this->bootCommercialSettlementRateLimiter();
         $this->bootPartnerApiRateLimiter();
         $this->bootFundingVerificationSchedule();
@@ -1881,6 +1885,7 @@ class XChangeServiceProvider extends ServiceProvider
                 ReplaySettledPaymentPipelineCommand::class,
                 ProcessStandingFundingRuntimeOutboxCommand::class,
                 ReconcilePendingDisbursementsCommand::class,
+                ValueFlowPayoutRecoveryCommand::class,
                 TestFeedbackEmailCommand::class,
                 TestFeedbackSmsCommand::class,
                 ShowFeedbackHistoryCommand::class,
@@ -1997,6 +2002,22 @@ class XChangeServiceProvider extends ServiceProvider
         );
     }
 
+    protected function bootStoredValueCollectorGate(): void
+    {
+        if (Gate::has('x-change.stored-value.collect')) {
+            return;
+        }
+
+        Gate::define('x-change.stored-value.collect', static function (Model $user): bool {
+            $model = config('auth.providers.users.model');
+            $policy = (array) config('x-change.execution.stored_value.collection.staff', []);
+
+            return ($policy['enabled'] ?? false) === true
+                && is_string($model) && $user instanceof $model && $user->exists
+                && in_array((string) $user->getKey(), array_map('strval', (array) ($policy['user_ids'] ?? [])), true);
+        });
+    }
+
     protected function bootInitialPinSetupGuard(): void
     {
         if (! $this->mobileFirstAuthEnabled()) {
@@ -2074,6 +2095,19 @@ class XChangeServiceProvider extends ServiceProvider
                 ))->by('start:day:'.$endpoint.':'.$ip),
             ];
         });
+    }
+
+    protected function bootPaymentPageRateLimiters(): void
+    {
+        foreach (['read' => 60, 'start' => 12, 'check' => 6, 'download' => 12] as $purpose => $attempts) {
+            RateLimiter::for('x-change-payment-'.$purpose, static function (Request $request) use ($attempts): Limit {
+                $identity = $request->user() !== null
+                    ? 'user:'.$request->user()->getAuthIdentifier()
+                    : 'ip:'.$request->ip();
+
+                return Limit::perMinute($attempts)->by($identity);
+            });
+        }
     }
 
     protected function bootPaymentVerificationRateLimiter(): void

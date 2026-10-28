@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services;
 
 use BackedEnum;
 use Illuminate\Support\Arr;
+use Illuminate\Validation\ValidationException;
 use UnitEnum;
 
 class VoucherIssuancePayloadNormalizer
@@ -15,12 +16,23 @@ class VoucherIssuancePayloadNormalizer
         private readonly OnboardingVoucherInstructionPolicy $onboarding,
         private readonly RiderStampDesignRegistry $stampDesigns,
         private readonly StoredValueIssuancePolicy $storedValue,
+        private readonly ValueFlowIssuancePolicy $valueFlows,
     ) {}
 
     public function normalize(array $input): array
     {
         $input = $this->normalizeEnumValues($input);
+        $input = app(SettlementRepaymentPolicy::class)->normalize($input);
+        if (isset($input['fee_bearer'])) {
+            if (! in_array($input['fee_bearer'], ['issuer', 'payer'], true)
+                || ! in_array($input['voucher_type'] ?? null, ['payable', 'settlement'], true)) {
+                throw ValidationException::withMessages([
+                    'fee_bearer' => 'Fee bearer must be issuer or payer on a payable or settlement voucher.',
+                ]);
+            }
+        }
         $input = $this->storedValue->normalize($input);
+        $input = $this->valueFlows->normalize($input);
         $input = $this->namedSlices->normalizeIssuancePayload($input);
         $input = $this->onboarding->normalize($input);
         $cashValidation = Arr::get($input, 'cash.validation');

@@ -328,3 +328,43 @@ it('rejects stored value policy conflicts and direct generic-driver bypasses', f
             ],
         ]))->toThrow(ValidationException::class);
 });
+
+it('compiles the fixed payout destination into payable and stored value instructions', function (bool $stored): void {
+    $input = [
+        'voucher_type' => $stored ? 'redeemable' : 'payable',
+        'cash' => ['amount' => 100, 'currency' => 'PHP'],
+        'value_flow' => ['destination' => 'instapay.gxchphm2xxx.account:09179999999'],
+    ];
+    if ($stored) {
+        $input['stored_value'] = ['enabled' => true, 'replenishable' => false, 'maximum_balance' => 100];
+    }
+    $normalizer = app(VoucherIssuancePayloadNormalizer::class);
+    $result = $normalizer->normalize($input);
+    expect(data_get($result, 'execution.metadata.value_flow.destination'))->toBe($input['value_flow']['destination'])
+        ->and($result)->not->toHaveKey('value_flow')
+        ->and($normalizer->normalize($result))->toBe($result);
+})->with([true, false]);
+
+it('rejects an invalid payout destination before issuance', function (): void {
+    expect(fn () => app(VoucherIssuancePayloadNormalizer::class)->normalize([
+        'voucher_type' => 'payable', 'cash' => ['amount' => 100],
+        'value_flow' => ['destination' => 'instapay.gcash.account:123456'],
+    ]))->toThrow(ValidationException::class);
+});
+
+it('rejects repayment instructions whose fixed installments cannot settle the target', function (array $changes): void {
+    $input = array_replace_recursive([
+        'voucher_type' => 'settlement', 'cash' => ['amount' => 100, 'currency' => 'PHP'],
+        'target_amount' => 120,
+        'rules' => ['settlement_mode' => 'disburse_then_repay', 'min_payment' => 30, 'max_payment' => 30],
+    ], $changes);
+    expect(fn () => app(VoucherIssuancePayloadNormalizer::class)->normalize($input))
+        ->toThrow(ValidationException::class);
+})->with([
+    'no principal' => [['cash' => ['amount' => 0]]],
+    'unequal payments' => [['rules' => ['max_payment' => 40]]],
+    'partial final installment' => [['target_amount' => 125]],
+    'wrong voucher type' => [['voucher_type' => 'payable']],
+    'multiple disbursements' => [['cash' => ['slices' => 4]]],
+    'incompatible executor' => [['execution' => ['driver' => 'settlement_envelope']]],
+]);

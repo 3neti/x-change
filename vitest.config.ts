@@ -88,6 +88,7 @@ export default defineConfig({
         import.meta.dirname,
         "tests/frontend/stubs/ui-select.ts",
       ),
+      "@/components/financial/ValueFlowDestination.vue": path.resolve(import.meta.dirname, "resources/js/components/x-change-shared-financial/ValueFlowDestination.vue"),
       "@/components/financial/BankEMISelect.vue": path.resolve(
         import.meta.dirname,
         "resources/js/components/x-change-shared-financial/BankEMISelect.vue",

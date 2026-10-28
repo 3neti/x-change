@@ -463,3 +463,71 @@ describe("Cockpit Quick Generate value use", () => {
     ).toContain("durable wallet engine");
   });
 });
+
+it('submits a voucher-owned destination and omits it when returning to ordinary disbursement', async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'issued', result: { code: 'FIXED' } }) });
+  vi.stubGlobal('fetch', fetchMock);
+  vi.stubGlobal('crypto', { randomUUID: () => 'fixed-destination' });
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+    props: {
+      templates: cockpitQuickGenerateTemplates,
+      instructionCapabilities: { stored_value: storedValueCapability() },
+      mutationContract: { runtime_enabled: true, route: 'x-change.cockpit.quick-generate.store', route_url: '/x/cockpit/quick-generate', allowed_methods: ['POST'] },
+    },
+  });
+  await openOrderOptions(wrapper);
+  expect(wrapper.find('[data-testid="value-flow-destination"]').exists()).toBe(false);
+  await wrapper.get('[data-testid="cockpit-value-use-reusable-balance"]').setValue(true);
+  const destination = wrapper.findComponent({ name: 'ValueFlowDestination' });
+  expect(destination.exists()).toBe(true);
+  destination.vm.$emit('update:modelValue', 'instapay.gcash.mobile:09179999999');
+  await flushPromises();
+  expect(preview(wrapper).value_flow.destination).toBe('instapay.gcash.mobile:09179999999');
+  await wrapper.get('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
+  await flushPromises();
+  const request = fetchMock.mock.calls.find(([url, options]) => url === '/x/cockpit/quick-generate' && options.method === 'POST');
+  expect(request).toBeDefined();
+  expect(JSON.parse(request![1].body).value_flow).toEqual({ destination: 'instapay.gcash.mobile:09179999999' });
+  await wrapper.get('[data-testid="cockpit-value-use-reusable-balance"]').setValue(false);
+  expect(wrapper.find('[data-testid="value-flow-destination"]').exists()).toBe(false);
+  expect(preview(wrapper)).not.toHaveProperty('value_flow');
+});
+
+
+it('shows the destination for payable and settlement vouchers', async () => {
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });
+  await openOrderOptions(wrapper);
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
+  expect(wrapper.find('[data-testid="value-flow-destination"]').exists()).toBe(true);
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
+  expect(wrapper.find('[data-testid="value-flow-destination"]').exists()).toBe(true);
+});
+
+
+it('includes the selected fee bearer on payable and settlement instructions', async () => {
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });
+  await openOrderOptions(wrapper);
+  expect(wrapper.find('[data-testid="fee-bearer-control"]').exists()).toBe(false);
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
+  expect(preview(wrapper).fee_bearer).toBe('issuer');
+  await wrapper.get('[data-testid="fee-bearer-payer"]').setValue(true);
+  expect(preview(wrapper).fee_bearer).toBe('payer');
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
+  expect(preview(wrapper).fee_bearer).toBe('payer');
+});
+
+
+it('builds an explicit settlement with separate principal, target and fixed repayment', async () => {
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });
+  await openOrderOptions(wrapper);
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
+  await wrapper.get('[data-testid="cockpit-quick-generate-target-amount"]').setValue('120');
+  await wrapper.get('[data-testid="settlement-repayment-enabled"]').setValue(true);
+  await wrapper.get('[data-testid="settlement-repayment-amount"]').setValue('30');
+  const instruction = preview(wrapper);
+  expect(instruction.target_amount).toBe(120);
+  expect(instruction.rules).toMatchObject({ settlement_mode: 'disburse_then_repay', min_payment: 30, max_payment: 30 });
+  expect(instruction.fee_bearer).toBe('issuer');
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
+  expect(preview(wrapper).rules).not.toHaveProperty('settlement_mode');
+});

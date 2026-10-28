@@ -155,7 +155,7 @@ final readonly class VerifiedPaymentSettlementRecoveryService
             $exactCollection = $collection instanceof VoucherCollection
                 && $attempt->voucher_collection_id === $collection->getKey()
                 && $collection->voucher_id === $attempt->voucher_id
-                && $collection->collected_amount_minor === $attempt->expected_amount_minor
+                && (int) data_get($collection->meta, 'gross_amount_minor', $collection->collected_amount_minor) === $attempt->expected_amount_minor
                 && $collection->currency === $attempt->currency;
 
             if (! $exactCollection || $presentCount !== 3) {

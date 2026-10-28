@@ -7,7 +7,6 @@ use Illuminate\Support\Str;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\XChange\Data\FundingDecisionData;
-use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Services\Treasury\PreparePayCodeTreasuryIssuance;
 use LBHurtado\XChange\Tests\Fakes\User;
 
@@ -53,7 +52,7 @@ it('uses issuer Client Funds when the source is explicit or omitted', function (
     'explicit payout destination with default source' => [null, 'instapay.gcash.mobile:09179999999'],
 ]);
 
-it('rejects an explicit source belonging to a different account before reservation', function () {
+it('ignores explicit value flow sources for an ordinary disbursable voucher', function () {
     enableNetbankTreasuryForTests();
     config()->set('x-change.commercial.enabled', true);
     $issuer = actingAsTestUser(0);
@@ -78,7 +77,7 @@ it('rejects an explicit source belonging to a different account before reservati
     );
     $voucher = issueVoucher($instructions);
 
-    expect(fn () => app(PreparePayCodeTreasuryIssuance::class)->handle(
+    app(PreparePayCodeTreasuryIssuance::class)->handle(
         $issuer,
         $instructions->toArray(),
         ['voucher_id' => $voucher->getKey(), 'currency' => 'PHP', 'amount' => 20],
@@ -88,11 +87,11 @@ it('rejects an explicit source belonging to a different account before reservati
             requiredMinor: 2_000,
             meta: ['provider' => 'netbank', 'topology' => 'ledger_pooled'],
         ),
-    ))->toThrow(PayCodeIssuanceFailed::class, 'funded issuing Account');
+    );
 
-    expect(valueFlowIssuerPositionBalance($issuer, TreasuryPositionPurpose::ClientFunds))->toBe(5_000)
+    expect(valueFlowIssuerPositionBalance($issuer, TreasuryPositionPurpose::ClientFunds))->toBe(3_000)
         ->and(valueFlowIssuerPositionBalance($other, TreasuryPositionPurpose::ClientFunds))->toBe(5_000)
-        ->and(valueFlowIssuerPositionBalance($issuer, TreasuryPositionPurpose::PayCodeReserve))->toBe(0);
+        ->and(valueFlowIssuerPositionBalance($issuer, TreasuryPositionPurpose::PayCodeReserve))->toBe(2_000);
 });
 
 function valueFlowIssuerPositionBalance(User $owner, TreasuryPositionPurpose $purpose): int

@@ -14,6 +14,7 @@ type Collection = {
     available_minor?: number;
     balance_after_minor?: number;
     expires_at: string;
+    receipt?: { payout_reference?: string | null; payout_status?: string | null };
 };
 type CollectionSummary = Pick<Collection, 'reference' | 'status' | 'amount_minor' | 'currency' | 'authorization_method'> & {
     created_at: string | null;
@@ -257,6 +258,9 @@ function reset(): void {
                     </template>
                     <template v-else-if="collection.status === 'committed'">
                         <p class="text-lg font-semibold text-emerald-700">Payment collected</p>
+                        <p v-if="collection.receipt?.payout_reference" class="text-sm" data-testid="collection-payout-status">
+                            {{ collection.receipt.payout_status === 'succeeded' ? 'Sent to the voucher’s destination.' : collection.receipt.payout_status === 'failed' ? 'The receiving institution rejected the payout. Funds are held for resolution.' : 'Payout to the voucher’s destination is awaiting confirmation.' }}
+                        </p>
                         <p class="text-sm">Remaining Pay Code balance: <strong>{{ money(collection.balance_after_minor ?? 0) }}</strong></p>
                         <button type="button" class="w-full rounded-xl border border-slate-300 px-4 py-3 font-semibold" @click="reset">New collection</button>
                     </template>

@@ -3009,16 +3009,16 @@ return [
             'scheduled_batch_size' => 100,
             'settlement_grace_seconds' => 300,
             'public_read_middleware' => [
-                'throttle:60,1',
+                'throttle:x-change-payment-read',
             ],
             'public_start_middleware' => [
-                'throttle:12,1',
+                'throttle:x-change-payment-start',
             ],
             'public_check_middleware' => [
-                'throttle:6,1',
+                'throttle:x-change-payment-check',
             ],
             'public_download_middleware' => [
-                'throttle:12,1',
+                'throttle:x-change-payment-download',
             ],
         ],
 
@@ -3112,6 +3112,7 @@ return [
                 'fixed_amount_minor' => (int) env('XCHANGE_STORED_VALUE_COLLECTION_FIXED_AMOUNT_MINOR', 0),
                 'staff' => [
                     'enabled' => (bool) env('XCHANGE_STORED_VALUE_STAFF_COLLECTION_ENABLED', false),
+                    'user_ids' => array_values(array_filter(array_map('trim', explode(',', (string) env('XCHANGE_STORED_VALUE_STAFF_COLLECTION_USER_IDS', ''))))),
                     'maximum_amount_minor' => (int) env('XCHANGE_STORED_VALUE_STAFF_COLLECTION_MAXIMUM_AMOUNT_MINOR', 0),
                     'daily_amount_minor' => (int) env('XCHANGE_STORED_VALUE_STAFF_COLLECTION_DAILY_AMOUNT_MINOR', 0),
                     'destination' => env('XCHANGE_STORED_VALUE_STAFF_COLLECTION_DESTINATION', 'collector'),

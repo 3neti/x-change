@@ -29,7 +29,7 @@ class DefaultClaimExecutionFactory implements ClaimExecutionFactoryContract
     {
         $capabilities = $this->flowResolver->resolve($voucher);
 
-        if ($capabilities->type->isSettlement()) {
+        if ($capabilities->type->isSettlement() && ! SettlementRepaymentPolicy::forVoucher($voucher)) {
             if ($this->executionDriver($voucher) === 'campaign_worksheet_authorization') {
                 return $this->container->make(CampaignWorksheetAuthorizationExecutionService::class);
             }

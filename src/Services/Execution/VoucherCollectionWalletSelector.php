@@ -21,6 +21,7 @@ final readonly class VoucherCollectionWalletSelector
         private VoucherCollectionWalletResolverContract $defaults,
         private WalletAccessContract $wallets,
         private TreasuryProviderConnectionCatalog $connections,
+        private ValueFlowPayoutService $payouts,
     ) {}
 
     public function resolve(Voucher $voucher, string $provider, string $currency): Wallet
@@ -38,6 +39,17 @@ final readonly class VoucherCollectionWalletSelector
 
         if ($connections->count() !== 1) {
             throw new RuntimeException('Value flow collection requires exactly one active Treasury connection.');
+        }
+
+        if ($this->payouts->isExternal($voucher)) {
+            $this->addresses->instapayDestination($destination);
+            $this->payouts->bridge($voucher, $connections->sole()->reference, strtoupper($currency));
+            $wallet = $this->wallets->resolveForUser($voucher->owner);
+            if (! $wallet instanceof Wallet) {
+                throw new RuntimeException('The voucher issuer has no Account wallet.');
+            }
+
+            return $wallet;
         }
 
         $position = $this->addresses->clientFunds(

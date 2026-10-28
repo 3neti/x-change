@@ -59,7 +59,7 @@ class DefaultVoucherFlowCapabilityResolver implements VoucherFlowCapabilityResol
             can_settle: (bool) ($config['can_settle'] ?? false),
             supports_open_slices: (bool) ($config['supports_open_slices'] ?? false),
             supports_delegated_spend: (bool) ($config['supports_delegated_spend'] ?? false),
-            requires_envelope: (bool) ($config['requires_envelope'] ?? false),
+            requires_envelope: ! SettlementRepaymentPolicy::forVoucher($voucher) && (bool) ($config['requires_envelope'] ?? false),
             pay_code_route: (string) ($config['pay_code_route'] ?? 'disburse'),
             qr_type: (string) ($config['qr_type'] ?? 'claim'),
         );

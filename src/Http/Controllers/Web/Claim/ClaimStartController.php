@@ -25,6 +25,7 @@ use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Services\BuildProvisioningRequirementViewData;
 use LBHurtado\XChange\Services\Claim\VoucherClaimFlowCompiler;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
+use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
 use LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
@@ -173,6 +174,10 @@ class ClaimStartController extends Controller
         }
 
         $flowCapabilities = $this->capabilities->resolve($voucher);
+        if (SettlementRepaymentPolicy::forVoucher($voucher)
+            && SettlementRepaymentPolicy::disbursed($voucher)) {
+            return redirect()->route('x-change.pay.show', ['code' => $voucher->code]);
+        }
 
         if (! $flowCapabilities->can_disburse) {
             if ($flowCapabilities->can_collect) {

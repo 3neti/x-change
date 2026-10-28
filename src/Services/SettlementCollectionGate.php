@@ -27,6 +27,14 @@ class SettlementCollectionGate
             return;
         }
 
+        if (SettlementRepaymentPolicy::forVoucher($voucher)) {
+            if (! SettlementRepaymentPolicy::disbursed($voucher)) {
+                throw new \RuntimeException('Repayments become available after the initial disbursement succeeds.');
+            }
+
+            return;
+        }
+
         if (! $capabilities->requires_envelope) {
             return;
         }
@@ -47,6 +55,10 @@ class SettlementCollectionGate
         $capabilities = $this->flowResolver->resolve($voucher);
 
         if (! $capabilities->type->isSettlement()) {
+            return;
+        }
+
+        if (SettlementRepaymentPolicy::forVoucher($voucher)) {
             return;
         }
 

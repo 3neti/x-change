@@ -108,6 +108,8 @@ it('delegates authoritative crediting to the existing collection action', functi
         ->toBe([
             'voucher_collection_id' => 321,
             'collection_status' => 'collected',
+            'collected_amount_minor' => 5000,
+            'gross_amount_minor' => 5000,
         ]);
 });
 
