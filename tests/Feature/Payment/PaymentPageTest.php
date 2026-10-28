@@ -14,6 +14,7 @@ use LBHurtado\XChange\Actions\Payment\IssuePaymentInstructions;
 use LBHurtado\XChange\Actions\Payment\SettleVerifiedPaymentAttempt;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
+use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
@@ -414,3 +415,38 @@ function publicExactPaymentObservation(PaymentAttempt $attempt): ProviderFunding
         ],
     );
 }
+
+it('creates a fresh QR for each equal installment while replaying duplicate requests in the same session', function (): void {
+    $user = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 100, overrides: [
+        'voucher_type' => 'settlement', 'target_amount' => 120,
+        'rules' => ['settlement_mode' => 'disburse_then_repay', 'min_payment' => 30, 'max_payment' => 30, 'auto_close_on_full_payment' => true],
+        'metadata' => ['flow_type' => 'settlement', 'issuer_id' => (string) $user->id, 'collection_wallet_id' => $user->wallet->id],
+    ]));
+    DisbursementReconciliation::query()->create([
+        'voucher_id' => $voucher->id, 'voucher_code' => $voucher->code, 'claim_type' => 'withdraw',
+        'provider' => 'netbank', 'provider_reference' => 'confirmed-initial-loan',
+        'status' => 'succeeded', 'internal_status' => 'finalized', 'amount' => 100, 'currency' => 'PHP',
+    ]);
+    $references = [];
+    for ($number = 1; $number <= 4; $number++) {
+        $this->post(route('x-change.pay.attempts.store', $voucher->code))->assertRedirect();
+        $attempt = PaymentAttempt::query()->latest('id')->firstOrFail();
+        $references[] = $attempt->reference;
+        expect($attempt->expected_amount_minor)->toBe(3000)
+            ->and($attempt->status)->toBe(PaymentAttemptStatus::AwaitingPayment);
+        $this->post(route('x-change.pay.attempts.store', $voucher->code))
+            ->assertRedirect(route('x-change.pay.show', ['code' => $voucher->code, 'attempt' => $attempt->reference]));
+        expect(PaymentAttempt::query()->count())->toBe($number);
+        $this->withHeader('X-Inertia', 'true')->get(route('x-change.pay.show', ['code' => $voucher->code, 'attempt' => $attempt->reference]))
+            ->assertOk()->assertJsonPath('props.payment.attempt.qr_code.mime_type', 'image/png');
+        $this->paymentAdapter->fundingObservation = publicExactPaymentObservation($attempt);
+        $this->post(route('x-change.pay.attempts.checks.store', ['code' => $voucher->code, 'attempt' => $attempt->reference]))
+            ->assertRedirect();
+        expect($attempt->fresh()->status)->toBe(PaymentAttemptStatus::Settled);
+        $this->travel(61)->seconds();
+    }
+    expect(array_unique($references))->toHaveCount(4)
+        ->and(VoucherCollection::query()->count())->toBe(4)
+        ->and($voucher->fresh()->isClosed())->toBeTrue();
+});

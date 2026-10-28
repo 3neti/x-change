@@ -15,6 +15,7 @@ use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
 use LBHurtado\XChange\Services\Payment\PaymentQrDeliveryPolicy;
+use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use Throwable;
 
 class PaymentAttemptController extends Controller
@@ -49,6 +50,10 @@ class PaymentAttemptController extends Controller
         }
 
         $sessionKey = 'x-change.payment.attempt-idempotency.'.$voucher->getKey();
+        $collectedMinor = app(VoucherCollectionProgressService::class)->compute($voucher)->collected_total_minor;
+        if ($collectedMinor > 0) {
+            $sessionKey .= '.after-collected-'.$collectedMinor;
+        }
         $idempotencyKey = (string) $request->session()->get($sessionKey, '');
 
         if ($idempotencyKey === '') {

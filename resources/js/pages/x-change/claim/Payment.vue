@@ -100,7 +100,7 @@ const pairedUnavailable = computed(() =>
         props.payment.paired_display?.status ?? '',
     ),
 );
-const selectedMethod = ref<'qr' | null>(props.payment.attempt ? 'qr' : null);
+const selectedMethod = ref<'qr' | null>(props.payment.attempt || props.payment.repayment_mode ? 'qr' : null);
 
 function money(amountMinor: number, currency: string): string {
     return new Intl.NumberFormat('en-PH', {
@@ -120,9 +120,10 @@ const attemptAmount = computed(() =>
 );
 const shouldPoll = computed(
     () =>
-        props.payment.attempt !== null &&
-        (props.payment.attempt.can_check === true || completionPending.value) &&
-        !props.payment.is_fully_paid,
+        !props.payment.is_fully_paid &&
+        ((props.payment.repayment_mode === true && props.payment.repayment_ready === false) ||
+            (props.payment.attempt !== null &&
+                (props.payment.attempt.can_check === true || completionPending.value))),
 );
 const { start: startPaymentPoll, stop: stopPaymentPoll } = usePoll(
     Math.max(1000, props.payment.poll_interval_ms ?? 5000),
@@ -276,7 +277,7 @@ function printReceipt(): void {
             <Card v-if="payment.repayment_mode" data-testid="repayment-progress">
                 <CardHeader><CardTitle>Repayment progress</CardTitle></CardHeader>
                 <CardContent class="space-y-2">
-                    <p v-if="!payment.repayment_ready">Repayments become available after the initial disbursement succeeds.</p>
+                    <p v-if="!payment.repayment_ready">Waiting for the initial disbursement to be confirmed. This page updates automatically.</p>
                     <p>Paid {{ money(payment.collected_amount_minor, payment.currency) }} of {{ money(payment.target_amount_minor, payment.currency) }}.</p>
                     <p>Remaining: {{ money(payment.remaining_to_collect_minor ?? 0, payment.currency) }}</p>
                     <p v-for="entry in payment.receipt?.payments ?? []" :key="entry.receipt_reference">

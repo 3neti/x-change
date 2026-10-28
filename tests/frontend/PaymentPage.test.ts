@@ -36,6 +36,17 @@ const pendingPayment = {
 };
 
 describe('PaymentPage', () => {
+    it('waits automatically for initial disbursement and reveals the next QR action without reselecting a method', async () => {
+        const payment = { ...pendingPayment, repayment_mode: true, repayment_ready: false, can_create_attempt: false, amount_due_minor: 3000 };
+        const wrapper = mount(PaymentPage, { props: { payment } });
+        expect(usePoll).toHaveBeenCalledWith(5000, { only: ['payment', 'notice'] }, { autoStart: true, mode: 'rest' });
+        expect(wrapper.get('[data-testid="payer-create-qr"]').attributes('disabled')).toBeDefined();
+        expect(wrapper.text()).toContain('This page updates automatically');
+        await wrapper.setProps({ payment: { ...payment, repayment_ready: true, can_create_attempt: true } });
+        expect(pollStop).toHaveBeenCalled();
+        expect(wrapper.get('[data-testid="payer-create-qr"]').attributes('disabled')).toBeUndefined();
+    });
+
     it('shows repayment progress and offers a fresh QR after a completed installment', async () => {
         const wrapper = mount(PaymentPage, { props: { payment: {
             ...pendingPayment, repayment_mode: true, repayment_ready: true,
