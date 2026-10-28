@@ -3009,16 +3009,16 @@ return [
             'scheduled_batch_size' => 100,
             'settlement_grace_seconds' => 300,
             'public_read_middleware' => [
-                'throttle:60,1',
+                'throttle:x-change-payment-read',
             ],
             'public_start_middleware' => [
-                'throttle:12,1',
+                'throttle:x-change-payment-start',
             ],
             'public_check_middleware' => [
-                'throttle:6,1',
+                'throttle:x-change-payment-check',
             ],
             'public_download_middleware' => [
-                'throttle:12,1',
+                'throttle:x-change-payment-download',
             ],
         ],
 

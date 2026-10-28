@@ -36,41 +36,222 @@ const pendingPayment = {
 };
 
 describe('PaymentPage', () => {
+    it.each(['poll', 'create', 'check'])(
+        'handles %s throttling inline and resumes after Retry-After',
+        async (origin) => {
+            vi.useFakeTimers();
+            const attempt = {
+                reference: 'PENDING',
+                status: 'awaiting_payment',
+                provider: 'netbank',
+                amount_minor: 3000,
+                currency: 'PHP',
+                expires_at: null,
+                last_checked_at: null,
+                can_check: true,
+                qr_code: {
+                    mime_type: 'image/png',
+                    base64_payload: 'RETAINEDQR',
+                    qr_mode: 'dynamic',
+                    transaction_type: 'p2m',
+                    embedded_amount: true,
+                },
+            };
+            const wrapper = mount(PaymentPage, {
+                props: {
+                    payment: {
+                        ...pendingPayment,
+                        repayment_mode: true,
+                        repayment_ready: true,
+                        attempt: origin === 'create' ? null : attempt,
+                    },
+                },
+            });
+            try {
+                if (origin !== 'poll')
+                    await wrapper
+                        .get(
+                            `[data-testid="${origin === 'create' ? 'payer-create-qr' : 'payer-check-status'}"]`,
+                        )
+                        .trigger('click');
+                const options =
+                    origin === 'poll'
+                        ? usePoll.mock.calls.at(-1)![1]
+                        : routerPost.mock.calls.at(-1)![2];
+                expect(
+                    options.onHttpException({ status: 500, headers: {} }),
+                ).toBeUndefined();
+                expect(
+                    options.onHttpException({
+                        status: 429,
+                        headers: { 'retry-after': '20' },
+                    }),
+                ).toBe(false);
+                options.onFinish?.();
+                await wrapper.vm.$nextTick();
+                expect(
+                    wrapper
+                        .get('[data-testid="payment-rate-limit-notice"]')
+                        .text(),
+                ).toContain('20 seconds');
+                if (origin !== 'create') {
+                    expect(wrapper.html()).toContain('RETAINEDQR');
+                    expect(pollStop).toHaveBeenCalled();
+                }
+                await vi.advanceTimersByTimeAsync(20000);
+                expect(
+                    wrapper
+                        .find('[data-testid="payment-rate-limit-notice"]')
+                        .exists(),
+                ).toBe(false);
+                if (origin !== 'create') expect(pollStart).toHaveBeenCalled();
+            } finally {
+                wrapper.unmount();
+                expect(vi.getTimerCount()).toBe(0);
+                vi.useRealTimers();
+            }
+        },
+    );
+
+    it('cools down manual checks for ten seconds while automatic updates continue', async () => {
+        vi.useFakeTimers();
+        const wrapper = mount(PaymentPage, {
+            props: {
+                payment: {
+                    ...pendingPayment,
+                    attempt: {
+                        reference: 'CHECK',
+                        status: 'awaiting_payment',
+                        provider: 'netbank',
+                        amount_minor: 3000,
+                        currency: 'PHP',
+                        expires_at: null,
+                        last_checked_at: null,
+                        can_check: true,
+                        qr_code: null,
+                    },
+                },
+            },
+        });
+        try {
+            await wrapper
+                .get('[data-testid="payer-check-status"]')
+                .trigger('click');
+            routerPost.mock.calls.at(-1)![2].onFinish();
+            await wrapper.vm.$nextTick();
+            expect(
+                wrapper.get('[data-testid="payer-check-status"]').text(),
+            ).toContain('10s');
+            expect(
+                wrapper
+                    .get('[data-testid="payer-check-status"]')
+                    .attributes('disabled'),
+            ).toBeDefined();
+            expect(pollStop).not.toHaveBeenCalled();
+            await vi.advanceTimersByTimeAsync(10000);
+            expect(
+                wrapper
+                    .get('[data-testid="payer-check-status"]')
+                    .attributes('disabled'),
+            ).toBeUndefined();
+        } finally {
+            wrapper.unmount();
+            vi.useRealTimers();
+        }
+    });
+
     it('waits automatically for initial disbursement and reveals the next QR action without reselecting a method', async () => {
-        const payment = { ...pendingPayment, repayment_mode: true, repayment_ready: false, can_create_attempt: false, amount_due_minor: 3000 };
+        const payment = {
+            ...pendingPayment,
+            repayment_mode: true,
+            repayment_ready: false,
+            can_create_attempt: false,
+            amount_due_minor: 3000,
+        };
         const wrapper = mount(PaymentPage, { props: { payment } });
-        expect(usePoll).toHaveBeenCalledWith(5000, { only: ['payment', 'notice'] }, { autoStart: true, mode: 'rest' });
-        expect(wrapper.get('[data-testid="payer-create-qr"]').attributes('disabled')).toBeDefined();
+        expect(usePoll).toHaveBeenCalledWith(
+            5000,
+            {
+                only: ['payment', 'notice'],
+                onHttpException: expect.any(Function),
+            },
+            { autoStart: true, mode: 'rest' },
+        );
+        expect(
+            wrapper
+                .get('[data-testid="payer-create-qr"]')
+                .attributes('disabled'),
+        ).toBeDefined();
         expect(wrapper.text()).toContain('This page updates automatically');
-        await wrapper.setProps({ payment: { ...payment, repayment_ready: true, can_create_attempt: true } });
+        await wrapper.setProps({
+            payment: {
+                ...payment,
+                repayment_ready: true,
+                can_create_attempt: true,
+            },
+        });
         expect(pollStop).toHaveBeenCalled();
-        expect(wrapper.get('[data-testid="payer-create-qr"]').attributes('disabled')).toBeUndefined();
+        expect(
+            wrapper
+                .get('[data-testid="payer-create-qr"]')
+                .attributes('disabled'),
+        ).toBeUndefined();
     });
 
     it('shows repayment progress and offers a fresh QR after a completed installment', async () => {
-        const wrapper = mount(PaymentPage, { props: { payment: {
-            ...pendingPayment, repayment_mode: true, repayment_ready: true,
-            target_amount_minor: 12000, collected_amount_minor: 3000,
-            amount_due_minor: 3000, remaining_to_collect_minor: 9000,
-            attempt: { reference: 'PAID1', status: 'settled', provider: 'netbank', amount_minor: 3000,
-                currency: 'PHP', expires_at: null, last_checked_at: null, can_check: false,
-                qr_code: { mime_type: 'image/png', base64_payload: 'OLDQR', qr_mode: 'dynamic', transaction_type: 'p2m', embedded_amount: true } },
-        } } });
-        expect(wrapper.get('[data-testid="repayment-progress"]').text()).toContain('90.00');
+        const wrapper = mount(PaymentPage, {
+            props: {
+                payment: {
+                    ...pendingPayment,
+                    repayment_mode: true,
+                    repayment_ready: true,
+                    target_amount_minor: 12000,
+                    collected_amount_minor: 3000,
+                    amount_due_minor: 3000,
+                    remaining_to_collect_minor: 9000,
+                    attempt: {
+                        reference: 'PAID1',
+                        status: 'settled',
+                        provider: 'netbank',
+                        amount_minor: 3000,
+                        currency: 'PHP',
+                        expires_at: null,
+                        last_checked_at: null,
+                        can_check: false,
+                        qr_code: {
+                            mime_type: 'image/png',
+                            base64_payload: 'OLDQR',
+                            qr_mode: 'dynamic',
+                            transaction_type: 'p2m',
+                            embedded_amount: true,
+                        },
+                    },
+                },
+            },
+        });
+        expect(
+            wrapper.get('[data-testid="repayment-progress"]').text(),
+        ).toContain('90.00');
         expect(wrapper.html()).not.toContain('OLDQR');
-        expect(wrapper.find('[data-testid="payer-create-qr"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="payer-create-qr"]').exists()).toBe(
+            true,
+        );
         await wrapper.get('[data-testid="payer-create-qr"]').trigger('click');
         expect(routerPost).toHaveBeenCalled();
     });
 
     it('shows principal and service fee separately from the total due', () => {
-        const wrapper = mount(PaymentPage, { props: { payment: {
-            ...pendingPayment,
-            collected_amount_minor: 0,
-            amount_due_minor: 11500,
-            principal_due_minor: 10000,
-            fee_due_minor: 1500,
-        } } });
+        const wrapper = mount(PaymentPage, {
+            props: {
+                payment: {
+                    ...pendingPayment,
+                    collected_amount_minor: 0,
+                    amount_due_minor: 11500,
+                    principal_due_minor: 10000,
+                    fee_due_minor: 1500,
+                },
+            },
+        });
         expect(wrapper.text()).toContain('Service fee');
         expect(wrapper.text()).toContain('Payment toward target');
         expect(wrapper.text()).toContain('115.00');
@@ -120,7 +301,10 @@ describe('PaymentPage', () => {
         expect(wrapper.text()).not.toContain('Amount due');
         expect(usePoll).toHaveBeenCalledWith(
             5000,
-            { only: ['payment', 'notice'] },
+            {
+                only: ['payment', 'notice'],
+                onHttpException: expect.any(Function),
+            },
             { autoStart: true, mode: 'rest' },
         );
         expect(routerPost).not.toHaveBeenCalled();
@@ -255,7 +439,10 @@ describe('PaymentPage', () => {
         expect(wrapper.text()).toContain('Check payment status');
         expect(usePoll).toHaveBeenCalledWith(
             5000,
-            { only: ['payment', 'notice'] },
+            {
+                only: ['payment', 'notice'],
+                onHttpException: expect.any(Function),
+            },
             { autoStart: true, mode: 'rest' },
         );
     });

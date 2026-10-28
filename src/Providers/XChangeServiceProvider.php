@@ -1802,6 +1802,7 @@ class XChangeServiceProvider extends ServiceProvider
         $this->bootLeadCampaignEndpointRateLimiter();
         $this->bootFundingVerificationRateLimiter();
         $this->bootPaymentVerificationRateLimiter();
+        $this->bootPaymentPageRateLimiters();
         $this->bootCommercialSettlementRateLimiter();
         $this->bootPartnerApiRateLimiter();
         $this->bootFundingVerificationSchedule();
@@ -2092,6 +2093,19 @@ class XChangeServiceProvider extends ServiceProvider
                 ))->by('start:day:'.$endpoint.':'.$ip),
             ];
         });
+    }
+
+    protected function bootPaymentPageRateLimiters(): void
+    {
+        foreach (['read' => 60, 'start' => 12, 'check' => 6, 'download' => 12] as $purpose => $attempts) {
+            RateLimiter::for('x-change-payment-'.$purpose, static function (Request $request) use ($attempts): Limit {
+                $identity = $request->user() !== null
+                    ? 'user:'.$request->user()->getAuthIdentifier()
+                    : 'ip:'.$request->ip();
+
+                return Limit::perMinute($attempts)->by($identity);
+            });
+        }
     }
 
     protected function bootPaymentVerificationRateLimiter(): void

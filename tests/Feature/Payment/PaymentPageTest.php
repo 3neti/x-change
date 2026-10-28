@@ -444,9 +444,32 @@ it('creates a fresh QR for each equal installment while replaying duplicate requ
         $this->post(route('x-change.pay.attempts.checks.store', ['code' => $voucher->code, 'attempt' => $attempt->reference]))
             ->assertRedirect();
         expect($attempt->fresh()->status)->toBe(PaymentAttemptStatus::Settled);
-        $this->travel(61)->seconds();
     }
     expect(array_unique($references))->toHaveCount(4)
         ->and(VoucherCollection::query()->count())->toBe(4)
         ->and($voucher->fresh()->isClosed())->toBeTrue();
 });
+
+it('isolates payment page refreshes and QR creation from manual verification limits', function (bool $guest): void {
+    $voucher = publicPaymentVoucher();
+    if ($guest) {
+        auth()->logout();
+    }
+    $this->post(route('x-change.pay.attempts.store', $voucher->code))->assertRedirect();
+    $attempt = PaymentAttempt::query()->sole();
+    $pageUrl = route('x-change.pay.show', ['code' => $voucher->code, 'attempt' => $attempt->reference]);
+    $checkUrl = route('x-change.pay.attempts.checks.store', ['code' => $voucher->code, 'attempt' => $attempt->reference]);
+    for ($read = 0; $read < 8; $read++) {
+        $this->withHeader('X-Inertia', 'true')->get($pageUrl)->assertOk();
+    }
+    for ($check = 0; $check < 6; $check++) {
+        $this->post($checkUrl)->assertRedirect();
+    }
+    $this->post($checkUrl)->assertStatus(429)->assertHeader('Retry-After');
+    $this->get($pageUrl)->assertOk();
+    $this->post(route('x-change.pay.attempts.store', $voucher->code))->assertRedirect();
+    expect(PaymentAttempt::query()->count())->toBe(1)
+        ->and(VoucherCollection::query()->count())->toBe(0);
+    $this->travel(61)->seconds();
+    $this->post($checkUrl)->assertRedirect();
+})->with(['guest' => true, 'authenticated' => false]);

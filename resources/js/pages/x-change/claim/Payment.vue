@@ -10,7 +10,8 @@ import {
     RefreshCw,
     ScanLine,
 } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
+import type { HttpExceptionResponse } from '@inertiajs/core';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -92,6 +93,51 @@ const props = defineProps<{
 }>();
 const creating = ref(false);
 const checking = ref(false);
+const retrySeconds = ref(0);
+const checkCooldownSeconds = ref(0);
+let retryUntil = 0;
+let checkUntil = 0;
+let cooldownTimer: ReturnType<typeof setTimeout> | undefined;
+
+function updateCooldowns(): void {
+    if (cooldownTimer !== undefined) clearTimeout(cooldownTimer);
+    retrySeconds.value = Math.max(
+        0,
+        Math.ceil((retryUntil - Date.now()) / 1000),
+    );
+    checkCooldownSeconds.value = Math.max(
+        0,
+        Math.ceil((checkUntil - Date.now()) / 1000),
+    );
+    cooldownTimer =
+        retrySeconds.value > 0 || checkCooldownSeconds.value > 0
+            ? setTimeout(updateCooldowns, 1000)
+            : undefined;
+}
+
+onUnmounted(() => {
+    if (cooldownTimer !== undefined) clearTimeout(cooldownTimer);
+});
+
+function handleHttpException(
+    response: HttpExceptionResponse,
+): false | undefined {
+    if (response.status !== 429) return;
+    const header =
+        response.headers['retry-after'] ?? response.headers['Retry-After'];
+    const numeric = header === undefined ? NaN : Number(header);
+    const delay = Number.isFinite(numeric)
+        ? numeric
+        : (Date.parse(header ?? '') - Date.now()) / 1000;
+    retryUntil = Math.max(
+        retryUntil,
+        Date.now() +
+            Math.max(1, Number.isFinite(delay) ? Math.ceil(delay) : 60) * 1000,
+    );
+    updateCooldowns();
+    return false;
+}
+
 const completionPending = computed(
     () => props.payment.attempt?.status === 'verified',
 );
@@ -100,7 +146,9 @@ const pairedUnavailable = computed(() =>
         props.payment.paired_display?.status ?? '',
     ),
 );
-const selectedMethod = ref<'qr' | null>(props.payment.attempt || props.payment.repayment_mode ? 'qr' : null);
+const selectedMethod = ref<'qr' | null>(
+    props.payment.attempt || props.payment.repayment_mode ? 'qr' : null,
+);
 
 function money(amountMinor: number, currency: string): string {
     return new Intl.NumberFormat('en-PH', {
@@ -120,6 +168,7 @@ const attemptAmount = computed(() =>
 );
 const shouldPoll = computed(
     () =>
+        retrySeconds.value === 0 &&
         !props.payment.is_fully_paid &&
         ((props.payment.repayment_mode === true && props.payment.repayment_ready === false) ||
             (props.payment.attempt !== null &&
@@ -127,7 +176,7 @@ const shouldPoll = computed(
 );
 const { start: startPaymentPoll, stop: stopPaymentPoll } = usePoll(
     Math.max(1000, props.payment.poll_interval_ms ?? 5000),
-    { only: ['payment', 'notice'] },
+    { only: ['payment', 'notice'], onHttpException: handleHttpException },
     { autoStart: shouldPoll.value, mode: 'rest' },
 );
 
@@ -205,7 +254,8 @@ function startPayment(): void {
         selectedMethod.value !== 'qr' ||
         pairedUnavailable.value ||
         !props.payment.can_create_attempt ||
-        creating.value
+        creating.value ||
+        retrySeconds.value > 0
     ) {
         return;
     }
@@ -216,6 +266,7 @@ function startPayment(): void {
         {},
         {
             preserveScroll: true,
+            onHttpException: handleHttpException,
             onFinish: () => {
                 creating.value = false;
             },
@@ -226,7 +277,12 @@ function startPayment(): void {
 function checkPaymentStatus(): void {
     const attempt = props.payment.attempt;
 
-    if (!attempt?.can_check || checking.value) {
+    if (
+        !attempt?.can_check ||
+        checking.value ||
+        checkCooldownSeconds.value > 0 ||
+        retrySeconds.value > 0
+    ) {
         return;
     }
 
@@ -240,8 +296,11 @@ function checkPaymentStatus(): void {
         {
             preserveScroll: true,
             replace: true,
+            onHttpException: handleHttpException,
             onFinish: () => {
                 checking.value = false;
+                checkUntil = Date.now() + 10000;
+                updateCooldowns();
             },
         },
     );
@@ -277,15 +336,55 @@ function printReceipt(): void {
             <Card v-if="payment.repayment_mode" data-testid="repayment-progress">
                 <CardHeader><CardTitle>Repayment progress</CardTitle></CardHeader>
                 <CardContent class="space-y-2">
-                    <p v-if="!payment.repayment_ready">Waiting for the initial disbursement to be confirmed. This page updates automatically.</p>
-                    <p>Paid {{ money(payment.collected_amount_minor, payment.currency) }} of {{ money(payment.target_amount_minor, payment.currency) }}.</p>
-                    <p>Remaining: {{ money(payment.remaining_to_collect_minor ?? 0, payment.currency) }}</p>
-                    <p v-for="entry in payment.receipt?.payments ?? []" :key="entry.receipt_reference">
-                        Payment {{ entry.collection_number }}: {{ money(entry.amount_paid_minor, payment.currency) }} · {{ dateTime(entry.completed_at) }}
+                    <p v-if="!payment.repayment_ready">
+                        Waiting for the initial disbursement to be confirmed.
+                        This page updates automatically.
+                    </p>
+                    <p>
+                        Paid
+                        {{
+                            money(
+                                payment.collected_amount_minor,
+                                payment.currency,
+                            )
+                        }}
+                        of
+                        {{
+                            money(
+                                payment.target_amount_minor,
+                                payment.currency,
+                            )
+                        }}.
+                    </p>
+                    <p>
+                        Remaining:
+                        {{
+                            money(
+                                payment.remaining_to_collect_minor ?? 0,
+                                payment.currency,
+                            )
+                        }}
+                    </p>
+                    <p
+                        v-for="entry in payment.receipt?.payments ?? []"
+                        :key="entry.receipt_reference"
+                    >
+                        Payment {{ entry.collection_number }}:
+                        {{ money(entry.amount_paid_minor, payment.currency) }} ·
+                        {{ dateTime(entry.completed_at) }}
                     </p>
                 </CardContent>
             </Card>
 
+            <p
+                v-if="retrySeconds > 0"
+                role="status"
+                class="text-center text-sm text-muted-foreground"
+                data-testid="payment-rate-limit-notice"
+            >
+                Please wait {{ retrySeconds }} seconds before trying again. Your
+                payment details are unchanged; automatic updates will resume.
+            </p>
             <div
                 v-if="notice"
                 class="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-center text-sm text-foreground print:hidden"
@@ -355,13 +454,35 @@ function printReceipt(): void {
                     </div>
                     <dl class="mt-5 space-y-3 text-sm">
                         <template v-if="(payment.fee_due_minor ?? 0) > 0">
-                            <div class="flex items-center justify-between gap-4">
-                                <dt class="text-muted-foreground">Payment toward target</dt>
-                                <dd class="font-medium tabular-nums">{{ money(payment.principal_due_minor ?? 0, payment.currency) }}</dd>
+                            <div
+                                class="flex items-center justify-between gap-4"
+                            >
+                                <dt class="text-muted-foreground">
+                                    Payment toward target
+                                </dt>
+                                <dd class="font-medium tabular-nums">
+                                    {{
+                                        money(
+                                            payment.principal_due_minor ?? 0,
+                                            payment.currency,
+                                        )
+                                    }}
+                                </dd>
                             </div>
-                            <div class="flex items-center justify-between gap-4">
-                                <dt class="text-muted-foreground">Service fee</dt>
-                                <dd class="font-medium tabular-nums">{{ money(payment.fee_due_minor ?? 0, payment.currency) }}</dd>
+                            <div
+                                class="flex items-center justify-between gap-4"
+                            >
+                                <dt class="text-muted-foreground">
+                                    Service fee
+                                </dt>
+                                <dd class="font-medium tabular-nums">
+                                    {{
+                                        money(
+                                            payment.fee_due_minor ?? 0,
+                                            payment.currency,
+                                        )
+                                    }}
+                                </dd>
                             </div>
                         </template>
                         <div class="flex items-center justify-between gap-4">
@@ -616,7 +737,12 @@ function printReceipt(): void {
                             variant="outline"
                             class="w-full"
                             size="lg"
-                            :disabled="!payment.attempt.can_check || checking"
+                            :disabled="
+                                !payment.attempt.can_check ||
+                                checking ||
+                                checkCooldownSeconds > 0 ||
+                                retrySeconds > 0
+                            "
                             @click="checkPaymentStatus"
                         >
                             <Loader2
@@ -625,7 +751,9 @@ function printReceipt(): void {
                             /><RefreshCw v-else class="mr-2 h-4 w-4" />{{
                                 checking
                                     ? 'Checking payment status…'
-                                    : 'Check payment status'
+                                    : checkCooldownSeconds > 0
+                                      ? `Check again in ${checkCooldownSeconds}s`
+                                      : 'Check payment status'
                             }}
                         </Button>
                     </template>
@@ -647,7 +775,8 @@ function printReceipt(): void {
                             :disabled="
                                 !payment.can_create_attempt ||
                                 creating ||
-                                pairedUnavailable
+                                pairedUnavailable ||
+                                retrySeconds > 0
                             "
                             @click="startPayment"
                         >
@@ -713,16 +842,39 @@ function printReceipt(): void {
                             {{ payment.rider_message }}
                         </p>
                         <dl class="mt-5 space-y-3 text-sm">
-                        <template v-if="(payment.fee_due_minor ?? 0) > 0">
-                            <div class="flex items-center justify-between gap-4">
-                                <dt class="text-muted-foreground">Payment toward target</dt>
-                                <dd class="font-medium tabular-nums">{{ money(payment.principal_due_minor ?? 0, payment.currency) }}</dd>
-                            </div>
-                            <div class="flex items-center justify-between gap-4">
-                                <dt class="text-muted-foreground">Service fee</dt>
-                                <dd class="font-medium tabular-nums">{{ money(payment.fee_due_minor ?? 0, payment.currency) }}</dd>
-                            </div>
-                        </template>
+                            <template v-if="(payment.fee_due_minor ?? 0) > 0">
+                                <div
+                                    class="flex items-center justify-between gap-4"
+                                >
+                                    <dt class="text-muted-foreground">
+                                        Payment toward target
+                                    </dt>
+                                    <dd class="font-medium tabular-nums">
+                                        {{
+                                            money(
+                                                payment.principal_due_minor ??
+                                                    0,
+                                                payment.currency,
+                                            )
+                                        }}
+                                    </dd>
+                                </div>
+                                <div
+                                    class="flex items-center justify-between gap-4"
+                                >
+                                    <dt class="text-muted-foreground">
+                                        Service fee
+                                    </dt>
+                                    <dd class="font-medium tabular-nums">
+                                        {{
+                                            money(
+                                                payment.fee_due_minor ?? 0,
+                                                payment.currency,
+                                            )
+                                        }}
+                                    </dd>
+                                </div>
+                            </template>
                             <div class="flex justify-between gap-4">
                                 <dt class="text-muted-foreground">Currency</dt>
                                 <dd>{{ payment.receipt.currency }}</dd>
