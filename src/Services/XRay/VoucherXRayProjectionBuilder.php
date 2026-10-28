@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\XRay;
 
 use BackedEnum;
+use Composer\InstalledVersions;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Route;
 use LBHurtado\Voucher\Models\Voucher;
@@ -17,6 +18,7 @@ use LBHurtado\XChange\Services\Claim\ClaimWorkflowReadModelProjector;
 use LBHurtado\XChange\Services\Claim\CoverageCompletionSuccessPresentation;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
+use LBHurtado\XChange\Services\Stamp\StampProviderIdentity;
 use LBHurtado\XChange\Services\VoucherCollectionOutcomeProjection;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 
@@ -28,6 +30,7 @@ class VoucherXRayProjectionBuilder
         private readonly VoucherCollectionProgressService $progress,
         private readonly ClaimWorkflowReadModelProjector $claimWorkflows,
         private readonly CoverageCompletionSuccessPresentation $coverageCompletionSuccess,
+        private readonly StampProviderIdentity $providerIdentity,
     ) {}
 
     /**
@@ -80,6 +83,18 @@ class VoucherXRayProjectionBuilder
             $sliceVoucher,
             $workflowInterpretation,
         );
+        $claimable = in_array($status, ['claimable', 'partially_claimable'], true)
+            && $flowCapabilities?->can_disburse === true;
+        $issuerName = $sliceVoucher instanceof Voucher
+            ? trim((string) $sliceVoucher->owner?->getAttribute('name'))
+            : '';
+        $reservedProvider = $sliceVoucher instanceof Voucher
+            ? data_get($sliceVoucher->metadata, 'treasury.pay_code_reservation.provider')
+            : null;
+        $provider = is_string($reservedProvider)
+            ? $this->providerIdentity->resolve($reservedProvider)
+            : null;
+        $issuedAt = $sliceVoucher?->created_at?->toIso8601String();
 
         return [
             'status' => $status,
@@ -87,7 +102,13 @@ class VoucherXRayProjectionBuilder
                 data_get($voucher, 'amount'),
                 (string) data_get($voucher, 'currency', 'PHP'),
             ),
-            'issuer' => data_get($voucher, 'issuer_id'),
+            'issuer' => $issuerName !== '' ? $issuerName : null,
+            'funding_source' => $provider !== null ? 'Pay Code reserve' : null,
+            'provider' => $provider['name'] ?? null,
+            'issued_at' => $issuedAt,
+            'expires_at' => $sliceVoucher?->expires_at?->toIso8601String(),
+            'reference' => $sliceVoucher?->code,
+            'service_info' => $this->serviceInfo(),
             'requirements' => $this->requirements($instructions),
             'presentation' => $presentation,
             'claim_workflow' => $this->claimWorkflowProjection($workflowInterpretation),
@@ -102,13 +123,41 @@ class VoucherXRayProjectionBuilder
                 ? []
                 : $this->nextActions($status, (string) data_get($voucher, 'code', ''), $sliceVoucher),
             'allow' => [
-                'amount' => false,
-                'issuer' => false,
+                'amount' => $claimable,
+                'issuer' => $claimable && $issuerName !== '',
+                'funding_source' => $claimable && $provider !== null,
+                'provider' => $claimable && $provider !== null,
+                'issued_at' => $claimable && $issuedAt !== null,
+                'expires_at' => $claimable && $sliceVoucher?->expires_at !== null,
+                'reference' => $claimable,
+                'service_info' => $claimable,
                 'remaining_slices' => $slicePlan !== [],
                 'rider_preclaim' => ! $requiresAttention,
                 'redirect_url' => false,
             ],
         ];
+    }
+
+    /** @return array<string, mixed> */
+    private function serviceInfo(): array
+    {
+        $versions = [];
+
+        if ((bool) config('x-change.claim.experience_ui.show_package_versions', false)) {
+            foreach (['3neti/x-change' => 'x_change_version', '3neti/form-flow' => 'form_flow_version'] as $package => $key) {
+                if (InstalledVersions::isInstalled($package)) {
+                    $versions[$key] = InstalledVersions::getPrettyVersion($package);
+                }
+            }
+        }
+
+        return array_filter([
+            'host_name' => config('app.name'),
+            'host_version' => $versions !== [] ? config('app.version') : null,
+            ...$versions,
+            'publisher' => config('x-change.claim.experience_ui.system_info.publisher', '3neti'),
+            'contributors' => config('x-change.claim.experience_ui.system_info.contributors', []),
+        ], static fn (mixed $value): bool => $value !== null && $value !== '' && $value !== []);
     }
 
     protected function xrayStatus(string $status, mixed $voucher): string

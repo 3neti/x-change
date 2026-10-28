@@ -6,6 +6,9 @@ vi.mock('lucide-vue-next', () => ({
     AlertCircle: {
         template: '<span />',
     },
+    Calendar: {
+        template: '<span />',
+    },
     CheckCircle2: {
         template: '<span />',
     },
@@ -13,6 +16,9 @@ vi.mock('lucide-vue-next', () => ({
         template: '<span />',
     },
     HelpCircle: {
+        template: '<span />',
+    },
+    Home: {
         template: '<span />',
     },
     XCircle: {
@@ -27,6 +33,9 @@ vi.mock('lucide-vue-next', () => ({
     KeyRound: {
         template: '<span />',
     },
+    Mail: {
+        template: '<span />',
+    },
     MapPin: {
         template: '<span />',
     },
@@ -39,12 +48,51 @@ vi.mock('lucide-vue-next', () => ({
     Smartphone: {
         template: '<span />',
     },
+    User: {
+        template: '<span />',
+    },
     Wallet: {
         template: '<span />',
     },
 }));
 
 describe('XRayClaimPreview', () => {
+    it('presents disclosed money details and service information in separate tabs', async () => {
+        const wrapper = mount(XRayClaimPreview, {
+            props: {
+                result: {
+                    visible: true,
+                    status: 'claimable',
+                    disclosures: [
+                        { key: 'amount', value: '₱50.00' },
+                        { key: 'reference', label: 'Pay Code', value: 'JK33' },
+                        { key: 'expires_at', value: '2026-10-29T08:33:00+08:00' },
+                        { key: 'issuer', label: 'Issuer', value: 'Amelia Cruz' },
+                        { key: 'provider', label: 'Payout provider', value: 'NetBank' },
+                        { key: 'service_info', value: { host_name: 'x-change', publisher: '3neti', x_change_version: 'v1.1.2' } },
+                    ],
+                    requirements: [{ key: 'mobile', label: 'Mobile' }],
+                },
+            },
+        });
+
+        expect(wrapper.get('[data-testid="xray-claim-amount"]').text()).toContain('₱50.00');
+        expect(wrapper.get('[data-testid="xray-claim-amount"]').text()).toContain('|| JK33 ||');
+        expect(wrapper.get('[data-testid="xray-validity"]').text()).toContain('Expires on');
+        expect(wrapper.get('[data-testid="xray-required-inputs"]').text()).toContain('Mobile number');
+        expect(wrapper.get('#xray-instructions-panel').isVisible()).toBe(true);
+        expect(wrapper.get('#xray-system-info-panel').isVisible()).toBe(false);
+
+        await wrapper.get('#xray-system-info-tab').trigger('click');
+
+        expect(wrapper.get('#xray-system-info-tab').attributes('aria-selected')).toBe('true');
+        expect(wrapper.get('#xray-system-info-panel').attributes('style')).not.toContain('display: none');
+        expect(wrapper.get('#xray-system-info-panel').text()).toContain('Amelia Cruz');
+        expect(wrapper.get('#xray-system-info-panel').text()).toContain('NetBank');
+        expect(wrapper.get('#xray-system-info-panel').text()).toContain('3neti');
+        expect(wrapper.get('#xray-instructions-panel').attributes('style')).toContain('display: none');
+    });
+
     it('renders a verified Pay Code panel without repeating the claim action', () => {
         const wrapper = mount(XRayClaimPreview, {
             props: {
@@ -91,7 +139,7 @@ describe('XRayClaimPreview', () => {
         }
     });
 
-    it('renders compact, human-readable requirement chips with icons', () => {
+    it('renders readable input rows and separates security requirements', () => {
         const wrapper = mount(XRayClaimPreview, {
             props: {
                 result: {
@@ -107,17 +155,41 @@ describe('XRayClaimPreview', () => {
                             key: 'otp',
                             label: 'Otp',
                         },
+                        {
+                            key: 'secret',
+                            label: 'Secret / PIN',
+                            description: 'A matching issuer-provided secret is required.',
+                        },
                     ],
                 },
             },
         });
 
-        expect(wrapper.text()).toContain("What you'll need");
-        expect(wrapper.text()).toContain('Mobile number');
-        expect(wrapper.text()).toContain('OTP');
+        expect(wrapper.get('[data-testid="xray-required-inputs"]').text()).toContain('Required Inputs');
+        expect(wrapper.get('[data-testid="xray-required-inputs"]').text()).toContain('Mobile number');
+        expect(wrapper.get('[data-testid="xray-required-inputs"]').text()).toContain('OTP');
+        expect(wrapper.get('[data-testid="xray-security-requirements"]').text()).toContain('Passcode required');
+        expect(wrapper.get('[data-testid="xray-security-requirements"]').text()).toContain('A matching issuer-provided secret is required.');
+        expect(wrapper.get('[data-testid="xray-required-inputs"]').text()).not.toContain('Secret / PIN');
         // Friendly copy replaces debug-style backend labels/keys.
         expect(wrapper.text()).not.toContain('Otp');
         expect(wrapper.text()).not.toContain('mobile');
+    });
+
+    it('does not invent validity or security details when they were not disclosed', () => {
+        const wrapper = mount(XRayClaimPreview, {
+            props: {
+                result: {
+                    visible: true,
+                    status: 'claimable',
+                    requirements: [],
+                },
+            },
+        });
+
+        expect(wrapper.get('[data-testid="xray-no-requirements"]').text()).toContain('No additional information required');
+        expect(wrapper.find('[data-testid="xray-validity"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="xray-security-requirements"]').exists()).toBe(false);
     });
 
     it('renders issuer preview stages under a human heading', () => {

@@ -155,6 +155,9 @@ vi.mock('lucide-vue-next', () => ({
     Ban: {
         template: '<span />',
     },
+    Calendar: {
+        template: '<span />',
+    },
     CalendarClock: {
         template: '<span />',
     },
@@ -165,6 +168,9 @@ vi.mock('lucide-vue-next', () => ({
         template: '<span />',
     },
     HelpCircle: {
+        template: '<span />',
+    },
+    Home: {
         template: '<span />',
     },
     Lock: {
@@ -183,6 +189,9 @@ vi.mock('lucide-vue-next', () => ({
         template: '<span />',
     },
     MapPin: {
+        template: '<span />',
+    },
+    Mail: {
         template: '<span />',
     },
     PenLine: {

@@ -55,6 +55,47 @@ it('returns guest-safe x-ray disclosure for a pay code', function (): void {
         ->toContain('amount', 'issuer', 'redirect_url');
 });
 
+it('shows an issued Pay Code amount, issuer and recorded payout provider to a guest', function (): void {
+    config()->set('x-change.claim.experience_ui.show_package_versions', false);
+    config()->set('x-change.claim.experience_ui.system_info.contributors', ['Ada']);
+    $issuer = actingAsTestUser();
+    $issuer->forceFill(['name' => 'Amelia Cruz'])->save();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 50));
+    $metadata = (array) $voucher->metadata;
+    data_set($metadata, 'treasury.pay_code_reservation.provider', 'netbank');
+    $voucher->forceFill(['metadata' => $metadata])->save();
+    auth()->logout();
+
+    $response = $this->postJson(xchangeApi('pay-codes/x-ray'), [
+        'code' => $voucher->code,
+        'channel' => 'claim',
+    ])->assertOk();
+
+    $details = collect($response->json('data.xray.disclosures'))->keyBy('key');
+
+    expect($details->get('amount')['value'])->toBe('₱50.00')
+        ->and($details->get('issuer')['value'])->toBe('Amelia Cruz')
+        ->and($details->get('provider')['value'])->toBe('NetBank')
+        ->and($details->get('funding_source')['value'])->toBe('Pay Code reserve')
+        ->and($details->get('reference')['value'])->toBe($voucher->code)
+        ->and($details->get('service_info')['value']['publisher'])->toBe('3neti')
+        ->and($details->get('service_info')['value']['contributors'])->toBe(['Ada'])
+        ->and($details->get('service_info')['value'])->not->toHaveKey('x_change_version');
+});
+
+it('does not infer a payout provider from an unreserved Pay Code', function (): void {
+    actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 50));
+    auth()->logout();
+
+    $response = $this->postJson(xchangeApi('pay-codes/x-ray'), [
+        'code' => $voucher->code,
+    ])->assertOk();
+
+    expect(collect($response->json('data.xray.disclosures'))->pluck('key')->all())
+        ->not->toContain('provider', 'funding_source');
+});
+
 it('keeps confirmed collection paid in x-ray after the voucher expires', function (): void {
     $issuer = actingAsTestUser();
     $voucher = issueVoucher(validVoucherInstructions(overrides: [
