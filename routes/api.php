@@ -30,6 +30,7 @@ Route::prefix($prefix.'/'.$version)->group(function (): void {
     });
 
     Route::post('/pay-codes/x-ray', InspectPayCodeXRayController::class)
+        ->middleware('throttle:60,1,pay-code-x-ray:')
         ->name('x-change.api.pay-codes.x-ray');
 
     Route::post('/pay-codes/estimate', EstimatePayCodeController::class)

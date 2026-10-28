@@ -2706,6 +2706,10 @@ return [
                 'XCHANGE_CLAIM_UI_SHOW_PACKAGE_VERSIONS',
                 env('APP_ENV', 'production') !== 'production',
             ),
+            'system_info' => [
+                'publisher' => '3neti',
+                'contributors' => [],
+            ],
             'brand' => [
                 'app_name' => env('XCHANGE_CLAIM_UI_APP_NAME', 'Pay Code'),
                 'app_logo' => env('XCHANGE_CLAIM_UI_APP_LOGO', '/vendor/x-change/images/pay-code/pay-code-logo.svg'),

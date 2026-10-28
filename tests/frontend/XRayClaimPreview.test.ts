@@ -45,6 +45,40 @@ vi.mock('lucide-vue-next', () => ({
 }));
 
 describe('XRayClaimPreview', () => {
+    it('presents disclosed money details and service information in separate tabs', async () => {
+        const wrapper = mount(XRayClaimPreview, {
+            props: {
+                result: {
+                    visible: true,
+                    status: 'claimable',
+                    disclosures: [
+                        { key: 'amount', value: '₱50.00' },
+                        { key: 'reference', label: 'Pay Code', value: 'JK33' },
+                        { key: 'expires_at', value: '2026-10-29T08:33:00+08:00' },
+                        { key: 'issuer', label: 'Issuer', value: 'Amelia Cruz' },
+                        { key: 'provider', label: 'Payout provider', value: 'NetBank' },
+                        { key: 'service_info', value: { host_name: 'x-change', publisher: '3neti', x_change_version: 'v1.1.2' } },
+                    ],
+                    requirements: [{ key: 'mobile', label: 'Mobile' }],
+                },
+            },
+        });
+
+        expect(wrapper.get('[data-testid="xray-claim-amount"]').text()).toContain('₱50.00');
+        expect(wrapper.get('[data-testid="xray-claim-amount"]').text()).toContain('|| JK33 ||');
+        expect(wrapper.get('#xray-instructions-panel').isVisible()).toBe(true);
+        expect(wrapper.get('#xray-system-info-panel').isVisible()).toBe(false);
+
+        await wrapper.get('#xray-system-info-tab').trigger('click');
+
+        expect(wrapper.get('#xray-system-info-tab').attributes('aria-selected')).toBe('true');
+        expect(wrapper.get('#xray-system-info-panel').attributes('style')).not.toContain('display: none');
+        expect(wrapper.get('#xray-system-info-panel').text()).toContain('Amelia Cruz');
+        expect(wrapper.get('#xray-system-info-panel').text()).toContain('NetBank');
+        expect(wrapper.get('#xray-system-info-panel').text()).toContain('3neti');
+        expect(wrapper.get('#xray-instructions-panel').attributes('style')).toContain('display: none');
+    });
+
     it('renders a verified Pay Code panel without repeating the claim action', () => {
         const wrapper = mount(XRayClaimPreview, {
             props: {

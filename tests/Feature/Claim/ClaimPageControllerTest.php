@@ -27,6 +27,27 @@ it('renders the canonical human claim page without exposing the experience JSON'
         ->assertJsonStructure(['props' => ['claim_experience']]);
 });
 
+it('hydrates the guest claim entry with the same disclosed money details as X-Ray', function (): void {
+    actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 50));
+    $metadata = (array) $voucher->metadata;
+    data_set($metadata, 'treasury.pay_code_reservation.provider', 'netbank');
+    $voucher->forceFill(['metadata' => $metadata])->save();
+    auth()->logout();
+
+    $response = $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.claim.show', ['code' => $voucher->code]))
+        ->assertOk();
+
+    $xray = collect($response->json('props.claim_surface.components'))
+        ->firstWhere('type', 'xray_preview');
+    $details = collect($xray['props']['disclosures'])->keyBy('key');
+
+    expect($details->get('amount')['value'])->toBe('₱50.00')
+        ->and($details->get('provider')['value'])->toBe('NetBank')
+        ->and($details->get('reference')['value'])->toBe($voucher->code);
+});
+
 it('hydrates the initial claim page with sanitized canonical slice X-Ray rows', function () {
     config()->set('x-ray.disclosure.guest.show_remaining_slices', 'if_allowed_by_voucher');
 
