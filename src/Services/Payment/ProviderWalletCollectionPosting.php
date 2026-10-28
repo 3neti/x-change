@@ -71,7 +71,7 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
             )
             ->values();
 
-        if ($connections->count() === 0 && ($this->payouts->isExternal($voucher) || $voucher->instructions?->fee_bearer === 'payer')) {
+        if ($connections->count() === 0 && ($this->payouts->isExternal($voucher) || data_get($voucher->metadata, 'instructions.fee_bearer', 'issuer') === 'payer')) {
             throw new RuntimeException('An external destination requires a Treasury-backed collection.');
         }
 
@@ -174,7 +174,7 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
                 ],
             );
         }
-        if ($voucher->instructions?->fee_bearer === 'payer') {
+        if (data_get($voucher->metadata, 'instructions.fee_bearer', 'issuer') === 'payer') {
             $commercial->collectFee($voucher);
         }
 

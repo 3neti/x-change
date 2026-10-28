@@ -175,7 +175,7 @@ class PayCodeCommercialSaleService
 
     public function outstandingCollectionFee(Voucher $voucher): int
     {
-        if ($voucher->instructions?->fee_bearer !== 'payer') {
+        if (data_get($voucher->metadata, 'instructions.fee_bearer', 'issuer') !== 'payer') {
             return 0;
         }
 
