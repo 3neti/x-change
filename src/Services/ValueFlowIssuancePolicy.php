@@ -19,7 +19,7 @@ final readonly class ValueFlowIssuancePolicy
     public function normalize(array $input): array
     {
         $supported = data_get($input, 'execution.driver') === 'stored_value'
-            || data_get($input, 'voucher_type') === 'payable';
+            || in_array(data_get($input, 'voucher_type'), ['payable', 'settlement'], true);
         $flow = $input['value_flow'] ?? data_get($input, 'execution.metadata.value_flow');
         unset($input['value_flow']);
         if (! $supported || $flow === null) {

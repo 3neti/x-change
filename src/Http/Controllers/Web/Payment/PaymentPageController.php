@@ -18,6 +18,7 @@ use LBHurtado\XChange\Services\Payment\PaymentAttemptPresenter;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptSessionGuard;
 use LBHurtado\XChange\Services\Payment\PaymentQrDeliveryPolicy;
 use LBHurtado\XChange\Services\Payment\PaymentReceiptReadModel;
+use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -48,6 +49,11 @@ class PaymentPageController extends Controller
         $collection = $progress->compute($voucher);
         $feeMinor = app(PayCodeCommercialSaleService::class)
             ->outstandingCollectionFee($voucher);
+        $repayment = SettlementRepaymentPolicy::forVoucher($voucher);
+        $repaymentReady = ! $repayment || SettlementRepaymentPolicy::disbursed($voucher);
+        $principalDue = $repayment
+            ? min($collection->remaining_to_collect_minor, SettlementRepaymentPolicy::paymentMinor($voucher))
+            : $collection->remaining_to_collect_minor;
         $attempt = $this->attempt($request, $voucher, $sessions);
         $attempt ??= $display?->attempt;
         $attemptData = $attempt === null ? null : $presenter->present($attempt);
@@ -72,8 +78,11 @@ class PaymentPageController extends Controller
                 'currency' => $collection->currency,
                 'target_amount_minor' => $collection->target_amount_minor,
                 'collected_amount_minor' => $collection->collected_total_minor,
-                'amount_due_minor' => $collection->remaining_to_collect_minor + $feeMinor,
-                'principal_due_minor' => $collection->remaining_to_collect_minor,
+                'amount_due_minor' => $principalDue + $feeMinor,
+                'principal_due_minor' => $principalDue,
+                'repayment_mode' => $repayment,
+                'repayment_ready' => $repaymentReady,
+                'remaining_to_collect_minor' => $collection->remaining_to_collect_minor,
                 'fee_due_minor' => $feeMinor,
                 'is_fully_paid' => $collection->is_fully_collected,
                 'rider_message' => $this->riderMessage($voucher),
@@ -81,6 +90,7 @@ class PaymentPageController extends Controller
                 'provider_available' => $providerEnabled,
                 'can_create_attempt' => (bool) config('x-change.payment.attempts.enabled', true)
                     && $providerEnabled
+                    && $repaymentReady
                     && $attempt?->status !== PaymentAttemptStatus::Verified
                     && ($display === null || ($display->ended_at === null && ! $display->expires_at->isPast() && $displays->intakeReady($display, $voucher)))
                     && ! $collection->is_fully_collected,
@@ -90,7 +100,7 @@ class PaymentPageController extends Controller
                     'reference' => $display->reference,
                     'status' => $displays->present($display)['status'],
                 ],
-                'receipt' => $collection->is_fully_collected
+                'receipt' => $collection->is_fully_collected || $repayment
                     ? $this->receipts->forVoucher($voucher, $collection->currency)
                     : null,
             ],

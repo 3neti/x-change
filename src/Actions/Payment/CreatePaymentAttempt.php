@@ -15,6 +15,7 @@ use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptSessionGuard;
 use LBHurtado\XChange\Services\Payment\PaymentQrDeliveryPolicy;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
+use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
 use LBHurtado\XChange\Services\VoucherCapabilityGuard;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LogicException;
@@ -39,7 +40,8 @@ class CreatePaymentAttempt
     ): PaymentAttempt {
         $this->capabilities->ensureCanCollect($voucher);
 
-        if (data_get($voucher->metadata, 'instructions.claim.default_outcome') === 'lead_intake') {
+        if (data_get($voucher->metadata, 'instructions.claim.default_outcome') === 'lead_intake'
+            || SettlementRepaymentPolicy::forVoucher($voucher)) {
             $this->settlementGate->ensureCollectibleSettlementIsReady($voucher);
         }
 
@@ -49,7 +51,10 @@ class CreatePaymentAttempt
         $progress = $this->progress->compute($voucher);
         $feeMinor = app(PayCodeCommercialSaleService::class)
             ->outstandingCollectionFee($voucher);
-        $grossMinor = $progress->remaining_to_collect_minor + $feeMinor;
+        $principalMinor = SettlementRepaymentPolicy::forVoucher($voucher)
+            ? min($progress->remaining_to_collect_minor, SettlementRepaymentPolicy::paymentMinor($voucher))
+            : $progress->remaining_to_collect_minor;
+        $grossMinor = $principalMinor + $feeMinor;
         $qrDeliveryModes ??= $this->qrDelivery->forVoucher($voucher, false);
         $qrDeliveryModeValues = $this->qrDelivery->values($qrDeliveryModes);
 
@@ -77,6 +82,7 @@ class CreatePaymentAttempt
                 $progress,
                 $feeMinor,
                 $grossMinor,
+                $principalMinor,
                 $sessionKeyHash,
                 $idempotencyKeyHash,
                 $fingerprint,
@@ -97,7 +103,7 @@ class CreatePaymentAttempt
                     ),
                     'metadata' => [
                         'purpose' => 'voucher_payment',
-                        'principal_amount_minor' => $progress->remaining_to_collect_minor,
+                        'principal_amount_minor' => $principalMinor,
                         'fee_amount_minor' => $feeMinor,
                         'qr_delivery_modes' => $qrDeliveryModeValues,
                     ],

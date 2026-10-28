@@ -494,17 +494,17 @@ it('submits a voucher-owned destination and omits it when returning to ordinary 
 });
 
 
-it('shows the destination for payable vouchers and hides it for settlement', async () => {
+it('shows the destination for payable and settlement vouchers', async () => {
   const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });
   await openOrderOptions(wrapper);
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
   expect(wrapper.find('[data-testid="value-flow-destination"]').exists()).toBe(true);
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
-  expect(wrapper.find('[data-testid="value-flow-destination"]').exists()).toBe(false);
+  expect(wrapper.find('[data-testid="value-flow-destination"]').exists()).toBe(true);
 });
 
 
-it('includes the selected fee bearer only on payable instructions', async () => {
+it('includes the selected fee bearer on payable and settlement instructions', async () => {
   const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });
   await openOrderOptions(wrapper);
   expect(wrapper.find('[data-testid="fee-bearer-control"]').exists()).toBe(false);
@@ -513,5 +513,21 @@ it('includes the selected fee bearer only on payable instructions', async () => 
   await wrapper.get('[data-testid="fee-bearer-payer"]').setValue(true);
   expect(preview(wrapper).fee_bearer).toBe('payer');
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
-  expect(preview(wrapper)).not.toHaveProperty('fee_bearer');
+  expect(preview(wrapper).fee_bearer).toBe('payer');
+});
+
+
+it('builds an explicit settlement with separate principal, target and fixed repayment', async () => {
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });
+  await openOrderOptions(wrapper);
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
+  await wrapper.get('[data-testid="cockpit-quick-generate-target-amount"]').setValue('120');
+  await wrapper.get('[data-testid="settlement-repayment-enabled"]').setValue(true);
+  await wrapper.get('[data-testid="settlement-repayment-amount"]').setValue('30');
+  const instruction = preview(wrapper);
+  expect(instruction.target_amount).toBe(120);
+  expect(instruction.rules).toMatchObject({ settlement_mode: 'disburse_then_repay', min_payment: 30, max_payment: 30 });
+  expect(instruction.fee_bearer).toBe('issuer');
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
+  expect(preview(wrapper).rules).not.toHaveProperty('settlement_mode');
 });

@@ -886,8 +886,9 @@ const rememberedScheduledClaimSlices = ref<NamedClaimSlice[] | null>(null);
 const reusableBalance = ref(false);
 const valueFlowDestination = ref("");
 const feeBearer = ref<"issuer" | "payer">("issuer");
+const settlementRepayment = ref(false);
 const valueFlowVisible = computed(
-  () => reusableBalance.value || voucherType.value === "payable",
+  () => reusableBalance.value || ["payable", "settlement"].includes(voucherType.value),
 );
 const valueFlowValid = computed(
   () => !valueFlowVisible.value || valueFlowDestination.value === "" ||
@@ -1220,6 +1221,7 @@ function applyTemplateDefaults(templateKey: string): void {
   );
   storedValueOtpAbove.value = "";
   valueFlowDestination.value = "";
+  settlementRepayment.value = false;
   feeBearer.value = "issuer";
   voucherType.value = defaults.voucherType;
   targetAmount.value = defaults.targetAmount;
@@ -2003,6 +2005,7 @@ function applyInstructionBlueprint(
     dataGet(instructions, ["rules", "auto_close_on_full_payment"]) !== false;
 
   const execution = instructionRecord(instructions, ["execution"]);
+  settlementRepayment.value = instructionString(instructions, ["rules", "settlement_mode"]) === "disburse_then_repay";
   feeBearer.value = instructionString(instructions, ["fee_bearer"]) === "payer" ? "payer" : "issuer";
   valueFlowDestination.value =
     instructionString(instructions, ["value_flow", "destination"]) ||
@@ -4947,6 +4950,9 @@ const settlementRulesSummary = computed<Record<string, unknown> | null>(() => {
   const minPayment = Number(rulesMinPayment.value);
   const maxPayment = Number(rulesMaxPayment.value);
   const rules: Record<string, unknown> = {};
+  if (isSettlementVoucher.value && settlementRepayment.value) {
+    rules.settlement_mode = "disburse_then_repay";
+  }
 
   if (Number.isFinite(minPayment) && minPayment > 0) {
     rules.min_payment = minPayment;
@@ -4961,6 +4967,11 @@ const settlementRulesSummary = computed<Record<string, unknown> | null>(() => {
   }
 
   if (rulesAutoCloseOnFullPayment.value) {
+    rules.auto_close_on_full_payment = true;
+  }
+
+  if (isSettlementVoucher.value && settlementRepayment.value) {
+    rules.allow_overpayment = false;
     rules.auto_close_on_full_payment = true;
   }
 
@@ -5602,7 +5613,7 @@ function buildPayloadShape(
 
   const payload: Record<string, unknown> = {
     cash,
-    ...(isPayableVoucher.value ? { fee_bearer: feeBearer.value } : {}),
+    ...((isPayableVoucher.value || isSettlementVoucher.value) ? { fee_bearer: feeBearer.value } : {}),
     ...(valueFlowVisible.value && valueFlowDestination.value
       ? { value_flow: { destination: redactSensitive
           ? valueFlowDestination.value.replace(/:[0-9]+(?=\.client_funds$|$)/, ":[redacted]")
@@ -7617,7 +7628,21 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
               </p>
             </div>
 
-            <fieldset v-if="isPayableVoucher" class="grid gap-2" data-testid="fee-bearer-control">
+            <fieldset v-if="isSettlementVoucher" class="grid gap-2" data-testid="settlement-repayment-control">
+              <label class="flex items-center gap-2 text-sm">
+                <input v-model="settlementRepayment" type="checkbox" :disabled="processing" data-testid="settlement-repayment-enabled" />
+                Disburse first, then collect repayments
+              </label>
+              <template v-if="settlementRepayment">
+                <label class="grid gap-1 text-sm">
+                  Fixed repayment amount
+                  <input :value="rulesMinPayment" type="number" min="0.01" step="0.01" :disabled="processing" data-testid="settlement-repayment-amount" @input="rulesMinPayment = ($event.target as HTMLInputElement).value; rulesMaxPayment = rulesMinPayment" />
+                </label>
+                <p class="text-xs text-muted-foreground">The amount is disbursed once. Repayments start after confirmed disbursement and continue until the target is paid.</p>
+              </template>
+            </fieldset>
+
+            <fieldset v-if="isPayableVoucher || isSettlementVoucher" class="grid gap-2" data-testid="fee-bearer-control">
               <legend class="text-xs font-semibold">Who pays the service fee?</legend>
               <label class="flex items-center gap-2 text-sm">
                 <input v-model="feeBearer" type="radio" value="issuer" :disabled="processing" data-testid="fee-bearer-issuer" />

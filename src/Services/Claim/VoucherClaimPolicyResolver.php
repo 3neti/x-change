@@ -10,6 +10,7 @@ use LBHurtado\Voucher\Enums\VoucherType;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Data\Claim\VoucherClaimOutcomeData;
 use LBHurtado\XChange\Data\Claim\VoucherClaimPolicyData;
+use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
 
 final readonly class VoucherClaimPolicyResolver
 {
@@ -99,7 +100,7 @@ final readonly class VoucherClaimPolicyResolver
             return ['payment'];
         }
 
-        if ($type === VoucherType::SETTLEMENT) {
+        if ($type === VoucherType::SETTLEMENT && ! SettlementRepaymentPolicy::forVoucher($voucher)) {
             return ['settlement'];
         }
 
@@ -133,7 +134,7 @@ final readonly class VoucherClaimPolicyResolver
             return ['payment'];
         }
 
-        if ($instructions->voucher_type === VoucherType::SETTLEMENT) {
+        if ($instructions->voucher_type === VoucherType::SETTLEMENT && ! SettlementRepaymentPolicy::applies($instructions->toArray())) {
             return ['settlement'];
         }
 

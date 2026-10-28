@@ -8,6 +8,7 @@ use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Services\Commercial\CommercialBillingPolicy;
+use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
 use LBHurtado\XChange\Services\VoucherIssuancePayloadNormalizer;
 
 class EstimatePayCodeCost
@@ -36,6 +37,7 @@ class EstimatePayCodeCost
             ['payable', 'settlement'],
             true,
         ) || data_get($input, 'metadata.flow_type') === 'collectible';
+        $collectsFunds = $collectsFunds && ! SettlementRepaymentPolicy::applies($input);
         $billing = $this->billingPolicy ??= app(CommercialBillingPolicy::class);
         $customerChargeMinor = $billing->isBillable()
             ? (int) round($issueCost * 100)
@@ -49,7 +51,7 @@ class EstimatePayCodeCost
             charges: (array) ($estimate['charges'] ?? []),
             pay_code_value: $payCodeValue,
             account_debit: ($input['fee_bearer'] ?? null) === 'payer'
-                ? 0.0
+                ? ($collectsFunds ? 0.0 : $payCodeValue)
                 : $billing->accountDebit($payCodeValue, $issueCost, $collectsFunds),
             commercial_offering_reference: is_string($estimate['commercial_offering_reference'] ?? null)
                 ? $estimate['commercial_offering_reference']

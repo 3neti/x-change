@@ -18,6 +18,7 @@ use LBHurtado\XChange\Services\Payment\PartnerPaymentEventOutbox;
 use LBHurtado\XChange\Services\Payment\VoucherCollectionJournal;
 use LBHurtado\XChange\Services\Payment\VoucherCollectionPostingRegistry;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
+use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
 use LBHurtado\XChange\Services\VoucherCapabilityGuard;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use RuntimeException;
@@ -111,6 +112,11 @@ final readonly class CompleteVoucherCollection
             $principalMinor = $data->amountMinor - $feeMinor;
             if ($principalMinor <= 0 || ($feeMinor > 0 && $data->executionDriver !== 'provider_wallet')) {
                 throw new RuntimeException('Payment must cover the service fee and a positive principal through the provider.');
+            }
+
+            if (SettlementRepaymentPolicy::forVoucher($locked)
+                && $principalMinor !== SettlementRepaymentPolicy::paymentMinor($locked)) {
+                throw new RuntimeException('The repayment must match the fixed installment amount.');
             }
 
             $allowOverpayment = (bool) Arr::get(

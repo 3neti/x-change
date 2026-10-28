@@ -21,7 +21,8 @@ class WithdrawalBankAccountResolver
 
     public function resolve(Voucher $voucher, Contact $contact, array $payload): BankAccount
     {
-        $destinationAddress = $this->valueFlows->destination($voucher);
+        $destinationAddress = SettlementRepaymentPolicy::forVoucher($voucher)
+            ? null : $this->valueFlows->destination($voucher);
 
         if ($destinationAddress !== null) {
             $destination = $this->addresses->instapayDestination($destinationAddress);

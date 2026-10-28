@@ -132,6 +132,13 @@ class EstimatePayCodeRequest extends FormRequest
 
             'count' => ['nullable', 'integer', 'min:1'],
             'fee_bearer' => ['nullable', 'string', 'in:issuer,payer'],
+            'rules.settlement_mode' => ['nullable', 'string', 'in:disburse_then_repay'],
+            'rules.min_payment' => ['nullable', 'numeric', 'min:0'],
+            'rules.max_payment' => ['nullable', 'numeric', 'min:0'],
+            'target_amount' => ['nullable', 'numeric', 'min:0'],
+            'rules' => ['nullable', 'array'],
+            'rules.allow_overpayment' => ['nullable', 'boolean'],
+            'rules.auto_close_on_full_payment' => ['nullable', 'boolean'],
             'value_flow' => ['nullable', 'array:source,destination'],
             'value_flow.source' => ['sometimes', 'string', 'max:200'],
             'value_flow.destination' => ['sometimes', 'string', 'max:200'],

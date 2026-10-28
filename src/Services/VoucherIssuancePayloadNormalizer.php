@@ -22,11 +22,12 @@ class VoucherIssuancePayloadNormalizer
     public function normalize(array $input): array
     {
         $input = $this->normalizeEnumValues($input);
+        $input = app(SettlementRepaymentPolicy::class)->normalize($input);
         if (isset($input['fee_bearer'])) {
             if (! in_array($input['fee_bearer'], ['issuer', 'payer'], true)
-                || ($input['voucher_type'] ?? null) !== 'payable') {
+                || ! in_array($input['voucher_type'] ?? null, ['payable', 'settlement'], true)) {
                 throw ValidationException::withMessages([
-                    'fee_bearer' => 'Fee bearer must be issuer or payer on a payable voucher.',
+                    'fee_bearer' => 'Fee bearer must be issuer or payer on a payable or settlement voucher.',
                 ]);
             }
         }

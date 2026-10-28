@@ -65,6 +65,9 @@ type PaymentReceipt = {
 };
 
 type PaymentReadModel = {
+    repayment_mode?: boolean;
+    repayment_ready?: boolean;
+    remaining_to_collect_minor?: number;
     paired_display?: { reference: string; status: string } | null;
     pay_code: string;
     currency: string;
@@ -263,12 +266,24 @@ function printReceipt(): void {
                     Secure Pay Code payment
                 </p>
                 <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">
-                    Pay {{ payment.pay_code }}
+                    {{ payment.repayment_mode ? 'Repay' : 'Pay' }} {{ payment.pay_code }}
                 </h1>
                 <p class="text-sm text-muted-foreground">
                     Review the purpose and invoice before choosing how to pay.
                 </p>
             </header>
+
+            <Card v-if="payment.repayment_mode" data-testid="repayment-progress">
+                <CardHeader><CardTitle>Repayment progress</CardTitle></CardHeader>
+                <CardContent class="space-y-2">
+                    <p v-if="!payment.repayment_ready">Repayments become available after the initial disbursement succeeds.</p>
+                    <p>Paid {{ money(payment.collected_amount_minor, payment.currency) }} of {{ money(payment.target_amount_minor, payment.currency) }}.</p>
+                    <p>Remaining: {{ money(payment.remaining_to_collect_minor ?? 0, payment.currency) }}</p>
+                    <p v-for="entry in payment.receipt?.payments ?? []" :key="entry.receipt_reference">
+                        Payment {{ entry.collection_number }}: {{ money(entry.amount_paid_minor, payment.currency) }} · {{ dateTime(entry.completed_at) }}
+                    </p>
+                </CardContent>
+            </Card>
 
             <div
                 v-if="notice"
@@ -485,7 +500,7 @@ function printReceipt(): void {
                         </Button>
                     </div>
 
-                    <template v-if="payment.attempt">
+                    <template v-if="payment.attempt && payment.attempt.status !== 'settled'">
                         <div
                             class="flex flex-wrap items-center justify-between gap-2"
                         >

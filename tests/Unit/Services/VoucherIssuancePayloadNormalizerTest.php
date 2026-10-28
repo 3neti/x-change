@@ -351,3 +351,20 @@ it('rejects an invalid payout destination before issuance', function (): void {
         'value_flow' => ['destination' => 'instapay.gcash.account:123456'],
     ]))->toThrow(ValidationException::class);
 });
+
+it('rejects repayment instructions whose fixed installments cannot settle the target', function (array $changes): void {
+    $input = array_replace_recursive([
+        'voucher_type' => 'settlement', 'cash' => ['amount' => 100, 'currency' => 'PHP'],
+        'target_amount' => 120,
+        'rules' => ['settlement_mode' => 'disburse_then_repay', 'min_payment' => 30, 'max_payment' => 30],
+    ], $changes);
+    expect(fn () => app(VoucherIssuancePayloadNormalizer::class)->normalize($input))
+        ->toThrow(ValidationException::class);
+})->with([
+    'no principal' => [['cash' => ['amount' => 0]]],
+    'unequal payments' => [['rules' => ['max_payment' => 40]]],
+    'partial final installment' => [['target_amount' => 125]],
+    'wrong voucher type' => [['voucher_type' => 'payable']],
+    'multiple disbursements' => [['cash' => ['slices' => 4]]],
+    'incompatible executor' => [['execution' => ['driver' => 'settlement_envelope']]],
+]);

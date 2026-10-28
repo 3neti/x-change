@@ -36,6 +36,22 @@ const pendingPayment = {
 };
 
 describe('PaymentPage', () => {
+    it('shows repayment progress and offers a fresh QR after a completed installment', async () => {
+        const wrapper = mount(PaymentPage, { props: { payment: {
+            ...pendingPayment, repayment_mode: true, repayment_ready: true,
+            target_amount_minor: 12000, collected_amount_minor: 3000,
+            amount_due_minor: 3000, remaining_to_collect_minor: 9000,
+            attempt: { reference: 'PAID1', status: 'settled', provider: 'netbank', amount_minor: 3000,
+                currency: 'PHP', expires_at: null, last_checked_at: null, can_check: false,
+                qr_code: { mime_type: 'image/png', base64_payload: 'OLDQR', qr_mode: 'dynamic', transaction_type: 'p2m', embedded_amount: true } },
+        } } });
+        expect(wrapper.get('[data-testid="repayment-progress"]').text()).toContain('90.00');
+        expect(wrapper.html()).not.toContain('OLDQR');
+        expect(wrapper.find('[data-testid="payer-create-qr"]').exists()).toBe(true);
+        await wrapper.get('[data-testid="payer-create-qr"]').trigger('click');
+        expect(routerPost).toHaveBeenCalled();
+    });
+
     it('shows principal and service fee separately from the total due', () => {
         const wrapper = mount(PaymentPage, { props: { payment: {
             ...pendingPayment,
