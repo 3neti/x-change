@@ -482,7 +482,7 @@ it('submits a voucher-owned destination and omits it when returning to ordinary 
   expect(destination.exists()).toBe(true);
   destination.vm.$emit('update:modelValue', 'instapay.gcash.mobile:09179999999');
   await flushPromises();
-  expect(preview(wrapper).value_flow.destination).toContain('[redacted]');
+  expect(preview(wrapper).value_flow.destination).toBe('instapay.gcash.mobile:09179999999');
   await wrapper.get('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
   await flushPromises();
   const request = fetchMock.mock.calls.find(([url, options]) => url === '/x/cockpit/quick-generate' && options.method === 'POST');

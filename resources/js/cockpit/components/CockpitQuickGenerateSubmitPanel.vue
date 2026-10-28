@@ -107,6 +107,7 @@ import CockpitFeedbackDestinationInput from "./CockpitFeedbackDestinationInput.v
 import CockpitFieldHelp from "./CockpitFieldHelp.vue";
 import CockpitIssuedPayCodeDialog from "./CockpitIssuedPayCodeDialog.vue";
 import CockpitOnDemandIssuanceFundingDialog from "./CockpitOnDemandIssuanceFundingDialog.vue";
+import { useClipboard } from "@/composables/useClipboard";
 import CockpitManualCopyButton from "./CockpitManualCopyButton.vue";
 import CockpitPayCodeCanvas from "./CockpitPayCodeCanvas.vue";
 import CockpitPhoneInput from "./CockpitPhoneInput.vue";
@@ -3474,7 +3475,7 @@ const payeeHelpText = computed<string>(() => {
   }
 
   if (payeeType.value === "secret") {
-    return "Explicit release secret. Quotes are removed before issuance and the value is kept out of previews.";
+    return "Explicit release secret. Quotes are removed before issuance. The full value is available in Engineering Preview.";
   }
 
   if (payeeType.value === "invalid") {
@@ -4885,9 +4886,34 @@ const sanitizedInstructionPayload = computed<Record<string, unknown>>(() => {
   return buildPayloadShape(true);
 });
 
-const sanitizedInstructionPayloadJson = computed<string>(() => {
-  return JSON.stringify(sanitizedInstructionPayload.value, null, 2);
+const engineeringPreviewJson = computed<string>(() => {
+  return JSON.stringify(buildPayloadShape(false), null, 2);
 });
+const engineeringPreviewExportMessage = ref("");
+const engineeringPreviewClipboard = useClipboard();
+
+async function copyEngineeringPreview(): Promise<void> {
+  const copied = await engineeringPreviewClipboard.copy(engineeringPreviewJson.value);
+  engineeringPreviewExportMessage.value = copied
+    ? "JSON copied."
+    : "Could not copy. Use Download JSON instead.";
+}
+
+function downloadEngineeringPreview(): void {
+  const blob = new Blob([engineeringPreviewJson.value], { type: "application/json;charset=utf-8" });
+  const href = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = href;
+  anchor.download = "pay-code-instructions.json";
+  document.body.appendChild(anchor);
+  try {
+    anchor.click();
+    engineeringPreviewExportMessage.value = "JSON download started.";
+  } finally {
+    anchor.remove();
+    URL.revokeObjectURL(href);
+  }
+}
 
 const previewDraftFingerprint = computed<string>(() => {
   return JSON.stringify({
@@ -11108,13 +11134,27 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
         Engineering Preview
       </summary>
       <p class="mt-2 text-xs leading-5 text-slate-400">
-        Sanitized Pay Code instructions. Secrets and execution internals are
-        excluded.
+        Current Pay Code issuance request, including the full values you entered.
       </p>
+      <div class="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          class="rounded-lg border border-slate-600 px-3 py-2 font-semibold text-slate-100 hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+          data-testid="engineering-preview-copy"
+          @click="copyEngineeringPreview"
+        >Copy JSON</button>
+        <button
+          type="button"
+          class="rounded-lg border border-slate-600 px-3 py-2 font-semibold text-slate-100 hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+          data-testid="engineering-preview-download"
+          @click="downloadEngineeringPreview"
+        >Download JSON</button>
+        <span role="status" aria-live="polite">{{ engineeringPreviewExportMessage }}</span>
+      </div>
       <pre
         class="mt-3 max-h-96 overflow-auto rounded-xl border border-slate-800 bg-slate-950 p-3 text-[11px] leading-5 text-slate-200"
         data-testid="cockpit-quick-generate-engineering-preview-json"
-        >{{ sanitizedInstructionPayloadJson }}</pre
+        >{{ engineeringPreviewJson }}</pre
       >
     </details>
 
