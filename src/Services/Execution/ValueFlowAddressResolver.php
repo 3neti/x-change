@@ -83,14 +83,18 @@ final readonly class ValueFlowAddressResolver
 
     public function instapayDestination(string $address): PayoutDestinationValidationData
     {
-        if (preg_match('/^instapay\.([a-z0-9_-]+)\.mobile:(09\d{9})$/', $address, $matches) !== 1) {
+        if (preg_match('/^instapay\.([a-z0-9_-]+)\.(mobile|account):([0-9]{6,34})$/', $address, $matches) !== 1) {
             throw new InvalidArgumentException('Expected instapay.<institution>.mobile:09XXXXXXXXX.');
+        }
+
+        if ($matches[2] === 'mobile' && preg_match('/^09\d{9}$/', $matches[3]) !== 1) {
+            throw new InvalidArgumentException('Expected a Philippine mobile number.');
         }
 
         $institution = $this->institutions->resolve($matches[1], SettlementRail::INSTAPAY);
         $destination = $this->payoutDestinations->validate(
             $institution->bankCode,
-            $matches[2],
+            $matches[3],
             SettlementRail::INSTAPAY->value,
         );
 

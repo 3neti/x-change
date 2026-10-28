@@ -119,6 +119,7 @@ import CockpitRiderPreviewFrame from "./CockpitRiderPreviewFrame.vue";
 import CockpitQuickGenerateSurfaceSwitch from "./CockpitQuickGenerateSurfaceSwitch.vue";
 import type { CockpitQuickGenerateSurface } from "./CockpitQuickGenerateSurfaceSwitch.vue";
 import type { CockpitScheduledPortion } from "./CockpitScheduledPortionsEditor.vue";
+import ValueFlowDestination from "@/components/financial/ValueFlowDestination.vue";
 import CockpitValueUseControl from "./CockpitValueUseControl.vue";
 import type { CockpitValueUseMode } from "./CockpitValueUseControl.vue";
 
@@ -882,6 +883,14 @@ const minWithdrawal = ref(String(issuerDefaultMinimumWithdrawal));
 const namedClaimSlices = ref<NamedClaimSlice[]>(defaultWholeNamedClaimSlices());
 const rememberedScheduledClaimSlices = ref<NamedClaimSlice[] | null>(null);
 const reusableBalance = ref(false);
+const valueFlowDestination = ref("");
+const valueFlowVisible = computed(
+  () => reusableBalance.value || voucherType.value === "payable",
+);
+const valueFlowValid = computed(
+  () => !valueFlowVisible.value || valueFlowDestination.value === "" ||
+    /^(?:instapay\.[a-z0-9_-]+\.(?:mobile|account):[0-9]{6,34}|account\.mobile:09[0-9]{9}\.client_funds)$/.test(valueFlowDestination.value),
+);
 const storedValueReplenishable = ref(false);
 const storedValueMaximumBalance = ref("");
 const storedValueOtpAbove = ref("");
@@ -1208,6 +1217,7 @@ function applyTemplateDefaults(templateKey: string): void {
     normalizedPayCodeAmount(),
   );
   storedValueOtpAbove.value = "";
+  valueFlowDestination.value = "";
   voucherType.value = defaults.voucherType;
   targetAmount.value = defaults.targetAmount;
   includeExecutionInstruction.value = defaults.includeExecutionInstruction;
@@ -1990,6 +2000,9 @@ function applyInstructionBlueprint(
     dataGet(instructions, ["rules", "auto_close_on_full_payment"]) !== false;
 
   const execution = instructionRecord(instructions, ["execution"]);
+  valueFlowDestination.value =
+    instructionString(instructions, ["value_flow", "destination"]) ||
+    instructionString(instructions, ["execution", "metadata", "value_flow", "destination"]) || "";
   const storedValuePolicy = instructionRecord(instructions, ["stored_value"]);
   const compiledStoredValuePolicy = instructionRecord(execution, [
     "metadata",
@@ -2495,6 +2508,7 @@ const canSubmit = computed<boolean>(() => {
     expirationValidationError.value === null &&
     namedClaimSliceValidationMessage.value === null &&
     storedValuePolicyError.value === null &&
+    valueFlowValid.value &&
     valueUseModeError.value === null &&
     claimRecipientError.value === null &&
     settlementRailSelectionError.value === null &&
@@ -2522,6 +2536,7 @@ const canGenerateClaimPreview = computed<boolean>(() => {
     expirationValidationError.value === null &&
     namedClaimSliceValidationMessage.value === null &&
     storedValuePolicyError.value === null &&
+    valueFlowValid.value &&
     valueUseModeError.value === null &&
     claimRecipientError.value === null &&
     settlementRailSelectionError.value === null
@@ -4960,7 +4975,11 @@ const executionSummary = computed<Record<string, unknown> | null>(() => {
 });
 
 const livePricingPayload = computed<Record<string, unknown>>(() => {
-  return buildPayloadShape(true, amountCalculatorPreview.value);
+  const payload = buildPayloadShape(true, amountCalculatorPreview.value);
+  if (valueFlowVisible.value && valueFlowDestination.value) {
+    payload.value_flow = { destination: valueFlowDestination.value };
+  }
+  return payload;
 });
 const canEstimateLivePricing = computed<boolean>(() => {
   const normalizedAmount =
@@ -4968,6 +4987,7 @@ const canEstimateLivePricing = computed<boolean>(() => {
   const normalizedCount = Number(count.value);
 
   return (
+    valueFlowValid.value &&
     Number.isFinite(normalizedAmount) &&
     normalizedAmount > 0 &&
     Number.isFinite(normalizedCount) &&
@@ -5553,6 +5573,11 @@ function buildPayloadShape(
 
   const payload: Record<string, unknown> = {
     cash,
+    ...(valueFlowVisible.value && valueFlowDestination.value
+      ? { value_flow: { destination: redactSensitive
+          ? valueFlowDestination.value.replace(/:[0-9]+(?=\.client_funds$|$)/, ":[redacted]")
+          : valueFlowDestination.value } }
+      : {}),
     ...(executableSlicePlan.value === null
       ? {}
       : { slice_plan: executableSlicePlan.value }),
@@ -7561,6 +7586,13 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                 {{ storedValuePolicyError }}
               </p>
             </div>
+
+            <ValueFlowDestination
+              v-if="valueFlowVisible"
+              v-model="valueFlowDestination"
+              :stored-value="reusableBalance"
+              :disabled="processing"
+            />
 
             <fieldset
               v-if="!publicMode && !isAccountFundingClaim && !reusableBalance"

@@ -234,6 +234,9 @@ class GeneratePayCodeRequest extends FormRequest
             'execution.fallback' => ['nullable', 'string', 'max:120'],
             'execution.visibility' => ['nullable', 'array'],
             'execution.metadata' => ['nullable', 'array'],
+            'value_flow' => ['nullable', 'array:source,destination'],
+            'value_flow.source' => ['sometimes', 'string', 'max:200'],
+            'value_flow.destination' => ['sometimes', 'string', 'max:200'],
             'stored_value' => [
                 'nullable',
                 'array:enabled,replenishable,maximum_balance,otp_required_above',

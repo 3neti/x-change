@@ -15,12 +15,14 @@ class VoucherIssuancePayloadNormalizer
         private readonly OnboardingVoucherInstructionPolicy $onboarding,
         private readonly RiderStampDesignRegistry $stampDesigns,
         private readonly StoredValueIssuancePolicy $storedValue,
+        private readonly ValueFlowIssuancePolicy $valueFlows,
     ) {}
 
     public function normalize(array $input): array
     {
         $input = $this->normalizeEnumValues($input);
         $input = $this->storedValue->normalize($input);
+        $input = $this->valueFlows->normalize($input);
         $input = $this->namedSlices->normalizeIssuancePayload($input);
         $input = $this->onboarding->normalize($input);
         $cashValidation = Arr::get($input, 'cash.validation');

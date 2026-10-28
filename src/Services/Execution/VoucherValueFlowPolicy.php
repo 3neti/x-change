@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Execution;
 
 use InvalidArgumentException;
+use LBHurtado\Voucher\Enums\VoucherType;
 use LBHurtado\Voucher\Models\Voucher;
 
 final class VoucherValueFlowPolicy
@@ -21,6 +22,11 @@ final class VoucherValueFlowPolicy
 
     private function address(Voucher $voucher, string $role): ?string
     {
+        if ($voucher->voucher_type === VoucherType::REDEEMABLE
+            && data_get($voucher->metadata, 'instructions.execution.driver') !== 'stored_value') {
+            return null;
+        }
+
         $flow = data_get($voucher->metadata, 'instructions.execution.metadata.value_flow');
 
         if ($flow === null) {

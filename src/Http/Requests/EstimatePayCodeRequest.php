@@ -131,6 +131,9 @@ class EstimatePayCodeRequest extends FormRequest
             'rider.stamp.claim_marker_position' => ['nullable', Rule::enum(RiderStampClaimMarkerPosition::class)],
 
             'count' => ['nullable', 'integer', 'min:1'],
+            'value_flow' => ['nullable', 'array:source,destination'],
+            'value_flow.source' => ['sometimes', 'string', 'max:200'],
+            'value_flow.destination' => ['sometimes', 'string', 'max:200'],
             'stored_value' => ['nullable', 'array:enabled,replenishable,maximum_balance,otp_required_above'],
             'stored_value.enabled' => ['required_with:stored_value', 'boolean'],
             'stored_value.replenishable' => ['required_if:stored_value.enabled,true', 'boolean'],

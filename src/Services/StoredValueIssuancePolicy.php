@@ -110,6 +110,10 @@ final class StoredValueIssuancePolicy
             ],
         ];
         $submittedExecution = data_get($input, 'execution');
+        $valueFlow = data_get($submittedExecution, 'metadata.value_flow');
+        if (is_array($submittedExecution)) {
+            Arr::forget($submittedExecution, 'metadata.value_flow');
+        }
 
         if (
             is_array($submittedExecution)
@@ -120,6 +124,10 @@ final class StoredValueIssuancePolicy
                 'execution',
                 'Reusable Balance execution instructions are compiled by the server and cannot be overridden.',
             );
+        }
+
+        if ($valueFlow !== null) {
+            $canonicalExecution['metadata']['value_flow'] = $valueFlow;
         }
 
         Arr::set($input, 'execution', $canonicalExecution);

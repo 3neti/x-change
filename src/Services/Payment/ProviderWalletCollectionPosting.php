@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Payment;
 
+use Illuminate\Support\Facades\DB;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
@@ -13,6 +14,7 @@ use LBHurtado\XChange\Contracts\VoucherCollectionPostingContract;
 use LBHurtado\XChange\Data\Payment\ConfirmedVoucherCollectionData;
 use LBHurtado\XChange\Data\Payment\VoucherCollectionPostingData;
 use LBHurtado\XChange\Services\Cockpit\CockpitPosSaleReferenceService;
+use LBHurtado\XChange\Services\Execution\ValueFlowPayoutService;
 use LBHurtado\XChange\Services\Execution\VoucherCollectionWalletSelector;
 use LBHurtado\XChange\Services\Execution\VoucherValueFlowPolicy;
 use LBHurtado\XChange\Services\Treasury\TreasuryInventoryRegistrationService;
@@ -29,6 +31,7 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
         private TreasuryInventoryRegistrationService $inventoryRegistration,
         private VerifiedTreasuryFundingAllocationContract $allocations,
         private CockpitPosSaleReferenceService $posSaleReferences,
+        private ValueFlowPayoutService $payouts,
     ) {}
 
     public function driver(): string
@@ -40,6 +43,11 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
         Voucher $voucher,
         ConfirmedVoucherCollectionData $collection,
     ): VoucherCollectionPostingData {
+        return DB::transaction(fn () => $this->postAtomically($voucher, $collection), attempts: 5);
+    }
+
+    private function postAtomically(Voucher $voucher, ConfirmedVoucherCollectionData $collection): VoucherCollectionPostingData
+    {
         if ($this->valueFlows->source($voucher) !== null) {
             throw new RuntimeException(
                 'Explicit collection sources require provider-verified payer account evidence.',
@@ -54,6 +62,10 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
                     && $connection->currency === $currency,
             )
             ->values();
+
+        if ($connections->count() === 0 && $this->payouts->isExternal($voucher)) {
+            throw new RuntimeException('An external destination requires a Treasury-backed collection.');
+        }
 
         if ($connections->count() === 0) {
             return $this->postToCompatibilityWallet($voucher, $collection);
@@ -139,6 +151,14 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
             ],
         );
 
+        $payout = $this->payouts->isExternal($voucher)
+            ? $this->payouts->prepare(
+                $voucher,
+                $this->payouts->bridge($voucher, $connection->reference, $currency),
+                $collection->amountMinor,
+                'voucher-collection:'.$provider.':'.$providerTransactionId,
+            ) : null;
+
         return new VoucherCollectionPostingData(
             treasuryOperationReference: $recognition->operationReference,
             metadata: [
@@ -147,6 +167,8 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
                 'provider_transaction_id' => $collection->providerTransactionId,
                 'provider_calls' => true,
                 'provider_inventory_changed' => true,
+                'payout_reference' => $payout?->provider_reference,
+                'payout_status' => $payout?->status,
                 'treasury_position_recognition_reference' => $allocation->recognitionOperationReference,
                 'treasury_position_allocation_reference' => $allocation->allocationOperationReference,
                 'treasury_position_transaction_id' => $allocation->destinationTransactionId,

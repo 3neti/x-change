@@ -161,7 +161,7 @@ it('uses the persisted claim destination instead of the claimant mobile fallback
     $provider->assertDisburseCalledTimes(1);
 });
 
-it('uses an explicit value flow InstaPay destination when it matches the recorded claim', function (): void {
+it('uses the recorded disbursable claim when redundant value flow matches it', function (): void {
     Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
     ['voucher' => $voucher] = treasuryBackedVoucherForPayout();
     $metadata = (array) $voucher->metadata;
@@ -191,7 +191,7 @@ it('uses an explicit value flow InstaPay destination when it matches the recorde
     $provider->assertDisburseCalledTimes(1);
 });
 
-it('does not pay an explicit value flow destination that differs from the recorded claim', function (): void {
+it('ignores a conflicting value flow destination and pays the recorded disbursable claim', function (): void {
     ['voucher' => $voucher] = treasuryBackedVoucherForPayout();
     $metadata = (array) $voucher->metadata;
     data_set(
@@ -201,20 +201,23 @@ it('does not pay an explicit value flow destination that differs from the record
     );
     $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
     $provider = fakePayoutProvider()->willReturnSuccessfulResult(
-        transactionId: 'MUST-NOT-BE-SUBMITTED',
+        transactionId: 'CLAIM-DESTINATION-ONLY',
         provider: 'netbank',
     );
 
-    expect(fn () => app(SubmitPayCodeClaim::class)->handle($voucher, [
+    $result = app(SubmitPayCodeClaim::class)->handle($voucher, [
         'mobile' => '09173011987',
         'recipient_country' => 'PH',
         'bank_account' => [
             'bank_code' => 'GXCHPHM2XXX',
             'account_number' => '09173011987',
         ],
-    ]))->toThrow(RuntimeException::class, 'does not match the voucher value flow destination');
+    ]);
 
-    $provider->assertNoDisbursementAttempted();
+    expect($result->status)->toBe('succeeded')
+        ->and($provider->lastRequest?->account_number)->toBe('09173011987');
+
+    $provider->assertDisburseCalledTimes(1);
 });
 
 it('fails closed before the provider when the resolved destination differs from the claim', function (): void {

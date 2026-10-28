@@ -225,6 +225,7 @@ describe("Public Auto Generate surface", () => {
 
     expect(reusableBalance.element.disabled).toBe(false);
     await reusableBalance.setValue(true);
+    expect(wrapper.find('[data-testid="value-flow-destination"]').exists()).toBe(true);
     await wrapper.get('[data-testid="cockpit-value-use-trigger"]').trigger("click");
 
     expect(

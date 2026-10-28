@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Queue;
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\Voucher\Actions\GenerateVouchers;
 use LBHurtado\Voucher\Data\ExecutionContextData;
@@ -16,8 +17,10 @@ use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Data\FundingDecisionData;
 use LBHurtado\XChange\Data\Payment\ConfirmedVoucherCollectionData;
 use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
+use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PosSaleReference;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Services\Execution\ValueFlowPayoutService;
 use LBHurtado\XChange\Services\Treasury\TreasuryCompatibilityLedgerSynchronizer;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
@@ -310,3 +313,30 @@ function treasuryBackedCollectionPayload(): array
         'idempotency_key' => 'treasury-backed-collection-1',
     ];
 }
+
+it('reserves a verified payable collection for its fixed external destination exactly once', function (): void {
+    Queue::fake();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    config()->set('omnipay.gateways.netbank.options.rails.INSTAPAY', ['enabled' => true, 'min_amount' => 100, 'max_amount' => 5_000_000]);
+    $issuer = actingAsTestUser(0);
+    $voucher = treasuryBackedCollectionVoucher($issuer, 'instapay.gcash.mobile:09179999999');
+    $result = treasuryBackedCollectionResult($voucher);
+    $payload = treasuryBackedCollectionPayload();
+    app(CollectVoucherFunds::class)->collectConfirmed($voucher, $result, $payload);
+    app(CollectVoucherFunds::class)->collectConfirmed($voucher, $result, $payload);
+    $payout = DisbursementReconciliation::query()->sole();
+    $collection = VoucherCollection::query()->sole();
+    expect($payout->claim_type)->toBe('value_flow')
+        ->and($payout->status)->toBe('intent')
+        ->and((float) $payout->amount)->toBe(100.0)
+        ->and(data_get($collection->meta, 'posting.payout_reference'))->toBe($payout->provider_reference)
+        ->and(treasuryClientFundsLedger($issuer)->balanceInt)->toBe(0)
+        ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(10_000);
+    $provider = fakePayoutProvider()->willReturnSuccessfulResult(provider: 'netbank');
+    app(ValueFlowPayoutService::class)->submit($payout->id);
+    app(ValueFlowPayoutService::class)->submit($payout->id);
+    expect($provider->lastRequest?->account_number)->toBe('09179999999')
+        ->and($provider->disburseCallCount)->toBe(1)
+        ->and($payout->fresh()->internal_status)->toBe('finalized')
+        ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(0);
+});

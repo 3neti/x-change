@@ -154,3 +154,15 @@ it('preserves the Reusable Balance policy when validating an estimate', function
     expect($validator->errors()->all())->toBeEmpty()
         ->and(data_get($validator->validated(), 'stored_value.enabled'))->toBeTrue();
 });
+
+it('preserves the destination for estimation and issuance and rejects unknown flow controls', function (string $requestClass): void {
+    $payload = validClaimInstructionPayload([
+        'outcomes' => [['key' => 'provider_disbursement']], 'default_outcome' => 'provider_disbursement',
+    ]);
+    $payload['value_flow'] = ['destination' => 'instapay.gcash.mobile:09179999999'];
+    $validator = validateClaimInstructionRequest($requestClass, $payload);
+    expect($validator->errors()->all())->toBeEmpty()
+        ->and(data_get($validator->validated(), 'value_flow.destination'))->toBe($payload['value_flow']['destination']);
+    $payload['value_flow']['collector_override'] = true;
+    expect(validateClaimInstructionRequest($requestClass, $payload)->errors()->has('value_flow'))->toBeTrue();
+})->with([[GeneratePayCodeRequest::class], [EstimatePayCodeRequest::class]]);

@@ -18,6 +18,7 @@ use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Services\ExecutionEngine;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryAllocationReadModelContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryAllocationReadModelQueryData;
+use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PartnerApiClient;
 use LBHurtado\XChange\Models\PartnerApiOperation;
 use LBHurtado\XChange\Models\PartnerApiProductionMandate;
@@ -253,6 +254,8 @@ final readonly class StoredValueCollectionService
                 'authorization_method' => $collection->authorization_method,
                 'collector_reference' => $channel.':'.$collector->getMorphClass().':'.$collector->getKey(),
                 'destination_principal_reference' => data_get($result->metadata, 'destination_principal_reference'),
+                'payout_reference' => data_get($result->metadata, 'payout_reference'),
+                'payout_status' => data_get($result->metadata, 'payout_status'),
                 'balance_after_minor' => $balanceAfter,
                 'collected_at' => now()->utc()->toIso8601String(),
             ];
@@ -459,6 +462,12 @@ final readonly class StoredValueCollectionService
         if ($collection->status === 'committed') {
             $data['balance_after_minor'] = $collection->balance_after_minor;
             $data['receipt'] = $collection->receipt;
+            $payoutReference = data_get($collection->receipt, 'payout_reference');
+            if (is_string($payoutReference) && $payoutReference !== '') {
+                $payout = DisbursementReconciliation::query()
+                    ->where('claim_type', 'value_flow')->where('provider_reference', $payoutReference)->first();
+                $data['receipt']['payout_status'] = $payout?->status ?? 'unknown';
+            }
         }
 
         return ['data' => $data];
