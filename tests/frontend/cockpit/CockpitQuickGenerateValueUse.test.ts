@@ -502,3 +502,16 @@ it('shows the destination for payable vouchers and hides it for settlement', asy
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
   expect(wrapper.find('[data-testid="value-flow-destination"]').exists()).toBe(false);
 });
+
+
+it('includes the selected fee bearer only on payable instructions', async () => {
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });
+  await openOrderOptions(wrapper);
+  expect(wrapper.find('[data-testid="fee-bearer-control"]').exists()).toBe(false);
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
+  expect(preview(wrapper).fee_bearer).toBe('issuer');
+  await wrapper.get('[data-testid="fee-bearer-payer"]').setValue(true);
+  expect(preview(wrapper).fee_bearer).toBe('payer');
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
+  expect(preview(wrapper)).not.toHaveProperty('fee_bearer');
+});

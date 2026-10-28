@@ -122,6 +122,10 @@ class GeneratePayCode
         $wallet = $this->resolveIssuanceWallet($issuer, $input);
         $input = $this->withAuthoritativeCollectionWallet($input, $wallet);
         $estimate = $this->estimatePayCodeCost->handle($input);
+        if (isset($input['fee_bearer']) && (! ($this->billingPolicy ??= app(CommercialBillingPolicy::class))->isBillable()
+            || ! config('x-change.commercial.enabled', true))) {
+            throw new RuntimeException('Explicit fee bearers require billable commercial pricing.');
+        }
         $this->assertAcceptedPricing($input, $estimate);
         ($this->customerCharging ??= app(CommercialCustomerChargingGuard::class))
             ->ensureAuthorized($estimate->customer_charge_minor);
@@ -139,6 +143,10 @@ class GeneratePayCode
                 ),
             ],
         );
+
+        if (isset($input['fee_bearer']) && ! $this->shouldAllocateLocalRevenue($funding->authority)) {
+            throw new RuntimeException('Explicit fee bearers require Treasury commercial posting.');
+        }
 
         return app(PayCodeIssuanceTransaction::class)->run(function () use ($issuer, $wallet, $input, $estimate, $funding): GeneratePayCodeResultData {
             $this->synchronizeCompatibilityLedger($issuer, $wallet, $funding);

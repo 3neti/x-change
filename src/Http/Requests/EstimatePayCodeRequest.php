@@ -131,6 +131,7 @@ class EstimatePayCodeRequest extends FormRequest
             'rider.stamp.claim_marker_position' => ['nullable', Rule::enum(RiderStampClaimMarkerPosition::class)],
 
             'count' => ['nullable', 'integer', 'min:1'],
+            'fee_bearer' => ['nullable', 'string', 'in:issuer,payer'],
             'value_flow' => ['nullable', 'array:source,destination'],
             'value_flow.source' => ['sometimes', 'string', 'max:200'],
             'value_flow.destination' => ['sometimes', 'string', 'max:200'],

@@ -12,6 +12,7 @@ use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentQrDeliveryMode;
 use LBHurtado\XChange\Models\PaymentAttempt;
+use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptPresenter;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptSessionGuard;
@@ -45,6 +46,8 @@ class PaymentPageController extends Controller
         $display = $displays->forPayer($voucher, $request);
 
         $collection = $progress->compute($voucher);
+        $feeMinor = app(PayCodeCommercialSaleService::class)
+            ->outstandingCollectionFee($voucher);
         $attempt = $this->attempt($request, $voucher, $sessions);
         $attempt ??= $display?->attempt;
         $attemptData = $attempt === null ? null : $presenter->present($attempt);
@@ -69,7 +72,9 @@ class PaymentPageController extends Controller
                 'currency' => $collection->currency,
                 'target_amount_minor' => $collection->target_amount_minor,
                 'collected_amount_minor' => $collection->collected_total_minor,
-                'amount_due_minor' => $collection->remaining_to_collect_minor,
+                'amount_due_minor' => $collection->remaining_to_collect_minor + $feeMinor,
+                'principal_due_minor' => $collection->remaining_to_collect_minor,
+                'fee_due_minor' => $feeMinor,
                 'is_fully_paid' => $collection->is_fully_collected,
                 'rider_message' => $this->riderMessage($voucher),
                 'provider' => $provider,

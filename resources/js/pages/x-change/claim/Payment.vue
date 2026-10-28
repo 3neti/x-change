@@ -71,6 +71,8 @@ type PaymentReadModel = {
     target_amount_minor: number;
     collected_amount_minor: number;
     amount_due_minor: number;
+    principal_due_minor?: number;
+    fee_due_minor?: number;
     is_fully_paid: boolean;
     rider_message: string | null;
     provider: string;
@@ -336,6 +338,16 @@ function printReceipt(): void {
                         }}</Badge>
                     </div>
                     <dl class="mt-5 space-y-3 text-sm">
+                        <template v-if="(payment.fee_due_minor ?? 0) > 0">
+                            <div class="flex items-center justify-between gap-4">
+                                <dt class="text-muted-foreground">Payment toward target</dt>
+                                <dd class="font-medium tabular-nums">{{ money(payment.principal_due_minor ?? 0, payment.currency) }}</dd>
+                            </div>
+                            <div class="flex items-center justify-between gap-4">
+                                <dt class="text-muted-foreground">Service fee</dt>
+                                <dd class="font-medium tabular-nums">{{ money(payment.fee_due_minor ?? 0, payment.currency) }}</dd>
+                            </div>
+                        </template>
                         <div class="flex items-center justify-between gap-4">
                             <dt class="text-muted-foreground">Target amount</dt>
                             <dd class="font-medium tabular-nums">
@@ -685,6 +697,16 @@ function printReceipt(): void {
                             {{ payment.rider_message }}
                         </p>
                         <dl class="mt-5 space-y-3 text-sm">
+                        <template v-if="(payment.fee_due_minor ?? 0) > 0">
+                            <div class="flex items-center justify-between gap-4">
+                                <dt class="text-muted-foreground">Payment toward target</dt>
+                                <dd class="font-medium tabular-nums">{{ money(payment.principal_due_minor ?? 0, payment.currency) }}</dd>
+                            </div>
+                            <div class="flex items-center justify-between gap-4">
+                                <dt class="text-muted-foreground">Service fee</dt>
+                                <dd class="font-medium tabular-nums">{{ money(payment.fee_due_minor ?? 0, payment.currency) }}</dd>
+                            </div>
+                        </template>
                             <div class="flex justify-between gap-4">
                                 <dt class="text-muted-foreground">Currency</dt>
                                 <dd>{{ payment.receipt.currency }}</dd>

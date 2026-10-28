@@ -48,7 +48,9 @@ class EstimatePayCodeCost
             total: $issueCost,
             charges: (array) ($estimate['charges'] ?? []),
             pay_code_value: $payCodeValue,
-            account_debit: $billing->accountDebit($payCodeValue, $issueCost, $collectsFunds),
+            account_debit: ($input['fee_bearer'] ?? null) === 'payer'
+                ? 0.0
+                : $billing->accountDebit($payCodeValue, $issueCost, $collectsFunds),
             commercial_offering_reference: is_string($estimate['commercial_offering_reference'] ?? null)
                 ? $estimate['commercial_offering_reference']
                 : null,

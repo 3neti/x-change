@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Bavix\Wallet\Models\Wallet;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\Voucher\Data\VoucherOperationalSummaryData;
 use LBHurtado\Voucher\Models\Voucher;
@@ -18,6 +19,8 @@ use LBHurtado\XChange\Actions\Commercial\RequestPartnerCommissionPayout;
 use LBHurtado\XChange\Actions\Commercial\SettleCommercialProviderCost;
 use LBHurtado\XChange\Actions\Commercial\SettlePartnerCommissionPayout;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Actions\Payment\CompleteVoucherCollection;
+use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
 use LBHurtado\XChange\Contracts\CommercialComponentEconomicsResolverContract;
 use LBHurtado\XChange\Contracts\CommercialOfferingResolverContract;
 use LBHurtado\XChange\Contracts\CommercialPartnerResolverContract;
@@ -30,6 +33,7 @@ use LBHurtado\XChange\Data\Commercial\ProviderCostEvidenceData;
 use LBHurtado\XChange\Data\DebitData;
 use LBHurtado\XChange\Data\FundingDecisionData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
+use LBHurtado\XChange\Data\Payment\ConfirmedVoucherCollectionData;
 use LBHurtado\XChange\Enums\CommercialActivationAuthority;
 use LBHurtado\XChange\Enums\CommercialBillableEventStatus;
 use LBHurtado\XChange\Enums\CommercialOfferingOrigin;
@@ -41,6 +45,7 @@ use LBHurtado\XChange\Models\CommercialBillableEvent;
 use LBHurtado\XChange\Models\CommercialOfferingActivation;
 use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
+use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PartnerCommissionPayout;
 use LBHurtado\XChange\Services\Commercial\ActivateCommercialComponentEconomics;
 use LBHurtado\XChange\Services\Commercial\ActivateCommercialRecipientDesignation;
@@ -48,6 +53,8 @@ use LBHurtado\XChange\Services\Commercial\CommercialComponentEconomicsManifestCo
 use LBHurtado\XChange\Services\Commercial\CommercialControlReadModel;
 use LBHurtado\XChange\Services\Commercial\PersistCommercialComponentEconomicsManifest;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
+use LBHurtado\XChange\Services\Execution\ValueFlowPayoutService;
+use LBHurtado\XChange\Services\Payment\PaymentReceiptReadModel;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XCommerce\Data\CommercialComponentEconomicsSetData;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
@@ -1037,3 +1044,126 @@ function recognizeAccountingInventoryForTest(
         externalReference: 'provider-observation:'.$scope,
     ));
 }
+
+it('issues a payable with an accepted fee charged to the selected bearer', function (string $bearer, bool $partial): void {
+    $issuer = actingAsTestUser(0);
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.commercial.enabled', true);
+    Queue::fake();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    config()->set('omnipay.gateways.netbank.options.rails.INSTAPAY', ['enabled' => true, 'min_amount' => 100, 'max_amount' => 5_000_000]);
+    if ($bearer === 'issuer') {
+        fundTestUserClientFunds($issuer, 10_000);
+    } else {
+        app(TreasuryAccountPortfolioProvisioningContract::class)->provision($issuer, ['netbank-primary']);
+    }
+    $before = treasuryClientFundsLedger($issuer)->balanceInt;
+    $funding = Mockery::mock(ProviderFundingPolicyContract::class);
+    $funding->shouldReceive('assertCanIssue')->once()->andReturnUsing(
+        function ($owner, $wallet, float $amount, array $context) use ($bearer): FundingDecisionData {
+            expect($amount)->{$bearer === 'payer' ? 'toBe' : 'toBeGreaterThan'}(0.0);
+
+            return FundingDecisionData::allowed(
+                authority: 'local_ledger', availableMinor: 10_000,
+                requiredMinor: (int) round($amount * 100), currency: 'PHP',
+                meta: ['provider' => 'netbank', 'topology' => 'ledger_pooled'],
+            );
+        },
+    );
+    app()->instance(ProviderFundingPolicyContract::class, $funding);
+    $result = app(GeneratePayCode::class)->handle(validPayCodePayload(0, 'INSTAPAY', [
+        'provider' => 'netbank',
+        'issuer_id' => $issuer->getKey(),
+        'voucher_type' => 'payable',
+        'target_amount' => 100,
+        'fee_bearer' => $bearer,
+        'value_flow' => ['destination' => 'instapay.gcash.mobile:09179999999'],
+        'inputs' => ['fields' => []],
+        'feedback' => [],
+    ]));
+    $voucher = Voucher::query()->findOrFail($result->voucher_id);
+    $sale = CommercialSale::query()->sole();
+
+    expect($voucher->instructions->fee_bearer)->toBe($bearer)
+        ->and($voucher->instructions->cash->amount)->toBe(0.0)
+        ->and($sale->total_price_minor)->toBeGreaterThan(0)
+        ->and($sale->status)->toBe($bearer === 'payer' ? 'accepted' : 'posted')
+        ->and(treasuryClientFundsLedger($issuer)->balanceInt)->toBe(
+            $before - ($bearer === 'issuer' ? $sale->total_price_minor : 0),
+        );
+    config()->set('x-change.funding.providers.netbank.enabled', true);
+    $attempt = app(CreatePaymentAttempt::class)
+        ->handle($voucher, 'netbank', 'fee-browser', 'fee-attempt');
+    expect($attempt->expected_amount_minor)->toBe(10_000 + ($bearer === 'payer' ? $sale->total_price_minor : 0));
+    if ($bearer === 'payer') {
+        $underpayment = new ConfirmedVoucherCollectionData(
+            amountMinor: $sale->total_price_minor, currency: 'PHP', executionDriver: 'provider_wallet',
+            authority: 'authoritative_provider', authorityReference: 'fee-only', idempotencyKey: 'fee-only', provider: 'netbank',
+            providerTransactionId: 'fee-only',
+        );
+        expect(fn () => app(CompleteVoucherCollection::class)->handle($voucher, $underpayment))
+            ->toThrow(RuntimeException::class, 'positive principal');
+        expect($sale->refresh()->status)->toBe('accepted');
+    }
+    $principalMinor = $partial ? 2_500 : 10_000;
+    $grossMinor = $principalMinor + ($bearer === 'payer' ? $sale->total_price_minor : 0);
+    $confirmed = new ConfirmedVoucherCollectionData(
+        amountMinor: $grossMinor, currency: 'PHP', executionDriver: 'provider_wallet',
+        authority: 'authoritative_provider', authorityReference: 'fee-split-provider-1',
+        idempotencyKey: 'fee-split-1', provider: 'netbank',
+        providerTransactionId: 'fee-split-provider-1',
+    );
+    $collection = app(CompleteVoucherCollection::class)->handle($voucher, $confirmed);
+    $replay = app(CompleteVoucherCollection::class)->handle($voucher, $confirmed);
+    $payout = DisbursementReconciliation::query()->sole();
+    expect($collection->collected_amount_minor)->toBe($principalMinor)
+        ->and($collection->requested_amount_minor)->toBe($grossMinor)
+        ->and($replay->getKey())->toBe($collection->getKey())
+        ->and($sale->refresh()->status)->toBe('posted')
+        ->and((float) $payout->amount)->toBe((float) ($principalMinor / 100))
+        ->and(treasuryClientFundsLedger($issuer)->balanceInt)->toBe(
+            $before - ($bearer === 'issuer' ? $sale->total_price_minor : 0),
+        );
+    $provider = fakePayoutProvider()->willReturnSuccessfulResult(provider: 'netbank');
+    $payouts = app(ValueFlowPayoutService::class);
+    $payouts->submit($payout->id);
+    $payouts->submit($payout->id);
+    expect($provider->disburseCallCount)->toBe(1)
+        ->and($payout->fresh()->internal_status)->toBe('finalized');
+    if ($partial) {
+        $second = new ConfirmedVoucherCollectionData(
+            amountMinor: 7_500, currency: 'PHP', executionDriver: 'provider_wallet',
+            authority: 'authoritative_provider', authorityReference: 'fee-split-provider-2',
+            idempotencyKey: 'fee-split-2', provider: 'netbank', providerTransactionId: 'fee-split-provider-2',
+        );
+        $collectionTwo = app(CompleteVoucherCollection::class)->handle($voucher, $second);
+        expect(data_get($collectionTwo->meta, 'fee_amount_minor'))->toBe(0)
+            ->and($collectionTwo->collected_amount_minor)->toBe(7_500)
+            ->and(CommercialSale::query()->count())->toBe(1);
+    }
+    $receipt = app(PaymentReceiptReadModel::class)->forVoucher($voucher, 'PHP');
+    expect($receipt['principal_paid_minor'])->toBe(10_000)
+        ->and($receipt['amount_paid_minor'])->toBe(10_000 + ($bearer === 'payer' ? $sale->total_price_minor : 0));
+})->with([
+    'issuer full' => ['issuer', false], 'payer full' => ['payer', false],
+    'issuer partial' => ['issuer', true], 'payer partial' => ['payer', true],
+]);
+
+it('rolls back issuer-paid payable issuance when the fee cannot be debited', function (): void {
+    $issuer = actingAsTestUser(0);
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.commercial.enabled', true);
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision($issuer, ['netbank-primary']);
+    $funding = Mockery::mock(ProviderFundingPolicyContract::class);
+    $funding->shouldReceive('assertCanIssue')->once()->andReturn(FundingDecisionData::allowed(
+        authority: 'local_ledger', availableMinor: 10_000, requiredMinor: 1_500, currency: 'PHP',
+        meta: ['provider' => 'netbank', 'topology' => 'ledger_pooled'],
+    ));
+    app()->instance(ProviderFundingPolicyContract::class, $funding);
+    expect(fn () => app(GeneratePayCode::class)->handle(validPayCodePayload(0, 'INSTAPAY', [
+        'provider' => 'netbank', 'issuer_id' => $issuer->getKey(),
+        'voucher_type' => 'payable', 'target_amount' => 100, 'fee_bearer' => 'issuer',
+    ])))->toThrow('Wallet is empty');
+    expect(Voucher::query()->count())->toBe(0)
+        ->and(CommercialSale::query()->count())->toBe(0);
+});

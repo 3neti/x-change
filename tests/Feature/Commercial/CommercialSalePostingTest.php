@@ -1081,3 +1081,25 @@ function recognizeCommercialInventoryForTest(int $amountMinor, string $scope): v
         externalReference: 'provider-observation:'.$scope,
     ));
 }
+
+it('accepts a deferred commercial sale without funds and collects it exactly once after funding', function (): void {
+    $positions = commercialSalePositions();
+    $posting = app(PostCommercialSale::class);
+    $sale = $posting->execute(
+        commercialSaleSnapshot('acceptance:deferred-fee'),
+        $positions['client_funds']->position_reference,
+        $positions['commercial_clearing']->position_reference,
+        commercialSaleDestinations($positions),
+        deferCharge: true,
+    );
+    expect($sale->status)->toBe('accepted')
+        ->and($sale->charge_operation_reference)->toBeNull();
+    expect(fn () => $posting->settleAccepted($sale))->toThrow('Wallet is empty');
+    expect($sale->refresh()->status)->toBe('accepted');
+    fundCommercialClientPosition($positions, $sale->total_price_minor, 'deferred-fee-payment');
+    $first = $posting->settleAccepted($sale);
+    $second = $posting->settleAccepted($sale);
+    expect($first->status)->toBe('posted')
+        ->and($second->charge_operation_reference)->toBe($first->charge_operation_reference)
+        ->and($second->allocations->sum('amount_minor'))->toBe($sale->total_price_minor);
+});

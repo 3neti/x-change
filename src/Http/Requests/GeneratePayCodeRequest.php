@@ -213,6 +213,7 @@ class GeneratePayCodeRequest extends FormRequest
             'expires_at' => ['nullable', 'date'],
             'voucher_type' => ['nullable', 'string', 'max:80'],
             'target_amount' => ['nullable', 'numeric', 'min:0'],
+            'fee_bearer' => ['nullable', 'string', 'in:issuer,payer'],
             'rules' => ['nullable', 'array'],
             'rules.auto_close_on_full_payment' => ['nullable', 'boolean'],
             'onboarding' => ['nullable', 'boolean'],

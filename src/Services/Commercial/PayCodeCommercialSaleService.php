@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services\Commercial;
 
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\XChange\Actions\Commercial\PostCommercialSale;
@@ -166,9 +167,44 @@ class PayCodeCommercialSaleService
             commercialClearingPositionReference: $clearing->positionReference,
             destinationPositionReferences: $destinations,
             dispositionPlans: $dispositions,
+            deferCharge: ($input['fee_bearer'] ?? null) === 'payer',
         );
 
         return $this->result($sale, $code);
+    }
+
+    public function outstandingCollectionFee(Voucher $voucher): int
+    {
+        if ($voucher->instructions?->fee_bearer !== 'payer') {
+            return 0;
+        }
+
+        $sale = $this->collectionSale($voucher);
+        if (! in_array($sale->status, ['accepted', 'posted'], true)) {
+            throw new CommercialSaleConflict('The payable commercial sale cannot accept payment.');
+        }
+
+        return $sale->status === 'accepted' ? $sale->total_price_minor : 0;
+    }
+
+    public function collectFee(Voucher $voucher): void
+    {
+        $sale = $this->collectionSale($voucher);
+        app(CommercialCustomerChargingGuard::class)->ensureAuthorized($sale->total_price_minor);
+        $this->posting->settleAccepted($sale);
+    }
+
+    private function collectionSale(Voucher $voucher): CommercialSale
+    {
+        $sale = CommercialSale::query()
+            ->where('acceptance_event_reference', 'pay-code-issued:voucher:'.$voucher->getKey())
+            ->first();
+
+        if (! $sale instanceof CommercialSale) {
+            throw new CommercialSaleConflict('The payable voucher has no accepted commercial pricing.');
+        }
+
+        return $sale;
     }
 
     private function destinationPurpose(CommercialAllocationLineData $line): TreasuryPositionPurpose
@@ -323,7 +359,7 @@ class PayCodeCommercialSaleService
                 ->all(),
             'debit' => [
                 'id' => null,
-                'amount' => (string) (-1 * $sale->total_price_minor),
+                'amount' => (string) ($sale->status === 'posted' ? -1 * $sale->total_price_minor : 0),
             ],
         ];
     }

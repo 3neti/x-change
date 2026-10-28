@@ -95,9 +95,8 @@ class VoucherCollectionIdempotencyService
     public function payloadMatches(VoucherCollection $collection, array $payload): bool
     {
         $stored = array_replace([
-            'amount' => $collection->collectedAmount() > 0
-                ? $collection->collectedAmount()
-                : $collection->requestedAmount(),
+            'amount' => (int) data_get($collection->meta, 'gross_amount_minor',
+                $collection->collected_amount_minor > 0 ? $collection->collected_amount_minor : $collection->requested_amount_minor) / 100,
             'currency' => $collection->currency,
             'provider' => $collection->provider,
             'provider_reference' => $collection->provider_reference,

@@ -885,6 +885,7 @@ const namedClaimSlices = ref<NamedClaimSlice[]>(defaultWholeNamedClaimSlices());
 const rememberedScheduledClaimSlices = ref<NamedClaimSlice[] | null>(null);
 const reusableBalance = ref(false);
 const valueFlowDestination = ref("");
+const feeBearer = ref<"issuer" | "payer">("issuer");
 const valueFlowVisible = computed(
   () => reusableBalance.value || voucherType.value === "payable",
 );
@@ -1219,6 +1220,7 @@ function applyTemplateDefaults(templateKey: string): void {
   );
   storedValueOtpAbove.value = "";
   valueFlowDestination.value = "";
+  feeBearer.value = "issuer";
   voucherType.value = defaults.voucherType;
   targetAmount.value = defaults.targetAmount;
   includeExecutionInstruction.value = defaults.includeExecutionInstruction;
@@ -2001,6 +2003,7 @@ function applyInstructionBlueprint(
     dataGet(instructions, ["rules", "auto_close_on_full_payment"]) !== false;
 
   const execution = instructionRecord(instructions, ["execution"]);
+  feeBearer.value = instructionString(instructions, ["fee_bearer"]) === "payer" ? "payer" : "issuer";
   valueFlowDestination.value =
     instructionString(instructions, ["value_flow", "destination"]) ||
     instructionString(instructions, ["execution", "metadata", "value_flow", "destination"]) || "";
@@ -5599,6 +5602,7 @@ function buildPayloadShape(
 
   const payload: Record<string, unknown> = {
     cash,
+    ...(isPayableVoucher.value ? { fee_bearer: feeBearer.value } : {}),
     ...(valueFlowVisible.value && valueFlowDestination.value
       ? { value_flow: { destination: redactSensitive
           ? valueFlowDestination.value.replace(/:[0-9]+(?=\.client_funds$|$)/, ":[redacted]")
@@ -7612,6 +7616,18 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                 {{ storedValuePolicyError }}
               </p>
             </div>
+
+            <fieldset v-if="isPayableVoucher" class="grid gap-2" data-testid="fee-bearer-control">
+              <legend class="text-xs font-semibold">Who pays the service fee?</legend>
+              <label class="flex items-center gap-2 text-sm">
+                <input v-model="feeBearer" type="radio" value="issuer" :disabled="processing" data-testid="fee-bearer-issuer" />
+                Issuer pays at issuance
+              </label>
+              <label class="flex items-center gap-2 text-sm">
+                <input v-model="feeBearer" type="radio" value="payer" :disabled="processing" data-testid="fee-bearer-payer" />
+                Customer pays with the payment
+              </label>
+            </fieldset>
 
             <ValueFlowDestination
               v-if="valueFlowVisible"

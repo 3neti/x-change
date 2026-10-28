@@ -11,6 +11,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentQrDeliveryMode;
 use LBHurtado\XChange\Models\PaymentAttempt;
+use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptSessionGuard;
 use LBHurtado\XChange\Services\Payment\PaymentQrDeliveryPolicy;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
@@ -46,6 +47,9 @@ class CreatePaymentAttempt
         $browserKey = $this->required($browserKey, 'Browser session');
         $idempotencyKey = $this->required($idempotencyKey, 'Idempotency key');
         $progress = $this->progress->compute($voucher);
+        $feeMinor = app(PayCodeCommercialSaleService::class)
+            ->outstandingCollectionFee($voucher);
+        $grossMinor = $progress->remaining_to_collect_minor + $feeMinor;
         $qrDeliveryModes ??= $this->qrDelivery->forVoucher($voucher, false);
         $qrDeliveryModeValues = $this->qrDelivery->values($qrDeliveryModes);
 
@@ -62,7 +66,7 @@ class CreatePaymentAttempt
         $fingerprint = hash('sha256', json_encode([
             'voucher_id' => $voucher->getKey(),
             'provider' => $provider,
-            'amount_minor' => $progress->remaining_to_collect_minor,
+            'amount_minor' => $grossMinor,
             'currency' => $progress->currency,
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
 
@@ -71,6 +75,8 @@ class CreatePaymentAttempt
                 $voucher,
                 $provider,
                 $progress,
+                $feeMinor,
+                $grossMinor,
                 $sessionKeyHash,
                 $idempotencyKeyHash,
                 $fingerprint,
@@ -79,7 +85,7 @@ class CreatePaymentAttempt
                 $attempt = PaymentAttempt::query()->create([
                     'voucher_id' => $voucher->getKey(),
                     'provider_code' => $provider,
-                    'expected_amount_minor' => $progress->remaining_to_collect_minor,
+                    'expected_amount_minor' => $grossMinor,
                     'currency' => strtoupper($progress->currency),
                     'status' => PaymentAttemptStatus::PendingInstructions,
                     'version' => 1,
@@ -91,6 +97,8 @@ class CreatePaymentAttempt
                     ),
                     'metadata' => [
                         'purpose' => 'voucher_payment',
+                        'principal_amount_minor' => $progress->remaining_to_collect_minor,
+                        'fee_amount_minor' => $feeMinor,
                         'qr_delivery_modes' => $qrDeliveryModeValues,
                     ],
                 ]);

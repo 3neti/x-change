@@ -93,6 +93,8 @@ final readonly class WalletPayableCollectionExecutionGateway implements PayableC
         return [
             'voucher_collection_id' => $collectionId,
             'collection_status' => $result->status,
+            'collected_amount_minor' => (int) round($result->amount * 100),
+            'gross_amount_minor' => $amountMinor,
         ];
     }
 

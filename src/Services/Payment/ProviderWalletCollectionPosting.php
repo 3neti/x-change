@@ -11,9 +11,11 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Contracts\VoucherCollectionPostingContract;
+use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\Payment\ConfirmedVoucherCollectionData;
 use LBHurtado\XChange\Data\Payment\VoucherCollectionPostingData;
 use LBHurtado\XChange\Services\Cockpit\CockpitPosSaleReferenceService;
+use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\Execution\ValueFlowPayoutService;
 use LBHurtado\XChange\Services\Execution\VoucherCollectionWalletSelector;
 use LBHurtado\XChange\Services\Execution\VoucherValueFlowPolicy;
@@ -54,6 +56,12 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
             );
         }
 
+        $commercial = app(PayCodeCommercialSaleService::class);
+        $feeMinor = $commercial->outstandingCollectionFee($voucher);
+        $principalMinor = $collection->amountMinor - $feeMinor;
+        if ($principalMinor <= 0) {
+            throw new RuntimeException('Collection must cover the fee and a positive principal.');
+        }
         $provider = mb_strtolower(trim((string) $collection->provider));
         $currency = mb_strtoupper(trim($collection->currency));
         $connections = collect($this->connections->active())
@@ -63,7 +71,7 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
             )
             ->values();
 
-        if ($connections->count() === 0 && $this->payouts->isExternal($voucher)) {
+        if ($connections->count() === 0 && ($this->payouts->isExternal($voucher) || $voucher->instructions?->fee_bearer === 'payer')) {
             throw new RuntimeException('An external destination requires a Treasury-backed collection.');
         }
 
@@ -138,7 +146,7 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
         $allocation = $this->allocations->allocate(
             accountReference: $accountReference,
             provider: $provider,
-            amountMinor: $collection->amountMinor,
+            amountMinor: $principalMinor,
             currency: $currency,
             evidenceReference: 'voucher-collection:'.$provider.':'.$providerTransactionId,
             metadata: [
@@ -151,11 +159,30 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
             ],
         );
 
+        if ($feeMinor > 0) {
+            $issuerWallet = app(WalletAccessContract::class)->resolveForUser($voucher->owner);
+            $this->allocations->allocate(
+                accountReference: 'wallet:'.$issuerWallet->uuid,
+                provider: $provider,
+                amountMinor: $feeMinor,
+                currency: $currency,
+                evidenceReference: 'voucher-collection-fee:'.$provider.':'.$providerTransactionId,
+                metadata: [
+                    'source' => 'verified_voucher_collection_fee',
+                    'voucher_code' => (string) $voucher->code,
+                    'inventory_operation_reference' => $recognition->operationReference,
+                ],
+            );
+        }
+        if ($voucher->instructions?->fee_bearer === 'payer') {
+            $commercial->collectFee($voucher);
+        }
+
         $payout = $this->payouts->isExternal($voucher)
             ? $this->payouts->prepare(
                 $voucher,
                 $this->payouts->bridge($voucher, $connection->reference, $currency),
-                $collection->amountMinor,
+                $principalMinor,
                 'voucher-collection:'.$provider.':'.$providerTransactionId,
             ) : null;
 
@@ -167,6 +194,8 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
                 'provider_transaction_id' => $collection->providerTransactionId,
                 'provider_calls' => true,
                 'provider_inventory_changed' => true,
+                'principal_amount_minor' => $principalMinor,
+                'fee_amount_minor' => $feeMinor,
                 'payout_reference' => $payout?->provider_reference,
                 'payout_status' => $payout?->status,
                 'treasury_position_recognition_reference' => $allocation->recognitionOperationReference,

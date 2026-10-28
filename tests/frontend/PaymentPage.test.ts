@@ -36,6 +36,20 @@ const pendingPayment = {
 };
 
 describe('PaymentPage', () => {
+    it('shows principal and service fee separately from the total due', () => {
+        const wrapper = mount(PaymentPage, { props: { payment: {
+            ...pendingPayment,
+            collected_amount_minor: 0,
+            amount_due_minor: 11500,
+            principal_due_minor: 10000,
+            fee_due_minor: 1500,
+        } } });
+        expect(wrapper.text()).toContain('Service fee');
+        expect(wrapper.text()).toContain('Payment toward target');
+        expect(wrapper.text()).toContain('115.00');
+        expect(wrapper.text()).toContain('15.00');
+    });
+
     beforeEach(() => {
         routerPost.mockReset();
         pollStart.mockReset();

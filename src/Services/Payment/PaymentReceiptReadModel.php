@@ -39,13 +39,17 @@ final class PaymentReceiptReadModel
 
         return [
             'pay_code' => (string) $voucher->code,
-            'amount_paid_minor' => (int) $collections->sum('collected_amount_minor'),
+            'amount_paid_minor' => (int) $collections->sum(fn (VoucherCollection $collection): int => (int) data_get($collection->meta, 'gross_amount_minor', $collection->collected_amount_minor)),
+            'principal_paid_minor' => (int) $collections->sum('collected_amount_minor'),
+            'fee_paid_minor' => (int) $collections->sum(fn (VoucherCollection $collection): int => (int) data_get($collection->meta, 'fee_amount_minor', 0)),
             'currency' => $currency,
             'completed_at' => $latest?->completed_at?->toIso8601String(),
             'payments' => $collections
                 ->map(fn (VoucherCollection $collection): array => [
                     'collection_number' => (int) $collection->collection_number,
-                    'amount_paid_minor' => (int) $collection->collected_amount_minor,
+                    'amount_paid_minor' => (int) data_get($collection->meta, 'gross_amount_minor', $collection->collected_amount_minor),
+                    'principal_paid_minor' => (int) $collection->collected_amount_minor,
+                    'fee_paid_minor' => (int) data_get($collection->meta, 'fee_amount_minor', 0),
                     'provider' => (string) ($collection->provider ?: 'Recorded payment'),
                     'receipt_reference' => sprintf(
                         'PAY-%s-%02d',
@@ -88,6 +92,7 @@ final class PaymentReceiptReadModel
             ->orderBy('collection_number')
             ->get([
                 'collection_number',
+                'meta',
                 'collected_amount_minor',
                 'provider',
                 'completed_at',
