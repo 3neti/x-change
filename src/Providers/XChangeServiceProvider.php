@@ -19,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pipeline\Pipeline;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -1772,6 +1773,7 @@ class XChangeServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->bootStoredValueCollectorGate();
         $stampCollection = InstalledVersions::getInstallPath('3neti/x-stamp-designs');
         if ($stampCollection !== null) {
             $this->publishes([
@@ -1995,6 +1997,22 @@ class XChangeServiceProvider extends ServiceProvider
             DisbursementRejected::class,
             HandleRejectedDisbursement::class
         );
+    }
+
+    protected function bootStoredValueCollectorGate(): void
+    {
+        if (Gate::has('x-change.stored-value.collect')) {
+            return;
+        }
+
+        Gate::define('x-change.stored-value.collect', static function (Model $user): bool {
+            $model = config('auth.providers.users.model');
+            $policy = (array) config('x-change.execution.stored_value.collection.staff', []);
+
+            return ($policy['enabled'] ?? false) === true
+                && is_string($model) && $user instanceof $model && $user->exists
+                && in_array((string) $user->getKey(), array_map('strval', (array) ($policy['user_ids'] ?? [])), true);
+        });
     }
 
     protected function bootInitialPinSetupGuard(): void
