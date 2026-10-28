@@ -99,7 +99,7 @@ describe('XRayClaimPreview', () => {
                         { key: 'expires_at', value: '2026-10-29T08:33:00+08:00' },
                         { key: 'issuer', label: 'Issuer', value: 'Amelia Cruz' },
                         { key: 'provider', label: 'Payout provider', value: 'NetBank' },
-                        { key: 'service_info', value: { host_name: 'x-change', publisher: '3neti', x_change_version: 'v1.1.2' } },
+                        { key: 'service_info', value: { host_name: 'x-change', publisher: '3neti', authors: ['Ada', 'Anaïs'], x_change_version: 'v1.1.2', x_ray_version: 'v1.0.3' } },
                     ],
                     requirements: [{ key: 'mobile', label: 'Mobile' }],
                 },
@@ -120,6 +120,10 @@ describe('XRayClaimPreview', () => {
         expect(wrapper.get('#xray-system-info-panel').text()).toContain('Amelia Cruz');
         expect(wrapper.get('#xray-system-info-panel').text()).toContain('NetBank');
         expect(wrapper.get('#xray-system-info-panel').text()).toContain('3neti');
+        expect(wrapper.get('#xray-system-info-panel').text()).toContain('x-ray');
+        expect(wrapper.get('#xray-system-info-panel').text()).toContain('v1.0.3');
+        expect(wrapper.get('#xray-system-info-panel').findAll('dt').map((row) => row.text()).slice(-2)).toEqual(['Publisher', 'Authors']);
+        expect(wrapper.get('#xray-system-info-panel').findAll('dt').map((row) => row.text())).not.toContain('Pay Code');
         expect(wrapper.get('#xray-instructions-panel').attributes('style')).toContain('display: none');
     });
 
@@ -147,6 +151,25 @@ describe('XRayClaimPreview', () => {
         // The raw status disclosure row is redundant with the friendly badge
         // above and should not be dumped verbatim.
         expect(wrapper.text()).not.toContain('claimable');
+    });
+
+    it('uses existing contributor names as Authors when older service data has no authors field', async () => {
+        const wrapper = mount(XRayClaimPreview, {
+            props: {
+                result: {
+                    visible: true,
+                    status: 'claimable',
+                    disclosures: [
+                        { key: 'service_info', value: { publisher: '3neti', contributors: ['Ada'] } },
+                    ],
+                },
+            },
+        });
+
+        await wrapper.get('#xray-system-info-tab').trigger('click');
+
+        expect(wrapper.get('#xray-system-info-panel').text()).toContain('Authors');
+        expect(wrapper.get('[data-testid="xray-current-author"]').text()).toBe('Ada');
     });
 
     it('renders friendly status labels for every claimability state', () => {

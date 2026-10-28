@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Composer\InstalledVersions;
 use LBHurtado\Voucher\Services\VoucherSlicePlanFactory;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
@@ -57,6 +58,7 @@ it('returns guest-safe x-ray disclosure for a pay code', function (): void {
 
 it('shows an issued Pay Code amount, issuer and recorded payout provider to a guest', function (): void {
     config()->set('x-change.claim.experience_ui.show_package_versions', false);
+    config()->set('x-change.claim.experience_ui.system_info.authors', ['Ada', 'Anaïs']);
     config()->set('x-change.claim.experience_ui.system_info.contributors', ['Ada']);
     $issuer = actingAsTestUser();
     $issuer->forceFill(['name' => 'Amelia Cruz'])->save();
@@ -79,8 +81,24 @@ it('shows an issued Pay Code amount, issuer and recorded payout provider to a gu
         ->and($details->get('funding_source')['value'])->toBe('Pay Code reserve')
         ->and($details->get('reference')['value'])->toBe($voucher->code)
         ->and($details->get('service_info')['value']['publisher'])->toBe('3neti')
+        ->and($details->get('service_info')['value']['authors'])->toBe(['Ada', 'Anaïs'])
         ->and($details->get('service_info')['value']['contributors'])->toBe(['Ada'])
-        ->and($details->get('service_info')['value'])->not->toHaveKey('x_change_version');
+        ->and($details->get('service_info')['value'])->not->toHaveKey('x_change_version')
+        ->and($details->get('service_info')['value'])->not->toHaveKey('x_ray_version');
+
+    config()->set('x-change.claim.experience_ui.show_package_versions', true);
+
+    $versionedResponse = $this->postJson(xchangeApi('pay-codes/x-ray'), [
+        'code' => $voucher->code,
+        'channel' => 'claim',
+    ])->assertOk();
+
+    $versionedServiceInfo = collect($versionedResponse->json('data.xray.disclosures'))
+        ->keyBy('key')
+        ->get('service_info')['value'];
+
+    expect($versionedServiceInfo['x_ray_version'])
+        ->toBe(InstalledVersions::getPrettyVersion('3neti/x-ray'));
 });
 
 it('does not infer a payout provider from an unreserved Pay Code', function (): void {

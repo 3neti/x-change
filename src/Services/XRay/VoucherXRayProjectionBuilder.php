@@ -144,7 +144,7 @@ class VoucherXRayProjectionBuilder
         $versions = [];
 
         if ((bool) config('x-change.claim.experience_ui.show_package_versions', false)) {
-            foreach (['3neti/x-change' => 'x_change_version', '3neti/form-flow' => 'form_flow_version'] as $package => $key) {
+            foreach (['3neti/x-change' => 'x_change_version', '3neti/form-flow' => 'form_flow_version', '3neti/x-ray' => 'x_ray_version'] as $package => $key) {
                 if (InstalledVersions::isInstalled($package)) {
                     $versions[$key] = InstalledVersions::getPrettyVersion($package);
                 }
@@ -156,6 +156,7 @@ class VoucherXRayProjectionBuilder
             'host_version' => $versions !== [] ? config('app.version') : null,
             ...$versions,
             'publisher' => config('x-change.claim.experience_ui.system_info.publisher', '3neti'),
+            'authors' => config('x-change.claim.experience_ui.system_info.authors', []),
             'contributors' => config('x-change.claim.experience_ui.system_info.contributors', []),
         ], static fn (mixed $value): bool => $value !== null && $value !== '' && $value !== []);
     }

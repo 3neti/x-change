@@ -4,6 +4,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertCircle, Clock } from 'lucide-vue-next';
+import XRayAuthorsTicker from '@/components/x-change/XRayAuthorsTicker.vue';
 import {
     resolveXRayRequirementViewModel,
     resolveXRayStatusViewModel,
@@ -15,7 +16,9 @@ interface XRayServiceInfo {
     host_version?: string;
     x_change_version?: string;
     form_flow_version?: string;
+    x_ray_version?: string;
     publisher?: string;
+    authors?: string[];
     contributors?: string[];
 }
 
@@ -57,7 +60,7 @@ const expiresAt = computed(() => disclosure('expires_at')?.value);
 const payCodeReference = computed(() => disclosure('reference')?.value);
 const systemDisclosures = computed(() =>
     (props.result?.disclosures ?? []).filter((item) =>
-        ['issuer', 'funding_source', 'provider', 'issued_at', 'reference'].includes(item.key),
+        ['issuer', 'funding_source', 'provider', 'issued_at'].includes(item.key),
     ),
 );
 const serviceInfo = computed<XRayServiceInfo | null>(() => {
@@ -74,10 +77,17 @@ const serviceRows = computed(() => {
         ['Application version', info.host_version],
         ['x-change', info.x_change_version],
         ['form-flow', info.form_flow_version],
+        ['x-ray', info.x_ray_version],
         ['Publisher', info.publisher],
-        ['Contributors', info.contributors?.join(', ')],
     ];
     return rows.filter((row): row is [string, string] => Boolean(row[1]));
+});
+const authors = computed(() => {
+    const names = serviceInfo.value?.authors?.length
+        ? serviceInfo.value.authors
+        : serviceInfo.value?.contributors ?? [];
+
+    return names.filter((name): name is string => typeof name === 'string' && name.trim() !== '');
 });
 
 // This is the redeemer-facing "Pay Code preview" panel. It is presentational
@@ -458,12 +468,16 @@ function stageText(stage: NonNullable<XRayClaimPreviewResult['stages']>[number])
                                 <dd class="min-w-0 break-words text-right font-medium text-foreground">{{ item.key === 'issued_at' ? new Date(String(item.value)).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : item.value }}</dd>
                             </div>
                         </dl>
-                        <div v-if="serviceRows.length" class="space-y-2">
+                        <div v-if="serviceRows.length || authors.length" class="space-y-2">
                             <p class="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">About this service</p>
                             <dl class="divide-y rounded-xl border px-4">
                                 <div v-for="[label, value] in serviceRows" :key="label" class="flex items-start justify-between gap-4 py-3 text-sm">
                                     <dt class="text-muted-foreground">{{ label }}</dt>
                                     <dd class="min-w-0 break-words text-right font-medium text-foreground">{{ value }}</dd>
+                                </div>
+                                <div v-if="authors.length" class="flex items-start justify-between gap-4 py-3 text-sm">
+                                    <dt class="text-muted-foreground">Authors</dt>
+                                    <XRayAuthorsTicker :authors="authors" :active="activeTab === 'system-info' && (!compact || expanded)" />
                                 </div>
                             </dl>
                         </div>

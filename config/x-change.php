@@ -2708,6 +2708,7 @@ return [
             ),
             'system_info' => [
                 'publisher' => '3neti',
+                'authors' => ['Lester B. Hurtado', 'Anaïs Santos'],
                 'contributors' => [],
             ],
             'brand' => [
