@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { AlertCircle } from 'lucide-vue-next';
+import { AlertCircle, Clock } from 'lucide-vue-next';
 import {
     resolveXRayRequirementViewModel,
     resolveXRayStatusViewModel,
@@ -122,6 +122,27 @@ const status = computed(() =>
 const requirements = computed(() =>
     (props.result?.requirements ?? []).map(resolveXRayRequirementViewModel),
 );
+const securityRequirements = computed(() =>
+    requirements.value.filter((item) =>
+        ['assigned_mobile', 'secret', 'passcode'].includes(item.key),
+    ),
+);
+const inputRequirements = computed(() =>
+    requirements.value.filter((item) =>
+        !['assigned_mobile', 'secret', 'passcode'].includes(item.key),
+    ),
+);
+const formattedExpiry = computed(() => {
+    if (!expiresAt.value) return null;
+
+    const date = new Date(String(expiresAt.value));
+    if (Number.isNaN(date.getTime())) return null;
+
+    return new Intl.DateTimeFormat('en-PH', {
+        dateStyle: 'long',
+        timeStyle: 'short',
+    }).format(date);
+});
 
 // Anything disclosed besides the status itself (e.g. amount/issuer for a
 // non-guest audience). Guests typically see nothing here, since the status
@@ -265,7 +286,6 @@ function stageText(stage: XRayStage): string {
                             <span v-if="payCodeReference" class="whitespace-nowrap font-mono">|| {{ payCodeReference }} ||</span>
                         </div>
                         <p class="mt-1 text-2xl font-bold tabular-nums text-foreground">{{ amount }}</p>
-                        <p v-if="expiresAt" class="mt-2 text-xs text-muted-foreground">Expires {{ new Date(String(expiresAt)).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) }}</p>
                     </div>
 
                     <div class="grid grid-cols-2 rounded-lg bg-muted/50 p-1" role="tablist" aria-label="Pay Code details">
@@ -275,30 +295,48 @@ function stageText(stage: XRayStage): string {
 
                     <div v-show="activeTab === 'instructions'" id="xray-instructions-panel" role="tabpanel" aria-labelledby="xray-instructions-tab" class="space-y-4">
 
-                    <!-- Requirements -->
-                    <div v-if="requirements.length" class="space-y-2">
-                        <p
-                            class="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground"
-                        >
-                            What you'll need
-                        </p>
-                        <ul class="flex flex-wrap gap-2">
-                            <li
-                                v-for="item in requirements"
-                                :key="item.key"
-                                class="inline-flex max-w-full items-center gap-1.5 rounded-full border bg-muted/30 px-3 py-1 text-xs font-medium text-foreground"
-                                :title="item.description || undefined"
-                            >
-                                <component
-                                    :is="item.icon"
-                                    v-if="item.icon"
-                                    class="h-3.5 w-3.5 shrink-0 text-muted-foreground"
-                                    aria-hidden="true"
-                                />
-                                <span class="truncate">{{ item.label }}</span>
+                    <section v-if="formattedExpiry" class="rounded-xl border p-4" data-testid="xray-validity">
+                        <div class="flex items-start gap-3">
+                            <Clock class="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                            <div class="min-w-0">
+                                <h3 class="text-sm font-semibold text-foreground">Expires on</h3>
+                                <p class="text-sm text-muted-foreground">{{ formattedExpiry }}</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section v-if="inputRequirements.length" class="space-y-3 rounded-xl border p-4" data-testid="xray-required-inputs">
+                        <div>
+                            <h3 class="text-base font-semibold text-foreground">Required Inputs</h3>
+                            <p class="text-sm text-muted-foreground">Please prepare to provide the following:</p>
+                        </div>
+                        <ul class="space-y-2">
+                            <li v-for="item in inputRequirements" :key="item.key" class="flex items-start gap-3 rounded-lg border bg-muted/20 p-3">
+                                <component :is="item.icon" v-if="item.icon" class="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium text-foreground">{{ item.label }}</p>
+                                    <p v-if="item.description" class="text-xs leading-relaxed text-muted-foreground">{{ item.description }}</p>
+                                </div>
                             </li>
                         </ul>
-                    </div>
+                    </section>
+
+                    <section v-if="securityRequirements.length" class="space-y-3 rounded-xl border p-4" data-testid="xray-security-requirements">
+                        <h3 class="text-base font-semibold text-foreground">Assignment &amp; Security</h3>
+                        <ul class="space-y-3">
+                            <li v-for="item in securityRequirements" :key="item.key" class="flex items-start gap-3">
+                                <component :is="item.icon" v-if="item.icon" class="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium text-foreground">{{ item.key === 'assigned_mobile' ? 'Assigned to a mobile number' : item.label + ' required' }}</p>
+                                    <p v-if="item.description" class="text-xs leading-relaxed text-muted-foreground">{{ item.description }}</p>
+                                </div>
+                            </li>
+                        </ul>
+                    </section>
+
+                    <p v-if="!requirements.length" class="rounded-xl border p-4 text-sm text-muted-foreground" data-testid="xray-no-requirements">
+                        No additional information required to claim this Pay Code.
+                    </p>
 
                     <div
                         v-if="sliceRows.length && !hideSlicePlan"

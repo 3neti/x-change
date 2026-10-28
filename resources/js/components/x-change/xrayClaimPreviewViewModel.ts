@@ -1,16 +1,20 @@
 import type { Component } from 'vue';
 import {
     AlertCircle,
+    Calendar,
     Camera,
     CheckCircle2,
     Clock,
     HelpCircle,
+    Home,
     IdCard,
     KeyRound,
+    Mail,
     MapPin,
     PenLine,
     ShieldCheck,
     Smartphone,
+    User,
     Wallet,
     XCircle,
 } from 'lucide-vue-next';
@@ -146,6 +150,7 @@ export function resolveXRayStatusViewModel(input: {
  */
 const REQUIREMENT_LABELS: Record<string, string> = {
     mobile: 'Mobile number',
+    email: 'Email address',
     assigned_mobile: 'Mobile number',
     bank_account: 'Wallet or bank account',
     bank_code: 'Wallet or bank account',
@@ -161,6 +166,10 @@ const REQUIREMENT_LABELS: Record<string, string> = {
 
 const REQUIREMENT_ICONS: Record<string, Component> = {
     mobile: Smartphone,
+    email: Mail,
+    name: User,
+    address: Home,
+    birth_date: Calendar,
     assigned_mobile: Smartphone,
     bank_account: Wallet,
     bank_code: Wallet,

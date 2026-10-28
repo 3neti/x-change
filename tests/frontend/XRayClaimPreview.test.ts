@@ -6,6 +6,9 @@ vi.mock('lucide-vue-next', () => ({
     AlertCircle: {
         template: '<span />',
     },
+    Calendar: {
+        template: '<span />',
+    },
     CheckCircle2: {
         template: '<span />',
     },
@@ -13,6 +16,9 @@ vi.mock('lucide-vue-next', () => ({
         template: '<span />',
     },
     HelpCircle: {
+        template: '<span />',
+    },
+    Home: {
         template: '<span />',
     },
     XCircle: {
@@ -27,6 +33,9 @@ vi.mock('lucide-vue-next', () => ({
     KeyRound: {
         template: '<span />',
     },
+    Mail: {
+        template: '<span />',
+    },
     MapPin: {
         template: '<span />',
     },
@@ -37,6 +46,9 @@ vi.mock('lucide-vue-next', () => ({
         template: '<span />',
     },
     Smartphone: {
+        template: '<span />',
+    },
+    User: {
         template: '<span />',
     },
     Wallet: {
@@ -66,6 +78,8 @@ describe('XRayClaimPreview', () => {
 
         expect(wrapper.get('[data-testid="xray-claim-amount"]').text()).toContain('₱50.00');
         expect(wrapper.get('[data-testid="xray-claim-amount"]').text()).toContain('|| JK33 ||');
+        expect(wrapper.get('[data-testid="xray-validity"]').text()).toContain('Expires on');
+        expect(wrapper.get('[data-testid="xray-required-inputs"]').text()).toContain('Mobile number');
         expect(wrapper.get('#xray-instructions-panel').isVisible()).toBe(true);
         expect(wrapper.get('#xray-system-info-panel').isVisible()).toBe(false);
 
@@ -125,7 +139,7 @@ describe('XRayClaimPreview', () => {
         }
     });
 
-    it('renders compact, human-readable requirement chips with icons', () => {
+    it('renders readable input rows and separates security requirements', () => {
         const wrapper = mount(XRayClaimPreview, {
             props: {
                 result: {
@@ -141,17 +155,41 @@ describe('XRayClaimPreview', () => {
                             key: 'otp',
                             label: 'Otp',
                         },
+                        {
+                            key: 'secret',
+                            label: 'Secret / PIN',
+                            description: 'A matching issuer-provided secret is required.',
+                        },
                     ],
                 },
             },
         });
 
-        expect(wrapper.text()).toContain("What you'll need");
-        expect(wrapper.text()).toContain('Mobile number');
-        expect(wrapper.text()).toContain('OTP');
+        expect(wrapper.get('[data-testid="xray-required-inputs"]').text()).toContain('Required Inputs');
+        expect(wrapper.get('[data-testid="xray-required-inputs"]').text()).toContain('Mobile number');
+        expect(wrapper.get('[data-testid="xray-required-inputs"]').text()).toContain('OTP');
+        expect(wrapper.get('[data-testid="xray-security-requirements"]').text()).toContain('Passcode required');
+        expect(wrapper.get('[data-testid="xray-security-requirements"]').text()).toContain('A matching issuer-provided secret is required.');
+        expect(wrapper.get('[data-testid="xray-required-inputs"]').text()).not.toContain('Secret / PIN');
         // Friendly copy replaces debug-style backend labels/keys.
         expect(wrapper.text()).not.toContain('Otp');
         expect(wrapper.text()).not.toContain('mobile');
+    });
+
+    it('does not invent validity or security details when they were not disclosed', () => {
+        const wrapper = mount(XRayClaimPreview, {
+            props: {
+                result: {
+                    visible: true,
+                    status: 'claimable',
+                    requirements: [],
+                },
+            },
+        });
+
+        expect(wrapper.get('[data-testid="xray-no-requirements"]').text()).toContain('No additional information required');
+        expect(wrapper.find('[data-testid="xray-validity"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="xray-security-requirements"]').exists()).toBe(false);
     });
 
     it('renders issuer preview stages under a human heading', () => {
