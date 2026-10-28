@@ -213,3 +213,44 @@ it('rejects an unsupported transfer before reserving funds or creating a payout'
     expect(DisbursementReconciliation::query()->count())->toBe(0)
         ->and(app(TreasuryPositionReadModelContract::class)->find($source->positionReference)->balanceMinor)->toBe(10_000);
 });
+
+it('uses a stable provider reference within the NetBank 36 character limit', function (): void {
+    [$service, $voucher, $source] = valueFlowPayoutFixture();
+    $payout = DB::transaction(fn () => $service->prepare($voucher, $source, 2_500, 'reference-length'));
+    $provider = fakePayoutProvider()->willReturnPendingResult(provider: 'netbank');
+    $service->submit($payout->id);
+    expect(strlen($provider->lastRequest->reference))->toBeLessThanOrEqual(36)
+        ->and($payout->fresh()->meta['submission_reference'])->toBe($provider->lastRequest->reference)
+        ->and($payout->fresh()->provider_reference)->toBe($payout->provider_reference);
+    $service->submit($payout->id);
+    expect($provider->disburseCallCount)->toBe(1);
+});
+
+it('recovers a confirmed unaccepted legacy submission from held funds without reserving twice', function (): void {
+    [$service, $voucher, $source] = valueFlowPayoutFixture();
+    $payout = DB::transaction(fn () => $service->prepare($voucher, $source, 2_500, 'legacy-reference'));
+    $payout->forceFill(['status' => 'failed', 'provider_transaction_id' => $payout->provider_reference,
+        'attempt_count' => 1, 'meta' => [...$payout->meta, 'provider_response' => ['received' => true, 'status' => 'failed']]])->save();
+    $service->converge($payout);
+    expect(fn () => $service->retryUnacceptedSubmission($payout->id, false, 'validation-rejection'))
+        ->toThrow(RuntimeException::class, 'explicit no-transfer');
+    $provider = fakePayoutProvider()->willReturnSuccessfulResult(provider: 'netbank');
+    $service->retryUnacceptedSubmission($payout->id, true, 'validation-rejection');
+    expect($payout->fresh()->internal_status)->toBe('finalized')
+        ->and($payout->fresh()->attempt_count)->toBe(2)
+        ->and($provider->disburseCallCount)->toBe(1)
+        ->and(app(TreasuryPositionReadModelContract::class)->find($source->positionReference)->balanceMinor)->toBe(7_500);
+    expect(fn () => $service->retryUnacceptedSubmission($payout->id, true, 'validation-rejection'))
+        ->toThrow(RuntimeException::class, 'not eligible');
+    expect($provider->disburseCallCount)->toBe(1);
+});
+
+it('refuses to recover an uncertain submission', function (): void {
+    [$service, $voucher, $source] = valueFlowPayoutFixture();
+    $payout = DB::transaction(fn () => $service->prepare($voucher, $source, 2_500, 'uncertain-recovery'));
+    $provider = fakePayoutProvider()->willThrow();
+    $service->submit($payout->id);
+    expect(fn () => $service->retryUnacceptedSubmission($payout->id, true, 'unverified'))
+        ->toThrow(RuntimeException::class, 'not eligible');
+    expect($payout->fresh()->status)->toBe('unknown');
+});

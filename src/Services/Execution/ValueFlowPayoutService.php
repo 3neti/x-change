@@ -155,13 +155,15 @@ final readonly class ValueFlowPayoutService
                 throw new RuntimeException('The configured payout provider differs from the reserved payout.');
             }
             $request = new PayoutRequestData(
-                reference: $row->provider_reference, amount: (int) data_get($row->meta, 'amount_minor') / 100,
+                reference: $this->submissionReference($row->provider_reference), amount: (int) data_get($row->meta, 'amount_minor') / 100,
                 account_number: Crypt::decryptString(data_get($row->meta, 'account_ciphertext')),
                 bank_code: $row->bank_code, settlement_rail: $row->settlement_rail, currency: $row->currency,
                 external_id: (string) $row->voucher_id, external_code: $row->voucher_code,
             );
             $this->rails->assertSupports($request);
-            $row->forceFill(['status' => 'unknown', 'attempt_count' => 1, 'attempted_at' => now(),
+            $meta = $row->meta;
+            $meta['submission_reference'] = $request->reference;
+            $row->forceFill(['meta' => $meta, 'status' => 'unknown', 'attempt_count' => ((int) $row->attempt_count) + 1, 'attempted_at' => now(),
                 'needs_review' => true, 'review_reason' => 'Provider submission outcome awaiting evidence.'])->save();
 
             return $request;
@@ -185,6 +187,9 @@ final readonly class ValueFlowPayoutService
             }
             $meta = $row->meta;
             $meta['provider_response'] = ['received' => $providerMatches, 'status' => $status];
+            if ($providerMatches && data_get($response->metadata, 'provider_submission_accepted') === false) {
+                $meta['provider_response']['submission_accepted'] = false;
+            }
             $row->forceFill([
                 'status' => $status, 'provider_transaction_id' => $providerMatches ? $response->transaction_id : null,
                 'transaction_uuid' => $response->uuid,
@@ -195,6 +200,38 @@ final readonly class ValueFlowPayoutService
             ])->save();
         });
         $this->converge(DisbursementReconciliation::query()->findOrFail($id));
+    }
+
+    private function submissionReference(string $reference): string
+    {
+        return strlen($reference) <= 36 ? $reference : 'vf-'.substr(hash('sha256', $reference), 0, 32);
+    }
+
+    public function retryUnacceptedSubmission(int $id, bool $confirmedNoProviderTransfer, string $evidenceReference): void
+    {
+        if (! $confirmedNoProviderTransfer || trim($evidenceReference) === '') {
+            throw new RuntimeException('Recovery requires explicit no-transfer confirmation and an evidence reference.');
+        }
+        DB::transaction(function () use ($id, $evidenceReference): void {
+            $row = DisbursementReconciliation::query()->whereKey($id)->lockForUpdate()->firstOrFail();
+            $unaccepted = data_get($row->meta, 'provider_response.submission_accepted') === false
+                || ($row->provider_transaction_id === $row->provider_reference && strlen($row->provider_reference) > 36);
+            if ($row->claim_type !== 'value_flow' || $row->status !== 'failed'
+                || $row->internal_status !== 'recovery_opened' || $row->needs_review || ! $unaccepted) {
+                throw new RuntimeException('This payout is not eligible for confirmed unaccepted-submission recovery.');
+            }
+            $meta = $row->meta;
+            $meta['submission_recoveries'][] = [
+                'evidence_reference' => $evidenceReference,
+                'prior_attempt_count' => $row->attempt_count,
+                'prior_provider_transaction_id' => $row->provider_transaction_id,
+                'prior_submission_reference' => $meta['submission_reference'] ?? $row->provider_reference,
+                'confirmed_at' => now()->toIso8601String(),
+            ];
+            $row->forceFill(['status' => 'intent', 'provider_transaction_id' => null,
+                'completed_at' => null, 'meta' => $meta])->save();
+        });
+        $this->submit($id);
     }
 
     public function converge(DisbursementReconciliation $payout): void
