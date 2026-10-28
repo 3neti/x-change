@@ -522,7 +522,7 @@ watch(
 <template>
     <div
         class="flex flex-col gap-6"
-        :class="!previewViewModel.isNonActive && !surfaceTakesOver ? 'pb-28 sm:pb-0' : ''"
+        :class="!previewViewModel.isNonActive && !surfaceTakesOver ? 'pb-28' : ''"
     >
         <Head :title="claimTitle" />
 
@@ -566,7 +566,7 @@ watch(
             <Button
                 ref="submitButton"
                 type="submit"
-                class="fixed inset-x-4 z-30 mx-auto h-14 w-auto max-w-md rounded-2xl text-base font-bold shadow-lg shadow-foreground/20 sm:static sm:inset-auto sm:w-full sm:max-w-none sm:shadow-none"
+                class="fixed inset-x-4 z-30 mx-auto h-14 w-auto max-w-md rounded-2xl text-base font-bold shadow-lg shadow-foreground/20"
                 style="bottom: max(0.2in, calc(env(safe-area-inset-bottom) + 1rem)); margin-bottom: 0"
                 data-testid="claim-widget-submit-button"
                 :disabled="submitViewModel.disabled"
