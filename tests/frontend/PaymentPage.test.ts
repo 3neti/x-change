@@ -36,6 +36,31 @@ const pendingPayment = {
 };
 
 describe('PaymentPage', () => {
+    it('keeps polling delivery after full repayment and stops once delivered', async () => {
+        const receipt = { pay_code: 'PAY-1234', amount_paid_minor: 10000, currency: 'PHP', completed_at: null,
+            payments: [{ collection_number: 1, amount_paid_minor: 10000, provider: 'netbank', receipt_reference: 'R1', completed_at: null,
+                delivery: { status: 'pending', account: '*******9999', bank_code: 'GXCHPHM2XXX' } }] };
+        const payment = { ...pendingPayment, is_fully_paid: true, can_create_attempt: false, receipt };
+        const wrapper = mount(PaymentPage, { props: { payment } });
+        expect(wrapper.get('[data-testid="payment-delivery"]').text()).toContain('Delivery pending');
+        expect(usePoll).toHaveBeenCalledWith(5000, expect.any(Object), { autoStart: true, mode: 'rest' });
+        await wrapper.setProps({ payment: { ...payment, receipt: { ...receipt, payments: [{ ...receipt.payments[0], delivery: { ...receipt.payments[0].delivery, status: 'delivered' } }] } } });
+        expect(wrapper.get('[data-testid="payment-delivery"]').text()).toContain('Delivered to destination');
+        expect(pollStop).toHaveBeenCalled();
+        expect(routerPost).not.toHaveBeenCalled();
+        wrapper.unmount();
+    });
+
+    it('shows recovery without asking the customer to pay again', () => {
+        const wrapper = mount(PaymentPage, { props: { payment: { ...pendingPayment, is_fully_paid: true, can_create_attempt: false,
+            receipt: { pay_code: 'PAY-1234', amount_paid_minor: 10000, currency: 'PHP', completed_at: null,
+                payments: [{ collection_number: 1, amount_paid_minor: 10000, provider: 'netbank', receipt_reference: 'R1', completed_at: null,
+                    delivery: { status: 'review', account: '*******9999', bank_code: 'GXCHPHM2XXX' } }] } } } });
+        expect(wrapper.get('[data-testid="payment-delivery"]').text()).toContain('Your payment remains recorded');
+        expect(wrapper.find('[data-testid="payer-create-qr"]').exists()).toBe(false);
+        wrapper.unmount();
+    });
+
     it.each(['poll', 'create', 'check'])(
         'handles %s throttling inline and resumes after Retry-After',
         async (origin) => {

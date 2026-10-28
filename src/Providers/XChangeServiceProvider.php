@@ -217,6 +217,7 @@ use LBHurtado\XChange\Console\Commands\Treasury\RepairMissingDisbursementPosting
 use LBHurtado\XChange\Console\Commands\Treasury\SimulateTreasuryProviderDepositCommand;
 use LBHurtado\XChange\Console\Commands\ValidateDeploymentManifestCommand;
 use LBHurtado\XChange\Console\Commands\ValidatePolicyCompletionTransportDispositionCommand;
+use LBHurtado\XChange\Console\Commands\ValueFlowPayoutRecoveryCommand;
 use LBHurtado\XChange\Console\Commands\Wallet\GetWalletBalanceCommand;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\AccountProvisioningContract;
@@ -1884,6 +1885,7 @@ class XChangeServiceProvider extends ServiceProvider
                 ReplaySettledPaymentPipelineCommand::class,
                 ProcessStandingFundingRuntimeOutboxCommand::class,
                 ReconcilePendingDisbursementsCommand::class,
+                ValueFlowPayoutRecoveryCommand::class,
                 TestFeedbackEmailCommand::class,
                 TestFeedbackSmsCommand::class,
                 ShowFeedbackHistoryCommand::class,

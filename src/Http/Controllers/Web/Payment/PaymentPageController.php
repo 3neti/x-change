@@ -100,7 +100,7 @@ class PaymentPageController extends Controller
                     'reference' => $display->reference,
                     'status' => $displays->present($display)['status'],
                 ],
-                'receipt' => $collection->is_fully_collected || $repayment
+                'receipt' => $collection->collected_total_minor > 0
                     ? $this->receipts->forVoucher($voucher, $collection->currency)
                     : null,
             ],

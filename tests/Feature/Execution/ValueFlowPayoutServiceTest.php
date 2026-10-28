@@ -254,3 +254,21 @@ it('refuses to recover an uncertain submission', function (): void {
         ->toThrow(RuntimeException::class, 'not eligible');
     expect($payout->fresh()->status)->toBe('unknown');
 });
+
+it('inspects recovery safely and requires evidence and the exact voucher before retry', function (): void {
+    [$service, $voucher, $source] = valueFlowPayoutFixture();
+    $payout = DB::transaction(fn () => $service->prepare($voucher, $source, 2_500, 'operator-recovery'));
+    $payout->forceFill(['status' => 'failed', 'provider_transaction_id' => $payout->provider_reference,
+        'attempt_count' => 1, 'meta' => [...$payout->meta, 'provider_response' => ['received' => true, 'status' => 'failed']]])->save();
+    $service->converge($payout);
+    $provider = fakePayoutProvider()->willReturnSuccessfulResult(provider: 'netbank');
+    $this->artisan('xchange:value-flow:recovery', ['voucher' => $voucher->code, '--json' => true])->assertSuccessful();
+    $this->artisan('xchange:value-flow:recovery', ['voucher' => $voucher->code, '--id' => $payout->id, '--retry-unaccepted' => true])->assertFailed();
+    $this->artisan('xchange:value-flow:recovery', ['voucher' => 'OTHER', '--id' => $payout->id, '--retry-unaccepted' => true, '--confirm-no-transfer' => true, '--evidence' => 'provider-rejection-1'])->assertFailed();
+    expect($provider->disburseCallCount)->toBe(0);
+    $this->artisan('xchange:value-flow:recovery', ['voucher' => $voucher->code, '--id' => $payout->id, '--retry-unaccepted' => true, '--confirm-no-transfer' => true, '--evidence' => 'provider-rejection-1'])->assertSuccessful();
+    expect($provider->disburseCallCount)->toBe(1)
+        ->and($payout->fresh()->internal_status)->toBe('finalized');
+    $this->artisan('xchange:value-flow:recovery', ['voucher' => $voucher->code, '--id' => $payout->id, '--retry-unaccepted' => true, '--confirm-no-transfer' => true, '--evidence' => 'provider-rejection-1'])->assertFailed();
+    expect($provider->disburseCallCount)->toBe(1);
+});

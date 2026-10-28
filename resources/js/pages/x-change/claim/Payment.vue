@@ -50,6 +50,7 @@ type PaymentAttempt = {
 };
 
 type ReceiptPayment = {
+    delivery?: { status: 'pending' | 'delivered' | 'review'; account: string | null; bank_code: string | null } | null;
     collection_number: number;
     amount_paid_minor: number;
     provider: string;
@@ -166,13 +167,17 @@ const attemptAmount = computed(() =>
         props.payment.attempt?.currency ?? props.payment.currency,
     ),
 );
+const deliveryPending = computed(
+    () => props.payment.receipt?.payments.some((entry) => entry.delivery?.status === 'pending') ?? false,
+);
 const shouldPoll = computed(
     () =>
         retrySeconds.value === 0 &&
-        !props.payment.is_fully_paid &&
-        ((props.payment.repayment_mode === true && props.payment.repayment_ready === false) ||
-            (props.payment.attempt !== null &&
-                (props.payment.attempt.can_check === true || completionPending.value))),
+        (deliveryPending.value ||
+            (!props.payment.is_fully_paid &&
+                ((props.payment.repayment_mode === true && props.payment.repayment_ready === false) ||
+                    (props.payment.attempt !== null &&
+                        (props.payment.attempt.can_check === true || completionPending.value))))),
 );
 const { start: startPaymentPoll, stop: stopPaymentPoll } = usePoll(
     Math.max(1000, props.payment.poll_interval_ms ?? 5000),
@@ -373,6 +378,19 @@ function printReceipt(): void {
                         {{ money(entry.amount_paid_minor, payment.currency) }} ·
                         {{ dateTime(entry.completed_at) }}
                     </p>
+                </CardContent>
+            </Card>
+
+            <Card v-if="payment.receipt?.payments.some((entry) => entry.delivery)" data-testid="payment-delivery">
+                <CardHeader><CardTitle>Delivery to destination</CardTitle></CardHeader>
+                <CardContent class="space-y-3">
+                    <p class="text-sm text-muted-foreground">Your payments are recorded. Delivery status is tracked separately.</p>
+                    <template v-for="entry in payment.receipt.payments" :key="entry.receipt_reference">
+                        <div v-if="entry.delivery" class="text-sm">
+                            <p>Payment {{ entry.collection_number }} · {{ entry.delivery.account }}</p>
+                            <p role="status">{{ entry.delivery.status === 'delivered' ? 'Delivered to destination' : entry.delivery.status === 'review' ? 'Delivery needs review. Your payment remains recorded.' : 'Delivery pending. This page updates automatically.' }}</p>
+                        </div>
+                    </template>
                 </CardContent>
             </Card>
 

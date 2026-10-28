@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services\Payment;
 
 use Illuminate\Support\Collection;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherCollection;
 
 final class PaymentReceiptReadModel
@@ -18,6 +19,7 @@ final class PaymentReceiptReadModel
      *     completed_at: ?string,
      *     payments: list<array{
      *         collection_number: int,
+     *         delivery: array{status: string, account: ?string, bank_code: ?string}|null,
      *         amount_paid_minor: int,
      *         provider: string,
      *         receipt_reference: string,
@@ -33,6 +35,11 @@ final class PaymentReceiptReadModel
             return null;
         }
 
+        $references = $collections->map(fn (VoucherCollection $collection): ?string => data_get($collection->meta, 'posting.payout_reference'))->filter()->values();
+        $payouts = DisbursementReconciliation::query()
+            ->where('voucher_id', $voucher->getKey())->where('claim_type', 'value_flow')
+            ->whereIn('provider_reference', $references)->get()->keyBy('provider_reference');
+
         $latest = $collections
             ->sortByDesc(fn (VoucherCollection $collection): int => $collection->completed_at?->getTimestamp() ?? 0)
             ->first();
@@ -47,6 +54,7 @@ final class PaymentReceiptReadModel
             'payments' => $collections
                 ->map(fn (VoucherCollection $collection): array => [
                     'collection_number' => (int) $collection->collection_number,
+                    'delivery' => $this->delivery($payouts->get(data_get($collection->meta, 'posting.payout_reference')), filled(data_get($collection->meta, 'posting.payout_reference'))),
                     'amount_paid_minor' => (int) data_get($collection->meta, 'gross_amount_minor', $collection->collected_amount_minor),
                     'principal_paid_minor' => (int) $collection->collected_amount_minor,
                     'fee_paid_minor' => (int) data_get($collection->meta, 'fee_amount_minor', 0),
@@ -61,6 +69,22 @@ final class PaymentReceiptReadModel
                 ->values()
                 ->all(),
         ];
+    }
+
+    /** @return array{status: string, account: ?string, bank_code: ?string}|null */
+    private function delivery(?DisbursementReconciliation $payout, bool $expected): ?array
+    {
+        if (! $expected) {
+            return null;
+        }
+        $status = match (true) {
+            $payout === null => 'review',
+            $payout->status === 'succeeded' && $payout->internal_status === 'finalized' => 'delivered',
+            $payout->needs_review || in_array($payout->status, ['failed', 'unknown'], true) => 'review',
+            default => 'pending',
+        };
+
+        return ['status' => $status, 'account' => $payout?->account_number_masked, 'bank_code' => $payout?->bank_code];
     }
 
     /**

@@ -99,3 +99,23 @@ it('registers package-owned pending disbursement reconciliation every minute', f
         ->and($event->expiresAt)->toBe(5)
         ->and($event->command)->toContain('xchange:reconcile:pending --limit=50');
 });
+
+it('limits status-only reconciliation to the requested voucher and never submits intents', function (): void {
+    foreach ([['CHOSEN', 'pending'], ['OTHER', 'pending'], ['CHOSEN', 'intent']] as [$code, $status]) {
+        DisbursementReconciliation::query()->create([
+            'voucher_id' => 10, 'voucher_code' => $code, 'claim_type' => 'value_flow',
+            'provider' => 'netbank', 'provider_reference' => $code.$status,
+            'provider_transaction_id' => $status === 'pending' ? $code : null,
+            'status' => $status, 'internal_status' => 'reserved', 'amount' => 30,
+            'currency' => 'PHP', 'attempt_count' => 1, 'needs_review' => false,
+        ]);
+    }
+    $service = Mockery::mock(DisbursementReconciliationContract::class);
+    $service->shouldReceive('reconcile')->once()
+        ->with(Mockery::on(fn ($row) => $row->voucher_code === 'CHOSEN' && $row->status === 'pending'))
+        ->andReturn(['updated' => true, 'resolved_status' => 'succeeded']);
+    app()->instance(DisbursementReconciliationContract::class, $service);
+    $this->artisan('xchange:reconcile:pending', ['--voucher' => 'chosen', '--status-only' => true])
+        ->expectsOutput('Processed: 1')->assertSuccessful();
+    expect(DisbursementReconciliation::query()->where('status', 'intent')->count())->toBe(1);
+});

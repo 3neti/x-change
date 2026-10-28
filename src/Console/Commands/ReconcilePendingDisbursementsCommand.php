@@ -13,6 +13,9 @@ class ReconcilePendingDisbursementsCommand extends Command
 {
     protected $signature = 'xchange:reconcile:pending
         {--limit=50 : Maximum number of records to process}
+        {--voucher= : Restrict reconciliation to one Pay Code}
+        {--id= : Restrict reconciliation to one record}
+        {--status-only : Only query existing provider transfers; never submit payouts}
         {--json : Output JSON}
         {--pretty : Pretty-print JSON output}';
 
@@ -23,6 +26,9 @@ class ReconcilePendingDisbursementsCommand extends Command
         $limit = max(1, (int) $this->option('limit'));
 
         $rows = DisbursementReconciliation::query()
+            ->when($this->option('voucher') !== null, fn ($query) => $query->where('voucher_code', strtoupper(trim((string) $this->option('voucher')))))
+            ->when($this->option('id') !== null, fn ($query) => $query->whereKey((int) $this->option('id')))
+            ->when($this->option('status-only'), fn ($query) => $query->whereNotNull('provider_transaction_id')->whereNotIn('status', ['intent', 'failed']))
             ->where(function ($query) {
                 $query->where(function ($query): void {
                     $query->where('claim_type', 'value_flow')->where(function ($query): void {
