@@ -277,6 +277,8 @@ describe('claim Success redirect countdown rendering', () => {
         expect(
             wrapper.find('[data-testid="provider-payout-pending-region"]').text(),
         ).toContain('Claim accepted · payout pending');
+        expect(wrapper.find('[data-testid="clock-icon"]').exists()).toBe(false);
+        expect(wrapper.get('[data-testid="claim-brand-logo"]').attributes('style')).toContain('height: 5rem');
     });
 
     it('replaces the generic ready rider message while provider payout is pending', () => {

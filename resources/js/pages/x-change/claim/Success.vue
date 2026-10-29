@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
-import { AlertTriangle, CheckCircle2, Clock3 } from 'lucide-vue-next';
+import { AlertTriangle, CheckCircle2 } from 'lucide-vue-next';
 import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
 import RiderRenderer from '@/components/x-rider/RiderRenderer.vue';
 import RiderCountdown from '@/components/x-rider/RiderCountdown.vue';
@@ -271,14 +271,15 @@ const successAction = computed(() => {
     <ClaimStepShell
         :tone="pageTone.isWarning ? 'warning' : 'success'"
         :brand-placement="successPresentation ? 'center' : 'top_left'"
-        :brand-size="successPresentation ? 'brand' : 'header'"
+        brand-size="display"
         :show-theme-picker="false"
         :width="successPresentation ? 'lg' : 'md'"
     >
         <div class="space-y-8">
             <div class="space-y-4 pt-4 text-center">
                 <component
-                    :is="pageTone.isAttention ? AlertTriangle : pageTone.isPending ? Clock3 : CheckCircle2"
+                    v-if="!pageTone.isPending"
+                    :is="pageTone.isAttention ? AlertTriangle : CheckCircle2"
                     class="mx-auto h-12 w-12"
                     :class="pageTone.iconClass"
                 />
