@@ -107,6 +107,8 @@ import CockpitFeedbackDestinationInput from "./CockpitFeedbackDestinationInput.v
 import CockpitFieldHelp from "./CockpitFieldHelp.vue";
 import CockpitIssuedPayCodeDialog from "./CockpitIssuedPayCodeDialog.vue";
 import CockpitOnDemandIssuanceFundingDialog from "./CockpitOnDemandIssuanceFundingDialog.vue";
+import { useIssuanceProgress } from "../composables/useIssuanceProgress";
+import CockpitIssuanceProgressCard from "./CockpitIssuanceProgressCard.vue";
 import { useClipboard } from "@/composables/useClipboard";
 import CockpitManualCopyButton from "./CockpitManualCopyButton.vue";
 import CockpitPayCodeCanvas from "./CockpitPayCodeCanvas.vue";
@@ -989,15 +991,31 @@ const collectionDestinationError = computed<string | null>(() => {
   );
 });
 
+const issuanceReadyNotice = ref(false);
+const issuanceProgress = useIssuanceProgress(onDemandFundingProjection, {
+  onIssued: handleOnDemandIssued,
+  storageKey: `x-change.issuance-progress:${typeof window === "undefined" ? "" : window.location.pathname}`,
+});
+
+function viewIssuanceProgress(): void {
+  issuanceReadyNotice.value = false;
+  if (onDemandFundingProjection.value?.status === "issued" && onDemandFundingProjection.value.order.voucher) {
+    issuedPayCodeDialogOpen.value = true;
+  } else {
+    issuanceProgress.dismissed.value = false;
+    onDemandFundingDialogOpen.value = true;
+  }
+}
+
 onBeforeMount((): void => {
   initializeStartingPoint();
 
   if (props.activeOnDemandFundingOrder) {
     onDemandFundingProjection.value = props.activeOnDemandFundingOrder;
-    onDemandFundingDialogOpen.value = true;
+    onDemandFundingDialogOpen.value = !issuanceProgress.dismissed.value;
     lastStatus.value = "awaiting_funds";
     lastMessage.value =
-      "Your frozen instruction is still waiting for its exact payment.";
+      props.activeOnDemandFundingOrder.lifecycle.message;
   }
 });
 
@@ -5240,9 +5258,10 @@ async function submit(): Promise<void> {
     if (body.schema === "x-change.cockpit.on-demand-issuance-funding.v1") {
       checkoutDraftToken.value = null;
       checkoutDraftMessage.value = null;
+      issuanceProgress.dismissed.value = false;
+      onDemandFundingDialogOpen.value = true;
       onDemandFundingProjection.value =
         body as CockpitOnDemandIssuanceFundingProjection;
-      onDemandFundingDialogOpen.value = true;
       lastStatus.value = "awaiting_funds";
       lastMessage.value =
         "The instruction is frozen. Complete the exact payment to issue the Pay Code.";
@@ -5361,13 +5380,16 @@ function handleOnDemandIssued(
   lastStatus.value = "issued";
   lastMessage.value = "Payment verified and Pay Code issued.";
   onDemandFundingProjection.value = projection;
+  const showResult = onDemandFundingDialogOpen.value && !issuanceProgress.dismissed.value;
   onDemandFundingDialogOpen.value = false;
-  issuedPayCodeDialogOpen.value = true;
+  issuedPayCodeDialogOpen.value = showResult;
+  issuanceReadyNotice.value = !showResult;
 }
 
 function handleOnDemandClosed(
   projection: CockpitOnDemandIssuanceFundingProjection,
 ): void {
+  issuanceProgress.dismissed.value = true;
   onDemandFundingDialogOpen.value = false;
 
   if (["expired", "cancelled"].includes(projection.status)) {
@@ -5384,7 +5406,7 @@ function handleOnDemandClosed(
 
   lastStatus.value = "awaiting_funds";
   lastMessage.value =
-    "Funding is still active. Payment checking will continue when you resume this window.";
+    "Your order is still active. We’ll keep checking its progress.";
   emit("fundingFlowClosed");
 }
 
@@ -6981,6 +7003,13 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
             </h4>
           </div>
         </div>
+        <CockpitIssuanceProgressCard
+          v-if="onDemandFundingProjection && !onDemandFundingDialogOpen && !issuedPayCodeDialogOpen"
+          :projection="onDemandFundingProjection"
+          :delayed="issuanceProgress.delayed.value"
+          :error="issuanceProgress.error.value"
+          @view="viewIssuanceProgress"
+        />
         <div
           class="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-300"
           data-testid="cockpit-quick-generate-order-mode-row"
@@ -7881,6 +7910,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
     </div>
 
     <CockpitOnDemandIssuanceFundingDialog
+      :tracker="issuanceProgress"
       :open="onDemandFundingDialogOpen"
       :projection="onDemandFundingProjection"
       :stamp-preview="stampPreviewProjection"
@@ -7889,20 +7919,15 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
       @closed="handleOnDemandClosed"
     />
 
-    <button
-      v-if="
-        onDemandFundingProjection &&
-        !onDemandFundingDialogOpen &&
-        onDemandFundingProjection.status !== 'issued'
-      "
-      type="button"
-      class="fixed bottom-5 right-5 z-40 inline-flex min-h-12 items-center gap-2 rounded-full bg-emerald-600 px-5 font-bold text-white shadow-xl hover:bg-emerald-700"
-      data-testid="cockpit-quick-generate-resume-funding"
-      @click="onDemandFundingDialogOpen = true"
-    >
-      <LoaderCircle class="size-4" aria-hidden="true" />
-      Resume funding
-    </button>
+    <Teleport to="body">
+    <div v-if="issuanceReadyNotice && onDemandFundingProjection?.status === 'issued'"
+      class="fixed bottom-5 right-5 z-40 flex max-w-[calc(100vw-2.5rem)] items-center gap-3 rounded-xl border border-emerald-300 bg-white p-4 text-slate-900 shadow-xl dark:border-emerald-800 dark:bg-slate-900 dark:text-slate-100"
+      data-testid="issuance-ready-notice">
+      <span class="text-sm font-semibold">Your Pay Code is ready</span>
+      <button type="button" class="min-h-10 px-2 font-semibold text-emerald-700 dark:text-emerald-300" @click="viewIssuanceProgress">View</button>
+      <button type="button" class="min-h-10 px-2" aria-label="Dismiss notification" @click="issuanceReadyNotice = false"><X class="size-4" /></button>
+    </div>
+    </Teleport>
 
     <CockpitIssuedPayCodeDialog
       :open="issuedPayCodeDialogOpen"
