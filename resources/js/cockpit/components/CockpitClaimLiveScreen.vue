@@ -15,6 +15,10 @@ import {
 } from 'lucide-vue-next';
 import { computed, defineAsyncComponent, type Component } from 'vue';
 import PayCodeLogo from '../../components/x-change/PayCodeLogo.vue';
+import XRayClaimPreview from '../../components/x-change/XRayClaimPreview.vue';
+import ClaimCodeField from '../../components/x-change/ClaimCodeField.vue';
+import { isVerifiedClaimCode } from '../../components/x-change/claimCodeVerification';
+import type { XRayClaimPreviewResult } from '../../components/x-change/xrayClaimPreviewViewModel';
 
 type ClaimPreviewField = {
     key: string;
@@ -24,6 +28,7 @@ type ClaimPreviewField = {
 
 type ClaimPreviewScreen = {
     kind: string;
+    xray?: XRayClaimPreviewResult | null;
     code?: string;
     amount?: string;
     title?: string;
@@ -74,7 +79,7 @@ const actualScreenComponent = computed<Component | null>(() => {
 
 <template>
     <div
-        class="bg-background text-foreground flex h-full min-h-0 flex-col overflow-hidden"
+        class="bg-background text-foreground relative flex h-full min-h-0 flex-col overflow-hidden"
         :class="
             presentation === 'viewport'
                 ? 'w-full'
@@ -99,37 +104,34 @@ const actualScreenComponent = computed<Component | null>(() => {
                 class="from-primary/5 via-background to-background min-h-0 flex-1 overflow-y-auto bg-gradient-to-b px-5 py-8"
             >
                 <div
-                    class="mx-auto flex min-h-full w-full max-w-md flex-col justify-center"
+                    class="mx-auto flex w-full max-w-md flex-col gap-6 pb-28"
                 >
-                    <section
-                        class="border-border/60 bg-card/85 grid w-full gap-6 rounded-lg border p-6 shadow-sm backdrop-blur-sm"
-                    >
-                        <div
-                            class="grid justify-items-center gap-2 text-center"
-                        >
-                            <PayCodeLogo
-                                variant="logo"
-                                class-name="!h-24 !max-h-24 !max-w-24"
-                            />
-                            <h3 class="text-xl font-medium">Claim Pay Code</h3>
-                        </div>
-                        <div class="grid gap-2">
-                            <label class="text-sm font-medium">Pay Code</label>
-                            <div
-                                class="bg-background grid min-h-10 place-items-center rounded-md border px-3 text-center text-lg font-medium tracking-wider"
-                            >
-                                {{ screen.code }}
-                            </div>
-                        </div>
-                        <button
-                            type="button"
-                            tabindex="-1"
-                            class="bg-primary text-primary-foreground min-h-10 rounded-full px-4 text-sm font-medium"
-                        >
-                            Continue
-                        </button>
-                    </section>
+                    <div class="grid justify-items-center gap-2 text-center">
+                        <PayCodeLogo
+                            variant="logo"
+                            class-name="!h-24 !max-h-24 !max-w-24"
+                        />
+                        <h3 class="text-xl font-medium">{{ screen.xray?.presentation?.title || screen.title }}</h3>
+                    </div>
+                    <ClaimCodeField
+                        id="preview-claim-code"
+                        label="Pay Code"
+                        :model-value="screen.code ?? ''"
+                        :verified="isVerifiedClaimCode(screen.xray, screen.code ?? '')"
+                        readonly
+                    />
+                    <XRayClaimPreview
+                        v-if="screen.xray"
+                        :result="screen.xray"
+                        compact
+                        data-testid="cockpit-claim-entry-xray"
+                    />
                 </div>
+            </div>
+            <div class="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-background via-background/95 to-transparent px-4 pb-4 pt-5">
+                <button type="button" tabindex="-1" class="bg-primary text-primary-foreground mx-auto block min-h-14 w-full max-w-md rounded-2xl text-base font-bold shadow-lg shadow-foreground/20">
+                    Continue
+                </button>
             </div>
         </template>
 

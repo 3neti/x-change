@@ -1,4 +1,22 @@
 import type { Component } from 'vue';
+
+export interface XRayClaimPreviewResult {
+    visible?: boolean;
+    status?: string | null;
+    disclosures?: Array<{ key: string; label?: string | null; value?: unknown }>;
+    requirements?: Array<{ key: string; label?: string | null; description?: string | null }>;
+    stages?: Array<{
+        type?: string | null;
+        key?: string | null;
+        payload?: Record<string, unknown> | null;
+        message?: string | null;
+        body?: string | null;
+        title?: string | null;
+    }>;
+    redactions?: Record<string, unknown>[];
+    warnings?: string[];
+    presentation?: { title?: string | null };
+}
 import {
     AlertCircle,
     Calendar,

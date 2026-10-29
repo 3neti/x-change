@@ -27,6 +27,7 @@ final class ClaimExperiencePreviewService
         private readonly ClaimPreviewVoucherIssuer $previewVouchersIssuer,
         private readonly ClaimPreviewJourneyManifestFactory $journeys,
         private readonly ClaimPreviewVoucherDisposer $previewVouchers,
+        private readonly ClaimPreviewXRaySnapshot $xraySnapshots,
         private readonly VoucherClaimFlowCompiler $claimFlows,
         private readonly FormFlowPreviewCompiler $formFlowPreviews,
         private readonly ClaimWorkflowReadModelProjector $workflowReadModel,
@@ -50,7 +51,7 @@ final class ClaimExperiencePreviewService
             'storage_scope' => $options->storageScope,
             'profile' => $options->profile,
             'dry_run' => $options->dryRun,
-            'render_mode' => 'compiled_claim_screen_v3',
+            'render_mode' => 'compiled_claim_screen_v4',
             'submit_claim' => false,
             'mobile' => $options->mobile,
             'bank_code' => $options->bankCode,
@@ -90,6 +91,7 @@ final class ClaimExperiencePreviewService
             $previewVoucherId = $issued['voucher_id'] ?? null;
             $payCode = (string) $issued['code'];
             $previewVoucher = Voucher::query()->findOrFail($previewVoucherId);
+            $xray = $this->xraySnapshots->forGuest($previewVoucher);
             $workflow = $this->workflowReadModel->project($previewVoucher);
             $simulation = $this->progressPresentations->project(
                 $workflow,
@@ -138,6 +140,7 @@ final class ClaimExperiencePreviewService
                 $screens,
                 $simulation,
                 $presentation,
+                $xray,
             );
             $journey['presentation'] = $presentation;
             $artifact = $this->cache->rememberRendered(

@@ -1,14 +1,15 @@
 <script setup lang="ts">
+import '@/experience/claim-midnight.css';
 import InputError from '@/components/InputError.vue';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import VoucherStatusStamp from '@/components/x-change/VoucherStatusStamp.vue';
 import RiderRuntimeSequencer from '@/components/x-rider/RiderRuntimeSequencer.vue';
 import XRayClaimPreview from '@/components/x-change/XRayClaimPreview.vue';
+import ClaimCodeField from '@/components/x-change/ClaimCodeField.vue';
+import { isVerifiedClaimCode } from '@/components/x-change/claimCodeVerification';
 import ClaimSurfaceRenderer from '@/components/x-change/ClaimSurfaceRenderer.vue';
 import type { ClaimSurfaceLike } from '@/components/x-change/ClaimSurfaceRenderer.vue';
 import type { RawRiderStage } from '@/components/x-rider/types';
@@ -72,7 +73,6 @@ onMounted(() => {
     }
 });
 
-const voucherInput = ref<HTMLInputElement | null>(null);
 const submitButton = ref<HTMLButtonElement | null>(null);
 const reactiveClaimExperience = ref<Record<string, unknown> | null>(
     props.claimExperience ?? null,
@@ -142,6 +142,7 @@ const serverResolvedXRay = computed<Record<string, unknown> | null>(() => {
 const resolvedXRay = computed<Record<string, unknown> | null>(
     () => serverResolvedXRay.value ?? xrayResult.value,
 );
+const verifiedCode = computed(() => isVerifiedClaimCode(resolvedXRay.value, normalizedCode.value));
 
 const xrayPresentation = computed<XRayClaimPresentation>(() => {
     const presentation = resolvedXRay.value?.presentation;
@@ -504,7 +505,7 @@ watch(
             return;
         }
 
-        if (voucher.status === 'redeemed' || voucher.status === 'expired') {
+        if (voucher.status === 'redeemed' || voucher.status === 'expired' || voucher.status === 'cancelled') {
             reactiveClaimExperience.value = null;
             void fetchXRay(voucherCode);
 
@@ -519,7 +520,10 @@ watch(
 </script>
 
 <template>
-    <div class="flex flex-col gap-6">
+    <div
+        class="flex flex-col gap-6"
+        :class="!previewViewModel.isNonActive && !surfaceTakesOver ? 'pb-28' : ''"
+    >
         <Head :title="claimTitle" />
 
         <!-- Viewer-aware claim surface: issuer console takes over entirely
@@ -546,15 +550,12 @@ watch(
             class="space-y-6"
         >
             <div class="flex flex-col gap-2">
-                <Label for="code">{{ claimCodeLabel }}</Label>
-                <Input
+                <ClaimCodeField
                     id="code"
                     v-model="code"
-                    placeholder="Enter pay code"
-                    required
+                    :label="claimCodeLabel"
+                    :verified="verifiedCode"
                     autofocus
-                    ref="voucherInput"
-                    class="text-center text-lg tracking-wider"
                 />
                 <InputError :message="errors.code" class="mt-1" />
             </div>
@@ -562,15 +563,13 @@ watch(
             <Button
                 ref="submitButton"
                 type="submit"
-                class="fixed inset-x-4 z-30 mx-auto h-11 w-auto max-w-md rounded-full shadow-lg shadow-foreground/10 sm:static sm:inset-auto sm:w-full sm:max-w-none sm:shadow-none"
+                class="fixed inset-x-4 z-30 mx-auto h-14 w-auto max-w-md rounded-2xl text-base font-bold shadow-lg shadow-foreground/20"
                 style="bottom: max(0.2in, calc(env(safe-area-inset-bottom) + 1rem)); margin-bottom: 0"
                 data-testid="claim-widget-submit-button"
                 :disabled="submitViewModel.disabled"
             >
                 {{ submitViewModel.label }}
             </Button>
-
-            <div class="h-24 shrink-0 sm:hidden" aria-hidden="true" />
 
             <p
                 v-if="claimExperienceLoading"
@@ -595,6 +594,7 @@ watch(
             :loading="xrayLoading && !resolvedXRay"
             :error="xrayError"
             :hide-slice-plan="hasSliceSelector"
+            compact
             data-testid="claim-widget-server-xray"
         />
 
@@ -639,7 +639,7 @@ watch(
             <!-- Non-Active State: Stamp + Rider Content -->
             <div v-else-if="previewMode === 'non-active'" class="space-y-2.5">
                 <VoucherStatusStamp
-                    :status="voucherData.status as 'redeemed' | 'expired'"
+                    :status="voucherData.status as 'redeemed' | 'expired' | 'cancelled'"
                     :status-date="previewViewModel.statusDate"
                     :voucher-code="voucherData.code"
                     :formatted-amount="

@@ -31,6 +31,7 @@ class VoucherXRayProjectionBuilder
         private readonly ClaimWorkflowReadModelProjector $claimWorkflows,
         private readonly CoverageCompletionSuccessPresentation $coverageCompletionSuccess,
         private readonly StampProviderIdentity $providerIdentity,
+        private readonly ClaimValueUseProjection $valueUse,
     ) {}
 
     /**
@@ -114,6 +115,9 @@ class VoucherXRayProjectionBuilder
             'claim_workflow' => $this->claimWorkflowProjection($workflowInterpretation),
             'collection_progress' => $collectionProgress,
             'slice_plan' => $slicePlan,
+            'value_use' => $sliceVoucher instanceof Voucher
+                ? $this->valueUse->forVoucher($sliceVoucher, $slicePlan)
+                : null,
             'remaining_slices' => $sliceVoucher instanceof Voucher
                 ? data_get($slicePlan, 'rows', [])
                 : $this->remainingSlices($instructions),
@@ -124,6 +128,7 @@ class VoucherXRayProjectionBuilder
                 : $this->nextActions($status, (string) data_get($voucher, 'code', ''), $sliceVoucher),
             'allow' => [
                 'amount' => $claimable,
+                'value_use' => $claimable,
                 'issuer' => $claimable && $issuerName !== '',
                 'funding_source' => $claimable && $provider !== null,
                 'provider' => $claimable && $provider !== null,
@@ -144,7 +149,7 @@ class VoucherXRayProjectionBuilder
         $versions = [];
 
         if ((bool) config('x-change.claim.experience_ui.show_package_versions', false)) {
-            foreach (['3neti/x-change' => 'x_change_version', '3neti/form-flow' => 'form_flow_version'] as $package => $key) {
+            foreach (['3neti/x-change' => 'x_change_version', '3neti/form-flow' => 'form_flow_version', '3neti/x-ray' => 'x_ray_version'] as $package => $key) {
                 if (InstalledVersions::isInstalled($package)) {
                     $versions[$key] = InstalledVersions::getPrettyVersion($package);
                 }
@@ -156,6 +161,7 @@ class VoucherXRayProjectionBuilder
             'host_version' => $versions !== [] ? config('app.version') : null,
             ...$versions,
             'publisher' => config('x-change.claim.experience_ui.system_info.publisher', '3neti'),
+            'authors' => config('x-change.claim.experience_ui.system_info.authors', []),
             'contributors' => config('x-change.claim.experience_ui.system_info.contributors', []),
         ], static fn (mixed $value): bool => $value !== null && $value !== '' && $value !== []);
     }

@@ -57,17 +57,22 @@
 
 :root[data-x-change-claim-appearance='dark']
     [data-testid='claim-widget-submit-button'] {
-    position: static;
-    width: 100%;
-    min-height: 3.375rem;
+    min-height: 3.5rem;
     margin-top: 2rem;
     border-radius: 0.875rem;
 }
 
-:root[data-x-change-claim-appearance='dark']
-    [data-testid='claim-widget-submit-button']
-    + [aria-hidden='true'] {
-    display: none;
+:root[data-x-change-claim-appearance] body
+    [data-testid='claim-widget-submit-button'] {
+    position: fixed;
+    inset-inline: 1rem;
+    bottom: max(0.2in, calc(env(safe-area-inset-bottom) + 1rem));
+    width: auto;
+    margin-top: 0;
+}
+
+:root[data-x-change-claim-appearance] {
+    scroll-padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
 }
 
 [data-form-flow-profile='guided-claim-v1'] {

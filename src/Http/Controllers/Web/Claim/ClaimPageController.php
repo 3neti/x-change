@@ -148,7 +148,9 @@ class ClaimPageController extends Controller
     ): Response {
         return $responses->render(
             initialCode: $code,
-            claimExperience: ResolveClaimExperience::run($voucher)->toArray(),
+            claimExperience: in_array($surface->state->key, ['cancelled', 'expired'], true)
+                ? null
+                : ResolveClaimExperience::run($voucher)->toArray(),
             provisioningRequirement: null,
             shareMetadata: $shareMetadata->resolve(
                 $voucher,

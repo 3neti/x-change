@@ -18,6 +18,7 @@ final class ClaimPreviewJourneyManifestFactory
     /**
      * @param  array<string, mixed>  $report
      * @param  array<string, mixed>  $scenario
+     * @param  array<string, mixed>  $xray
      * @return array<string, mixed>
      */
     public function fromReport(
@@ -26,6 +27,7 @@ final class ClaimPreviewJourneyManifestFactory
         array $formFlowScreens = [],
         array $simulation = [],
         array $presentation = [],
+        array $xray = [],
     ): array {
         $canonical = $this->canonicalSteps($scenario);
         $storyboard = $this->storyboard($report);
@@ -39,7 +41,7 @@ final class ClaimPreviewJourneyManifestFactory
         $root = $this->artifactRoot($report);
 
         $steps = collect($canonical)
-            ->map(function (array $step, int $index) use ($captured, $root, $scenario): array {
+            ->map(function (array $step, int $index) use ($captured, $root, $scenario, $xray): array {
                 $checkpoint = $captured->get($step['key']);
 
                 return $this->step(
@@ -48,6 +50,7 @@ final class ClaimPreviewJourneyManifestFactory
                     checkpoint: is_array($checkpoint) ? $checkpoint : null,
                     root: $root,
                     scenario: $scenario,
+                    xray: $xray,
                 );
             })
             ->values()
@@ -270,6 +273,7 @@ final class ClaimPreviewJourneyManifestFactory
     /**
      * @param  array<string, mixed>  $step
      * @param  array<string, mixed>|null  $checkpoint
+     * @param  array<string, mixed>  $xray
      * @return array<string, mixed>
      */
     private function step(
@@ -278,6 +282,7 @@ final class ClaimPreviewJourneyManifestFactory
         ?array $checkpoint,
         ?string $root,
         array $scenario,
+        array $xray,
     ): array {
         $frame = $checkpoint === null
             ? null
@@ -289,16 +294,17 @@ final class ClaimPreviewJourneyManifestFactory
             'render_kind' => $frame === null ? 'live_screen' : 'captured_frame',
             'status' => $frame === null ? 'rendered' : 'captured',
             'frame' => $frame,
-            'screen' => $frame === null ? $this->screen($step, $scenario) : null,
+            'screen' => $frame === null ? $this->screen($step, $scenario, $xray) : null,
         ];
     }
 
     /**
      * @param  array<string, mixed>  $step
      * @param  array<string, mixed>  $scenario
+     * @param  array<string, mixed>  $xray
      * @return array<string, mixed>
      */
-    private function screen(array $step, array $scenario): array
+    private function screen(array $step, array $scenario, array $xray): array
     {
         $key = (string) ($step['key'] ?? '');
         $fixture = (array) data_get($scenario, 'fixture', []);
@@ -312,6 +318,7 @@ final class ClaimPreviewJourneyManifestFactory
 
         return [
             'kind' => $this->screenKind($key, $validation),
+            'xray' => $key === 'claim-entry' ? $xray : null,
             'code' => self::SampleCode,
             'amount' => $formattedAmount,
             'title' => $this->screenTitle($key, $validation),

@@ -57,6 +57,62 @@ vi.mock('lucide-vue-next', () => ({
 }));
 
 describe('XRayClaimPreview', () => {
+    it.each([
+        [{ mode: 'whole', amount_basis: 'whole', amount_minor: 2_500 }, 'Amount available in one claim', '₱25.00'],
+        [{ mode: 'flexible', amount_basis: 'remaining', amount_minor: 3_500, minimum_minor: 500, claims_remaining: 2 }, 'Remaining balance', 'Minimum ₱5.00 · 2 claims remaining'],
+        [{ mode: 'equal', amount_basis: 'available_now', amount_minor: 2_500, portion_number: 2, portion_count: 4 }, 'Available now', 'Portion 2 of 4'],
+        [{ mode: 'scheduled', amount_basis: 'next_available', amount_minor: 4_000, portion_number: 1, portion_count: 2, available_at: '2026-11-01T08:00:00+08:00' }, 'Next available amount', 'Nov 1, 2026'],
+        [{ mode: 'stored_value', amount_basis: 'starting', amount_minor: 10_000, collection_terms: { amount: 'collector_sets_amount', otp_above_minor: 5_000 } }, 'Starting balance', 'Collector sets the amount · OTP may be required above ₱50.00'],
+    ])('shows the %s value use without treating face value as current claim amount', (valueUse, label, detail) => {
+        const wrapper = mount(XRayClaimPreview, {
+            props: {
+                result: {
+                    visible: true,
+                    status: 'claimable',
+                    disclosures: [
+                        { key: 'amount', value: '₱100.00' },
+                        { key: 'value_use', value: valueUse },
+                    ],
+                },
+            },
+        });
+
+        const card = wrapper.get('[data-testid="xray-claim-amount"]').text();
+        expect(card).toContain(label);
+        expect(card).toContain(detail);
+        if (valueUse.amount_minor !== 10_000) expect(card).not.toContain('₱100.00');
+    });
+
+    it('keeps the claim summary visible while details expand on request', async () => {
+        const wrapper = mount(XRayClaimPreview, {
+            props: {
+                compact: true,
+                result: {
+                    visible: true,
+                    status: 'claimable',
+                    disclosures: [{ key: 'amount', value: '₱50.00' }],
+                    requirements: [
+                        { key: 'mobile', label: 'Mobile number' },
+                        { key: 'location', label: 'Location' },
+                        { key: 'selfie', label: 'Selfie' },
+                        { key: 'signature', label: 'Signature' },
+                    ],
+                },
+            },
+        });
+
+        expect(wrapper.get('[data-testid="xray-claim-amount"]').text()).toContain('₱50.00');
+        expect(wrapper.get('[data-testid="xray-requirements-summary"]').text()).toContain('Mobile number · Location · Selfie · +1 more');
+        expect(wrapper.get('[data-testid="xray-requirements-toggle"]').attributes('aria-expanded')).toBe('false');
+        expect((wrapper.get('#xray-instructions-panel').element as HTMLElement).style.display).toBe('none');
+
+        await wrapper.get('[data-testid="xray-requirements-toggle"]').trigger('click');
+
+        expect(wrapper.get('[data-testid="xray-requirements-toggle"]').attributes('aria-expanded')).toBe('true');
+        expect((wrapper.get('#xray-instructions-panel').element as HTMLElement).style.display).toBe('');
+        expect(wrapper.get('[data-testid="xray-required-inputs"]').text()).toContain('Signature');
+    });
+
     it('presents disclosed money details and service information in separate tabs', async () => {
         const wrapper = mount(XRayClaimPreview, {
             props: {
@@ -69,7 +125,7 @@ describe('XRayClaimPreview', () => {
                         { key: 'expires_at', value: '2026-10-29T08:33:00+08:00' },
                         { key: 'issuer', label: 'Issuer', value: 'Amelia Cruz' },
                         { key: 'provider', label: 'Payout provider', value: 'NetBank' },
-                        { key: 'service_info', value: { host_name: 'x-change', publisher: '3neti', x_change_version: 'v1.1.2' } },
+                        { key: 'service_info', value: { host_name: 'x-change', publisher: '3neti', authors: ['Ada', 'Anaïs'], x_change_version: 'v1.1.2', x_ray_version: 'v1.0.3' } },
                     ],
                     requirements: [{ key: 'mobile', label: 'Mobile' }],
                 },
@@ -77,7 +133,7 @@ describe('XRayClaimPreview', () => {
         });
 
         expect(wrapper.get('[data-testid="xray-claim-amount"]').text()).toContain('₱50.00');
-        expect(wrapper.get('[data-testid="xray-claim-amount"]').text()).toContain('|| JK33 ||');
+        expect(wrapper.get('[data-testid="xray-claim-amount"]').text()).not.toContain('JK33');
         expect(wrapper.get('[data-testid="xray-validity"]').text()).toContain('Expires on');
         expect(wrapper.get('[data-testid="xray-required-inputs"]').text()).toContain('Mobile number');
         expect(wrapper.get('#xray-instructions-panel').isVisible()).toBe(true);
@@ -90,6 +146,10 @@ describe('XRayClaimPreview', () => {
         expect(wrapper.get('#xray-system-info-panel').text()).toContain('Amelia Cruz');
         expect(wrapper.get('#xray-system-info-panel').text()).toContain('NetBank');
         expect(wrapper.get('#xray-system-info-panel').text()).toContain('3neti');
+        expect(wrapper.get('#xray-system-info-panel').text()).toContain('x-ray');
+        expect(wrapper.get('#xray-system-info-panel').text()).toContain('v1.0.3');
+        expect(wrapper.get('#xray-system-info-panel').findAll('dt').map((row) => row.text()).slice(-2)).toEqual(['Publisher', 'Authors']);
+        expect(wrapper.get('#xray-system-info-panel').findAll('dt').map((row) => row.text())).not.toContain('Pay Code');
         expect(wrapper.get('#xray-instructions-panel').attributes('style')).toContain('display: none');
     });
 
@@ -117,6 +177,25 @@ describe('XRayClaimPreview', () => {
         // The raw status disclosure row is redundant with the friendly badge
         // above and should not be dumped verbatim.
         expect(wrapper.text()).not.toContain('claimable');
+    });
+
+    it('uses existing contributor names as Authors when older service data has no authors field', async () => {
+        const wrapper = mount(XRayClaimPreview, {
+            props: {
+                result: {
+                    visible: true,
+                    status: 'claimable',
+                    disclosures: [
+                        { key: 'service_info', value: { publisher: '3neti', contributors: ['Ada'] } },
+                    ],
+                },
+            },
+        });
+
+        await wrapper.get('#xray-system-info-tab').trigger('click');
+
+        expect(wrapper.get('#xray-system-info-panel').text()).toContain('Authors');
+        expect(wrapper.get('[data-testid="xray-current-author"]').text()).toBe('Ada');
     });
 
     it('renders friendly status labels for every claimability state', () => {

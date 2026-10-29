@@ -1,3 +1,5 @@
+import type { XRayClaimPreviewResult } from "../components/x-change/xrayClaimPreviewViewModel";
+
 export type CockpitNavigationGroup = "primary" | "secondary";
 
 export type CockpitNavigationItem = {
@@ -1725,6 +1727,7 @@ export type CockpitClaimExperiencePreviewStep = {
   frame: CockpitClaimExperiencePreviewFrame | null;
   screen: {
     kind: string;
+    xray?: XRayClaimPreviewResult | null;
     code?: string;
     amount?: string;
     title?: string;

@@ -4,48 +4,21 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertCircle, Clock } from 'lucide-vue-next';
+import XRayAuthorsTicker from '@/components/x-change/XRayAuthorsTicker.vue';
 import {
     resolveXRayRequirementViewModel,
     resolveXRayStatusViewModel,
 } from '@/components/x-change/xrayClaimPreviewViewModel';
-
-interface XRayDisclosure {
-    key: string;
-    label?: string | null;
-    value?: unknown;
-}
-
-interface XRayRequirement {
-    key: string;
-    label?: string | null;
-    description?: string | null;
-}
-
-interface XRayStage {
-    type?: string | null;
-    key?: string | null;
-    payload?: Record<string, unknown> | null;
-    message?: string | null;
-    body?: string | null;
-    title?: string | null;
-}
-
-interface XRayResult {
-    visible?: boolean;
-    status?: string | null;
-    disclosures?: XRayDisclosure[];
-    requirements?: XRayRequirement[];
-    stages?: XRayStage[];
-    redactions?: Record<string, unknown>[];
-    warnings?: string[];
-}
+import type { XRayClaimPreviewResult } from '@/components/x-change/xrayClaimPreviewViewModel';
 
 interface XRayServiceInfo {
     host_name?: string;
     host_version?: string;
     x_change_version?: string;
     form_flow_version?: string;
+    x_ray_version?: string;
     publisher?: string;
+    authors?: string[];
     contributors?: string[];
 }
 
@@ -63,28 +36,83 @@ interface XRaySliceRow {
     is_final_claim?: boolean | null;
 }
 
+interface XRayValueUse {
+    mode: 'whole' | 'flexible' | 'equal' | 'scheduled' | 'stored_value';
+    amount_basis: 'whole' | 'remaining' | 'available_now' | 'next_available' | 'starting' | 'unavailable';
+    amount_minor?: number | null;
+    minimum_minor?: number;
+    claims_remaining?: number;
+    portion_number?: number;
+    portion_count?: number;
+    available_at?: string;
+    collection_terms?: { amount: string; otp_above_minor?: number };
+}
+
 const props = withDefaults(defineProps<{
-    result?: XRayResult | null;
+    result?: XRayClaimPreviewResult | null;
     loading?: boolean;
     error?: string | null;
     hideSlicePlan?: boolean;
+    compact?: boolean;
 }>(), {
     hideSlicePlan: false,
+    compact: false,
 });
 const activeTab = ref<'instructions' | 'system-info'>('instructions');
+const expanded = ref(!props.compact);
 function switchTab(tab: 'instructions' | 'system-info', event: KeyboardEvent): void {
     activeTab.value = tab;
     const target = event.currentTarget as HTMLElement;
     target.parentElement?.querySelector<HTMLElement>(`#xray-${tab}-tab`)?.focus();
 }
-const disclosure = (key: string): XRayDisclosure | undefined =>
+const disclosure = (key: string): NonNullable<XRayClaimPreviewResult['disclosures']>[number] | undefined =>
     props.result?.disclosures?.find((item) => item.key === key);
 const amount = computed(() => disclosure('amount')?.value);
+const valueUse = computed<XRayValueUse | null>(() => {
+    const value = disclosure('value_use')?.value;
+    return value && typeof value === 'object' && !Array.isArray(value) && 'mode' in value
+        ? value as XRayValueUse
+        : null;
+});
+const valueUseLabel = computed(() => {
+    const value = valueUse.value;
+    if (!value) return 'Pay Code value';
+    if (value.amount_basis === 'unavailable') return 'Balance unavailable';
+    if (value.mode === 'whole') return 'Amount available in one claim';
+    if (value.mode === 'flexible') return 'Remaining balance';
+    if (value.mode === 'stored_value') return value.amount_basis === 'starting' ? 'Starting balance' : 'Remaining balance';
+    return value.amount_basis === 'next_available' ? 'Next available amount' : 'Available now';
+});
+const valueUseAmount = computed(() => {
+    const value = valueUse.value;
+    if (!value) return amount.value;
+    return typeof value.amount_minor === 'number' ? formatSliceAmount(value.amount_minor) : null;
+});
+const valueUseDetails = computed(() => {
+    const value = valueUse.value;
+    if (!value) return [];
+    const details: string[] = [];
+    if (value.mode === 'flexible') {
+        if (typeof value.minimum_minor === 'number') details.push(`Minimum ${formatSliceAmount(value.minimum_minor)}`);
+        if (typeof value.claims_remaining === 'number') details.push(`${value.claims_remaining} claims remaining`);
+    }
+    if (['equal', 'scheduled'].includes(value.mode) && value.portion_number) {
+        details.push(`Portion ${value.portion_number}${value.portion_count ? ` of ${value.portion_count}` : ''}`);
+    }
+    if (value.available_at && value.amount_basis === 'next_available') {
+        const date = new Date(value.available_at);
+        if (!Number.isNaN(date.getTime())) details.push(new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeZone: 'Asia/Manila' }).format(date));
+    }
+    if (value.mode === 'stored_value') {
+        details.push('Collector sets the amount');
+        if (value.collection_terms?.otp_above_minor) details.push(`OTP may be required above ${formatSliceAmount(value.collection_terms.otp_above_minor)}`);
+    }
+    return details;
+});
 const expiresAt = computed(() => disclosure('expires_at')?.value);
-const payCodeReference = computed(() => disclosure('reference')?.value);
 const systemDisclosures = computed(() =>
     (props.result?.disclosures ?? []).filter((item) =>
-        ['issuer', 'funding_source', 'provider', 'issued_at', 'reference'].includes(item.key),
+        ['issuer', 'funding_source', 'provider', 'issued_at'].includes(item.key),
     ),
 );
 const serviceInfo = computed<XRayServiceInfo | null>(() => {
@@ -101,10 +129,17 @@ const serviceRows = computed(() => {
         ['Application version', info.host_version],
         ['x-change', info.x_change_version],
         ['form-flow', info.form_flow_version],
+        ['x-ray', info.x_ray_version],
         ['Publisher', info.publisher],
-        ['Contributors', info.contributors?.join(', ')],
     ];
     return rows.filter((row): row is [string, string] => Boolean(row[1]));
+});
+const authors = computed(() => {
+    const names = serviceInfo.value?.authors?.length
+        ? serviceInfo.value.authors
+        : serviceInfo.value?.contributors ?? [];
+
+    return names.filter((name): name is string => typeof name === 'string' && name.trim() !== '');
 });
 
 // This is the redeemer-facing "Pay Code preview" panel. It is presentational
@@ -132,6 +167,16 @@ const inputRequirements = computed(() =>
         !['assigned_mobile', 'secret', 'passcode'].includes(item.key),
     ),
 );
+const requirementSummary = computed(() => {
+    if (requirements.value.length === 0) {
+        return 'No additional information required';
+    }
+
+    const labels = requirements.value.slice(0, 3).map((item) => item.label);
+    const remaining = requirements.value.length - labels.length;
+
+    return `${labels.join(' · ')}${remaining > 0 ? ` · +${remaining} more` : ''}`;
+});
 const formattedExpiry = computed(() => {
     if (!expiresAt.value) return null;
 
@@ -149,7 +194,7 @@ const formattedExpiry = computed(() => {
 // is already shown in the friendly header above.
 const extraDisclosures = computed(() =>
     (props.result?.disclosures ?? []).filter(
-        (item) => !['status', 'remaining_slices', 'amount', 'issuer', 'funding_source', 'provider', 'issued_at', 'expires_at', 'reference', 'service_info'].includes(item.key),
+        (item) => !['status', 'remaining_slices', 'amount', 'value_use', 'issuer', 'funding_source', 'provider', 'issued_at', 'expires_at', 'reference', 'service_info'].includes(item.key),
     ),
 );
 const sliceRows = computed<XRaySliceRow[]>(() => {
@@ -207,7 +252,7 @@ const headingLabel = computed(() =>
 );
 const showStatusBadge = computed(() => !isPlainClaimable.value);
 
-function stageText(stage: XRayStage): string {
+function stageText(stage: NonNullable<XRayClaimPreviewResult['stages']>[number]): string {
     const payload = stage.payload ?? {};
     const raw = String(
         payload.message ??
@@ -280,20 +325,36 @@ function stageText(stage: XRayStage): string {
                         {{ status.description }}
                     </p>
 
-                    <div v-if="amount" class="rounded-xl border border-primary/15 bg-primary/5 p-4" data-testid="xray-claim-amount">
+                    <div v-if="valueUse || amount" class="rounded-xl border border-primary/15 bg-primary/5 p-4" data-testid="xray-claim-amount">
                         <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                            <span>You can claim</span>
-                            <span v-if="payCodeReference" class="whitespace-nowrap font-mono">|| {{ payCodeReference }} ||</span>
+                            <span>{{ valueUseLabel }}</span>
                         </div>
-                        <p class="mt-1 text-2xl font-bold tabular-nums text-foreground">{{ amount }}</p>
+                        <p v-if="valueUseAmount" class="mt-1 text-2xl font-bold tabular-nums text-foreground">{{ valueUseAmount }}</p>
+                        <p v-if="valueUseDetails.length" class="mt-1 text-xs text-muted-foreground">{{ valueUseDetails.join(' · ') }}</p>
                     </div>
 
-                    <div class="grid grid-cols-2 rounded-lg bg-muted/50 p-1" role="tablist" aria-label="Pay Code details">
+                    <button
+                        v-if="compact"
+                        type="button"
+                        class="w-full rounded-xl border p-3 text-left transition hover:bg-muted/30 focus-visible:outline-2 focus-visible:outline-primary"
+                        :aria-expanded="expanded"
+                        aria-controls="xray-instructions-panel xray-system-info-panel"
+                        data-testid="xray-requirements-toggle"
+                        @click="expanded = !expanded"
+                    >
+                        <span class="flex items-center justify-between gap-3 text-sm font-semibold text-foreground">
+                            <span>What you'll need</span>
+                            <span class="text-xs text-muted-foreground">{{ expanded ? 'Hide details' : 'Review details' }}</span>
+                        </span>
+                        <span class="mt-1 block text-xs leading-5 text-muted-foreground" data-testid="xray-requirements-summary">{{ requirementSummary }}</span>
+                    </button>
+
+                    <div v-if="!compact || expanded" class="grid grid-cols-2 rounded-lg bg-muted/50 p-1" role="tablist" aria-label="Pay Code details">
                         <button type="button" role="tab" id="xray-instructions-tab" aria-controls="xray-instructions-panel" :aria-selected="activeTab === 'instructions'" :tabindex="activeTab === 'instructions' ? 0 : -1" class="min-h-10 rounded-md px-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary" :class="activeTab === 'instructions' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'" @click="activeTab = 'instructions'" @keydown.right.prevent="switchTab('system-info', $event)" @keydown.left.prevent="switchTab('system-info', $event)">Instructions</button>
                         <button type="button" role="tab" id="xray-system-info-tab" aria-controls="xray-system-info-panel" :aria-selected="activeTab === 'system-info'" :tabindex="activeTab === 'system-info' ? 0 : -1" class="min-h-10 rounded-md px-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary" :class="activeTab === 'system-info' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'" @click="activeTab = 'system-info'" @keydown.right.prevent="switchTab('instructions', $event)" @keydown.left.prevent="switchTab('instructions', $event)">System Info</button>
                     </div>
 
-                    <div v-show="activeTab === 'instructions'" id="xray-instructions-panel" role="tabpanel" aria-labelledby="xray-instructions-tab" class="space-y-4">
+                    <div v-show="(!compact || expanded) && activeTab === 'instructions'" id="xray-instructions-panel" role="tabpanel" aria-labelledby="xray-instructions-tab" class="space-y-4">
 
                     <section v-if="formattedExpiry" class="rounded-xl border p-4" data-testid="xray-validity">
                         <div class="flex items-start gap-3">
@@ -452,19 +513,23 @@ function stageText(stage: XRayStage): string {
                     </div>
                     </div>
 
-                    <div v-show="activeTab === 'system-info'" id="xray-system-info-panel" role="tabpanel" aria-labelledby="xray-system-info-tab" class="space-y-4">
+                    <div v-show="(!compact || expanded) && activeTab === 'system-info'" id="xray-system-info-panel" role="tabpanel" aria-labelledby="xray-system-info-tab" class="space-y-4">
                         <dl v-if="systemDisclosures.length || extraDisclosures.length" class="divide-y rounded-xl border px-4">
                             <div v-for="item in [...systemDisclosures, ...extraDisclosures]" :key="item.key" class="flex items-start justify-between gap-4 py-3 text-sm">
                                 <dt class="text-muted-foreground">{{ item.label || item.key }}</dt>
                                 <dd class="min-w-0 break-words text-right font-medium text-foreground">{{ item.key === 'issued_at' ? new Date(String(item.value)).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : item.value }}</dd>
                             </div>
                         </dl>
-                        <div v-if="serviceRows.length" class="space-y-2">
+                        <div v-if="serviceRows.length || authors.length" class="space-y-2">
                             <p class="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">About this service</p>
                             <dl class="divide-y rounded-xl border px-4">
                                 <div v-for="[label, value] in serviceRows" :key="label" class="flex items-start justify-between gap-4 py-3 text-sm">
                                     <dt class="text-muted-foreground">{{ label }}</dt>
                                     <dd class="min-w-0 break-words text-right font-medium text-foreground">{{ value }}</dd>
+                                </div>
+                                <div v-if="authors.length" class="flex items-start justify-between gap-4 py-3 text-sm">
+                                    <dt class="text-muted-foreground">Authors</dt>
+                                    <XRayAuthorsTicker :authors="authors" :active="activeTab === 'system-info' && (!compact || expanded)" />
                                 </div>
                             </dl>
                         </div>

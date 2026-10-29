@@ -6,9 +6,10 @@ import {
 } from '../../resources/js/components/x-change/claimWidgetVoucherState';
 
 describe('claim widget voucher state helpers', () => {
-    it('identifies redeemed and expired vouchers as non-active', () => {
+    it('identifies redeemed, expired, and cancelled vouchers as non-active', () => {
         expect(isNonActiveVoucher({ status: 'redeemed' })).toBe(true);
         expect(isNonActiveVoucher({ status: 'expired' })).toBe(true);
+        expect(isNonActiveVoucher({ status: 'cancelled' })).toBe(true);
     });
 
     it('does not treat active, missing, or unknown vouchers as non-active', () => {
