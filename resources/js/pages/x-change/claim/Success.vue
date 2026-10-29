@@ -491,7 +491,7 @@ const successAction = computed(() => {
                     v-if="shouldShowVoucherCodeBadge"
                     class="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-4 py-1 font-mono text-sm font-semibold tracking-widest text-primary"
                 >
-                    {{ voucher.code }}
+                    || {{ voucher.code }} ||
                 </div>
 
                 <PayoutRouteDisplay

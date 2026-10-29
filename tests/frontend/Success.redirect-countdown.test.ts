@@ -97,6 +97,12 @@ const baseProps = {
 };
 
 describe('claim Success redirect countdown rendering', () => {
+    it('displays the Pay Code with the branded parallel lines', () => {
+        const wrapper = mount(Success, { props: { ...baseProps, sender_content_source: 'none' } });
+
+        expect(wrapper.text()).toContain('|| TEST123 ||');
+    });
+
     it('uses an unattributed thank you when the issuer supplied no message, even with a demo driver stage', () => {
         const wrapper = mount(Success, {
             props: {
