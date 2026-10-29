@@ -13,7 +13,7 @@ export function isNonActiveVoucher(
 ): boolean {
     const status = voucher?.status;
 
-    return status === 'redeemed' || status === 'expired';
+    return status === 'redeemed' || status === 'expired' || status === 'cancelled';
 }
 
 export function resolveVoucherStatusDate(

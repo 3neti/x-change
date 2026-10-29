@@ -64,6 +64,14 @@ class ClaimStartController extends Controller
                 'inputs' => ['required', 'array'],
             ]);
 
+            $submittedVoucher = Voucher::query()
+                ->where('code', strtoupper(trim((string) $validated['code'])))
+                ->first();
+
+            if ($submittedVoucher?->isCancelled() || $submittedVoucher?->isClosed()) {
+                return $this->redirectToCanonicalClaimSurface((string) $submittedVoucher->code);
+            }
+
             app(PrepareCompiledClaimSubmission::class)->handle($validated);
 
             $prepared = app(PrepareCompiledClaim::class)->handle();
@@ -171,6 +179,10 @@ class ClaimStartController extends Controller
                 message: 'Invalid Pay Code.',
                 code: $code,
             );
+        }
+
+        if ($voucher->isCancelled() || $voucher->isClosed()) {
+            return $this->redirectToCanonicalClaimSurface($code);
         }
 
         $flowCapabilities = $this->capabilities->resolve($voucher);

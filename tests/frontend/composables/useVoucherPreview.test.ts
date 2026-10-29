@@ -90,4 +90,26 @@ describe('useVoucherPreview', () => {
 
         scope.stop();
     });
+
+    it('maps a hidden cancelled code to a non-active preview before submission', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                success: true,
+                data: { xray: { visible: true, status: 'hidden', disclosures: [], requirements: [] } },
+            }),
+        }));
+
+        const scope = effectScope();
+        const preview = scope.run(() => useVoucherPreview({ debounceMs: 1 }))!;
+        preview.code.value = '84DH';
+        await nextTick();
+        await vi.runAllTimersAsync();
+        await nextTick();
+
+        expect(preview.voucherData.value?.status).toBe('cancelled');
+        expect(preview.error.value).toBeNull();
+
+        scope.stop();
+    });
 });

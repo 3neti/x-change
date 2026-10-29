@@ -336,6 +336,23 @@ it('keeps cancelled and expired public claim pages focused on the terminal outco
     Http::assertNothingSent();
 });
 
+it('does not preview rider content to the issuer on a cancelled claim URL', function (): void {
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => [
+            'message' => 'Completion message must stay off this page.',
+            'url' => 'https://example.test/after-claim',
+        ],
+    ]));
+    $voucher->forceFill(['state' => VoucherState::CANCELLED, 'closed_at' => now()])->save();
+
+    $surface = claimSurfaceResolver()->resolve($voucher->refresh(), $issuer);
+
+    expect($surface->state->key)->toBe('cancelled')
+        ->and(collect($surface->components)->pluck('type'))->toContain('outcome_panel')
+        ->not->toContain('claim_experience_summary');
+});
+
 it('maps a redeemed Pay Code to an outcome panel', function () {
     $issuer = actingAsTestUser();
     $voucher = issueVoucher(validVoucherInstructions(100));

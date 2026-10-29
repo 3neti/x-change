@@ -7,6 +7,7 @@ use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
 use LBHurtado\FormFlowManager\Services\DriverService;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Enums\VoucherSliceSelectionPolicy;
+use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\Services\VoucherSlicePlanFactory;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
@@ -41,6 +42,27 @@ function claimVoucherWithoutRiderSplash(): Voucher
         ],
     ));
 }
+
+it('does not start form-flow for a cancelled Pay Code through either claim submission path', function (): void {
+    $voucher = claimVoucherWithRiderSplash();
+    $voucher->forceFill(['state' => VoucherState::CANCELLED, 'closed_at' => now()])->save();
+    auth()->logout();
+
+    $formFlow = Mockery::mock(FormFlowService::class);
+    $formFlow->shouldNotReceive('startFlow');
+    app()->instance(FormFlowService::class, $formFlow);
+
+    $claimUrl = route('x-change.claim.show', ['code' => $voucher->code]);
+
+    $this->post(route('x-change.claim.flows.store', ['code' => $voucher->code]))
+        ->assertRedirect($claimUrl);
+
+    $this->post(route('x-change.claim.flows.store', ['code' => $voucher->code]), [
+        'mode' => 'compiled_form',
+        'code' => $voucher->code,
+        'inputs' => ['first_name' => 'Lester'],
+    ])->assertRedirect($claimUrl);
+});
 
 it('starts reusable balance activation without signing in', function (): void {
     $voucher = issueVoucher(validVoucherInstructions(100, 'INSTAPAY', [

@@ -505,7 +505,7 @@ watch(
             return;
         }
 
-        if (voucher.status === 'redeemed' || voucher.status === 'expired') {
+        if (voucher.status === 'redeemed' || voucher.status === 'expired' || voucher.status === 'cancelled') {
             reactiveClaimExperience.value = null;
             void fetchXRay(voucherCode);
 
@@ -639,7 +639,7 @@ watch(
             <!-- Non-Active State: Stamp + Rider Content -->
             <div v-else-if="previewMode === 'non-active'" class="space-y-2.5">
                 <VoucherStatusStamp
-                    :status="voucherData.status as 'redeemed' | 'expired'"
+                    :status="voucherData.status as 'redeemed' | 'expired' | 'cancelled'"
                     :status-date="previewViewModel.statusDate"
                     :voucher-code="voucherData.code"
                     :formatted-amount="

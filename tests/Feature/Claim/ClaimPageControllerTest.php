@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\Services\VoucherSlicePlanFactory;
 use LBHurtado\XCampaign\Contracts\CampaignWorksheetRepository;
@@ -25,6 +26,24 @@ it('renders the canonical human claim page without exposing the experience JSON'
         ->assertJsonPath('props.initial_code', (string) $voucher->code)
         ->assertJsonPath('props.provisioning_requirement', null)
         ->assertJsonStructure(['props' => ['claim_experience']]);
+});
+
+it('does not hydrate a cancelled issuer claim page with rider content', function (): void {
+    actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'rider' => ['message' => 'Completion copy', 'url' => 'https://example.test/after'],
+    ]));
+    $voucher->forceFill(['state' => VoucherState::CANCELLED, 'closed_at' => now()])->save();
+
+    $response = $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.claim.show', ['code' => $voucher->code]))
+        ->assertOk()
+        ->assertJsonPath('props.claim_surface.state.key', 'cancelled')
+        ->assertJsonPath('props.claim_experience', null);
+
+    expect(collect($response->json('props.claim_surface.components'))->pluck('type'))
+        ->toContain('outcome_panel')
+        ->not->toContain('claim_experience_summary');
 });
 
 it('hydrates the guest claim entry with the same disclosed money details as X-Ray', function (): void {

@@ -48,6 +48,10 @@ function previewStatusFromXRay(status: string): string {
         return 'redeemed';
     }
 
+    if (status === 'hidden') {
+        return 'cancelled';
+    }
+
     return status;
 }
 
