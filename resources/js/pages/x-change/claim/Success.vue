@@ -32,7 +32,9 @@ import { resolveSuccessCompiledClaimResultViewModel,
 import { resolveSuccessPageTone } from '@/components/x-change/successPageTone';
 import { resolveSuccessCountdownViewModel } from '@/components/x-change/successCountdownViewModel';
 import PayoutRouteDisplay from '@/components/x-change/PayoutRouteDisplay.vue';
+import ClaimPendingReceipt from '@/components/x-change/ClaimPendingReceipt.vue';
 import type { PayoutDestinationSnapshot } from '@/components/x-change/support/payoutDestinations';
+import { settlementRailLabel } from '@/components/x-change/support/payoutDestinations';
 
 defineOptions({ layout: null });
 
@@ -144,6 +146,15 @@ const redirectRuntimeStages = computed<RawRiderStage[]>(() =>
 const hasRiderMessage = computed(() =>
     shouldRenderSuccessRiderMessage(displayedRiderContent.value),
 );
+const showSenderMessageLabel = computed(() => {
+    if (!pageTone.value.isPending) return false;
+    if (successVisualStages.value.length) {
+        return successVisualStages.value.some((stage) =>
+            (stage.payload?.content ?? stage.content) !== 'Your claim is being processed.',
+        );
+    }
+    return hasRiderMessage.value && displayedRiderContent.value?.content !== 'Your claim is being processed.';
+});
 
 const { countdownRedirect, hasRedirect } = useClaimSuccessRedirect(
     riderRedirect,
@@ -194,6 +205,17 @@ const hasNonZeroAmount = computed(() => hasNonZeroVoucherAmount(props.voucher));
 const formattedAmount = computed(() =>
     formatSuccessVoucherAmount(props.voucher),
 );
+
+const receiptAmount = computed(() => {
+    const amount = props.destination?.claim_amount_minor;
+    const currency = props.destination?.claim_currency;
+    if (typeof amount !== 'number' || !currency) return null;
+    try {
+        return new Intl.NumberFormat('en-PH', { style: 'currency', currency }).format(amount / 100);
+    } catch {
+        return null;
+    }
+});
 
 const fallbackTitle = computed(() =>
     resolveSuccessFallbackTitle(props.voucher, {
@@ -284,20 +306,15 @@ const successAction = computed(() => {
                     :class="pageTone.iconClass"
                 />
 
-                <div
+                <ClaimPendingReceipt
                     v-if="pageTone.isPending"
-                    data-testid="provider-payout-pending-region"
-                    role="status"
-                    class="rounded-lg border border-amber-500/25 bg-amber-500/10 p-4 text-left"
-                >
-                    <p class="text-sm font-semibold text-foreground">
-                        Claim accepted · payout pending
-                    </p>
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        The Pay Code has been claimed. Funds are released only
-                        after the payment provider confirms the transfer.
-                    </p>
-                </div>
+                    :amount="receiptAmount"
+                    :bank-label="destination?.bank_code ? destination.bank_label || destination.bank_name : null"
+                    :account="destination?.account_number_full || destination?.account_number_masked"
+                    :rail="destination?.bank_code ? settlementRailLabel(destination.settlement_rail || 'INSTAPAY') : null"
+                />
+
+                <p v-if="showSenderMessageLabel" class="text-left text-xs font-semibold text-muted-foreground">Message from the sender</p>
 
                 <div
                     v-if="successPresentation"
@@ -382,7 +399,7 @@ const successAction = computed(() => {
                 />
 
                 <div
-                    v-else-if="shouldRenderFallback"
+                    v-else-if="shouldRenderFallback && !pageTone.isPending"
                     data-testid="fallback-success-region"
                     class="space-y-3"
                 >
@@ -473,7 +490,7 @@ const successAction = computed(() => {
                 </div>
 
                 <PayoutRouteDisplay
-                    v-if="destination?.bank_code"
+                    v-if="destination?.bank_code && !pageTone.isPending"
                     class="text-left"
                     :amount="formattedAmount"
                     :bank-code="destination.bank_code"

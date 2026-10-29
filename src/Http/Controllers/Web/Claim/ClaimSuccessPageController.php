@@ -19,6 +19,7 @@ use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
 use LBHurtado\XChange\Services\Settlement\DemonstrationPolicySummary;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LBHurtado\XChange\Services\XRay\VoucherXRayProjectionBuilder;
+use LBHurtado\XChange\Support\Claim\ClaimDestinationReceipt;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\ClaimRiderHandoff;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSuccessPayload;
@@ -107,17 +108,14 @@ class ClaimSuccessPageController
         ];
 
         if (request()->wantsJson()) {
-            return response()->json($props)->withHeaders(($successPresentation['suppress_legacy_rider'] ?? false) ? [
+            return response()->json($props)->withHeaders([
                 'Cache-Control' => 'private, no-store',
                 'Referrer-Policy' => 'no-referrer',
-            ] : []);
+            ]);
         }
 
-        if (! ($successPresentation['suppress_legacy_rider'] ?? false)) {
-            return Inertia::render('x-change/claim/Success', $props);
-        }
-
-        if (($props['success_action']['intent'] ?? null) === 'demo_policy_summary') {
+        if (($props['success_action']['intent'] ?? null) === 'demo_policy_summary'
+            || filled(data_get($props, 'destination.account_number_full'))) {
             Inertia::encryptHistory();
         }
         $response = Inertia::render('x-change/claim/Success', $props)->toResponse($request);
@@ -263,6 +261,15 @@ class ClaimSuccessPageController
             ->first();
 
         $destination = is_array($latestClaim?->meta) ? data_get($latestClaim->meta, 'destination') : null;
+
+        if (is_array($destination) && $latestClaim) {
+            $receipt = app(ClaimDestinationReceipt::class)->forClaim($voucher, $latestClaim);
+            if ($receipt !== null) {
+                $destination['account_number_full'] = $receipt['account'];
+                $destination['claim_amount_minor'] = $receipt['amount_minor'];
+                $destination['claim_currency'] = $receipt['currency'];
+            }
+        }
 
         return is_array($destination) && $destination !== [] ? $destination : null;
     }

@@ -276,9 +276,23 @@ describe('claim Success redirect countdown rendering', () => {
 
         expect(
             wrapper.find('[data-testid="provider-payout-pending-region"]').text(),
-        ).toContain('Claim accepted · payout pending');
+        ).toContain('Claim received');
+        expect(wrapper.find('[data-testid="provider-payout-pending-region"]').text()).toContain('Transfer processing');
         expect(wrapper.find('[data-testid="clock-icon"]').exists()).toBe(false);
         expect(wrapper.get('[data-testid="claim-brand-logo"]').attributes('style')).toContain('height: 5rem');
+    });
+
+    it('shows the claim amount and session destination in a compact pending receipt', () => {
+        const wrapper = mount(Success, { props: {
+            ...baseProps,
+            claimOutcome: 'accepted_pending',
+            destination: { bank_code: 'GXCHPHM2XXX', bank_name: 'GCash', bank_label: 'GCash', icon_asset: null, settlement_rail: 'INSTAPAY', account_number_masked: '*******1987', account_number_full: '09173011987', claim_amount_minor: 2500, claim_currency: 'PHP', route: [], route_icons: [] },
+        } });
+        const receipt = wrapper.get('[data-testid="claim-transfer-receipt"]').text();
+        expect(receipt).toContain('₱25.00');
+        expect(receipt).toContain('GCash · 09173011987');
+        expect(receipt).toContain('InstaPay');
+        expect(receipt).not.toContain('*******1987');
     });
 
     it('replaces the generic ready rider message while provider payout is pending', () => {

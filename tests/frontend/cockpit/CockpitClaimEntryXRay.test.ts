@@ -3,6 +3,17 @@ import { describe, expect, it } from 'vitest';
 import CockpitClaimLiveScreen from '../../../resources/js/cockpit/components/CockpitClaimLiveScreen.vue';
 
 describe('Cockpit claim entry walkthrough', () => {
+    it('uses the shared pending receipt presentation for the success preview', () => {
+        const wrapper = mount(CockpitClaimLiveScreen, {
+            props: { screen: { kind: 'success', amount: '₱25.00', message: 'Thank you.' } },
+        });
+
+        expect(wrapper.get('[data-testid="provider-payout-pending-region"]').text()).toContain('Claim received');
+        expect(wrapper.get('[data-testid="claim-transfer-receipt"]').text()).toContain('₱25.00');
+        expect(wrapper.text()).toContain('Message from the sender');
+        expect(wrapper.text()).toContain('Thank you.');
+    });
+
     it('uses the live x-ray card with the sample code and a single visible action', async () => {
         const wrapper = mount(CockpitClaimLiveScreen, {
             props: {

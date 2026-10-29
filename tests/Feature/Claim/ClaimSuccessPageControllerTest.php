@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Execution\CampaignCoverageCompletionExecutionDriver;
+use LBHurtado\XChange\Support\Claim\ClaimDestinationReceipt;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 use LBHurtado\XRider\Contracts\RiderExperienceResolverContract;
@@ -57,6 +60,54 @@ BLADE);
         ->name('x-change.cockpit.quick-generate');
     Route::get('/x/pay/{code}', fn (string $code) => response('pay '.$code))
         ->name('x-change.pay.show');
+});
+
+it('reveals the submitted destination only in the matching unexpired claim session', function (): void {
+    $voucher = issueVoucher(validVoucherInstructions(amount: 50));
+    $claim = VoucherClaim::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'claim_number' => 1,
+        'claim_type' => 'withdraw',
+        'status' => 'pending_review',
+        'requested_amount_minor' => 5_000,
+        'currency' => 'PHP',
+        'bank_code' => 'GXCHPHM2XXX',
+        'account_number_masked' => '*******1987',
+        'idempotency_key' => 'session-receipt-test',
+        'completed_at' => now(),
+        'meta' => ['destination' => ['bank_code' => 'GXCHPHM2XXX', 'bank_label' => 'GCash', 'account_number_masked' => '*******1987', 'settlement_rail' => 'INSTAPAY']],
+    ]);
+    $this->getJson(route('x-change.claim.success', ['code' => $voucher->code]))
+        ->assertOk()->assertJsonMissingPath('destination.account_number_full')
+        ->assertJsonMissingPath('destination.claim_amount_minor');
+    $failed = new SubmitPayCodeClaimResultData(voucher_code: $voucher->code, claim_type: 'withdraw', claimed: false, status: 'failed');
+    app(ClaimDestinationReceipt::class)->remember($voucher, $failed, ['account_number' => '09173011987'], 'session-receipt-test');
+    expect(session()->get('x-change.claim-destination-receipt'))->toBeNull();
+    $result = new SubmitPayCodeClaimResultData(voucher_code: $voucher->code, claim_type: 'withdraw', claimed: true, status: 'pending_review');
+    app(ClaimDestinationReceipt::class)->remember($voucher, $result, ['account_number' => '09173011987'], 'session-receipt-test');
+    $stored = session()->all();
+
+    expect(json_encode($stored))->not->toContain('09173011987');
+    $otherClaim = new VoucherClaim;
+    $otherClaim->id = (int) $claim->getKey() + 1;
+    expect(app(ClaimDestinationReceipt::class)->forClaim($voucher, $otherClaim))->toBeNull();
+    $this->withSession($stored)->getJson(route('x-change.claim.success', ['code' => $voucher->code]))
+        ->assertOk()->assertHeader('Cache-Control', 'no-store, private')
+        ->assertJsonPath('destination.account_number_full', '09173011987')
+        ->assertJsonPath('destination.claim_amount_minor', 5_000);
+
+    $otherSession = $stored;
+    data_set($otherSession, 'x-change.claim-destination-receipt.session_id', 'different-session');
+    $this->withSession($otherSession)->getJson(route('x-change.claim.success', ['code' => $voucher->code]))
+        ->assertOk()->assertJsonMissingPath('destination.account_number_full');
+    $this->withSession($stored);
+
+    $this->travel(11)->minutes();
+    $expired = $this->getJson(route('x-change.claim.success', ['code' => $voucher->code]))->assertOk();
+    $expired->assertJsonPath('destination.account_number_masked', '*******1987')
+        ->assertJsonMissingPath('destination.account_number_full');
+
+    expect($claim->refresh()->account_number_masked)->toBe('*******1987');
 });
 
 it('suppresses legacy rider payment instructions for an unlinked completion claim without asserting payment', function (): void {

@@ -17,6 +17,7 @@ import { computed, defineAsyncComponent, type Component } from 'vue';
 import PayCodeLogo from '../../components/x-change/PayCodeLogo.vue';
 import XRayClaimPreview from '../../components/x-change/XRayClaimPreview.vue';
 import ClaimCodeField from '../../components/x-change/ClaimCodeField.vue';
+import ClaimPendingReceipt from '../../components/x-change/ClaimPendingReceipt.vue';
 import { isVerifiedClaimCode } from '../../components/x-change/claimCodeVerification';
 import type { XRayClaimPreviewResult } from '../../components/x-change/xrayClaimPreviewViewModel';
 
@@ -442,25 +443,9 @@ const actualScreenComponent = computed<Component | null>(() => {
             <div
                 class="via-background to-background flex min-h-0 flex-1 flex-col justify-center gap-5 bg-gradient-to-b from-emerald-500/10 px-5 py-6 text-center"
             >
-                <CheckCircle2 class="mx-auto size-14 text-emerald-500" />
-                <div class="grid gap-2">
-                    <p class="text-2xl font-bold">{{ screen.amount }}</p>
-                    <h3 class="text-lg font-semibold">{{ screen.title }}</h3>
-                    <p class="text-muted-foreground text-[11px] leading-4">
-                        {{ screen.description }}
-                    </p>
-                </div>
-                <div
-                    class="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-left"
-                >
-                    <p class="text-[11px] font-semibold">
-                        Claim accepted · payout pending
-                    </p>
-                    <p class="text-muted-foreground mt-1 text-[10px] leading-4">
-                        Funds are released after the payment provider confirms
-                        the transfer.
-                    </p>
-                </div>
+                <PayCodeLogo variant="mark" size="display" class="mx-auto" />
+                <ClaimPendingReceipt :amount="screen.amount" bank-label="Selected bank or wallet" />
+                <p v-if="screen.message" class="text-left text-xs font-semibold text-muted-foreground">Message from the sender</p>
                 <p
                     v-if="screen.message"
                     class="bg-card rounded-xl border p-3 text-xs font-medium"

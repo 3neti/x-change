@@ -15,6 +15,9 @@ export type PayoutDestinationSnapshot = {
     icon_asset: string | null;
     settlement_rail: string | null;
     account_number_masked: string | null;
+    account_number_full?: string | null;
+    claim_amount_minor?: number | null;
+    claim_currency?: string | null;
     route: string[];
     route_icons: (string | null)[];
 };

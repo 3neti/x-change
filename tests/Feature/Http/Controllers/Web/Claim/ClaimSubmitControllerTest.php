@@ -11,6 +11,7 @@ use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Support\Claim\ClaimDestinationReceipt;
 use LBHurtado\XChange\Support\Claim\ClaimEvidenceSynchronizer;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
 use LBHurtado\XChange\Support\Claim\FormFlowClaimPayloadNormalizer;
@@ -66,6 +67,32 @@ function successfulClaimSubmitResult(Voucher $voucher): SubmitPayCodeClaimResult
         ],
     );
 }
+
+it('binds the submitted destination to the completed claim session', function (): void {
+    $voucher = claimSubmitTestVoucher();
+    $state = ['flow_id' => 'receipt-flow', 'collected_data' => ['wallet' => ['mobile' => '09173011987']]];
+    $this->formFlowService->shouldReceive('getFlowState')->once()->with('receipt-flow')->andReturn($state);
+    $this->payloadNormalizer->shouldReceive('normalize')->once()->andReturn([
+        'mobile' => '09173011987', 'country' => 'PH', 'bank_code' => 'GXCHPHM2XXX', 'account_number' => '09173011987', 'inputs' => [],
+    ]);
+    $this->evidenceSynchronizer->shouldReceive('sync')->once();
+    $this->submitAction->shouldReceive('handle')->once()->andReturnUsing(function (Voucher $voucher, array $payload): SubmitPayCodeClaimResultData {
+        VoucherClaim::query()->create([
+            'voucher_id' => $voucher->getKey(), 'claim_number' => 1, 'claim_type' => 'withdraw', 'status' => 'withdrawn',
+            'requested_amount_minor' => 1_000, 'currency' => 'PHP', 'idempotency_key' => data_get($payload, '_meta.idempotency_key'), 'completed_at' => now(),
+        ]);
+
+        return successfulClaimSubmitResult($voucher);
+    });
+    $this->formFlowService->shouldReceive('clearFlow')->once()->with('receipt-flow');
+
+    $this->post(route('x-change.claim.submit', ['code' => $voucher->code]), ['flow_id' => 'receipt-flow'])
+        ->assertRedirect(route('x-change.claim.success', ['code' => $voucher->code]));
+
+    $claim = VoucherClaim::query()->where('voucher_id', $voucher->getKey())->firstOrFail();
+    expect(app(ClaimDestinationReceipt::class)->forClaim($voucher, $claim))
+        ->toMatchArray(['account' => '09173011987', 'amount_minor' => 1_000]);
+});
 
 it('redirects to claim start when neither flow id nor reference id is provided', function (): void {
     $voucher = claimSubmitTestVoucher();
