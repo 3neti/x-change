@@ -4,7 +4,7 @@ import {
   RefreshCw,
   X,
 } from "lucide-vue-next";
-import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import type {
   CockpitOnDemandIssuanceFundingProjection,
   CockpitPrimaryFundingWorkspaceMode,
@@ -14,8 +14,11 @@ import type { PayCodeStampPreviewState } from "../payCodeStampPreview";
 import CockpitPayCodeCanvas from "./CockpitPayCodeCanvas.vue";
 import CockpitFundingMethodSelector from "./CockpitFundingMethodSelector.vue";
 
+import { useIssuanceProgress, type IssuanceProgress } from "../composables/useIssuanceProgress";
+
 const props = defineProps<{
   open: boolean;
+  tracker?: IssuanceProgress;
   projection: CockpitOnDemandIssuanceFundingProjection | null;
   stampPreview?: PayCodeStampPreviewState | null;
 }>();
@@ -26,24 +29,20 @@ const emit = defineEmits<{
   closed: [projection: CockpitOnDemandIssuanceFundingProjection];
 }>();
 
-const current = ref<CockpitOnDemandIssuanceFundingProjection | null>(
-  props.projection,
-);
+const tracker = props.tracker ?? useIssuanceProgress(ref(props.projection), { onIssued: (projection) => emit("issued", projection) });
+const { current, error, refresh } = tracker;
 const showingStamp = ref(false);
 const stampBackground = ref("");
 watch(() => [props.open, props.projection?.order.reference], () => { showingStamp.value = false; });
 const selectedMode = ref<CockpitPrimaryFundingWorkspaceMode>("bank_transfer");
 const checking = ref(false);
 const monitoring = ref(false);
-const refreshing = ref(false);
+const refreshing = tracker.busy;
 const retrying = ref(false);
 const cancelling = ref(false);
 const selectingFundingMethod = ref(false);
 const bankMobile = ref("");
-const error = ref<string | null>(null);
 const monitorMessage = ref<string | null>(null);
-let pollTimer: ReturnType<typeof setTimeout> | null = null;
-let emittedIssuedReference: string | null = null;
 
 async function downloadBatch(): Promise<void> {
   const batch = current.value?.batch;
@@ -97,6 +96,9 @@ const latePaymentCredited = computed(
 );
 const batchCount = computed(() => current.value?.batch?.item_count ?? 0);
 const isBatch = computed(() => batchCount.value > 0);
+const payCodeValue = computed(() => current.value?.pricing
+  ? new Intl.NumberFormat("en-PH", { style: "currency", currency: current.value.pricing.currency }).format(current.value.pricing.pay_code_value)
+  : null);
 const issuanceLabel = computed(() =>
   `${Math.max(batchCount.value, 1)} Pay Code${batchCount.value > 1 ? "s" : ""}`,
 );
@@ -146,6 +148,8 @@ const dialogTitle = computed(() => {
     return "Payment needs review";
   }
 
+  if (current.value?.status === "issued") return "Your Pay Code is ready";
+
   if (["funded", "issuing"].includes(current.value?.status ?? "")) {
     return "Payment received";
   }
@@ -168,7 +172,9 @@ const dialogDescription = computed(() => {
   }
 
   if (["funded", "issuing"].includes(current.value?.status ?? "")) {
-    return `Your payment is verified. Keep this window open while we finish issuing ${issuanceLabel.value.toLowerCase()}.`;
+    return tracker.delayed.value
+      ? "Your payment is confirmed. We’re still preparing your Pay Code."
+      : `Preparing ${isBatch.value ? issuanceLabel.value.toLowerCase() : `your ${payCodeValue.value ? `${payCodeValue.value} ` : ""}Pay Code`}… You can continue working while we finish.`;
   }
 
   return "Choose Bank Transfer or QR Ph, pay the exact amount once, and keep this window open. We will check the payment automatically.";
@@ -192,21 +198,18 @@ function rememberBatchToken(projection: CockpitOnDemandIssuanceFundingProjection
 
 watch(
   () => props.projection,
-  (projection) => {
+  (projection, previous) => {
     current.value = projection;
     rememberBatchToken(projection);
-    selectedMode.value =
-      projection?.funding_selector.default_mode ?? "bank_transfer";
+    if (previous === undefined || projection?.order.reference !== previous?.order.reference) {
+      selectedMode.value =
+        projection?.funding_selector.default_mode ?? "bank_transfer";
+    }
     monitorMessage.value = null;
-    schedulePoll();
   },
   { immediate: true },
 );
 
-watch(
-  () => props.open,
-  () => schedulePoll(),
-);
 
 watch(selectedMode, (mode) => {
   showingStamp.value = false;
@@ -216,7 +219,6 @@ watch(selectedMode, (mode) => {
   }
 });
 
-onBeforeUnmount(clearPoll);
 
 function csrfHeader(): Record<string, string> {
   const token = document
@@ -224,13 +226,6 @@ function csrfHeader(): Record<string, string> {
     ?.getAttribute("content");
 
   return token ? { "X-CSRF-TOKEN": token } : {};
-}
-
-function clearPoll(): void {
-  if (pollTimer !== null) {
-    clearTimeout(pollTimer);
-    pollTimer = null;
-  }
 }
 
 async function selectFundingMethod(method: "qr_ph" | "bank_transfer"): Promise<void> {
@@ -244,7 +239,7 @@ async function selectFundingMethod(method: "qr_ph" | "bank_transfer"): Promise<v
   error.value = null;
 
   try {
-    const response = await fetch(action, {
+    const response = await tracker.request(action, {
       method: "POST",
       credentials: "same-origin",
       headers: {
@@ -272,71 +267,6 @@ async function selectFundingMethod(method: "qr_ph" | "bank_transfer"): Promise<v
   }
 }
 
-function schedulePoll(): void {
-  clearPoll();
-
-  if (
-    !props.open ||
-    current.value === null ||
-    terminal.value ||
-    !current.value.monitor.enabled ||
-    !current.value.monitor.eligible
-  ) {
-    return;
-  }
-
-  const delay = Math.max(5000, current.value.monitor.interval_milliseconds);
-  pollTimer = setTimeout(() => void refresh(), delay);
-}
-
-async function refresh(): Promise<void> {
-  if (current.value === null || checking.value || refreshing.value) {
-    schedulePoll();
-
-    return;
-  }
-
-  refreshing.value = true;
-  try {
-    const response = await fetch(current.value.actions.show, {
-      credentials: "same-origin",
-      headers: {
-        Accept: "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-        ...guestAccessHeader(),
-      },
-    });
-
-    if (response.ok) {
-      const next =
-        (await response.json()) as CockpitOnDemandIssuanceFundingProjection;
-      current.value = next;
-      error.value = null;
-
-      if (
-        current.value.status === "issued" &&
-        emittedIssuedReference !== current.value.order.reference
-      ) {
-        emittedIssuedReference = current.value.order.reference;
-        emit("issued", current.value);
-      }
-
-      if (current.value.monitor.enabled && current.value.monitor.eligible) {
-        await requestVerification(true);
-      }
-    } else {
-      error.value =
-        "Status could not be refreshed. Try again shortly. Do not pay again.";
-    }
-  } catch {
-    error.value =
-      "Status could not be refreshed. Try again shortly. Do not pay again.";
-  } finally {
-    refreshing.value = false;
-    schedulePoll();
-  }
-}
-
 async function retryIssuance(): Promise<void> {
   if (
     current.value === null ||
@@ -350,7 +280,7 @@ async function retryIssuance(): Promise<void> {
   error.value = null;
 
   try {
-    const response = await fetch(current.value.actions.retry_issuance, {
+    const response = await tracker.request(current.value.actions.retry_issuance, {
       method: "POST",
       credentials: "same-origin",
       headers: {
@@ -381,7 +311,6 @@ async function retryIssuance(): Promise<void> {
 }
 
 function closeForNow(): void {
-  clearPoll();
   if (current.value !== null) {
     emit("closed", current.value);
   }
@@ -406,7 +335,7 @@ async function requestVerification(automatic = false): Promise<void> {
   }
 
   try {
-    const response = await fetch(current.value.actions.verify, {
+    const response = await tracker.request(current.value.actions.verify, {
       method: "POST",
       credentials: "same-origin",
       headers: {
@@ -447,7 +376,6 @@ async function requestVerification(automatic = false): Promise<void> {
     } else {
       checking.value = false;
     }
-    schedulePoll();
   }
 }
 
@@ -468,7 +396,7 @@ async function cancel(): Promise<void> {
   error.value = null;
 
   try {
-    const response = await fetch(current.value.actions.cancel, {
+    const response = await tracker.request(current.value.actions.cancel, {
       method: "DELETE",
       credentials: "same-origin",
       headers: {
@@ -854,6 +782,13 @@ function text(value: unknown): string | null {
             <RefreshCw v-else class="size-4" aria-hidden="true" />
             Check now
           </button>
+          <button
+            v-if="!terminal && !paymentNeedsReview"
+            type="button"
+            class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 px-4 font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200"
+            data-testid="on-demand-continue-working"
+            @click="closeForNow"
+          >Continue working</button>
           <button
             v-if="terminal || paymentNeedsReview"
             type="button"

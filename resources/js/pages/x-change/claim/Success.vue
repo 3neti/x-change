@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
-import { AlertTriangle, CheckCircle2, Clock3 } from 'lucide-vue-next';
+import { AlertTriangle, CheckCircle2 } from 'lucide-vue-next';
 import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
 import RiderRenderer from '@/components/x-rider/RiderRenderer.vue';
 import RiderCountdown from '@/components/x-rider/RiderCountdown.vue';
@@ -32,7 +32,9 @@ import { resolveSuccessCompiledClaimResultViewModel,
 import { resolveSuccessPageTone } from '@/components/x-change/successPageTone';
 import { resolveSuccessCountdownViewModel } from '@/components/x-change/successCountdownViewModel';
 import PayoutRouteDisplay from '@/components/x-change/PayoutRouteDisplay.vue';
+import ClaimPendingReceipt from '@/components/x-change/ClaimPendingReceipt.vue';
 import type { PayoutDestinationSnapshot } from '@/components/x-change/support/payoutDestinations';
+import { settlementRailLabel } from '@/components/x-change/support/payoutDestinations';
 
 defineOptions({ layout: null });
 
@@ -49,6 +51,7 @@ interface Props {
     voucher: VoucherProps;
     claimOutcome?: string;
     claimWorkflowKey?: string | null;
+    sender_content_source?: 'message' | 'none' | null;
     rider?: RiderExperience | null;
     redirectEndpoint?: string | null;
     handoff_retry_url?: string | null;
@@ -100,6 +103,9 @@ const completionProcessing = computed(() =>
 const completionPoll = useCompletionStatusPoll(completionProcessing);
 
 const suppressLegacyRider = computed(() => props.success_presentation?.suppress_legacy_rider === true);
+const useDefaultThankYou = computed(() =>
+    props.sender_content_source === 'none' && !suppressLegacyRider.value && !props.success_presentation,
+);
 const hasPaymentHandoff = computed(() =>
     props.success_action?.key === 'x-change.claim-success.continue-to-payment'
     && props.success_action.enabled !== false
@@ -110,7 +116,7 @@ const suppressAutomaticRedirects = computed(() =>
     props.paired_payment || hasPaymentHandoff.value || suppressLegacyRider.value,
 );
 
-const riderContent = computed(() => suppressLegacyRider.value ? null : props.rider?.success ?? null);
+const riderContent = computed(() => suppressLegacyRider.value || useDefaultThankYou.value ? null : props.rider?.success ?? null);
 const riderRedirect = computed(() =>
     suppressAutomaticRedirects.value ? null : props.rider?.redirect ?? null,
 );
@@ -121,18 +127,16 @@ const effectiveRedirectEndpoint = computed(() =>
     suppressAutomaticRedirects.value ? null : props.redirectEndpoint ?? null,
 );
 
+const riderMessageState = computed(() => props.sender_content_source === 'message'
+    ? { claimOutcome: null, riderState: null }
+    : { claimOutcome: props.claimOutcome, riderState: props.rider?.state });
+
 const displayedRiderContent = computed(() =>
-    resolveSuccessRiderMessage(riderContent.value, {
-        claimOutcome: props.claimOutcome,
-        riderState: props.rider?.state,
-    }),
+    resolveSuccessRiderMessage(riderContent.value, riderMessageState.value),
 );
 
 const successVisualStages = computed<RawRiderStage[]>(() =>
-    suppressLegacyRider.value ? [] : resolveSuccessVisualStages(props.claim_experience, props.rider, {
-        claimOutcome: props.claimOutcome,
-        riderState: props.rider?.state,
-    }),
+    suppressLegacyRider.value || useDefaultThankYou.value ? [] : resolveSuccessVisualStages(props.claim_experience, props.rider, riderMessageState.value),
 );
 
 const redirectRuntimeStages = computed<RawRiderStage[]>(() =>
@@ -144,6 +148,16 @@ const redirectRuntimeStages = computed<RawRiderStage[]>(() =>
 const hasRiderMessage = computed(() =>
     shouldRenderSuccessRiderMessage(displayedRiderContent.value),
 );
+const showSenderMessageLabel = computed(() => {
+    if (useDefaultThankYou.value || props.success_presentation?.title?.trim()) return false;
+    if (props.sender_content_source === 'message') return successVisualStages.value.length > 0 || hasRiderMessage.value;
+    if (successVisualStages.value.length) {
+        return successVisualStages.value.some((stage) =>
+            (stage.payload?.content ?? stage.content) !== 'Your claim is being processed.',
+        );
+    }
+    return hasRiderMessage.value && displayedRiderContent.value?.content !== 'Your claim is being processed.';
+});
 
 const { countdownRedirect, hasRedirect } = useClaimSuccessRedirect(
     riderRedirect,
@@ -194,6 +208,17 @@ const hasNonZeroAmount = computed(() => hasNonZeroVoucherAmount(props.voucher));
 const formattedAmount = computed(() =>
     formatSuccessVoucherAmount(props.voucher),
 );
+
+const receiptAmount = computed(() => {
+    const amount = props.destination?.claim_amount_minor;
+    const currency = props.destination?.claim_currency;
+    if (typeof amount !== 'number' || !currency) return null;
+    try {
+        return new Intl.NumberFormat('en-PH', { style: 'currency', currency }).format(amount / 100);
+    } catch {
+        return null;
+    }
+});
 
 const fallbackTitle = computed(() =>
     resolveSuccessFallbackTitle(props.voucher, {
@@ -271,32 +296,28 @@ const successAction = computed(() => {
     <ClaimStepShell
         :tone="pageTone.isWarning ? 'warning' : 'success'"
         :brand-placement="successPresentation ? 'center' : 'top_left'"
-        :brand-size="successPresentation ? 'brand' : 'header'"
+        brand-size="display"
         :show-theme-picker="false"
         :width="successPresentation ? 'lg' : 'md'"
     >
         <div class="space-y-8">
             <div class="space-y-4 pt-4 text-center">
                 <component
-                    :is="pageTone.isAttention ? AlertTriangle : pageTone.isPending ? Clock3 : CheckCircle2"
+                    v-if="!pageTone.isPending"
+                    :is="pageTone.isAttention ? AlertTriangle : CheckCircle2"
                     class="mx-auto h-12 w-12"
                     :class="pageTone.iconClass"
                 />
 
-                <div
+                <ClaimPendingReceipt
                     v-if="pageTone.isPending"
-                    data-testid="provider-payout-pending-region"
-                    role="status"
-                    class="rounded-lg border border-amber-500/25 bg-amber-500/10 p-4 text-left"
-                >
-                    <p class="text-sm font-semibold text-foreground">
-                        Claim accepted · payout pending
-                    </p>
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        The Pay Code has been claimed. Funds are released only
-                        after the payment provider confirms the transfer.
-                    </p>
-                </div>
+                    :amount="receiptAmount"
+                    :bank-label="destination?.bank_code ? destination.bank_label || destination.bank_name : null"
+                    :account="destination?.account_number_full || destination?.account_number_masked"
+                    :rail="destination?.bank_code ? settlementRailLabel(destination.settlement_rail || 'INSTAPAY') : null"
+                />
+
+                <p v-if="showSenderMessageLabel" class="text-left text-xs font-semibold text-muted-foreground">Message from the sender</p>
 
                 <div
                     v-if="successPresentation"
@@ -360,6 +381,8 @@ const successAction = computed(() => {
                     </p>
                 </div>
 
+                <p v-else-if="useDefaultThankYou" data-testid="claim-default-thank-you" class="text-sm text-foreground">Thank you.</p>
+
                 <div
                     v-else-if="hasSuccessVisualStages"
                     data-testid="success-stage-region"
@@ -381,7 +404,7 @@ const successAction = computed(() => {
                 />
 
                 <div
-                    v-else-if="shouldRenderFallback"
+                    v-else-if="shouldRenderFallback && !pageTone.isPending"
                     data-testid="fallback-success-region"
                     class="space-y-3"
                 >
@@ -468,11 +491,11 @@ const successAction = computed(() => {
                     v-if="shouldShowVoucherCodeBadge"
                     class="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-4 py-1 font-mono text-sm font-semibold tracking-widest text-primary"
                 >
-                    {{ voucher.code }}
+                    || {{ voucher.code }} ||
                 </div>
 
                 <PayoutRouteDisplay
-                    v-if="destination?.bank_code"
+                    v-if="destination?.bank_code && !pageTone.isPending"
                     class="text-left"
                     :amount="formattedAmount"
                     :bank-code="destination.bank_code"

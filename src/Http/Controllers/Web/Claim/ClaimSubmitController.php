@@ -16,6 +16,7 @@ use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Services\BuildProvisioningRequirementViewData;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalResumePayloadSession;
+use LBHurtado\XChange\Support\Claim\ClaimDestinationReceipt;
 use LBHurtado\XChange\Support\Claim\ClaimEvidenceSynchronizer;
 use LBHurtado\XChange\Support\Claim\ClaimFlowStateGuard;
 use LBHurtado\XChange\Support\Claim\ClaimRiderHandoff;
@@ -147,6 +148,12 @@ class ClaimSubmitController extends Controller
                 ]);
 
                 return redirect()->route('x-change.claim.approval', ['code' => $code]);
+            }
+
+            try {
+                app(ClaimDestinationReceipt::class)->remember($voucher, $result, $payload, $idempotencyKey);
+            } catch (\Throwable $exception) {
+                Log::warning('Claim destination receipt unavailable', ['exception' => $exception::class]);
             }
 
             $this->formFlowService->clearFlow($state['flow_id'] ?? $flowId);

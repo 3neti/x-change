@@ -2,176 +2,36 @@ import { mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 import CockpitOnDemandIssuanceFundingDialog from "../../../resources/js/cockpit/components/CockpitOnDemandIssuanceFundingDialog.vue";
-import type { CockpitOnDemandIssuanceFundingProjection } from "../../../resources/js/cockpit/types";
 
-const projection: CockpitOnDemandIssuanceFundingProjection = {
-  schema: "x-change.cockpit.on-demand-issuance-funding.v1",
-  status: "awaiting_payment",
-  funding_required: true,
-  public_links: {
-    recovery:
-      "https://example.test/x/auto-generate/recover/ORDER-1?signature=signed",
-    receipt:
-      "https://example.test/x/auto-generate/receipts/ORDER-1?signature=signed",
-  },
-  lifecycle: {
-    current: "awaiting_payment",
-    verification_unavailable: false,
-    message:
-      "Transfer the exact amount, then ask x-change to check the payment.",
-    steps: [
-      {
-        key: "awaiting_payment",
-        label: "Awaiting payment",
-        state: "current",
-      },
-      {
-        key: "checking_payment",
-        label: "Checking payment",
-        state: "pending",
-      },
-      {
-        key: "payment_verified",
-        label: "Payment verified",
-        state: "pending",
-      },
-      {
-        key: "issuing_pay_code",
-        label: "Issuing Pay Code",
-        state: "pending",
-      },
-      {
-        key: "pay_code_ready",
-        label: "Pay Code ready",
-        state: "pending",
-      },
-    ],
-  },
-  actions: {
-    show: "/x/cockpit/quick-generate/funding-orders/ORDER-1",
-    acknowledge: "/x/cockpit/quick-generate/funding-orders/ORDER-1/acknowledge",
-    verify: "/x/cockpit/quick-generate/funding-orders/ORDER-1/verification",
-    retry_issuance:
-      "/x/cockpit/quick-generate/funding-orders/ORDER-1/retry-issuance",
-    cancel: "/x/cockpit/quick-generate/funding-orders/ORDER-1",
-  },
-  retry: {
-    eligible: false,
-    pending: false,
-    attempts_remaining: 2,
-    next_available_at: null,
-  },
-  monitor: {
-    enabled: true,
-    eligible: true,
-    interval_milliseconds: 10_000,
-    last_checked_at: null,
-  },
-  order: {
-    reference: "ORDER-1",
-    funding_basis: "full_amount",
-    required_amount_minor: 5_000,
-    reserved_client_funds_minor: 0,
-    on_demand_amount_minor: 5_000,
-    reconciliation_adjustment_minor: 0,
-    expected_payment_minor: 5_000,
-    currency: "PHP",
-    status: "awaiting_payment",
-    expires_at: "2026-09-29T09:00:00+08:00",
-    can_cancel: true,
-    late_payment_disposition: null,
-    late_payment_detected_at: null,
-    voucher: null,
-    receipt: {
-      order_reference: "ORDER-1",
-      expected_payment_minor: 5_000,
-      currency: "PHP",
-      provider_transaction_id: null,
-      verified_at: null,
-      settled_at: null,
-      issued_at: null,
-    },
-  },
-  funding_selector: {
-    schema: "x-change.cockpit.funding-method-selector.v1",
-    context: "pay_code_issuance",
-    intent_reference: "INTENT-1",
-    order_reference: "ORDER-1",
-    amount: {
-      currency: "PHP",
-      principal_minor: 5_000,
-      fee_minor: 0,
-      required_minor: 5_000,
-      principal: "50.00",
-      fee: "0.00",
-      required: "50.00",
-    },
-    expires_at: "2026-09-29T09:00:00+08:00",
-    status: "awaiting_payment",
-    default_mode: "bank_transfer",
-    notice: "Keep this window open.",
-    methods: [
-      {
-        key: "bank_transfer",
-        workspace_mode: "bank_transfer",
-        label: "Bank Transfer",
-        description: "Transfer the exact amount.",
-        available: true,
-        selectable: true,
-        unavailable_reason: null,
-      },
-      {
-        key: "qr_ph",
-        workspace_mode: "self_top_up",
-        label: "QR Ph",
-        description: "Fixed amount QR.",
-        available: false,
-        selectable: false,
-        unavailable_reason: "Fixed-amount QR unavailable.",
-      },
-      {
-        key: "pay_code",
-        workspace_mode: "pay_code",
-        label: "Pay Code",
-        description: "Not enabled.",
-        available: false,
-        selectable: false,
-        unavailable_reason: "Not enabled.",
-      },
-    ],
-    bank_transfer: {
-      instructions: {
-        institution: "NetBank",
-        account_name: "3neti R&D OPC",
-        funding_address: "113-001-00001-9",
-      },
-      reconciliation_reference: {
-        mode: "disabled",
-        value: null,
-        label: "Transfer reference",
-        instructions: "Exact amount matching.",
-      },
-      matching_strategies: [
-        "reserved_exact_amount",
-        "destination_account",
-        "currency",
-        "observation_window",
-      ],
-    },
-    qr_ph: {
-      fixed_amount: false,
-      amount_minor: null,
-      currency: null,
-      image: null,
-      qr_mode: null,
-      transaction_type: null,
-      provider_generated: false,
-      notice: null,
-    },
-  },
-};
+import { projection } from "./issuanceProjection";
 
 describe("CockpitOnDemandIssuanceFundingDialog", () => {
+  it("preserves QR Ph across refreshed projections and reopening, but resets for a new order", async () => {
+    const initial = structuredClone(projection);
+    initial.funding_selector.methods[1].available = true;
+    initial.funding_selector.methods[1].selectable = true;
+    const wrapper = mount(CockpitOnDemandIssuanceFundingDialog, {
+      props: { open: true, projection: initial },
+      global: { stubs: { Teleport: true } },
+    });
+    try {
+      const qrTab = () => wrapper.get('[data-testid="funding-mode-self_top_up"]');
+      await qrTab().trigger("click");
+      expect(qrTab().attributes("aria-selected")).toBe("true");
+      for (let refresh = 0; refresh < 3; refresh++) {
+        await wrapper.setProps({ projection: structuredClone(initial) });
+        expect(qrTab().attributes("aria-selected")).toBe("true");
+      }
+      await wrapper.setProps({ open: false });
+      await wrapper.setProps({ open: true });
+      expect(qrTab().attributes("aria-selected")).toBe("true");
+      const nextOrder = structuredClone(initial);
+      nextOrder.order.reference = "ORDER-2";
+      await wrapper.setProps({ projection: nextOrder });
+      expect(wrapper.get('[data-testid="funding-mode-bank_transfer"]').attributes("aria-selected")).toBe("true");
+    } finally { wrapper.unmount(); }
+  });
+
   it("keeps bank transfer primary and presents an exact read-only amount", () => {
     const wrapper = mount(CockpitOnDemandIssuanceFundingDialog, {
       props: { open: true, projection },

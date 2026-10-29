@@ -97,6 +97,61 @@ const baseProps = {
 };
 
 describe('claim Success redirect countdown rendering', () => {
+    it('displays the Pay Code with the branded parallel lines', () => {
+        const wrapper = mount(Success, { props: { ...baseProps, sender_content_source: 'none' } });
+
+        expect(wrapper.text()).toContain('|| TEST123 ||');
+    });
+
+    it('uses an unattributed thank you when the issuer supplied no message, even with a demo driver stage', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                sender_content_source: 'none',
+                claimOutcome: 'accepted_pending',
+                rider: {
+                    ...baseProps.rider,
+                    stages: { stages: [{ key: 'demo-success-message', type: 'message', phase: 'success', content: 'SUCCESS DEMO: Thank you for claiming.' }] },
+                    success: { enabled: true, content: 'SUCCESS DEMO: Thank you for claiming.' },
+                },
+            },
+        });
+
+        expect(wrapper.get('[data-testid="claim-default-thank-you"]').text()).toBe('Thank you.');
+        expect(wrapper.text()).not.toContain('SUCCESS DEMO');
+        expect(wrapper.text()).not.toContain('Message from the sender');
+        expect(wrapper.find('[data-testid="success-stage-region"]').exists()).toBe(false);
+    });
+
+    it('attributes an issuer rider message to the sender', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                sender_content_source: 'message',
+                claimOutcome: 'accepted_pending',
+                rider: { ...baseProps.rider, success: { enabled: true, type: 'text', content: 'A message from the issuer.' } },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Message from the sender');
+        expect(wrapper.text()).toContain('A message from the issuer.');
+        expect(wrapper.find('[data-testid="claim-default-thank-you"]').exists()).toBe(false);
+    });
+
+    it('preserves an issuer message even when it resembles the legacy generic copy', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                sender_content_source: 'message',
+                claimOutcome: 'accepted_pending',
+                rider: { ...baseProps.rider, state: 'accepted_pending', success: { enabled: true, type: 'text', content: 'Your Pay Code is ready.' } },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Message from the sender');
+        expect(wrapper.text()).toContain('Your Pay Code is ready.');
+        expect(wrapper.text()).not.toContain('Your claim is being processed.');
+    });
     it('renders workflow attention without payout-pending copy, actions, or redirects', () => {
         const wrapper = mount(Success, {
             props: {
@@ -276,7 +331,23 @@ describe('claim Success redirect countdown rendering', () => {
 
         expect(
             wrapper.find('[data-testid="provider-payout-pending-region"]').text(),
-        ).toContain('Claim accepted · payout pending');
+        ).toContain('Claim received');
+        expect(wrapper.find('[data-testid="provider-payout-pending-region"]').text()).toContain('Transfer processing');
+        expect(wrapper.find('[data-testid="clock-icon"]').exists()).toBe(false);
+        expect(wrapper.get('[data-testid="claim-brand-logo"]').attributes('style')).toContain('height: 5rem');
+    });
+
+    it('shows the claim amount and session destination in a compact pending receipt', () => {
+        const wrapper = mount(Success, { props: {
+            ...baseProps,
+            claimOutcome: 'accepted_pending',
+            destination: { bank_code: 'GXCHPHM2XXX', bank_name: 'GCash', bank_label: 'GCash', icon_asset: null, settlement_rail: 'INSTAPAY', account_number_masked: '*******1987', account_number_full: '09173011987', claim_amount_minor: 2500, claim_currency: 'PHP', route: [], route_icons: [] },
+        } });
+        const receipt = wrapper.get('[data-testid="claim-transfer-receipt"]').text();
+        expect(receipt).toContain('₱25.00');
+        expect(receipt).toContain('GCash · 09173011987');
+        expect(receipt).toContain('InstaPay');
+        expect(receipt).not.toContain('*******1987');
     });
 
     it('replaces the generic ready rider message while provider payout is pending', () => {
