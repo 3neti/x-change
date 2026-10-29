@@ -43,11 +43,11 @@ function issued() {
   };
   return value;
 }
-function panel() {
+function panel(activeOrder = paid()) {
   const wrapper = mount(Panel, {
     props: {
       templates: cockpitQuickGenerateTemplates,
-      activeOnDemandFundingOrder: paid(),
+      activeOnDemandFundingOrder: activeOrder,
     },
     global: { stubs: { Teleport: true } },
   });
@@ -149,4 +149,19 @@ it("preserves batch downloads when background issuance completes", async () => {
   expect(wrapper.findComponent(FundingDialog).text()).toContain(
     "Download 2 Pay Codes",
   );
+});
+
+
+it("keeps QR Ph selected during real parent-owned status and verification polling", async () => {
+  const awaiting = structuredClone(projection);
+  awaiting.funding_selector.methods[1].available = true;
+  awaiting.funding_selector.methods[1].selectable = true;
+  const fetch = vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true, status: 200, json: async () => structuredClone(awaiting) } as Response);
+  const wrapper = panel(awaiting);
+  const qrTab = () => wrapper.get('[data-testid="funding-mode-self_top_up"]');
+  await qrTab().trigger("click");
+  await vi.advanceTimersByTimeAsync(20000);
+  expect(fetch.mock.calls.some(([url]) => url === awaiting.actions.show)).toBe(true);
+  expect(fetch.mock.calls.some(([url]) => url === awaiting.actions.verify)).toBe(true);
+  expect(qrTab().attributes("aria-selected")).toBe("true");
 });

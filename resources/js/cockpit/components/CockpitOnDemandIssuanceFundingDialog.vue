@@ -198,11 +198,13 @@ function rememberBatchToken(projection: CockpitOnDemandIssuanceFundingProjection
 
 watch(
   () => props.projection,
-  (projection) => {
+  (projection, previous) => {
     current.value = projection;
     rememberBatchToken(projection);
-    selectedMode.value =
-      projection?.funding_selector.default_mode ?? "bank_transfer";
+    if (previous === undefined || projection?.order.reference !== previous?.order.reference) {
+      selectedMode.value =
+        projection?.funding_selector.default_mode ?? "bank_transfer";
+    }
     monitorMessage.value = null;
   },
   { immediate: true },

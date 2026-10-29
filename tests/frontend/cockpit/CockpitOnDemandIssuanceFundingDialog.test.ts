@@ -6,6 +6,32 @@ import CockpitOnDemandIssuanceFundingDialog from "../../../resources/js/cockpit/
 import { projection } from "./issuanceProjection";
 
 describe("CockpitOnDemandIssuanceFundingDialog", () => {
+  it("preserves QR Ph across refreshed projections and reopening, but resets for a new order", async () => {
+    const initial = structuredClone(projection);
+    initial.funding_selector.methods[1].available = true;
+    initial.funding_selector.methods[1].selectable = true;
+    const wrapper = mount(CockpitOnDemandIssuanceFundingDialog, {
+      props: { open: true, projection: initial },
+      global: { stubs: { Teleport: true } },
+    });
+    try {
+      const qrTab = () => wrapper.get('[data-testid="funding-mode-self_top_up"]');
+      await qrTab().trigger("click");
+      expect(qrTab().attributes("aria-selected")).toBe("true");
+      for (let refresh = 0; refresh < 3; refresh++) {
+        await wrapper.setProps({ projection: structuredClone(initial) });
+        expect(qrTab().attributes("aria-selected")).toBe("true");
+      }
+      await wrapper.setProps({ open: false });
+      await wrapper.setProps({ open: true });
+      expect(qrTab().attributes("aria-selected")).toBe("true");
+      const nextOrder = structuredClone(initial);
+      nextOrder.order.reference = "ORDER-2";
+      await wrapper.setProps({ projection: nextOrder });
+      expect(wrapper.get('[data-testid="funding-mode-bank_transfer"]').attributes("aria-selected")).toBe("true");
+    } finally { wrapper.unmount(); }
+  });
+
   it("keeps bank transfer primary and presents an exact read-only amount", () => {
     const wrapper = mount(CockpitOnDemandIssuanceFundingDialog, {
       props: { open: true, projection },
