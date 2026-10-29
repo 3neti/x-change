@@ -57,7 +57,6 @@ const disclosure = (key: string): NonNullable<XRayClaimPreviewResult['disclosure
     props.result?.disclosures?.find((item) => item.key === key);
 const amount = computed(() => disclosure('amount')?.value);
 const expiresAt = computed(() => disclosure('expires_at')?.value);
-const payCodeReference = computed(() => disclosure('reference')?.value);
 const systemDisclosures = computed(() =>
     (props.result?.disclosures ?? []).filter((item) =>
         ['issuer', 'funding_source', 'provider', 'issued_at'].includes(item.key),
@@ -276,7 +275,6 @@ function stageText(stage: NonNullable<XRayClaimPreviewResult['stages']>[number])
                     <div v-if="amount" class="rounded-xl border border-primary/15 bg-primary/5 p-4" data-testid="xray-claim-amount">
                         <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                             <span>You can claim</span>
-                            <span v-if="payCodeReference" class="whitespace-nowrap font-mono">|| {{ payCodeReference }} ||</span>
                         </div>
                         <p class="mt-1 text-2xl font-bold tabular-nums text-foreground">{{ amount }}</p>
                     </div>

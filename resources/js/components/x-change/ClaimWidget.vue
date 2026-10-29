@@ -4,12 +4,12 @@ import InputError from '@/components/InputError.vue';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import VoucherStatusStamp from '@/components/x-change/VoucherStatusStamp.vue';
 import RiderRuntimeSequencer from '@/components/x-rider/RiderRuntimeSequencer.vue';
 import XRayClaimPreview from '@/components/x-change/XRayClaimPreview.vue';
+import ClaimCodeField from '@/components/x-change/ClaimCodeField.vue';
+import { isVerifiedClaimCode } from '@/components/x-change/claimCodeVerification';
 import ClaimSurfaceRenderer from '@/components/x-change/ClaimSurfaceRenderer.vue';
 import type { ClaimSurfaceLike } from '@/components/x-change/ClaimSurfaceRenderer.vue';
 import type { RawRiderStage } from '@/components/x-rider/types';
@@ -73,7 +73,6 @@ onMounted(() => {
     }
 });
 
-const voucherInput = ref<HTMLInputElement | null>(null);
 const submitButton = ref<HTMLButtonElement | null>(null);
 const reactiveClaimExperience = ref<Record<string, unknown> | null>(
     props.claimExperience ?? null,
@@ -143,6 +142,7 @@ const serverResolvedXRay = computed<Record<string, unknown> | null>(() => {
 const resolvedXRay = computed<Record<string, unknown> | null>(
     () => serverResolvedXRay.value ?? xrayResult.value,
 );
+const verifiedCode = computed(() => isVerifiedClaimCode(resolvedXRay.value, normalizedCode.value));
 
 const xrayPresentation = computed<XRayClaimPresentation>(() => {
     const presentation = resolvedXRay.value?.presentation;
@@ -550,15 +550,12 @@ watch(
             class="space-y-6"
         >
             <div class="flex flex-col gap-2">
-                <Label for="code">{{ claimCodeLabel }}</Label>
-                <Input
+                <ClaimCodeField
                     id="code"
                     v-model="code"
-                    placeholder="Enter pay code"
-                    required
+                    :label="claimCodeLabel"
+                    :verified="verifiedCode"
                     autofocus
-                    ref="voucherInput"
-                    class="text-center text-lg tracking-wider"
                 />
                 <InputError :message="errors.code" class="mt-1" />
             </div>

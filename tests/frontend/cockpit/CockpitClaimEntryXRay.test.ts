@@ -27,7 +27,10 @@ describe('Cockpit claim entry walkthrough', () => {
         });
 
         expect(wrapper.get('[data-testid="cockpit-claim-entry-xray"]').text()).toContain('₱25.00');
-        expect(wrapper.get('[data-testid="cockpit-claim-entry-xray"]').text()).toContain('|| AA317 ||');
+        expect(wrapper.get('[data-testid="cockpit-claim-entry-xray"]').text()).not.toContain('AA317');
+        expect((wrapper.get('[data-testid="claim-code-input"]').element as HTMLInputElement).value).toBe('AA317');
+        expect(wrapper.get('[data-testid="claim-code-left-pipes"]').text()).toBe('||');
+        expect(wrapper.get('[data-testid="claim-code-right-pipes"]').text()).toBe('||');
         expect(wrapper.get('[data-testid="xray-requirements-toggle"]').text()).toContain('Mobile number');
         expect(wrapper.findAll('button').filter((button) => button.text() === 'Continue')).toHaveLength(1);
 

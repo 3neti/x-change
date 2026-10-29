@@ -107,7 +107,7 @@ describe('XRayClaimPreview', () => {
         });
 
         expect(wrapper.get('[data-testid="xray-claim-amount"]').text()).toContain('₱50.00');
-        expect(wrapper.get('[data-testid="xray-claim-amount"]').text()).toContain('|| JK33 ||');
+        expect(wrapper.get('[data-testid="xray-claim-amount"]').text()).not.toContain('JK33');
         expect(wrapper.get('[data-testid="xray-validity"]').text()).toContain('Expires on');
         expect(wrapper.get('[data-testid="xray-required-inputs"]').text()).toContain('Mobile number');
         expect(wrapper.get('#xray-instructions-panel').isVisible()).toBe(true);

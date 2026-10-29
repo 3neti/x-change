@@ -16,6 +16,8 @@ import {
 import { computed, defineAsyncComponent, type Component } from 'vue';
 import PayCodeLogo from '../../components/x-change/PayCodeLogo.vue';
 import XRayClaimPreview from '../../components/x-change/XRayClaimPreview.vue';
+import ClaimCodeField from '../../components/x-change/ClaimCodeField.vue';
+import { isVerifiedClaimCode } from '../../components/x-change/claimCodeVerification';
 import type { XRayClaimPreviewResult } from '../../components/x-change/xrayClaimPreviewViewModel';
 
 type ClaimPreviewField = {
@@ -111,12 +113,13 @@ const actualScreenComponent = computed<Component | null>(() => {
                         />
                         <h3 class="text-xl font-medium">{{ screen.xray?.presentation?.title || screen.title }}</h3>
                     </div>
-                    <div class="grid gap-2">
-                        <label class="text-sm font-medium">Pay Code</label>
-                        <div class="bg-background grid min-h-12 place-items-center rounded-xl border px-3 text-center text-lg font-medium tracking-wider">
-                            {{ screen.code }}
-                        </div>
-                    </div>
+                    <ClaimCodeField
+                        id="preview-claim-code"
+                        label="Pay Code"
+                        :model-value="screen.code ?? ''"
+                        :verified="isVerifiedClaimCode(screen.xray, screen.code ?? '')"
+                        readonly
+                    />
                     <XRayClaimPreview
                         v-if="screen.xray"
                         :result="screen.xray"

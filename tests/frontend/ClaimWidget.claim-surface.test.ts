@@ -169,6 +169,7 @@ const claimableSliceSurface = {
                     subject_label: 'Invitation code',
                 },
                 disclosures: [
+                    { key: 'reference', label: 'Pay Code', value: 'TEST123' },
                     {
                         key: 'remaining_slices',
                         label: 'Remaining Slices',
@@ -268,6 +269,26 @@ describe('ClaimWidget claim surface gating', () => {
         expect(wrapper.find('h1').text()).toBe('Accept Invitation');
         expect(wrapper.find('label[for="code"]').text()).toBe('Invitation code');
         expect(wrapper.get('[data-testid="claim-widget-submit-button"]').text()).toBe('Continue');
+    });
+
+    it('shows branded pipes only while the verified code matches the editable value', async () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: null,
+                claimSurface: claimableSliceSurface,
+            },
+        });
+
+        expect((wrapper.get('[data-testid="claim-code-input"]').element as HTMLInputElement).value).toBe('TEST123');
+        expect(wrapper.findAll('[data-testid="claim-code-left-pipes"]')).toHaveLength(1);
+        expect(wrapper.findAll('[data-testid="claim-code-right-pipes"]')).toHaveLength(1);
+
+        capturedCodeRef!.value = 'DIFFERENT';
+        await nextTick();
+
+        expect(wrapper.find('[data-testid="claim-code-left-pipes"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="claim-code-right-pipes"]').exists()).toBe(false);
     });
 
     it('keeps one selectable slice set when X-Ray and the compiled selector resolve together', () => {
