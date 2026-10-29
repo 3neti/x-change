@@ -131,6 +131,21 @@ describe('claim Success redirect countdown rendering', () => {
         expect(wrapper.text()).toContain('A message from the issuer.');
         expect(wrapper.find('[data-testid="claim-default-thank-you"]').exists()).toBe(false);
     });
+
+    it('preserves an issuer message even when it resembles the legacy generic copy', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                sender_content_source: 'message',
+                claimOutcome: 'accepted_pending',
+                rider: { ...baseProps.rider, state: 'accepted_pending', success: { enabled: true, type: 'text', content: 'Your Pay Code is ready.' } },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Message from the sender');
+        expect(wrapper.text()).toContain('Your Pay Code is ready.');
+        expect(wrapper.text()).not.toContain('Your claim is being processed.');
+    });
     it('renders workflow attention without payout-pending copy, actions, or redirects', () => {
         const wrapper = mount(Success, {
             props: {

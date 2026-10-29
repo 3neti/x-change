@@ -127,18 +127,16 @@ const effectiveRedirectEndpoint = computed(() =>
     suppressAutomaticRedirects.value ? null : props.redirectEndpoint ?? null,
 );
 
+const riderMessageState = computed(() => props.sender_content_source === 'message'
+    ? { claimOutcome: null, riderState: null }
+    : { claimOutcome: props.claimOutcome, riderState: props.rider?.state });
+
 const displayedRiderContent = computed(() =>
-    resolveSuccessRiderMessage(riderContent.value, {
-        claimOutcome: props.claimOutcome,
-        riderState: props.rider?.state,
-    }),
+    resolveSuccessRiderMessage(riderContent.value, riderMessageState.value),
 );
 
 const successVisualStages = computed<RawRiderStage[]>(() =>
-    suppressLegacyRider.value || useDefaultThankYou.value ? [] : resolveSuccessVisualStages(props.claim_experience, props.rider, {
-        claimOutcome: props.claimOutcome,
-        riderState: props.rider?.state,
-    }),
+    suppressLegacyRider.value || useDefaultThankYou.value ? [] : resolveSuccessVisualStages(props.claim_experience, props.rider, riderMessageState.value),
 );
 
 const redirectRuntimeStages = computed<RawRiderStage[]>(() =>
@@ -152,6 +150,7 @@ const hasRiderMessage = computed(() =>
 );
 const showSenderMessageLabel = computed(() => {
     if (useDefaultThankYou.value || props.success_presentation?.title?.trim()) return false;
+    if (props.sender_content_source === 'message') return successVisualStages.value.length > 0 || hasRiderMessage.value;
     if (successVisualStages.value.length) {
         return successVisualStages.value.some((stage) =>
             (stage.payload?.content ?? stage.content) !== 'Your claim is being processed.',
