@@ -307,6 +307,35 @@ it('maps an expired Pay Code to an outcome panel', function () {
         ->and(collect($surface->components)->pluck('type'))->toContain('outcome_panel');
 });
 
+it('keeps cancelled and expired public claim pages focused on the terminal outcome', function (): void {
+    Http::fake();
+    actingAsTestUser();
+
+    foreach (['cancelled', 'expired'] as $status) {
+        $voucher = issueVoucher(validVoucherInstructions(overrides: [
+            'rider' => [
+                'message' => 'This message belongs to the claim journey.',
+                'url' => 'https://example.test/after-claim',
+                'splash' => '<h1>Before you claim</h1>',
+            ],
+        ]));
+
+        $voucher->forceFill($status === 'cancelled'
+            ? ['state' => VoucherState::CANCELLED, 'closed_at' => now()]
+            : ['expires_at' => now()->subMinute()])->save();
+        auth()->logout();
+
+        $surface = claimSurfaceResolver()->resolve($voucher->refresh(), null);
+
+        expect($surface->state->key)->toBe($status)
+            ->and($surface->state->terminal)->toBeTrue()
+            ->and(collect($surface->components)->pluck('type'))->toContain('outcome_panel')
+            ->not->toContain('claim_experience_summary');
+    }
+
+    Http::assertNothingSent();
+});
+
 it('maps a redeemed Pay Code to an outcome panel', function () {
     $issuer = actingAsTestUser();
     $voucher = issueVoucher(validVoucherInstructions(100));

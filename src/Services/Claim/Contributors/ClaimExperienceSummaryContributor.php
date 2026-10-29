@@ -30,6 +30,10 @@ final class ClaimExperienceSummaryContributor implements ClaimSurfaceContributor
     {
         $isIssuerViewer = in_array($context->viewer->role, self::ISSUER_ROLES, true);
 
+        if (! $isIssuerViewer && in_array($context->state->key, ['cancelled', 'expired'], true)) {
+            return;
+        }
+
         if (! $context->state->terminal && ! ($isIssuerViewer && $context->hasClaimActivity())) {
             return;
         }
