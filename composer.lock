@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "aecae82d88a8e1e365c8be280744dc5c",
+    "content-hash": "9daa821ec88bc18c31326cd49fbc9e1c",
     "packages": [
         {
             "name": "3neti/cash",
@@ -1932,11 +1932,11 @@
         },
         {
             "name": "3neti/x-ray",
-            "version": "v1.0.3",
+            "version": "v1.0.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/x-ray.git",
-                "reference": "c5b38a9cee33f6befed71e987e1ec0134108bac7"
+                "reference": "d624293d1d559fe98432a4b9328d82e292e436ef"
             },
             "require": {
                 "illuminate/http": "^12.0 || ^13.0",
@@ -1990,7 +1990,7 @@
                 }
             ],
             "description": "Permissioned pre-claim inspection and disclosure runtime for Pay Codes.",
-            "time": "2026-10-28T14:35:25+00:00"
+            "time": "2026-10-29T01:25:42+00:00"
         },
         {
             "name": "3neti/x-rider",
