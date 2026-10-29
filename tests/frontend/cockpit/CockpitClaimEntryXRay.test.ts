@@ -14,6 +14,15 @@ describe('Cockpit claim entry walkthrough', () => {
         expect(wrapper.text()).toContain('Thank you.');
     });
 
+    it('shows an unattributed thank you when the preview has no sender message', () => {
+        const wrapper = mount(CockpitClaimLiveScreen, {
+            props: { screen: { kind: 'success', amount: '₱25.00', message: null } },
+        });
+
+        expect(wrapper.text()).toContain('Thank you.');
+        expect(wrapper.text()).not.toContain('Message from the sender');
+    });
+
     it('uses the live x-ray card with the sample code and a single visible action', async () => {
         const wrapper = mount(CockpitClaimLiveScreen, {
             props: {

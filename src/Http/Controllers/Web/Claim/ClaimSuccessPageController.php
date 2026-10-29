@@ -84,6 +84,7 @@ class ClaimSuccessPageController
             ],
             'claimOutcome' => $state->value,
             'claimWorkflowKey' => $workflow->workflow?->key,
+            'sender_content_source' => $this->senderContentSource($instructions),
             'rider' => $experience?->toArray(),
             'redirectEndpoint' => null,
             'handoff_retry_url' => session()->get('claim_rider_handoff_failed')
@@ -272,6 +273,12 @@ class ClaimSuccessPageController
         }
 
         return is_array($destination) && $destination !== [] ? $destination : null;
+    }
+
+    /** @param array<string, mixed> $instructions */
+    private function senderContentSource(array $instructions): string
+    {
+        return filled(data_get($instructions, 'rider.message')) ? 'message' : 'none';
     }
 
     /**

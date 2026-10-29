@@ -452,6 +452,7 @@ const actualScreenComponent = computed<Component | null>(() => {
                 >
                     {{ screen.message }}
                 </p>
+                <p v-else class="text-sm text-foreground">Thank you.</p>
             </div>
         </template>
 

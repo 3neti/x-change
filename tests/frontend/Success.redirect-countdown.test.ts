@@ -97,6 +97,40 @@ const baseProps = {
 };
 
 describe('claim Success redirect countdown rendering', () => {
+    it('uses an unattributed thank you when the issuer supplied no message, even with a demo driver stage', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                sender_content_source: 'none',
+                claimOutcome: 'accepted_pending',
+                rider: {
+                    ...baseProps.rider,
+                    stages: { stages: [{ key: 'demo-success-message', type: 'message', phase: 'success', content: 'SUCCESS DEMO: Thank you for claiming.' }] },
+                    success: { enabled: true, content: 'SUCCESS DEMO: Thank you for claiming.' },
+                },
+            },
+        });
+
+        expect(wrapper.get('[data-testid="claim-default-thank-you"]').text()).toBe('Thank you.');
+        expect(wrapper.text()).not.toContain('SUCCESS DEMO');
+        expect(wrapper.text()).not.toContain('Message from the sender');
+        expect(wrapper.find('[data-testid="success-stage-region"]').exists()).toBe(false);
+    });
+
+    it('attributes an issuer rider message to the sender', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                sender_content_source: 'message',
+                claimOutcome: 'accepted_pending',
+                rider: { ...baseProps.rider, success: { enabled: true, type: 'text', content: 'A message from the issuer.' } },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Message from the sender');
+        expect(wrapper.text()).toContain('A message from the issuer.');
+        expect(wrapper.find('[data-testid="claim-default-thank-you"]').exists()).toBe(false);
+    });
     it('renders workflow attention without payout-pending copy, actions, or redirects', () => {
         const wrapper = mount(Success, {
             props: {

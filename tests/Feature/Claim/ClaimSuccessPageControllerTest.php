@@ -201,6 +201,7 @@ it('exposes claim experience redirect countdown metadata to the success page', f
         ],
     ]))
         ->assertOk()
+        ->assertJsonPath('sender_content_source', 'message')
         ->assertJsonPath('claim_experience.options.show_redirect_countdown', false)
         ->assertJsonPath('claim_experience.diagnostics.redirect_owner', 'claim-widget')
         ->assertJsonPath('redirect.show_countdown', false)
@@ -210,6 +211,14 @@ it('exposes claim experience redirect countdown metadata to the success page', f
     $claimExperience = $response->json('claim_experience');
 
     expect(ClaimExperiencePayload::isClaimWidgetRedirect($claimExperience))->toBeTrue();
+});
+
+it('identifies the absence of an issuer rider message for the success page', function (): void {
+    $voucher = issueVoucher(validVoucherInstructions(overrides: ['rider' => ['message' => null]]));
+
+    $this->getJson(route('x-change.claim.success', ['code' => $voucher->code]))
+        ->assertOk()
+        ->assertJsonPath('sender_content_source', 'none');
 });
 
 it('passes claim widget redirect ownership metadata to success page', function () {

@@ -51,6 +51,7 @@ interface Props {
     voucher: VoucherProps;
     claimOutcome?: string;
     claimWorkflowKey?: string | null;
+    sender_content_source?: 'message' | 'none' | null;
     rider?: RiderExperience | null;
     redirectEndpoint?: string | null;
     handoff_retry_url?: string | null;
@@ -102,6 +103,9 @@ const completionProcessing = computed(() =>
 const completionPoll = useCompletionStatusPoll(completionProcessing);
 
 const suppressLegacyRider = computed(() => props.success_presentation?.suppress_legacy_rider === true);
+const useDefaultThankYou = computed(() =>
+    props.sender_content_source === 'none' && !suppressLegacyRider.value && !props.success_presentation,
+);
 const hasPaymentHandoff = computed(() =>
     props.success_action?.key === 'x-change.claim-success.continue-to-payment'
     && props.success_action.enabled !== false
@@ -112,7 +116,7 @@ const suppressAutomaticRedirects = computed(() =>
     props.paired_payment || hasPaymentHandoff.value || suppressLegacyRider.value,
 );
 
-const riderContent = computed(() => suppressLegacyRider.value ? null : props.rider?.success ?? null);
+const riderContent = computed(() => suppressLegacyRider.value || useDefaultThankYou.value ? null : props.rider?.success ?? null);
 const riderRedirect = computed(() =>
     suppressAutomaticRedirects.value ? null : props.rider?.redirect ?? null,
 );
@@ -131,7 +135,7 @@ const displayedRiderContent = computed(() =>
 );
 
 const successVisualStages = computed<RawRiderStage[]>(() =>
-    suppressLegacyRider.value ? [] : resolveSuccessVisualStages(props.claim_experience, props.rider, {
+    suppressLegacyRider.value || useDefaultThankYou.value ? [] : resolveSuccessVisualStages(props.claim_experience, props.rider, {
         claimOutcome: props.claimOutcome,
         riderState: props.rider?.state,
     }),
@@ -147,7 +151,7 @@ const hasRiderMessage = computed(() =>
     shouldRenderSuccessRiderMessage(displayedRiderContent.value),
 );
 const showSenderMessageLabel = computed(() => {
-    if (!pageTone.value.isPending) return false;
+    if (useDefaultThankYou.value || props.success_presentation?.title?.trim()) return false;
     if (successVisualStages.value.length) {
         return successVisualStages.value.some((stage) =>
             (stage.payload?.content ?? stage.content) !== 'Your claim is being processed.',
@@ -377,6 +381,8 @@ const successAction = computed(() => {
                         </span>
                     </p>
                 </div>
+
+                <p v-else-if="useDefaultThankYou" data-testid="claim-default-thank-you" class="text-sm text-foreground">Thank you.</p>
 
                 <div
                     v-else-if="hasSuccessVisualStages"
