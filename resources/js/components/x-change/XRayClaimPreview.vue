@@ -36,6 +36,18 @@ interface XRaySliceRow {
     is_final_claim?: boolean | null;
 }
 
+interface XRayValueUse {
+    mode: 'whole' | 'flexible' | 'equal' | 'scheduled' | 'stored_value';
+    amount_basis: 'whole' | 'remaining' | 'available_now' | 'next_available' | 'starting' | 'unavailable';
+    amount_minor?: number | null;
+    minimum_minor?: number;
+    claims_remaining?: number;
+    portion_number?: number;
+    portion_count?: number;
+    available_at?: string;
+    collection_terms?: { amount: string; otp_above_minor?: number };
+}
+
 const props = withDefaults(defineProps<{
     result?: XRayClaimPreviewResult | null;
     loading?: boolean;
@@ -56,6 +68,47 @@ function switchTab(tab: 'instructions' | 'system-info', event: KeyboardEvent): v
 const disclosure = (key: string): NonNullable<XRayClaimPreviewResult['disclosures']>[number] | undefined =>
     props.result?.disclosures?.find((item) => item.key === key);
 const amount = computed(() => disclosure('amount')?.value);
+const valueUse = computed<XRayValueUse | null>(() => {
+    const value = disclosure('value_use')?.value;
+    return value && typeof value === 'object' && !Array.isArray(value) && 'mode' in value
+        ? value as XRayValueUse
+        : null;
+});
+const valueUseLabel = computed(() => {
+    const value = valueUse.value;
+    if (!value) return 'Pay Code value';
+    if (value.amount_basis === 'unavailable') return 'Balance unavailable';
+    if (value.mode === 'whole') return 'Amount available in one claim';
+    if (value.mode === 'flexible') return 'Remaining balance';
+    if (value.mode === 'stored_value') return value.amount_basis === 'starting' ? 'Starting balance' : 'Remaining balance';
+    return value.amount_basis === 'next_available' ? 'Next available amount' : 'Available now';
+});
+const valueUseAmount = computed(() => {
+    const value = valueUse.value;
+    if (!value) return amount.value;
+    return typeof value.amount_minor === 'number' ? formatSliceAmount(value.amount_minor) : null;
+});
+const valueUseDetails = computed(() => {
+    const value = valueUse.value;
+    if (!value) return [];
+    const details: string[] = [];
+    if (value.mode === 'flexible') {
+        if (typeof value.minimum_minor === 'number') details.push(`Minimum ${formatSliceAmount(value.minimum_minor)}`);
+        if (typeof value.claims_remaining === 'number') details.push(`${value.claims_remaining} claims remaining`);
+    }
+    if (['equal', 'scheduled'].includes(value.mode) && value.portion_number) {
+        details.push(`Portion ${value.portion_number}${value.portion_count ? ` of ${value.portion_count}` : ''}`);
+    }
+    if (value.available_at && value.amount_basis === 'next_available') {
+        const date = new Date(value.available_at);
+        if (!Number.isNaN(date.getTime())) details.push(new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeZone: 'Asia/Manila' }).format(date));
+    }
+    if (value.mode === 'stored_value') {
+        details.push('Collector sets the amount');
+        if (value.collection_terms?.otp_above_minor) details.push(`OTP may be required above ${formatSliceAmount(value.collection_terms.otp_above_minor)}`);
+    }
+    return details;
+});
 const expiresAt = computed(() => disclosure('expires_at')?.value);
 const systemDisclosures = computed(() =>
     (props.result?.disclosures ?? []).filter((item) =>
@@ -141,7 +194,7 @@ const formattedExpiry = computed(() => {
 // is already shown in the friendly header above.
 const extraDisclosures = computed(() =>
     (props.result?.disclosures ?? []).filter(
-        (item) => !['status', 'remaining_slices', 'amount', 'issuer', 'funding_source', 'provider', 'issued_at', 'expires_at', 'reference', 'service_info'].includes(item.key),
+        (item) => !['status', 'remaining_slices', 'amount', 'value_use', 'issuer', 'funding_source', 'provider', 'issued_at', 'expires_at', 'reference', 'service_info'].includes(item.key),
     ),
 );
 const sliceRows = computed<XRaySliceRow[]>(() => {
@@ -272,11 +325,12 @@ function stageText(stage: NonNullable<XRayClaimPreviewResult['stages']>[number])
                         {{ status.description }}
                     </p>
 
-                    <div v-if="amount" class="rounded-xl border border-primary/15 bg-primary/5 p-4" data-testid="xray-claim-amount">
+                    <div v-if="valueUse || amount" class="rounded-xl border border-primary/15 bg-primary/5 p-4" data-testid="xray-claim-amount">
                         <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                            <span>You can claim</span>
+                            <span>{{ valueUseLabel }}</span>
                         </div>
-                        <p class="mt-1 text-2xl font-bold tabular-nums text-foreground">{{ amount }}</p>
+                        <p v-if="valueUseAmount" class="mt-1 text-2xl font-bold tabular-nums text-foreground">{{ valueUseAmount }}</p>
+                        <p v-if="valueUseDetails.length" class="mt-1 text-xs text-muted-foreground">{{ valueUseDetails.join(' · ') }}</p>
                     </div>
 
                     <button

@@ -31,6 +31,7 @@ class VoucherXRayProjectionBuilder
         private readonly ClaimWorkflowReadModelProjector $claimWorkflows,
         private readonly CoverageCompletionSuccessPresentation $coverageCompletionSuccess,
         private readonly StampProviderIdentity $providerIdentity,
+        private readonly ClaimValueUseProjection $valueUse,
     ) {}
 
     /**
@@ -114,6 +115,9 @@ class VoucherXRayProjectionBuilder
             'claim_workflow' => $this->claimWorkflowProjection($workflowInterpretation),
             'collection_progress' => $collectionProgress,
             'slice_plan' => $slicePlan,
+            'value_use' => $sliceVoucher instanceof Voucher
+                ? $this->valueUse->forVoucher($sliceVoucher, $slicePlan)
+                : null,
             'remaining_slices' => $sliceVoucher instanceof Voucher
                 ? data_get($slicePlan, 'rows', [])
                 : $this->remainingSlices($instructions),
@@ -124,6 +128,7 @@ class VoucherXRayProjectionBuilder
                 : $this->nextActions($status, (string) data_get($voucher, 'code', ''), $sliceVoucher),
             'allow' => [
                 'amount' => $claimable,
+                'value_use' => $claimable,
                 'issuer' => $claimable && $issuerName !== '',
                 'funding_source' => $claimable && $provider !== null,
                 'provider' => $claimable && $provider !== null,

@@ -57,6 +57,32 @@ vi.mock('lucide-vue-next', () => ({
 }));
 
 describe('XRayClaimPreview', () => {
+    it.each([
+        [{ mode: 'whole', amount_basis: 'whole', amount_minor: 2_500 }, 'Amount available in one claim', '₱25.00'],
+        [{ mode: 'flexible', amount_basis: 'remaining', amount_minor: 3_500, minimum_minor: 500, claims_remaining: 2 }, 'Remaining balance', 'Minimum ₱5.00 · 2 claims remaining'],
+        [{ mode: 'equal', amount_basis: 'available_now', amount_minor: 2_500, portion_number: 2, portion_count: 4 }, 'Available now', 'Portion 2 of 4'],
+        [{ mode: 'scheduled', amount_basis: 'next_available', amount_minor: 4_000, portion_number: 1, portion_count: 2, available_at: '2026-11-01T08:00:00+08:00' }, 'Next available amount', 'Nov 1, 2026'],
+        [{ mode: 'stored_value', amount_basis: 'starting', amount_minor: 10_000, collection_terms: { amount: 'collector_sets_amount', otp_above_minor: 5_000 } }, 'Starting balance', 'Collector sets the amount · OTP may be required above ₱50.00'],
+    ])('shows the %s value use without treating face value as current claim amount', (valueUse, label, detail) => {
+        const wrapper = mount(XRayClaimPreview, {
+            props: {
+                result: {
+                    visible: true,
+                    status: 'claimable',
+                    disclosures: [
+                        { key: 'amount', value: '₱100.00' },
+                        { key: 'value_use', value: valueUse },
+                    ],
+                },
+            },
+        });
+
+        const card = wrapper.get('[data-testid="xray-claim-amount"]').text();
+        expect(card).toContain(label);
+        expect(card).toContain(detail);
+        if (valueUse.amount_minor !== 10_000) expect(card).not.toContain('₱100.00');
+    });
+
     it('keeps the claim summary visible while details expand on request', async () => {
         const wrapper = mount(XRayClaimPreview, {
             props: {
