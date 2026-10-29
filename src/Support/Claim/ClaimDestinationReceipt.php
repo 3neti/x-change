@@ -32,8 +32,18 @@ final class ClaimDestinationReceipt
             return;
         }
 
+        $account = trim($account);
+        $maskedAccount = str_repeat('*', max(strlen($account) - 4, 0)).substr($account, -4);
+        $bankCode = data_get($payload, 'bank_code');
+        if (! is_string($claim->account_number_masked)
+            || ! hash_equals($claim->account_number_masked, $maskedAccount)
+            || ! is_string($bankCode) || ! is_string($claim->bank_code)
+            || strcasecmp(trim($bankCode), trim($claim->bank_code)) !== 0) {
+            return;
+        }
+
         try {
-            $encryptedAccount = Crypt::encryptString(trim($account));
+            $encryptedAccount = Crypt::encryptString($account);
         } catch (Throwable) {
             return;
         }

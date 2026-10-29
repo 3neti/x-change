@@ -81,10 +81,14 @@ it('reveals the submitted destination only in the matching unexpired claim sessi
         ->assertOk()->assertJsonMissingPath('destination.account_number_full')
         ->assertJsonMissingPath('destination.claim_amount_minor');
     $failed = new SubmitPayCodeClaimResultData(voucher_code: $voucher->code, claim_type: 'withdraw', claimed: false, status: 'failed');
-    app(ClaimDestinationReceipt::class)->remember($voucher, $failed, ['account_number' => '09173011987'], 'session-receipt-test');
+    app(ClaimDestinationReceipt::class)->remember($voucher, $failed, ['bank_code' => 'GXCHPHM2XXX', 'account_number' => '09173011987'], 'session-receipt-test');
     expect(session()->get('x-change.claim-destination-receipt'))->toBeNull();
     $result = new SubmitPayCodeClaimResultData(voucher_code: $voucher->code, claim_type: 'withdraw', claimed: true, status: 'pending_review');
-    app(ClaimDestinationReceipt::class)->remember($voucher, $result, ['account_number' => '09173011987'], 'session-receipt-test');
+    app(ClaimDestinationReceipt::class)->remember($voucher, $result, ['bank_code' => 'OTHER', 'account_number' => '09173011987'], 'session-receipt-test');
+    expect(session()->get('x-change.claim-destination-receipt'))->toBeNull();
+    app(ClaimDestinationReceipt::class)->remember($voucher, $result, ['bank_code' => 'GXCHPHM2XXX', 'account_number' => '09173010000'], 'session-receipt-test');
+    expect(session()->get('x-change.claim-destination-receipt'))->toBeNull();
+    app(ClaimDestinationReceipt::class)->remember($voucher, $result, ['bank_code' => 'GXCHPHM2XXX', 'account_number' => '09173011987'], 'session-receipt-test');
     $stored = session()->all();
 
     expect(json_encode($stored))->not->toContain('09173011987');

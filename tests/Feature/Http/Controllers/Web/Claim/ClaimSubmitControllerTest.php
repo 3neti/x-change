@@ -79,7 +79,8 @@ it('binds the submitted destination to the completed claim session', function ()
     $this->submitAction->shouldReceive('handle')->once()->andReturnUsing(function (Voucher $voucher, array $payload): SubmitPayCodeClaimResultData {
         VoucherClaim::query()->create([
             'voucher_id' => $voucher->getKey(), 'claim_number' => 1, 'claim_type' => 'withdraw', 'status' => 'withdrawn',
-            'requested_amount_minor' => 1_000, 'currency' => 'PHP', 'idempotency_key' => data_get($payload, '_meta.idempotency_key'), 'completed_at' => now(),
+            'requested_amount_minor' => 1_000, 'currency' => 'PHP', 'bank_code' => 'GXCHPHM2XXX', 'account_number_masked' => '*******1987',
+            'idempotency_key' => data_get($payload, '_meta.idempotency_key'), 'completed_at' => now(),
         ]);
 
         return successfulClaimSubmitResult($voucher);
