@@ -540,7 +540,8 @@ it('waits for settlement and quarantines terminal payments that fail binding rul
     $pending = campaignPaymentObservation($address, 'transaction-rule-failure', 'pending');
 
     $waiting = app(RecognizeQualifyingCampaignPayment::class)->handle($binding, $pending);
-    $settled = campaignPaymentObservation($address, 'transaction-rule-failure', 'settled');
+    $this->travel(2)->seconds();
+    $settled = campaignPaymentObservation($address, 'transaction-rule-failure', 'settled', occurredAt: $pending->occurredAtInstant());
     $rejected = app(RecognizeQualifyingCampaignPayment::class)->handle($binding, $settled);
 
     expect($waiting->recognized())->toBeFalse()
@@ -3405,8 +3406,9 @@ function campaignPaymentObservation(
     string $status,
     int $amountMinor = 12_200,
     array $payer = [],
+    ?CarbonImmutable $occurredAt = null,
 ): ProviderFundingObservation {
-    $occurredAt = now()->addMinute()->toImmutable();
+    $occurredAt ??= now()->addMinute()->toImmutable();
 
     return ProviderFundingObservation::query()->create([
         ...$payer,
