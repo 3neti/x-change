@@ -12,6 +12,7 @@ final class V2EventCatalog
         return [
             'attestation.evidence_captured' => ['label' => 'Attestation recorded', 'stage' => 'attest', 'workflows' => ['philhealth']],
             'settlement.amount_reviewed' => ['label' => 'Settlement amount reviewed', 'stage' => 'review', 'workflows' => ['philhealth']],
+            'settlement.ready' => ['label' => 'Settlement ready', 'stage' => 'review', 'workflows' => ['philhealth']],
             'settlement.payment_collected' => ['label' => 'Payment confirmed', 'stage' => 'settle', 'workflows' => ['philhealth', 'payable']],
             'settlement.payout_confirmed' => ['label' => 'Payout confirmed', 'stage' => 'settle', 'workflows' => ['philhealth', 'payable'], 'requires_destination' => true],
             'settlement.payout_failed' => ['label' => 'Payout failed', 'stage' => 'settle', 'workflows' => ['philhealth', 'payable'], 'requires_destination' => true],

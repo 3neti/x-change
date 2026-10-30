@@ -53,6 +53,25 @@ it('projects the patient, hospital and payment waits for a PhilHealth settlement
     expect(collect($manifest['journey']['steps'])->firstWhere('key', 'settlement-review')['actor'])->toBe('Hospital');
 });
 
+it('projects simulated payment and payout stages only when instructed', function (): void {
+    $scenario = ['fixture' => ['instructions' => ['execution' => [
+        'schema' => 'voucher.execution.v2',
+        'events' => ['settle' => ['actor' => 'payer']],
+        'value_flow' => ['destination' => 'instapay.example.account:1234'],
+    ]]], 'checkpoints' => []];
+    $factory = app(ClaimPreviewJourneyManifestFactory::class);
+    $steps = collect($factory->fromReport([], $scenario)['steps'])->keyBy('key');
+    expect($steps->get('execution-payment')['screen']['simulated'])->toBeTrue()
+        ->and($steps->get('execution-payout')['screen']['description'])->toContain('recovery');
+
+    data_set($scenario, 'fixture.instructions.execution.value_flow.destination', 'client_funds');
+    expect(collect($factory->fromReport([], $scenario)['steps'])->pluck('key')->all())
+        ->toContain('execution-payment')->not->toContain('execution-payout');
+    data_set($scenario, 'fixture.instructions.execution.schema', 'voucher.execution.v1');
+    expect(collect($factory->fromReport([], $scenario)['steps'])->pluck('key')->all())
+        ->not->toContain('execution-payment');
+});
+
 it('renders and caches preview artifacts from voucher instructions', function (): void {
     $issuer = actingAsTestUser();
     $instructions = validVoucherInstructions(42.00, overrides: [

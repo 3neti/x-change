@@ -271,20 +271,20 @@ it('issues the supported v2 PhilHealth settlement through x-change with its even
     $payload = validPayCodePayload(0, 'INSTAPAY', [
         'provider' => 'netbank', 'issuer_id' => $issuer->getKey(), 'voucher_type' => 'settlement',
         'target_amount' => 100, 'fee_bearer' => 'payer', 'inputs' => ['fields' => ['name']],
-        'feedback' => ['webhooks' => [['url' => 'https://example.test/hook', 'events' => ['settlement.payment_collected', 'settlement.payout_failed', 'settlement.payout_confirmed']]]],
+        'feedback' => ['webhooks' => [['url' => 'https://example.test/hook', 'events' => ['settlement.ready', 'settlement.payment_collected', 'settlement.payout_failed', 'settlement.payout_confirmed']]]],
         'presentation' => ['share' => ['title' => 'Hospital settlement', 'image_source' => 'stamp']],
         'execution' => [
             'schema' => 'voucher.execution.v2', 'driver' => 'settlement_envelope',
             'mode' => null, 'pipeline' => null, 'fallback' => null, 'visibility' => null, 'metadata' => null,
             'settlement' => ['driver' => 'philhealth-bst', 'readiness_gate' => 'settleable'],
             'value_flow' => ['destination' => 'instapay.gcash.mobile:09179999999'],
-            'events' => ['attest' => ['actor' => 'beneficiary'], 'settle' => ['actor' => 'payer', 'requires' => ['settlement_ready', 'confirmed_payment']]],
+            'events' => ['attest' => ['actor' => 'beneficiary'], 'review' => ['actor' => 'hospital_reviewer', 'requires' => ['attestation_recorded'], 'surface' => 'claim', 'authentication' => 'required'], 'settle' => ['actor' => 'payer', 'requires' => ['settlement_ready', 'confirmed_payment']]],
         ],
     ]);
     $result = app(GeneratePayCode::class)->handle($payload);
     $voucher = Voucher::query()->findOrFail($result->voucher_id);
     expect(data_get($voucher->metadata, 'instructions.execution.events.settle.actor'))->toBe('payer')
-        ->and(data_get($voucher->metadata, 'instructions.feedback.webhooks.0.events'))->toBe(['settlement.payment_collected', 'settlement.payout_failed', 'settlement.payout_confirmed'])
+        ->and(data_get($voucher->metadata, 'instructions.feedback.webhooks.0.events'))->toBe(['settlement.ready', 'settlement.payment_collected', 'settlement.payout_failed', 'settlement.payout_confirmed'])
         ->and(data_get($voucher->metadata, 'instructions.presentation.share.title'))->toBe('Hospital settlement')
         ->and(data_get($voucher->metadata, 'instructions.execution.settlement.driver'))->toBe('philhealth-bst')
         ->and(app(VoucherValueFlowPolicy::class)->destination($voucher))->toBe('instapay.gcash.mobile:09179999999')

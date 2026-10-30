@@ -29,11 +29,13 @@ use LBHurtado\XChange\Actions\Redemption\PrepareVoucherClaimEvidence;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Actions\Settlement\VerifyPhilhealthSettlementAmount;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
+use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Data\FundingDecisionData;
 use LBHurtado\XChange\Data\Payment\ObservedPaymentTransactionData;
 use LBHurtado\XChange\Data\Payment\PaymentObservationNoticeData;
 use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
+use LBHurtado\XChange\Data\Settlement\SettlementEnvelopeReadinessData;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Events\PaymentTransactionObserved;
@@ -53,6 +55,7 @@ use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\FundingQrMerchantProfileResolver;
 use LBHurtado\XChange\Services\Settlement\V2EventWebhookDelivery;
 use LBHurtado\XChange\Services\Settlement\V2EvidenceEventJournal;
+use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Support\Funding\FundingMerchantSnapshot;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 use LBHurtado\XChange\Tests\Fakes\User;
@@ -115,7 +118,9 @@ it('follows the PhilHealth v2 attestation and verified settlement lifecycle', fu
     $payload = [
         'cash' => ['amount' => 0, 'currency' => 'PHP', 'settlement_rail' => 'INSTAPAY', 'validation' => ['country' => 'PH']],
         'inputs' => ['fields' => ['name']],
-        'feedback' => ['email' => null, 'mobile' => null, 'webhook' => null],
+        'feedback' => ['email' => null, 'mobile' => null, 'webhook' => null, 'webhooks' => [
+            ['url' => 'https://example.test/ready', 'events' => ['settlement.ready']],
+        ]],
         'rider' => [],
         'count' => 1, 'prefix' => 'PAY', 'mask' => '****',
         'voucher_type' => 'settlement', 'target_amount' => 100,
@@ -186,7 +191,8 @@ it('follows the PhilHealth v2 attestation and verified settlement lifecycle', fu
         throw new RuntimeException('rollback review');
     }))->toThrow(RuntimeException::class, 'rollback review');
     expect(data_get($voucher->fresh()->metadata, 'settlement_envelope.amount_review'))->toBeNull()
-        ->and(V2EvidenceOutbox::query()->where('event_type', 'settlement.amount_reviewed')->count())->toBe(0);
+        ->and(V2EvidenceOutbox::query()->where('event_type', 'settlement.amount_reviewed')->count())->toBe(0)
+        ->and(V2EvidenceOutbox::query()->where('event_type', 'settlement.ready')->count())->toBe(0);
     $reference = 'claim-review:'.data_get($voucher->fresh()->metadata, 'settlement_envelope.attestation.claim_id');
     $this->postJson(route('x-change.claim.settlement-review.store', ['code' => $voucher->code]), ['amount_minor' => 10000, 'evidence_manifest' => str_repeat('a', 64)])->assertUnprocessable();
     $this->post(route('x-change.claim.settlement-review.store', ['code' => $voucher->code]), [
@@ -196,8 +202,25 @@ it('follows the PhilHealth v2 attestation and verified settlement lifecycle', fu
     $voucher->refresh();
     app(VerifyPhilhealthSettlementAmount::class)->handle($voucher, $user, 10000, $reference);
     expect(V2EvidenceOutbox::query()->where('voucher_id', $voucher->id)->where('event_type', 'settlement.amount_reviewed')->count())->toBe(1);
+    expect(V2EvidenceOutbox::query()->where('voucher_id', $voucher->id)->where('event_type', 'settlement.ready')->count())->toBe(1);
+    $sender = new class implements FeedbackWebhookSenderContract
+    {
+        public array $events = [];
+
+        public function send(FeedbackWebhookMessageData $message): FeedbackWebhookSendResultData
+        {
+            $this->events[] = $message->payload['event_type'];
+
+            return new FeedbackWebhookSendResultData(message_id: 'ready-webhook', status: FeedbackDeliveryData::StatusQueued);
+        }
+    };
+    app()->instance(FeedbackWebhookSenderContract::class, $sender);
+    app(V2EvidenceEventJournal::class)->deliverPending();
+    app(V2EvidenceEventJournal::class)->deliverPending();
+    expect($sender->events)->toBe(['settlement.ready']);
     $attempt = issuedPaymentAttempt($voucher->refresh());
     expect($attempt->expected_amount_minor)->toBe(10000);
+    expect(V2EvidenceOutbox::query()->where('voucher_id', $voucher->id)->where('event_type', 'settlement.ready')->count())->toBe(1);
     $this->paymentAdapter->fundingObservation = exactPaymentObservation($attempt);
     $settled = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
     $replayed = app(SettleVerifiedPaymentAttempt::class)->handle($settled, PaymentVerificationTrigger::Payer);
@@ -377,7 +400,7 @@ it('recovers a missing v2 payment event from an already settled collection', fun
     app(SettleVerifiedPaymentAttempt::class)->handle($settled, PaymentVerificationTrigger::Payer);
     $failing = Mockery::mock(ExecutionJournalRecorder::class);
     $failing->shouldReceive('record')->once()->andThrow(new RuntimeException('delivery failed'));
-    (new V2EvidenceEventJournal($failing, app(V2EventWebhookDelivery::class)))->deliverPending();
+    (new V2EvidenceEventJournal($failing, app(V2EventWebhookDelivery::class), app(SettlementEnvelopeReadinessContract::class), app(SettlementCollectionGate::class)))->deliverPending();
     expect(V2EvidenceOutbox::query()->where('status', 'pending')->sole()->attempts)->toBe(1);
     app(V2EvidenceEventJournal::class)->deliverPending();
 
@@ -451,6 +474,31 @@ it('issues, collects and delivers a payable v2 payment event without replaying i
     expect(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(1)
         ->and(V2EvidenceOutbox::query()->where('voucher_id', $voucher->id)->where('event_type', 'settlement.payment_collected')->count())->toBe(1)
         ->and($sender->calls)->toBe(1);
+});
+
+it('records settlement readiness only after the readiness evaluator permits it', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.execution', [
+        'schema' => 'voucher.execution.v2',
+        'settlement' => ['driver' => 'philhealth-bst', 'readiness_gate' => 'settleable'],
+        'events' => ['review' => ['actor' => 'hospital_reviewer']],
+    ]);
+    data_set($metadata, 'settlement_envelope.amount_review', ['reference' => 'review-1', 'reviewed_at' => now()->toISOString()]);
+    $voucher->forceFill(['metadata' => $metadata])->save();
+    $readiness = Mockery::mock(SettlementEnvelopeReadinessContract::class);
+    $readiness->shouldReceive('evaluate')->times(3)->andReturn(
+        SettlementEnvelopeReadinessData::notAvailable(),
+        new SettlementEnvelopeReadinessData(required: true, exists: true, ready: true),
+        new SettlementEnvelopeReadinessData(required: true, exists: true, ready: true),
+    );
+    app()->instance(SettlementEnvelopeReadinessContract::class, $readiness);
+    $journal = app(V2EvidenceEventJournal::class);
+    $journal->settlementReadyAfterReview($voucher);
+    expect(V2EvidenceOutbox::query()->where('event_type', 'settlement.ready')->count())->toBe(0);
+    $journal->settlementReadyAfterReview($voucher);
+    $journal->settlementReadyAfterReview($voucher);
+    expect(V2EvidenceOutbox::query()->where('event_type', 'settlement.ready')->count())->toBe(1);
 });
 
 it('retries subscribed v2 webhooks without repeating successful delivery', function (): void {

@@ -63,6 +63,7 @@ final class ClaimPreviewJourneyManifestFactory
         $steps = $this->withRiderSplash($steps, $scenario, $presentation);
         $steps = $this->withSimulation($steps, $simulation);
         $steps = $this->withSettlementEvents($steps, $scenario);
+        $steps = $this->withPaymentExecution($steps, $scenario);
 
         return [
             'schema' => 'x-change.claim-experience-preview.journey.v2',
@@ -75,6 +76,39 @@ final class ClaimPreviewJourneyManifestFactory
             'steps' => $steps,
             'simulation' => $simulation,
         ];
+    }
+
+    private function withPaymentExecution(array $steps, array $scenario): array
+    {
+        $instructions = data_get($scenario, 'fixture.instructions', []);
+        if (data_get($instructions, 'execution.schema') !== 'voucher.execution.v2'
+            || ! is_array(data_get($instructions, 'execution.events.settle'))) {
+            return $steps;
+        }
+
+        $stages = [
+            ['execution-payment', 'Payer', 'Payment and verification', 'The payer completes payment. Provider history must confirm it before the value is collected.'],
+        ];
+        if (str_starts_with((string) data_get($instructions, 'execution.value_flow.destination'), 'instapay.')) {
+            $stages[] = ['execution-payout', 'Provider', 'Destination transfer', 'After payment is confirmed, the transfer is submitted to the instructed destination. A failed transfer enters recovery.'];
+        }
+
+        foreach ($stages as [$key, $actor, $title, $description]) {
+            $steps[] = [
+                'key' => $key, 'phase' => 'settlement', 'title' => $title, 'description' => $description,
+                'actor' => $actor, 'render_kind' => 'live_screen', 'status' => 'rendered', 'frame' => null,
+                'screen' => [
+                    'kind' => 'claim_progress', 'code' => self::SampleCode, 'title' => $title,
+                    'description' => $description, 'progress_state' => 'processing', 'simulated' => true,
+                ],
+            ];
+        }
+
+        return collect($steps)->values()->map(function (array $step, int $index): array {
+            $step['sequence'] = $index + 1;
+
+            return $step;
+        })->all();
     }
 
     private function withSettlementEvents(array $steps, array $scenario): array

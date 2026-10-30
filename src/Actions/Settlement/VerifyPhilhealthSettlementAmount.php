@@ -51,6 +51,8 @@ final class VerifyPhilhealthSettlementAmount
                     && ($existing['reviewer_id'] ?? null) === (string) $reviewer->getKey()
                     && ($existing['amount_minor'] ?? null) === $amountMinor
                     && ($existing['evidence_manifest_sha256'] ?? null) === $manifest) {
+                    $this->events->settlementReadyAfterReview($locked);
+
                     return $locked;
                 }
                 throw new LogicException('The settlement amount was already reviewed with different evidence.');
@@ -65,6 +67,7 @@ final class VerifyPhilhealthSettlementAmount
             data_set($metadata, 'settlement_checklist.amount_verified', true);
             $locked->forceFill(['metadata' => $metadata])->save();
             $this->events->amountReviewed($locked, $reference, $manifest, $amountMinor);
+            $this->events->settlementReadyAfterReview($locked);
 
             return $locked->refresh();
         }, attempts: 5);

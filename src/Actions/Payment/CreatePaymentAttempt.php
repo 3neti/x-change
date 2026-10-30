@@ -14,6 +14,7 @@ use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptSessionGuard;
 use LBHurtado\XChange\Services\Payment\PaymentQrDeliveryPolicy;
+use LBHurtado\XChange\Services\Settlement\V2EvidenceEventJournal;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
 use LBHurtado\XChange\Services\VoucherCapabilityGuard;
@@ -28,6 +29,7 @@ class CreatePaymentAttempt
         private readonly PaymentAttemptSessionGuard $sessions,
         private readonly SettlementCollectionGate $settlementGate,
         private readonly PaymentQrDeliveryPolicy $qrDelivery,
+        private readonly V2EvidenceEventJournal $v2Events,
     ) {}
 
     /** @param list<PaymentQrDeliveryMode>|null $qrDeliveryModes */
@@ -90,6 +92,13 @@ class CreatePaymentAttempt
                 $fingerprint,
                 $qrDeliveryModeValues,
             ): PaymentAttempt {
+                if (data_get($voucher->metadata, 'instructions.execution.settlement.driver') === 'philhealth-bst'
+                    && data_get($voucher->metadata, 'instructions.execution.schema') === 'voucher.execution.v2') {
+                    $lockedVoucher = Voucher::query()->lockForUpdate()->findOrFail($voucher->getKey());
+                    $this->settlementGate->ensureCollectibleSettlementIsReady($lockedVoucher);
+                    $this->v2Events->settlementReadyAfterReview($lockedVoucher);
+                }
+
                 $attempt = PaymentAttempt::query()->create([
                     'voucher_id' => $voucher->getKey(),
                     'provider_code' => $provider,
