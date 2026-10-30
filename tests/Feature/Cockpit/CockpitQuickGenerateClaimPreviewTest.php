@@ -104,7 +104,7 @@ it('shows a payable payment page instead of the disbursement claim journey', fun
             'value_flow' => ['destination' => 'instapay.gcash.mobile:09179999999']],
         'dry_run' => true, 'refresh_preview' => true,
     ]);
-    $response->assertOk()->assertJsonPath('journey.step_count', 1)
+    $response->assertOk()->assertJsonPath('journey.step_count', 5)
         ->assertJsonPath('journey.steps.0.key', 'payment-page')
         ->assertJsonPath('journey.steps.0.actor', 'payer')
         ->assertJsonPath('journey.steps.0.screen.component', 'x-change/claim/Payment')
@@ -112,6 +112,9 @@ it('shows a payable payment page instead of the disbursement claim journey', fun
         ->assertJsonPath('journey.steps.0.screen.props.payment.target_amount_minor', 10000)
         ->assertJsonPath('journey.steps.0.screen.props.payment.amount_due_minor', 10000)
         ->assertJsonPath('journey.steps.0.screen.props.payment.can_create_attempt', false);
+    expect(collect($response->json('journey.steps'))->pluck('key')->all())
+        ->toBe(['payment-page', 'payment-qr', 'payment-verifying', 'payment-receipt', 'payment-delivery']);
+    expect(data_get($response->json(), 'journey.steps.4.screen.props.payment.receipt.payments.0.delivery.status'))->toBe('pending');
     expect($response->getContent())->not->toContain('09179999999');
 });
 

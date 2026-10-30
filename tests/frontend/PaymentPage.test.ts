@@ -36,6 +36,20 @@ const pendingPayment = {
 };
 
 describe('PaymentPage', () => {
+    it('shows an unscannable QR illustration without polling or submitting', () => {
+        const payment = { ...pendingPayment, attempt: { reference: 'PREVIEW', status: 'awaiting_payment',
+            provider: 'netbank', amount_minor: 10000, currency: 'PHP', expires_at: null,
+            last_checked_at: null, can_check: false, qr_code: null } };
+        const wrapper = mount(PaymentPage, { props: { payment, previewMode: true, previewStage: 'payment-qr' } });
+        expect(wrapper.get('[data-testid="payer-preview-notice"]').text()).toContain('No payment has been made');
+        expect(wrapper.get('[data-testid="payer-preview-qr"]').text()).toContain('not scannable');
+        expect(wrapper.find('[data-testid="payer-qr-ph-artifact"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="payer-invoice-step"]').exists()).toBe(false);
+        expect(usePoll).toHaveBeenCalledWith(5000, expect.any(Object), { autoStart: false, mode: 'rest' });
+        expect(routerPost).not.toHaveBeenCalled();
+        wrapper.unmount();
+    });
+
     it('keeps the payment preview read-only and does not guess payer fees', async () => {
         const wrapper = mount(PaymentPage, { props: { payment: pendingPayment, previewMode: true, previewFeePending: true } });
         expect(wrapper.text()).toContain('Calculated at payment');

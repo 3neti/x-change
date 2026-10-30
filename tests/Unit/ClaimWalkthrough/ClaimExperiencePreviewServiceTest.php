@@ -41,9 +41,12 @@ it('uses the payment page for payable instructions across schema versions', func
         'cash' => ['amount' => 0, 'currency' => 'PHP'], 'execution' => ['schema' => $schema],
     ]], 'checkpoints' => [['key' => 'claim-entry']]];
     $journey = app(ClaimPreviewJourneyManifestFactory::class)->fromReport([], $scenario);
-    expect(collect($journey['steps'])->pluck('key')->all())->toBe(['payment-page'])
+    expect(collect($journey['steps'])->pluck('key')->all())->toBe(['payment-page', 'payment-qr', 'payment-verifying', 'payment-receipt'])
         ->and(data_get($journey, 'steps.0.screen.props.previewFeePending'))->toBeTrue()
-        ->and(data_get($journey, 'steps.0.screen.props.payment.target_amount_minor'))->toBe(10000);
+        ->and(data_get($journey, 'steps.0.screen.props.payment.target_amount_minor'))->toBe(10000)
+        ->and(data_get($journey, 'steps.1.screen.props.payment.attempt.status'))->toBe('awaiting_payment')
+        ->and(data_get($journey, 'steps.2.screen.props.payment.attempt.status'))->toBe('verified')
+        ->and(data_get($journey, 'steps.3.screen.props.payment.is_fully_paid'))->toBeTrue();
 })->with(['voucher.execution.v1', 'voucher.execution.v2']);
 
 it('projects the patient, hospital and payment waits for a PhilHealth settlement', function (): void {

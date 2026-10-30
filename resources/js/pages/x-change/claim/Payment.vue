@@ -93,6 +93,7 @@ const props = defineProps<{
     notice?: string | null;
     previewMode?: boolean;
     previewFeePending?: boolean;
+    previewStage?: string;
 }>();
 const creating = ref(false);
 const checking = ref(false);
@@ -166,7 +167,7 @@ const amountDue = computed(() =>
         : money(props.payment.amount_due_minor, props.payment.currency),
 );
 const attemptAmount = computed(() =>
-    money(
+    props.previewMode && props.previewFeePending ? 'Amount shown on QR' : money(
         props.payment.attempt?.amount_minor ?? 0,
         props.payment.attempt?.currency ?? props.payment.currency,
     ),
@@ -330,7 +331,10 @@ function printReceipt(): void {
         :centered="false"
     >
         <div class="space-y-5">
-            <header class="space-y-2 text-center print:hidden">
+            <p v-if="previewMode" data-testid="payer-preview-notice" class="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-center text-sm text-muted-foreground">
+                Walkthrough preview · No payment has been made
+            </p>
+            <header v-if="!previewMode || !previewStage || previewStage === 'payment-page'" class="space-y-2 text-center print:hidden">
                 <p
                     class="text-xs font-semibold tracking-[0.2em] text-primary uppercase"
                 >
@@ -418,6 +422,7 @@ function printReceipt(): void {
             </div>
 
             <Card
+                v-if="!previewMode || !previewStage || previewStage === 'payment-page'"
                 data-testid="payer-xray-step"
                 class="border-primary/10 shadow-none print:hidden"
             >
@@ -444,6 +449,7 @@ function printReceipt(): void {
             </Card>
 
             <Card
+                v-if="!previewMode || !previewStage || previewStage === 'payment-page'"
                 data-testid="payer-invoice-step"
                 class="border-primary/10 shadow-none print:hidden"
             >
@@ -585,7 +591,7 @@ function printReceipt(): void {
                                 : 'This seller display pairing has ended or expired. Ask the seller for a new display before paying.'
                         }}
                     </div>
-                    <div class="grid gap-3 sm:grid-cols-3">
+                    <div v-if="!previewMode || previewStage !== 'payment-qr'" class="grid gap-3 sm:grid-cols-3">
                         <Button
                             type="button"
                             data-testid="payer-method-qr"
@@ -700,6 +706,15 @@ function printReceipt(): void {
                                     payment.</template
                                 >
                             </p>
+                        </div>
+                        <div
+                            v-else-if="previewMode"
+                            data-testid="payer-preview-qr"
+                            class="rounded-lg border border-dashed border-primary/40 p-6 text-center"
+                        >
+                            <ScanLine class="mx-auto size-12 text-primary" />
+                            <p class="mt-2 text-sm font-semibold">Sample QR Ph</p>
+                            <p class="text-xs text-muted-foreground">Illustration only · not scannable</p>
                         </div>
                         <div
                             v-else-if="qrSource"
@@ -823,7 +838,7 @@ function printReceipt(): void {
             </Card>
 
             <Card
-                v-if="payment.is_fully_paid"
+                v-if="payment.is_fully_paid && (!previewMode || previewStage !== 'payment-delivery')"
                 data-testid="payer-receipt"
                 class="border-primary/20 shadow-none print:border-0 print:shadow-none"
             >
@@ -849,7 +864,7 @@ function printReceipt(): void {
                                 class="mt-1 text-3xl font-bold tracking-tight text-foreground tabular-nums"
                             >
                                 {{
-                                    money(
+                                    previewMode && previewFeePending ? 'Calculated at payment' : money(
                                         payment.receipt.amount_paid_minor,
                                         payment.receipt.currency,
                                     )
@@ -922,7 +937,7 @@ function printReceipt(): void {
                                         receiptPayment.provider
                                     }}</span
                                     ><span class="tabular-nums">{{
-                                        money(
+                                        previewMode && previewFeePending ? 'Calculated at payment' : money(
                                             receiptPayment.amount_paid_minor,
                                             payment.receipt.currency,
                                         )

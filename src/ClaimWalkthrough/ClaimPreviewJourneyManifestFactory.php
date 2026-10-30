@@ -87,32 +87,55 @@ final class ClaimPreviewJourneyManifestFactory
         $instruction = (array) data_get($scenario, 'fixture.instructions', []);
         $target = max(0, (int) round((float) data_get($instruction, 'target_amount', 0) * 100));
         $feePending = data_get($instruction, 'fee_bearer', 'issuer') === 'payer';
-        $step = [
-            'sequence' => 1, 'key' => 'payment-page', 'phase' => 'payment',
-            'title' => 'Pay the Pay Code', 'description' => 'The payer reviews the invoice and chooses how to pay.',
-            'actor' => 'payer', 'render_kind' => 'actual_screen', 'status' => 'rendered', 'frame' => null,
-            'screen' => [
-                'kind' => 'payment_preview', 'component' => 'x-change/claim/Payment',
-                'props' => [
-                    'previewMode' => true, 'previewFeePending' => $feePending,
-                    'payment' => [
-                        'pay_code' => self::SampleCode,
-                        'currency' => (string) data_get($instruction, 'cash.currency', 'PHP'),
-                        'target_amount_minor' => $target, 'collected_amount_minor' => 0,
-                        'amount_due_minor' => $target, 'principal_due_minor' => $target, 'fee_due_minor' => 0,
-                        'is_fully_paid' => false, 'rider_message' => data_get($instruction, 'rider.message'),
-                        'provider' => (string) data_get($instruction, 'provider', 'netbank'),
-                        'provider_available' => true, 'can_create_attempt' => false,
-                        'poll_interval_ms' => 5000, 'attempt' => null, 'receipt' => null,
-                    ],
-                ],
-            ],
+        $currency = (string) data_get($instruction, 'cash.currency', 'PHP');
+        $provider = (string) data_get($instruction, 'provider', 'netbank');
+        $payment = [
+            'pay_code' => self::SampleCode, 'currency' => $currency,
+            'target_amount_minor' => $target, 'collected_amount_minor' => 0,
+            'amount_due_minor' => $target, 'principal_due_minor' => $target, 'fee_due_minor' => 0,
+            'is_fully_paid' => false, 'rider_message' => data_get($instruction, 'rider.message'),
+            'provider' => $provider, 'provider_available' => true, 'can_create_attempt' => false,
+            'poll_interval_ms' => 5000, 'attempt' => null, 'receipt' => null,
         ];
+        $attempt = [
+            'reference' => 'PREVIEW', 'status' => 'awaiting_payment', 'provider' => $provider,
+            'amount_minor' => $target, 'currency' => $currency, 'expires_at' => null,
+            'last_checked_at' => null, 'can_check' => false, 'qr_code' => null,
+        ];
+        $receipt = [
+            'pay_code' => self::SampleCode, 'amount_paid_minor' => $target,
+            'currency' => $currency, 'completed_at' => null,
+            'payments' => [[
+                'collection_number' => 1, 'amount_paid_minor' => $target, 'provider' => $provider,
+                'receipt_reference' => 'PREVIEW', 'completed_at' => null,
+            ]],
+        ];
+        $stages = [
+            ['payment-page', 'Review the payment', $payment],
+            ['payment-qr', 'Pay with QR Ph', [...$payment, 'attempt' => $attempt]],
+            ['payment-verifying', 'Payment verification', [...$payment, 'attempt' => [...$attempt, 'status' => 'verified']]],
+            ['payment-receipt', 'Payment received', [...$payment, 'is_fully_paid' => true, 'collected_amount_minor' => $target, 'receipt' => $receipt]],
+        ];
+        $destination = data_get($instruction, 'execution.value_flow.destination')
+            ?? data_get($instruction, 'value_flow.destination');
+        if (is_string($destination) && str_starts_with($destination, 'instapay.')) {
+            $deliveryReceipt = $receipt;
+            $deliveryReceipt['payments'][0]['delivery'] = ['status' => 'pending', 'account' => null, 'bank_code' => null];
+            $stages[] = ['payment-delivery', 'Destination transfer', [...$payment, 'is_fully_paid' => true,
+                'collected_amount_minor' => $target, 'receipt' => $deliveryReceipt]];
+        }
+        $steps = collect($stages)->map(fn (array $stage, int $index): array => [
+            'sequence' => $index + 1, 'key' => $stage[0], 'phase' => 'payment', 'title' => $stage[1],
+            'description' => 'Illustrative payment state.', 'actor' => 'payer',
+            'render_kind' => 'actual_screen', 'status' => 'rendered', 'frame' => null,
+            'screen' => ['kind' => 'payment_preview', 'component' => 'x-change/claim/Payment',
+                'props' => ['previewMode' => true, 'previewStage' => $stage[0], 'previewFeePending' => $feePending, 'payment' => $stage[2]]],
+        ])->all();
 
         return [
             'schema' => 'x-change.claim-experience-preview.journey.v2',
             'viewport' => ['profile' => 'mobile_claim_v1', 'width' => 360, 'height' => 720],
-            'step_count' => 1, 'steps' => [$step], 'simulation' => [],
+            'step_count' => count($steps), 'steps' => $steps, 'simulation' => [],
         ];
     }
 
