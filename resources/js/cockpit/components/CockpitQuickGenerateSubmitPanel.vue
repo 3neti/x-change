@@ -908,6 +908,18 @@ const rulesAllowOverpayment = ref(false);
 const rulesAutoCloseOnFullPayment = ref(true);
 const includeExecutionInstruction = ref(false);
 const executionSchema = ref("voucher.execution.v2");
+const philhealthSettlement = ref(false);
+function configurePhilhealthSettlement(): void {
+  if (!philhealthSettlement.value) return;
+  if (!(Number(targetAmount.value) > 0) && Number(amount.value) > 0) {
+    targetAmount.value = amount.value;
+  }
+  amount.value = "0";
+  settlementRepayment.value = false;
+  if (selectedInputFieldValues.value.length === 0) {
+    selectedInputFieldValues.value = ["signature"];
+  }
+}
 const executionDriver = ref("default");
 const executionMode = ref("");
 const executionPipeline = ref("");
@@ -1129,6 +1141,9 @@ watch(claimOutcome, (outcome): void => {
 });
 
 watch(voucherType, (type): void => {
+  if (type !== "settlement") {
+    philhealthSettlement.value = false;
+  }
   if (type === "payable" && claimOutcome.value === "account_funding") {
     claimOutcome.value = "provider_disbursement";
   }
@@ -1233,6 +1248,7 @@ function applyTemplateDefaults(templateKey: string): void {
   customMandates.value = "";
   applyTemplateSliceDefaults(defaults);
   reusableBalance.value = false;
+  philhealthSettlement.value = false;
   storedValueReplenishable.value = false;
   storedValueMaximumBalance.value = formatSliceAmount(
     normalizedPayCodeAmount(),
@@ -2026,6 +2042,8 @@ function applyInstructionBlueprint(
     dataGet(instructions, ["rules", "auto_close_on_full_payment"]) !== false;
 
   const execution = instructionRecord(instructions, ["execution"]);
+  philhealthSettlement.value = instructionString(execution, ["schema"]) === "voucher.execution.v2"
+    && instructionString(execution, ["settlement", "driver"]) === "philhealth-bst";
   settlementRepayment.value = instructionString(instructions, ["rules", "settlement_mode"]) === "disburse_then_repay";
   feeBearer.value = instructionString(instructions, ["fee_bearer"]) === "payer" ? "payer" : "issuer";
   valueFlowDestination.value =
@@ -2545,6 +2563,7 @@ const canSubmit = computed<boolean>(() => {
     (specializedJourney.value === null || (voucherType.value === 'redeemable' && count.value === '1' && claimOutcome.value === 'provider_disbursement')) &&
     payableAmountIsValid &&
     settlementTargetIsValid &&
+    (!philhealthSettlement.value || (valueFlowDestination.value !== "" && selectedInputFields.value.length > 0)) &&
     onDemandFundingProjection.value === null &&
     (!isAccountFundingClaim.value || sliceMode.value === "whole")
   );
@@ -2557,7 +2576,8 @@ const canGenerateClaimPreview = computed<boolean>(() => {
     claimPreviewRouteUrl.value !== null &&
     !previewProcessing.value &&
     Number.isFinite(normalizedAmount) &&
-    normalizedAmount > 0 &&
+    (normalizedAmount > 0 || (philhealthSettlement.value && Number(targetAmount.value) > 0)) &&
+    (!philhealthSettlement.value || (valueFlowDestination.value !== "" && selectedInputFields.value.length > 0)) &&
     payeePolicy.value.issuable &&
     feedbackValid.value &&
     locationRuleError.value === null &&
@@ -3121,10 +3141,12 @@ const requiresCollectionDestination = computed<boolean>(
     metadataFlowType.value.trim() === "collectible",
 );
 const amountFieldLabel = computed<string>(() =>
-  isPayableVoucher.value ? "Amount to Collect" : "Amount",
+  philhealthSettlement.value ? "Disbursement Amount" : (isPayableVoucher.value ? "Amount to Collect" : "Amount"),
 );
 const amountFieldHelp = computed<string>(() =>
-  isPayableVoucher.value
+  philhealthSettlement.value
+    ? "This workflow collects the target amount after review; no value is disbursed to the patient."
+    : isPayableVoucher.value
     ? "Amount to be collected from the payer. Not funded upfront."
     : "Value the recipient can claim. Select the field to open the calculator.",
 );
@@ -5056,7 +5078,7 @@ const canEstimateLivePricing = computed<boolean>(() => {
   return (
     valueFlowValid.value &&
     Number.isFinite(normalizedAmount) &&
-    normalizedAmount > 0 &&
+    (normalizedAmount > 0 || (philhealthSettlement.value && Number(targetAmount.value) > 0 && valueFlowDestination.value !== "" && selectedInputFields.value.length > 0)) &&
     Number.isFinite(normalizedCount) &&
     normalizedCount > 0
   );
@@ -5615,7 +5637,7 @@ function buildPayloadShape(
   const normalizedCount = Number(count.value);
   const campaign = campaignMetadata();
   const cash: Record<string, unknown> = {
-    amount: Number.isFinite(normalizedAmount) ? normalizedAmount : amount.value,
+    amount: philhealthSettlement.value ? 0 : (Number.isFinite(normalizedAmount) ? normalizedAmount : amount.value),
     currency: currency.value.trim() || "PHP",
     validation: validationSummary.value,
   };
@@ -5642,7 +5664,19 @@ function buildPayloadShape(
 
   cash.validation = validation;
 
-  const execution = executionSummary.value ??
+  const preserveLegacyExecution = includeExecutionInstruction.value && executionSchema.value.trim() === "voucher.execution.v1";
+  const execution = philhealthSettlement.value ? {
+    schema: "voucher.execution.v2",
+    driver: "settlement_envelope",
+    settlement: { driver: "philhealth-bst", readiness_gate: "settleable" },
+    events: {
+      attest: { actor: "beneficiary", surface: "claim", authentication: "anonymous", requires: [] },
+      review: { actor: "hospital_reviewer", surface: "claim", authentication: "required", requires: ["attestation_recorded"] },
+      settle: { actor: "payer", surface: "pay", authentication: "optional", requires: ["settlement_ready", "confirmed_payment"] },
+    },
+  } : reusableBalance.value ? (preserveLegacyExecution ? null : { schema: "voucher.execution.v2", driver: "stored_value" }) : onboardingEnabled.value
+    ? { schema: preserveLegacyExecution ? "voucher.execution.v1" : "voucher.execution.v2", driver: "onboarding_account_provisioning" }
+    : executionSummary.value ??
     (!reusableBalance.value && !onboardingEnabled.value
       ? { schema: "voucher.execution.v2", driver: "default" }
       : null);
@@ -5812,7 +5846,7 @@ function buildPayloadShape(
     };
   }
 
-  const flowType = metadataFlowType.value.trim();
+  const flowType = philhealthSettlement.value ? "settlement" : metadataFlowType.value.trim();
   const issuerId = metadataIssuerId.value.trim();
 
   if (flowType !== "") {
@@ -7097,7 +7131,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                 ref="amountInputElement"
                 v-model="amount"
                 class="col-start-1 row-start-1 min-w-0 w-full max-w-72"
-                :disabled="processing"
+                :disabled="processing || philhealthSettlement"
                 :estimated-cost="amountCalculatorEstimatedCost"
                 :estimate-pending="amountCalculatorEstimatePending"
                 :estimate-affordability="liveAccountDebitAffordability"
@@ -7373,6 +7407,10 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
               {{ targetAmountError }}
             </span>
           </label>
+          <label v-if="isSettlementVoucher && !publicMode && !onboardingEnabled" class="flex items-start gap-2 text-xs text-slate-700 sm:col-span-2 dark:text-slate-300">
+            <input v-model="philhealthSettlement" type="checkbox" :disabled="processing" data-testid="philhealth-settlement-workflow" @change="configurePhilhealthSettlement" />
+            <span>PhilHealth settlement: patient attestation, hospital review, and payment to the hospital.</span>
+          </label>
           <label
             class="grid w-full min-w-0 max-w-72 gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
             data-testid="cockpit-quick-generate-recipient-field"
@@ -7442,29 +7480,29 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
               <span
                 class="flex min-w-0 items-center gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
               >
-                <span class="truncate">Collection destination</span>
+                <span class="truncate">{{ philhealthSettlement ? 'Hospital payout destination' : 'Collection destination' }}</span>
                 <CockpitFieldHelp
                   label="About Collection destination"
-                  tooltip="Payments are credited automatically to the collection account authorized for the signed-in operator."
+                  :tooltip="philhealthSettlement ? 'Choose the hospital account in Options. Verified payment is routed to that account.' : 'Payments are credited automatically to the collection account authorized for the signed-in operator.'"
                 />
               </span>
               <span
                 class="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-[0.68rem] font-semibold text-emerald-800 dark:bg-emerald-900 dark:text-emerald-100"
               >
                 <Check class="size-3" aria-hidden="true" />
-                Automatic
+                {{ philhealthSettlement ? (valueFlowDestination ? 'Selected' : 'Required') : 'Automatic' }}
               </span>
             </div>
             <p
               class="truncate text-sm font-semibold text-slate-950 dark:text-slate-50"
               data-testid="cockpit-quick-generate-collection-destination-label"
             >
-              {{ collectionDestination?.label ?? "Your Client Funds" }}
+              {{ philhealthSettlement ? (valueFlowDestination ? 'Bank / Wallet selected' : 'Choose a bank or wallet in Options') : (collectionDestination?.label ?? "Your Client Funds") }}
             </p>
             <p class="text-xs leading-5 text-slate-600 dark:text-slate-400">
               {{
-                collectionDestination?.description ??
-                "Payments are credited to the collection account authorized for the signed-in operator."
+                philhealthSettlement ? 'The hospital receives the verified settlement through its selected account.' : (collectionDestination?.description ??
+                "Payments are credited to the collection account authorized for the signed-in operator.")
               }}
             </p>
             <span
@@ -7676,7 +7714,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
               </p>
             </div>
 
-            <fieldset v-if="isSettlementVoucher" class="grid gap-2" data-testid="settlement-repayment-control">
+            <fieldset v-if="isSettlementVoucher && !philhealthSettlement" class="grid gap-2" data-testid="settlement-repayment-control">
               <label class="flex items-center gap-2 text-sm">
                 <input v-model="settlementRepayment" type="checkbox" :disabled="processing" data-testid="settlement-repayment-enabled" />
                 Disburse first, then collect repayments

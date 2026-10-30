@@ -184,6 +184,15 @@ php artisan x-change:doctor --assets --strict --no-interaction
 npm run build
 ```
 
+After changing installed package code, restart long-running queue workers so
+they load the new classes. With a process manager that automatically starts
+replacement workers, run `php artisan queue:restart --no-interaction` and
+verify the replacement workers are processing the required queues. For a
+manually started local worker, stop it gracefully and start it again; the
+restart signal alone does not start a replacement. Do this before accepting
+new issuance work, and verify any already-paid order through its existing
+recovery path without collecting payment again.
+
 Do not publish package configuration for ordinary development. Package defaults remain authoritative.
 
 After local integration, remove the alternate manifest and restore the host from its committed lockfile:
@@ -231,6 +240,11 @@ npm run build
 composer validate --strict
 git diff --check
 ```
+
+Restart the host's queue workers after Composer adoption and confirm replacement
+workers are running before accepting issuance. Use `php artisan queue:restart
+--no-interaction` with a process manager; a manually started worker must be
+started again after it exits.
 
 Commit the host lockfile, required published UI inputs, and boundary-test version update as a separate adoption commit. Configuration files must not reappear in the host.
 

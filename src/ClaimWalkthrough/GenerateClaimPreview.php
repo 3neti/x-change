@@ -72,6 +72,10 @@ final class GenerateClaimPreview
             data_set($payload, 'metadata.issuer_id', (string) $request->user()->getAuthIdentifier());
         }
 
+        if (in_array(data_get($payload, 'voucher_type'), ['payable', 'settlement'], true)) {
+            data_set($payload, 'metadata.collection_wallet_id', 'claim-preview-only');
+        }
+
         $result = $this->previews->renderFromInstructions(
             VoucherInstructionsData::createFromAttribs($payload),
             new ClaimExperiencePreviewOptions(

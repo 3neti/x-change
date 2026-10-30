@@ -482,15 +482,15 @@ it('submits a voucher-owned destination and omits it when returning to ordinary 
   expect(destination.exists()).toBe(true);
   destination.vm.$emit('update:modelValue', 'instapay.gcash.mobile:09179999999');
   await flushPromises();
-  expect(preview(wrapper).value_flow.destination).toBe('instapay.gcash.mobile:09179999999');
+  expect(preview(wrapper).execution.value_flow.destination).toBe('instapay.gcash.mobile:09179999999');
   await wrapper.get('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
   await flushPromises();
   const request = fetchMock.mock.calls.find(([url, options]) => url === '/x/cockpit/quick-generate' && options.method === 'POST');
   expect(request).toBeDefined();
-  expect(JSON.parse(request![1].body).value_flow).toEqual({ destination: 'instapay.gcash.mobile:09179999999' });
+  expect(JSON.parse(request![1].body).execution.value_flow).toEqual({ destination: 'instapay.gcash.mobile:09179999999' });
   await wrapper.get('[data-testid="cockpit-value-use-reusable-balance"]').setValue(false);
   expect(wrapper.find('[data-testid="value-flow-destination"]').exists()).toBe(false);
-  expect(preview(wrapper)).not.toHaveProperty('value_flow');
+  expect(preview(wrapper).execution).not.toHaveProperty('value_flow');
 });
 
 
@@ -523,6 +523,27 @@ it('places a payable destination under v2 execution in the preview and submitted
   const request = fetchMock.mock.calls.find(([url, options]) => url === '/x/cockpit/quick-generate' && options.method === 'POST');
   expect(request).toBeDefined();
   expect(JSON.parse(request![1].body).execution).toEqual(preview(wrapper).execution);
+});
+
+it('builds the zero-disbursement PhilHealth attestation, review and payment workflow', async () => {
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });
+  await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('20000');
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
+  await wrapper.get('[data-testid="philhealth-settlement-workflow"]').setValue(true);
+  await openOrderOptions(wrapper);
+  wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', 'instapay.gcash.mobile:09179999999');
+  await flushPromises();
+  const instruction = preview(wrapper);
+  expect(instruction.cash.amount).toBe(0);
+  expect(instruction.target_amount).toBe(20000);
+  expect(instruction.metadata.flow_type).toBe('settlement');
+  expect(instruction.inputs.fields).toContain('signature');
+  expect(instruction.execution).toMatchObject({
+    schema: 'voucher.execution.v2', driver: 'settlement_envelope',
+    settlement: { driver: 'philhealth-bst', readiness_gate: 'settleable' },
+    value_flow: { destination: 'instapay.gcash.mobile:09179999999' },
+    events: { attest: { actor: 'beneficiary' }, review: { actor: 'hospital_reviewer' }, settle: { actor: 'payer' } },
+  });
 });
 
 

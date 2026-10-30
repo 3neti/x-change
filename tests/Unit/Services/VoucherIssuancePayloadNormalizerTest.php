@@ -185,6 +185,18 @@ it('allows the local onboarding OTP policy to omit OTP capabilities', function (
         ->toBeFalse();
 });
 
+it('retains the requested onboarding execution version while compiling its requirements', function (string $schema): void {
+    $normalized = app(VoucherIssuancePayloadNormalizer::class)->normalize([
+        'onboarding' => true,
+        'cash' => ['amount' => 100],
+        'inputs' => ['fields' => []],
+        'execution' => ['schema' => $schema, 'driver' => 'onboarding_account_provisioning'],
+    ]);
+    expect(data_get($normalized, 'execution.schema'))->toBe($schema)
+        ->and(data_get($normalized, 'execution.driver'))->toBe('onboarding_account_provisioning')
+        ->and(data_get($normalized, 'inputs.fields'))->toContain('name', 'email', 'mobile');
+})->with(['voucher.execution.v1', 'voucher.execution.v2']);
+
 it('forces OTP for a specifically restricted mobile despite the local bypass', function () {
     config()->set('x-change.onboarding.voucher.require_otp', false);
 
@@ -289,6 +301,24 @@ it('freezes collector authorization for newly issued reusable balances without a
         ->toBe('collector')
         ->and(data_get($normalized, 'execution.metadata.stored_value.otp_required_above'))
         ->toBe(0);
+});
+
+it('compiles a v2 reusable balance while retaining its fixed destination', function (): void {
+    $input = [
+        'cash' => ['amount' => '100.00', 'currency' => 'PHP'],
+        'stored_value' => ['enabled' => true],
+        'execution' => [
+            'schema' => 'voucher.execution.v2', 'driver' => 'stored_value',
+            'value_flow' => ['destination' => 'instapay.gcash.mobile:09179999999'],
+        ],
+    ];
+    $normalized = app(VoucherIssuancePayloadNormalizer::class)->normalize($input);
+    expect(data_get($normalized, 'execution.schema'))->toBe('voucher.execution.v2')
+        ->and(data_get($normalized, 'execution.value_flow.destination'))->toBe('instapay.gcash.mobile:09179999999')
+        ->and(data_get($normalized, 'execution.metadata.stored_value.initial_balance'))->toBe(10000)
+        ->and(data_get($normalized, 'execution.metadata.value_flow'))->toBeNull();
+    $input['execution']['metadata'] = ['stored_value' => ['initial_balance' => 999999]];
+    expect(fn () => app(VoucherIssuancePayloadNormalizer::class)->normalize($input))->toThrow(ValidationException::class);
 });
 
 it('rejects stored value policy conflicts and direct generic-driver bypasses', function (): void {
