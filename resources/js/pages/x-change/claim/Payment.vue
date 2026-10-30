@@ -10,7 +10,7 @@ import {
     RefreshCw,
     ScanLine,
 } from 'lucide-vue-next';
-import { computed, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import type { HttpExceptionResponse } from '@inertiajs/core';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -121,6 +121,20 @@ function updateCooldowns(): void {
 
 onUnmounted(() => {
     if (cooldownTimer !== undefined) clearTimeout(cooldownTimer);
+});
+
+onMounted(async () => {
+    if (!props.previewMode || !props.previewStage || props.previewStage === 'payment-page') return;
+    const sections: Record<string, string> = {
+        'payment-qr': '[data-testid="payer-preview-qr"]',
+        'payment-verifying': '[data-testid="payer-completion-pending"]',
+        'payment-receipt': '[data-testid="payer-receipt"]',
+        'payment-delivery': '[data-testid="payment-delivery"]',
+    };
+    const selector = sections[props.previewStage];
+    if (!selector) return;
+    await nextTick();
+    document.querySelector(selector)?.scrollIntoView?.({ block: 'start' });
 });
 
 function handleHttpException(
@@ -331,10 +345,7 @@ function printReceipt(): void {
         :centered="false"
     >
         <div class="space-y-5">
-            <p v-if="previewMode" data-testid="payer-preview-notice" class="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-center text-sm text-muted-foreground">
-                Walkthrough preview · No payment has been made
-            </p>
-            <header v-if="!previewMode || !previewStage || previewStage === 'payment-page'" class="space-y-2 text-center print:hidden">
+            <header class="space-y-2 text-center print:hidden">
                 <p
                     class="text-xs font-semibold tracking-[0.2em] text-primary uppercase"
                 >
@@ -422,7 +433,6 @@ function printReceipt(): void {
             </div>
 
             <Card
-                v-if="!previewMode || !previewStage || previewStage === 'payment-page'"
                 data-testid="payer-xray-step"
                 class="border-primary/10 shadow-none print:hidden"
             >
@@ -449,7 +459,6 @@ function printReceipt(): void {
             </Card>
 
             <Card
-                v-if="!previewMode || !previewStage || previewStage === 'payment-page'"
                 data-testid="payer-invoice-step"
                 class="border-primary/10 shadow-none print:hidden"
             >
@@ -591,7 +600,7 @@ function printReceipt(): void {
                                 : 'This seller display pairing has ended or expired. Ask the seller for a new display before paying.'
                         }}
                     </div>
-                    <div v-if="!previewMode || previewStage !== 'payment-qr'" class="grid gap-3 sm:grid-cols-3">
+                    <div class="grid gap-3 sm:grid-cols-3">
                         <Button
                             type="button"
                             data-testid="payer-method-qr"
@@ -838,7 +847,7 @@ function printReceipt(): void {
             </Card>
 
             <Card
-                v-if="payment.is_fully_paid && (!previewMode || previewStage !== 'payment-delivery')"
+                v-if="payment.is_fully_paid"
                 data-testid="payer-receipt"
                 class="border-primary/20 shadow-none print:border-0 print:shadow-none"
             >
