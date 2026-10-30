@@ -365,6 +365,10 @@ export default defineConfig({
         import.meta.dirname,
         "tests/frontend/stubs/claim-flow-route.ts",
       ),
+      "@/routes/x-change/claim/settlement-review": path.resolve(
+        import.meta.dirname,
+        "tests/frontend/stubs/claim-settlement-review-route.ts",
+      ),
       "@/routes/x-change/pay/attempts/checks": path.resolve(
         import.meta.dirname,
         "tests/frontend/stubs/payment-verification-check-route.ts",

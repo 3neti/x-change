@@ -66,7 +66,7 @@ const handoffDescription = computed(
     () => props.screen.handoff?.description || props.screen.description,
 );
 const formFlowPages = import.meta.glob<{ default: Component }>(
-    '/resources/js/pages/form-flow/**/*.vue',
+    ['/resources/js/pages/form-flow/**/*.vue', '/resources/js/pages/x-change/claim/Settlement*.vue'],
 );
 const actualScreenComponent = computed<Component | null>(() => {
     if (!props.screen.component) return null;

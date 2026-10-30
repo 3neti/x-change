@@ -15,6 +15,7 @@ use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Services\Settlement\V2EvidenceEventJournal;
 use LogicException;
 
 class SettleVerifiedPaymentAttempt
@@ -22,6 +23,7 @@ class SettleVerifiedPaymentAttempt
     public function __construct(
         private readonly RecognizeSettlementVoucherCollection $recognizeCampaignPayment,
         private readonly AdvanceSettlementCampaignLifecycle $advanceCampaignLifecycle,
+        private readonly V2EvidenceEventJournal $v2Events,
     ) {}
 
     public function handle(
@@ -32,6 +34,17 @@ class SettleVerifiedPaymentAttempt
             $locked = PaymentAttempt::query()->lockForUpdate()->findOrFail($attempt->getKey());
 
             if ($locked->status === PaymentAttemptStatus::Settled) {
+                $voucher = Voucher::query()->lockForUpdate()->findOrFail($locked->voucher_id);
+                if (data_get($voucher->metadata, 'instructions.execution.schema') === 'voucher.execution.v2'
+                    && is_array(data_get($voucher->metadata, 'instructions.execution.events.settle'))) {
+                    $collection = VoucherCollection::query()
+                        ->whereKey($locked->voucher_collection_id)
+                        ->where('voucher_id', $voucher->getKey())
+                        ->where('idempotency_key', 'payment-attempt:'.$locked->reference)
+                        ->sole();
+                    $this->v2Events->paymentCollected($voucher, $collection);
+                }
+
                 return $locked->load(['events', 'voucher']);
             }
 
@@ -92,6 +105,8 @@ class SettleVerifiedPaymentAttempt
                 ->where('voucher_id', $voucher->getKey())
                 ->where('idempotency_key', $idempotencyKey)
                 ->sole();
+
+            $this->v2Events->paymentCollected($voucher->refresh(), $collection);
 
             $nextVersion = $locked->version + 1;
 

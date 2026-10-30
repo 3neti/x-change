@@ -15,6 +15,7 @@ use LBHurtado\XChange\Enums\ClaimPreviewProgressState;
 use LBHurtado\XChange\Http\Requests\GeneratePayCodeRequest;
 use LBHurtado\XChange\Models\ClaimPreviewArtifact;
 use LBHurtado\XChange\Services\Cockpit\CompileCockpitQuickGenerateClaimPolicy;
+use LBHurtado\XChange\Services\Cockpit\SettlementAttestationDraftProjection;
 use LBHurtado\XChange\Services\IdempotencyService;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceInstructionPolicy;
 
@@ -52,14 +53,15 @@ final class GenerateClaimPreview
         $key = $this->idempotency->extractKey($request);
         $correlationId = $request->header((string) config('x-change.api.correlation.header', 'X-Correlation-ID'));
 
+        $projection = app(SettlementAttestationDraftProjection::class);
         $draft = $this->quickGenerateDraftFactory->fromPayload(
-            $payload,
+            $projection->forDraft($payload),
             idempotencyKey: $key,
             correlationId: is_string($correlationId) ? $correlationId : null,
         );
         $this->ensureDraftIsValid($this->draftValidator->validate($draft));
 
-        $payload = array_replace_recursive($payload, $this->draftCompiler->compile($draft));
+        $payload = $projection->restore(array_replace_recursive($payload, $this->draftCompiler->compile($draft)), $payload);
         $payload = $this->claimPolicy->handle($payload);
 
         if ($this->context->isPublic($request)) {

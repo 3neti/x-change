@@ -62,6 +62,7 @@ final class ClaimPreviewJourneyManifestFactory
 
         $steps = $this->withRiderSplash($steps, $scenario, $presentation);
         $steps = $this->withSimulation($steps, $simulation);
+        $steps = $this->withSettlementEvents($steps, $scenario);
 
         return [
             'schema' => 'x-change.claim-experience-preview.journey.v2',
@@ -74,6 +75,38 @@ final class ClaimPreviewJourneyManifestFactory
             'steps' => $steps,
             'simulation' => $simulation,
         ];
+    }
+
+    private function withSettlementEvents(array $steps, array $scenario): array
+    {
+        $execution = data_get($scenario, 'fixture.instructions.execution', []);
+        if (data_get($execution, 'schema') !== 'voucher.execution.v2'
+            || data_get($execution, 'settlement.driver') !== 'philhealth-bst'
+            || ! is_array(data_get($execution, 'events.attest'))
+            || ! is_array(data_get($execution, 'events.review'))
+            || ! is_array(data_get($execution, 'events.settle'))) {
+            return $steps;
+        }
+
+        $steps = array_values(array_filter($steps, fn (array $step): bool => ! in_array($step['phase'] ?? null, ['completion', 'handoff'], true)));
+        $amount = (int) round((float) data_get($scenario, 'fixture.instructions.target_amount', 0) * 100);
+        foreach ([
+            ['settlement-waiting', 'Patient', 'Waiting for hospital review', 'x-change/claim/SettlementWaiting', ['code' => self::SampleCode, 'reviewed' => false, 'paid' => false]],
+            ['settlement-review', 'Hospital', 'Review settlement amount', 'x-change/claim/SettlementReview', ['code' => self::SampleCode, 'amountMinor' => $amount, 'evidenceManifest' => '', 'reviewed' => false, 'paid' => false, 'preview' => true, 'evidence' => []]],
+            ['settlement-payment-waiting', 'PhilHealth', 'Settlement preparation', 'x-change/claim/SettlementWaiting', ['code' => self::SampleCode, 'reviewed' => true, 'paid' => false]],
+        ] as [$key, $actor, $title, $component, $props]) {
+            $steps[] = [
+                'key' => $key, 'phase' => 'settlement', 'title' => $title, 'description' => '',
+                'actor' => $actor, 'render_kind' => 'actual_screen', 'status' => 'rendered', 'frame' => null,
+                'screen' => ['kind' => 'settlement', 'component' => $component, 'props' => $props],
+            ];
+        }
+
+        return collect($steps)->values()->map(function (array $step, int $index): array {
+            $step['sequence'] = $index + 1;
+
+            return $step;
+        })->all();
     }
 
     /**

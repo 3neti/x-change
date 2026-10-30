@@ -14,9 +14,11 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimExperiencePreviewOptions;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimExperiencePreviewService;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewArtifactFingerprint;
+use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewJourneyManifestFactory;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewVoucherDisposer;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewVoucherIssuer;
 use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewVoucherPayloadFactory;
+use LBHurtado\XChange\ClaimWalkthrough\ClaimPreviewWebManifestPresenter;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Enums\ClaimPreviewProgressState;
 use LBHurtado\XChange\Models\ClaimPreviewArtifact;
@@ -31,6 +33,24 @@ beforeEach(function (): void {
         'selfie' => SelfieHandler::class,
         'signature' => SignatureHandler::class,
     ]);
+});
+
+it('projects the patient, hospital and payment waits for a PhilHealth settlement', function (): void {
+    $scenario = ['fixture' => ['instructions' => [
+        'target_amount' => 20000,
+        'execution' => ['schema' => 'voucher.execution.v2', 'settlement' => ['driver' => 'philhealth-bst'],
+            'events' => ['attest' => [], 'review' => [], 'settle' => []]],
+    ]], 'checkpoints' => []];
+    $journey = app(ClaimPreviewJourneyManifestFactory::class)->fromReport([], $scenario);
+    $steps = collect($journey['steps'])->keyBy('key');
+
+    expect($steps->get('settlement-waiting')['screen']['props']['code'])->toBe('AA317')
+        ->and($steps->get('settlement-review')['screen']['props']['amountMinor'])->toBe(2000000)
+        ->and($steps->get('settlement-review')['screen']['props']['preview'])->toBeTrue()
+        ->and($steps->get('settlement-payment-waiting')['screen']['props']['reviewed'])->toBeTrue();
+    $artifact = new ClaimPreviewArtifact(['reference' => 'preview123', 'metadata' => ['journey' => $journey]]);
+    $manifest = app(ClaimPreviewWebManifestPresenter::class)->present($artifact);
+    expect(collect($manifest['journey']['steps'])->firstWhere('key', 'settlement-review')['actor'])->toBe('Hospital');
 });
 
 it('renders and caches preview artifacts from voucher instructions', function (): void {

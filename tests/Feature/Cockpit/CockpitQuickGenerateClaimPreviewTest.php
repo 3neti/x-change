@@ -93,6 +93,31 @@ it('renders a dry-run claim preview from quick generate instructions', function 
         ->not->toContain('09173011987');
 });
 
+it('shows the PhilHealth settlement phases in the generated claim preview', function (): void {
+    $issuer = actingAsTestUser();
+    $response = $this->postJson(route('x-change.cockpit.quick-generate.claim-previews.store'), [
+        'cash' => ['amount' => 0, 'currency' => 'PHP'], 'inputs' => ['fields' => ['name']],
+        'feedback' => ['mobile' => null], 'rider' => ['message' => null], 'voucher_type' => 'settlement', 'target_amount' => 100,
+        'metadata' => ['collection_wallet_id' => (string) $issuer->wallet->id],
+        'presentation' => ['share' => ['title' => 'Hospital settlement', 'image_source' => 'stamp']],
+        'execution' => [
+            'schema' => 'voucher.execution.v2', 'driver' => 'settlement_envelope',
+            'settlement' => ['driver' => 'philhealth-bst', 'readiness_gate' => 'settleable'],
+            'value_flow' => ['destination' => 'instapay.gcash.mobile:09179999999'],
+            'events' => [
+                'attest' => ['actor' => 'beneficiary', 'surface' => 'claim', 'authentication' => 'anonymous', 'requires' => []],
+                'review' => ['actor' => 'hospital_reviewer', 'surface' => 'claim', 'authentication' => 'required', 'requires' => ['attestation_recorded']],
+                'settle' => ['actor' => 'payer', 'surface' => 'pay', 'authentication' => 'optional', 'requires' => ['settlement_ready', 'confirmed_payment']],
+            ],
+        ], 'dry_run' => true, 'refresh_preview' => true,
+    ]);
+    $response->assertOk();
+    $steps = collect($response->json('journey.steps'))->keyBy('key');
+    expect($steps->get('settlement-waiting')['screen']['props']['code'])->toBe('AA317')
+        ->and($steps->get('settlement-review')['actor'])->toBe('Hospital')
+        ->and($steps->get('settlement-payment-waiting')['actor'])->toBe('PhilHealth');
+});
+
 it('rejects an unknown simulated claim progress state', function (): void {
     actingAsTestUser();
 

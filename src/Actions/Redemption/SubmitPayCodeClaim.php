@@ -76,7 +76,13 @@ class SubmitPayCodeClaim
 
         $validationDecision = app(ClaimExecutionPreflight::class)->assertExecutable($voucher, $payload);
 
-        $preparedClaim = app(PrepareVoucherClaimEvidence::class)->handle($voucher, $payload);
+        $isV2Attestation = data_get($voucher->metadata, 'instructions.execution.schema') === 'voucher.execution.v2'
+            && data_get($voucher->metadata, 'instructions.execution.driver') === 'settlement_envelope'
+            && is_array(data_get($voucher->metadata, 'instructions.execution.events.attest'));
+        $preparedClaim = app(PrepareVoucherClaimEvidence::class)->handle($voucher, $payload, $isV2Attestation);
+        if ($isV2Attestation && $preparedClaim instanceof VoucherClaim) {
+            $voucher->refresh();
+        }
         if ($preparedClaim instanceof VoucherClaim) {
             $validationDecision->forceFill(['voucher_claim_id' => $preparedClaim->getKey()])->save();
         }

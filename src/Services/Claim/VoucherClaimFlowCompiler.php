@@ -57,6 +57,7 @@ final class VoucherClaimFlowCompiler
 
         $instructionPayload = $this->prefillCampaignPayerName($voucher, $instructions->toArray());
         $instructionPayload = $this->prefillContactProfile($voucher, $authenticatedMobile, $instructionPayload);
+        $instructionPayload = $this->prepareSettlementAttestation($voucher, $instructionPayload);
 
         return new CompiledVoucherClaimFlowData(
             experience: $experience,
@@ -65,6 +66,30 @@ final class VoucherClaimFlowCompiler
                 $this->splashPolicy->apply($instructionPayload),
             ),
         );
+    }
+
+    private function prepareSettlementAttestation(Voucher $voucher, array $payload): array
+    {
+        if (data_get($voucher->metadata, 'instructions.execution.schema') !== 'voucher.execution.v2'
+            || data_get($voucher->metadata, 'instructions.execution.settlement.driver') !== 'philhealth-bst'
+            || ! is_array(data_get($voucher->metadata, 'instructions.execution.events.attest'))) {
+            return $payload;
+        }
+
+        foreach ($payload['steps'] ?? [] as $index => $step) {
+            if (data_get($step, 'config.step_name') !== 'wallet_info') {
+                continue;
+            }
+
+            $fields = (array) data_get($step, 'config.fields', []);
+            data_set($payload, "steps.{$index}.config.fields", array_values(array_filter($fields,
+                fn (array $field): bool => ! in_array($field['name'] ?? null, ['amount', 'settlement_rail', 'bank_code', 'account_number'], true))));
+            data_set($payload, "steps.{$index}.config.title", 'Patient details');
+            data_set($payload, "steps.{$index}.config.description", 'Enter your mobile number to continue.');
+            unset($payload['steps'][$index]['config']['auto_sync']);
+        }
+
+        return $payload;
     }
 
     /**

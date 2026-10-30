@@ -22,18 +22,22 @@ final readonly class RiderStampClaimShareMetadataResolver implements ClaimShareM
         string $shareCardUrl,
     ): ClaimShareMetadataData {
         $copy = $this->copy->resolve($voucher);
+        $share = data_get($voucher->metadata, 'instructions.execution.schema') === 'voucher.execution.v2'
+            ? (array) data_get($voucher->metadata, 'instructions.presentation.share', []) : [];
+        $title = is_string($share['title'] ?? null) && trim($share['title']) !== '' ? trim($share['title']) : $copy->title;
+        $description = is_string($share['description'] ?? null) && trim($share['description']) !== '' ? trim($share['description']) : $copy->description;
         $artifact = RiderStampArtifactData::fromArray(data_get($voucher, 'instructions.metadata.custom.rider_stamp_artifact'));
 
         return new ClaimShareMetadataData(
-            title: $copy->title,
-            description: $copy->description,
+            title: $title,
+            description: $description,
             url: $claimUrl,
             siteName: (string) config(
                 'x-change.claim.share.site_name',
                 config('x-change.branding.name', 'X-Change'),
             ),
             imageUrl: $shareCardUrl,
-            imageAlt: "{$copy->title} preview",
+            imageAlt: "{$title} preview",
             imageWidth: $artifact?->width ?? 1200,
             imageHeight: $artifact?->height ?? 630,
         );

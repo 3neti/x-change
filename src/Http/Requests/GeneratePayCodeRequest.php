@@ -47,6 +47,13 @@ class GeneratePayCodeRequest extends FormRequest
             ...$this->minimumWithdrawalPolicyValidators(),
             ...$this->cockpitPayeePolicyValidators(),
             function (Validator $validator): void {
+                if ($this->input('execution.schema') === 'voucher.execution.v2') {
+                    foreach (['pricing', 'campaign'] as $field) {
+                        if ($this->input($field) !== null) {
+                            $validator->errors()->add($field, 'This v2 instruction is not supported for issuance.');
+                        }
+                    }
+                }
                 if ($this->routeIs('x-change.cockpit.quick-generate.store')) {
                     if ($this->isPayable() && $this->filled('slice_plan')) {
                         $validator->errors()->add('slice_plan', 'Collect Pay Codes use one collection target without release slices.');
@@ -126,7 +133,9 @@ class GeneratePayCodeRequest extends FormRequest
             'cash.amount' => [
                 'required',
                 'numeric',
-                Rule::when($this->isPayable(), ['min:0'], ['min:0.01']),
+                Rule::when($this->isPayable() || ($this->input('voucher_type') === 'settlement'
+                    && $this->input('execution.schema') === 'voucher.execution.v2'
+                    && $this->input('execution.settlement.driver') === 'philhealth-bst'), ['min:0'], ['min:0.01']),
             ],
             'cash.currency' => ['required', 'string', 'max:10'],
             'cash.settlement_rail' => ['nullable', Rule::enum(SettlementRail::class)],
@@ -160,6 +169,11 @@ class GeneratePayCodeRequest extends FormRequest
             'feedback.email' => ['nullable', 'email'],
             'feedback.mobile' => ['nullable', (new Phone)->country('PH')->type('mobile')],
             'feedback.webhook' => ['nullable', 'url:http,https'],
+            'feedback.webhooks' => ['nullable', 'array'],
+            'feedback.webhooks.*' => ['required', 'array:url,events'],
+            'feedback.webhooks.*.url' => ['required', 'url:http,https'],
+            'feedback.webhooks.*.events' => ['required', 'array', 'min:1'],
+            'feedback.webhooks.*.events.*' => ['required', 'string', 'max:120'],
 
             'rider' => ['required', 'array'],
             'rider.message' => ['nullable'],
@@ -238,6 +252,32 @@ class GeneratePayCodeRequest extends FormRequest
             'execution.fallback' => ['nullable', 'string', 'max:120'],
             'execution.visibility' => ['nullable', 'array'],
             'execution.metadata' => ['nullable', 'array'],
+            'execution.settlement' => ['nullable', 'array:driver,version,readiness_gate,payment_requirement'],
+            'execution.settlement.driver' => ['nullable', 'string', 'max:120'],
+            'execution.settlement.version' => ['nullable', 'string', 'max:120'],
+            'execution.settlement.readiness_gate' => ['nullable', 'string', 'max:120'],
+            'execution.settlement.payment_requirement' => ['nullable', 'string', 'max:120'],
+            'execution.value_flow' => ['nullable', 'array:source,destination'],
+            'execution.value_flow.source' => ['sometimes', 'string', 'max:200'],
+            'execution.value_flow.destination' => ['sometimes', 'string', 'max:200'],
+            'execution.events' => ['nullable', 'array'],
+            'execution.events.*' => ['array:actor,requires,surface,authentication'],
+            'execution.events.*.actor' => ['required', 'string', 'max:120'],
+            'execution.events.*.requires' => ['nullable', 'array'],
+            'execution.events.*.requires.*' => ['string', 'max:120'],
+            'execution.events.*.surface' => ['nullable', 'string', 'max:120'],
+            'execution.events.*.authentication' => ['nullable', 'string', 'max:120'],
+            'presentation' => ['nullable', 'array:stamp,share'],
+            'presentation.stamp' => ['nullable', 'array:design_id,design_version,show_logo,show_tagline,claim_marker'],
+            'presentation.stamp.design_id' => ['required_with:presentation.stamp', 'string', 'max:80'],
+            'presentation.stamp.design_version' => ['required_with:presentation.stamp', 'integer', 'min:1'],
+            'presentation.stamp.show_logo' => ['nullable', 'boolean'],
+            'presentation.stamp.show_tagline' => ['nullable', 'boolean'],
+            'presentation.stamp.claim_marker' => ['nullable', Rule::enum(RiderStampClaimMarker::class)],
+            'presentation.share' => ['nullable', 'array:title,description,image_source'],
+            'presentation.share.title' => ['nullable', 'string', 'max:120'],
+            'presentation.share.description' => ['nullable', 'string', 'max:240'],
+            'presentation.share.image_source' => ['nullable', 'in:stamp'],
             'value_flow' => ['nullable', 'array:source,destination'],
             'value_flow.source' => ['sometimes', 'string', 'max:200'],
             'value_flow.destination' => ['sometimes', 'string', 'max:200'],

@@ -78,7 +78,7 @@ final class ClaimPreviewWebManifestPresenter
             'phase' => (string) ($step['phase'] ?? 'claim'),
             'title' => (string) ($step['title'] ?? 'Claim step'),
             'description' => (string) ($step['description'] ?? ''),
-            'actor' => 'redeemer',
+            'actor' => (string) ($step['actor'] ?? 'redeemer'),
             'render_kind' => (string) ($step['render_kind'] ?? 'live_screen'),
             'status' => (string) ($step['status'] ?? 'rendered'),
             'preview_url' => $this->urls->route(

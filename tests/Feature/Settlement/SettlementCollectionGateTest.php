@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
 use LBHurtado\XChange\Actions\Redemption\PrepareVoucherClaimEvidence;
+use LBHurtado\XChange\Contracts\SettlementReadinessGateContract;
+use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Models\VoucherClaim;
@@ -12,6 +14,26 @@ use LBHurtado\XChange\Services\SettlementCollectionGate;
 beforeEach(function () {
     config()->set('x-change.settlement.default_driver', 'philhealth-bst');
     config()->set('x-change.settlement.drivers_path', settlementEnvelopeDriversPath());
+});
+
+it('uses the v2 instruction readiness gate for collection when none is supplied by the caller', function (): void {
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'metadata' => ['flow_type' => 'settlement', 'settlement_driver' => 'philhealth-bst'],
+    ]));
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.execution', [
+        'schema' => 'voucher.execution.v2',
+        'settlement' => ['driver' => 'claim-intake', 'readiness_gate' => 'reviewed'],
+    ]);
+    $voucher->forceFill(['metadata' => $metadata])->save();
+    $readiness = Mockery::mock(SettlementReadinessGateContract::class);
+    $readiness->shouldReceive('ensureReady')->once()->withArgs(
+        fn ($actual, $gate, $context): bool => $actual->is($voucher)
+            && $gate === 'reviewed' && $context['gate'] === 'reviewed',
+    );
+
+    (new SettlementCollectionGate(app(VoucherFlowCapabilityResolverContract::class), $readiness))
+        ->ensureCollectibleSettlementIsReady($voucher->refresh());
 });
 
 it('requires durable complete intake evidence rather than metadata claims of readiness', function (): void {

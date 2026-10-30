@@ -39,15 +39,42 @@ class SettlementCollectionGate
             return;
         }
 
+        $resolvedContext = [
+            ...$this->contextFromVoucher($voucher),
+            ...$context,
+            'requires_envelope' => true,
+        ];
+
+        if (data_get($voucher->metadata, 'instructions.execution.schema') === 'voucher.execution.v2'
+            && data_get($voucher->metadata, 'instructions.execution.settlement.driver') === 'philhealth-bst') {
+            $this->assertVerifiedPhilhealthReview($voucher);
+        }
+
         $this->settlementGate->ensureReady(
             voucher: $voucher,
-            gate: (string) ($context['gate'] ?? config('x-change.settlement.default_gate', 'settleable')),
-            context: [
-                ...$this->contextFromVoucher($voucher),
-                ...$context,
-                'requires_envelope' => true,
-            ],
+            gate: (string) $resolvedContext['gate'],
+            context: $resolvedContext,
         );
+    }
+
+    private function assertVerifiedPhilhealthReview(Voucher $voucher): void
+    {
+        $metadata = (array) $voucher->metadata;
+        $review = data_get($metadata, 'settlement_envelope.amount_review');
+        $claimId = data_get($metadata, 'settlement_envelope.attestation.claim_id');
+        $manifest = data_get($metadata, 'settlement_envelope.attestation.evidence_manifest_sha256');
+        $claim = $voucher->claims()->whereKey($claimId)->first();
+        if (! is_array($review) || $claim === null || ! is_string($manifest)
+            || ! hash_equals($manifest, (string) data_get($claim->meta, 'evidence.manifest_sha256'))
+            || ! hash_equals($manifest, (string) ($review['evidence_manifest_sha256'] ?? ''))
+            || ($review['amount_minor'] ?? null) !== (int) round((float) $voucher->target_amount * 100)
+            || empty($review['reference']) || empty($review['reviewer_type']) || empty($review['reviewer_id'])) {
+            throw new VoucherRequiresSettlementEnvelope(
+                voucher: $voucher,
+                capabilities: $this->flowResolver->resolve($voucher),
+                message: 'PhilHealth settlement requires an authorized amount review tied to attestation evidence.',
+            );
+        }
     }
 
     public function assertSettlementDoesNotDisburse(Voucher $voucher): void
@@ -88,10 +115,18 @@ class SettlementCollectionGate
         ];
 
         $envelope = (array) data_get($metadata, 'settlement_envelope', []);
+        $isV2 = data_get($metadata, 'instructions.execution.schema') === 'voucher.execution.v2';
+        $v2Settlement = $isV2 ? data_get($metadata, 'instructions.execution.settlement') : null;
+        if ($isV2 && (! is_array($v2Settlement) || ! is_string($v2Settlement['driver'] ?? null) || trim($v2Settlement['driver']) === '')) {
+            throw new \InvalidArgumentException('V2 settlement requires an explicit driver.');
+        }
+        if ($isV2 && isset($envelope['driver']) && $envelope['driver'] !== $v2Settlement['driver']) {
+            throw new \InvalidArgumentException('Settlement envelope driver does not match the v2 instruction.');
+        }
 
         return [
             'requires_envelope' => true,
-            'driver' => data_get($envelope, 'driver')
+            'driver' => ($isV2 ? $v2Settlement['driver'] : null) ?? data_get($envelope, 'driver')
                 ?? $metadata['settlement_driver']
                     ?? $metadata['envelope_driver']
                     ?? data_get($metadata, 'instructions.metadata.settlement_driver')
@@ -101,7 +136,7 @@ class SettlementCollectionGate
                         ? 'claim-intake'
                         : null)
                     ?? config('x-change.settlement.default_driver', 'philhealth-bst'),
-            'gate' => config('x-change.settlement.default_gate', 'settleable'),
+            'gate' => $isV2 ? ($v2Settlement['readiness_gate'] ?? 'settleable') : config('x-change.settlement.default_gate', 'settleable'),
             'payload' => (array) (
                 data_get($envelope, 'payload')
                 ?? $metadata['settlement_payload']

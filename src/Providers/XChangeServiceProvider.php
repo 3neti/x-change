@@ -88,6 +88,7 @@ use LBHurtado\XChange\Console\Commands\Checkout\BackfillPublicCheckoutsCommand;
 use LBHurtado\XChange\Console\Commands\Checkout\ManageCheckoutViewerLinkCommand;
 use LBHurtado\XChange\Console\Commands\Claim\ClaimWalkthroughCommand;
 use LBHurtado\XChange\Console\Commands\Claim\DeliverClaimValidationJournalCommand;
+use LBHurtado\XChange\Console\Commands\Claim\DeliverV2EvidenceJournalCommand;
 use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionContextCommand;
 use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
 use LBHurtado\XChange\Console\Commands\Claim\SnapshotRiderSplashArtworkCommand;
@@ -1775,6 +1776,7 @@ class XChangeServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->bootStoredValueCollectorGate();
+        $this->bootSettlementReviewSentinel();
         $stampCollection = InstalledVersions::getInstallPath('3neti/x-stamp-designs');
         if ($stampCollection !== null) {
             $this->publishes([
@@ -1898,6 +1900,7 @@ class XChangeServiceProvider extends ServiceProvider
                 ExpireProvisioningOffersCommand::class,
                 DeliverVoucherSliceExecutionJournalCommand::class,
                 DeliverClaimValidationJournalCommand::class,
+                DeliverV2EvidenceJournalCommand::class,
                 DeliverStoredValueAuditJournalCommand::class,
                 BackfillStoredValueAuditCommand::class,
                 ReconcileStoredValueAuditCommand::class,
@@ -2015,6 +2018,20 @@ class XChangeServiceProvider extends ServiceProvider
             return ($policy['enabled'] ?? false) === true
                 && is_string($model) && $user instanceof $model && $user->exists
                 && in_array((string) $user->getKey(), array_map('strval', (array) ($policy['user_ids'] ?? [])), true);
+        });
+    }
+
+    protected function bootSettlementReviewSentinel(): void
+    {
+        if (Gate::has('x-change.settlement.verify-amount')) {
+            return;
+        }
+
+        Gate::define('x-change.settlement.verify-amount', static function (Model $user): bool {
+            $model = config('auth.providers.users.model');
+
+            return app()->environment(['local', 'testing'])
+                && is_string($model) && $user instanceof $model && $user->exists;
         });
     }
 
@@ -2209,6 +2226,11 @@ class XChangeServiceProvider extends ServiceProvider
                 ->everyMinute()
                 ->onOneServer()
                 ->withoutOverlapping(5);
+        });
+
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            $schedule->command('x-change:v2:deliver-evidence --limit=100')
+                ->name('x-change:v2:deliver-evidence')->everyMinute()->onOneServer()->withoutOverlapping(5);
         });
 
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {

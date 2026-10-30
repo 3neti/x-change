@@ -18,6 +18,8 @@ class SubmitSettlementAttestation
 
     public function handle(Voucher $voucher, array $payload): SubmitPayCodeClaimResultData
     {
+        $this->envelopeSync->assertInstructionCompatible($voucher);
+
         $payload = [
             ...$payload,
             'claim_type' => $payload['claim_type'] ?? 'redeem',
@@ -26,7 +28,11 @@ class SubmitSettlementAttestation
 
         $result = $this->submitPayCodeClaim->handle($voucher, $payload);
 
-        $this->envelopeSync->syncPatientAttestation($voucher->refresh(), $payload);
+        $voucher->refresh();
+        if (data_get($voucher->metadata, 'instructions.execution.schema') !== 'voucher.execution.v2'
+            || data_get($voucher->metadata, 'settlement_envelope.attestation.claim_id') === null) {
+            $this->envelopeSync->syncPatientAttestation($voucher, $payload);
+        }
 
         return $result;
     }

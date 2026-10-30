@@ -8,6 +8,36 @@ beforeEach(function () {
     config()->set('x-change.settlement.default_driver', 'philhealth-bst');
 });
 
+it('uses the v2 instruction driver when recording an attestation', function () {
+    $voucher = issueVoucher(validVoucherInstructions());
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.execution', [
+        'schema' => 'voucher.execution.v2',
+        'settlement' => ['driver' => 'aui-application'],
+    ]);
+    $voucher->forceFill(['metadata' => $metadata])->save();
+
+    $updated = app(SettlementEnvelopeMetadataSyncService::class)
+        ->syncPatientAttestation($voucher->refresh(), ['inputs' => ['name' => 'Test Patient']]);
+
+    expect($updated->metadata['settlement_envelope']['driver'])->toBe('aui-application');
+});
+
+it('rejects conflicting persisted envelope and v2 instruction drivers', function () {
+    $voucher = issueVoucher(validVoucherInstructions());
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.execution', [
+        'schema' => 'voucher.execution.v2',
+        'settlement' => ['driver' => 'aui-application'],
+    ]);
+    data_set($metadata, 'settlement_envelope.driver', 'philhealth-bst');
+    $voucher->forceFill(['metadata' => $metadata])->save();
+
+    expect(fn () => app(SettlementEnvelopeMetadataSyncService::class)
+        ->syncPatientAttestation($voucher->refresh(), []))
+        ->toThrow(InvalidArgumentException::class, 'does not match');
+});
+
 it('persists patient attestation into settlement envelope metadata', function () {
     $voucher = issueVoucher(validVoucherInstructions(
         overrides: [

@@ -35,6 +35,7 @@ use LBHurtado\XChange\Services\Cockpit\CockpitPosSaleReferenceService;
 use LBHurtado\XChange\Services\Cockpit\CompileCockpitQuickGenerateClaimPolicy;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Cockpit\QuickGenerateLastInstructionsStore;
+use LBHurtado\XChange\Services\Cockpit\SettlementAttestationDraftProjection;
 use LBHurtado\XChange\Services\Configuration\ApplicationJourneyInstructionGuard;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingPolicy;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingRequirement;
@@ -107,14 +108,15 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         $correlationId = $request->header((string) config('x-change.api.correlation.header', 'X-Correlation-ID'));
         $issuerId = $this->actorIdentifier($request->user());
 
+        $projection = app(SettlementAttestationDraftProjection::class);
         $draft = $quickGenerateDraftFactory->fromPayload(
-            $payload,
+            $projection->forDraft($payload),
             idempotencyKey: $key,
             correlationId: is_string($correlationId) ? $correlationId : null,
         );
         $this->ensureDraftIsValid($draftValidator->validate($draft));
 
-        $payload = array_replace_recursive($validatedPayload, $draftCompiler->compile($draft));
+        $payload = $projection->restore(array_replace_recursive($validatedPayload, $draftCompiler->compile($draft)), $validatedPayload);
         $payload = $claimPolicy->handle($payload);
         $payload['_meta'] = [
             'idempotency_key' => $key,
