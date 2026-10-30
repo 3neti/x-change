@@ -32,8 +32,8 @@ final readonly class OnDemandIssuanceFundingRequirement
             ($pricing->account_debit ?? ($pricing->pay_code_value ?? 0) + $pricing->total) * 100,
         );
 
-        if ($requiredAmountMinor <= 0) {
-            throw new RuntimeException('On-demand issuance requires a positive authoritative amount.');
+        if ($requiredAmountMinor < 0) {
+            throw new RuntimeException('On-demand issuance requires a non-negative authoritative amount.');
         }
 
         $availableClientFundsMinor = $basis === OnDemandIssuanceFundingBasis::Shortfall

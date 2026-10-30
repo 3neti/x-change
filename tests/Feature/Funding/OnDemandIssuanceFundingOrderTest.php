@@ -168,6 +168,21 @@ it('calculates full amount and shortfall funding from the authoritative balance'
         ->and($shortfall->externalAmountMinor)->toBe(2_000);
 });
 
+it('allows a zero issuer debit without requiring external funding', function (): void {
+    $user = actingAsTestUser(0);
+    $pricing = new PricingEstimateData(currency: 'PHP', pay_code_value: 0, account_debit: 0);
+
+    foreach ([OnDemandIssuanceFundingBasis::FullAmount, OnDemandIssuanceFundingBasis::Shortfall] as $basis) {
+        $requirement = app(OnDemandIssuanceFundingRequirement::class)->forBasis($user, $pricing, $basis);
+        expect($requirement->requiredAmountMinor)->toBe(0)
+            ->and($requirement->reservedClientFundsMinor)->toBe(0)
+            ->and($requirement->externalAmountMinor)->toBe(0);
+    }
+
+    expect(fn () => app(PrepareOnDemandPayCodeIssuance::class)->handle($user, [], $pricing, 'zero-funding-order'))
+        ->toThrow(RuntimeException::class, 'A funding order requires a positive authoritative amount.');
+});
+
 it('blocks a charged on-demand order before presenting payment instructions when charging is unauthorized', function (): void {
     config()->set('x-change.deployment.runtime_tier', 'production');
     config()->set('x-change.commercial.beta_customer_charging_exception.enabled', false);
