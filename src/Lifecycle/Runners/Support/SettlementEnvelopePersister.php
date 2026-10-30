@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Lifecycle\Runners\Support;
 
+use LBHurtado\XChange\Services\SettlementEnvelopeMetadataSyncService;
+
 final class SettlementEnvelopePersister
 {
     public function completeEnvelope(
@@ -11,6 +13,14 @@ final class SettlementEnvelopePersister
         array $scenario,
         array $readyContext,
     ): mixed {
+        if (data_get($voucher->metadata, 'instructions.execution.schema') === 'voucher.execution.v2') {
+            return app(SettlementEnvelopeMetadataSyncService::class)->syncEvidence($voucher, [
+                'payload' => (array) data_get($readyContext, 'payload', []),
+                'documents' => (array) data_get($readyContext, 'documents', []),
+                'checklist' => (array) data_get($readyContext, 'checklist', []),
+            ]);
+        }
+
         $metadata = is_array($voucher->metadata ?? null)
             ? $voucher->metadata
             : [];

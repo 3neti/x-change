@@ -7,7 +7,7 @@ namespace LBHurtado\XChange\Services\Settlement;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
+use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\V2EvidenceOutbox;
 use LBHurtado\XChange\Models\VoucherClaim;
@@ -24,7 +24,6 @@ final readonly class V2EvidenceEventJournal
     public function __construct(
         private ExecutionJournalRecorder $journal,
         private V2EventWebhookDelivery $webhooks,
-        private SettlementEnvelopeReadinessContract $readiness,
         private SettlementCollectionGate $collectionGate,
     ) {}
 
@@ -83,12 +82,13 @@ final readonly class V2EvidenceEventJournal
 
         $review = data_get($voucher->metadata, 'settlement_envelope.amount_review');
         if (! is_array($review) || ! is_string($review['reference'] ?? null) || empty($review['reviewed_at'])) {
-            throw new \LogicException('A persisted settlement review is required.');
+            return;
         }
 
         $context = $this->collectionGate->contextFromVoucher($voucher);
-        $result = $this->readiness->evaluate($voucher, (string) $context['gate'], $context);
-        if (! $result->required || ! $result->ready) {
+        try {
+            $this->collectionGate->ensureCollectibleSettlementIsReady($voucher);
+        } catch (VoucherRequiresSettlementEnvelope) {
             return;
         }
 

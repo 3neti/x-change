@@ -2,10 +2,52 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\DB;
+use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
+use LBHurtado\XChange\Models\V2EvidenceOutbox;
+use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\SettlementEnvelopeMetadataSyncService;
 
 beforeEach(function () {
     config()->set('x-change.settlement.default_driver', 'philhealth-bst');
+});
+
+it('records readiness atomically when the last independent evidence section is saved', function (): void {
+    $voucher = issueVoucher(validVoucherInstructions());
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.execution', [
+        'schema' => 'voucher.execution.v2', 'settlement' => ['driver' => 'philhealth-bst'],
+        'events' => ['review' => ['actor' => 'hospital_reviewer']],
+    ]);
+    data_set($metadata, 'settlement_envelope.amount_review', ['reference' => 'review-1', 'reviewed_at' => now()->toISOString()]);
+    $voucher->forceFill(['metadata' => $metadata])->save();
+    $gate = Mockery::mock(SettlementCollectionGate::class);
+    $gate->shouldReceive('contextFromVoucher')->andReturn(['gate' => 'settleable']);
+    $gate->shouldReceive('ensureCollectibleSettlementIsReady')->andReturnUsing(function ($candidate): void {
+        if (! data_get($candidate->metadata, 'settlement_envelope.payload.patient_name')
+            || ! data_get($candidate->metadata, 'settlement_envelope.documents.claim')
+            || ! data_get($candidate->metadata, 'settlement_envelope.checklist.checked')) {
+            throw new VoucherRequiresSettlementEnvelope;
+        }
+    });
+    app()->instance(SettlementCollectionGate::class, $gate);
+    $service = app(SettlementEnvelopeMetadataSyncService::class);
+    $service->syncEvidence($voucher, ['payload' => ['patient_name' => 'Patient']]);
+    $service->syncEvidence($voucher, ['documents' => ['claim' => 'document-reference']]);
+    expect(V2EvidenceOutbox::query()->where('event_type', 'settlement.ready')->count())->toBe(0);
+
+    expect(fn () => DB::transaction(function () use ($service, $voucher): void {
+        $service->syncEvidence($voucher, ['checklist' => ['checked' => true]]);
+        throw new RuntimeException('rollback evidence');
+    }))->toThrow(RuntimeException::class, 'rollback evidence');
+    expect(data_get($voucher->fresh()->metadata, 'settlement_envelope.checklist.checked'))->toBeNull()
+        ->and(V2EvidenceOutbox::query()->where('event_type', 'settlement.ready')->count())->toBe(0);
+
+    $service->syncEvidence($voucher, ['checklist' => ['checked' => true]]);
+    $service->syncEvidence($voucher, ['checklist' => ['checked' => true]]);
+    expect(V2EvidenceOutbox::query()->where('event_type', 'settlement.ready')->count())->toBe(1);
+    expect(fn () => $service->syncEvidence($voucher, ['checklist' => ['amount_verified' => true]]))
+        ->toThrow(InvalidArgumentException::class, 'authorized settlement review');
 });
 
 it('uses the v2 instruction driver when recording an attestation', function () {
