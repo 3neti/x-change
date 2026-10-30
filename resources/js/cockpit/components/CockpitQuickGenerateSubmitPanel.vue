@@ -907,7 +907,7 @@ const rulesMaxPayment = ref("");
 const rulesAllowOverpayment = ref(false);
 const rulesAutoCloseOnFullPayment = ref(true);
 const includeExecutionInstruction = ref(false);
-const executionSchema = ref("voucher.execution.v1");
+const executionSchema = ref("voucher.execution.v2");
 const executionDriver = ref("default");
 const executionMode = ref("");
 const executionPipeline = ref("");
@@ -1244,6 +1244,9 @@ function applyTemplateDefaults(templateKey: string): void {
   voucherType.value = defaults.voucherType;
   targetAmount.value = defaults.targetAmount;
   includeExecutionInstruction.value = defaults.includeExecutionInstruction;
+  executionSchema.value = defaults.executionDriver === "settlement_envelope"
+    ? "voucher.execution.v1"
+    : "voucher.execution.v2";
   executionDriver.value = defaults.executionDriver;
   claimOutcome.value = defaults.claimOutcome;
   executionPipeline.value =
@@ -2027,6 +2030,7 @@ function applyInstructionBlueprint(
   feeBearer.value = instructionString(instructions, ["fee_bearer"]) === "payer" ? "payer" : "issuer";
   valueFlowDestination.value =
     instructionString(instructions, ["value_flow", "destination"]) ||
+    instructionString(instructions, ["execution", "value_flow", "destination"]) ||
     instructionString(instructions, ["execution", "metadata", "value_flow", "destination"]) || "";
   const storedValuePolicy = instructionRecord(instructions, ["stored_value"]);
   const compiledStoredValuePolicy = instructionRecord(execution, [
@@ -5035,7 +5039,12 @@ const executionSummary = computed<Record<string, unknown> | null>(() => {
 const livePricingPayload = computed<Record<string, unknown>>(() => {
   const payload = buildPayloadShape(true, amountCalculatorPreview.value);
   if (valueFlowVisible.value && valueFlowDestination.value) {
-    payload.value_flow = { destination: valueFlowDestination.value };
+    const execution = payload.execution as Record<string, unknown> | undefined;
+    if (execution?.schema === "voucher.execution.v2") {
+      execution.value_flow = { destination: valueFlowDestination.value };
+    } else {
+      payload.value_flow = { destination: valueFlowDestination.value };
+    }
   }
   return payload;
 });
@@ -5633,14 +5642,21 @@ function buildPayloadShape(
 
   cash.validation = validation;
 
+  const execution = executionSummary.value ??
+    (!reusableBalance.value && !onboardingEnabled.value
+      ? { schema: "voucher.execution.v2", driver: "default" }
+      : null);
+  const destination = valueFlowVisible.value && valueFlowDestination.value
+    ? { destination: redactSensitive
+        ? valueFlowDestination.value.replace(/:[0-9]+(?=\.client_funds$|$)/, ":[redacted]")
+        : valueFlowDestination.value }
+    : null;
+  const isV2Execution = execution?.schema === "voucher.execution.v2";
+
   const payload: Record<string, unknown> = {
     cash,
     ...((isPayableVoucher.value || isSettlementVoucher.value) ? { fee_bearer: feeBearer.value } : {}),
-    ...(valueFlowVisible.value && valueFlowDestination.value
-      ? { value_flow: { destination: redactSensitive
-          ? valueFlowDestination.value.replace(/:[0-9]+(?=\.client_funds$|$)/, ":[redacted]")
-          : valueFlowDestination.value } }
-      : {}),
+    ...(destination && !isV2Execution ? { value_flow: destination } : {}),
     ...(executableSlicePlan.value === null
       ? {}
       : { slice_plan: executableSlicePlan.value }),
@@ -5789,8 +5805,11 @@ function buildPayloadShape(
     payload.rules = settlementRulesSummary.value;
   }
 
-  if (executionSummary.value !== null) {
-    payload.execution = executionSummary.value;
+  if (execution !== null) {
+    payload.execution = {
+      ...execution,
+      ...(destination && isV2Execution ? { value_flow: destination } : {}),
+    };
   }
 
   const flowType = metadataFlowType.value.trim();

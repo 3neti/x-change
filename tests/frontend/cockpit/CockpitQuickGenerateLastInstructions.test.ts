@@ -26,6 +26,24 @@ const collectionDestination = {
 } as const;
 
 describe('Quick Generate last instructions', () => {
+    it('restores a v2 value-flow destination when repeating an instruction', () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: {
+            templates: cockpitQuickGenerateTemplates,
+            collectionDestination,
+            startupMode: 'repeat_last',
+            lastInstructions: {
+                schema: 'x-change.cockpit.quick-generate-last-instructions.v1',
+                saved_at: '2026-08-28T09:00:00Z',
+                instructions: {
+                    voucher_type: 'payable', cash: { amount: 0, currency: 'PHP' }, target_amount: 100,
+                    execution: { schema: 'voucher.execution.v2', driver: 'default', value_flow: { destination: 'instapay.gcash.mobile:09179999999' } },
+                },
+            },
+        } });
+        const preview = JSON.parse(wrapper.get('[data-testid="cockpit-quick-generate-engineering-preview-json"]').text());
+        expect(preview.execution.value_flow.destination).toBe('instapay.gcash.mobile:09179999999');
+        expect(preview).not.toHaveProperty('value_flow');
+    });
     it('ignores legacy wallet ids and presents the authoritative collection destination', () => {
         const instructions = (collectionWalletId?: string) => ({
             schema: 'x-change.cockpit.quick-generate-last-instructions.v1',
