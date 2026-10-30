@@ -93,6 +93,28 @@ it('renders a dry-run claim preview from quick generate instructions', function 
         ->not->toContain('09173011987');
 });
 
+it('shows a payable payment page instead of the disbursement claim journey', function (): void {
+    $issuer = actingAsTestUser();
+    $response = $this->postJson(route('x-change.cockpit.quick-generate.claim-previews.store'), [
+        'cash' => ['amount' => 0, 'currency' => 'PHP'], 'inputs' => ['fields' => []],
+        'feedback' => ['mobile' => null], 'rider' => ['message' => 'Payment for services'],
+        'voucher_type' => 'payable', 'target_amount' => 100, 'fee_bearer' => 'issuer',
+        'metadata' => ['collection_wallet_id' => (string) $issuer->wallet->id],
+        'execution' => ['schema' => 'voucher.execution.v2', 'driver' => 'default',
+            'value_flow' => ['destination' => 'instapay.gcash.mobile:09179999999']],
+        'dry_run' => true, 'refresh_preview' => true,
+    ]);
+    $response->assertOk()->assertJsonPath('journey.step_count', 1)
+        ->assertJsonPath('journey.steps.0.key', 'payment-page')
+        ->assertJsonPath('journey.steps.0.actor', 'payer')
+        ->assertJsonPath('journey.steps.0.screen.component', 'x-change/claim/Payment')
+        ->assertJsonPath('journey.steps.0.screen.props.previewMode', true)
+        ->assertJsonPath('journey.steps.0.screen.props.payment.target_amount_minor', 10000)
+        ->assertJsonPath('journey.steps.0.screen.props.payment.amount_due_minor', 10000)
+        ->assertJsonPath('journey.steps.0.screen.props.payment.can_create_attempt', false);
+    expect($response->getContent())->not->toContain('09179999999');
+});
+
 it('shows the PhilHealth settlement phases in the generated claim preview', function (): void {
     $issuer = actingAsTestUser();
     $response = $this->postJson(route('x-change.cockpit.quick-generate.claim-previews.store'), [

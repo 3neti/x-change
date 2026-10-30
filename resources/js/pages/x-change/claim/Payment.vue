@@ -91,6 +91,8 @@ type PaymentReadModel = {
 const props = defineProps<{
     payment: PaymentReadModel;
     notice?: string | null;
+    previewMode?: boolean;
+    previewFeePending?: boolean;
 }>();
 const creating = ref(false);
 const checking = ref(false);
@@ -159,7 +161,9 @@ function money(amountMinor: number, currency: string): string {
 }
 
 const amountDue = computed(() =>
-    money(props.payment.amount_due_minor, props.payment.currency),
+    props.previewMode && props.previewFeePending
+        ? 'Calculated at payment'
+        : money(props.payment.amount_due_minor, props.payment.currency),
 );
 const attemptAmount = computed(() =>
     money(
@@ -172,7 +176,7 @@ const deliveryPending = computed(
 );
 const shouldPoll = computed(
     () =>
-        retrySeconds.value === 0 &&
+        !props.previewMode && retrySeconds.value === 0 &&
         (deliveryPending.value ||
             (!props.payment.is_fully_paid &&
                 ((props.payment.repayment_mode === true && props.payment.repayment_ready === false) ||
@@ -256,6 +260,7 @@ function selectQr(): void {
 
 function startPayment(): void {
     if (
+        props.previewMode ||
         selectedMethod.value !== 'qr' ||
         pairedUnavailable.value ||
         !props.payment.can_create_attempt ||
@@ -283,6 +288,7 @@ function checkPaymentStatus(): void {
     const attempt = props.payment.attempt;
 
     if (
+        props.previewMode ||
         !attempt?.can_check ||
         checking.value ||
         checkCooldownSeconds.value > 0 ||

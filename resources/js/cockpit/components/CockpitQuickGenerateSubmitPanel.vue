@@ -5670,7 +5670,7 @@ function buildPayloadShape(
   const normalizedCount = Number(count.value);
   const campaign = campaignMetadata();
   const cash: Record<string, unknown> = {
-    amount: philhealthSettlement.value ? 0 : (Number.isFinite(normalizedAmount) ? normalizedAmount : amount.value),
+    amount: philhealthSettlement.value || isPayableVoucher.value ? 0 : (Number.isFinite(normalizedAmount) ? normalizedAmount : amount.value),
     currency: currency.value.trim() || "PHP",
     validation: validationSummary.value,
   };

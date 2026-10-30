@@ -29,6 +29,10 @@ final class ClaimPreviewJourneyManifestFactory
         array $presentation = [],
         array $xray = [],
     ): array {
+        if (data_get($scenario, 'fixture.instructions.voucher_type') === 'payable') {
+            return $this->payableJourney($scenario);
+        }
+
         $canonical = $this->canonicalSteps($scenario);
         $storyboard = $this->storyboard($report);
         $captured = collect(data_get($storyboard, 'checkpoints', []))
@@ -75,6 +79,40 @@ final class ClaimPreviewJourneyManifestFactory
             'step_count' => count($steps),
             'steps' => $steps,
             'simulation' => $simulation,
+        ];
+    }
+
+    private function payableJourney(array $scenario): array
+    {
+        $instruction = (array) data_get($scenario, 'fixture.instructions', []);
+        $target = max(0, (int) round((float) data_get($instruction, 'target_amount', 0) * 100));
+        $feePending = data_get($instruction, 'fee_bearer', 'issuer') === 'payer';
+        $step = [
+            'sequence' => 1, 'key' => 'payment-page', 'phase' => 'payment',
+            'title' => 'Pay the Pay Code', 'description' => 'The payer reviews the invoice and chooses how to pay.',
+            'actor' => 'payer', 'render_kind' => 'actual_screen', 'status' => 'rendered', 'frame' => null,
+            'screen' => [
+                'kind' => 'payment_preview', 'component' => 'x-change/claim/Payment',
+                'props' => [
+                    'previewMode' => true, 'previewFeePending' => $feePending,
+                    'payment' => [
+                        'pay_code' => self::SampleCode,
+                        'currency' => (string) data_get($instruction, 'cash.currency', 'PHP'),
+                        'target_amount_minor' => $target, 'collected_amount_minor' => 0,
+                        'amount_due_minor' => $target, 'principal_due_minor' => $target, 'fee_due_minor' => 0,
+                        'is_fully_paid' => false, 'rider_message' => data_get($instruction, 'rider.message'),
+                        'provider' => (string) data_get($instruction, 'provider', 'netbank'),
+                        'provider_available' => true, 'can_create_attempt' => false,
+                        'poll_interval_ms' => 5000, 'attempt' => null, 'receipt' => null,
+                    ],
+                ],
+            ],
+        ];
+
+        return [
+            'schema' => 'x-change.claim-experience-preview.journey.v2',
+            'viewport' => ['profile' => 'mobile_claim_v1', 'width' => 360, 'height' => 720],
+            'step_count' => 1, 'steps' => [$step], 'simulation' => [],
         ];
     }
 

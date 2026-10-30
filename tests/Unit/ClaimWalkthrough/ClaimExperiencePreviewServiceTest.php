@@ -35,6 +35,17 @@ beforeEach(function (): void {
     ]);
 });
 
+it('uses the payment page for payable instructions across schema versions', function (string $schema): void {
+    $scenario = ['fixture' => ['instructions' => [
+        'voucher_type' => 'payable', 'target_amount' => 100, 'fee_bearer' => 'payer',
+        'cash' => ['amount' => 0, 'currency' => 'PHP'], 'execution' => ['schema' => $schema],
+    ]], 'checkpoints' => [['key' => 'claim-entry']]];
+    $journey = app(ClaimPreviewJourneyManifestFactory::class)->fromReport([], $scenario);
+    expect(collect($journey['steps'])->pluck('key')->all())->toBe(['payment-page'])
+        ->and(data_get($journey, 'steps.0.screen.props.previewFeePending'))->toBeTrue()
+        ->and(data_get($journey, 'steps.0.screen.props.payment.target_amount_minor'))->toBe(10000);
+})->with(['voucher.execution.v1', 'voucher.execution.v2']);
+
 it('projects the patient, hospital and payment waits for a PhilHealth settlement', function (): void {
     $scenario = ['fixture' => ['instructions' => [
         'target_amount' => 20000,

@@ -516,12 +516,16 @@ it('places a payable destination under v2 execution in the preview and submitted
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
   wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', 'instapay.gcash.mobile:09179999999');
   await flushPromises();
+  expect(preview(wrapper).cash.amount).toBe(0);
+  expect(preview(wrapper).target_amount).toBe(100);
   expect(preview(wrapper).execution).toEqual({ schema: 'voucher.execution.v2', driver: 'default', value_flow: { destination: 'instapay.gcash.mobile:09179999999' } });
   expect(preview(wrapper)).not.toHaveProperty('value_flow');
   await wrapper.get('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
   await flushPromises();
   const request = fetchMock.mock.calls.find(([url, options]) => url === '/x/cockpit/quick-generate' && options.method === 'POST');
   expect(request).toBeDefined();
+  expect(JSON.parse(request![1].body).cash.amount).toBe(0);
+  expect(JSON.parse(request![1].body).target_amount).toBe(100);
   expect(JSON.parse(request![1].body).execution).toEqual(preview(wrapper).execution);
 });
 
