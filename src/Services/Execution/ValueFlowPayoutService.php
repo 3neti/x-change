@@ -29,6 +29,7 @@ use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Jobs\SubmitValueFlowPayout;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Services\DisbursementRejectionTrustService;
+use LBHurtado\XChange\Services\Settlement\V2EvidenceEventJournal;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use RuntimeException;
 use Throwable;
@@ -48,6 +49,7 @@ final readonly class ValueFlowPayoutService
         private DisbursementStatusResolverContract $statuses,
         private DisbursementRejectionTrustService $rejectionTrust,
         private SettlementRailCapabilityRegistryContract $rails,
+        private V2EvidenceEventJournal $v2Events,
     ) {}
 
     public function isExternal(Voucher $voucher): bool
@@ -260,6 +262,7 @@ final readonly class ValueFlowPayoutService
                     metadata: ['source' => 'x_change_value_flow'],
                 ));
                 $row->forceFill(['internal_status' => 'finalized'])->save();
+                $this->v2Events->payoutConverged($row);
             } elseif ($this->rejectionTrust->isTrusted($row) && $row->internal_status === 'reserved') {
                 $this->operations->holdPayoutRecovery(new TreasuryPositionPayoutRecoveryData(
                     operationReference: $reference.':recovery', sourcePositionReference: $meta['reserve_position'],
@@ -268,6 +271,7 @@ final readonly class ValueFlowPayoutService
                     metadata: ['source' => 'x_change_value_flow'],
                 ));
                 $row->forceFill(['internal_status' => 'recovery_opened'])->save();
+                $this->v2Events->payoutConverged($row);
             }
         }, attempts: 5);
     }

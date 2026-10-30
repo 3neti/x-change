@@ -40,7 +40,9 @@ class CreatePaymentAttempt
     ): PaymentAttempt {
         $this->capabilities->ensureCanCollect($voucher);
 
-        if (data_get($voucher->metadata, 'instructions.claim.default_outcome') === 'lead_intake'
+        if ((data_get($voucher->metadata, 'instructions.execution.schema') === 'voucher.execution.v2'
+                && data_get($voucher->metadata, 'instructions.execution.driver') === 'settlement_envelope')
+            || data_get($voucher->metadata, 'instructions.claim.default_outcome') === 'lead_intake'
             || SettlementRepaymentPolicy::forVoucher($voucher)) {
             $this->settlementGate->ensureCollectibleSettlementIsReady($voucher);
         }

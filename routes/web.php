@@ -16,6 +16,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimCompleteController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimExperienceController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimRedirectController;
+use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSettlementReviewController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimShareCardController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimStartController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSubmitController;
@@ -1107,6 +1108,10 @@ Route::prefix('x')->middleware(['web', ShareXChangeBranding::class, GuardPairedC
     Route::get('claim/{code}', ClaimPageController::class)
         ->middleware((array) config('x-change.claim.public_read_middleware', []))
         ->name('x-change.claim.show');
+    Route::get('claim/{code}/settlement-review', [ClaimSettlementReviewController::class, 'show'])
+        ->middleware('auth')->name('x-change.claim.settlement-review.show');
+    Route::post('claim/{code}/settlement-review', [ClaimSettlementReviewController::class, 'store'])
+        ->middleware('auth')->name('x-change.claim.settlement-review.store');
     Route::get('claim/{code}/authorization-required', ClaimAuthorizationRequiredController::class)
         ->middleware((array) config('x-change.claim.public_read_middleware', []))
         ->name('x-change.claim.authorization-required');

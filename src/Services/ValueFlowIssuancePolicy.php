@@ -20,7 +20,11 @@ final readonly class ValueFlowIssuancePolicy
     {
         $supported = data_get($input, 'execution.driver') === 'stored_value'
             || in_array(data_get($input, 'voucher_type'), ['payable', 'settlement'], true);
-        $flow = $input['value_flow'] ?? data_get($input, 'execution.metadata.value_flow');
+        $isV2 = data_get($input, 'execution.schema') === 'voucher.execution.v2';
+        $flow = $isV2 ? data_get($input, 'execution.value_flow') : ($input['value_flow'] ?? data_get($input, 'execution.metadata.value_flow'));
+        if ($isV2 && (array_key_exists('value_flow', $input) || data_get($input, 'execution.metadata.value_flow') !== null)) {
+            throw ValidationException::withMessages(['value_flow' => 'V2 value flow must be provided only under execution.value_flow.']);
+        }
         unset($input['value_flow']);
         if (! $supported || $flow === null) {
             return $input;
@@ -44,7 +48,7 @@ final readonly class ValueFlowIssuancePolicy
             }
             $flow[$role] = $address;
         }
-        Arr::set($input, 'execution.metadata.value_flow', $flow);
+        Arr::set($input, $isV2 ? 'execution.value_flow' : 'execution.metadata.value_flow', $flow);
 
         return $input;
     }

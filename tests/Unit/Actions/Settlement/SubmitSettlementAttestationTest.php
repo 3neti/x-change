@@ -34,6 +34,7 @@ it('submits settlement attestation through the pay code claim action', function 
         ));
 
     $sync = Mockery::mock(SettlementEnvelopeMetadataSyncService::class);
+    $sync->shouldReceive('assertInstructionCompatible')->once()->with($voucher);
     $sync
         ->shouldReceive('syncPatientAttestation')
         ->once()
@@ -58,4 +59,22 @@ it('submits settlement attestation through the pay code claim action', function 
             'claim_type' => 'redeem',
             'settlement_attestation' => true,
         ]);
+});
+
+it('rejects a conflicting v2 envelope before submitting the claim', function () {
+    $voucher = new Voucher;
+    $voucher->metadata = [
+        'instructions' => ['execution' => [
+            'schema' => 'voucher.execution.v2',
+            'settlement' => ['driver' => 'aui-application'],
+        ]],
+        'settlement_envelope' => ['driver' => 'philhealth-bst'],
+    ];
+    $claim = Mockery::mock(SubmitPayCodeClaim::class);
+    $claim->shouldNotReceive('handle');
+
+    $action = new SubmitSettlementAttestation($claim, app(SettlementEnvelopeMetadataSyncService::class));
+
+    expect(fn () => $action->handle($voucher, []))
+        ->toThrow(InvalidArgumentException::class, 'does not match');
 });

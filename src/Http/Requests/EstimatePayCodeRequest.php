@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 use LBHurtado\EmiCore\Enums\SettlementRail;
 use LBHurtado\Voucher\Enums\RiderContentFormat;
 use LBHurtado\Voucher\Enums\RiderStampArtworkSource;
@@ -45,6 +46,16 @@ class EstimatePayCodeRequest extends FormRequest
         return [
             ...$this->minimumWithdrawalPolicyValidators(),
             ...$this->cockpitPayeePolicyValidators(),
+            function (Validator $validator): void {
+                if ($this->input('execution.schema') !== 'voucher.execution.v2') {
+                    return;
+                }
+                foreach (['pricing', 'campaign'] as $field) {
+                    if ($this->input($field) !== null) {
+                        $validator->errors()->add($field, 'This v2 instruction is not supported for pricing.');
+                    }
+                }
+            },
         ];
     }
 

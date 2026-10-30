@@ -82,7 +82,6 @@ final readonly class CompleteVoucherCollection
 
             $this->settlementCollectionGate->ensureCollectibleSettlementIsReady(
                 voucher: $locked,
-                context: $this->settlementCollectionGate->contextFromVoucher($locked),
             );
 
             if ($data->executionDriver !== 'provider_wallet'

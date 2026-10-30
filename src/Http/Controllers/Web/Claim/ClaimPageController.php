@@ -7,6 +7,8 @@ namespace LBHurtado\XChange\Http\Controllers\Web\Claim;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Gate;
+use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
@@ -48,6 +50,21 @@ class ClaimPageController extends Controller
                 message: 'Invalid Pay Code.',
                 code: $code,
             );
+        }
+
+        if (data_get($voucher->metadata, 'instructions.execution.schema') === 'voucher.execution.v2'
+            && data_get($voucher->metadata, 'instructions.execution.settlement.driver') === 'philhealth-bst'
+            && is_array(data_get($voucher->metadata, 'instructions.execution.events.review'))
+            && data_get($voucher->metadata, 'settlement_envelope.attestation.claim_id')) {
+            if ($request->user() !== null && Gate::forUser($request->user())->allows('x-change.settlement.verify-amount', $voucher)) {
+                return redirect()->route('x-change.claim.settlement-review.show', ['code' => $code]);
+            }
+
+            return Inertia::render('x-change/claim/SettlementWaiting', [
+                'code' => $code,
+                'reviewed' => is_array(data_get($voucher->metadata, 'settlement_envelope.amount_review')),
+                'paid' => $collectionProgress->compute($voucher)->is_fully_collected,
+            ]);
         }
 
         $flowCapabilities = $capabilities->resolve($voucher);

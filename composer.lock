@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9daa821ec88bc18c31326cd49fbc9e1c",
+    "content-hash": "d9a69cd002d83952003da4775bb50c9d",
     "packages": [
         {
             "name": "3neti/cash",
@@ -1358,16 +1358,16 @@
         },
         {
             "name": "3neti/voucher",
-            "version": "v1.1.0",
+            "version": "v1.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/voucher.git",
-                "reference": "75a695a73a01513a4d4090c15e9fff2498df7049"
+                "reference": "cb756414491a6cc6952eeb98e7039b929ff3b001"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/voucher/zipball/75a695a73a01513a4d4090c15e9fff2498df7049",
-                "reference": "75a695a73a01513a4d4090c15e9fff2498df7049",
+                "url": "https://api.github.com/repos/3neti/voucher/zipball/cb756414491a6cc6952eeb98e7039b929ff3b001",
+                "reference": "cb756414491a6cc6952eeb98e7039b929ff3b001",
                 "shasum": ""
             },
             "require": {
@@ -1435,7 +1435,7 @@
                 "issues": "https://github.com/3neti/voucher/issues",
                 "source": "https://github.com/3neti/voucher"
             },
-            "time": "2026-10-28T10:12:37+00:00"
+            "time": "2026-10-30T11:45:00+00:00"
         },
         {
             "name": "3neti/wallet",

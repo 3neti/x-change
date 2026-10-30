@@ -16,6 +16,7 @@ use LBHurtado\Cash\CashServiceProvider;
 use LBHurtado\Contact\ContactServiceProvider;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiCore\EmiCoreServiceProvider;
+use LBHurtado\FormFlowManager\Services\DriverService as FormFlowDriverService;
 use LBHurtado\Instruction\Database\Seeders\InstructionItemSeeder;
 use LBHurtado\Instruction\InstructionServiceProvider;
 use LBHurtado\Merchant\MerchantServiceProvider;
@@ -45,6 +46,7 @@ use Spatie\LaravelData\Normalizers\JsonNormalizer;
 use Spatie\LaravelData\Normalizers\ModelNormalizer;
 use Spatie\LaravelData\Normalizers\ObjectNormalizer;
 use Spatie\SchemalessAttributes\SchemalessAttributesServiceProvider;
+use Symfony\Component\Yaml\Yaml;
 
 abstract class TestCase extends Orchestra
 {
@@ -55,6 +57,20 @@ abstract class TestCase extends Orchestra
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->app->bind(FormFlowDriverService::class, fn () => new class extends FormFlowDriverService
+        {
+            public function loadConfig(string $driverName = 'voucher-redemption'): void
+            {
+                if ($driverName !== 'voucher-redemption') {
+                    parent::loadConfig($driverName);
+
+                    return;
+                }
+
+                $this->config = Yaml::parseFile(__DIR__.'/../config/form-flow-drivers/voucher-redemption.yaml');
+            }
+        });
 
         $this->fakePayoutProvider = new FakePayoutProvider;
         $this->app->instance(PayoutProvider::class, $this->fakePayoutProvider);

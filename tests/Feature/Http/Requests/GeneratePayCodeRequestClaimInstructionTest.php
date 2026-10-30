@@ -52,6 +52,32 @@ function validateClaimInstructionRequest(string $requestClass, array $payload): 
     return $validator;
 }
 
+it('preserves v2 execution and webhook subscriptions through issuance validation', function (): void {
+    $payload = validClaimInstructionPayload([]);
+    unset($payload['claim']);
+    $payload['execution'] = [
+        'schema' => 'voucher.execution.v2', 'driver' => 'settlement_envelope',
+        'settlement' => ['driver' => 'philhealth-bst', 'readiness_gate' => 'settleable'],
+        'value_flow' => ['destination' => 'instapay.gcash.mobile:09179999999'],
+        'events' => ['attest' => ['actor' => 'beneficiary'], 'settle' => ['actor' => 'payer', 'requires' => ['settlement_ready', 'confirmed_payment']]],
+    ];
+    $payload['feedback']['webhooks'] = [['url' => 'https://example.test/hook', 'events' => ['settlement.payment_collected']]];
+    $validator = validateClaimInstructionRequest(GeneratePayCodeRequest::class, $payload);
+    expect($validator->errors()->all())->toBeEmpty()
+        ->and(data_get($validator->validated(), 'execution'))->toBe($payload['execution'])
+        ->and(data_get($validator->validated(), 'feedback.webhooks'))->toBe($payload['feedback']['webhooks']);
+});
+
+it('rejects unsupported v2 fields before request filtering can discard them', function (string $field, string $requestClass): void {
+    $payload = validClaimInstructionPayload([]);
+    unset($payload['claim']);
+    $payload['execution'] = ['schema' => 'voucher.execution.v2'];
+    $payload[$field] = ['value' => 'not-yet-supported'];
+
+    $validator = validateClaimInstructionRequest($requestClass, $payload);
+    expect($validator->errors()->has($field))->toBeTrue();
+})->with(['pricing', 'campaign'])->with([[GeneratePayCodeRequest::class], [EstimatePayCodeRequest::class]]);
+
 it('accepts typed Account Funding claim instructions for generation and estimation', function (string $requestClass): void {
     $validator = validateClaimInstructionRequest($requestClass, validClaimInstructionPayload([
         'outcomes' => [[

@@ -6,14 +6,17 @@ namespace LBHurtado\XChange\Services;
 
 use Illuminate\Support\Arr;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Models\VoucherClaim;
 
 class SettlementEnvelopeMetadataSyncService
 {
-    public function syncPatientAttestation(Voucher $voucher, array $payload): Voucher
+    public function syncPatientAttestation(Voucher $voucher, array $payload, ?VoucherClaim $evidenceClaim = null): Voucher
     {
         $metadata = $this->metadata($voucher);
 
         $existingEnvelope = (array) Arr::get($metadata, 'settlement_envelope', []);
+
+        $instructionDriver = $this->validatedInstructionDriver($metadata);
 
         $bioFields = (array) Arr::get($payload, 'bio_fields', []);
         $walletInfo = (array) Arr::get($payload, 'wallet_info', []);
@@ -46,7 +49,11 @@ class SettlementEnvelopeMetadataSyncService
         $attestation = [
             ...(array) Arr::get($existingEnvelope, 'attestation', []),
             'attested' => true,
-            'attested_at' => now()->toISOString(),
+            'attested_at' => $evidenceClaim?->attempted_at?->toISOString() ?? now()->toISOString(),
+            ...($evidenceClaim === null ? [] : [
+                'claim_id' => $evidenceClaim->getKey(),
+                'evidence_manifest_sha256' => data_get($evidenceClaim->meta, 'evidence.manifest_sha256'),
+            ]),
             'claim_type' => Arr::get($payload, 'claim_type', 'redeem'),
             'mobile' => Arr::get($payload, 'mobile'),
             'inputs' => $inputs,
@@ -62,7 +69,8 @@ class SettlementEnvelopeMetadataSyncService
 
         $envelope = [
             ...$existingEnvelope,
-            'driver' => Arr::get($existingEnvelope, 'driver')
+            'driver' => $instructionDriver
+                ?? Arr::get($existingEnvelope, 'driver')
                 ?? Arr::get($metadata, 'settlement_driver')
                     ?? Arr::get($metadata, 'instructions.metadata.settlement_driver')
                     ?? Arr::get($metadata, 'instructions.metadata.envelope_driver')
@@ -118,5 +126,29 @@ class SettlementEnvelopeMetadataSyncService
         $metadata = $voucher->metadata ?? null;
 
         return is_array($metadata) ? $metadata : [];
+    }
+
+    public function assertInstructionCompatible(Voucher $voucher): void
+    {
+        $this->validatedInstructionDriver($this->metadata($voucher));
+    }
+
+    private function validatedInstructionDriver(array $metadata): ?string
+    {
+        if (Arr::get($metadata, 'instructions.execution.schema') !== 'voucher.execution.v2') {
+            return null;
+        }
+
+        $driver = Arr::get($metadata, 'instructions.execution.settlement.driver');
+        if (! is_string($driver) || trim($driver) === '') {
+            throw new \InvalidArgumentException('V2 settlement requires an explicit driver.');
+        }
+
+        $envelopeDriver = Arr::get($metadata, 'settlement_envelope.driver');
+        if ($envelopeDriver !== null && $envelopeDriver !== $driver) {
+            throw new \InvalidArgumentException('Settlement envelope driver does not match the v2 instruction.');
+        }
+
+        return $driver;
     }
 }

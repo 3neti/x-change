@@ -27,7 +27,16 @@ final class VoucherValueFlowPolicy
             return null;
         }
 
-        $flow = data_get($voucher->metadata, 'instructions.execution.metadata.value_flow');
+        $schema = data_get($voucher->metadata, 'instructions.execution.schema', 'voucher.execution.v1');
+        if (! in_array($schema, ['voucher.execution.v1', 'voucher.execution.v2'], true)) {
+            throw new InvalidArgumentException('Unsupported execution schema.');
+        }
+        if ($schema === 'voucher.execution.v2' && data_get($voucher->metadata, 'instructions.execution.metadata.value_flow') !== null) {
+            throw new InvalidArgumentException('V2 value_flow must not appear in legacy metadata.');
+        }
+        $flow = data_get($voucher->metadata, $schema === 'voucher.execution.v2'
+            ? 'instructions.execution.value_flow'
+            : 'instructions.execution.metadata.value_flow');
 
         if ($flow === null) {
             return null;

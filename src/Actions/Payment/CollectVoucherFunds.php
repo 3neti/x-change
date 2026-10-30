@@ -34,7 +34,6 @@ class CollectVoucherFunds
 
         $this->settlementCollectionGate->ensureCollectibleSettlementIsReady(
             voucher: $voucher,
-            context: $this->settlementCollectionGate->contextFromVoucher($voucher),
         );
 
         $result = $this->confirmation->confirm($voucher, $payload);
@@ -71,7 +70,6 @@ class CollectVoucherFunds
 
         $this->settlementCollectionGate->ensureCollectibleSettlementIsReady(
             voucher: $voucher,
-            context: $this->settlementCollectionGate->contextFromVoucher($voucher),
         );
 
         if (! $result->succeeded()) {

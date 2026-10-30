@@ -136,6 +136,16 @@ class ClaimSubmitController extends Controller
             $result = $this->submitAction->handle($voucher, $payload);
             $receipt->remember($voucher, $result, $pendingIssuanceId, $idempotencyKey);
 
+            $voucher->refresh();
+            if (data_get($voucher->metadata, 'instructions.execution.schema') === 'voucher.execution.v2'
+                && data_get($voucher->metadata, 'instructions.execution.settlement.driver') === 'philhealth-bst'
+                && is_array(data_get($voucher->metadata, 'instructions.execution.events.review'))
+                && data_get($voucher->metadata, 'settlement_envelope.attestation.claim_id')) {
+                $this->formFlowService->clearFlow($state['flow_id'] ?? $flowId);
+
+                return redirect()->route('x-change.claim.show', ['code' => $code]);
+            }
+
             if ($result->status === 'approval_required') {
                 $this->compiledClaimResultSession->put($result);
                 $this->resumePayloadSession->put($voucher, $payload);

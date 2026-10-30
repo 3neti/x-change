@@ -86,7 +86,9 @@ final class XChangeSettlementEnvelopeExecutionGateway implements SettlementEnvel
      */
     private function settlementEnvelopeMetadata(ExecutionContextData $context): array
     {
-        $metadata = data_get($context->instruction?->metadata, 'settlement_envelope', []);
+        $metadata = $context->instruction?->schema === 'voucher.execution.v2'
+            ? $context->instruction->settlement
+            : data_get($context->instruction?->metadata, 'settlement_envelope', []);
 
         if (! is_array($metadata)) {
             $metadata = [];

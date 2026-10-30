@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use LBHurtado\EmiCore\Data\Funding\FundingQrMerchantData;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\Merchant\Contracts\MerchantProfileRepositoryContract;
@@ -11,6 +14,10 @@ use LBHurtado\PaymentGateway\Funding\NetbankFundingApiClient;
 use LBHurtado\PaymentGateway\Funding\NetbankFundingProviderAdapter;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\Services\ExecutionEngine;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
+use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
+use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
+use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
 use LBHurtado\XChange\Actions\Payment\IssuePaymentInstructions;
 use LBHurtado\XChange\Actions\Payment\MonitorPaymentAttempt;
@@ -18,24 +25,43 @@ use LBHurtado\XChange\Actions\Payment\RecordObservedPaymentTransaction;
 use LBHurtado\XChange\Actions\Payment\RecordVoucherCollection;
 use LBHurtado\XChange\Actions\Payment\SettleVerifiedPaymentAttempt;
 use LBHurtado\XChange\Actions\Payment\VerifyPaymentAttempt;
+use LBHurtado\XChange\Actions\Redemption\PrepareVoucherClaimEvidence;
+use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
+use LBHurtado\XChange\Actions\Settlement\VerifyPhilhealthSettlementAmount;
+use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
+use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
+use LBHurtado\XChange\Data\FundingDecisionData;
 use LBHurtado\XChange\Data\Payment\ObservedPaymentTransactionData;
 use LBHurtado\XChange\Data\Payment\PaymentObservationNoticeData;
 use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Events\PaymentTransactionObserved;
+use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
+use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\ObservedPaymentTransaction;
 use LBHurtado\XChange\Models\PartnerApiClient;
 use LBHurtado\XChange\Models\PartnerApiPayCodeReference;
 use LBHurtado\XChange\Models\PartnerPaymentEvent;
 use LBHurtado\XChange\Models\PaymentAttempt;
+use LBHurtado\XChange\Models\V2EvidenceOutbox;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Services\Claim\VoucherClaimFlowCompiler;
+use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
+use LBHurtado\XChange\Services\Execution\ValueFlowPayoutService;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\FundingQrMerchantProfileResolver;
+use LBHurtado\XChange\Services\Settlement\V2EventWebhookDelivery;
+use LBHurtado\XChange\Services\Settlement\V2EvidenceEventJournal;
 use LBHurtado\XChange\Support\Funding\FundingMerchantSnapshot;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 use LBHurtado\XChange\Tests\Fakes\User;
+use LBHurtado\XFeedback\Contracts\FeedbackWebhookSenderContract;
+use LBHurtado\XFeedback\Data\FeedbackDeliveryData;
+use LBHurtado\XFeedback\Data\FeedbackWebhookMessageData;
+use LBHurtado\XFeedback\Data\FeedbackWebhookSendResultData;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
+use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
 
 beforeEach(function (): void {
     config()->set('x-change.funding.providers.netbank.enabled', true);
@@ -45,6 +71,360 @@ beforeEach(function (): void {
     $this->app->instance(FakeFundingProviderAdapter::class, $this->paymentAdapter);
     $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
     $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
+});
+
+it('allows a persisted local reviewer through the temporary settlement review sentinel', function (): void {
+    $reviewer = actingAsTestUser();
+    $voucher = paymentAttemptCollectibleVoucherForUser($reviewer);
+
+    $unsaved = new ($reviewer::class);
+    expect(Gate::forUser($reviewer)->allows('x-change.settlement.verify-amount', $voucher))->toBeTrue()
+        ->and(Gate::forUser($unsaved)->allows('x-change.settlement.verify-amount', $voucher))->toBeFalse()
+        ->and(Gate::forUser(null)->allows('x-change.settlement.verify-amount', $voucher))->toBeFalse();
+    $originalEnvironment = app()->environment();
+    try {
+        app()->instance('env', 'production');
+        expect(Gate::forUser($reviewer)->allows('x-change.settlement.verify-amount', $voucher))->toBeFalse();
+        app()->instance('env', 'staging');
+        expect(Gate::forUser($reviewer)->allows('x-change.settlement.verify-amount', $voucher))->toBeFalse();
+    } finally {
+        app()->instance('env', $originalEnvironment);
+    }
+});
+
+it('follows the PhilHealth v2 attestation and verified settlement lifecycle', function (): void {
+    config()->set('x-change.settlement.default_driver', 'philhealth-bst');
+    config()->set('x-change.settlement.drivers_path', settlementEnvelopeDriversPath());
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    config()->set('omnipay.gateways.netbank.options.rails.INSTAPAY', ['enabled' => true, 'min_amount' => 100, 'max_amount' => 5_000_000]);
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    $user = actingAsTestUser();
+    fundTestUserClientFunds($user, 10000);
+    $inventory = app(TreasuryInventoryOperationContract::class);
+    $inventory->registerInventory(new TreasuryInventoryData(inventoryReference: 'inventory:netbank:vca-cash', resourceType: 'cash_at_bank', currency: 'PHP', capacityMinor: 0, status: 'requested', idempotencyKey: 'register:philhealth', externalReference: 'resource:netbank:corporate-vca'));
+    $inventory->recognize(new TreasuryInventoryRecognitionData(operationReference: 'philhealth:test-funding', inventoryReference: 'inventory:netbank:vca-cash', settlementResourceReference: 'resource:netbank:corporate-vca', amountMinor: 10000, currency: 'PHP', status: 'requested', idempotencyKey: 'philhealth:test-funding', externalReference: 'philhealth:test'));
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+    config()->set('x-change.commercial.enabled', true);
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:philhealth-lifecycle');
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision($user, ['netbank-primary']);
+    $funding = Mockery::mock(ProviderFundingPolicyContract::class);
+    $funding->shouldReceive('assertCanIssue')->once()->andReturn(FundingDecisionData::allowed(authority: 'local_ledger', availableMinor: 10000, requiredMinor: 0, currency: 'PHP', meta: ['provider' => 'netbank', 'topology' => 'ledger_pooled']));
+    app()->instance(ProviderFundingPolicyContract::class, $funding);
+    $payload = [
+        'cash' => ['amount' => 0, 'currency' => 'PHP', 'settlement_rail' => 'INSTAPAY', 'validation' => ['country' => 'PH']],
+        'inputs' => ['fields' => ['name']],
+        'feedback' => ['email' => null, 'mobile' => null, 'webhook' => null],
+        'rider' => [],
+        'count' => 1, 'prefix' => 'PAY', 'mask' => '****',
+        'voucher_type' => 'settlement', 'target_amount' => 100,
+        'metadata' => ['collection_wallet_id' => (int) $user->wallet->id],
+        'execution' => [
+            'schema' => 'voucher.execution.v2', 'driver' => 'settlement_envelope',
+            'settlement' => ['driver' => 'philhealth-bst', 'version' => '1.0.0', 'readiness_gate' => 'settleable'],
+            'value_flow' => ['destination' => 'instapay.gcash.mobile:09179999999'],
+            'events' => [
+                'attest' => ['actor' => 'beneficiary', 'requires' => [], 'surface' => 'claim', 'authentication' => 'anonymous'],
+                'review' => ['actor' => 'hospital_reviewer', 'requires' => ['attestation_recorded'], 'surface' => 'claim', 'authentication' => 'required'],
+                'settle' => ['actor' => 'payer', 'requires' => ['settlement_ready', 'confirmed_payment'], 'surface' => 'pay', 'authentication' => 'optional'],
+            ],
+        ],
+    ];
+    $payload['provider'] = 'netbank';
+    $payload['issuer_id'] = $user->getKey();
+    $payload['fee_bearer'] = 'issuer';
+    data_set($payload, 'metadata.flow_type', 'settlement');
+    data_set($payload, 'metadata.settlement_driver', 'philhealth-bst');
+    data_set($payload, 'metadata.issuer_id', (string) $user->id);
+    $issued = app(GeneratePayCode::class)->handle($payload);
+    $voucher = Voucher::query()->findOrFail($issued->voucher_id);
+    expect(data_get($voucher->metadata, 'instructions.execution.schema'))->toBe('voucher.execution.v2');
+    auth()->logout();
+    config()->set('inertia.testing.ensure_pages_exist', false);
+    $this->withHeader('X-Inertia', 'true');
+    $this->get('/x/claim/'.$voucher->code)->assertOk()->assertJsonPath('component', 'x-change/claim/Entry');
+    $flow = app(VoucherClaimFlowCompiler::class)->compile($voucher)->instructions->toArray();
+    $fields = collect($flow['steps'])->flatMap(fn (array $step) => data_get($step, 'config.fields', []))->pluck('name')->all();
+    expect($fields)->toContain('mobile')->not->toContain('bank_code', 'account_number');
+    $this->actingAs($user);
+    $claimPayload = [
+        'mobile' => '09171234567', 'inputs' => ['name' => 'Patient'],
+        '_meta' => ['idempotency_key' => 'philhealth-attestation'],
+    ];
+    app(SubmitPayCodeClaim::class)->handle($voucher, $claimPayload);
+    app(SubmitPayCodeClaim::class)->handle($voucher->refresh(), $claimPayload);
+    expect(data_get($voucher->fresh()->metadata, 'settlement_envelope.attestation.claim_id'))->not->toBeNull();
+    expect($voucher->claims()->count())->toBe(1);
+    auth()->logout();
+    $this->get('/x/claim/'.$voucher->code)->assertOk()->assertJsonPath('component', 'x-change/claim/SettlementWaiting')
+        ->assertJsonPath('props.reviewed', false)->assertJsonMissingPath('props.evidence');
+    $this->getJson(route('x-change.claim.settlement-review.show', ['code' => $voucher->code]))->assertUnauthorized();
+    $this->actingAs($user);
+    $this->get('/x/claim/'.$voucher->code)->assertRedirect(route('x-change.claim.settlement-review.show', ['code' => $voucher->code]));
+    $this->get(route('x-change.claim.settlement-review.show', ['code' => $voucher->code]))->assertOk()
+        ->assertJsonPath('component', 'x-change/claim/SettlementReview')->assertJsonPath('props.amountMinor', 10000)
+        ->assertJsonPath('props.reviewed', false)->assertJsonStructure(['props' => ['evidence']]);
+    expect(fn () => app(CreatePaymentAttempt::class)->handle($voucher->fresh(), 'netbank', 'philhealth-payer', 'early'))
+        ->toThrow(VoucherRequiresSettlementEnvelope::class);
+    $metadata = $voucher->fresh()->metadata;
+    data_set($metadata, 'settlement_envelope.checklist.amount_verified', true);
+    $voucher->forceFill(['metadata' => $metadata])->save();
+    expect(fn () => app(CreatePaymentAttempt::class)->handle($voucher->fresh(), 'netbank', 'philhealth-payer', 'forged-review'))
+        ->toThrow(VoucherRequiresSettlementEnvelope::class);
+    $sentinel = Gate::abilities()['x-change.settlement.verify-amount'];
+    Gate::define('x-change.settlement.verify-amount', fn (): bool => false);
+    $this->get(route('x-change.claim.settlement-review.show', ['code' => $voucher->code]))->assertForbidden();
+    $this->post(route('x-change.claim.settlement-review.store', ['code' => $voucher->code]), ['amount_minor' => 10000, 'evidence_manifest' => str_repeat('a', 64)])->assertForbidden();
+    expect(fn () => app(VerifyPhilhealthSettlementAmount::class)->handle($voucher->fresh(), $user, 10000, 'hospital-review-1'))
+        ->toThrow(AuthorizationException::class);
+    Gate::define('x-change.settlement.verify-amount', $sentinel);
+    expect(fn () => app(VerifyPhilhealthSettlementAmount::class)->handle($voucher->fresh(), $user, 9900, 'hospital-review-1'))
+        ->toThrow(LogicException::class, 'must match');
+    expect(fn () => DB::transaction(function () use ($voucher, $user): void {
+        app(VerifyPhilhealthSettlementAmount::class)->handle($voucher->fresh(), $user, 10000, 'rolled-back-review');
+        throw new RuntimeException('rollback review');
+    }))->toThrow(RuntimeException::class, 'rollback review');
+    expect(data_get($voucher->fresh()->metadata, 'settlement_envelope.amount_review'))->toBeNull()
+        ->and(V2EvidenceOutbox::query()->where('event_type', 'settlement.amount_reviewed')->count())->toBe(0);
+    $reference = 'claim-review:'.data_get($voucher->fresh()->metadata, 'settlement_envelope.attestation.claim_id');
+    $this->postJson(route('x-change.claim.settlement-review.store', ['code' => $voucher->code]), ['amount_minor' => 10000, 'evidence_manifest' => str_repeat('a', 64)])->assertUnprocessable();
+    $this->post(route('x-change.claim.settlement-review.store', ['code' => $voucher->code]), [
+        'amount_minor' => 10000, 'evidence_manifest' => data_get($voucher->fresh()->metadata, 'settlement_envelope.attestation.evidence_manifest_sha256'),
+    ])
+        ->assertRedirect(route('x-change.claim.settlement-review.show', ['code' => $voucher->code]));
+    $voucher->refresh();
+    app(VerifyPhilhealthSettlementAmount::class)->handle($voucher, $user, 10000, $reference);
+    expect(V2EvidenceOutbox::query()->where('voucher_id', $voucher->id)->where('event_type', 'settlement.amount_reviewed')->count())->toBe(1);
+    $attempt = issuedPaymentAttempt($voucher->refresh());
+    expect($attempt->expected_amount_minor)->toBe(10000);
+    $this->paymentAdapter->fundingObservation = exactPaymentObservation($attempt);
+    $settled = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    $replayed = app(SettleVerifiedPaymentAttempt::class)->handle($settled, PaymentVerificationTrigger::Payer);
+    $payout = DisbursementReconciliation::query()->where('voucher_id', $voucher->id)->where('claim_type', 'value_flow')->sole();
+    $provider = fakePayoutProvider()->willReturnFailedResult(provider: 'netbank', metadata: ['provider_submission_accepted' => false]);
+    $service = app(ValueFlowPayoutService::class);
+    $service->submit($payout->id);
+    $service->converge($payout);
+    expect(V2EvidenceOutbox::query()->where('voucher_id', $voucher->id)->where('event_type', 'settlement.payout_failed')->count())->toBe(1);
+    expect($settled->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and($replayed->voucher_collection_id)->toBe($settled->voucher_collection_id)
+        ->and($provider->disburseCallCount)->toBe(1)
+        ->and($provider->lastRequest->account_number)->toBe('09179999999')
+        ->and($payout->fresh()->internal_status)->toBe('recovery_opened');
+    expect(fn () => $service->retryUnacceptedSubmission($payout->id, false, 'provider-rejection'))
+        ->toThrow(RuntimeException::class, 'explicit no-transfer');
+    $provider = fakePayoutProvider()->willReturnSuccessfulResult(provider: 'netbank');
+    $service->retryUnacceptedSubmission($payout->id, true, 'provider-rejection');
+    expect($payout->fresh()->internal_status)->toBe('finalized')->and($provider->disburseCallCount)->toBe(1);
+    expect(V2EvidenceOutbox::query()->where('voucher_id', $voucher->id)->where('event_type', 'settlement.payout_confirmed')->count())->toBe(1);
+});
+
+it('issues, collects, and recovers the same payable lifecycle under both instruction versions', function (string $schema, array $flow): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    config()->set('omnipay.gateways.netbank.options.rails.INSTAPAY', ['enabled' => true, 'min_amount' => 100, 'max_amount' => 5_000_000]);
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+    config()->set('x-change.commercial.enabled', true);
+    $issuer = actingAsTestUser(0);
+    fundTestUserClientFunds($issuer, 10000);
+    $inventory = app(TreasuryInventoryOperationContract::class);
+    $inventory->registerInventory(new TreasuryInventoryData(inventoryReference: 'inventory:netbank:vca-cash', resourceType: 'cash_at_bank', currency: 'PHP', capacityMinor: 0, status: 'requested', idempotencyKey: 'register:parity', externalReference: 'resource:netbank:corporate-vca'));
+    $inventory->recognize(new TreasuryInventoryRecognitionData(operationReference: 'parity:test-funding', inventoryReference: 'inventory:netbank:vca-cash', settlementResourceReference: 'resource:netbank:corporate-vca', amountMinor: 10000, currency: 'PHP', status: 'requested', idempotencyKey: 'parity:test-funding', externalReference: 'parity:test'));
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:parity');
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision($issuer, ['netbank-primary']);
+    $funding = Mockery::mock(ProviderFundingPolicyContract::class);
+    $funding->shouldReceive('assertCanIssue')->once()->andReturn(FundingDecisionData::allowed(authority: 'local_ledger', availableMinor: 10000, requiredMinor: 0, currency: 'PHP', meta: ['provider' => 'netbank', 'topology' => 'ledger_pooled']));
+    app()->instance(ProviderFundingPolicyContract::class, $funding);
+    $payload = validPayCodePayload(0, 'INSTAPAY', [
+        'provider' => 'netbank', 'issuer_id' => $issuer->getKey(), 'fee_bearer' => 'issuer',
+        'voucher_type' => 'payable', 'target_amount' => 100, 'execution' => ['schema' => $schema, ...$flow],
+    ]);
+    $payload['inputs']['fields'] = [];
+    $issued = app(GeneratePayCode::class)->handle($payload);
+    $voucher = Voucher::query()->findOrFail($issued->voucher_id);
+    $attempt = issuedPaymentAttempt($voucher);
+    $this->paymentAdapter->fundingObservation = exactPaymentObservation($attempt);
+    $settled = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    $replay = app(SettleVerifiedPaymentAttempt::class)->handle($settled, PaymentVerificationTrigger::Payer);
+    $payout = DisbursementReconciliation::query()->where('voucher_id', $voucher->id)->where('claim_type', 'value_flow')->sole();
+    $failed = fakePayoutProvider()->willReturnFailedResult(provider: 'netbank', metadata: ['provider_submission_accepted' => false]);
+    $service = app(ValueFlowPayoutService::class);
+    $service->submit($payout->id);
+    expect($settled->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and($replay->voucher_collection_id)->toBe($settled->voucher_collection_id)
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(1)
+        ->and($failed->lastRequest->account_number)->toBe('09179999999')
+        ->and($payout->fresh()->internal_status)->toBe('recovery_opened');
+    $provider = fakePayoutProvider()->willReturnSuccessfulResult(provider: 'netbank');
+    $service->retryUnacceptedSubmission($payout->id, true, 'provider-rejection');
+    expect($payout->fresh()->internal_status)->toBe('finalized')->and($provider->disburseCallCount)->toBe(1);
+})->with([
+    'v1' => ['voucher.execution.v1', ['metadata' => ['value_flow' => ['destination' => 'instapay.gcash.mobile:09179999999']]]],
+    'v2' => ['voucher.execution.v2', ['value_flow' => ['destination' => 'instapay.gcash.mobile:09179999999']]],
+]);
+
+it('journals v2 captured attestation evidence and verified collection once across replay', function (): void {
+    $user = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0.00, overrides: [
+        'inputs' => ['fields' => ['name']],
+        'target_amount' => 100.00,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $user->id, 'collection_wallet_id' => $user->wallet->id],
+    ]));
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.execution', [
+        'schema' => 'voucher.execution.v2',
+        'events' => ['attest' => ['actor' => 'beneficiary'], 'settle' => ['actor' => 'payer']],
+    ]);
+    $voucher->forceFill(['metadata' => $metadata])->save();
+
+    $payload = ['inputs' => ['name' => 'Private Patient', 'email' => 'patient@example.test'], '_meta' => ['idempotency_key' => 'attestation-test']];
+    $claim = app(PrepareVoucherClaimEvidence::class)->handle($voucher->refresh(), $payload);
+    $replayedClaim = app(PrepareVoucherClaimEvidence::class)->handle($voucher->refresh(), [
+        '_meta' => ['idempotency_key' => 'attestation-test', 'request_id' => 'retry'],
+        'inputs' => ['email' => 'patient@example.test', 'name' => 'Private Patient'],
+    ]);
+    expect(fn () => app(PrepareVoucherClaimEvidence::class)->handle($voucher->refresh(), [
+        'inputs' => ['name' => 'Different Patient'], '_meta' => ['idempotency_key' => 'attestation-test'],
+    ]))->toThrow(LogicException::class, 'different evidence');
+    $attempt = issuedPaymentAttempt($voucher->refresh());
+    $this->paymentAdapter->fundingObservation = exactPaymentObservation($attempt);
+    $settled = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    app(SettleVerifiedPaymentAttempt::class)->handle($settled, PaymentVerificationTrigger::Payer);
+    app(V2EvidenceEventJournal::class)->deliverPending();
+
+    $events = ExecutionJournalEntry::query()->whereIn('event_type', ['attestation.evidence_captured', 'settlement.payment_collected'])->orderBy('id')->get();
+    expect($replayedClaim->is($claim))->toBeTrue()
+        ->and($events->pluck('event_type')->all())->toBe(['attestation.evidence_captured', 'settlement.payment_collected'])
+        ->and(json_encode($events->toArray(), JSON_THROW_ON_ERROR))->not->toContain('Private Patient')
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(1);
+});
+
+it('rolls back the v2 attestation journal with its claim evidence', function (): void {
+    $user = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'inputs' => ['fields' => ['name']],
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $user->id],
+    ]));
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.execution', [
+        'schema' => 'voucher.execution.v2', 'events' => ['attest' => ['actor' => 'beneficiary']],
+    ]);
+    $voucher->forceFill(['metadata' => $metadata])->save();
+
+    expect(fn () => DB::transaction(function () use ($voucher): void {
+        app(PrepareVoucherClaimEvidence::class)->handle($voucher->refresh(), [
+            'inputs' => ['name' => 'Private Patient'], '_meta' => ['idempotency_key' => 'rollback-test'],
+        ]);
+        throw new RuntimeException('rollback');
+    }))->toThrow(RuntimeException::class, 'rollback');
+
+    expect($voucher->claims()->count())->toBe(0)
+        ->and(V2EvidenceOutbox::query()->count())->toBe(0)
+        ->and(ExecutionJournalEntry::query()->where('event_type', 'attestation.evidence_captured')->count())->toBe(0);
+});
+
+it('rolls back the v2 payment journal with its collection', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.execution', [
+        'schema' => 'voucher.execution.v2',
+        'events' => ['settle' => ['actor' => 'payer']],
+    ]);
+    $voucher->forceFill(['metadata' => $metadata])->save();
+    $attempt = issuedPaymentAttempt($voucher->refresh());
+    $this->paymentAdapter->fundingObservation = exactPaymentObservation($attempt);
+
+    expect(fn () => DB::transaction(function () use ($attempt): void {
+        app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+        throw new RuntimeException('rollback');
+    }))->toThrow(RuntimeException::class, 'rollback');
+
+    expect(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(0)
+        ->and(V2EvidenceOutbox::query()->count())->toBe(0)
+        ->and(ExecutionJournalEntry::query()->where('event_type', 'settlement.payment_collected')->count())->toBe(0)
+        ->and($attempt->fresh()->status)->toBe(PaymentAttemptStatus::AwaitingPayment);
+});
+
+it('rejects a v2 attestation without configured claim evidence', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.execution', [
+        'schema' => 'voucher.execution.v2', 'events' => ['attest' => ['actor' => 'beneficiary']],
+    ]);
+    $voucher->forceFill(['metadata' => $metadata])->save();
+
+    expect(fn () => app(PrepareVoucherClaimEvidence::class)->handle($voucher->refresh(), [
+        '_meta' => ['idempotency_key' => 'missing-evidence'],
+    ]))->toThrow(LogicException::class, 'requires configured claim evidence');
+    expect($voucher->claims()->count())->toBe(0);
+});
+
+it('recovers a missing v2 payment event from an already settled collection', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $attempt = issuedPaymentAttempt($voucher);
+    $this->paymentAdapter->fundingObservation = exactPaymentObservation($attempt);
+    $settled = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    $metadata = $voucher->fresh()->metadata;
+    data_set($metadata, 'instructions.execution', [
+        'schema' => 'voucher.execution.v2', 'events' => ['settle' => ['actor' => 'payer']],
+    ]);
+    $voucher->forceFill(['metadata' => $metadata])->save();
+
+    app(SettleVerifiedPaymentAttempt::class)->handle($settled, PaymentVerificationTrigger::Payer);
+    app(SettleVerifiedPaymentAttempt::class)->handle($settled, PaymentVerificationTrigger::Payer);
+    $failing = Mockery::mock(ExecutionJournalRecorder::class);
+    $failing->shouldReceive('record')->once()->andThrow(new RuntimeException('delivery failed'));
+    (new V2EvidenceEventJournal($failing, app(V2EventWebhookDelivery::class)))->deliverPending();
+    expect(V2EvidenceOutbox::query()->where('status', 'pending')->sole()->attempts)->toBe(1);
+    app(V2EvidenceEventJournal::class)->deliverPending();
+
+    expect(ExecutionJournalEntry::query()->where('event_type', 'settlement.payment_collected')->count())->toBe(1)
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(1);
+});
+
+it('retries subscribed v2 webhooks without repeating successful delivery', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.feedback.webhooks', [
+        ['url' => 'https://example.test/events', 'events' => ['settlement.payment_collected']],
+        ['url' => 'https://example.test/other', 'events' => ['attestation.evidence_captured']],
+    ]);
+    $voucher->forceFill(['metadata' => $metadata])->save();
+    $event = V2EvidenceOutbox::query()->create([
+        'event_key' => 'test:payment:1', 'voucher_id' => $voucher->id,
+        'event_type' => 'settlement.payment_collected', 'evidence_reference' => 'collection:1',
+        'occurred_at' => now(), 'payload' => ['amount_minor' => 10000, 'currency' => 'PHP'],
+    ]);
+    $sender = new class implements FeedbackWebhookSenderContract
+    {
+        public int $calls = 0;
+
+        public ?FeedbackWebhookMessageData $message = null;
+
+        public function send(FeedbackWebhookMessageData $message): FeedbackWebhookSendResultData
+        {
+            $this->calls++;
+            $this->message = $message;
+            if ($this->calls === 1) {
+                throw new RuntimeException('temporary failure');
+            }
+
+            return new FeedbackWebhookSendResultData(message_id: 'test-webhook', status: FeedbackDeliveryData::StatusQueued);
+        }
+    };
+    app()->instance(FeedbackWebhookSenderContract::class, $sender);
+
+    app(V2EvidenceEventJournal::class)->deliverPending();
+    expect($event->fresh()->status)->toBe('pending')->and($sender->calls)->toBe(1);
+    app(V2EvidenceEventJournal::class)->deliverPending();
+    app(V2EvidenceEventJournal::class)->deliverPending();
+    expect($event->fresh()->status)->toBe('delivered')->and($sender->calls)->toBe(2)
+        ->and($sender->message->payload['causation_id'])->toBe('test:payment:1')
+        ->and($sender->message->payload['event_type'])->toBe('settlement.payment_collected')
+        ->and(ExecutionJournalEntry::query()->where('event_type', 'settlement.payment_collected')->count())->toBe(1);
 });
 
 it('records multiple provider payments per QR without duplicating or exposing payer identity', function (): void {

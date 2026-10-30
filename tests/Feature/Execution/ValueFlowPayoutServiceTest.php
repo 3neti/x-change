@@ -128,14 +128,20 @@ it('settles a confirmed payout exactly once and never submits an uncertain outco
         ->and($provider->disburseCallCount)->toBe(0);
 });
 
-it('routes every stored value spend by its issued destination rather than collector authority', function (bool $external): void {
+it('routes every stored value spend by its issued destination rather than collector authority', function (bool $external, string $schema): void {
     [$payouts, $voucher, $source] = valueFlowPayoutFixture();
     $owner = $voucher->owner;
     $owner->forceFill(['mobile' => '09171234567'])->save();
     $metadata = $voucher->metadata;
     data_set($metadata, 'instructions.execution.driver', 'stored_value');
+    data_set($metadata, 'instructions.execution.schema', $schema);
+    if ($schema === 'voucher.execution.v2') {
+        data_set($metadata, 'instructions.execution.value_flow', data_get($metadata, 'instructions.execution.metadata.value_flow'));
+        data_forget($metadata, 'instructions.execution.metadata.value_flow');
+    }
     if (! $external) {
-        data_set($metadata, 'instructions.execution.metadata.value_flow.destination', 'account.mobile:09171234567.client_funds');
+        $path = $schema === 'voucher.execution.v2' ? 'instructions.execution.value_flow.destination' : 'instructions.execution.metadata.value_flow.destination';
+        data_set($metadata, $path, 'account.mobile:09171234567.client_funds');
     }
     $voucher->forceFill(['voucher_type' => VoucherType::REDEEMABLE, 'metadata' => $metadata])->save();
     $reservation = app(TreasuryPayCodeAccountingService::class)
@@ -175,7 +181,12 @@ it('routes every stored value spend by its issued destination rather than collec
         ->and($first['destination_principal_reference'])->toBe($source->principalReference)
         ->and(app(TreasuryPositionReadModelContract::class)->find($source->positionReference)->balanceMinor)->toBe($external ? 0 : 3_500)
         ->and(DisbursementReconciliation::query()->count())->toBe($external ? 2 : 0);
-})->with([true, false]);
+})->with([
+    'v1 external' => [true, 'voucher.execution.v1'],
+    'v1 client funds' => [false, 'voucher.execution.v1'],
+    'v2 external' => [true, 'voucher.execution.v2'],
+    'v2 client funds' => [false, 'voucher.execution.v2'],
+]);
 
 it('dispatches an unsubmitted durable payout from the reconciliation command and reports it', function (): void {
     [$service, $voucher, $source] = valueFlowPayoutFixture();
