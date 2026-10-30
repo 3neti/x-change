@@ -84,6 +84,7 @@ describe('Cockpit Quick Generate hydration', () => {
                 .attributes('aria-pressed'),
         ).toBe('true');
         expect(preview.onboarding).toBe(true);
+        expect(preview.execution).toEqual({ schema: 'voucher.execution.v2', driver: 'onboarding_account_provisioning' });
         expect(preview.inputs.fields).toEqual(
             expect.arrayContaining(['mobile', 'email', 'name', 'otp']),
         );

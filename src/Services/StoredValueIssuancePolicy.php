@@ -90,8 +90,9 @@ final class StoredValueIssuancePolicy
             );
         }
 
+        $isV2 = data_get($input, 'execution.schema') === ExecutionInstructionData::SCHEMA_V2;
         $canonicalExecution = [
-            'schema' => ExecutionInstructionData::SCHEMA,
+            'schema' => $isV2 ? ExecutionInstructionData::SCHEMA_V2 : ExecutionInstructionData::SCHEMA,
             'driver' => 'stored_value',
             'metadata' => [
                 'stored_value' => [
@@ -110,14 +111,20 @@ final class StoredValueIssuancePolicy
             ],
         ];
         $submittedExecution = data_get($input, 'execution');
-        $valueFlow = data_get($submittedExecution, 'metadata.value_flow');
+        $valueFlow = data_get($submittedExecution, $isV2 ? 'value_flow' : 'metadata.value_flow');
         if (is_array($submittedExecution)) {
-            Arr::forget($submittedExecution, 'metadata.value_flow');
+            Arr::forget($submittedExecution, $isV2 ? 'value_flow' : 'metadata.value_flow');
         }
+
+        $v2Request = $isV2 && is_array($submittedExecution)
+            && count($submittedExecution) === 2
+            && ($submittedExecution['schema'] ?? null) === ExecutionInstructionData::SCHEMA_V2
+            && ($submittedExecution['driver'] ?? null) === 'stored_value';
 
         if (
             is_array($submittedExecution)
             && $submittedExecution !== []
+            && ! $v2Request
             && $submittedExecution !== $canonicalExecution
         ) {
             $this->reject(
@@ -127,7 +134,7 @@ final class StoredValueIssuancePolicy
         }
 
         if ($valueFlow !== null) {
-            $canonicalExecution['metadata']['value_flow'] = $valueFlow;
+            Arr::set($canonicalExecution, $isV2 ? 'value_flow' : 'metadata.value_flow', $valueFlow);
         }
 
         Arr::set($input, 'execution', $canonicalExecution);

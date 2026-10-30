@@ -5507,6 +5507,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(url).toBe(`${baseUrl}/claim-previews`);
         expect(options.method).toBe('POST');
         expect(payload.cash.amount).toBe(25);
+        expect(payload.execution).toEqual({ schema: 'voucher.execution.v2', driver: 'default' });
         expect(payload.preview_profile).toBe('issuer');
         expect(payload.preview_state).toBe('current');
         expect(wrapper.text()).not.toContain('Claim Experience Preview');

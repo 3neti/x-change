@@ -66,7 +66,14 @@ class EstimatePayCodeRequest extends FormRequest
     {
         return [
             'cash' => ['required', 'array'],
-            'cash.amount' => ['required', 'numeric', 'min:0.01'],
+            'cash.amount' => ['required', 'numeric', $this->input('voucher_type') === 'settlement'
+                && $this->input('execution.schema') === 'voucher.execution.v2'
+                && $this->input('execution.driver') === 'settlement_envelope'
+                && $this->input('execution.settlement.driver') === 'philhealth-bst'
+                && is_array($this->input('execution.events.attest'))
+                && is_array($this->input('execution.events.settle'))
+                && (float) $this->input('target_amount', 0) > 0
+                ? 'min:0' : 'min:0.01'],
             'cash.currency' => ['required', 'string', 'max:10'],
             'cash.settlement_rail' => ['nullable', Rule::enum(SettlementRail::class)],
             'cash.slice_mode' => ['nullable', 'string', 'in:fixed,open'],
@@ -147,6 +154,30 @@ class EstimatePayCodeRequest extends FormRequest
             'rules.min_payment' => ['nullable', 'numeric', 'min:0'],
             'rules.max_payment' => ['nullable', 'numeric', 'min:0'],
             'target_amount' => ['nullable', 'numeric', 'min:0'],
+            'execution' => ['nullable', 'array'],
+            'execution.schema' => ['nullable', 'string', 'max:120'],
+            'execution.driver' => ['nullable', 'string', 'max:120'],
+            'execution.mode' => ['nullable', 'string', 'max:120'],
+            'execution.pipeline' => ['nullable', 'array'],
+            'execution.pipeline.*' => ['string', 'max:120'],
+            'execution.fallback' => ['nullable', 'string', 'max:120'],
+            'execution.visibility' => ['nullable', 'array'],
+            'execution.metadata' => ['nullable', 'array'],
+            'execution.settlement' => ['nullable', 'array:driver,version,readiness_gate,payment_requirement'],
+            'execution.settlement.driver' => ['nullable', 'string', 'max:120'],
+            'execution.settlement.version' => ['nullable', 'string', 'max:120'],
+            'execution.settlement.readiness_gate' => ['nullable', 'string', 'max:120'],
+            'execution.settlement.payment_requirement' => ['nullable', 'string', 'max:120'],
+            'execution.value_flow' => ['nullable', 'array:source,destination'],
+            'execution.value_flow.source' => ['sometimes', 'string', 'max:200'],
+            'execution.value_flow.destination' => ['sometimes', 'string', 'max:200'],
+            'execution.events' => ['nullable', 'array'],
+            'execution.events.*' => ['array:actor,requires,surface,authentication'],
+            'execution.events.*.actor' => ['required', 'string', 'max:120'],
+            'execution.events.*.requires' => ['nullable', 'array'],
+            'execution.events.*.requires.*' => ['string', 'max:120'],
+            'execution.events.*.surface' => ['nullable', 'string', 'max:120'],
+            'execution.events.*.authentication' => ['nullable', 'string', 'max:120'],
             'rules' => ['nullable', 'array'],
             'rules.allow_overpayment' => ['nullable', 'boolean'],
             'rules.auto_close_on_full_payment' => ['nullable', 'boolean'],

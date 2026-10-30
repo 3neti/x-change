@@ -52,7 +52,8 @@ final class OnboardingVoucherInstructionPolicy
                 ->values()
                 ->all(),
         );
-        Arr::set($input, 'execution.schema', ExecutionInstructionData::SCHEMA);
+        Arr::set($input, 'execution.schema', data_get($input, 'execution.schema') === ExecutionInstructionData::SCHEMA_V2
+            ? ExecutionInstructionData::SCHEMA_V2 : ExecutionInstructionData::SCHEMA);
         Arr::set($input, 'execution.driver', self::ExecutionDriver);
         Arr::set($input, 'execution.metadata.onboarding', [
             'workflow_key' => self::WorkflowKey,

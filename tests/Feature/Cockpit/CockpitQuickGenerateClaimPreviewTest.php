@@ -118,6 +118,35 @@ it('shows the PhilHealth settlement phases in the generated claim preview', func
         ->and($steps->get('settlement-payment-waiting')['actor'])->toBe('PhilHealth');
 });
 
+it('previews the PhilHealth instruction built by the cockpit form', function (): void {
+    actingAsTestUser();
+    $response = $this->postJson(route('x-change.cockpit.quick-generate.claim-previews.store'), [
+        'cash' => ['amount' => 0, 'currency' => 'PHP', 'validation' => [], 'fee_strategy' => 'absorb'],
+        'fee_bearer' => 'issuer', 'provider' => 'netbank',
+        'inputs' => ['fields' => ['signature'], 'requirements' => []], 'count' => 1,
+        'feedback' => ['mobile' => null, 'email' => null, 'webhook' => null],
+        'rider' => ['message' => null, 'message_format' => null, 'url' => null, 'redirect_timeout' => 0, 'splash' => null, 'splash_format' => null, 'splash_timeout' => 3, 'splash_meta' => null, 'og_source' => null],
+        'validation' => [],
+        'claim' => ['outcomes' => [['key' => 'provider_disbursement']], 'selection' => 'server', 'consumption' => 'one_of', 'default_outcome' => 'provider_disbursement', 'onboarding' => ['mode' => 'if_required'], 'claimant' => ['mode' => 'unbound'], 'profile' => 'voucher.claim.v1'],
+        'metadata' => ['flow_type' => 'settlement', 'custom' => ['cockpit' => ['template_key' => 'blank-pay-code', 'source' => 'cockpit.quick-generate', 'builder' => 'guided-voucher-instruction-builder', 'payee' => ['kind' => 'open', 'explicit_secret' => false]]]],
+        'voucher_type' => 'settlement', 'target_amount' => 20000,
+        'rules' => ['auto_close_on_full_payment' => true],
+        'execution' => [
+            'schema' => 'voucher.execution.v2', 'driver' => 'settlement_envelope',
+            'settlement' => ['driver' => 'philhealth-bst', 'readiness_gate' => 'settleable'],
+            'events' => [
+                'attest' => ['actor' => 'beneficiary', 'surface' => 'claim', 'authentication' => 'anonymous', 'requires' => []],
+                'review' => ['actor' => 'hospital_reviewer', 'surface' => 'claim', 'authentication' => 'required', 'requires' => ['attestation_recorded']],
+                'settle' => ['actor' => 'payer', 'surface' => 'pay', 'authentication' => 'optional', 'requires' => ['settlement_ready', 'confirmed_payment']],
+            ],
+            'value_flow' => ['destination' => 'instapay.gxchphm2xxx.account:09179999999'],
+        ],
+        'dry_run' => true, 'refresh_preview' => true,
+    ]);
+    $response->assertOk();
+    expect(collect($response->json('journey.steps'))->pluck('key')->all())->toContain('settlement-waiting', 'settlement-review', 'settlement-payment-waiting');
+});
+
 it('rejects an unknown simulated claim progress state', function (): void {
     actingAsTestUser();
 

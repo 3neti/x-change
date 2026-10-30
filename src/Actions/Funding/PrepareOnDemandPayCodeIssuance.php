@@ -57,6 +57,9 @@ final readonly class PrepareOnDemandPayCodeIssuance
             ? $this->requirements->for($issuer, $pricing)
             : $this->requirements->forBasis($issuer, $pricing, $fundingBasis);
         $requiredAmountMinor = $requirement->requiredAmountMinor;
+        if ($requiredAmountMinor === 0) {
+            throw new RuntimeException('A funding order requires a positive authoritative amount.');
+        }
 
         $provider = mb_strtolower((string) config(
             'x-change.funding.requests.bank_transfer.provider',

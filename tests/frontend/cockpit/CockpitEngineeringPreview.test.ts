@@ -25,6 +25,11 @@ function json(wrapper: ReturnType<typeof panel>): string {
 }
 
 describe('Engineering Preview exports', () => {
+    it('shows an explicit v2 execution for a new ordinary Pay Code', () => {
+        const instructions = JSON.parse(json(panel()));
+        expect(instructions.execution).toEqual({ schema: 'voucher.execution.v2', driver: 'default' });
+        expect(instructions.claim.profile).toBe('voucher.claim.v1');
+    });
     it('copies the current full JSON and keeps the preview collapsible', async () => {
         const writeText = vi.fn().mockResolvedValue(undefined);
         vi.stubGlobal('navigator', { clipboard: { writeText } });

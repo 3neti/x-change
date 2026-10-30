@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Data\PricingEstimateData;
-use LBHurtado\XChange\Data\Funding\OnDemandIssuanceFundingRequirementData;
-use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
 use LBHurtado\XChange\Services\BuildBalanceOverview;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingPolicy;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingRequirement;
@@ -98,4 +96,30 @@ it('returns a direct decision when on-demand funding is disabled', function (): 
         ->assertJsonPath('funding.execution', 'direct')
         ->assertJsonPath('funding.external_amount_minor', 0)
         ->assertJsonPath('funding.reason', 'client_funds_cover_required_debit');
+});
+
+it('returns a direct decision when the payer bears the issuance fee', function (): void {
+    $issuer = actingAsTestUser(0);
+    config()->set('x-change.issuance_funding.on_demand.enabled', true);
+    config()->set('x-change.issuance_funding.on_demand.basis', 'full_amount');
+    $this->app->instance(EstimatePayCodeCost::class, Mockery::mock(EstimatePayCodeCost::class, function ($mock): void {
+        $mock->shouldReceive('handle')->once()->andReturn(new PricingEstimateData(currency: 'PHP', total: 15, pay_code_value: 0, account_debit: 0));
+    }));
+    $this->app->instance(BuildBalanceOverview::class, Mockery::mock(BuildBalanceOverview::class, function ($mock) use ($issuer): void {
+        $mock->shouldReceive('handle')->once()->with($issuer, null, false)->andReturn(['balances' => []]);
+    }));
+    $this->app->instance(OnDemandIssuanceFundingRequirement::class, new OnDemandIssuanceFundingRequirement(
+        app(OnDemandIssuanceFundingPolicy::class), app(BuildBalanceOverview::class),
+    ));
+
+    $payload = quickGeneratePreflightPayload();
+    $payload['voucher_type'] = 'payable';
+    $payload['target_amount'] = 100;
+    $payload['fee_bearer'] = 'payer';
+    $payload['cash']['amount'] = 0;
+    $this->postJson(route('x-change.cockpit.quick-generate.funding-preflight'), $payload)
+        ->assertSuccessful()
+        ->assertJsonPath('funding.execution', 'direct')
+        ->assertJsonPath('funding.required_amount_minor', 0)
+        ->assertJsonPath('funding.external_amount_minor', 0);
 });

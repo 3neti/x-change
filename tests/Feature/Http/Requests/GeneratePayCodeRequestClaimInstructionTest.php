@@ -52,6 +52,25 @@ function validateClaimInstructionRequest(string $requestClass, array $payload): 
     return $validator;
 }
 
+it('retains v2 PhilHealth execution during pricing and accepts its zero disbursement', function (): void {
+    $payload = validClaimInstructionPayload([]);
+    unset($payload['claim']);
+    $payload['cash']['amount'] = 0;
+    $payload['voucher_type'] = 'settlement';
+    $payload['target_amount'] = 20000;
+    $payload['execution'] = [
+        'schema' => 'voucher.execution.v2', 'driver' => 'settlement_envelope',
+        'settlement' => ['driver' => 'philhealth-bst', 'readiness_gate' => 'settleable'],
+        'value_flow' => ['destination' => 'instapay.gcash.mobile:09179999999'],
+        'events' => ['attest' => ['actor' => 'beneficiary'], 'settle' => ['actor' => 'payer', 'requires' => ['settlement_ready', 'confirmed_payment']]],
+    ];
+    $validator = validateClaimInstructionRequest(EstimatePayCodeRequest::class, $payload);
+    expect($validator->errors()->all())->toBeEmpty()
+        ->and(data_get($validator->validated(), 'execution'))->toBe($payload['execution']);
+    unset($payload['execution']);
+    expect(validateClaimInstructionRequest(EstimatePayCodeRequest::class, $payload)->errors()->has('cash.amount'))->toBeTrue();
+});
+
 it('preserves v2 execution and webhook subscriptions through issuance validation', function (): void {
     $payload = validClaimInstructionPayload([]);
     unset($payload['claim']);
