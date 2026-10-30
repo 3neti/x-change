@@ -12,12 +12,14 @@ use Illuminate\Validation\ValidationException;
 use LBHurtado\Voucher\Contracts\GeneratesVouchers;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Data\VoucherMetadataData;
+use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\RiderSplashArtworkSnapshotterContract;
 use LBHurtado\XChange\Contracts\RiderStampArtifactStoreContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Services\Cockpit\CockpitPosSaleReferenceService;
+use LBHurtado\XChange\Services\Commercial\CommercialPricingAcceptanceGuard;
 use LBHurtado\XChange\Services\Payment\PayCodePaymentLinkResolver;
 use LBHurtado\XChange\Services\Stamp\StampProviderIdentity;
 
@@ -40,6 +42,12 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
         $input = app(VoucherIssuancePayloadNormalizer::class)->normalize($input);
         $input = $this->withCollectionWalletContext($issuer, $input);
         $this->assertCollectionWalletPresentForCollectible($input);
+        if (data_get($input, 'execution.schema') === 'voucher.execution.v2' && is_array(data_get($input, 'pricing'))) {
+            app(CommercialPricingAcceptanceGuard::class)->assertV2Decision(
+                data_get($input, 'pricing'),
+                app(EstimatePayCodeCost::class)->handle($input),
+            );
+        }
         $instructions = VoucherInstructionsData::createFromAttribs($input);
         $this->restoreCustomMetadata($instructions, $input);
         $this->restorePreparedSplashArtworkSnapshot($instructions, $input);

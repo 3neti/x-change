@@ -136,6 +136,7 @@ const props = withDefaults(
     campaignContext?: CockpitQuickGenerateCampaignContext;
     applicationJourney?: { key: string; label: string; kind: string } | null;
     feedbackDefaults?: CockpitQuickGenerateFeedbackDefaults;
+    v2EventCatalog?: Record<string, { label: string; stage: string; workflows: string[]; requires_destination?: boolean }>;
     onboardingOtpRequired?: boolean;
     onboardingPreset?: boolean;
     issuanceSurface?: CockpitQuickGenerateSurface;
@@ -856,6 +857,7 @@ const feedbackEmailEnabled = ref(false);
 const feedbackMobileEnabled = ref(false);
 const feedbackWebhookEnabled = ref(false);
 const feedbackTokenErrors = ref<string[]>([]);
+const eventSubscriptions = ref<Array<{ url: string; events: string[] }>>([]);
 const autoFilledFeedback = ref<Record<FeedbackChannel, string | null>>({
   email: null,
   mobile: null,
@@ -909,6 +911,25 @@ const rulesAutoCloseOnFullPayment = ref(true);
 const includeExecutionInstruction = ref(false);
 const executionSchema = ref("voucher.execution.v2");
 const philhealthSettlement = ref(false);
+const availableNotificationEvents = computed(() => {
+  if (props.publicMode) return [];
+  if (!philhealthSettlement.value && includeExecutionInstruction.value && (executionSchema.value === "voucher.execution.v1" || executionDriver.value !== "default")) return [];
+  const workflow = philhealthSettlement.value ? "philhealth" : voucherType.value === "payable" ? "payable" : null;
+  if (workflow === null) return [];
+  return Object.entries(props.v2EventCatalog ?? {})
+    .filter(([, event]) => event.workflows.includes(workflow)
+      && (!event.requires_destination || valueFlowDestination.value.startsWith("instapay.")))
+    .map(([key, event]) => ({ key, label: event.label }));
+});
+const eventWebhookError = computed<string | null>(() => {
+  if (eventSubscriptions.value.length === 0) return null;
+  for (const subscription of eventSubscriptions.value) {
+    if (!isValidWebhookUrl(subscription.url.trim())) return "Enter an http(s) URL for each event webhook.";
+    if (subscription.events.length === 0) return "Select at least one event for each webhook.";
+    if (subscription.events.some((key) => !availableNotificationEvents.value.some((event) => event.key === key))) return "Remove events that are unavailable for this workflow.";
+  }
+  return null;
+});
 function configurePhilhealthSettlement(): void {
   if (!philhealthSettlement.value) return;
   if (!(Number(targetAmount.value) > 0) && Number(amount.value) > 0) {
@@ -1211,6 +1232,7 @@ function applyTemplateDefaults(templateKey: string): void {
   feedbackMobile.value = defaults.feedbackMobile;
   feedbackEmail.value = defaults.feedbackEmail;
   feedbackWebhook.value = defaults.feedbackWebhook;
+  eventSubscriptions.value = [];
   provider.value = defaults.provider;
   riderUrl.value = defaults.riderUrl;
   riderUrlPreset.value = "";
@@ -1952,6 +1974,11 @@ function applyInstructionBlueprint(
   feedbackEmailEnabled.value = feedbackEmail.value !== "";
   feedbackMobileEnabled.value = feedbackMobile.value !== "";
   feedbackWebhookEnabled.value = feedbackWebhook.value !== "";
+  const subscriptions = dataGet(instructions, ["feedback", "webhooks"]);
+  eventSubscriptions.value = Array.isArray(subscriptions) ? subscriptions.map((subscription) => ({
+    url: instructionString(subscription, ["url"]),
+    events: instructionStringArray(subscription, ["events"]),
+  })) : [];
 
   prefix.value = instructionString(instructions, ["prefix"]);
   mask.value = instructionString(instructions, ["mask"]);
@@ -2332,6 +2359,7 @@ const feedbackValidationErrors = computed<string[]>(() => {
     feedbackEmailError.value,
     feedbackMobileError.value,
     feedbackWebhookError.value,
+    eventWebhookError.value,
     ...feedbackTokenErrors.value,
   ].filter((error): error is string => error !== null);
 });
@@ -4188,6 +4216,9 @@ const feedbackSummary = computed<Record<string, unknown>>(() => {
     mobile: mobile === "" ? null : mobile,
     email: email === "" ? null : email,
     webhook: webhook === "" ? null : webhook,
+    ...(eventWebhookError.value === null && eventSubscriptions.value.length > 0
+      ? { webhooks: eventSubscriptions.value.map((subscription) => ({ url: subscription.url.trim(), events: subscription.events })) }
+      : {}),
   };
 });
 
@@ -4933,11 +4964,11 @@ const contractSummaryItems = computed<Array<{ label: string; value: string }>>(
 );
 
 const sanitizedInstructionPayload = computed<Record<string, unknown>>(() => {
-  return buildPayloadShape(true);
+  return buildPayloadShape(true, null, true);
 });
 
 const engineeringPreviewJson = computed<string>(() => {
-  return JSON.stringify(buildPayloadShape(false), null, 2);
+  return JSON.stringify(buildPayloadShape(false, null, true), null, 2);
 });
 const engineeringPreviewExportMessage = ref("");
 const engineeringPreviewClipboard = useClipboard();
@@ -5085,6 +5116,7 @@ const canEstimateLivePricing = computed<boolean>(() => {
 });
 const {
   estimate: livePricingEstimate,
+  estimatePayload: livePricingEstimatePayload,
   estimating: livePricingEstimating,
   estimateError: livePricingEstimateError,
   refreshEstimate: refreshLivePricingEstimate,
@@ -5603,7 +5635,7 @@ function refreshReadModel(): void {
 }
 
 function buildPayload(): Record<string, unknown> {
-  return buildPayloadShape(false);
+  return buildPayloadShape(false, null, true);
 }
 
 function buildIssuancePayload(): Record<string, unknown> {
@@ -5631,6 +5663,7 @@ function buildIssuancePayload(): Record<string, unknown> {
 function buildPayloadShape(
   redactSensitive: boolean,
   amountOverride: number | null = null,
+  includePricing = false,
 ): Record<string, unknown> {
   const normalizedAmount =
     amountOverride === null ? Number(amount.value) : amountOverride;
@@ -5676,6 +5709,8 @@ function buildPayloadShape(
     },
   } : reusableBalance.value ? (preserveLegacyExecution ? null : { schema: "voucher.execution.v2", driver: "stored_value" }) : onboardingEnabled.value
     ? { schema: preserveLegacyExecution ? "voucher.execution.v1" : "voucher.execution.v2", driver: "onboarding_account_provisioning" }
+    : voucherType.value === "payable" && eventSubscriptions.value.length > 0 && eventWebhookError.value === null
+    ? { schema: "voucher.execution.v2", driver: "default", events: { settle: { actor: "payer", surface: "pay", authentication: "optional", requires: ["confirmed_payment"] } } }
     : executionSummary.value ??
     (!reusableBalance.value && !onboardingEnabled.value
       ? { schema: "voucher.execution.v2", driver: "default" }
@@ -5686,9 +5721,31 @@ function buildPayloadShape(
         : valueFlowDestination.value }
     : null;
   const isV2Execution = execution?.schema === "voucher.execution.v2";
+  const estimate = includePricing ? livePricingEstimate.value : null;
+  const reference = estimate?.commercial_quote_reference;
+  const pricing = isV2Execution && typeof reference === "string"
+    && /^commercial-quote:[a-f0-9]{64}$/.test(reference)
+    && typeof estimate?.currency === "string"
+    && livePricingEstimatePayload.value === JSON.stringify(livePricingPayload.value)
+    ? { quote_reference: reference, currency: estimate.currency,
+        fee_bearer: isPayableVoucher.value || isSettlementVoucher.value ? feeBearer.value : "issuer",
+        quote_hash: reference.slice("commercial-quote:".length) }
+    : null;
+  const stamp = riderSummary.value.stamp as Record<string, unknown> | undefined;
+  const presentation = isV2Execution && typeof stamp?.design_id === "string" && typeof stamp?.design_version === "number"
+    ? { stamp: {
+        design_id: stamp.design_id,
+        design_version: stamp.design_version,
+        show_logo: stamp.show_logo,
+        show_tagline: stamp.show_tagline,
+        claim_marker: stamp.claim_marker,
+      } }
+    : null;
 
   const payload: Record<string, unknown> = {
     cash,
+    ...(pricing === null ? {} : { pricing }),
+    ...(presentation === null ? {} : { presentation }),
     ...((isPayableVoucher.value || isSettlementVoucher.value) ? { fee_bearer: feeBearer.value } : {}),
     ...(destination && !isV2Execution ? { value_flow: destination } : {}),
     ...(executableSlicePlan.value === null
@@ -7595,6 +7652,27 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                 @validation="feedbackTokenErrors = $event"
               />
             </div>
+
+            <fieldset v-if="!publicMode && (availableNotificationEvents.length > 0 || eventSubscriptions.length > 0)" class="grid gap-2 rounded-xl border border-slate-200 p-3 dark:border-slate-700" data-testid="v2-event-subscriptions">
+              <legend class="px-1 text-xs font-semibold">Event updates</legend>
+              <div v-for="(subscription, index) in eventSubscriptions" :key="index" class="grid gap-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700" :data-testid="`v2-event-subscription-${index}`">
+                <label class="grid gap-1 text-xs font-medium">
+                  Event webhook URL
+                  <input v-model="subscription.url" type="url" class="w-full rounded-xl border bg-white px-3 py-2 text-sm dark:bg-slate-900" :disabled="processing" :data-testid="`v2-event-webhook-url-${index}`" />
+                </label>
+                <label v-for="event in availableNotificationEvents" :key="event.key" class="flex items-center gap-2 text-sm">
+                  <input v-model="subscription.events" type="checkbox" :value="event.key" :disabled="processing" :data-testid="`v2-event-${index}-${event.key}`" />
+                  {{ event.label }}
+                </label>
+                <label v-for="event in subscription.events.filter((key) => !availableNotificationEvents.some((available) => available.key === key))" :key="event" class="flex items-center gap-2 text-xs text-rose-600 dark:text-rose-300">
+                  <input v-model="subscription.events" type="checkbox" :value="event" :disabled="processing" />
+                  Unavailable event: {{ event }}
+                </label>
+                <button type="button" class="justify-self-start text-xs underline" :disabled="processing" @click="eventSubscriptions.splice(index, 1)">Remove webhook</button>
+              </div>
+              <button v-if="availableNotificationEvents.length > 0" type="button" class="justify-self-start text-xs underline" :disabled="processing" data-testid="v2-event-add-webhook" @click="eventSubscriptions.push({ url: '', events: [] })">Add event webhook</button>
+              <p v-if="eventWebhookError" class="text-xs text-rose-600 dark:text-rose-300">{{ eventWebhookError }}</p>
+            </fieldset>
 
             <label
               v-if="publicMode"

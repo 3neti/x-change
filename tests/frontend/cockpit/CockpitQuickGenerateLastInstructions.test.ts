@@ -26,6 +26,28 @@ const collectionDestination = {
 } as const;
 
 describe('Quick Generate last instructions', () => {
+    it('restores all v2 event webhook destinations when repeating an instruction', () => {
+        const subscriptions = [
+            { url: 'https://example.test/one', events: ['settlement.payment_collected'] },
+            { url: 'https://example.test/two', events: ['settlement.payment_collected'] },
+        ];
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: {
+            templates: cockpitQuickGenerateTemplates,
+            collectionDestination,
+            startupMode: 'repeat_last',
+            v2EventCatalog: { 'settlement.payment_collected': { label: 'Payment confirmed', stage: 'settle', workflows: ['payable'] } },
+            lastInstructions: {
+                schema: 'x-change.cockpit.quick-generate-last-instructions.v1', saved_at: '2026-08-28T09:00:00Z',
+                instructions: {
+                    voucher_type: 'payable', cash: { amount: 0, currency: 'PHP' }, target_amount: 100,
+                    feedback: { webhooks: subscriptions },
+                    execution: { schema: 'voucher.execution.v2', driver: 'default', events: { settle: { actor: 'payer', requires: ['confirmed_payment'] } } },
+                },
+            },
+        } });
+        const instruction = JSON.parse(wrapper.get('[data-testid="cockpit-quick-generate-engineering-preview-json"]').text());
+        expect(instruction.feedback.webhooks).toEqual(subscriptions);
+    });
     it('restores a v2 value-flow destination when repeating an instruction', () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: {
             templates: cockpitQuickGenerateTemplates,

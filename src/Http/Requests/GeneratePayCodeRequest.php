@@ -48,7 +48,7 @@ class GeneratePayCodeRequest extends FormRequest
             ...$this->cockpitPayeePolicyValidators(),
             function (Validator $validator): void {
                 if ($this->input('execution.schema') === 'voucher.execution.v2') {
-                    foreach (['pricing', 'campaign'] as $field) {
+                    foreach (['campaign'] as $field) {
                         if ($this->input($field) !== null) {
                             $validator->errors()->add($field, 'This v2 instruction is not supported for issuance.');
                         }
@@ -169,7 +169,7 @@ class GeneratePayCodeRequest extends FormRequest
             'feedback.email' => ['nullable', 'email'],
             'feedback.mobile' => ['nullable', (new Phone)->country('PH')->type('mobile')],
             'feedback.webhook' => ['nullable', 'url:http,https'],
-            'feedback.webhooks' => ['nullable', 'array'],
+            'feedback.webhooks' => ['prohibited_unless:execution.schema,voucher.execution.v2', 'nullable', 'array'],
             'feedback.webhooks.*' => ['required', 'array:url,events'],
             'feedback.webhooks.*.url' => ['required', 'url:http,https'],
             'feedback.webhooks.*.events' => ['required', 'array', 'min:1'],
@@ -278,6 +278,11 @@ class GeneratePayCodeRequest extends FormRequest
             'presentation.share.title' => ['nullable', 'string', 'max:120'],
             'presentation.share.description' => ['nullable', 'string', 'max:240'],
             'presentation.share.image_source' => ['nullable', 'in:stamp'],
+            'pricing' => ['prohibited_unless:execution.schema,voucher.execution.v2', 'nullable', 'array:quote_reference,currency,fee_bearer,quote_hash'],
+            'pricing.quote_reference' => ['required_with:pricing', 'regex:/^commercial-quote:[a-f0-9]{64}$/'],
+            'pricing.currency' => ['required_with:pricing', 'string', 'size:3'],
+            'pricing.fee_bearer' => ['required_with:pricing', 'in:issuer,payer'],
+            'pricing.quote_hash' => ['nullable', 'regex:/^[a-f0-9]{64}$/'],
             'value_flow' => ['nullable', 'array:source,destination'],
             'value_flow.source' => ['sometimes', 'string', 'max:200'],
             'value_flow.destination' => ['sometimes', 'string', 'max:200'],

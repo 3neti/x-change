@@ -546,6 +546,39 @@ it('builds the zero-disbursement PhilHealth attestation, review and payment work
   });
 });
 
+it('builds payable subscriptions from the supplied event catalog', async () => {
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: {
+    templates: cockpitQuickGenerateTemplates,
+    v2EventCatalog: {
+      'settlement.payment_collected': { label: 'Payment confirmed', stage: 'settle', workflows: ['payable', 'philhealth'] },
+      'settlement.payout_failed': { label: 'Payout failed', stage: 'settle', workflows: ['payable'], requires_destination: true },
+    },
+  } });
+  await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('100');
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
+  await openOrderOptions(wrapper);
+  await wrapper.get('[data-testid="v2-event-add-webhook"]').trigger('click');
+  expect(wrapper.find('[data-testid="v2-event-0-settlement.payout_failed"]').exists()).toBe(false);
+  await wrapper.get('[data-testid="v2-event-webhook-url-0"]').setValue('https://example.test/events');
+  await wrapper.get('[data-testid="v2-event-0-settlement.payment_collected"]').setValue(true);
+  await wrapper.get('[data-testid="v2-event-add-webhook"]').trigger('click');
+  await wrapper.get('[data-testid="v2-event-webhook-url-1"]').setValue('https://example.test/other');
+  await wrapper.get('[data-testid="v2-event-1-settlement.payment_collected"]').setValue(true);
+  const instruction = preview(wrapper);
+  expect(instruction.feedback.webhooks).toEqual([
+    { url: 'https://example.test/events', events: ['settlement.payment_collected'] },
+    { url: 'https://example.test/other', events: ['settlement.payment_collected'] },
+  ]);
+  expect(instruction.execution.events.settle).toMatchObject({ actor: 'payer', requires: ['confirmed_payment'] });
+  wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', 'instapay.gcash.mobile:09179999999');
+  await flushPromises();
+  await wrapper.get('[data-testid="v2-event-0-settlement.payout_failed"]').setValue(true);
+  expect(preview(wrapper).feedback.webhooks[0].events).toEqual(['settlement.payment_collected', 'settlement.payout_failed']);
+  wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', '');
+  await flushPromises();
+  expect(wrapper.text()).toContain('Remove events that are unavailable for this workflow.');
+});
+
 
 it('includes the selected fee bearer on payable and settlement instructions', async () => {
   const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });

@@ -87,6 +87,21 @@ it('preserves v2 execution and webhook subscriptions through issuance validation
         ->and(data_get($validator->validated(), 'feedback.webhooks'))->toBe($payload['feedback']['webhooks']);
 });
 
+it('retains a validated v2 pricing decision for issuance and estimation', function (string $requestClass): void {
+    $payload = validClaimInstructionPayload([]);
+    unset($payload['claim']);
+    $payload['execution'] = ['schema' => 'voucher.execution.v2', 'driver' => 'default'];
+    $payload['pricing'] = ['quote_reference' => 'commercial-quote:'.str_repeat('a', 64), 'currency' => 'PHP', 'fee_bearer' => 'issuer', 'quote_hash' => str_repeat('a', 64)];
+    $payload['feedback']['webhooks'] = [['url' => 'https://example.test/hook', 'events' => ['settlement.payment_collected']]];
+    $validator = validateClaimInstructionRequest($requestClass, $payload);
+    expect($validator->errors()->all())->toBeEmpty()
+        ->and(data_get($validator->validated(), 'pricing'))->toBe($payload['pricing'])
+        ->and(data_get($validator->validated(), 'feedback.webhooks'))->toBe($payload['feedback']['webhooks']);
+
+    $payload['execution']['schema'] = 'voucher.execution.v1';
+    expect(validateClaimInstructionRequest($requestClass, $payload)->errors()->has('pricing'))->toBeTrue();
+})->with([[GeneratePayCodeRequest::class], [EstimatePayCodeRequest::class]]);
+
 it('rejects unsupported v2 fields before request filtering can discard them', function (string $field, string $requestClass): void {
     $payload = validClaimInstructionPayload([]);
     unset($payload['claim']);

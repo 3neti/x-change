@@ -124,6 +124,17 @@ it('uses the immutable x-commerce catalog for Pay Code pricing and projections',
         ->and($first['commercial_quote_reference'])->toStartWith('commercial-quote:');
 });
 
+it('includes the existing webhook pricing component for v2 event subscriptions', function (): void {
+    $instructions = validVoucherInstructions(100, 'INSTAPAY', [
+        'execution' => ['schema' => 'voucher.execution.v2'],
+        'feedback' => ['email' => null, 'mobile' => null, 'webhook' => null,
+            'webhooks' => [['url' => 'https://example.test/events', 'events' => ['settlement.payment_collected']]]],
+    ]);
+    $charges = collect(app(PricingServiceContract::class)->estimate($instructions)['charges']);
+
+    expect($charges->where('catalog_item_reference', 'feedback.webhook')->count())->toBe(1);
+});
+
 it('prices KYC only when it is explicitly selected in the Voucher Instructions', function () {
     $selfieOnly = validVoucherInstructions(100, 'INSTAPAY', [
         'inputs' => ['fields' => ['selfie']],

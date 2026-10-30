@@ -24,7 +24,13 @@ class EstimatePayCodeCost
     public function handle(array $input): PricingEstimateData
     {
         $input = app(VoucherIssuancePayloadNormalizer::class)->normalize($input);
-        $instructions = VoucherInstructionsData::from($input);
+        $pricingInput = $input;
+        if (data_get($pricingInput, 'execution.schema') === 'voucher.execution.v2'
+            && in_array(data_get($pricingInput, 'voucher_type'), ['payable', 'settlement'], true)
+            && data_get($pricingInput, 'metadata.collection_wallet_id') === null) {
+            data_set($pricingInput, 'metadata.collection_wallet_id', 'pricing-preview-only');
+        }
+        $instructions = VoucherInstructionsData::from($pricingInput);
 
         $estimate = $this->pricing->estimate($instructions);
         $payCodeValue = round(

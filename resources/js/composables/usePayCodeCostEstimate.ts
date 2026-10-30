@@ -38,6 +38,7 @@ type UsePayCodeCostEstimateOptions = {
 
 type UsePayCodeCostEstimate = {
     estimate: Ref<PayCodeCostEstimate | null>;
+    estimatePayload: Ref<string | null>;
     estimating: Ref<boolean>;
     estimateError: Ref<string | null>;
     refreshEstimate: () => Promise<void>;
@@ -53,6 +54,7 @@ export function usePayCodeCostEstimate(
     const estimateError = ref<string | null>(null);
     const debounceMs = options.debounceMs ?? 500;
     const retryDelaysMs = options.retryDelaysMs ?? [1000, 2000];
+    const estimatePayload = ref<string | null>(null);
     let estimateTimer: ReturnType<typeof setTimeout> | null = null;
     let estimateRequestId = 0;
     let estimateAbortController: AbortController | null = null;
@@ -72,6 +74,7 @@ export function usePayCodeCostEstimate(
         if (typeof window === 'undefined' || !canEstimate.value) {
             estimateAbortController?.abort();
             estimate.value = null;
+            estimatePayload.value = null;
             estimateError.value = null;
             estimating.value = false;
 
@@ -89,6 +92,7 @@ export function usePayCodeCostEstimate(
         }
 
         const requestId = ++estimateRequestId;
+        const serializedPayload = JSON.stringify(requestPayload.value);
         const route = EstimatePayCodeController();
 
         estimateAbortController?.abort();
@@ -106,7 +110,7 @@ export function usePayCodeCostEstimate(
                         'Content-Type': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest',
                     },
-                    body: JSON.stringify(requestPayload.value),
+                    body: serializedPayload,
                     signal: estimateAbortController.signal,
                 });
                 const payload = await safeJson(response);
@@ -117,6 +121,7 @@ export function usePayCodeCostEstimate(
 
                 if (response.ok && payload.success !== false) {
                     estimate.value = estimateValue(payload);
+                    estimatePayload.value = serializedPayload;
 
                     return;
                 }
@@ -166,6 +171,7 @@ export function usePayCodeCostEstimate(
 
     return {
         estimate,
+        estimatePayload,
         estimating,
         estimateError,
         refreshEstimate,

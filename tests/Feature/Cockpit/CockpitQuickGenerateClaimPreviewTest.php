@@ -130,6 +130,8 @@ it('previews the PhilHealth instruction built by the cockpit form', function ():
         'claim' => ['outcomes' => [['key' => 'provider_disbursement']], 'selection' => 'server', 'consumption' => 'one_of', 'default_outcome' => 'provider_disbursement', 'onboarding' => ['mode' => 'if_required'], 'claimant' => ['mode' => 'unbound'], 'profile' => 'voucher.claim.v1'],
         'metadata' => ['flow_type' => 'settlement', 'custom' => ['cockpit' => ['template_key' => 'blank-pay-code', 'source' => 'cockpit.quick-generate', 'builder' => 'guided-voucher-instruction-builder', 'payee' => ['kind' => 'open', 'explicit_secret' => false]]]],
         'voucher_type' => 'settlement', 'target_amount' => 20000,
+        'presentation' => ['stamp' => ['design_id' => 'steampunk', 'design_version' => 8, 'show_logo' => true, 'show_tagline' => true, 'claim_marker' => 'qr']],
+        'pricing' => ['quote_reference' => 'commercial-quote:'.str_repeat('a', 64), 'currency' => 'PHP', 'fee_bearer' => 'issuer', 'quote_hash' => str_repeat('a', 64)],
         'rules' => ['auto_close_on_full_payment' => true],
         'execution' => [
             'schema' => 'voucher.execution.v2', 'driver' => 'settlement_envelope',

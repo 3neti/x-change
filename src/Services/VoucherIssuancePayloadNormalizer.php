@@ -6,7 +6,9 @@ namespace LBHurtado\XChange\Services;
 
 use BackedEnum;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\XChange\Services\Settlement\V2EventCatalog;
 use UnitEnum;
 
 class VoucherIssuancePayloadNormalizer
@@ -29,16 +31,38 @@ class VoucherIssuancePayloadNormalizer
                 }
             }
         }
+        if (data_get($input, 'pricing') !== null && data_get($input, 'execution.schema') !== 'voucher.execution.v2') {
+            throw ValidationException::withMessages(['pricing' => 'Pricing decisions require voucher execution v2.']);
+        }
         if (data_get($input, 'execution.schema') === 'voucher.execution.v2'
-            && (data_get($input, 'pricing') !== null
-                || data_get($input, 'campaign') !== null)) {
+            && data_get($input, 'campaign') !== null) {
             throw ValidationException::withMessages([
-                'execution.schema' => 'V2 pricing and campaign instructions are not supported for issuance.',
+                'execution.schema' => 'V2 campaign instructions are not supported for issuance.',
             ]);
         }
+        if (data_get($input, 'execution.schema') === 'voucher.execution.v2' && data_get($input, 'pricing') !== null) {
+            Validator::make($input, [
+                'pricing' => ['required', 'array:quote_reference,currency,fee_bearer,quote_hash'],
+                'pricing.quote_reference' => ['required', 'regex:/^commercial-quote:[a-f0-9]{64}$/'],
+                'pricing.currency' => ['required', 'string', 'size:3'],
+                'pricing.fee_bearer' => ['required', 'in:issuer,payer'],
+                'pricing.quote_hash' => ['nullable', 'regex:/^[a-f0-9]{64}$/'],
+            ])->validate();
+            $bearer = data_get($input, 'pricing.fee_bearer');
+            if (isset($input['fee_bearer']) && $input['fee_bearer'] !== $bearer) {
+                throw ValidationException::withMessages(['pricing.fee_bearer' => 'Pricing fee bearer conflicts with the voucher instruction.']);
+            }
+            if (in_array(data_get($input, 'voucher_type'), ['payable', 'settlement'], true)) {
+                $input['fee_bearer'] = $bearer;
+            } elseif ($bearer !== 'issuer') {
+                throw ValidationException::withMessages(['pricing.fee_bearer' => 'Only the issuer can pay fees for this voucher type.']);
+            }
+        }
         if (data_get($input, 'execution.schema') === 'voucher.execution.v2' && ! empty(data_get($input, 'execution.events'))) {
-            $this->assertSupportedPhilhealthEvents($input);
-            data_set($input, 'metadata.flow_type', 'settlement');
+            $this->assertSupportedV2Events($input);
+            if (data_get($input, 'voucher_type') === 'settlement') {
+                data_set($input, 'metadata.flow_type', 'settlement');
+            }
         }
         if (data_get($input, 'execution.schema') === 'voucher.execution.v2' && ! empty(data_get($input, 'feedback.webhooks'))) {
             $this->assertSupportedWebhookSubscriptions($input);
@@ -63,6 +87,9 @@ class VoucherIssuancePayloadNormalizer
 
         if (! is_array($cashValidation)) {
             Arr::set($input, 'cash.validation', []);
+        }
+        if (data_get($input, 'execution.schema') === 'voucher.execution.v2' && data_get($input, 'cash.validation') === []) {
+            data_set($input, 'cash.validation', ['secret' => null]);
         }
 
         $input = $this->stampDesigns->materialize($input);
@@ -89,9 +116,12 @@ class VoucherIssuancePayloadNormalizer
         return $input;
     }
 
-    private function assertSupportedPhilhealthEvents(array $input): void
+    private function assertSupportedV2Events(array $input): void
     {
         $events = data_get($input, 'execution.events');
+        if ($this->hasSupportedPayableEvents($input, $events)) {
+            return;
+        }
         $attest = is_array($events) ? ($events['attest'] ?? null) : null;
         $review = is_array($events) ? ($events['review'] ?? null) : null;
         $settle = is_array($events) ? ($events['settle'] ?? null) : null;
@@ -138,6 +168,27 @@ class VoucherIssuancePayloadNormalizer
         }
     }
 
+    private function hasSupportedPayableEvents(array $input, mixed $events): bool
+    {
+        if (data_get($input, 'voucher_type') !== 'payable'
+            || ! is_array($events) || array_keys($events) !== ['settle']) {
+            return false;
+        }
+
+        $settle = $events['settle'];
+        $execution = data_get($input, 'execution');
+
+        return is_array($settle)
+            && is_array($execution)
+            && array_diff(array_keys($execution), ['schema', 'driver', 'value_flow', 'events']) === []
+            && array_diff(array_keys($settle), ['actor', 'requires', 'surface', 'authentication']) === []
+            && ($settle['actor'] ?? null) === 'payer'
+            && ($settle['requires'] ?? null) === ['confirmed_payment']
+            && in_array($settle['surface'] ?? null, [null, 'pay'], true)
+            && in_array($settle['authentication'] ?? null, [null, 'optional'], true)
+            && in_array(data_get($input, 'execution.driver', 'default'), ['default', 'payable_collection'], true);
+    }
+
     private function assertSupportedWebhookSubscriptions(array $input): void
     {
         $subscriptions = data_get($input, 'feedback.webhooks');
@@ -146,13 +197,8 @@ class VoucherIssuancePayloadNormalizer
             throw ValidationException::withMessages(['feedback.webhooks' => 'Webhook subscriptions require supported v2 events.']);
         }
 
-        $recordedEvents = [
-            'attestation.evidence_captured' => 'attest',
-            'settlement.amount_reviewed' => 'review',
-            'settlement.payment_collected' => 'settle',
-            'settlement.payout_confirmed' => 'settle',
-            'settlement.payout_failed' => 'settle',
-        ];
+        $recordedEvents = app(V2EventCatalog::class)->definitions();
+        $workflow = data_get($input, 'voucher_type') === 'payable' ? 'payable' : 'philhealth';
         foreach ($subscriptions as $subscription) {
             if (! is_array($subscription) || ! is_string($subscription['url'] ?? null)
                 || ! filter_var($subscription['url'], FILTER_VALIDATE_URL)
@@ -161,8 +207,13 @@ class VoucherIssuancePayloadNormalizer
                 throw ValidationException::withMessages(['feedback.webhooks' => 'Each webhook needs a URL and supported event subscriptions.']);
             }
             foreach ($subscription['events'] as $event) {
-                if (! is_string($event) || ! isset($recordedEvents[$event]) || ! isset($events[$recordedEvents[$event]])) {
+                $definition = is_string($event) ? ($recordedEvents[$event] ?? null) : null;
+                if (! is_array($definition) || ! in_array($workflow, $definition['workflows'], true) || ! isset($events[$definition['stage']])) {
                     throw ValidationException::withMessages(['feedback.webhooks' => 'The subscribed event is not supported by this instruction.']);
+                }
+                if ($workflow === 'payable' && ($definition['requires_destination'] ?? false)
+                    && ! str_starts_with((string) data_get($input, 'execution.value_flow.destination'), 'instapay.')) {
+                    throw ValidationException::withMessages(['feedback.webhooks' => 'Payout events require a bank or wallet destination.']);
                 }
             }
         }

@@ -94,10 +94,23 @@ final class PayCodeCommercialQuoteService
      */
     public function estimate(VoucherInstructionsData $instructions): array
     {
+        $projection = $instructions->toArray();
+        if ($instructions->execution?->schema === 'voucher.execution.v2') {
+            $profile = $this->usesAccountFundingProfile($instructions) ? 'account_funding' : 'pay_code';
+            $catalog = $this->offerings->resolve($profile)->catalog;
+            $projection = [
+                'schema' => 'voucher-pricing-projection.v2',
+                'lines' => array_map(static fn (CommercialQuoteLineInputData $line): array => [
+                    'item' => $line->catalogItemReference,
+                    'quantity' => $line->quantity,
+                    'source' => $line->sourceInstructionReference,
+                ], $this->lineInputs($instructions, $catalog)),
+            ];
+        }
         $sourceReference = 'pay-code-pricing-projection:'.hash(
             'sha256',
             json_encode(
-                $instructions->toArray(),
+                $projection,
                 JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES,
             ),
         );
@@ -246,6 +259,9 @@ final class PayCodeCommercialQuoteService
             if (filled(data_get($instructions, "feedback.{$channel}"))) {
                 $selected[] = "feedback.{$channel}";
             }
+        }
+        if (is_array($instructions->feedback->webhooks) && $instructions->feedback->webhooks !== []) {
+            $selected[] = 'feedback.webhook';
         }
 
         foreach (['secret', 'mobile'] as $validation) {

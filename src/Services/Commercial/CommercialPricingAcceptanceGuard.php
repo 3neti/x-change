@@ -10,6 +10,20 @@ use LBHurtado\XCommerce\Data\CommercialQuoteData;
 
 final class CommercialPricingAcceptanceGuard
 {
+    /** @param array<string, mixed> $decision */
+    public function assertV2Decision(array $decision, PricingEstimateData $estimate): void
+    {
+        $actualReference = $estimate->commercial_quote_reference;
+        $requestedReference = $decision['quote_reference'] ?? null;
+        $hash = $decision['quote_hash'] ?? null;
+        if (! is_string($actualReference) || ! is_string($requestedReference)
+            || ! hash_equals($actualReference, $requestedReference)
+            || ($decision['currency'] ?? null) !== $estimate->currency
+            || ($hash !== null && (! is_string($hash) || ! hash_equals(substr($actualReference, strlen('commercial-quote:')), $hash)))) {
+            throw new CommercialPricingChanged('The accepted v2 quote no longer matches authoritative pricing. Refresh the estimate and issue again.');
+        }
+    }
+
     /** @param array<string, mixed> $expected */
     public function assertExpected(array $expected, PricingEstimateData $estimate): void
     {

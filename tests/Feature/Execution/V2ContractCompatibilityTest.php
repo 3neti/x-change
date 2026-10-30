@@ -14,11 +14,14 @@ use LBHurtado\Voucher\Services\ExecutionEngine;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
+use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\ClaimShareMetadataResolverContract;
+use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Data\FundingDecisionData;
+use LBHurtado\XChange\Exceptions\CommercialPricingChanged;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Execution\ValueFlowPayoutService;
 use LBHurtado\XChange\Services\Execution\VoucherValueFlowPolicy;
@@ -145,6 +148,87 @@ it('rejects issuance of v2 instructions with event declarations until event exec
     ]))->toThrow(ValidationException::class, 'V2 event execution is not implemented');
 });
 
+it('accepts a verified-payment event for a payable voucher and rejects unsupported prerequisites', function (): void {
+    $input = [
+        'cash' => ['amount' => 0, 'currency' => 'PHP'], 'voucher_type' => 'payable', 'target_amount' => 100,
+        'execution' => ['schema' => 'voucher.execution.v2', 'driver' => 'default',
+            'events' => ['settle' => ['actor' => 'payer', 'requires' => ['confirmed_payment'], 'surface' => 'pay', 'authentication' => 'optional']]],
+        'feedback' => ['webhooks' => [['url' => 'https://example.test/events', 'events' => ['settlement.payment_collected']]]],
+    ];
+
+    $normalized = app(VoucherIssuancePayloadNormalizer::class)->normalize($input);
+    expect(data_get($normalized, 'execution.events.settle.actor'))->toBe('payer')
+        ->and(data_get($normalized, 'metadata.flow_type'))->not->toBe('settlement');
+
+    $payoutSubscription = $input;
+    data_set($payoutSubscription, 'feedback.webhooks.0.events', ['settlement.payout_failed']);
+    expect(fn () => app(VoucherIssuancePayloadNormalizer::class)->normalize($payoutSubscription))->toThrow(ValidationException::class);
+    data_set($payoutSubscription, 'execution.value_flow.destination', 'instapay.gcash.mobile:09179999999');
+    expect(data_get(app(VoucherIssuancePayloadNormalizer::class)->normalize($payoutSubscription), 'feedback.webhooks.0.events'))->toBe(['settlement.payout_failed']);
+    $requiresAuthentication = $input;
+    data_set($requiresAuthentication, 'execution.events.settle.authentication', 'required');
+    expect(fn () => app(VoucherIssuancePayloadNormalizer::class)->normalize($requiresAuthentication))->toThrow(ValidationException::class);
+
+    data_set($input, 'execution.events.settle.requires', ['unimplemented_requirement']);
+    expect(fn () => app(VoucherIssuancePayloadNormalizer::class)->normalize($input))->toThrow(ValidationException::class);
+});
+
+it('issues a payable voucher with its verified-payment subscription intact', function (): void {
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:v2-payable-events');
+    $issuer = actingAsTestUser(0);
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.commercial.enabled', true);
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    Queue::fake();
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision($issuer, ['netbank-primary']);
+    $funding = Mockery::mock(ProviderFundingPolicyContract::class);
+    $funding->shouldReceive('assertCanIssue')->once()->andReturn(FundingDecisionData::allowed(authority: 'local_ledger', availableMinor: 10000, requiredMinor: 0, currency: 'PHP', meta: ['provider' => 'netbank', 'topology' => 'ledger_pooled']));
+    app()->instance(ProviderFundingPolicyContract::class, $funding);
+    $payload = validPayCodePayload(0, 'INSTAPAY', [
+        'provider' => 'netbank', 'issuer_id' => $issuer->getKey(), 'voucher_type' => 'payable',
+        'target_amount' => 100, 'fee_bearer' => 'payer',
+        'feedback' => ['webhooks' => [['url' => 'https://example.test/events', 'events' => ['settlement.payment_collected']]]],
+        'execution' => ['schema' => 'voucher.execution.v2', 'driver' => 'default',
+            'events' => ['settle' => ['actor' => 'payer', 'requires' => ['confirmed_payment'], 'surface' => 'pay', 'authentication' => 'optional']]],
+    ]);
+
+    $payload['cash']['validation'] = [];
+    $quote = app(EstimatePayCodeCost::class)->handle($payload);
+    $payload['pricing'] = [
+        'quote_reference' => $quote->commercial_quote_reference,
+        'currency' => $quote->currency,
+        'fee_bearer' => 'payer',
+        'quote_hash' => substr($quote->commercial_quote_reference, strlen('commercial-quote:')),
+    ];
+    $tampered = $payload;
+    $tampered['pricing']['quote_reference'] = 'commercial-quote:'.str_repeat('0', 64);
+    expect(fn () => app(GeneratePayCode::class)->handle($tampered))
+        ->toThrow(CommercialPricingChanged::class);
+    $tampered = $payload;
+    $tampered['pricing']['quote_hash'] = str_repeat('0', 64);
+    expect(fn () => app(GeneratePayCode::class)->handle($tampered))
+        ->toThrow(CommercialPricingChanged::class);
+    $tampered = $payload;
+    $tampered['pricing']['fee_bearer'] = 'issuer';
+    expect(fn () => app(GeneratePayCode::class)->handle($tampered))->toThrow(ValidationException::class);
+    $tampered = $payload;
+    $tampered['pricing']['currency'] = 'USD';
+    expect(fn () => app(GeneratePayCode::class)->handle($tampered))->toThrow(CommercialPricingChanged::class);
+    $tampered = $payload;
+    $tampered['count'] = 2;
+    expect(fn () => app(GeneratePayCode::class)->handle($tampered))->toThrow(CommercialPricingChanged::class);
+    expect(fn () => app(PayCodeIssuanceContract::class)->issue($issuer, $tampered))
+        ->toThrow(CommercialPricingChanged::class);
+
+    $result = app(GeneratePayCode::class)->handle($payload);
+    $voucher = Voucher::query()->findOrFail($result->voucher_id);
+    expect(data_get($voucher->metadata, 'instructions.execution.events.settle.requires'))->toBe(['confirmed_payment'])
+        ->and(data_get($voucher->metadata, 'instructions.feedback.webhooks.0.events'))->toBe(['settlement.payment_collected'])
+        ->and(data_get($voucher->metadata, 'instructions.pricing.quote_reference'))->toBe($quote->commercial_quote_reference);
+});
+
 it('applies v2 presentation to the stamp and preserves its share metadata', function (): void {
     $design = (string) config('x-change.experience.default_system_stamp_design', 'steampunk');
     $version = app(RiderStampDesignRegistry::class)->resolve($design, null)['version'];
@@ -188,6 +272,7 @@ it('issues the supported v2 PhilHealth settlement through x-change with its even
         'provider' => 'netbank', 'issuer_id' => $issuer->getKey(), 'voucher_type' => 'settlement',
         'target_amount' => 100, 'fee_bearer' => 'payer', 'inputs' => ['fields' => ['name']],
         'feedback' => ['webhooks' => [['url' => 'https://example.test/hook', 'events' => ['settlement.payment_collected', 'settlement.payout_failed', 'settlement.payout_confirmed']]]],
+        'presentation' => ['share' => ['title' => 'Hospital settlement', 'image_source' => 'stamp']],
         'execution' => [
             'schema' => 'voucher.execution.v2', 'driver' => 'settlement_envelope',
             'mode' => null, 'pipeline' => null, 'fallback' => null, 'visibility' => null, 'metadata' => null,
@@ -200,6 +285,7 @@ it('issues the supported v2 PhilHealth settlement through x-change with its even
     $voucher = Voucher::query()->findOrFail($result->voucher_id);
     expect(data_get($voucher->metadata, 'instructions.execution.events.settle.actor'))->toBe('payer')
         ->and(data_get($voucher->metadata, 'instructions.feedback.webhooks.0.events'))->toBe(['settlement.payment_collected', 'settlement.payout_failed', 'settlement.payout_confirmed'])
+        ->and(data_get($voucher->metadata, 'instructions.presentation.share.title'))->toBe('Hospital settlement')
         ->and(data_get($voucher->metadata, 'instructions.execution.settlement.driver'))->toBe('philhealth-bst')
         ->and(app(VoucherValueFlowPolicy::class)->destination($voucher))->toBe('instapay.gcash.mobile:09179999999')
         ->and($voucher->instructions->cash->amount)->toBe(0.0);

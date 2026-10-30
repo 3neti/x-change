@@ -22,6 +22,7 @@ use LBHurtado\XChange\Services\Cockpit\RiderLibraryReadModel;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegistry;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingPolicy;
 use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
+use LBHurtado\XChange\Services\Settlement\V2EventCatalog;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
 
 class CockpitQuickGeneratePageController extends Controller
@@ -78,6 +79,7 @@ class CockpitQuickGeneratePageController extends Controller
             'saved_templates' => $this->templates->for($request->user()),
             'rider_library' => $this->riderLibrary->for($request->user()),
             'instruction_capabilities' => $this->instructionCapabilities->sanitized(),
+            'v2_event_catalog' => app(V2EventCatalog::class)->definitions(),
             'settlement_rail_capabilities' => $this->settlementRails->sanitized(),
             'collection_destination' => $this->collectionDestination($request),
             'pos_voucher' => $this->posVoucher($request),

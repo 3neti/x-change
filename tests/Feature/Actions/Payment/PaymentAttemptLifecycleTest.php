@@ -385,6 +385,74 @@ it('recovers a missing v2 payment event from an already settled collection', fun
         ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(1);
 });
 
+it('records a payable v2 verified-payment subscription only once on replay', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.execution', [
+        'schema' => 'voucher.execution.v2', 'driver' => 'default',
+        'events' => ['settle' => ['actor' => 'payer', 'requires' => ['confirmed_payment'], 'surface' => 'pay', 'authentication' => 'optional']],
+    ]);
+    data_set($metadata, 'instructions.feedback.webhooks', [
+        ['url' => 'https://example.test/events', 'events' => ['settlement.payment_collected']],
+    ]);
+    $voucher->forceFill(['metadata' => $metadata])->save();
+
+    $attempt = issuedPaymentAttempt($voucher->refresh());
+    $this->paymentAdapter->fundingObservation = exactPaymentObservation($attempt);
+    $settled = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    app(SettleVerifiedPaymentAttempt::class)->handle($settled, PaymentVerificationTrigger::Payer);
+    app(SettleVerifiedPaymentAttempt::class)->handle($settled, PaymentVerificationTrigger::Payer);
+
+    expect(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(1)
+        ->and(V2EvidenceOutbox::query()->where('voucher_id', $voucher->id)->where('event_type', 'settlement.payment_collected')->count())->toBe(1);
+});
+
+it('issues, collects and delivers a payable v2 payment event without replaying it', function (): void {
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:v2-payable-lifecycle');
+    $issuer = actingAsTestUser(0);
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.commercial.enabled', true);
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    Queue::fake();
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision($issuer, ['netbank-primary']);
+    $funding = Mockery::mock(ProviderFundingPolicyContract::class);
+    $funding->shouldReceive('assertCanIssue')->once()->andReturn(FundingDecisionData::allowed(authority: 'local_ledger', availableMinor: 10000, requiredMinor: 0, currency: 'PHP', meta: ['provider' => 'netbank', 'topology' => 'ledger_pooled']));
+    app()->instance(ProviderFundingPolicyContract::class, $funding);
+    $payload = validPayCodePayload(0, 'INSTAPAY', [
+        'provider' => 'netbank', 'issuer_id' => $issuer->getKey(), 'voucher_type' => 'payable',
+        'target_amount' => 100, 'fee_bearer' => 'payer',
+        'feedback' => ['webhooks' => [['url' => 'https://example.test/events', 'events' => ['settlement.payment_collected']]]],
+        'execution' => ['schema' => 'voucher.execution.v2', 'driver' => 'default',
+            'events' => ['settle' => ['actor' => 'payer', 'requires' => ['confirmed_payment'], 'surface' => 'pay', 'authentication' => 'optional']]],
+    ]);
+    $issued = app(GeneratePayCode::class)->handle($payload);
+    $voucher = Voucher::query()->findOrFail($issued->voucher_id);
+    $sender = new class implements FeedbackWebhookSenderContract
+    {
+        public int $calls = 0;
+
+        public function send(FeedbackWebhookMessageData $message): FeedbackWebhookSendResultData
+        {
+            $this->calls++;
+
+            return new FeedbackWebhookSendResultData(message_id: 'payable-event', status: FeedbackDeliveryData::StatusQueued);
+        }
+    };
+    app()->instance(FeedbackWebhookSenderContract::class, $sender);
+    $attempt = issuedPaymentAttempt($voucher);
+    $this->paymentAdapter->fundingObservation = exactPaymentObservation($attempt);
+    $settled = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    app(SettleVerifiedPaymentAttempt::class)->handle($settled, PaymentVerificationTrigger::Payer);
+    app(V2EvidenceEventJournal::class)->deliverPending();
+    app(V2EvidenceEventJournal::class)->deliverPending();
+
+    expect(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(1)
+        ->and(V2EvidenceOutbox::query()->where('voucher_id', $voucher->id)->where('event_type', 'settlement.payment_collected')->count())->toBe(1)
+        ->and($sender->calls)->toBe(1);
+});
+
 it('retries subscribed v2 webhooks without repeating successful delivery', function (): void {
     $voucher = paymentAttemptCollectibleVoucher();
     $metadata = $voucher->metadata;

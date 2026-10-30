@@ -24,6 +24,7 @@ it('rejects privileged modes and unsafe destinations', function (array $payload)
         ->toThrow(ValidationException::class);
 })->with([
     'webhook' => [['feedback' => ['webhook' => 'https://example.com/hook']]],
+    'v2 webhook subscriptions' => [['feedback' => ['webhooks' => [['url' => 'https://example.com/hook', 'events' => ['settlement.payment_collected']]]]]],
     'invitation' => [['onboarding' => true]],
     'settlement' => [['voucher_type' => 'settlement']],
     'stored value' => [['stored_value' => ['enabled' => true]]],
