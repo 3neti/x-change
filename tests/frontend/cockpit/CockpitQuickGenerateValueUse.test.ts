@@ -533,7 +533,7 @@ it('builds the zero-disbursement PhilHealth attestation, review and payment work
   const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });
   await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('20000');
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
-  await wrapper.get('[data-testid="philhealth-settlement-workflow"]').setValue(true);
+  await wrapper.get('[data-testid="settlement-workflow"]').setValue('philhealth');
   await openOrderOptions(wrapper);
   wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', 'instapay.gcash.mobile:09179999999');
   await flushPromises();
@@ -602,7 +602,7 @@ it('builds an explicit settlement with separate principal, target and fixed repa
   await openOrderOptions(wrapper);
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
   await wrapper.get('[data-testid="cockpit-quick-generate-target-amount"]').setValue('120');
-  await wrapper.get('[data-testid="settlement-repayment-enabled"]').setValue(true);
+  await wrapper.get('[data-testid="settlement-workflow"]').setValue('repayment');
   await wrapper.get('[data-testid="settlement-repayment-amount"]').setValue('30');
   const instruction = preview(wrapper);
   expect(instruction.target_amount).toBe(120);
@@ -610,4 +610,46 @@ it('builds an explicit settlement with separate principal, target and fixed repa
   expect(instruction.fee_bearer).toBe('issuer');
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
   expect(preview(wrapper).rules).not.toHaveProperty('settlement_mode');
+});
+
+it('keeps destinations separate by purpose and reflects the active instruction in the summary', async () => {
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });
+  await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('100');
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
+  wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', 'instapay.gcash.mobile:09179999999');
+  await flushPromises();
+  expect(wrapper.get('[data-testid="cockpit-order-flow-summary"]').text()).toContain('GCASH · •••• 9999');
+  expect(preview(wrapper).execution.value_flow.destination).toBe('instapay.gcash.mobile:09179999999');
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
+  expect(preview(wrapper).execution).not.toHaveProperty('value_flow');
+  expect(wrapper.get('[data-testid="cockpit-order-flow-summary"]').text()).not.toContain('9999');
+  wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', 'instapay.maya.account:1234567890');
+  await flushPromises();
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
+  expect(preview(wrapper).execution.value_flow.destination).toBe('instapay.gcash.mobile:09179999999');
+  expect(wrapper.get('[data-testid="cockpit-order-flow-summary"]').text()).toContain('9999');
+});
+
+it('shows the PhilHealth review and wait before payment', async () => {
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });
+  await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('20000');
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
+  await wrapper.get('[data-testid="settlement-workflow"]').setValue('philhealth');
+  const text = wrapper.get('[data-testid="cockpit-order-flow-summary"]').text();
+  expect(text.indexOf('Patient provides')).toBeLessThan(text.indexOf('Hospital reviews'));
+  expect(text.indexOf('Hospital reviews')).toBeLessThan(text.indexOf('Wait for review'));
+  expect(preview(wrapper).cash.amount).toBe(0);
+  expect(preview(wrapper).target_amount).toBe(20000);
+});
+
+it('restores the disbursement amount when leaving the PhilHealth workflow', async () => {
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });
+  const amount = wrapper.get<HTMLInputElement>('[data-testid="cockpit-quick-generate-primary-amount"]');
+  await amount.setValue('100');
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
+  await wrapper.get('[data-testid="settlement-workflow"]').setValue('philhealth');
+  expect(preview(wrapper).cash.amount).toBe(0);
+  await wrapper.get('[data-testid="settlement-workflow"]').setValue('repayment');
+  expect(preview(wrapper).cash.amount).toBe(100);
+  expect(wrapper.get('[data-testid="settlement-repayment-amount"]').exists()).toBe(true);
 });

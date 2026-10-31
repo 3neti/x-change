@@ -479,6 +479,16 @@ function text(value: unknown): string | null {
           </span>
         </div>
         <div
+          v-if="paymentOpen && current.lifecycle.verification_unavailable && !needsAttention && !paymentNeedsReview"
+          class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+          role="status"
+          data-testid="funding-verification-unavailable"
+        >
+          <p class="font-semibold">Payment verification is temporarily unavailable</p>
+          <p class="mt-1">{{ current.lifecycle.message }}</p>
+          <p v-if="current.monitor.enabled && current.monitor.eligible" class="mt-1">We’ll keep checking automatically.</p>
+        </div>
+        <div
           v-if="terminal"
           :class="[
             'mt-5 rounded-2xl border p-4 text-sm',

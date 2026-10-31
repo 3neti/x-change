@@ -280,7 +280,7 @@ describe("CockpitOnDemandIssuanceFundingDialog", () => {
     wrapper.unmount();
   });
 
-  it("states provider outages without implying nonpayment", () => {
+  it("shows provider outages outside order details and clears them after recovery", async () => {
     const unavailableProjection = structuredClone(projection);
     unavailableProjection.status = "payer_acknowledged";
     unavailableProjection.order.status = "payer_acknowledged";
@@ -297,6 +297,13 @@ describe("CockpitOnDemandIssuanceFundingDialog", () => {
       "Verification is temporarily unavailable",
     );
     expect(document.body.textContent).toContain("You do not need to pay again");
+    const notice = document.body.querySelector('[data-testid="funding-verification-unavailable"]');
+    expect(notice).not.toBeNull();
+    expect(notice?.closest("details")).toBeNull();
+    expect(notice?.textContent).toContain("Verification is temporarily unavailable");
+
+    await wrapper.setProps({ projection: structuredClone(projection) });
+    expect(document.body.querySelector('[data-testid="funding-verification-unavailable"]')).toBeNull();
 
     wrapper.unmount();
   });

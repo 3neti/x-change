@@ -7,6 +7,10 @@ describe('voucher value destination', () => {
     it('uses the shared institution picker and preserves leading account zeroes', async () => {
         const wrapper = mount(ValueFlowDestination, { props: { storedValue: true } });
         await wrapper.get('select').setValue(true);
+        expect(wrapper.getComponent(BankEMISelect).props('compact')).toBe(true);
+        expect(wrapper.get('[data-testid="bank-emi-select-trigger"]').classes()).toContain('h-10');
+        expect(wrapper.get('input[inputmode="numeric"]').classes()).toContain('h-10');
+        expect(wrapper.get('input[inputmode="numeric"]').classes()).not.toContain('text-2xl');
         wrapper.getComponent(BankEMISelect).vm.$emit('update:modelValue', 'GXCHPHM2XXX');
         await wrapper.get('input[inputmode="numeric"]').setValue('0917 999 9999');
         expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['instapay.gxchphm2xxx.account:09179999999']);
