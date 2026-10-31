@@ -39,10 +39,13 @@ function setAccount(event: Event): void {
             <option :value="true">Bank / Wallet</option>
         </select>
         <div v-if="external" class="grid min-w-0 gap-3">
-            <BankEMISelect v-model="bank" settlement-rail="INSTAPAY" :disabled="disabled" @update:model-value="update" />
+            <div class="grid gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-200">
+                <span>Destination</span>
+                <BankEMISelect v-model="bank" compact settlement-rail="INSTAPAY" :disabled="disabled" @update:model-value="update" />
+            </div>
             <label class="grid gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-200">
                 Account Number
-                <input :value="account" inputmode="numeric" autocomplete="off" maxlength="34" placeholder="Enter account number" class="h-14 w-full rounded-xl border border-slate-300 bg-white px-3 text-center text-2xl font-semibold tracking-widest text-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50" @input="setAccount" />
+                <input :value="account" inputmode="numeric" autocomplete="off" maxlength="34" placeholder="Enter account number" class="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" @input="setAccount" />
             </label>
             <p class="text-xs leading-relaxed text-slate-600 dark:text-slate-400">{{ storedValue ? 'Every spend from this Pay Code goes to this account via InstaPay.' : 'Payments collected through this Pay Code go to this account via InstaPay.' }}</p>
         </div>

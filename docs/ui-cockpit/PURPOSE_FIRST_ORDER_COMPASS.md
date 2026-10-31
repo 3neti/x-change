@@ -1,7 +1,9 @@
 # Purpose-first Order card compass
 
-**Status:** Local implementation and automated checks complete; sandbox review in progress.  
-**Owner:** x-change package; the sandbox hosts generated projections.  
+**Status:** Release verification in progress.
+
+**Owner:** x-change package; the sandbox hosts generated projections.
+
 **Plan:** [Purpose-first Order card](PURPOSE_FIRST_ORDER_PLAN.md).
 
 ## North star

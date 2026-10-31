@@ -8,6 +8,7 @@ interface Props {
     modelValue?: string;
     settlementRail?: string | null;
     disabled?: boolean;
+    compact?: boolean;
     institutions?: MoneyIssuerOption[];
 }
 
@@ -27,6 +28,7 @@ const props = withDefaults(defineProps<Props>(), {
     modelValue: undefined,
     settlementRail: null,
     disabled: false,
+    compact: false,
     institutions: () => [],
 });
 
@@ -130,7 +132,8 @@ const selectInstitution = (value: string) => {
             :disabled="disabled"
             :aria-expanded="open"
             aria-haspopup="listbox"
-            class="flex min-h-16 w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-left text-base font-semibold text-slate-950 shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+            class="flex w-full min-w-0 items-center justify-between gap-3 border bg-white text-left text-slate-950 transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-950 dark:text-white"
+            :class="compact ? 'h-10 rounded-lg border-slate-300 px-3 text-sm font-normal dark:border-slate-700' : 'min-h-16 rounded-xl border-slate-200 px-3.5 py-3 text-base font-semibold shadow-sm dark:border-slate-800'"
             data-testid="bank-emi-select-trigger"
             @click="open = !open"
             @keydown.esc="open = false"
@@ -144,13 +147,13 @@ const selectInstitution = (value: string) => {
                     :alt="selectedInstitution.label"
                     size-class="h-6 w-6"
                 />
-                <span class="truncate text-lg leading-tight">{{ selectedInstitution.label }}</span>
+                <span :class="compact ? 'truncate text-sm' : 'truncate text-lg leading-tight'">{{ selectedInstitution.label }}</span>
             </span>
             <span v-else class="flex min-w-0 flex-col">
-                <span class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                <span v-if="!compact" class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                     Destination
                 </span>
-                <span class="truncate text-lg font-semibold text-slate-950 dark:text-white">
+                <span :class="compact ? 'truncate text-sm text-slate-900 dark:text-slate-100' : 'truncate text-lg font-semibold text-slate-950 dark:text-white'">
                     Choose wallet or bank
                 </span>
             </span>
