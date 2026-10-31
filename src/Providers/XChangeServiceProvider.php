@@ -2334,7 +2334,7 @@ class XChangeServiceProvider extends ServiceProvider
 
             $this->callAfterResolving(Schedule::class, function (Schedule $schedule) use ($batchSize): void {
                 $schedule
-                    ->command("xchange:reconcile:pending --limit={$batchSize}")
+                    ->command("xchange:reconcile:pending --exclude-manual-review --limit={$batchSize}")
                     ->name('xchange:reconcile:pending')
                     ->everyMinute()
                     ->onOneServer()

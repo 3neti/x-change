@@ -17,6 +17,7 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
+use LBHurtado\XChange\Contracts\DisbursementStatusFetcherContract;
 use LBHurtado\XChange\Contracts\Execution\StoredValueDestinationAuthorityContract;
 use LBHurtado\XChange\Contracts\SettlementRailCapabilityRegistryContract;
 use LBHurtado\XChange\Data\Execution\StoredValueDestinationAuthorityData;
@@ -76,6 +77,25 @@ it('reserves each collection independently and replays without a second reservat
     expect($provider->disburseCallCount)->toBe(1)
         ->and($provider->lastRequest->account_number)->toBe('09179999999')
         ->and($payout->fresh()->status)->toBe('pending');
+});
+
+it('reconciles a delayed payout once without submitting another transfer', function (): void {
+    [$service, $voucher, $source] = valueFlowPayoutFixture();
+    $payout = DB::transaction(fn () => $service->prepare($voucher, $source, 2_500, 'delayed-status'));
+    $provider = fakePayoutProvider()->willReturnPendingResult(provider: 'netbank');
+    $service->submit($payout->id);
+    $fetcher = Mockery::mock(DisbursementStatusFetcherContract::class);
+    $fetcher->shouldReceive('fetch')->twice()->andReturn(['status' => 'pending'], ['status' => 'completed']);
+    app()->instance(DisbursementStatusFetcherContract::class, $fetcher);
+
+    $this->artisan('xchange:reconcile:pending', ['--id' => $payout->id, '--status-only' => true])->assertSuccessful();
+    expect($payout->fresh()->status)->toBe('pending')
+        ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(10_000);
+    $this->artisan('xchange:reconcile:pending', ['--id' => $payout->id, '--status-only' => true])->assertSuccessful();
+    $this->artisan('xchange:reconcile:pending', ['--id' => $payout->id, '--status-only' => true])->assertSuccessful();
+    expect($payout->fresh()->internal_status)->toBe('finalized')
+        ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(7_500)
+        ->and($provider->disburseCallCount)->toBe(1);
 });
 
 it('rejects conflicting replay and rolls back all funding mutations', function (): void {

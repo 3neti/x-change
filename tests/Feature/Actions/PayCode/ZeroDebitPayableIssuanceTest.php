@@ -79,3 +79,65 @@ it('permits zero-debit payable issuance while compatibility is ahead', function 
         ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(5_000)
         ->and(data_get($voucher->metadata, 'treasury.pay_code_reservation'))->toBeNull();
 });
+
+it('does not reserve the collection target for a zero-cash payable with a disbursement claim outcome', function (): void {
+    $user = actingAsTestUser(6_000);
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.commercial.enabled', true);
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision(
+        $user,
+        ['netbank-primary'],
+    );
+    app(VerifiedTreasuryFundingAllocationContract::class)->allocate(
+        accountReference: 'wallet:'.$user->wallet->uuid,
+        provider: 'netbank',
+        amountMinor: 5_000,
+        currency: 'PHP',
+        evidenceReference: 'netbank:payable-issuance:zero-debit',
+    );
+    $funding = Mockery::mock(ProviderFundingPolicyContract::class);
+    $funding->shouldReceive('assertCanIssue')
+        ->once()
+        ->andReturn(FundingDecisionData::allowed(
+            authority: 'local_ledger',
+            availableMinor: 5_000,
+            requiredMinor: 0,
+            currency: 'PHP',
+            meta: [
+                'provider' => 'netbank',
+                'topology' => 'ledger_pooled',
+            ],
+        ));
+    app()->instance(ProviderFundingPolicyContract::class, $funding);
+    $wallet = $user->wallet()->where('slug', 'platform')->sole();
+    $payload = validPayCodePayload(200, 'INSTAPAY', [
+        'voucher_type' => 'payable',
+        'target_amount' => 200,
+        'metadata' => [
+            'issuer_id' => (string) $user->getKey(),
+        ],
+        'feedback' => [
+            'email' => null,
+            'mobile' => null,
+            'webhook' => null,
+        ],
+    ]);
+    data_set($payload, 'cash.amount', 0);
+    data_set($payload, 'claim', [
+        'selection' => 'server',
+        'consumption' => 'one_of',
+        'default_outcome' => 'provider_disbursement',
+        'outcomes' => [['key' => 'provider_disbursement']],
+    ]);
+    data_set($payload, 'inputs.fields', []);
+    $payload['provider'] = 'netbank';
+
+    $result = app(GeneratePayCode::class)->handle($payload);
+    $voucher = Voucher::query()->findOrFail($result->voucher_id);
+
+    expect($result->amount)->toBe(200.0)
+        ->and($result->cost->account_debit)->toBe(0.0)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(6_000)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(5_000)
+        ->and(data_get($voucher->metadata, 'treasury.pay_code_reservation'))->toBeNull();
+});

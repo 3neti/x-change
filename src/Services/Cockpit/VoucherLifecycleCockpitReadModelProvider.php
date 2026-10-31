@@ -160,6 +160,17 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             if ($voucher instanceof Voucher) {
                 $sliceProjection = ($this->slicePlans ?? app(VoucherSlicePlanProjection::class))->forVoucher($voucher);
                 $detail['pos_reference'] = $this->posSaleReferenceService()->forVoucher($voucher);
+                if (is_array($detail['collection'] ?? null)) {
+                    $payouts = DB::table('disbursement_reconciliations')
+                        ->where('voucher_id', $voucher->getKey())
+                        ->where('claim_type', 'value_flow')
+                        ->get(['status', 'internal_status', 'needs_review']);
+                    if ($payouts->isNotEmpty()) {
+                        $needsAttention = $payouts->contains(fn ($payout): bool => (bool) $payout->needs_review || $payout->status === 'failed');
+                        $allFinalized = $payouts->every(fn ($payout): bool => $payout->status === 'succeeded' && $payout->internal_status === 'finalized');
+                        $detail['collection']['payout_status'] = $needsAttention ? 'needs_attention' : ($allFinalized ? 'completed' : 'processing');
+                    }
+                }
             }
         }
         $summary = $this->summary($detail, $code);

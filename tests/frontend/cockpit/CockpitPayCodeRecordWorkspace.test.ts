@@ -1033,6 +1033,7 @@ describe("Cockpit Pay Code record workspace", () => {
             is_fully_collected: false,
             is_overpaid: false,
             overpaid_amount_minor: 0,
+            payout_status: "processing",
           },
         },
         distributionUrl: "/distribution",
@@ -1046,6 +1047,7 @@ describe("Cockpit Pay Code record workspace", () => {
     expect(progress.text()).toContain("Collection");
     expect(progress.text()).toContain("₱40.00");
     expect(progress.text()).toContain("₱60.00");
+    expect(progress.get('[data-testid="value-flow-payout-status"]').text()).toBe("Payout processing");
     expect(wrapper.text()).toContain("Collection:");
     expect(wrapper.text()).toContain("Processing");
   });

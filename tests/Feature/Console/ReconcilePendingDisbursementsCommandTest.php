@@ -97,7 +97,7 @@ it('registers package-owned pending disbursement reconciliation every minute', f
         ->and($event->withoutOverlapping)->toBeTrue()
         ->and($event->onOneServer)->toBeTrue()
         ->and($event->expiresAt)->toBe(5)
-        ->and($event->command)->toContain('xchange:reconcile:pending --limit=50');
+        ->and($event->command)->toContain('xchange:reconcile:pending --exclude-manual-review --limit=50');
 });
 
 it('limits status-only reconciliation to the requested voucher and never submits intents', function (): void {
@@ -118,4 +118,41 @@ it('limits status-only reconciliation to the requested voucher and never submits
     $this->artisan('xchange:reconcile:pending', ['--voucher' => 'chosen', '--status-only' => true])
         ->expectsOutput('Processed: 1')->assertSuccessful();
     expect(DisbursementReconciliation::query()->where('status', 'intent')->count())->toBe(1);
+});
+
+it('flags an overdue value-flow payout for review while continuing status checks', function (): void {
+    config()->set('x-change.disbursement.reconciliation.review_after_minutes', 30);
+    $record = DisbursementReconciliation::query()->create([
+        'voucher_id' => 10, 'voucher_code' => 'OVERDUE', 'claim_type' => 'value_flow',
+        'provider' => 'netbank', 'provider_reference' => 'OVERDUE-REF',
+        'provider_transaction_id' => 'OVERDUE-TX', 'status' => 'pending',
+        'internal_status' => 'reserved', 'amount' => 50, 'currency' => 'PHP',
+        'attempt_count' => 1, 'needs_review' => false, 'attempted_at' => now()->subMinutes(31),
+    ]);
+    $service = Mockery::mock(DisbursementReconciliationContract::class);
+    $service->shouldReceive('reconcile')->twice()->andReturn(['updated' => false, 'resolved_status' => 'pending']);
+    app()->instance(DisbursementReconciliationContract::class, $service);
+
+    $this->artisan('xchange:reconcile:pending', ['--id' => $record->id, '--status-only' => true])->assertSuccessful();
+    expect($record->fresh()->needs_review)->toBeTrue()
+        ->and($record->fresh()->review_reason)->toBe('Payout confirmation is taking longer than expected.');
+    $this->artisan('xchange:reconcile:pending', ['--id' => $record->id, '--status-only' => true])->assertSuccessful();
+    expect($record->fresh()->status)->toBe('pending');
+});
+
+it('can automatically check value-flow payouts without touching manual reviews or other payouts', function (): void {
+    foreach ([['SAFE', 'value_flow', false, null], ['OVERDUE', 'value_flow', true, 'Payout confirmation is taking longer than expected.'], ['UNCERTAIN', 'value_flow', true, 'Provider outcome requires reconciliation.'], ['MANUAL', 'value_flow', true, 'Low-confidence failed status from provider'], ['OTHER', 'withdraw', false, null]] as [$code, $type, $review, $reason]) {
+        DisbursementReconciliation::query()->create([
+            'voucher_id' => 10, 'voucher_code' => $code, 'claim_type' => $type,
+            'provider' => 'netbank', 'provider_reference' => $code, 'provider_transaction_id' => $code,
+            'status' => 'pending', 'internal_status' => 'reserved', 'amount' => 50,
+            'currency' => 'PHP', 'attempt_count' => 1, 'needs_review' => $review,
+            'review_reason' => $reason, 'attempted_at' => now(),
+        ]);
+    }
+    $service = Mockery::mock(DisbursementReconciliationContract::class);
+    $service->shouldReceive('reconcile')->times(3)->andReturn(['updated' => false, 'resolved_status' => 'pending']);
+    app()->instance(DisbursementReconciliationContract::class, $service);
+    $this->artisan('xchange:reconcile:pending', ['--status-only' => true, '--value-flow-only' => true, '--exclude-manual-review' => true])
+        ->expectsOutput('Processed: 3')->assertSuccessful();
 });

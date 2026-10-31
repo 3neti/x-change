@@ -16,6 +16,8 @@ class ReconcilePendingDisbursementsCommand extends Command
         {--voucher= : Restrict reconciliation to one Pay Code}
         {--id= : Restrict reconciliation to one record}
         {--status-only : Only query existing provider transfers; never submit payouts}
+        {--value-flow-only : Restrict reconciliation to value-flow payouts}
+        {--exclude-manual-review : Leave manually flagged payouts for an operator}
         {--json : Output JSON}
         {--pretty : Pretty-print JSON output}';
 
@@ -29,6 +31,16 @@ class ReconcilePendingDisbursementsCommand extends Command
             ->when($this->option('voucher') !== null, fn ($query) => $query->where('voucher_code', strtoupper(trim((string) $this->option('voucher')))))
             ->when($this->option('id') !== null, fn ($query) => $query->whereKey((int) $this->option('id')))
             ->when($this->option('status-only'), fn ($query) => $query->whereNotNull('provider_transaction_id')->whereNotIn('status', ['intent', 'failed']))
+            ->when($this->option('value-flow-only'), fn ($query) => $query->where('claim_type', 'value_flow'))
+            ->when($this->option('exclude-manual-review'), fn ($query) => $query->where(function ($subQuery): void {
+                $subQuery->where('claim_type', '!=', 'value_flow')
+                    ->orWhere('needs_review', false)
+                    ->orWhereIn('review_reason', [
+                        'Payout confirmation is taking longer than expected.',
+                        'Provider outcome requires reconciliation.',
+                        'Provider submission outcome awaiting evidence.',
+                    ]);
+            }))
             ->where(function ($query) {
                 $query->where(function ($query): void {
                     $query->where('claim_type', 'value_flow')->where(function ($query): void {
@@ -55,6 +67,7 @@ class ReconcilePendingDisbursementsCommand extends Command
                     $query->where('claim_type', 'value_flow')->whereIn('status', ['intent', 'failed']);
                 });
             })
+            ->orderBy('last_checked_at')
             ->orderBy('attempted_at')
             ->orderBy('id')
             ->limit($limit)
@@ -101,6 +114,19 @@ class ReconcilePendingDisbursementsCommand extends Command
                     'error' => $e->getMessage(),
                 ];
             }
+
+            $reviewAfterMinutes = max(1, (int) config('x-change.disbursement.reconciliation.review_after_minutes', 30));
+            DisbursementReconciliation::query()
+                ->whereKey($row->getKey())
+                ->where('claim_type', 'value_flow')
+                ->whereIn('status', ['pending', 'unknown'])
+                ->where('needs_review', false)
+                ->whereNotNull('attempted_at')
+                ->where('attempted_at', '<=', now()->subMinutes($reviewAfterMinutes))
+                ->update([
+                    'needs_review' => true,
+                    'review_reason' => 'Payout confirmation is taking longer than expected.',
+                ]);
         }
 
         $payload = [
