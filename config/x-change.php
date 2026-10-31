@@ -2941,6 +2941,7 @@ return [
                 'XCHANGE_DISBURSEMENT_RECONCILIATION_SCHEDULED_BATCH_SIZE',
                 50,
             ),
+            'review_after_minutes' => (int) env('XCHANGE_DISBURSEMENT_REVIEW_AFTER_MINUTES', 30),
         ],
     ],
 

@@ -53,6 +53,7 @@ final class CockpitPayCodeDetailProjection
                 'is_fully_collected',
                 'is_overpaid',
                 'overpaid_amount_minor',
+                'payout_status',
             ]),
         ];
     }

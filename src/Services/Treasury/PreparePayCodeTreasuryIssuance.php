@@ -39,6 +39,10 @@ final readonly class PreparePayCodeTreasuryIssuance
             return;
         }
 
+        if (data_get($input, 'voucher_type') === 'payable') {
+            return;
+        }
+
         $policy = $this->claimPolicies->resolveInstructions(
             VoucherInstructionsData::from($input),
         );

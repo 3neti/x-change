@@ -1892,6 +1892,9 @@ function number(value: unknown): number {
           </div>
           <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">Target {{ formatMoney(collection.target_amount_minor, collection.currency) }}</p>
           <p class="mt-1 text-sm text-slate-700 dark:text-slate-200">{{ formatMoney(collection.collected_total_minor, collection.currency) }} collected · {{ formatMoney(collection.remaining_to_collect_minor, collection.currency) }} remaining</p>
+          <p v-if="collection.payout_status" class="mt-2 text-sm font-semibold text-slate-700 dark:text-slate-200" data-testid="value-flow-payout-status">
+            {{ collection.payout_status === 'completed' ? 'Payout completed' : collection.payout_status === 'needs_attention' ? 'Payout needs attention' : 'Payout processing' }}
+          </p>
           <p v-if="collection.is_overpaid === true" class="mt-1 text-xs font-semibold text-amber-800 dark:text-amber-200">Overpaid by {{ formatMoney(collection.overpaid_amount_minor, collection.currency) }}</p>
         </div>
         <div
