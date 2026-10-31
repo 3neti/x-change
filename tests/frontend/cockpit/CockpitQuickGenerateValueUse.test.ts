@@ -516,12 +516,16 @@ it('places a payable destination under v2 execution in the preview and submitted
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
   wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', 'instapay.gcash.mobile:09179999999');
   await flushPromises();
+  expect(preview(wrapper).cash.amount).toBe(0);
+  expect(preview(wrapper).target_amount).toBe(100);
   expect(preview(wrapper).execution).toEqual({ schema: 'voucher.execution.v2', driver: 'default', value_flow: { destination: 'instapay.gcash.mobile:09179999999' } });
   expect(preview(wrapper)).not.toHaveProperty('value_flow');
   await wrapper.get('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
   await flushPromises();
   const request = fetchMock.mock.calls.find(([url, options]) => url === '/x/cockpit/quick-generate' && options.method === 'POST');
   expect(request).toBeDefined();
+  expect(JSON.parse(request![1].body).cash.amount).toBe(0);
+  expect(JSON.parse(request![1].body).target_amount).toBe(100);
   expect(JSON.parse(request![1].body).execution).toEqual(preview(wrapper).execution);
 });
 
@@ -544,6 +548,39 @@ it('builds the zero-disbursement PhilHealth attestation, review and payment work
     value_flow: { destination: 'instapay.gcash.mobile:09179999999' },
     events: { attest: { actor: 'beneficiary' }, review: { actor: 'hospital_reviewer' }, settle: { actor: 'payer' } },
   });
+});
+
+it('builds payable subscriptions from the supplied event catalog', async () => {
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: {
+    templates: cockpitQuickGenerateTemplates,
+    v2EventCatalog: {
+      'settlement.payment_collected': { label: 'Payment confirmed', stage: 'settle', workflows: ['payable', 'philhealth'] },
+      'settlement.payout_failed': { label: 'Payout failed', stage: 'settle', workflows: ['payable'], requires_destination: true },
+    },
+  } });
+  await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('100');
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
+  await openOrderOptions(wrapper);
+  await wrapper.get('[data-testid="v2-event-add-webhook"]').trigger('click');
+  expect(wrapper.find('[data-testid="v2-event-0-settlement.payout_failed"]').exists()).toBe(false);
+  await wrapper.get('[data-testid="v2-event-webhook-url-0"]').setValue('https://example.test/events');
+  await wrapper.get('[data-testid="v2-event-0-settlement.payment_collected"]').setValue(true);
+  await wrapper.get('[data-testid="v2-event-add-webhook"]').trigger('click');
+  await wrapper.get('[data-testid="v2-event-webhook-url-1"]').setValue('https://example.test/other');
+  await wrapper.get('[data-testid="v2-event-1-settlement.payment_collected"]').setValue(true);
+  const instruction = preview(wrapper);
+  expect(instruction.feedback.webhooks).toEqual([
+    { url: 'https://example.test/events', events: ['settlement.payment_collected'] },
+    { url: 'https://example.test/other', events: ['settlement.payment_collected'] },
+  ]);
+  expect(instruction.execution.events.settle).toMatchObject({ actor: 'payer', requires: ['confirmed_payment'] });
+  wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', 'instapay.gcash.mobile:09179999999');
+  await flushPromises();
+  await wrapper.get('[data-testid="v2-event-0-settlement.payout_failed"]').setValue(true);
+  expect(preview(wrapper).feedback.webhooks[0].events).toEqual(['settlement.payment_collected', 'settlement.payout_failed']);
+  wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', '');
+  await flushPromises();
+  expect(wrapper.text()).toContain('Remove events that are unavailable for this workflow.');
 });
 
 

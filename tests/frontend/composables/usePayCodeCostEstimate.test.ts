@@ -13,7 +13,7 @@ const EstimateHarness = defineComponent({
             },
         }));
         const canEstimate = computed(() => amount.value > 0);
-        const { estimate, estimating, estimateError } = usePayCodeCostEstimate(
+        const { estimate, estimatePayload, estimating, estimateError } = usePayCodeCostEstimate(
             requestPayload,
             canEstimate,
         );
@@ -21,6 +21,7 @@ const EstimateHarness = defineComponent({
         return {
             amount,
             estimate,
+            estimatePayload,
             estimating,
             estimateError,
         };
@@ -85,6 +86,7 @@ describe('usePayCodeCostEstimate', () => {
             },
         });
         expect(wrapper.get('[data-testid="total"]').text()).toBe('17');
+        expect(JSON.parse(wrapper.vm.estimatePayload as string)).toEqual({ cash: { amount: 1, currency: 'PHP' } });
     });
 
     it('keeps the last good estimate when a later refresh fails', async () => {
@@ -115,6 +117,7 @@ describe('usePayCodeCostEstimate', () => {
         await vi.advanceTimersByTimeAsync(500);
         await nextTick();
         expect(wrapper.get('[data-testid="total"]').text()).toBe('12');
+        expect(JSON.parse(wrapper.vm.estimatePayload as string)).toEqual({ cash: { amount: 1, currency: 'PHP' } });
 
         await wrapper.find('[data-testid="amount"]').trigger('click');
         await vi.advanceTimersByTimeAsync(500);

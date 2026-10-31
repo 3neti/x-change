@@ -66,7 +66,7 @@ const handoffDescription = computed(
     () => props.screen.handoff?.description || props.screen.description,
 );
 const formFlowPages = import.meta.glob<{ default: Component }>(
-    ['/resources/js/pages/form-flow/**/*.vue', '/resources/js/pages/x-change/claim/Settlement*.vue'],
+    ['/resources/js/pages/form-flow/**/*.vue', '/resources/js/pages/x-change/claim/Settlement*.vue', '/resources/js/pages/x-change/claim/Payment.vue'],
 );
 const actualScreenComponent = computed<Component | null>(() => {
     if (!props.screen.component) return null;
@@ -92,6 +92,7 @@ const actualScreenComponent = computed<Component | null>(() => {
     >
         <div
             v-if="actualScreenComponent"
+            :inert="screen.kind === 'payment_preview'"
             class="bg-background h-full min-h-0 w-full overflow-y-auto"
             data-testid="cockpit-claim-actual-screen"
         >

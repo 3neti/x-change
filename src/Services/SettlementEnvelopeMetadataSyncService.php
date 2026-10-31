@@ -5,12 +5,66 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services;
 
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\Settlement\V2EvidenceEventJournal;
 
 class SettlementEnvelopeMetadataSyncService
 {
+    public function __construct(private readonly V2EvidenceEventJournal $events) {}
+
     public function syncPatientAttestation(Voucher $voucher, array $payload, ?VoucherClaim $evidenceClaim = null): Voucher
+    {
+        return DB::transaction(function () use ($voucher, $payload, $evidenceClaim): Voucher {
+            $locked = Voucher::query()->lockForUpdate()->findOrFail($voucher->getKey());
+            $updated = $this->persistPatientAttestation($locked, $payload, $evidenceClaim);
+            $this->events->settlementReadyAfterReview($updated);
+
+            return $updated;
+        });
+    }
+
+    /** @param array{payload?: array, documents?: array, checklist?: array} $evidence */
+    public function syncEvidence(Voucher $voucher, array $evidence): Voucher
+    {
+        if (array_diff(array_keys($evidence), ['payload', 'documents', 'checklist']) !== []) {
+            throw new \InvalidArgumentException('Unsupported settlement evidence section.');
+        }
+        foreach ($evidence as $section) {
+            if (! is_array($section)) {
+                throw new \InvalidArgumentException('Settlement evidence sections must be arrays.');
+            }
+        }
+
+        return DB::transaction(function () use ($voucher, $evidence): Voucher {
+            $locked = Voucher::query()->lockForUpdate()->findOrFail($voucher->getKey());
+            $metadata = $this->metadata($locked);
+            $driver = $this->validatedInstructionDriver($metadata);
+            if ($driver !== null && array_key_exists('amount_verified', $evidence['checklist'] ?? [])
+                && data_get($metadata, 'settlement_envelope.checklist.amount_verified') !== $evidence['checklist']['amount_verified']) {
+                throw new \InvalidArgumentException('Amount verification requires an authorized settlement review.');
+            }
+
+            $envelope = (array) data_get($metadata, 'settlement_envelope', []);
+            if ($driver !== null) {
+                $envelope['driver'] = $driver;
+            }
+            foreach (['payload', 'documents', 'checklist'] as $section) {
+                $value = [...(array) ($envelope[$section] ?? $metadata['settlement_'.$section] ?? []), ...($evidence[$section] ?? [])];
+                $envelope[$section] = $value;
+                $metadata['settlement_'.$section] = $value;
+            }
+            $envelope['updated_at'] = now()->toISOString();
+            $metadata['settlement_envelope'] = $envelope;
+            $locked->forceFill(['metadata' => $metadata])->save();
+            $this->events->settlementReadyAfterReview($locked);
+
+            return $locked->refresh();
+        });
+    }
+
+    private function persistPatientAttestation(Voucher $voucher, array $payload, ?VoucherClaim $evidenceClaim): Voucher
     {
         $metadata = $this->metadata($voucher);
 

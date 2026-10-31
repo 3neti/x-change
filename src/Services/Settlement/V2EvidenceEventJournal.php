@@ -7,10 +7,12 @@ namespace LBHurtado\XChange\Services\Settlement;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\V2EvidenceOutbox;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XJournal\Data\ExecutionActorData;
 use LBHurtado\XJournal\Data\ExecutionJournalEntryData;
 use LBHurtado\XJournal\Data\ExecutionReferenceData;
@@ -19,7 +21,11 @@ use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
 
 final readonly class V2EvidenceEventJournal
 {
-    public function __construct(private ExecutionJournalRecorder $journal, private V2EventWebhookDelivery $webhooks) {}
+    public function __construct(
+        private ExecutionJournalRecorder $journal,
+        private V2EventWebhookDelivery $webhooks,
+        private SettlementCollectionGate $collectionGate,
+    ) {}
 
     public function attestationEvidenceCaptured(Voucher $voucher, VoucherClaim $claim): void
     {
@@ -66,6 +72,28 @@ final readonly class V2EvidenceEventJournal
 
         $this->record($voucher, 'settlement.amount_reviewed', 'voucher-review:'.$voucher->getKey().':'.$reference,
             CarbonImmutable::parse($review['reviewed_at']), ['manifest_sha256' => $manifest, 'amount_minor' => $amountMinor]);
+    }
+
+    public function settlementReadyAfterReview(Voucher $voucher): void
+    {
+        if (! $this->declares($voucher, 'review')) {
+            return;
+        }
+
+        $review = data_get($voucher->metadata, 'settlement_envelope.amount_review');
+        if (! is_array($review) || ! is_string($review['reference'] ?? null) || empty($review['reviewed_at'])) {
+            return;
+        }
+
+        $context = $this->collectionGate->contextFromVoucher($voucher);
+        try {
+            $this->collectionGate->ensureCollectibleSettlementIsReady($voucher);
+        } catch (VoucherRequiresSettlementEnvelope) {
+            return;
+        }
+
+        $this->record($voucher, 'settlement.ready', 'voucher-review:'.$voucher->getKey().':'.$review['reference'],
+            CarbonImmutable::now(), ['gate' => $context['gate']]);
     }
 
     public function payoutConverged(DisbursementReconciliation $payout): void

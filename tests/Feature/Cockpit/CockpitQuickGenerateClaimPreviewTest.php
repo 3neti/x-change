@@ -93,6 +93,31 @@ it('renders a dry-run claim preview from quick generate instructions', function 
         ->not->toContain('09173011987');
 });
 
+it('shows a payable payment page instead of the disbursement claim journey', function (): void {
+    $issuer = actingAsTestUser();
+    $response = $this->postJson(route('x-change.cockpit.quick-generate.claim-previews.store'), [
+        'cash' => ['amount' => 0, 'currency' => 'PHP'], 'inputs' => ['fields' => []],
+        'feedback' => ['mobile' => null], 'rider' => ['message' => 'Payment for services'],
+        'voucher_type' => 'payable', 'target_amount' => 100, 'fee_bearer' => 'issuer',
+        'metadata' => ['collection_wallet_id' => (string) $issuer->wallet->id],
+        'execution' => ['schema' => 'voucher.execution.v2', 'driver' => 'default',
+            'value_flow' => ['destination' => 'instapay.gcash.mobile:09179999999']],
+        'dry_run' => true, 'refresh_preview' => true,
+    ]);
+    $response->assertOk()->assertJsonPath('journey.step_count', 5)
+        ->assertJsonPath('journey.steps.0.key', 'payment-page')
+        ->assertJsonPath('journey.steps.0.actor', 'payer')
+        ->assertJsonPath('journey.steps.0.screen.component', 'x-change/claim/Payment')
+        ->assertJsonPath('journey.steps.0.screen.props.previewMode', true)
+        ->assertJsonPath('journey.steps.0.screen.props.payment.target_amount_minor', 10000)
+        ->assertJsonPath('journey.steps.0.screen.props.payment.amount_due_minor', 10000)
+        ->assertJsonPath('journey.steps.0.screen.props.payment.can_create_attempt', false);
+    expect(collect($response->json('journey.steps'))->pluck('key')->all())
+        ->toBe(['payment-page', 'payment-qr', 'payment-verifying', 'payment-receipt', 'payment-delivery']);
+    expect(data_get($response->json(), 'journey.steps.4.screen.props.payment.receipt.payments.0.delivery.status'))->toBe('pending');
+    expect($response->getContent())->not->toContain('09179999999');
+});
+
 it('shows the PhilHealth settlement phases in the generated claim preview', function (): void {
     $issuer = actingAsTestUser();
     $response = $this->postJson(route('x-change.cockpit.quick-generate.claim-previews.store'), [
@@ -130,6 +155,8 @@ it('previews the PhilHealth instruction built by the cockpit form', function ():
         'claim' => ['outcomes' => [['key' => 'provider_disbursement']], 'selection' => 'server', 'consumption' => 'one_of', 'default_outcome' => 'provider_disbursement', 'onboarding' => ['mode' => 'if_required'], 'claimant' => ['mode' => 'unbound'], 'profile' => 'voucher.claim.v1'],
         'metadata' => ['flow_type' => 'settlement', 'custom' => ['cockpit' => ['template_key' => 'blank-pay-code', 'source' => 'cockpit.quick-generate', 'builder' => 'guided-voucher-instruction-builder', 'payee' => ['kind' => 'open', 'explicit_secret' => false]]]],
         'voucher_type' => 'settlement', 'target_amount' => 20000,
+        'presentation' => ['stamp' => ['design_id' => 'steampunk', 'design_version' => 8, 'show_logo' => true, 'show_tagline' => true, 'claim_marker' => 'qr']],
+        'pricing' => ['quote_reference' => 'commercial-quote:'.str_repeat('a', 64), 'currency' => 'PHP', 'fee_bearer' => 'issuer', 'quote_hash' => str_repeat('a', 64)],
         'rules' => ['auto_close_on_full_payment' => true],
         'execution' => [
             'schema' => 'voucher.execution.v2', 'driver' => 'settlement_envelope',

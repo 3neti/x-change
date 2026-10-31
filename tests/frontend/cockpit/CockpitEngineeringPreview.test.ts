@@ -25,10 +25,36 @@ function json(wrapper: ReturnType<typeof panel>): string {
 }
 
 describe('Engineering Preview exports', () => {
+    it('includes only a quote matching the current pricing request', async () => {
+        vi.useFakeTimers();
+        try {
+            const hash = 'a'.repeat(64);
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({ success: true, data: { currency: 'PHP', total: 15, commercial_quote_reference: `commercial-quote:${hash}` } }),
+            }));
+            const wrapper = panel();
+            await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('100');
+            await vi.advanceTimersByTimeAsync(600);
+            await flushPromises();
+            expect(JSON.parse(json(wrapper)).pricing).toEqual({ quote_reference: `commercial-quote:${hash}`, quote_hash: hash, currency: 'PHP', fee_bearer: 'issuer' });
+            await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('200');
+            expect(JSON.parse(json(wrapper))).not.toHaveProperty('pricing');
+        } finally {
+            vi.useRealTimers();
+        }
+    });
     it('shows an explicit v2 execution for a new ordinary Pay Code', () => {
         const instructions = JSON.parse(json(panel()));
         expect(instructions.execution).toEqual({ schema: 'voucher.execution.v2', driver: 'default' });
         expect(instructions.claim.profile).toBe('voucher.claim.v1');
+        expect(instructions.presentation.stamp).toMatchObject({
+            design_id: instructions.rider.stamp.design_id,
+            design_version: instructions.rider.stamp.design_version,
+            show_logo: instructions.rider.stamp.show_logo,
+            show_tagline: instructions.rider.stamp.show_tagline,
+            claim_marker: instructions.rider.stamp.claim_marker,
+        });
     });
     it('copies the current full JSON and keeps the preview collapsible', async () => {
         const writeText = vi.fn().mockResolvedValue(undefined);

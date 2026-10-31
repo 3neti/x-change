@@ -1309,6 +1309,7 @@ function stringValue(value: unknown): string | null {
           :campaign-context="campaignContext"
           :application-journey="props.application_journey"
           :feedback-defaults="props.feedback_defaults"
+          :v2-event-catalog="props.v2_event_catalog ?? {}"
           :onboarding-otp-required="
             props.onboarding_policy?.otp_required ?? true
           "

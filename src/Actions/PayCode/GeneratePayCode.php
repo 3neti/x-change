@@ -235,6 +235,10 @@ class GeneratePayCode
      */
     private function assertAcceptedPricing(array $input, PricingEstimateData $estimate): void
     {
+        $decision = data_get($input, 'pricing');
+        if (data_get($input, 'execution.schema') === 'voucher.execution.v2' && is_array($decision)) {
+            ($this->pricingAcceptance ??= app(CommercialPricingAcceptanceGuard::class))->assertV2Decision($decision, $estimate);
+        }
         $expected = data_get($input, '_pricing');
 
         if (! is_array($expected)) {

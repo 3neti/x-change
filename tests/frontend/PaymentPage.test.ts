@@ -36,6 +36,30 @@ const pendingPayment = {
 };
 
 describe('PaymentPage', () => {
+    it('shows an unscannable QR illustration without polling or submitting', () => {
+        const payment = { ...pendingPayment, attempt: { reference: 'PREVIEW', status: 'awaiting_payment',
+            provider: 'netbank', amount_minor: 10000, currency: 'PHP', expires_at: null,
+            last_checked_at: null, can_check: false, qr_code: null } };
+        const wrapper = mount(PaymentPage, { props: { payment, previewMode: true, previewStage: 'payment-qr' } });
+        expect(wrapper.find('[data-testid="payer-preview-notice"]').exists()).toBe(false);
+        expect(wrapper.get('[data-testid="payer-preview-qr"]').text()).toContain('not scannable');
+        expect(wrapper.find('[data-testid="payer-qr-ph-artifact"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="payer-invoice-step"]').exists()).toBe(true);
+        expect(usePoll).toHaveBeenCalledWith(5000, expect.any(Object), { autoStart: false, mode: 'rest' });
+        expect(routerPost).not.toHaveBeenCalled();
+        wrapper.unmount();
+    });
+
+    it('keeps the payment preview read-only and does not guess payer fees', async () => {
+        const wrapper = mount(PaymentPage, { props: { payment: pendingPayment, previewMode: true, previewFeePending: true } });
+        expect(wrapper.text()).toContain('Calculated at payment');
+        expect(usePoll).toHaveBeenCalledWith(5000, expect.any(Object), { autoStart: false, mode: 'rest' });
+        await wrapper.get('[data-testid="payer-method-qr"]').trigger('click');
+        await wrapper.get('[data-testid="payer-create-qr"]').trigger('click');
+        expect(routerPost).not.toHaveBeenCalled();
+        wrapper.unmount();
+    });
+
     it('keeps polling delivery after full repayment and stops once delivered', async () => {
         const receipt = { pay_code: 'PAY-1234', amount_paid_minor: 10000, currency: 'PHP', completed_at: null,
             payments: [{ collection_number: 1, amount_paid_minor: 10000, provider: 'netbank', receipt_reference: 'R1', completed_at: null,

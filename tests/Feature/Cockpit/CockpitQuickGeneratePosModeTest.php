@@ -172,6 +172,18 @@ it('keeps POS references canonical, repeatable, and replay safe', function (): v
     ])->postJson(route('x-change.cockpit.quick-generate.store'), $changed)->assertConflict();
 });
 
+it('issues a zero-cash payable from its collection target', function (): void {
+    actingAsTestUser();
+    $payload = cockpitPosPayload();
+    data_set($payload, 'cash.amount', 0);
+    $response = $this->withHeaders([
+        'Accept' => 'application/json', 'Idempotency-Key' => 'zero-cash-payable',
+    ])->postJson(route('x-change.cockpit.quick-generate.store'), $payload)->assertCreated();
+    $voucher = Voucher::query()->where('code', $response->json('result.code'))->sole();
+    expect(data_get($voucher->metadata, 'instructions.cash.amount'))->toBe(0)
+        ->and(data_get($voucher->metadata, 'instructions.target_amount'))->toBe(50);
+});
+
 it('allows purpose and order number to be omitted', function (): void {
     actingAsTestUser();
     $payload = cockpitPosPayload();

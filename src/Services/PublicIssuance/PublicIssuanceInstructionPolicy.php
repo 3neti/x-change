@@ -21,6 +21,9 @@ final readonly class PublicIssuanceInstructionPolicy
         if ($this->filled(data_get($payload, 'feedback.webhook'))) {
             $errors['feedback.webhook'][] = 'Webhook destinations are unavailable for public issuance.';
         }
+        if (data_get($payload, 'feedback.webhooks') !== null && data_get($payload, 'feedback.webhooks') !== []) {
+            $errors['feedback.webhooks'][] = 'Webhook destinations are unavailable for public issuance.';
+        }
 
         if ((bool) data_get($payload, 'onboarding', false)) {
             $errors['onboarding'][] = 'Invitation issuance is unavailable on the public surface.';

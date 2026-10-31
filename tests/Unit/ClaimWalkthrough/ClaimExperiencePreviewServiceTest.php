@@ -35,6 +35,20 @@ beforeEach(function (): void {
     ]);
 });
 
+it('uses the payment page for payable instructions across schema versions', function (string $schema): void {
+    $scenario = ['fixture' => ['instructions' => [
+        'voucher_type' => 'payable', 'target_amount' => 100, 'fee_bearer' => 'payer',
+        'cash' => ['amount' => 0, 'currency' => 'PHP'], 'execution' => ['schema' => $schema],
+    ]], 'checkpoints' => [['key' => 'claim-entry']]];
+    $journey = app(ClaimPreviewJourneyManifestFactory::class)->fromReport([], $scenario);
+    expect(collect($journey['steps'])->pluck('key')->all())->toBe(['payment-page', 'payment-qr', 'payment-verifying', 'payment-receipt'])
+        ->and(data_get($journey, 'steps.0.screen.props.previewFeePending'))->toBeTrue()
+        ->and(data_get($journey, 'steps.0.screen.props.payment.target_amount_minor'))->toBe(10000)
+        ->and(data_get($journey, 'steps.1.screen.props.payment.attempt.status'))->toBe('awaiting_payment')
+        ->and(data_get($journey, 'steps.2.screen.props.payment.attempt.status'))->toBe('verified')
+        ->and(data_get($journey, 'steps.3.screen.props.payment.is_fully_paid'))->toBeTrue();
+})->with(['voucher.execution.v1', 'voucher.execution.v2']);
+
 it('projects the patient, hospital and payment waits for a PhilHealth settlement', function (): void {
     $scenario = ['fixture' => ['instructions' => [
         'target_amount' => 20000,
@@ -51,6 +65,25 @@ it('projects the patient, hospital and payment waits for a PhilHealth settlement
     $artifact = new ClaimPreviewArtifact(['reference' => 'preview123', 'metadata' => ['journey' => $journey]]);
     $manifest = app(ClaimPreviewWebManifestPresenter::class)->present($artifact);
     expect(collect($manifest['journey']['steps'])->firstWhere('key', 'settlement-review')['actor'])->toBe('Hospital');
+});
+
+it('projects simulated payment and payout stages only when instructed', function (): void {
+    $scenario = ['fixture' => ['instructions' => ['execution' => [
+        'schema' => 'voucher.execution.v2',
+        'events' => ['settle' => ['actor' => 'payer']],
+        'value_flow' => ['destination' => 'instapay.example.account:1234'],
+    ]]], 'checkpoints' => []];
+    $factory = app(ClaimPreviewJourneyManifestFactory::class);
+    $steps = collect($factory->fromReport([], $scenario)['steps'])->keyBy('key');
+    expect($steps->get('execution-payment')['screen']['simulated'])->toBeTrue()
+        ->and($steps->get('execution-payout')['screen']['description'])->toContain('recovery');
+
+    data_set($scenario, 'fixture.instructions.execution.value_flow.destination', 'client_funds');
+    expect(collect($factory->fromReport([], $scenario)['steps'])->pluck('key')->all())
+        ->toContain('execution-payment')->not->toContain('execution-payout');
+    data_set($scenario, 'fixture.instructions.execution.schema', 'voucher.execution.v1');
+    expect(collect($factory->fromReport([], $scenario)['steps'])->pluck('key')->all())
+        ->not->toContain('execution-payment');
 });
 
 it('renders and caches preview artifacts from voucher instructions', function (): void {

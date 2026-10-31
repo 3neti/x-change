@@ -8,6 +8,22 @@ use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
 use LBHurtado\XChange\Data\PricingEstimateData;
 
+it('estimates a v2 payable without accepting a collection wallet from the browser', function (): void {
+    $input = [
+        'cash' => ['amount' => 0, 'currency' => 'PHP', 'validation' => []], 'voucher_type' => 'payable', 'target_amount' => 100,
+        'inputs' => ['fields' => []], 'feedback' => ['email' => null, 'mobile' => null, 'webhook' => null],
+        'rider' => ['message' => null, 'url' => null, 'splash' => null], 'count' => 1,
+        'execution' => ['schema' => 'voucher.execution.v2', 'driver' => 'default'],
+    ];
+    $pricing = Mockery::mock(PricingServiceContract::class);
+    $pricing->shouldReceive('estimate')->once()->with(Mockery::on(function (VoucherInstructionsData $instructions): bool {
+        return $instructions->metadata->collection_wallet_id === 'pricing-preview-only';
+    }))->andReturn(['currency' => 'PHP', 'total' => 15]);
+
+    expect((new EstimatePayCodeCost($pricing))->handle($input)->total)->toBe(15.0)
+        ->and(data_get($input, 'metadata.collection_wallet_id'))->toBeNull();
+});
+
 it('returns pricing estimate from voucher instructions input', function () {
     $input = [
         'cash' => [

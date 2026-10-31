@@ -10,7 +10,7 @@ import {
     RefreshCw,
     ScanLine,
 } from 'lucide-vue-next';
-import { computed, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import type { HttpExceptionResponse } from '@inertiajs/core';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -91,6 +91,9 @@ type PaymentReadModel = {
 const props = defineProps<{
     payment: PaymentReadModel;
     notice?: string | null;
+    previewMode?: boolean;
+    previewFeePending?: boolean;
+    previewStage?: string;
 }>();
 const creating = ref(false);
 const checking = ref(false);
@@ -118,6 +121,20 @@ function updateCooldowns(): void {
 
 onUnmounted(() => {
     if (cooldownTimer !== undefined) clearTimeout(cooldownTimer);
+});
+
+onMounted(async () => {
+    if (!props.previewMode || !props.previewStage || props.previewStage === 'payment-page') return;
+    const sections: Record<string, string> = {
+        'payment-qr': '[data-testid="payer-preview-qr"]',
+        'payment-verifying': '[data-testid="payer-completion-pending"]',
+        'payment-receipt': '[data-testid="payer-receipt"]',
+        'payment-delivery': '[data-testid="payment-delivery"]',
+    };
+    const selector = sections[props.previewStage];
+    if (!selector) return;
+    await nextTick();
+    document.querySelector(selector)?.scrollIntoView?.({ block: 'start' });
 });
 
 function handleHttpException(
@@ -159,10 +176,12 @@ function money(amountMinor: number, currency: string): string {
 }
 
 const amountDue = computed(() =>
-    money(props.payment.amount_due_minor, props.payment.currency),
+    props.previewMode && props.previewFeePending
+        ? 'Calculated at payment'
+        : money(props.payment.amount_due_minor, props.payment.currency),
 );
 const attemptAmount = computed(() =>
-    money(
+    props.previewMode && props.previewFeePending ? 'Amount shown on QR' : money(
         props.payment.attempt?.amount_minor ?? 0,
         props.payment.attempt?.currency ?? props.payment.currency,
     ),
@@ -172,7 +191,7 @@ const deliveryPending = computed(
 );
 const shouldPoll = computed(
     () =>
-        retrySeconds.value === 0 &&
+        !props.previewMode && retrySeconds.value === 0 &&
         (deliveryPending.value ||
             (!props.payment.is_fully_paid &&
                 ((props.payment.repayment_mode === true && props.payment.repayment_ready === false) ||
@@ -256,6 +275,7 @@ function selectQr(): void {
 
 function startPayment(): void {
     if (
+        props.previewMode ||
         selectedMethod.value !== 'qr' ||
         pairedUnavailable.value ||
         !props.payment.can_create_attempt ||
@@ -283,6 +303,7 @@ function checkPaymentStatus(): void {
     const attempt = props.payment.attempt;
 
     if (
+        props.previewMode ||
         !attempt?.can_check ||
         checking.value ||
         checkCooldownSeconds.value > 0 ||
@@ -696,6 +717,15 @@ function printReceipt(): void {
                             </p>
                         </div>
                         <div
+                            v-else-if="previewMode"
+                            data-testid="payer-preview-qr"
+                            class="rounded-lg border border-dashed border-primary/40 p-6 text-center"
+                        >
+                            <ScanLine class="mx-auto size-12 text-primary" />
+                            <p class="mt-2 text-sm font-semibold">Sample QR Ph</p>
+                            <p class="text-xs text-muted-foreground">Illustration only · not scannable</p>
+                        </div>
+                        <div
                             v-else-if="qrSource"
                             class="mx-auto grid w-fit max-w-full justify-items-center gap-3"
                         >
@@ -843,7 +873,7 @@ function printReceipt(): void {
                                 class="mt-1 text-3xl font-bold tracking-tight text-foreground tabular-nums"
                             >
                                 {{
-                                    money(
+                                    previewMode && previewFeePending ? 'Calculated at payment' : money(
                                         payment.receipt.amount_paid_minor,
                                         payment.receipt.currency,
                                     )
@@ -916,7 +946,7 @@ function printReceipt(): void {
                                         receiptPayment.provider
                                     }}</span
                                     ><span class="tabular-nums">{{
-                                        money(
+                                        previewMode && previewFeePending ? 'Calculated at payment' : money(
                                             receiptPayment.amount_paid_minor,
                                             payment.receipt.currency,
                                         )

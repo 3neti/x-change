@@ -18,6 +18,7 @@ use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceDiscoveryService;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceInput;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceOrderAccess;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceTurnstileVerifier;
+use LBHurtado\XChange\Services\Settlement\V2EventCatalog;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
 
 final class PublicAutoGeneratePageController extends Controller
@@ -75,6 +76,7 @@ final class PublicAutoGeneratePageController extends Controller
 
         return Inertia::render('x-change/public/AutoGenerate', [
             ...$props,
+            'v2_event_catalog' => app(V2EventCatalog::class)->definitions(),
             'display_campaigns' => [],
             'display_session' => null,
             'checkout_draft' => $draft === null ? null : [

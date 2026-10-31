@@ -26,8 +26,11 @@ final class SettlementAttestationDraftProjection
 
     private function applies(array $payload): bool
     {
-        return data_get($payload, 'voucher_type') === 'settlement'
+        return (data_get($payload, 'voucher_type') === 'payable'
+            && (float) data_get($payload, 'cash.amount', -1) === 0.0
+            && (float) data_get($payload, 'target_amount', 0) > 0)
+            || (data_get($payload, 'voucher_type') === 'settlement'
             && data_get($payload, 'execution.schema') === 'voucher.execution.v2'
-            && data_get($payload, 'execution.settlement.driver') === 'philhealth-bst';
+            && data_get($payload, 'execution.settlement.driver') === 'philhealth-bst');
     }
 }

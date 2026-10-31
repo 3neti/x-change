@@ -1495,7 +1495,7 @@ describe('Cockpit Quick Generate foundation', () => {
             voucher_type: 'payable',
             target_amount: 125.5,
             cash: {
-                amount: 125.5,
+                amount: 0,
             },
         });
         expect(payablePreview.metadata).not.toHaveProperty(

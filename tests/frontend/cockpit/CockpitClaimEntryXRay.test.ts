@@ -1,8 +1,34 @@
-import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { flushPromises, mount } from '@vue/test-utils';
+import { describe, expect, it, vi } from 'vitest';
 import CockpitClaimLiveScreen from '../../../resources/js/cockpit/components/CockpitClaimLiveScreen.vue';
 
+vi.mock('@inertiajs/vue3', async (importOriginal) => ({
+    ...await importOriginal<typeof import('@inertiajs/vue3')>(),
+    Head: { template: '<div><slot /></div>' },
+    usePoll: () => ({ start: vi.fn(), stop: vi.fn() }),
+}));
+
 describe('Cockpit claim entry walkthrough', () => {
+    it('renders the real payment page as a non-interactive preview', async () => {
+        const wrapper = mount(CockpitClaimLiveScreen, {
+            props: { screen: {
+                kind: 'payment_preview', component: 'x-change/claim/Payment', props: {
+                    previewMode: true,
+                    payment: { pay_code: 'AA317', currency: 'PHP', target_amount_minor: 10000,
+                        collected_amount_minor: 0, amount_due_minor: 10000, is_fully_paid: false,
+                        rider_message: null, provider: 'netbank', provider_available: true,
+                        can_create_attempt: false, poll_interval_ms: 5000, attempt: null, receipt: null },
+                },
+            } },
+        });
+        await flushPromises();
+        expect(wrapper.get('[data-testid="cockpit-claim-actual-screen"]').attributes()).toHaveProperty('inert');
+        await vi.waitFor(() => expect(wrapper.text()).toContain('Pay AA317'));
+        expect(wrapper.text()).toContain('₱100.00');
+        expect(wrapper.text()).toContain('Choose how to pay');
+        wrapper.unmount();
+    });
+
     it('uses the shared pending receipt presentation for the success preview', () => {
         const wrapper = mount(CockpitClaimLiveScreen, {
             props: { screen: { kind: 'success', amount: '₱25.00', message: 'Thank you.' } },

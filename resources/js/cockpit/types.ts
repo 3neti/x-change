@@ -1839,6 +1839,7 @@ export type CockpitCollectionDestination = {
 };
 
 export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
+  v2_event_catalog?: Record<string, { label: string; stage: string; workflows: string[]; requires_destination?: boolean }>;
   stored_value_collect_url?: string;
   composer_view?: "prompt" | "standard";
   initial_workspace?: "composer" | "llm";

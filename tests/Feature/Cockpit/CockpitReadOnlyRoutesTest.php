@@ -39,6 +39,15 @@ it('requires authentication before accepting a Pay Code payout correction', func
     ])->assertUnauthorized();
 });
 
+it('supplies the implemented event catalog to the issuance form', function (): void {
+    actingAsTestUser();
+    $response = $this->withHeader('X-Inertia', 'true')->get(route('x-change.cockpit.quick-generate'));
+    $response->assertOk();
+    $catalog = $response->json('props.v2_event_catalog');
+    expect($catalog['settlement.payment_collected']['workflows'])->toContain('payable', 'philhealth')
+        ->and($catalog['settlement.payout_failed']['requires_destination'])->toBeTrue();
+});
+
 it('renders the cockpit documentation hub without exposing operational secrets', function (): void {
     actingAsTestUser();
 

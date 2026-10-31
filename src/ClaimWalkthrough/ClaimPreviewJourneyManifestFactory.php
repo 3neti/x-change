@@ -29,6 +29,10 @@ final class ClaimPreviewJourneyManifestFactory
         array $presentation = [],
         array $xray = [],
     ): array {
+        if (data_get($scenario, 'fixture.instructions.voucher_type') === 'payable') {
+            return $this->payableJourney($scenario);
+        }
+
         $canonical = $this->canonicalSteps($scenario);
         $storyboard = $this->storyboard($report);
         $captured = collect(data_get($storyboard, 'checkpoints', []))
@@ -63,6 +67,7 @@ final class ClaimPreviewJourneyManifestFactory
         $steps = $this->withRiderSplash($steps, $scenario, $presentation);
         $steps = $this->withSimulation($steps, $simulation);
         $steps = $this->withSettlementEvents($steps, $scenario);
+        $steps = $this->withPaymentExecution($steps, $scenario);
 
         return [
             'schema' => 'x-change.claim-experience-preview.journey.v2',
@@ -75,6 +80,96 @@ final class ClaimPreviewJourneyManifestFactory
             'steps' => $steps,
             'simulation' => $simulation,
         ];
+    }
+
+    private function payableJourney(array $scenario): array
+    {
+        $instruction = (array) data_get($scenario, 'fixture.instructions', []);
+        $target = max(0, (int) round((float) data_get($instruction, 'target_amount', 0) * 100));
+        $feePending = data_get($instruction, 'fee_bearer', 'issuer') === 'payer';
+        $currency = (string) data_get($instruction, 'cash.currency', 'PHP');
+        $provider = (string) data_get($instruction, 'provider', 'netbank');
+        $payment = [
+            'pay_code' => self::SampleCode, 'currency' => $currency,
+            'target_amount_minor' => $target, 'collected_amount_minor' => 0,
+            'amount_due_minor' => $target, 'principal_due_minor' => $target, 'fee_due_minor' => 0,
+            'is_fully_paid' => false, 'rider_message' => data_get($instruction, 'rider.message'),
+            'provider' => $provider, 'provider_available' => true, 'can_create_attempt' => false,
+            'poll_interval_ms' => 5000, 'attempt' => null, 'receipt' => null,
+        ];
+        $attempt = [
+            'reference' => 'PREVIEW', 'status' => 'awaiting_payment', 'provider' => $provider,
+            'amount_minor' => $target, 'currency' => $currency, 'expires_at' => null,
+            'last_checked_at' => null, 'can_check' => false, 'qr_code' => null,
+        ];
+        $receipt = [
+            'pay_code' => self::SampleCode, 'amount_paid_minor' => $target,
+            'currency' => $currency, 'completed_at' => null,
+            'payments' => [[
+                'collection_number' => 1, 'amount_paid_minor' => $target, 'provider' => $provider,
+                'receipt_reference' => 'PREVIEW', 'completed_at' => null,
+            ]],
+        ];
+        $stages = [
+            ['payment-page', 'Review the payment', $payment],
+            ['payment-qr', 'Pay with QR Ph', [...$payment, 'attempt' => $attempt]],
+            ['payment-verifying', 'Payment verification', [...$payment, 'attempt' => [...$attempt, 'status' => 'verified']]],
+            ['payment-receipt', 'Payment received', [...$payment, 'is_fully_paid' => true, 'collected_amount_minor' => $target, 'receipt' => $receipt]],
+        ];
+        $destination = data_get($instruction, 'execution.value_flow.destination')
+            ?? data_get($instruction, 'value_flow.destination');
+        if (is_string($destination) && str_starts_with($destination, 'instapay.')) {
+            $deliveryReceipt = $receipt;
+            $deliveryReceipt['payments'][0]['delivery'] = ['status' => 'pending', 'account' => null, 'bank_code' => null];
+            $stages[] = ['payment-delivery', 'Destination transfer', [...$payment, 'is_fully_paid' => true,
+                'collected_amount_minor' => $target, 'receipt' => $deliveryReceipt]];
+        }
+        $steps = collect($stages)->map(fn (array $stage, int $index): array => [
+            'sequence' => $index + 1, 'key' => $stage[0], 'phase' => 'payment', 'title' => $stage[1],
+            'description' => 'Illustrative payment state.', 'actor' => 'payer',
+            'render_kind' => 'actual_screen', 'status' => 'rendered', 'frame' => null,
+            'screen' => ['kind' => 'payment_preview', 'component' => 'x-change/claim/Payment',
+                'props' => ['previewMode' => true, 'previewStage' => $stage[0], 'previewFeePending' => $feePending, 'payment' => $stage[2]]],
+        ])->all();
+
+        return [
+            'schema' => 'x-change.claim-experience-preview.journey.v2',
+            'viewport' => ['profile' => 'mobile_claim_v1', 'width' => 360, 'height' => 720],
+            'step_count' => count($steps), 'steps' => $steps, 'simulation' => [],
+        ];
+    }
+
+    private function withPaymentExecution(array $steps, array $scenario): array
+    {
+        $instructions = data_get($scenario, 'fixture.instructions', []);
+        if (data_get($instructions, 'execution.schema') !== 'voucher.execution.v2'
+            || ! is_array(data_get($instructions, 'execution.events.settle'))) {
+            return $steps;
+        }
+
+        $stages = [
+            ['execution-payment', 'Payer', 'Payment and verification', 'The payer completes payment. Provider history must confirm it before the value is collected.'],
+        ];
+        if (str_starts_with((string) data_get($instructions, 'execution.value_flow.destination'), 'instapay.')) {
+            $stages[] = ['execution-payout', 'Provider', 'Destination transfer', 'After payment is confirmed, the transfer is submitted to the instructed destination. A failed transfer enters recovery.'];
+        }
+
+        foreach ($stages as [$key, $actor, $title, $description]) {
+            $steps[] = [
+                'key' => $key, 'phase' => 'settlement', 'title' => $title, 'description' => $description,
+                'actor' => $actor, 'render_kind' => 'live_screen', 'status' => 'rendered', 'frame' => null,
+                'screen' => [
+                    'kind' => 'claim_progress', 'code' => self::SampleCode, 'title' => $title,
+                    'description' => $description, 'progress_state' => 'processing', 'simulated' => true,
+                ],
+            ];
+        }
+
+        return collect($steps)->values()->map(function (array $step, int $index): array {
+            $step['sequence'] = $index + 1;
+
+            return $step;
+        })->all();
     }
 
     private function withSettlementEvents(array $steps, array $scenario): array
