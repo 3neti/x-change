@@ -35,7 +35,11 @@ class ReconcilePendingDisbursementsCommand extends Command
             ->when($this->option('exclude-manual-review'), fn ($query) => $query->where(function ($subQuery): void {
                 $subQuery->where('claim_type', '!=', 'value_flow')
                     ->orWhere('needs_review', false)
-                    ->orWhere('review_reason', 'Payout confirmation is taking longer than expected.');
+                    ->orWhereIn('review_reason', [
+                        'Payout confirmation is taking longer than expected.',
+                        'Provider outcome requires reconciliation.',
+                        'Provider submission outcome awaiting evidence.',
+                    ]);
             }))
             ->where(function ($query) {
                 $query->where(function ($query): void {

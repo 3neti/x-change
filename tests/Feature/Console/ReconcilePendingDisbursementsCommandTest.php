@@ -141,7 +141,7 @@ it('flags an overdue value-flow payout for review while continuing status checks
 });
 
 it('can automatically check value-flow payouts without touching manual reviews or other payouts', function (): void {
-    foreach ([['SAFE', 'value_flow', false, null], ['OVERDUE', 'value_flow', true, 'Payout confirmation is taking longer than expected.'], ['MANUAL', 'value_flow', true, 'Provider outcome requires reconciliation.'], ['OTHER', 'withdraw', false, null]] as [$code, $type, $review, $reason]) {
+    foreach ([['SAFE', 'value_flow', false, null], ['OVERDUE', 'value_flow', true, 'Payout confirmation is taking longer than expected.'], ['UNCERTAIN', 'value_flow', true, 'Provider outcome requires reconciliation.'], ['MANUAL', 'value_flow', true, 'Low-confidence failed status from provider'], ['OTHER', 'withdraw', false, null]] as [$code, $type, $review, $reason]) {
         DisbursementReconciliation::query()->create([
             'voucher_id' => 10, 'voucher_code' => $code, 'claim_type' => $type,
             'provider' => 'netbank', 'provider_reference' => $code, 'provider_transaction_id' => $code,
@@ -151,8 +151,8 @@ it('can automatically check value-flow payouts without touching manual reviews o
         ]);
     }
     $service = Mockery::mock(DisbursementReconciliationContract::class);
-    $service->shouldReceive('reconcile')->twice()->andReturn(['updated' => false, 'resolved_status' => 'pending']);
+    $service->shouldReceive('reconcile')->times(3)->andReturn(['updated' => false, 'resolved_status' => 'pending']);
     app()->instance(DisbursementReconciliationContract::class, $service);
     $this->artisan('xchange:reconcile:pending', ['--status-only' => true, '--value-flow-only' => true, '--exclude-manual-review' => true])
-        ->expectsOutput('Processed: 2')->assertSuccessful();
+        ->expectsOutput('Processed: 3')->assertSuccessful();
 });
