@@ -94,6 +94,11 @@ final class ClaimPreviewJourneyManifestFactory
             'target_amount_minor' => $target, 'collected_amount_minor' => 0,
             'amount_due_minor' => $target, 'principal_due_minor' => $target, 'fee_due_minor' => 0,
             'is_fully_paid' => false, 'rider_message' => data_get($instruction, 'rider.message'),
+            'document_requirements' => collect((array) data_get($instruction, 'execution.document_requirements', []))
+                ->filter(fn ($item) => is_array($item) && ($item['contributor'] ?? null) === 'payer'
+                    && is_string($item['type'] ?? null) && is_string($item['timing'] ?? null) && is_bool($item['requires_acceptance'] ?? null))
+                ->map(fn ($item) => ['type' => $item['type'], 'timing' => $item['timing'], 'requires_acceptance' => $item['requires_acceptance']])->values()->all(),
+            'document_upload_url' => null, 'documents_ready' => false,
             'provider' => $provider, 'provider_available' => true, 'can_create_attempt' => false,
             'poll_interval_ms' => 5000, 'attempt' => null, 'receipt' => null,
         ];

@@ -41,7 +41,7 @@ final class UploadParticipantDocumentController extends Controller
                 envelope: $envelope,
                 docType: $input['document_type'],
                 file: $input['file'],
-                metadata: ['contributor_role' => $role, 'participant_session_hash' => hash_hmac('sha256', $request->session()->getId(), (string) config('app.key'))],
+                metadata: ['contributor_role' => $role, 'participant_session_hash' => $sessions->fingerprint($request, $lockedVoucher, $role)],
                 storageDisk: $disk,
             );
         });

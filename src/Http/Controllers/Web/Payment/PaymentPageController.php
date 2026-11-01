@@ -11,6 +11,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentQrDeliveryMode;
+use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
@@ -18,6 +19,7 @@ use LBHurtado\XChange\Services\Payment\PaymentAttemptPresenter;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptSessionGuard;
 use LBHurtado\XChange\Services\Payment\PaymentQrDeliveryPolicy;
 use LBHurtado\XChange\Services\Payment\PaymentReceiptReadModel;
+use LBHurtado\XChange\Services\Settlement\DocumentPaymentGate;
 use LBHurtado\XChange\Services\Settlement\ParticipantDocumentSession;
 use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
@@ -73,6 +75,28 @@ class PaymentPageController extends Controller
         }
         $provider = strtolower((string) config('x-change.payment.attempts.provider', 'netbank'));
         $providerEnabled = (bool) config("x-change.funding.providers.{$provider}.enabled", false);
+        $documentsReady = true;
+        try {
+            app(DocumentPaymentGate::class)->ensureReady($voucher);
+        } catch (VoucherRequiresSettlementEnvelope) {
+            $documentsReady = false;
+        }
+        $requirements = collect((array) data_get($voucher->metadata, 'instructions.execution.document_requirements', []))
+            ->filter(fn ($item) => is_array($item) && ($item['contributor'] ?? null) === 'payer'
+                && is_string($item['type'] ?? null) && is_string($item['timing'] ?? null) && is_bool($item['requires_acceptance'] ?? null))
+            ->map(fn ($item) => ['type' => $item['type'], 'timing' => $item['timing'], 'requires_acceptance' => $item['requires_acceptance']])
+            ->values()->all();
+        if ($requirements !== [] && is_string(config('app.key')) && trim(config('app.key')) !== '') {
+            $sessionHash = app(ParticipantDocumentSession::class)->fingerprint($request, $voucher, 'payer');
+            $attachments = $voucher->envelope()->first()?->attachments()->orderByDesc('id')->get() ?? collect();
+            foreach ($requirements as &$requirement) {
+                $own = $attachments->first(fn ($item) => $item->doc_type === $requirement['type']
+                    && data_get($item->metadata, 'contributor_role') === 'payer'
+                    && data_get($item->metadata, 'participant_session_hash') === $sessionHash);
+                $requirement['status'] = $own?->review_status;
+            }
+            unset($requirement);
+        }
 
         $response = Inertia::render('x-change/claim/Payment', [
             'payment' => [
@@ -88,11 +112,15 @@ class PaymentPageController extends Controller
                 'fee_due_minor' => $feeMinor,
                 'is_fully_paid' => $collection->is_fully_collected,
                 'rider_message' => $this->riderMessage($voucher),
+                'document_requirements' => $requirements,
+                'document_upload_url' => $requirements === [] ? null : route('x-change.pay.documents.store', ['code' => $voucher->code]),
+                'documents_ready' => $documentsReady,
                 'provider' => $provider,
                 'provider_available' => $providerEnabled,
                 'can_create_attempt' => (bool) config('x-change.payment.attempts.enabled', true)
                     && $providerEnabled
                     && $repaymentReady
+                    && $documentsReady
                     && $attempt?->status !== PaymentAttemptStatus::Verified
                     && ($display === null || ($display->ended_at === null && ! $display->expires_at->isPast() && $displays->intakeReady($display, $voucher)))
                     && ! $collection->is_fully_collected,

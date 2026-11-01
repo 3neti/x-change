@@ -28,12 +28,17 @@ it('requires a voucher and role scoped browser session for payer uploads', funct
     $file = fn () => UploadedFile::fake()->createWithContent('document.pdf', "%PDF-1.4\nexample\n%%EOF");
 
     $this->postJson($uploadUrl, ['document_type' => 'TEST_DOC', 'file' => $file()])->assertNotFound();
-    $this->get(route('x-change.pay.show', ['code' => $voucher->code]), ['X-Inertia' => 'true'])->assertSuccessful();
+    $this->get(route('x-change.pay.show', ['code' => $voucher->code]), ['X-Inertia' => 'true'])->assertSuccessful()
+        ->assertJsonPath('props.payment.document_requirements.0.type', 'TEST_DOC')
+        ->assertJsonPath('props.payment.documents_ready', false)
+        ->assertJsonPath('props.payment.can_create_attempt', false);
     $this->postJson($uploadUrl, ['document_type' => 'OTHER', 'file' => $file()])->assertNotFound();
     $response = $this->postJson($uploadUrl, ['document_type' => 'TEST_DOC', 'file' => $file(), 'contributor_role' => 'claimant'])->assertCreated();
     $attachment = $envelope->attachments()->findOrFail($response->json('id'));
     expect(data_get($attachment->metadata, 'contributor_role'))->toBe('payer')
         ->and($attachment->disk)->toBe('local');
+    $this->get(route('x-change.pay.show', ['code' => $voucher->code]), ['X-Inertia' => 'true'])->assertSuccessful()
+        ->assertJsonPath('props.payment.document_requirements.0.status', 'pending');
     $this->postJson(route('x-change.claim.documents.store', ['code' => $voucher->code]), ['document_type' => 'TEST_DOC', 'file' => $file()])->assertNotFound();
     config()->set('filesystems.disks.local.visibility', 'public');
     $this->postJson($uploadUrl, ['document_type' => 'TEST_DOC', 'file' => $file()])->assertStatus(503);
@@ -43,6 +48,8 @@ it('requires a voucher and role scoped browser session for payer uploads', funct
     $this->get(route('x-change.pay.show', ['code' => $voucher->code]), ['X-Inertia' => 'true'])->assertSuccessful();
     session()->flush();
     $this->postJson($uploadUrl, ['document_type' => 'TEST_DOC', 'file' => $file()])->assertNotFound();
+    $this->get(route('x-change.pay.show', ['code' => $voucher->code]), ['X-Inertia' => 'true'])->assertSuccessful()
+        ->assertJsonPath('props.payment.document_requirements.0.status', null);
 });
 
 it('grants claimant document access only after the claim page is validated', function (): void {

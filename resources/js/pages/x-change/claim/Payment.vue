@@ -23,6 +23,7 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
+import ParticipantDocuments from '@/components/x-change/ParticipantDocuments.vue';
 import XChangeQrArtifact from '@/components/x-change/XChangeQrArtifact.vue';
 import { store as createPaymentAttempt } from '@/routes/x-change/pay/attempts';
 import { store as checkPaymentAttempt } from '@/routes/x-change/pay/attempts/checks';
@@ -80,6 +81,9 @@ type PaymentReadModel = {
     fee_due_minor?: number;
     is_fully_paid: boolean;
     rider_message: string | null;
+    document_requirements?: { type: string; timing: string; requires_acceptance: boolean }[];
+    document_upload_url?: string | null;
+    documents_ready?: boolean;
     provider: string;
     provider_available: boolean;
     can_create_attempt: boolean;
@@ -457,6 +461,15 @@ function printReceipt(): void {
                     </p>
                 </CardContent>
             </Card>
+
+            <ParticipantDocuments
+                :requirements="payment.document_requirements ?? []"
+                :upload-url="payment.document_upload_url"
+                :preview-mode="previewMode"
+            />
+            <p v-if="payment.documents_ready === false && (payment.document_requirements?.length ?? 0) > 0" class="text-sm text-muted-foreground" role="status">
+                Payment becomes available when the required documents are ready.
+            </p>
 
             <Card
                 data-testid="payer-invoice-step"

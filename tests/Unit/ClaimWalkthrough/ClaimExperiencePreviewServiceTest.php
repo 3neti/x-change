@@ -49,6 +49,19 @@ it('uses the payment page for payable instructions across schema versions', func
         ->and(data_get($journey, 'steps.3.screen.props.payment.is_fully_paid'))->toBeTrue();
 })->with(['voucher.execution.v1', 'voucher.execution.v2']);
 
+it('projects only payer document requirements into the payment walkthrough', function (): void {
+    $payer = ['type' => 'INVOICE', 'timing' => 'before_payment', 'requires_acceptance' => true, 'contributor' => 'payer'];
+    $claimant = ['type' => 'PRIVATE_ID', 'timing' => 'later_review', 'requires_acceptance' => true, 'contributor' => 'claimant'];
+    $scenario = ['fixture' => ['instructions' => [
+        'voucher_type' => 'payable', 'target_amount' => 100, 'cash' => ['amount' => 0, 'currency' => 'PHP'],
+        'execution' => ['schema' => 'voucher.execution.v2', 'document_requirements' => [$payer, $claimant]],
+    ]], 'checkpoints' => []];
+
+    $journey = app(ClaimPreviewJourneyManifestFactory::class)->fromReport([], $scenario);
+    expect(data_get($journey, 'steps.0.screen.props.payment.document_requirements'))->toBe([collect($payer)->except('contributor')->all()])
+        ->and(data_get($journey, 'steps.0.screen.props.payment.document_upload_url'))->toBeNull();
+});
+
 it('projects the patient, hospital and payment waits for a PhilHealth settlement', function (): void {
     $scenario = ['fixture' => ['instructions' => [
         'target_amount' => 20000,
