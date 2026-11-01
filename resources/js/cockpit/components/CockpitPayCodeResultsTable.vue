@@ -271,11 +271,14 @@ function formatClaimAmount(record: CockpitPayCodeExplorerRecord): string | null 
         return null;
     }
 
-    return new Intl.NumberFormat('en-PH', {
+    const amount = new Intl.NumberFormat('en-PH', {
         style: 'currency',
         currency: record.claimSummary?.currency ?? 'PHP',
         minimumFractionDigits: 2,
     }).format(record.claimSummary.amount_minor / 100);
+    const kind = record.claimSummary.amount_kind;
+
+    return kind === 'requested' || kind === 'disbursed' ? `${amount} ${kind}` : amount;
 }
 
 function timingFacts(record: CockpitPayCodeExplorerRecord) {

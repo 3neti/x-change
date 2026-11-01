@@ -518,6 +518,10 @@ function sanitizeClaimSummary(
         claimed_mobile_masked: stringValue(value.claimed_mobile_masked),
         amount_minor:
             typeof value.amount_minor === 'number' ? value.amount_minor : null,
+        amount_kind:
+            value.amount_kind === 'requested' || value.amount_kind === 'disbursed'
+                ? value.amount_kind
+                : null,
         currency: stringValue(value.currency),
         location_label: stringValue(value.location_label),
         evidence_count:

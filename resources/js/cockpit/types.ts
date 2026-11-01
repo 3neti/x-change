@@ -2180,6 +2180,7 @@ export type CockpitPayCodeClaimSummaryReadModel = {
   claimed_by_label?: string | null;
   claimed_mobile_masked?: string | null;
   amount_minor?: number | null;
+  amount_kind?: 'requested' | 'disbursed' | null;
   currency?: string | null;
   location_label?: string | null;
   evidence_count?: number | null;

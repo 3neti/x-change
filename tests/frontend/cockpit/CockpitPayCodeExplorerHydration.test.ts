@@ -200,6 +200,27 @@ const activityNavigationContext = {
 };
 
 describe('Cockpit Pay Code Explorer hydration', () => {
+    it.each([
+        ['requested', '₱10,000.00 requested'],
+        ['disbursed', '₱10,000.00 disbursed'],
+    ])('labels %s claim amounts in desktop and mobile results', (kind, label) => {
+        const first = payCodesReadModel.records[0];
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: {
+                    ...payCodesReadModel,
+                    records: [{
+                        ...first,
+                        claim_summary: { ...first.claim_summary, amount_minor: 1000000, amount_kind: kind },
+                    }],
+                },
+            },
+        });
+
+        expect(wrapper.get('[data-testid="cockpit-pay-code-claim-summary"]').text()).toContain(label);
+        expect(wrapper.get('[data-testid="cockpit-pay-code-mobile-claim-summary"]').text()).toContain(label);
+    });
+
     it('keeps the stamp detail accessible when saved thumbnail bytes are missing', async () => {
         const wrapper = mount(CockpitPayCodeStampThumbnail, {
             props: {
