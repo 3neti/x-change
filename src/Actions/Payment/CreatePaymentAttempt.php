@@ -14,6 +14,7 @@ use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptSessionGuard;
 use LBHurtado\XChange\Services\Payment\PaymentQrDeliveryPolicy;
+use LBHurtado\XChange\Services\Settlement\DocumentPaymentGate;
 use LBHurtado\XChange\Services\Settlement\V2EvidenceEventJournal;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
@@ -30,6 +31,7 @@ class CreatePaymentAttempt
         private readonly SettlementCollectionGate $settlementGate,
         private readonly PaymentQrDeliveryPolicy $qrDelivery,
         private readonly V2EvidenceEventJournal $v2Events,
+        private readonly DocumentPaymentGate $documentGate,
     ) {}
 
     /** @param list<PaymentQrDeliveryMode>|null $qrDeliveryModes */
@@ -41,6 +43,7 @@ class CreatePaymentAttempt
         ?array $qrDeliveryModes = null,
     ): PaymentAttempt {
         $this->capabilities->ensureCanCollect($voucher);
+        $this->documentGate->ensureReady($voucher);
 
         if ((data_get($voucher->metadata, 'instructions.execution.schema') === 'voucher.execution.v2'
                 && data_get($voucher->metadata, 'instructions.execution.driver') === 'settlement_envelope')

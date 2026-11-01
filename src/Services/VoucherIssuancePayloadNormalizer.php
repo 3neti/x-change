@@ -24,6 +24,25 @@ class VoucherIssuancePayloadNormalizer
     public function normalize(array $input): array
     {
         $input = $this->normalizeEnumValues($input);
+        $documentRequirements = data_get($input, 'metadata.custom.document_requirements');
+        if ($documentRequirements !== null) {
+            if (data_get($input, 'execution.schema') !== 'voucher.execution.v2'
+                || ! in_array(data_get($input, 'voucher_type'), ['payable', 'settlement'], true)
+                || ! is_array($documentRequirements) || ! array_is_list($documentRequirements)) {
+                throw ValidationException::withMessages(['metadata.custom.document_requirements' => 'Document requirements require a v2 payable or settlement voucher.']);
+            }
+            Validator::make($input, [
+                'metadata.custom.document_requirements' => ['array', 'max:20'],
+                'metadata.custom.document_requirements.*' => ['required', 'array:type,timing,requires_acceptance'],
+                'metadata.custom.document_requirements.*.type' => ['required', 'string', 'max:64', 'distinct'],
+                'metadata.custom.document_requirements.*.timing' => ['required', 'in:optional,before_payment,later_review'],
+                'metadata.custom.document_requirements.*.requires_acceptance' => ['present', function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! is_bool($value)) {
+                        $fail('The '.$attribute.' field must be a boolean.');
+                    }
+                }],
+            ])->validate();
+        }
         if (data_get($input, 'execution.schema') === 'voucher.execution.v2') {
             foreach (['mode', 'pipeline', 'fallback', 'visibility', 'metadata'] as $key) {
                 if (array_key_exists($key, $input['execution']) && $input['execution'][$key] === null) {
