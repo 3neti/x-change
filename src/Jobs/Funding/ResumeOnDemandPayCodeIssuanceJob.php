@@ -27,6 +27,7 @@ use LBHurtado\XChange\Models\Checkout;
 use LBHurtado\XChange\Models\IssuanceBatch;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
+use LBHurtado\XChange\Services\Funding\SettlementIssuanceRecoveryAssessment;
 use RuntimeException;
 use Throwable;
 
@@ -69,8 +70,9 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
         TransitionPayCodeIssuanceFundingOrder $transition,
         GeneratePayCode $generatePayCode,
         IssueIssuanceBatchPayCodes $issueBatch,
+        SettlementIssuanceRecoveryAssessment $settlementFunding,
     ): void {
-        DB::transaction(function () use ($holds, $portfolios, $accountBalances, $transition, $generatePayCode, $issueBatch): void {
+        DB::transaction(function () use ($holds, $portfolios, $accountBalances, $transition, $generatePayCode, $issueBatch, $settlementFunding): void {
             $order = PayCodeIssuanceFundingOrder::query()
                 ->lockForUpdate()
                 ->findOrFail($this->fundingOrderId);
@@ -157,12 +159,13 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
                 $order->currency,
             );
 
-            if ($availableMinor === null || $availableMinor < $order->required_amount_minor) {
+            $requiredMinor = $order->required_amount_minor + $settlementFunding->assess($order)['required_minor'];
+            if ($availableMinor === null || $availableMinor < $requiredMinor) {
                 throw new RuntimeException(sprintf(
-                    'The consumed issuance hold did not restore authoritative Client Funds [provider=%s; available=%s; required=%d].',
+                    'Authoritative Client Funds are insufficient for issuance [provider=%s; available=%s; required=%d].',
                     $issuanceProvider,
                     $availableMinor === null ? 'unavailable' : (string) $availableMinor,
-                    $order->required_amount_minor,
+                    $requiredMinor,
                 ));
             }
 

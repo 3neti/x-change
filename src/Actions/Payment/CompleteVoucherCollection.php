@@ -200,6 +200,7 @@ final readonly class CompleteVoucherCollection
             ) {
                 $locked->forceFill([
                     'state' => VoucherState::CLOSED,
+                    'closed_at' => $locked->closed_at ?? $collection->completed_at ?? now(),
                 ])->saveQuietly();
             }
 

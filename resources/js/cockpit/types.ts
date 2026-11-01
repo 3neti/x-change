@@ -938,6 +938,8 @@ export type CockpitOnDemandIssuanceFundingProjection = {
     pending: boolean;
     attempts_remaining: number;
     next_available_at: string | null;
+    additional_client_funds_minor?: number | null;
+    funding_balance_unavailable?: boolean;
   };
   monitor: {
     enabled: boolean;

@@ -444,10 +444,82 @@ it('creates a fresh QR for each equal installment while replaying duplicate requ
         $this->post(route('x-change.pay.attempts.checks.store', ['code' => $voucher->code, 'attempt' => $attempt->reference]))
             ->assertRedirect();
         expect($attempt->fresh()->status)->toBe(PaymentAttemptStatus::Settled);
+        if ($number < 4) {
+            expect($voucher->fresh()->closed_at)->toBeNull();
+        }
     }
     expect(array_unique($references))->toHaveCount(4)
         ->and(VoucherCollection::query()->count())->toBe(4)
-        ->and($voucher->fresh()->isClosed())->toBeTrue();
+        ->and($voucher->fresh()->isClosed())->toBeTrue()
+        ->and($voucher->fresh()->closed_at?->equalTo(VoucherCollection::query()->latest('id')->firstOrFail()->completed_at))->toBeTrue();
+});
+
+it('opens repayment only for a recorded accepted or finalized initial payout', function (array $payout, bool $ready): void {
+    $user = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 100, overrides: [
+        'voucher_type' => 'settlement', 'target_amount' => 120,
+        'rules' => ['settlement_mode' => 'disburse_then_repay', 'min_payment' => 30, 'max_payment' => 30],
+        'metadata' => ['flow_type' => 'settlement', 'issuer_id' => (string) $user->id, 'collection_wallet_id' => $user->wallet->id],
+    ]));
+    $record = DisbursementReconciliation::query()->create(array_merge([
+        'voucher_id' => $voucher->id, 'voucher_code' => $voucher->code, 'claim_type' => 'withdraw',
+        'provider' => 'netbank', 'provider_reference' => 'initial-loan', 'amount' => 100, 'currency' => 'PHP',
+    ], $payout));
+
+    $this->withHeader('X-Inertia', 'true')->get(route('x-change.pay.show', $voucher->code))
+        ->assertOk()->assertJsonPath('props.payment.can_create_attempt', $ready);
+    if ($ready) {
+        $this->get(route('x-change.claim.show', $voucher->code))->assertRedirect(route('x-change.pay.show', $voucher->code));
+    }
+
+    if ($ready && $record->status === 'pending') {
+        $record->update(['status' => 'failed']);
+        $this->withHeader('X-Inertia', 'true')->get(route('x-change.pay.show', $voucher->code))
+            ->assertOk()->assertJsonPath('props.payment.can_create_attempt', false);
+        $retry = $record->replicate();
+        $retry->fill(['provider_reference' => 'loan-retry', 'status' => 'pending'])->save();
+        $this->withHeader('X-Inertia', 'true')->get(route('x-change.pay.show', $voucher->code))
+            ->assertOk()->assertJsonPath('props.payment.can_create_attempt', true);
+    }
+})->with([
+    'accepted pending' => [['status' => 'pending', 'internal_status' => 'recorded', 'provider_transaction_id' => 'bank-123', 'meta' => ['provider_response' => ['received' => true, 'status' => 'pending']]], true],
+    'finalized' => [['status' => 'succeeded', 'internal_status' => 'finalized'], true],
+    'intent only' => [['status' => 'intent', 'internal_status' => 'intent'], false],
+    'missing provider response' => [['status' => 'pending', 'internal_status' => 'recorded', 'provider_transaction_id' => 'bank-123'], false],
+    'missing transaction ID' => [['status' => 'pending', 'internal_status' => 'recorded', 'meta' => ['provider_response' => ['received' => true, 'status' => 'pending']]], false],
+    'uncertain' => [['status' => 'unknown', 'internal_status' => 'recorded', 'needs_review' => true], false],
+    'failed' => [['status' => 'failed', 'internal_status' => 'recorded', 'provider_transaction_id' => 'bank-123', 'meta' => ['provider_response' => ['received' => true, 'status' => 'pending']]], false],
+]);
+
+it('retains a verified repayment and settles it once after the initial payout is recovered', function (): void {
+    $user = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 100, overrides: [
+        'voucher_type' => 'settlement', 'target_amount' => 120,
+        'rules' => ['settlement_mode' => 'disburse_then_repay', 'min_payment' => 30, 'max_payment' => 30],
+        'metadata' => ['flow_type' => 'settlement', 'issuer_id' => (string) $user->id, 'collection_wallet_id' => $user->wallet->id],
+    ]));
+    $payout = DisbursementReconciliation::query()->create([
+        'voucher_id' => $voucher->id, 'voucher_code' => $voucher->code, 'claim_type' => 'withdraw',
+        'provider' => 'netbank', 'provider_reference' => 'initial-loan', 'amount' => 100, 'currency' => 'PHP',
+        'status' => 'pending', 'internal_status' => 'recorded', 'provider_transaction_id' => 'bank-123',
+        'meta' => ['provider_response' => ['received' => true, 'status' => 'pending']],
+    ]);
+    $this->post(route('x-change.pay.attempts.store', $voucher->code))->assertRedirect();
+    $attempt = PaymentAttempt::query()->sole();
+    $payout->update(['status' => 'failed']);
+    $this->paymentAdapter->fundingObservation = publicExactPaymentObservation($attempt);
+    Exceptions::fake();
+    $url = route('x-change.pay.attempts.checks.store', ['code' => $voucher->code, 'attempt' => $attempt->reference]);
+    $this->post($url)->assertRedirect();
+    expect($attempt->fresh()->status)->toBe(PaymentAttemptStatus::Verified)
+        ->and(VoucherCollection::query()->count())->toBe(0);
+    $retry = $payout->replicate();
+    $retry->fill(['provider_reference' => 'retry-loan', 'status' => 'pending'])->save();
+    $this->post($url)->assertRedirect();
+    expect($attempt->fresh()->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and(VoucherCollection::query()->count())->toBe(1);
+    $this->post($url)->assertRedirect();
+    expect(VoucherCollection::query()->count())->toBe(1);
 });
 
 it('isolates payment page refreshes and QR creation from manual verification limits', function (bool $guest): void {

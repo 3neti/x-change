@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use LBHurtado\Voucher\Enums\VoucherInputField;
+use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Services\XRay\VoucherXRayProjectionBuilder;
 
 it('projects voucher details into an x-ray disclosure payload', function (): void {
@@ -265,6 +266,43 @@ it('does not call a failed reusable balance activation partially claimable', fun
     ], $voucher);
 
     expect($projection['status'])->toBe('claimable');
+});
+
+it('shows the disbursement claim before a loan repayment and payment after it is finalized', function (): void {
+    $user = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 50, overrides: [
+        'voucher_type' => 'settlement',
+        'target_amount' => 60,
+        'rules' => ['settlement_mode' => 'disburse_then_repay', 'min_payment' => 30, 'max_payment' => 30],
+        'metadata' => ['flow_type' => 'settlement', 'issuer_id' => (string) $user->id, 'collection_wallet_id' => $user->wallet->id],
+    ]));
+    $builder = app(VoucherXRayProjectionBuilder::class);
+    $before = $builder->build($voucher);
+    expect($before['status'])->toBe('claimable')
+        ->and(data_get($before, 'next_actions.0.key'))->toBe('claim')
+        ->and(data_get($before, 'presentation.intent'))->not->toBe('payable_collection');
+    $this->postJson('/api/x/v1/pay-codes/x-ray', ['code' => $voucher->code, 'channel' => 'claim'])
+        ->assertOk()->assertJsonPath('data.xray.status', 'claimable')
+        ->assertJsonPath('data.xray.next_actions.0.key', 'claim');
+
+    $reconciliation = DisbursementReconciliation::query()->create([
+        'voucher_id' => $voucher->id, 'voucher_code' => $voucher->code, 'claim_type' => 'withdraw',
+        'provider' => 'netbank', 'provider_reference' => 'loan-xray-stage',
+        'status' => 'pending', 'internal_status' => 'pending', 'amount' => 50, 'currency' => 'PHP',
+    ]);
+    expect($builder->build($voucher)['status'])->not->toBe('payable')
+        ->and(data_get($builder->build($voucher), 'next_actions.0.key'))->not->toBe('pay');
+
+    $reconciliation->update(['status' => 'succeeded', 'internal_status' => 'finalized']);
+    $after = $builder->build($voucher->fresh());
+    expect($after['status'])->toBe('payable')
+        ->and(data_get($after, 'next_actions.0.key'))->toBe('pay')
+        ->and(data_get($after, 'presentation.intent'))->toBe('payable_collection');
+    $this->postJson('/api/x/v1/pay-codes/x-ray', ['code' => $voucher->code, 'channel' => 'claim'])
+        ->assertOk()->assertJsonPath('data.xray.status', 'payable')
+        ->assertJsonPath('data.xray.next_actions.0.key', 'pay');
+    $this->get(route('x-change.claim.show', ['code' => $voucher->code]))
+        ->assertRedirect(route('x-change.pay.show', ['code' => $voucher->code]));
 });
 
 it('projects payable vouchers with collection progress and pay action', function (): void {

@@ -78,6 +78,14 @@ const terminal = computed(() =>
 const needsAttention = computed(
   () => current.value?.status === "issuance_attention",
 );
+const additionalClientFunds = computed(() => {
+  const minor = current.value?.retry.additional_client_funds_minor;
+  if (minor == null || minor <= 0 || !current.value) return null;
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: current.value.order.currency,
+  }).format(minor / 100);
+});
 const paymentReceived = computed(
   () => current.value?.order.receipt.verified_at !== null,
 );
@@ -715,6 +723,12 @@ function text(value: unknown): string | null {
           v-if="current.status !== 'issued'"
           class="sticky bottom-0 mt-3 flex flex-wrap justify-end gap-2 bg-white pt-2 dark:bg-slate-950"
         >
+          <p v-if="needsAttention && additionalClientFunds" class="w-full text-sm text-slate-700 dark:text-slate-300" role="status">
+            Add {{ additionalClientFunds }} to Client Funds, then refresh status and try issuing again. Your payment for this order is already held; do not pay it again.
+          </p>
+          <p v-else-if="needsAttention && current.retry.funding_balance_unavailable" class="w-full text-sm text-slate-700 dark:text-slate-300" role="status">
+            Client Funds are temporarily unavailable. Refresh status before trying again. Do not pay this order again.
+          </p>
           <button
             v-if="
               ['funded', 'issuing', 'issuance_attention'].includes(

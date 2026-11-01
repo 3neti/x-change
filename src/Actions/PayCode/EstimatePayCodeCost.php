@@ -8,7 +8,6 @@ use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Services\Commercial\CommercialBillingPolicy;
-use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
 use LBHurtado\XChange\Services\VoucherIssuancePayloadNormalizer;
 
 class EstimatePayCodeCost
@@ -43,7 +42,7 @@ class EstimatePayCodeCost
             ['payable', 'settlement'],
             true,
         ) || data_get($input, 'metadata.flow_type') === 'collectible';
-        $collectsFunds = $collectsFunds && ! SettlementRepaymentPolicy::applies($input);
+        $collectsFunds = $collectsFunds && $payCodeValue <= 0;
         $billing = $this->billingPolicy ??= app(CommercialBillingPolicy::class);
         $customerChargeMinor = $billing->isBillable()
             ? (int) round($issueCost * 100)

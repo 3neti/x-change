@@ -503,6 +503,61 @@ it('shows the destination for payable and settlement vouchers', async () => {
   expect(wrapper.find('[data-testid="value-flow-destination"]').exists()).toBe(true);
 });
 
+it('keeps the loan repayment destination consistent when switching between a bank and Client Funds', async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'issued', result: { code: 'FIXED' } }) });
+  vi.stubGlobal('fetch', fetchMock);
+  vi.stubGlobal('crypto', { randomUUID: () => 'loan-destination' });
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: {
+    templates: cockpitQuickGenerateTemplates,
+    mutationContract: { runtime_enabled: true, route: 'x-change.cockpit.quick-generate.store', route_url: '/x/cockpit/quick-generate', allowed_methods: ['POST'] },
+  } });
+  await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('50');
+  await openOrderOptions(wrapper);
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
+  await wrapper.get('[data-testid="settlement-workflow"]').setValue('repayment');
+  await wrapper.get('[data-testid="cockpit-quick-generate-target-amount"]').setValue('60');
+  await wrapper.get('[data-testid="settlement-repayment-amount"]').setValue('30');
+  const destination = wrapper.findComponent({ name: 'ValueFlowDestination' });
+  destination.vm.$emit('update:modelValue', 'instapay.gxchphm2xxx.account:09179999999');
+  await flushPromises();
+  expect(preview(wrapper).execution.value_flow.destination).toBe('instapay.gxchphm2xxx.account:09179999999');
+  expect(wrapper.get('[data-testid="cockpit-order-flow-summary"]').text()).toContain('9999');
+  await wrapper.get('[aria-label="Value destination"]').setValue('false');
+  await flushPromises();
+  expect(preview(wrapper).execution).not.toHaveProperty('value_flow');
+  expect(wrapper.get('[data-testid="cockpit-order-flow-summary"]').text()).not.toContain('9999');
+  await wrapper.get('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
+  await flushPromises();
+  const request = fetchMock.mock.calls.find(([url, options]) => url === '/x/cockpit/quick-generate' && options.method === 'POST');
+  expect(request).toBeDefined();
+  expect(JSON.parse(request![1].body).execution).not.toHaveProperty('value_flow');
+});
+
+it('submits the bank destination shown for a loan repayment', async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'issued', result: { code: 'FIXED' } }) });
+  vi.stubGlobal('fetch', fetchMock);
+  vi.stubGlobal('crypto', { randomUUID: () => 'loan-bank-destination' });
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: {
+    templates: cockpitQuickGenerateTemplates,
+    mutationContract: { runtime_enabled: true, route: 'x-change.cockpit.quick-generate.store', route_url: '/x/cockpit/quick-generate', allowed_methods: ['POST'] },
+  } });
+  await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('50');
+  await openOrderOptions(wrapper);
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
+  await wrapper.get('[data-testid="settlement-workflow"]').setValue('repayment');
+  await wrapper.get('[data-testid="cockpit-quick-generate-target-amount"]').setValue('60');
+  await wrapper.get('[data-testid="settlement-repayment-amount"]').setValue('30');
+  wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', 'instapay.gxchphm2xxx.account:09179999999');
+  await flushPromises();
+  expect(wrapper.get('[data-testid="cockpit-order-flow-summary"]').text()).toContain('9999');
+  const expected = preview(wrapper).execution.value_flow;
+  await wrapper.get('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
+  await flushPromises();
+  const request = fetchMock.mock.calls.find(([url, options]) => url === '/x/cockpit/quick-generate' && options.method === 'POST');
+  expect(request).toBeDefined();
+  expect(JSON.parse(request![1].body).execution.value_flow).toEqual(expected);
+});
+
 it('places a payable destination under v2 execution in the preview and submitted instructions', async () => {
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'issued', result: { code: 'FIXED' } }) });
   vi.stubGlobal('fetch', fetchMock);

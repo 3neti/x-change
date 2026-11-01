@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Bavix\Wallet\Models\Wallet;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -21,6 +22,7 @@ use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
 use LBHurtado\XChange\Actions\Funding\ApproveFundingReconciliation;
 use LBHurtado\XChange\Actions\Funding\AssessPaidOnDemandIssuanceRecovery;
+use LBHurtado\XChange\Actions\Funding\CancelPaidCockpitIssuanceToClientFunds;
 use LBHurtado\XChange\Actions\Funding\ClaimFundingEvidence;
 use LBHurtado\XChange\Actions\Funding\ClassifyOnDemandIssuanceFundingMismatch;
 use LBHurtado\XChange\Actions\Funding\ExpireOnDemandIssuanceFundingOrder;
@@ -34,6 +36,7 @@ use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Actions\Funding\TransitionPayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Actions\Funding\VerifyFundingIntent;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Data\DebitData;
 use LBHurtado\XChange\Data\Funding\FundingIntentVerificationData;
@@ -1425,6 +1428,140 @@ it('does not use corporate account fallback outside on-demand issuance', functio
         ->and($adapter->fundingVerifications)->toHaveCount(1)
         ->and($adapter->fundingVerifications[0]->fundingAddress)
         ->toBe('915008422914050308952');
+});
+
+it('cancels a paid cockpit order and releases its hold to the issuing Account exactly once', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->sole();
+    $observation = onDemandFundingObservation(800);
+    $intent = onDemandFundingIntent($wallet->uuid, $observation, 800);
+    $order = issuanceFundingOrder($user);
+    $order->forceFill([
+        'account_reference' => 'wallet:'.$wallet->uuid,
+        'required_amount_minor' => 800,
+        'on_demand_amount_minor' => 800,
+        'expected_payment_minor' => 800,
+        'metadata' => ['source' => 'cockpit.quick-generate'],
+    ])->saveQuietly();
+    $order = app(ReserveOnDemandIssuanceAmountLease::class)->handle($order);
+    $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();
+    app(SettleVerifiedFundingIntent::class)->handle($intent);
+    (new ResumeOnDemandPayCodeIssuanceJob($order->getKey()))->failed(new RuntimeException('failed'));
+    $action = app(CancelPaidCockpitIssuanceToClientFunds::class);
+    $other = actingAsTestUser(0);
+    expect(fn () => $action->handle($order, $other))->toThrow(RuntimeException::class, 'issuing Account');
+    $order->refresh()->forceFill(['metadata' => ['source' => 'cockpit.quick-generate', 'issuance_retry' => ['pending' => true]]])->saveQuietly();
+    expect(fn () => $action->handle($order, $user))->toThrow(RuntimeException::class, 'not eligible');
+    $order->forceFill(['metadata' => ['source' => 'cockpit.quick-generate']])->saveQuietly();
+    expect(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(0);
+    expect(fn () => app(TransitionPayCodeIssuanceFundingOrder::class)->handle(
+        order: $order,
+        status: PayCodeIssuanceFundingOrderStatus::Cancelled,
+        eventType: 'funded_order_cancelled_to_client_funds',
+        actorType: $user::class,
+        actorId: (string) $user->getKey(),
+        approvedFundedCancellation: true,
+    ))->toThrow(RuntimeException::class, 'governed recovery');
+
+    expect(fn () => DB::transaction(function () use ($action, $order, $user): void {
+        $action->handle($order, $user);
+        throw new RuntimeException('simulate rollback');
+    }))->toThrow(RuntimeException::class, 'simulate rollback');
+    expect($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::IssuanceAttention)
+        ->and(treasuryClientFundsLedger($user)->fresh()->getBalanceIntAttribute())->toBe(0)
+        ->and(TreasuryAllocation::query()->where('allocation_reference', $order->treasury_hold_reference)->sole()->balance_minor)->toBe(800);
+
+    $cancelled = $action->handle($order, $user);
+    $action->handle($order, $user);
+    expect($cancelled->status)->toBe(PayCodeIssuanceFundingOrderStatus::Cancelled)
+        ->and($cancelled->voucher_id)->toBeNull()
+        ->and(treasuryClientFundsLedger($user)->fresh()->getBalanceIntAttribute())->toBe(800)
+        ->and(TreasuryAllocation::query()->where('allocation_reference', $order->treasury_hold_reference)->sole()->status)->toBe('released')
+        ->and($order->events()->where('event_type', 'funded_order_cancelled_to_client_funds')->count())->toBe(1)
+        ->and(FundingSettlement::query()->where('funding_intent_id', $intent->getKey())->count())->toBe(1);
+    expect(fn () => app()->call([new ResumeOnDemandPayCodeIssuanceJob($order->getKey()), 'handle']))
+        ->toThrow(RuntimeException::class, 'not ready');
+});
+
+it('recovers an underquoted paid settlement only after the missing principal is available', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->sole();
+    $observation = onDemandFundingObservation(800);
+    $intent = onDemandFundingIntent($wallet->uuid, $observation, 800);
+    $order = issuanceFundingOrder($user);
+    $order->forceFill([
+        'instructions_ciphertext' => ['cash' => ['amount' => 50, 'currency' => 'PHP'], 'voucher_type' => 'settlement', 'target_amount' => 60, 'fee_bearer' => 'issuer'],
+        'pricing_snapshot_ciphertext' => ['account_debit' => 8, 'customer_charge_minor' => 800],
+        'required_amount_minor' => 800,
+        'on_demand_amount_minor' => 800,
+        'expected_payment_minor' => 800,
+    ])->saveQuietly();
+    $order = app(ReserveOnDemandIssuanceAmountLease::class)->handle($order);
+    $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();
+    app(SettleVerifiedFundingIntent::class)->handle($intent);
+    (new ResumeOnDemandPayCodeIssuanceJob($order->getKey()))->failed(new RuntimeException('insufficient funds'));
+
+    $available = 0;
+    $balances = Mockery::mock(AccountBalanceReadModelContract::class);
+    $balances->shouldReceive('providerBalanceMinor')->andReturnUsing(function () use (&$available): ?int {
+        return $available;
+    });
+    app()->instance(AccountBalanceReadModelContract::class, $balances);
+    $retry = app(RequestOnDemandPayCodeIssuanceRetry::class);
+    $status = $retry->availability($order->refresh());
+    expect($status['eligible'])->toBeFalse()
+        ->and($status['additional_client_funds_minor'])->toBe(5000)
+        ->and($status['attempts_remaining'])->toBe(2);
+    expect(fn () => $retry->handle($order, 'issuer', (string) $user->getKey()))->toThrow(ConflictHttpException::class);
+    expect(data_get($order->refresh()->metadata, 'issuance_retry.count', 0))->toBe(0);
+
+    $available = null;
+    expect($retry->availability($order->refresh()))->toMatchArray([
+        'eligible' => false,
+        'funding_balance_unavailable' => true,
+        'additional_client_funds_minor' => null,
+    ]);
+
+    $available = 5000;
+    expect($retry->availability($order->refresh())['eligible'])->toBeTrue();
+    $retry->handle($order, 'issuer', (string) $user->getKey());
+    expect(data_get($order->refresh()->metadata, 'issuance_retry.pending'))->toBeTrue()
+        ->and($order->events()->where('event_type', 'manual_issuance_retry_requested')->count())->toBe(1)
+        ->and(TreasuryAllocation::query()->where('allocation_reference', $order->treasury_hold_reference)->sole()->balance_minor)->toBe(800);
+    expect(fn () => $retry->handle($order, 'issuer', (string) $user->getKey()))->toThrow(ConflictHttpException::class);
+
+    $job = new ResumeOnDemandPayCodeIssuanceJob($order->getKey());
+    $available = 800;
+    expect(fn () => app()->call([$job, 'handle']))->toThrow(RuntimeException::class, 'required=5800');
+    expect($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::IssuanceAttention)
+        ->and(TreasuryAllocation::query()->where('allocation_reference', $order->treasury_hold_reference)->sole()->balance_minor)->toBe(800);
+
+    $voucher = Voucher::query()->create(['code' => 'RECOVERY-TEST', 'metadata' => ['instructions' => []]]);
+    $result = new GeneratePayCodeResultData(
+        voucher_id: $voucher->getKey(),
+        code: $voucher->code,
+        amount: 50,
+        currency: 'PHP',
+        issuer: new IssuerData(id: $user->getKey()),
+        cost: new PricingEstimateData(currency: 'PHP', pay_code_value: 50, account_debit: 58),
+        wallet: ['balance_before' => 58, 'balance_after' => 0],
+        debit: new DebitData(id: 99, amount: 58),
+        links: new PayCodeLinksData(redeem: 'https://example.test/x/claim/RECOVERY-TEST', redeem_path: '/x/claim/RECOVERY-TEST'),
+    );
+    $generate = Mockery::mock(GeneratePayCode::class);
+    $generate->shouldReceive('handle')->once()->andReturn($result);
+    app()->instance(GeneratePayCode::class, $generate);
+    $available = 5800;
+    app()->call([$job, 'handle']);
+    app()->call([$job, 'handle']);
+    expect($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::Issued)
+        ->and($order->voucher_id)->toBe($voucher->getKey())
+        ->and(FundingSettlement::query()->where('funding_intent_id', $intent->getKey())->count())->toBe(1)
+        ->and($order->events()->where('event_type', 'pay_code_issued')->count())->toBe(1);
 });
 
 it('admits one durable payer retry after terminal issuance failure and enforces the retry budget', function (): void {
