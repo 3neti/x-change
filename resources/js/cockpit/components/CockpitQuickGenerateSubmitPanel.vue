@@ -34,7 +34,6 @@ import {
   computed,
   nextTick,
   onBeforeMount,
-  onBeforeUnmount,
   onMounted,
   ref,
   watch,
@@ -123,6 +122,7 @@ import CockpitQuickGenerateSurfaceSwitch from "./CockpitQuickGenerateSurfaceSwit
 import type { CockpitQuickGenerateSurface } from "./CockpitQuickGenerateSurfaceSwitch.vue";
 import type { CockpitScheduledPortion } from "./CockpitScheduledPortionsEditor.vue";
 import ValueFlowDestination from "@/components/financial/ValueFlowDestination.vue";
+import CockpitOrderFlowSummary from "./CockpitOrderFlowSummary.vue";
 import CockpitValueUseControl from "./CockpitValueUseControl.vue";
 import type { CockpitValueUseMode } from "./CockpitValueUseControl.vue";
 
@@ -902,6 +902,11 @@ const storedValueReplenishable = ref(false);
 const storedValueMaximumBalance = ref("");
 const storedValueOtpAbove = ref("");
 const voucherType = ref<"redeemable" | "payable" | "settlement">("redeemable");
+const destinationDrafts: Record<"redeemable" | "payable" | "settlement", string> = {
+  redeemable: "",
+  payable: "",
+  settlement: "",
+};
 const claimOutcome = ref<ClaimOutcomeMode>("provider_disbursement");
 const targetAmount = ref("");
 const rulesMinPayment = ref("");
@@ -911,6 +916,25 @@ const rulesAutoCloseOnFullPayment = ref(true);
 const includeExecutionInstruction = ref(false);
 const executionSchema = ref("voucher.execution.v2");
 const philhealthSettlement = ref(false);
+const amountBeforePhilhealth = ref<string | null>(null);
+const settlementWorkflow = computed(() =>
+  philhealthSettlement.value ? "philhealth" : settlementRepayment.value ? "repayment" : "other",
+);
+function selectSettlementWorkflow(event: Event): void {
+  const selected = (event.target as HTMLSelectElement).value;
+  if (selected === "philhealth") {
+    amountBeforePhilhealth.value = amount.value;
+    philhealthSettlement.value = true;
+    configurePhilhealthSettlement();
+    return;
+  }
+  if (philhealthSettlement.value && amountBeforePhilhealth.value !== null) {
+    amount.value = amountBeforePhilhealth.value;
+  }
+  amountBeforePhilhealth.value = null;
+  philhealthSettlement.value = false;
+  settlementRepayment.value = selected === "repayment";
+}
 const availableNotificationEvents = computed(() => {
   if (props.publicMode) return [];
   if (!philhealthSettlement.value && includeExecutionInstruction.value && (executionSchema.value === "voucher.execution.v1" || executionDriver.value !== "default")) return [];
@@ -994,7 +1018,6 @@ const costPreviewOpen = ref(false);
 const amountInputElement = ref<InstanceType<typeof CockpitAmountPicker> | null>(
   null,
 );
-const issueActionMenuElement = ref<HTMLDetailsElement | null>(null);
 const amountCalculatorPreview = ref<number | null>(null);
 const amountCalculatorEstimatePending = ref(false);
 const riderDesignEditor = ref<RiderDesignEditor>("appearance");
@@ -1054,12 +1077,7 @@ onBeforeMount((): void => {
 
 onMounted((): void => {
   riderDesignTeleportReady.value = true;
-  document.addEventListener("pointerdown", closeIssueActionMenuFromOutside);
   void focusAmountEditor();
-});
-
-onBeforeUnmount((): void => {
-  document.removeEventListener("pointerdown", closeIssueActionMenuFromOutside);
 });
 
 async function focusAmountEditor(): Promise<void> {
@@ -1161,14 +1179,20 @@ watch(claimOutcome, (outcome): void => {
   feeStrategy.value = "absorb";
 });
 
-watch(voucherType, (type): void => {
+watch(voucherType, (type, previousType): void => {
+  destinationDrafts[previousType] = valueFlowDestination.value;
+  valueFlowDestination.value = destinationDrafts[type];
   if (type !== "settlement") {
+    if (philhealthSettlement.value && amountBeforePhilhealth.value !== null) {
+      amount.value = amountBeforePhilhealth.value;
+    }
+    amountBeforePhilhealth.value = null;
     philhealthSettlement.value = false;
   }
   if (type === "payable" && claimOutcome.value === "account_funding") {
     claimOutcome.value = "provider_disbursement";
   }
-});
+}, { flush: "sync" });
 
 watch(onboardingEnabled, (enabled): void => {
   if (enabled) {
@@ -3162,14 +3186,8 @@ const isPayableVoucher = computed<boolean>(
 const isSettlementVoucher = computed<boolean>(
   () => voucherType.value === "settlement",
 );
-const requiresCollectionDestination = computed<boolean>(
-  () =>
-    isPayableVoucher.value ||
-    isSettlementVoucher.value ||
-    metadataFlowType.value.trim() === "collectible",
-);
 const amountFieldLabel = computed<string>(() =>
-  philhealthSettlement.value ? "Disbursement Amount" : (isPayableVoucher.value ? "Amount to Collect" : "Amount"),
+  philhealthSettlement.value ? "Disbursement Amount" : (isPayableVoucher.value ? "Amount to Collect" : isSettlementVoucher.value && settlementRepayment.value ? "Amount to Disburse" : "Amount"),
 );
 const amountFieldHelp = computed<string>(() =>
   philhealthSettlement.value
@@ -3267,43 +3285,8 @@ function setOnboardingMode(enabled: boolean): void {
   onboardingEnabled.value = enabled;
 }
 
-function closeIssueActionMenu(restoreFocus = false): void {
-  const menu = issueActionMenuElement.value;
-
-  if (menu === null) {
-    return;
-  }
-
-  menu.open = false;
-
-  if (restoreFocus) {
-    menu.querySelector<HTMLElement>("summary")?.focus();
-  }
-}
-
-function toggleIssueActionMenu(): void {
-  const menu = issueActionMenuElement.value;
-
-  if (menu !== null && !processing.value) {
-    menu.open = !menu.open;
-  }
-}
-
-function closeIssueActionMenuFromOutside(event: PointerEvent): void {
-  const menu = issueActionMenuElement.value;
-
-  if (
-    menu !== null &&
-    event.target instanceof Node &&
-    !menu.contains(event.target)
-  ) {
-    closeIssueActionMenu();
-  }
-}
-
 function selectIssueAction(enabled: boolean): void {
   setOnboardingMode(enabled);
-  closeIssueActionMenu(true);
 }
 
 function applyOnboardingDependencies(): void {
@@ -5210,7 +5193,7 @@ const requiresOnDemandFunding = computed<boolean>(() => {
 });
 const issueActionLabel = computed<string>(() => {
   if (onboardingEnabled.value) {
-    return "Issue Invitation";
+    return requiresOnDemandFunding.value ? "Fund and Issue Invitation" : "Issue Invitation";
   }
 
   return requiresOnDemandFunding.value
@@ -7154,7 +7137,36 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
               <p class="text-xs text-slate-500 sm:col-span-2 dark:text-slate-400">The Pay Code amount below is the externally quoted PHP payout. No exchange rate is calculated here.</p>
             </div>
           </section>
+          <fieldset v-if="!publicMode" class="grid min-w-0 gap-2 sm:col-span-2" data-testid="cockpit-quick-generate-voucher-kind">
+            <legend class="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100">What would you like to do?</legend>
+            <div class="grid grid-cols-1 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Pay Code purpose" data-testid="cockpit-quick-generate-voucher-type">
+              <label v-for="option in voucherTypeOptions" :key="option.value" class="relative min-w-0" :data-testid="`cockpit-quick-generate-voucher-type-${option.value}`">
+                <input v-model="voucherType" type="radio" name="cockpit-quick-generate-voucher-type" :value="option.value" :aria-label="option.label" :disabled="processing" class="peer sr-only" />
+                <span class="flex min-h-14 cursor-pointer flex-col justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-left transition peer-checked:border-emerald-500 peer-checked:bg-emerald-50 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-emerald-600 peer-disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:peer-checked:border-emerald-500 dark:peer-checked:bg-emerald-950/40">
+                  <span class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ option.label }}</span>
+                  <span class="text-xs leading-5 text-slate-500 dark:text-slate-400">{{ option.value === 'redeemable' ? 'Send value' : option.value === 'payable' ? 'Receive a payment' : 'Coordinate settlement' }}</span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+          <fieldset v-if="!publicMode" class="grid gap-2 sm:col-span-2" data-testid="cockpit-quick-generate-issuance-type">
+            <legend class="mb-2 text-xs font-semibold text-slate-700 dark:text-slate-300">Issue as</legend>
+            <div class="flex flex-wrap gap-2" role="group" aria-label="Issuance type">
+              <button type="button" data-testid="cockpit-quick-generate-mode-paycode" :aria-pressed="!onboardingEnabled" :disabled="processing" @click="selectIssueAction(false)" :class="!onboardingEnabled ? 'border-emerald-500 bg-emerald-50 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100' : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'" class="min-h-11 rounded-xl border px-4 text-sm font-semibold">Pay Code</button>
+              <button type="button" data-testid="cockpit-quick-generate-mode-invitation" :aria-pressed="onboardingEnabled" :disabled="processing || philhealthSettlement" @click="selectIssueAction(true)" :class="onboardingEnabled ? 'border-emerald-500 bg-emerald-50 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100' : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'" class="min-h-11 rounded-xl border px-4 text-sm font-semibold">Invitation</button>
+            </div>
+            <p v-if="philhealthSettlement" class="text-xs text-slate-500 dark:text-slate-400">Invitation is unavailable for the PhilHealth settlement workflow.</p>
+          </fieldset>
+          <label v-if="isSettlementVoucher && !publicMode" class="grid gap-2 text-sm font-semibold text-slate-800 sm:col-span-2 dark:text-slate-200">
+            Settlement workflow
+            <select :value="settlementWorkflow" :disabled="processing" class="min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-normal dark:border-slate-700 dark:bg-slate-900" data-testid="settlement-workflow" @change="selectSettlementWorkflow">
+              <option value="other">Other settlement</option>
+              <option value="repayment">Loan and repayments</option>
+              <option value="philhealth" :disabled="onboardingEnabled">PhilHealth settlement</option>
+            </select>
+          </label>
           <div
+            v-if="!philhealthSettlement"
             class="grid min-w-0 gap-1.5 text-xs font-medium text-slate-700 sm:col-span-2 dark:text-slate-300"
             data-testid="cockpit-quick-generate-amount-field"
           >
@@ -7181,7 +7193,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
               <span v-if="checkoutDraftMessage" role="status" class="text-slate-600 dark:text-slate-300">{{ checkoutDraftMessage }}</span>
             </div>
             <div
-              class="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-start justify-start gap-x-2 gap-y-1.5 sm:grid-cols-[minmax(0,18rem)_minmax(0,18rem)]"
+              class="grid min-w-0 grid-cols-1 items-start gap-1.5"
               data-testid="cockpit-quick-generate-amount-action-row"
             >
               <CockpitAmountPicker
@@ -7194,235 +7206,9 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                 :estimate-affordability="liveAccountDebitAffordability"
                 @preview="previewAmountInCalculator"
               />
-              <div
-                class="col-start-2 row-start-1 inline-flex w-full min-w-0 self-start rounded-xl shadow-sm"
-                data-testid="cockpit-quick-generate-mode-control"
-                role="group"
-                aria-label="Issue action"
-              >
-                <button
-                  type="submit"
-                  class="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap bg-emerald-600 px-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 sm:px-4 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
-                  :class="publicMode ? 'rounded-xl' : 'rounded-l-xl'"
-                  data-testid="cockpit-quick-generate-submit-button"
-                  :aria-label="issueActionLabel"
-                  :disabled="!canSubmit || processing"
-                >
-                  <LoaderCircle
-                    v-if="processing"
-                    class="size-4 animate-spin"
-                    aria-hidden="true"
-                    data-testid="cockpit-quick-generate-issue-spinner"
-                  />
-                  <TicketCheck
-                    v-else
-                    class="size-4 shrink-0"
-                    aria-hidden="true"
-                    data-testid="cockpit-quick-generate-issue-icon"
-                  />
-                  <span v-if="processing">Issuing…</span>
-                  <template v-else>
-                    <span class="sm:hidden">
-                      {{
-                        onboardingEnabled
-                          ? "Invite"
-                          : requiresOnDemandFunding
-                            ? "Fund & Issue"
-                            : "Pay Code"
-                      }}
-                    </span>
-                    <span class="hidden sm:inline">
-                      {{ issueActionLabel }}
-                    </span>
-                  </template>
-                </button>
-                <details
-                  v-if="!publicMode"
-                  ref="issueActionMenuElement"
-                  class="relative"
-                  data-testid="cockpit-quick-generate-issue-action-menu"
-                  @keydown.esc.prevent.stop="closeIssueActionMenu(true)"
-                >
-                  <summary
-                    class="flex min-h-12 w-10 cursor-pointer list-none items-center justify-center rounded-r-xl border-l border-emerald-500 bg-emerald-600 text-white transition marker:hidden hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 [&::-webkit-details-marker]:hidden"
-                    aria-label="Choose issue action"
-                    :aria-disabled="processing"
-                    data-testid="cockpit-quick-generate-issue-action-toggle"
-                    @click.prevent="toggleIssueActionMenu"
-                  >
-                    <ChevronDown class="size-4" aria-hidden="true" />
-                  </summary>
-                  <div
-                    class="absolute right-0 z-50 mt-2 grid min-w-48 gap-1 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
-                    role="menu"
-                    aria-label="Issue as"
-                    data-testid="cockpit-quick-generate-issue-action-options"
-                  >
-                    <button
-                      type="button"
-                      :aria-pressed="!onboardingEnabled"
-                      :class="[
-                        'flex min-h-10 w-full items-center justify-between gap-3 rounded-lg px-3 text-left text-sm font-semibold transition',
-                        !onboardingEnabled
-                          ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
-                          : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800',
-                      ]"
-                      :disabled="processing"
-                      role="menuitemradio"
-                      :aria-checked="!onboardingEnabled"
-                      data-testid="cockpit-quick-generate-mode-paycode"
-                      @click="selectIssueAction(false)"
-                    >
-                      Issue Pay Code
-                      <Check
-                        v-if="!onboardingEnabled"
-                        class="size-4"
-                        aria-hidden="true"
-                      />
-                    </button>
-                    <button
-                      type="button"
-                      :aria-pressed="onboardingEnabled"
-                      :class="[
-                        'flex min-h-10 w-full items-center justify-between gap-3 rounded-lg px-3 text-left text-sm font-semibold transition',
-                        onboardingEnabled
-                          ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
-                          : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800',
-                      ]"
-                      :disabled="processing"
-                      role="menuitemradio"
-                      :aria-checked="onboardingEnabled"
-                      data-testid="cockpit-quick-generate-mode-invitation"
-                      @click="selectIssueAction(true)"
-                    >
-                      Issue Invitation
-                      <Check
-                        v-if="onboardingEnabled"
-                        class="size-4"
-                        aria-hidden="true"
-                      />
-                    </button>
-                  </div>
-                </details>
-              </div>
-              <div
-                class="col-start-1 row-start-2 flex min-h-5 w-full max-w-72 min-w-0 items-baseline justify-between gap-2 px-0.5 text-[0.7rem] leading-5"
-                data-testid="cockpit-quick-generate-account-debit"
-                :data-affordability="liveAccountDebitAffordability"
-                :title="
-                  liveAccountDebitExceedsClientFunds
-                    ? 'Estimated Cost exceeds Client Funds.'
-                    : undefined
-                "
-                aria-live="polite"
-              >
-                <button
-                  type="button"
-                  class="min-w-0 truncate text-left underline-offset-2 hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2"
-                  :class="
-                    liveAccountDebitExceedsClientFunds
-                      ? 'font-semibold text-rose-600 hover:text-rose-700 focus-visible:outline-rose-600 dark:text-rose-300 dark:hover:text-rose-200'
-                      : 'font-medium text-slate-500 hover:text-emerald-700 focus-visible:outline-emerald-600 dark:text-slate-400 dark:hover:text-emerald-300'
-                  "
-                  aria-label="View estimated cost"
-                  data-testid="cockpit-quick-generate-account-debit-view-cost"
-                  @click="canvasView = 'cost'"
-                >
-                  <span class="sm:hidden">Est. cost</span>
-                  <span class="hidden sm:inline">Estimated Cost</span>
-                </button>
-                <span
-                  v-if="liveAccountDebit !== null"
-                  class="shrink-0 text-right font-semibold tabular-nums"
-                  :class="
-                    liveAccountDebitExceedsClientFunds
-                      ? 'text-rose-600 dark:text-rose-300'
-                      : 'text-slate-700 dark:text-slate-200'
-                  "
-                  data-testid="cockpit-quick-generate-account-debit-amount"
-                >
-                  {{ formatAccountMoney(liveAccountDebit) }}
-                </span>
-                <span
-                  v-else-if="liveAccountDebitPending"
-                  class="shrink-0 text-right text-slate-400 dark:text-slate-500"
-                  data-testid="cockpit-quick-generate-account-debit-loading"
-                >
-                  Calculating…
-                </span>
-                <span
-                  v-else
-                  class="shrink-0 text-right text-slate-400 dark:text-slate-500"
-                  data-testid="cockpit-quick-generate-account-debit-unavailable"
-                >
-                  —
-                </span>
-              </div>
-              <fieldset
-                v-if="!publicMode"
-                class="col-start-2 row-start-2 min-w-0"
-                data-testid="cockpit-quick-generate-voucher-kind"
-              >
-                <legend class="sr-only">Value flow</legend>
-                <div
-                  class="flex min-w-0 flex-nowrap items-center gap-1"
-                  data-testid="cockpit-quick-generate-value-flow-row"
-                >
-                  <span
-                    class="flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[0.625rem] font-medium text-slate-600 dark:text-slate-400"
-                    data-testid="cockpit-quick-generate-value-flow-label"
-                  >
-                    <span class="sm:hidden">Flow</span>
-                    <span class="hidden sm:inline">Value flow</span>
-                    <CockpitFieldHelp
-                      label="About Value Flow"
-                      tooltip="Disburse sends claimable value, Collect receives a payment, and Settle combines redeemable value with a collection target."
-                    />
-                  </span>
-                  <div
-                    class="grid min-w-0 flex-1 grid-cols-3 rounded-md bg-slate-100 p-px dark:bg-slate-900"
-                    role="radiogroup"
-                    aria-label="Pay Code value flow"
-                    data-testid="cockpit-quick-generate-voucher-type"
-                  >
-                    <label
-                      v-for="option in voucherTypeOptions"
-                      :key="option.value"
-                      class="relative min-w-0"
-                      :data-testid="`cockpit-quick-generate-voucher-type-${option.value}`"
-                    >
-                      <input
-                        v-model="voucherType"
-                        class="peer sr-only"
-                        type="radio"
-                        name="cockpit-quick-generate-voucher-type"
-                        :value="option.value"
-                        :aria-label="option.label"
-                        :disabled="processing"
-                      />
-                      <span
-                        class="flex min-h-6 min-w-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm px-0 text-[0.5625rem] font-semibold whitespace-nowrap text-slate-600 transition peer-checked:bg-white peer-checked:text-emerald-800 peer-checked:shadow-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-1 peer-focus-visible:outline-emerald-600 peer-disabled:cursor-not-allowed peer-disabled:opacity-60 sm:px-1 sm:text-[0.625rem] dark:text-slate-300 dark:peer-checked:bg-slate-800 dark:peer-checked:text-emerald-200"
-                        :title="option.label"
-                      >
-                        <span
-                          v-if="'compactLabel' in option"
-                          class="sm:hidden"
-                          >{{ option.compactLabel }}</span
-                        >
-                        <span
-                          :class="
-                            'compactLabel' in option ? 'hidden sm:inline' : ''
-                          "
-                          >{{ option.label }}</span
-                        >
-                      </span>
-                    </label>
-                  </div>
-                </div>
-              </fieldset>
               <span
                 v-if="amountFieldError"
-                class="col-start-1 row-start-3 text-[11px] font-medium text-rose-600 dark:text-rose-300"
+                class="text-[11px] font-medium text-rose-600 dark:text-rose-300"
                 data-testid="cockpit-quick-generate-amount-error"
               >
                 {{ amountFieldError }}
@@ -7435,10 +7221,10 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
             data-testid="cockpit-quick-generate-target-amount-field"
           >
             <span class="flex items-center gap-1">
-              Target Value
+              {{ philhealthSettlement ? 'Settlement Amount' : 'Total to Collect' }}
               <CockpitFieldHelp
-                label="About Target Value"
-                tooltip="Collection target tracked independently from the redeemable settlement amount."
+                :label="philhealthSettlement ? 'About Settlement Amount' : 'About Total to Collect'"
+                :tooltip="philhealthSettlement ? 'The amount to be paid after the patient attestation and hospital review.' : 'The total collection target, separate from any amount disbursed.'"
               />
             </span>
             <input
@@ -7464,10 +7250,37 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
               {{ targetAmountError }}
             </span>
           </label>
-          <label v-if="isSettlementVoucher && !publicMode && !onboardingEnabled" class="flex items-start gap-2 text-xs text-slate-700 sm:col-span-2 dark:text-slate-300">
-            <input v-model="philhealthSettlement" type="checkbox" :disabled="processing" data-testid="philhealth-settlement-workflow" @change="configurePhilhealthSettlement" />
-            <span>PhilHealth settlement: patient attestation, hospital review, and payment to the hospital.</span>
-          </label>
+          <div v-if="isPayableVoucher || isSettlementVoucher || reusableBalance" class="grid min-w-0 gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:col-span-2 dark:border-slate-700 dark:bg-slate-900/50" data-testid="cockpit-quick-generate-money-flow-controls">
+            <fieldset v-if="isSettlementVoucher && settlementRepayment && !philhealthSettlement" class="grid gap-2" data-testid="settlement-repayment-control">
+              <label class="grid gap-1 text-sm">Fixed repayment amount
+                <input :value="rulesMinPayment" type="number" min="0.01" step="0.01" :disabled="processing" data-testid="settlement-repayment-amount" class="min-h-12 rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900" @input="rulesMinPayment = ($event.target as HTMLInputElement).value; rulesMaxPayment = rulesMinPayment" />
+              </label>
+              <p class="text-xs text-slate-600 dark:text-slate-400">Repayments begin after confirmed disbursement and continue until the target is paid.</p>
+            </fieldset>
+
+            <ValueFlowDestination
+              v-if="valueFlowVisible"
+              v-model="valueFlowDestination"
+              :stored-value="reusableBalance"
+              :disabled="processing"
+            />
+
+            <fieldset v-if="isPayableVoucher || isSettlementVoucher" class="grid gap-2" data-testid="fee-bearer-control">
+              <legend class="text-xs font-semibold">Who pays the service fee?</legend>
+              <label class="flex items-center gap-2 text-sm">
+                <input v-model="feeBearer" type="radio" value="issuer" :disabled="processing" data-testid="fee-bearer-issuer" />
+                Issuer pays at issuance
+              </label>
+              <label class="flex items-center gap-2 text-sm">
+                <input v-model="feeBearer" type="radio" value="payer" :disabled="processing" data-testid="fee-bearer-payer" />
+                Customer pays with the payment
+              </label>
+            </fieldset>
+
+
+            <p v-if="collectionDestinationError" class="text-xs font-medium text-rose-600 dark:text-rose-300" data-testid="cockpit-quick-generate-collection-destination-error">{{ collectionDestinationError }}</p>
+
+          </div>
           <label
             class="grid w-full min-w-0 max-w-72 gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
             data-testid="cockpit-quick-generate-recipient-field"
@@ -7528,7 +7341,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
             />
           </label>
           <section
-            v-if="requiresCollectionDestination"
+            v-if="metadataFlowType.trim() === 'collectible' && !isPayableVoucher && !isSettlementVoucher"
             class="grid min-w-0 gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 sm:col-span-2 dark:border-emerald-900 dark:bg-emerald-950/30"
             data-testid="cockpit-quick-generate-collection-destination"
             aria-label="Collection destination"
@@ -7570,6 +7383,100 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
               {{ collectionDestinationError }}
             </span>
           </section>
+          <CockpitOrderFlowSummary v-if="!publicMode" class="sm:col-span-2" :voucher-type="voucherType" :amount="amount" :target-amount="targetAmount" :destination="valueFlowVisible ? valueFlowDestination : ''" :default-destination="collectionDestination?.label ?? 'Client Funds'" :fee-bearer="feeBearer" :repayment="settlementRepayment" :repayment-amount="rulesMinPayment" :philhealth="philhealthSettlement" />
+          <div class="grid gap-2 sm:col-span-2" data-testid="cockpit-quick-generate-final-action">
+              <p v-if="valueUseModeError" class="text-xs font-medium text-rose-700 dark:text-rose-300" role="alert">{{ valueUseModeError }} Open Options to change Value Use.</p>
+              <div
+                class="flex min-h-5 w-full min-w-0 items-baseline justify-between gap-2 px-0.5 text-xs leading-5"
+                data-testid="cockpit-quick-generate-account-debit"
+                :data-affordability="liveAccountDebitAffordability"
+                :title="
+                  liveAccountDebitExceedsClientFunds
+                    ? 'Estimated Cost exceeds Client Funds.'
+                    : undefined
+                "
+                aria-live="polite"
+              >
+                <button
+                  type="button"
+                  class="min-w-0 truncate text-left underline-offset-2 hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2"
+                  :class="
+                    liveAccountDebitExceedsClientFunds
+                      ? 'font-semibold text-rose-600 hover:text-rose-700 focus-visible:outline-rose-600 dark:text-rose-300 dark:hover:text-rose-200'
+                      : 'font-medium text-slate-500 hover:text-emerald-700 focus-visible:outline-emerald-600 dark:text-slate-400 dark:hover:text-emerald-300'
+                  "
+                  aria-label="View estimated cost"
+                  data-testid="cockpit-quick-generate-account-debit-view-cost"
+                  @click="canvasView = 'cost'"
+                >
+                  <span class="sm:hidden">Est. cost</span>
+                  <span class="hidden sm:inline">Estimated Cost</span>
+                </button>
+                <span
+                  v-if="liveAccountDebit !== null"
+                  class="shrink-0 text-right font-semibold tabular-nums"
+                  :class="
+                    liveAccountDebitExceedsClientFunds
+                      ? 'text-rose-600 dark:text-rose-300'
+                      : 'text-slate-700 dark:text-slate-200'
+                  "
+                  data-testid="cockpit-quick-generate-account-debit-amount"
+                >
+                  {{ formatAccountMoney(liveAccountDebit) }}
+                </span>
+                <span
+                  v-else-if="liveAccountDebitPending"
+                  class="shrink-0 text-right text-slate-400 dark:text-slate-500"
+                  data-testid="cockpit-quick-generate-account-debit-loading"
+                >
+                  Calculating…
+                </span>
+                <span
+                  v-else
+                  class="shrink-0 text-right text-slate-400 dark:text-slate-500"
+                  data-testid="cockpit-quick-generate-account-debit-unavailable"
+                >
+                  —
+                </span>
+              </div>
+              <div v-if="!publicMode && liveFundingPreflight?.funding" class="grid gap-1 text-xs text-slate-600 dark:text-slate-300" aria-live="polite" data-testid="cockpit-funding-summary">
+                <div v-if="typeof liveFundingPreflight.funding.external_amount_minor === 'number'" class="flex justify-between gap-3">
+                  <span>Additional funding required</span><span class="font-semibold tabular-nums">{{ formatAccountMoney(liveFundingPreflight.funding.external_amount_minor / 100) }}</span>
+                </div>
+              </div>
+              <p v-else-if="!publicMode && liveFundingPreflighting" class="text-xs text-slate-500 dark:text-slate-400" role="status">Checking funding…</p>
+              <div
+                class="inline-flex w-full min-w-0 rounded-xl shadow-sm"
+                data-testid="cockpit-quick-generate-mode-control"
+                role="group"
+                aria-label="Issue action"
+              >
+                <button
+                  type="submit"
+                  class="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-emerald-600 px-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 sm:px-4 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+                  data-testid="cockpit-quick-generate-submit-button"
+                  :aria-label="issueActionLabel"
+                  :disabled="!canSubmit || processing"
+                >
+                  <LoaderCircle
+                    v-if="processing"
+                    class="size-4 animate-spin"
+                    aria-hidden="true"
+                    data-testid="cockpit-quick-generate-issue-spinner"
+                  />
+                  <TicketCheck
+                    v-else
+                    class="size-4 shrink-0"
+                    aria-hidden="true"
+                    data-testid="cockpit-quick-generate-issue-icon"
+                  />
+                  <span v-if="processing">Issuing…</span>
+                  <template v-else>
+                    <span>{{ issueActionLabel }}</span>
+                  </template>
+                </button>
+              </div>
+          </div>
         </div>
 
         <section
@@ -7791,39 +7698,6 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                 {{ storedValuePolicyError }}
               </p>
             </div>
-
-            <fieldset v-if="isSettlementVoucher && !philhealthSettlement" class="grid gap-2" data-testid="settlement-repayment-control">
-              <label class="flex items-center gap-2 text-sm">
-                <input v-model="settlementRepayment" type="checkbox" :disabled="processing" data-testid="settlement-repayment-enabled" />
-                Disburse first, then collect repayments
-              </label>
-              <template v-if="settlementRepayment">
-                <label class="grid gap-1 text-sm">
-                  Fixed repayment amount
-                  <input :value="rulesMinPayment" type="number" min="0.01" step="0.01" :disabled="processing" data-testid="settlement-repayment-amount" @input="rulesMinPayment = ($event.target as HTMLInputElement).value; rulesMaxPayment = rulesMinPayment" />
-                </label>
-                <p class="text-xs text-muted-foreground">The amount is disbursed once. Repayments start after confirmed disbursement and continue until the target is paid.</p>
-              </template>
-            </fieldset>
-
-            <fieldset v-if="isPayableVoucher || isSettlementVoucher" class="grid gap-2" data-testid="fee-bearer-control">
-              <legend class="text-xs font-semibold">Who pays the service fee?</legend>
-              <label class="flex items-center gap-2 text-sm">
-                <input v-model="feeBearer" type="radio" value="issuer" :disabled="processing" data-testid="fee-bearer-issuer" />
-                Issuer pays at issuance
-              </label>
-              <label class="flex items-center gap-2 text-sm">
-                <input v-model="feeBearer" type="radio" value="payer" :disabled="processing" data-testid="fee-bearer-payer" />
-                Customer pays with the payment
-              </label>
-            </fieldset>
-
-            <ValueFlowDestination
-              v-if="valueFlowVisible"
-              v-model="valueFlowDestination"
-              :stored-value="reusableBalance"
-              :disabled="processing"
-            />
 
             <fieldset
               v-if="!publicMode && !isAccountFundingClaim && !reusableBalance"
@@ -8185,6 +8059,9 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
             <p v-if="isPayableVoucher" class="text-xs text-slate-600 dark:text-slate-300">
               Collect {{ formatAccountMoney(Number(amount) || 0) }} from the payer. No value is funded upfront.
             </p>
+            <p v-else-if="philhealthSettlement" class="text-xs text-slate-600 dark:text-slate-300">
+              Patient attestation and hospital review precede the verified settlement payment of {{ formatAccountMoney(Number(targetAmount) || 0) }}.
+            </p>
             <p v-else-if="isSettlementVoucher" class="text-xs text-slate-600 dark:text-slate-300">
               Collect {{ formatAccountMoney(Number(targetAmount) || 0) }} and release {{ formatAccountMoney(Number(amount) || 0) }} under the settlement rules.
             </p>
@@ -8198,15 +8075,6 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
           <span class="self-start rounded-full bg-white px-3 py-1 text-xs font-semibold text-emerald-800 dark:bg-slate-900 dark:text-emerald-200">
             {{ reusableBalance ? 'Reusable balance' : sliceMode === 'whole' ? 'Whole value' : sliceMode === 'fixed' ? 'Equal portions' : sliceMode === 'open' ? 'Flexible portions' : 'Scheduled portions' }}
           </span>
-          <fieldset v-if="!publicMode" class="grid gap-2 border-t border-emerald-200 pt-3 sm:col-span-2 dark:border-emerald-900" data-testid="cockpit-claim-experience-mode">
-            <legend class="text-xs font-semibold">Value flow</legend>
-            <div class="grid gap-2 sm:grid-cols-3">
-              <label v-for="option in voucherTypeOptions" :key="option.value" class="flex cursor-pointer items-center gap-2 rounded-xl border border-emerald-200 bg-white p-3 text-xs font-semibold dark:border-emerald-900 dark:bg-slate-900">
-                <input v-model="voucherType" type="radio" name="claim-experience-voucher-type" :value="option.value" :disabled="processing" :data-testid="`cockpit-claim-experience-mode-${option.value}`" />
-                {{ option.label }}
-              </label>
-            </div>
-          </fieldset>
         </section>
         <nav class="flex gap-2 overflow-x-auto pb-1" aria-label="Claim Experience sections" data-testid="cockpit-claim-experience-navigation">
           <button
@@ -8321,11 +8189,6 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
               </div>
             </label>
 
-            <label v-if="isSettlementVoucher" class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300">
-              Collection target
-              <input v-model="targetAmount" type="number" min="0.01" step="0.01" class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50" data-testid="cockpit-claim-experience-target-amount" :disabled="processing" />
-              <span v-if="targetAmountError" class="text-rose-700 dark:text-rose-300">{{ targetAmountError }}</span>
-            </label>
 
             <label
               class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"

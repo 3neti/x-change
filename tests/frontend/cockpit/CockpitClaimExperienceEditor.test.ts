@@ -100,15 +100,15 @@ describe('Claim Experience editor', () => {
         expect(wrapper.find('[data-testid="cockpit-claim-experience-value-use-error"]').exists()).toBe(false);
     });
 
-    it('authors mode, value, and collection target inside Claim Experience alone', async () => {
+    it('keeps the claim editor in sync with purpose and amounts from the Order card', async () => {
         const wrapper = editor();
-        await wrapper.get('[data-testid="cockpit-claim-experience-mode-payable"]').setValue();
+        await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue();
         await wrapper.get('[data-testid="cockpit-quick-generate-submit-amount"]').setValue('40');
         expect(payload(wrapper).voucher_type).toBe('payable');
         expect(payload(wrapper).target_amount).toBe(40);
 
-        await wrapper.get('[data-testid="cockpit-claim-experience-mode-settlement"]').setValue();
-        await wrapper.get('[data-testid="cockpit-claim-experience-target-amount"]').setValue('60');
+        await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue();
+        await wrapper.get('[data-testid="cockpit-quick-generate-target-amount"]').setValue('60');
         expect(payload(wrapper).voucher_type).toBe('settlement');
         expect(payload(wrapper).target_amount).toBe(60);
     });
@@ -127,7 +127,7 @@ describe('Claim Experience editor', () => {
                 },
             },
         });
-        await wrapper.get('[data-testid="cockpit-claim-experience-mode-payable"]').setValue();
+        await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue();
         expect(wrapper.get('[data-testid="cockpit-claim-experience-value-use-summary"]').text()).toContain('available only for Disburse');
     });
 });
