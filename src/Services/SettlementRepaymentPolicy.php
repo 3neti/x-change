@@ -58,9 +58,23 @@ final class SettlementRepaymentPolicy
 
     public static function disbursed(Voucher $voucher): bool
     {
-        return DisbursementReconciliation::query()
+        $payout = DisbursementReconciliation::query()
             ->where('voucher_id', $voucher->getKey())->where('claim_type', '!=', 'value_flow')
-            ->where('status', 'succeeded')->where('internal_status', 'finalized')->exists();
+            ->latest('id')->first();
+
+        if ($payout === null || $payout->needs_review) {
+            return false;
+        }
+
+        if ($payout->status === 'succeeded' && $payout->internal_status === 'finalized') {
+            return true;
+        }
+
+        return $payout->status === 'pending'
+            && $payout->internal_status === 'recorded'
+            && data_get($payout->meta, 'provider_response.received') === true
+            && data_get($payout->meta, 'provider_response.status') === 'pending'
+            && filled($payout->provider_transaction_id);
     }
 
     public static function paymentMinor(Voucher $voucher): int
