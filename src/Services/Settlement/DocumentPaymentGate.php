@@ -11,7 +11,7 @@ final readonly class DocumentPaymentGate
 {
     public function __construct(private DocumentPaymentReadiness $readiness) {}
 
-    public function ensureReady(Voucher $voucher): void
+    public function ensureReady(Voucher $voucher, bool $lockEnvelope = false): void
     {
         $requirements = data_get($voucher->metadata, 'instructions.execution.document_requirements');
 
@@ -23,7 +23,11 @@ final readonly class DocumentPaymentGate
             throw new VoucherRequiresSettlementEnvelope(voucher: $voucher, message: 'Document requirements are invalid.');
         }
 
-        $envelope = $voucher->envelope()->first();
+        $query = $voucher->envelope();
+        if ($lockEnvelope) {
+            $query->lockForUpdate();
+        }
+        $envelope = $query->first();
         $documents = $envelope?->attachments()->get(['doc_type', 'review_status', 'metadata'])
             ->map(fn ($attachment): array => [
                 'type' => $attachment->doc_type,

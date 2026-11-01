@@ -95,6 +95,7 @@ class CreatePaymentAttempt
                 $fingerprint,
                 $qrDeliveryModeValues,
             ): PaymentAttempt {
+                $this->documentGate->ensureReady($voucher->fresh(), lockEnvelope: true);
                 if (data_get($voucher->metadata, 'instructions.execution.settlement.driver') === 'philhealth-bst'
                     && data_get($voucher->metadata, 'instructions.execution.schema') === 'voucher.execution.v2') {
                     $lockedVoucher = Voucher::query()->lockForUpdate()->findOrFail($voucher->getKey());
