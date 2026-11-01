@@ -17,6 +17,7 @@ use LBHurtado\XChange\Models\StoredValueHolderBinding;
 use LBHurtado\XChange\Services\Claim\ClaimWorkflowReadModelProjector;
 use LBHurtado\XChange\Services\Claim\CoverageCompletionSuccessPresentation;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
+use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
 use LBHurtado\XChange\Services\Slices\VoucherSlicePlanProjection;
 use LBHurtado\XChange\Services\Stamp\StampProviderIdentity;
 use LBHurtado\XChange\Services\VoucherCollectionOutcomeProjection;
@@ -168,7 +169,8 @@ class VoucherXRayProjectionBuilder
 
     protected function xrayStatus(string $status, mixed $voucher): string
     {
-        if ($voucher instanceof Voucher && $this->capabilities->canCollect($voucher)) {
+        if ($voucher instanceof Voucher && $this->capabilities->canCollect($voucher)
+            && ! $this->awaitsSettlementDisbursement($voucher)) {
             $progress = $this->progress->compute($voucher);
             $outcome = app(VoucherCollectionOutcomeProjection::class)->project($voucher, $progress);
 
@@ -589,6 +591,7 @@ class VoucherXRayProjectionBuilder
         if (
             $voucher instanceof Voucher
             && $this->capabilities->canCollect($voucher)
+            && ! $this->awaitsSettlementDisbursement($voucher)
             && ! $this->progress->compute($voucher)->is_fully_collected
         ) {
             return [[
@@ -609,6 +612,12 @@ class VoucherXRayProjectionBuilder
             'label' => 'Start claim',
             'url' => '/x/claim?code='.rawurlencode($code),
         ]];
+    }
+
+    private function awaitsSettlementDisbursement(Voucher $voucher): bool
+    {
+        return SettlementRepaymentPolicy::forVoucher($voucher)
+            && ! SettlementRepaymentPolicy::disbursed($voucher);
     }
 
     protected function fieldKey(mixed $field): ?string
