@@ -12,17 +12,21 @@ use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
 use LBHurtado\XChange\Models\Checkout;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
+use LBHurtado\XChange\Services\Funding\SettlementIssuanceRecoveryAssessment;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final readonly class RequestOnDemandPayCodeIssuanceRetry
 {
-    public function __construct(private TransitionPayCodeIssuanceFundingOrder $transition) {}
+    public function __construct(
+        private TransitionPayCodeIssuanceFundingOrder $transition,
+        private SettlementIssuanceRecoveryAssessment $settlementFunding,
+    ) {}
 
     public const int MaximumRequests = 2;
 
     public const int CooldownSeconds = 60;
 
-    /** @return array{eligible: bool, pending: bool, attempts_remaining: int, next_available_at: ?string} */
+    /** @return array{eligible: bool, pending: bool, attempts_remaining: int, next_available_at: ?string, additional_client_funds_minor: ?int, funding_balance_unavailable: bool} */
     public function availability(PayCodeIssuanceFundingOrder $order): array
     {
         $count = (int) data_get($order->metadata, 'issuance_retry.count', 0);
@@ -49,8 +53,14 @@ final readonly class RequestOnDemandPayCodeIssuanceRetry
             ->where('funding_order_id', $order->getKey())
             ->whereHas('refundCase')->exists();
 
+        $funding = $safe ? $this->settlementFunding->assess($order) : null;
+        $balanceUnavailable = $funding !== null && $funding['shortfall_minor'] === null;
+        $shortfall = $funding['shortfall_minor'] ?? null;
+
         return [
             'eligible' => $safe
+                && ! $balanceUnavailable
+                && $shortfall === 0
                 && ! $pending
                 && $count < self::MaximumRequests
                 && $ready,
@@ -59,6 +69,8 @@ final readonly class RequestOnDemandPayCodeIssuanceRetry
             'next_available_at' => $safe && $count < self::MaximumRequests
                 ? $next?->toIso8601String()
                 : null,
+            'additional_client_funds_minor' => $shortfall,
+            'funding_balance_unavailable' => $balanceUnavailable,
         ];
     }
 

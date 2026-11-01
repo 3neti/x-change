@@ -8,6 +8,30 @@ use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
 use LBHurtado\XChange\Data\PricingEstimateData;
 
+it('includes settlement principal in the issuer funding requirement', function (array $changes, float $expected): void {
+    config()->set('x-change.commercial.billing.mode', 'billable');
+    $input = array_replace_recursive([
+        'cash' => ['amount' => 50, 'currency' => 'PHP', 'validation' => []],
+        'voucher_type' => 'settlement',
+        'target_amount' => 60,
+        'inputs' => ['fields' => []],
+        'feedback' => ['email' => null, 'mobile' => null, 'webhook' => null],
+        'rider' => ['message' => null, 'url' => null, 'splash' => null],
+        'count' => 1,
+        'execution' => ['schema' => 'voucher.execution.v2', 'driver' => 'default'],
+    ], $changes);
+    $pricing = Mockery::mock(PricingServiceContract::class);
+    $pricing->shouldReceive('estimate')->once()->andReturn(['currency' => 'PHP', 'total' => 8]);
+
+    expect((new EstimatePayCodeCost($pricing))->handle($input)->account_debit)->toBe($expected);
+})->with([
+    'general settlement issuer pays' => [['fee_bearer' => 'issuer'], 58.0],
+    'general settlement payer pays' => [['fee_bearer' => 'payer'], 50.0],
+    'zero principal issuer pays' => [['cash' => ['amount' => 0], 'fee_bearer' => 'issuer'], 8.0],
+    'zero principal payer pays' => [['cash' => ['amount' => 0], 'fee_bearer' => 'payer'], 0.0],
+    'loan repayments' => [['rules' => ['settlement_mode' => 'disburse_then_repay', 'min_payment' => 30, 'max_payment' => 30]], 58.0],
+]);
+
 it('estimates a v2 payable without accepting a collection wallet from the browser', function (): void {
     $input = [
         'cash' => ['amount' => 0, 'currency' => 'PHP', 'validation' => []], 'voucher_type' => 'payable', 'target_amount' => 100,
@@ -226,7 +250,7 @@ it('excludes a collectible target from the account debit', function () {
     expect($result->account_debit)->toBe(15.0);
 });
 
-it('requires only the commercial charge for collection voucher types', function (string $voucherType, float $expectedPayCodeValue): void {
+it('funds the disbursement principal separately from the collection target', function (string $voucherType, float $expectedPayCodeValue, float $expectedDebit): void {
     $input = validPayCodePayload(1000, 'INSTAPAY', [
         'voucher_type' => $voucherType,
         'target_amount' => 1000,
@@ -256,8 +280,8 @@ it('requires only the commercial charge for collection voucher types', function 
 
     expect($result->pay_code_value)->toBe($expectedPayCodeValue)
         ->and($result->total)->toBe(2.5)
-        ->and($result->account_debit)->toBe(2.5);
+        ->and($result->account_debit)->toBe($expectedDebit);
 })->with([
-    'payable' => ['payable', 0.0],
-    'settlement' => ['settlement', 1000.0],
+    'payable' => ['payable', 0.0, 2.5],
+    'settlement' => ['settlement', 1000.0, 1002.5],
 ]);

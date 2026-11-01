@@ -6,6 +6,23 @@ import CockpitOnDemandIssuanceFundingDialog from "../../../resources/js/cockpit/
 import { projection } from "./issuanceProjection";
 
 describe("CockpitOnDemandIssuanceFundingDialog", () => {
+  it("explains the missing Client Funds without requesting the order payment again", () => {
+    const order = structuredClone(projection);
+    order.status = "issuance_attention";
+    order.order.status = "issuance_attention";
+    order.order.receipt.verified_at = "2026-11-01T00:23:12+08:00";
+    order.retry.eligible = false;
+    Object.assign(order.retry, { additional_client_funds_minor: 5000 });
+    const wrapper = mount(CockpitOnDemandIssuanceFundingDialog, {
+      props: { open: true, projection: order },
+      attachTo: document.body,
+    });
+    expect(document.body.textContent).toContain("Add ₱50.00 to Client Funds");
+    expect(document.body.textContent).toContain("do not pay it again");
+    expect(document.body.textContent).not.toContain("Try issuing again");
+    wrapper.unmount();
+  });
+
   it("preserves QR Ph across refreshed projections and reopening, but resets for a new order", async () => {
     const initial = structuredClone(projection);
     initial.funding_selector.methods[1].available = true;
