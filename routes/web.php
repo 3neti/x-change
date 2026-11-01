@@ -139,6 +139,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliation
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliationRunController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliationRunExecutionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitVoucherDetailPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Contribution\VerifyContributionPasswordController;
 use LBHurtado\XChange\Http\Controllers\Web\DashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\EnrollmentController;
 use LBHurtado\XChange\Http\Controllers\Web\Leads\LeadCampaignEndpointController;
@@ -1070,6 +1071,9 @@ Route::get('x/demo/policies/{outcome:reference}', DemonstrationPolicySummaryCont
 
 // Public claim routes (no auth required)
 Route::prefix('x')->middleware(['web', ShareXChangeBranding::class, GuardPairedCampaignClaim::class])->group(function (): void {
+    Route::post('contributions/password', VerifyContributionPasswordController::class)
+        ->middleware('throttle:6,1')
+        ->name('x-change.contributions.password.verify');
     Route::get('enroll/{reference}', [EnrollmentController::class, 'show'])
         ->whereUlid('reference')
         ->name('x-change.enrollment.show');
