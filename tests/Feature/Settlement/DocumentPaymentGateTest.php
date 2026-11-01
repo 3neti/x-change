@@ -16,10 +16,10 @@ it('blocks a payment attempt until the voucher envelope contains accepted requir
         'target_amount' => 100,
         'metadata' => [
             'flow_type' => 'collectible', 'issuer_id' => (string) $issuer->id, 'collection_wallet_id' => $issuer->wallet->id,
-            'custom' => ['document_requirements' => [[
-                'type' => 'IDENTITY', 'timing' => 'before_payment', 'requires_acceptance' => true,
-            ]]],
         ],
+        'execution' => ['schema' => 'voucher.execution.v2', 'driver' => 'default', 'document_requirements' => [[
+            'type' => 'IDENTITY', 'timing' => 'before_payment', 'requires_acceptance' => true, 'contributor' => 'payer',
+        ]]],
     ]));
 
     expect(fn () => app(CreatePaymentAttempt::class)->handle($voucher->fresh(), 'netbank', 'browser', 'request'))
@@ -44,6 +44,7 @@ it('blocks a payment attempt until the voucher envelope contains accepted requir
         'size' => 10,
         'hash' => str_repeat('a', 64),
         'review_status' => 'pending',
+        'metadata' => ['contributor_role' => 'payer'],
     ]);
 
     expect(fn () => app(DocumentPaymentGate::class)->ensureReady($voucher->fresh()))
@@ -63,7 +64,7 @@ it('leaves existing vouchers without document requirements unchanged', function 
 it('fails closed for malformed persisted requirements', function (): void {
     $voucher = issueVoucher(validVoucherInstructions());
     $metadata = $voucher->metadata;
-    data_set($metadata, 'instructions.metadata.custom.document_requirements', 'invalid');
+    data_set($metadata, 'instructions.execution.document_requirements', 'invalid');
     $voucher->forceFill(['metadata' => $metadata])->save();
 
     expect(fn () => app(DocumentPaymentGate::class)->ensureReady($voucher->fresh()))

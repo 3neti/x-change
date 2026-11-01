@@ -24,19 +24,20 @@ class VoucherIssuancePayloadNormalizer
     public function normalize(array $input): array
     {
         $input = $this->normalizeEnumValues($input);
-        $documentRequirements = data_get($input, 'metadata.custom.document_requirements');
+        $documentRequirements = data_get($input, 'execution.document_requirements');
         if ($documentRequirements !== null) {
             if (data_get($input, 'execution.schema') !== 'voucher.execution.v2'
                 || ! in_array(data_get($input, 'voucher_type'), ['payable', 'settlement'], true)
                 || ! is_array($documentRequirements) || ! array_is_list($documentRequirements)) {
-                throw ValidationException::withMessages(['metadata.custom.document_requirements' => 'Document requirements require a v2 payable or settlement voucher.']);
+                throw ValidationException::withMessages(['execution.document_requirements' => 'Document requirements require a v2 payable or settlement voucher.']);
             }
             Validator::make($input, [
-                'metadata.custom.document_requirements' => ['array', 'max:20'],
-                'metadata.custom.document_requirements.*' => ['required', 'array:type,timing,requires_acceptance'],
-                'metadata.custom.document_requirements.*.type' => ['required', 'string', 'max:64', 'distinct'],
-                'metadata.custom.document_requirements.*.timing' => ['required', 'in:optional,before_payment,later_review'],
-                'metadata.custom.document_requirements.*.requires_acceptance' => ['present', function (string $attribute, mixed $value, \Closure $fail): void {
+                'execution.document_requirements' => ['array', 'max:20'],
+                'execution.document_requirements.*' => ['required', 'array:type,timing,requires_acceptance,contributor'],
+                'execution.document_requirements.*.type' => ['required', 'string', 'max:64', 'distinct'],
+                'execution.document_requirements.*.timing' => ['required', 'in:optional,before_payment,later_review'],
+                'execution.document_requirements.*.contributor' => ['required', 'in:payer,claimant,invited'],
+                'execution.document_requirements.*.requires_acceptance' => ['present', function (string $attribute, mixed $value, \Closure $fail): void {
                     if (! is_bool($value)) {
                         $fail('The '.$attribute.' field must be a boolean.');
                     }

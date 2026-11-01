@@ -13,7 +13,7 @@ final readonly class DocumentPaymentGate
 
     public function ensureReady(Voucher $voucher): void
     {
-        $requirements = data_get($voucher->metadata, 'instructions.metadata.custom.document_requirements');
+        $requirements = data_get($voucher->metadata, 'instructions.execution.document_requirements');
 
         if ($requirements === null) {
             return;
@@ -24,10 +24,11 @@ final readonly class DocumentPaymentGate
         }
 
         $envelope = $voucher->envelope()->first();
-        $documents = $envelope?->attachments()->get(['doc_type', 'review_status'])
+        $documents = $envelope?->attachments()->get(['doc_type', 'review_status', 'metadata'])
             ->map(fn ($attachment): array => [
                 'type' => $attachment->doc_type,
                 'review_status' => $attachment->review_status,
+                'contributor' => data_get($attachment->metadata, 'contributor_role'),
             ])->all() ?? [];
 
         try {
