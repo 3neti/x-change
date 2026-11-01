@@ -54,11 +54,13 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialPartnerDesti
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialPartnerDestinationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialPayCodeScenarioRunnerController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialProviderCostBatchController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitContributionInvitationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDistributionWorkspacePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDocumentationPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitEnrollmentOfferController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitEntryPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitEnvelopeDocumentReviewController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingDestinationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingInstructionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingIntentController;
@@ -139,6 +141,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliation
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliationRunController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliationRunExecutionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitVoucherDetailPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Contribution\UploadInvitedDocumentController;
 use LBHurtado\XChange\Http\Controllers\Web\Contribution\VerifyContributionPasswordController;
 use LBHurtado\XChange\Http\Controllers\Web\Contribution\ViewContributionDocumentController;
 use LBHurtado\XChange\Http\Controllers\Web\DashboardPageController;
@@ -1009,6 +1012,12 @@ Route::prefix('x')->middleware([
         Route::get('diagnostics/runtime-profile', CockpitRuntimeProfilePageController::class)->name('x-change.cockpit.diagnostics.runtime-profile');
         Route::prefix('pay-codes')->group(function (): void {
             Route::get('/', CockpitPayCodeExplorerPageController::class)->name('x-change.cockpit.pay-codes.index');
+            Route::post('{code}/documents/{attachment}/review', CockpitEnvelopeDocumentReviewController::class)
+                ->whereNumber('attachment')->middleware('throttle:20,1,contribution-review:')->name('x-change.cockpit.documents.review');
+            Route::post('{code}/contribution-invitations', [CockpitContributionInvitationController::class, 'store'])
+                ->middleware('throttle:20,1,contribution-invite:')->name('x-change.cockpit.contribution-invitations.store');
+            Route::delete('{code}/contribution-invitations/{invitation}', [CockpitContributionInvitationController::class, 'destroy'])
+                ->whereNumber('invitation')->middleware('throttle:20,1,contribution-revoke:')->name('x-change.cockpit.contribution-invitations.destroy');
             Route::get('{code}/stamp/{size}/{sha256}.png', CockpitPayCodeStampController::class)
                 ->whereIn('size', ['full', 'thumbnail'])
                 ->where('sha256', '(?:[a-f0-9]{64}|current)')
@@ -1073,11 +1082,13 @@ Route::get('x/demo/policies/{outcome:reference}', DemonstrationPolicySummaryCont
 // Public claim routes (no auth required)
 Route::prefix('x')->middleware(['web', ShareXChangeBranding::class, GuardPairedCampaignClaim::class])->group(function (): void {
     Route::post('contributions/password', VerifyContributionPasswordController::class)
-        ->middleware('throttle:6,1')
+        ->middleware('throttle:6,1,contribution-password:')
         ->name('x-change.contributions.password.verify');
+    Route::post('contributions/documents', UploadInvitedDocumentController::class)
+        ->middleware('throttle:12,1,contribution-upload:')->name('x-change.contributions.documents.store');
     Route::post('contributions/documents/{attachment}', ViewContributionDocumentController::class)
         ->whereNumber('attachment')
-        ->middleware('throttle:30,1')
+        ->middleware('throttle:30,1,contribution-view:')
         ->name('x-change.contributions.documents.show');
     Route::get('enroll/{reference}', [EnrollmentController::class, 'show'])
         ->whereUlid('reference')
