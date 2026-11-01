@@ -18,6 +18,7 @@ use LBHurtado\XChange\Services\Payment\PaymentAttemptPresenter;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptSessionGuard;
 use LBHurtado\XChange\Services\Payment\PaymentQrDeliveryPolicy;
 use LBHurtado\XChange\Services\Payment\PaymentReceiptReadModel;
+use LBHurtado\XChange\Services\Settlement\ParticipantDocumentSession;
 use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use Symfony\Component\HttpFoundation\Response;
@@ -43,6 +44,7 @@ class PaymentPageController extends Controller
             ->firstOrFail();
 
         abort_unless($capabilities->resolve($voucher)->can_collect, 404);
+        app(ParticipantDocumentSession::class)->grant($request, $voucher, 'payer');
 
         $display = $displays->forPayer($voucher, $request);
 

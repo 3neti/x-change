@@ -22,6 +22,7 @@ use LBHurtado\XChange\Data\Claim\ClaimSurfaceData;
 use LBHurtado\XChange\Enums\ClaimAuthenticationMode;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Services\Payment\PaymentReceiptReadModel;
+use LBHurtado\XChange\Services\Settlement\ParticipantDocumentSession;
 use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
@@ -143,6 +144,8 @@ class ClaimPageController extends Controller
                 code: $code,
             );
         }
+
+        app(ParticipantDocumentSession::class)->grant($request, $voucher, 'claimant');
 
         return $this->renderEntry($responses, $shareMetadata, $shareCardUrls, $voucher, $code, $surface);
     }

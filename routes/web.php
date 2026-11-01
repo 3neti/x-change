@@ -142,6 +142,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliation
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliationRunExecutionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitVoucherDetailPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Contribution\UploadInvitedDocumentController;
+use LBHurtado\XChange\Http\Controllers\Web\Contribution\UploadParticipantDocumentController;
 use LBHurtado\XChange\Http\Controllers\Web\Contribution\VerifyContributionPasswordController;
 use LBHurtado\XChange\Http\Controllers\Web\Contribution\ViewContributionDocumentController;
 use LBHurtado\XChange\Http\Controllers\Web\DashboardPageController;
@@ -1100,6 +1101,10 @@ Route::prefix('x')->middleware(['web', ShareXChangeBranding::class, GuardPairedC
     Route::get('pay/{code}', PaymentPageController::class)
         ->middleware((array) config('x-change.payment.attempts.public_read_middleware', []))
         ->name('x-change.pay.show');
+    Route::post('pay/{code}/documents', UploadParticipantDocumentController::class)
+        ->defaults('participant_role', 'payer')->middleware('throttle:12,1,participant-payer-upload:')->name('x-change.pay.documents.store');
+    Route::post('claim/{code}/documents', UploadParticipantDocumentController::class)
+        ->defaults('participant_role', 'claimant')->middleware('throttle:12,1,participant-claimant-upload:')->name('x-change.claim.documents.store');
     Route::post('pay/{code}/attempts', PaymentAttemptController::class)
         ->middleware((array) config('x-change.payment.attempts.public_start_middleware', []))
         ->name('x-change.pay.attempts.store');
