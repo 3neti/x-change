@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services\Campaigns;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use LBHurtado\XCampaign\Models\CampaignWorksheet;
 use LBHurtado\XCampaign\Models\CampaignWorksheetAuthorization;
 use LBHurtado\XCampaign\Models\CampaignWorksheetFulfillment;
@@ -65,6 +66,34 @@ final readonly class CampaignLifecycleJournal
         array $payload = [],
         array $metadata = [],
     ): ExecutionJournalEntry {
+        if ($eventType === 'campaign.owner.authorized') {
+            return DB::transaction(function () use ($eventType, $authorization, $actor, $payload, $metadata): ExecutionJournalEntry {
+                $locked = CampaignWorksheetAuthorization::query()->lockForUpdate()->findOrFail($authorization->getKey());
+                $key = 'x-change:campaign:'.$eventType.':authorization:'.$locked->getKey();
+                $existing = ExecutionJournalEntry::query()->where('idempotency_key', $key)->first();
+
+                return $this->recordAuthorizationAt(
+                    $eventType, $locked, $actor, $payload, $metadata,
+                    $existing?->occurred_at === null ? null : CarbonImmutable::instance($existing->occurred_at),
+                );
+            });
+        }
+
+        return $this->recordAuthorizationAt($eventType, $authorization, $actor, $payload, $metadata);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $metadata
+     */
+    private function recordAuthorizationAt(
+        string $eventType,
+        CampaignWorksheetAuthorization $authorization,
+        mixed $actor,
+        array $payload,
+        array $metadata,
+        ?CarbonImmutable $occurredAt = null,
+    ): ExecutionJournalEntry {
         $authorization->loadMissing('worksheet');
         $worksheet = $authorization->worksheet;
 
@@ -87,6 +116,7 @@ final readonly class CampaignLifecycleJournal
             metadata: $metadata,
             currency: (string) $authorization->currency,
             minorAmount: (int) $authorization->principal_minor,
+            occurredAt: $occurredAt,
         );
     }
 
@@ -182,10 +212,11 @@ final readonly class CampaignLifecycleJournal
         ?string $externalReference = null,
         string $currency = 'PHP',
         int $minorAmount = 0,
+        ?CarbonImmutable $occurredAt = null,
     ): ExecutionJournalEntry {
         return $this->recorder->record(new ExecutionJournalEntryData(
             eventType: $eventType,
-            occurredAt: CarbonImmutable::now('UTC'),
+            occurredAt: $occurredAt ?? CarbonImmutable::now('UTC'),
             actor: new ExecutionActorData(
                 id: $actor instanceof Model ? (string) $actor->getKey() : 'system',
                 type: $actor instanceof Model ? $actor->getMorphClass() : 'system',
