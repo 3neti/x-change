@@ -26,9 +26,27 @@ final class SettlementRepaymentPolicy
      * @param  array<string, mixed>  $input
      * @return array<string, mixed>
      */
-    public function normalize(array $input): array
+    public function normalize(array $input, bool $requireWorkflow = true): array
     {
-        if (data_get($input, 'rules.settlement_mode') === null) {
+        $mode = data_get($input, 'rules.settlement_mode');
+        if (data_get($input, 'metadata.custom.cockpit.template_key') === 'loan'
+            && (data_get($input, 'metadata.custom.cockpit.template_version') !== 1
+                || data_get($input, 'execution.schema') !== 'voucher.execution.v2'
+                || $mode !== 'disburse_then_repay')) {
+            throw ValidationException::withMessages([
+                'rules.settlement_mode' => 'The loan template requires the disburse, then collect workflow.',
+            ]);
+        }
+        if ($mode === null) {
+            if ($requireWorkflow && data_get($input, 'voucher_type') === 'settlement'
+                && data_get($input, 'execution.schema') === 'voucher.execution.v2'
+                && blank(data_get($input, 'execution.settlement.driver'))
+                && data_get($input, 'execution.metadata.settlement_workflow') !== 'collect_for_settlement') {
+                throw ValidationException::withMessages([
+                    'rules.settlement_mode' => 'Select a settlement workflow.',
+                ]);
+            }
+
             return $input;
         }
 
@@ -41,7 +59,7 @@ final class SettlementRepaymentPolicy
             || $payment <= 0 || $payment !== $maximum || $target % $payment !== 0
             || data_get($input, 'execution.driver', 'default') !== 'default'
             || data_get($input, 'stored_value.enabled', false)
-            || (int) data_get($input, 'cash.slices', 1) !== 1
+            || (int) (data_get($input, 'cash.slices') ?? 1) !== 1
             || data_get($input, 'cash.slice_mode', 'fixed') === 'open'
             || data_get($input, 'claim.default_outcome', 'provider_disbursement') !== 'provider_disbursement') {
             throw ValidationException::withMessages([

@@ -8,6 +8,12 @@ const props = withDefaults(
     modelValue: string;
     disabled?: boolean;
     quickAmounts?: number[];
+    inputId?: string;
+    testId?: string;
+    label?: string;
+    title?: string;
+    invalid?: boolean;
+    showEstimate?: boolean;
     estimatedCost?: string | null;
     estimatePending?: boolean;
     estimateAffordability?:
@@ -16,6 +22,12 @@ const props = withDefaults(
   {
     disabled: false,
     quickAmounts: () => [100, 500, 1000, 2000, 5000, 10000],
+    inputId: "cockpit-quick-generate-primary-amount",
+    testId: "cockpit-quick-generate-primary-amount",
+    label: "Pay Code amount. Type a number or open the calculator.",
+    title: "Pay Code Amount",
+    invalid: false,
+    showEstimate: true,
     estimatedCost: null,
     estimatePending: false,
     estimateAffordability: "unknown",
@@ -129,7 +141,7 @@ defineExpose({ focus, open });
       ₱
     </span>
     <input
-      id="cockpit-quick-generate-primary-amount"
+      :id="inputId"
       ref="inputElement"
       type="text"
       inputmode="decimal"
@@ -137,9 +149,11 @@ defineExpose({ focus, open });
       :value="displayValue"
       :disabled="disabled"
       class="h-12 w-full cursor-pointer rounded-xl border border-slate-200 bg-white pr-11 pl-8 text-base font-semibold tabular-nums text-slate-950 shadow-sm transition hover:border-emerald-300 focus-visible:border-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-500/20 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50 dark:hover:border-emerald-700"
-      data-testid="cockpit-quick-generate-primary-amount"
+      :data-testid="testId"
       aria-haspopup="dialog"
-      aria-label="Pay Code amount. Type a number or open the calculator."
+      :aria-label="label"
+      :aria-invalid="invalid ? 'true' : undefined"
+      :class="invalid ? 'border-rose-300 ring-2 ring-rose-100 dark:border-rose-800 dark:ring-rose-950' : ''"
       @input="synchronizeProgrammaticInput"
       @click="openKeypad"
       @keydown="openKeypadFromNumericKey"
@@ -160,11 +174,11 @@ defineExpose({ focus, open });
       :initial-entry="keypadInitialEntry"
       appearance="cockpit"
       allow-decimal
-      title="Pay Code Amount"
+      :title="title"
       @confirm="confirmAmount"
       @preview="previewAmount"
     >
-      <template #summary>
+      <template v-if="showEstimate" #summary>
         <div
           class="flex min-h-5 items-baseline justify-between gap-3 text-xs leading-5"
           data-testid="cockpit-amount-picker-estimated-cost"

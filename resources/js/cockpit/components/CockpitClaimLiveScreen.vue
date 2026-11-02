@@ -139,7 +139,7 @@ const actualScreenComponent = computed<Component | null>(() => {
             </div>
             <div class="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-background via-background/95 to-transparent px-4 pb-4 pt-5">
                 <button type="button" tabindex="-1" class="bg-primary text-primary-foreground mx-auto block min-h-14 w-full max-w-md rounded-2xl text-base font-bold shadow-lg shadow-foreground/20">
-                    Continue
+                    {{ screen.xray?.presentation?.primary_action_label?.trim() || 'Start Claim' }}
                 </button>
             </div>
         </template>

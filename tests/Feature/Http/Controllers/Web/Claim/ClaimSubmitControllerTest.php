@@ -105,6 +105,19 @@ it('redirects to claim start when neither flow id nor reference id is provided',
         ->assertSessionHasErrors(['error']);
 });
 
+it('does not execute a claim when the form flow has not completed', function (): void {
+    $voucher = claimSubmitTestVoucher();
+    $this->formFlowService->shouldReceive('getFlowState')->once()->with('incomplete-flow')->andReturn([
+        'flow_id' => 'incomplete-flow', 'status' => 'active', 'collected_data' => ['mobile' => '09173011987'],
+    ]);
+    $this->payloadNormalizer->shouldNotReceive('normalize');
+    $this->submitAction->shouldNotReceive('handle');
+
+    $this->post(route('x-change.claim.submit', ['code' => $voucher->code]), ['flow_id' => 'incomplete-flow'])
+        ->assertRedirect(route('x-change.claim.start', ['code' => $voucher->code]))
+        ->assertSessionHasErrors('error');
+});
+
 it('loads form-flow state by reference id when reference id is provided', function (): void {
     $voucher = claimSubmitTestVoucher();
 

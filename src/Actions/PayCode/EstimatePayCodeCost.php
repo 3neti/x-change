@@ -22,7 +22,7 @@ class EstimatePayCodeCost
      */
     public function handle(array $input): PricingEstimateData
     {
-        $input = app(VoucherIssuancePayloadNormalizer::class)->normalize($input);
+        $input = app(VoucherIssuancePayloadNormalizer::class)->normalize($input, requireSettlementWorkflow: false);
         $pricingInput = $input;
         if (data_get($pricingInput, 'execution.schema') === 'voucher.execution.v2'
             && in_array(data_get($pricingInput, 'voucher_type'), ['payable', 'settlement'], true)

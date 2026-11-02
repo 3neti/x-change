@@ -22,7 +22,7 @@ class VoucherIssuancePayloadNormalizer
         private readonly ValueFlowIssuancePolicy $valueFlows,
     ) {}
 
-    public function normalize(array $input): array
+    public function normalize(array $input, bool $requireSettlementWorkflow = true): array
     {
         $input = $this->normalizeEnumValues($input);
         if (isset($input['payment_details']) && (data_get($input, 'execution.schema') !== 'voucher.execution.v2'
@@ -108,7 +108,7 @@ class VoucherIssuancePayloadNormalizer
         if (data_get($input, 'execution.schema') === 'voucher.execution.v2' && data_get($input, 'presentation') !== null) {
             $input = $this->applyV2Presentation($input);
         }
-        $input = app(SettlementRepaymentPolicy::class)->normalize($input);
+        $input = app(SettlementRepaymentPolicy::class)->normalize($input, $requireSettlementWorkflow);
         if (isset($input['fee_bearer'])) {
             if (! in_array($input['fee_bearer'], ['issuer', 'payer'], true)
                 || ! in_array($input['voucher_type'] ?? null, ['payable', 'settlement'], true)) {

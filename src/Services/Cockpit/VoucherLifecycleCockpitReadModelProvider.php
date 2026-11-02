@@ -552,6 +552,13 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                     estimated_time: 'Build your own',
                 ),
                 new CockpitQuickGenerateTemplateData(
+                    key: 'loan',
+                    name: 'Loan',
+                    description: 'Disburse a principal, then collect fixed repayments.',
+                    profile: 'settlement',
+                    estimated_time: 'Configure amounts',
+                ),
+                new CockpitQuickGenerateTemplateData(
                     key: 'ofw-remittance',
                     name: 'OFW Remittance',
                     description: 'Template-first remittance issuance with recipient details.',

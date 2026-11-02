@@ -420,16 +420,6 @@ const successAction = computed(() => {
                     </p>
                 </div>
 
-                <a
-                    v-if="successAction"
-                    :href="successAction.url"
-                    referrerpolicy="no-referrer"
-                    data-testid="claim-success-primary-action"
-                    class="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                    {{ successAction.label }}
-                </a>
-
                 <div v-if="completionProcessing" data-testid="completion-status-check" class="space-y-3">
                     <p role="status" aria-live="polite" class="text-sm text-muted-foreground">
                         {{ completionPoll.message.value }}
@@ -489,6 +479,7 @@ const successAction = computed(() => {
 
                 <div
                     v-if="shouldShowVoucherCodeBadge"
+                    data-testid="claim-success-code"
                     class="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-4 py-1 font-mono text-sm font-semibold tracking-widest text-primary"
                 >
                     || {{ voucher.code }} ||
@@ -502,6 +493,17 @@ const successAction = computed(() => {
                     :account-number="destination.account_number_masked"
                     :settlement-rail="destination.settlement_rail || 'INSTAPAY'"
                 />
+
+                <div v-if="successAction" class="flex justify-center">
+                    <a
+                        :href="successAction.url"
+                        referrerpolicy="no-referrer"
+                        data-testid="claim-success-primary-action"
+                        class="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                        {{ successAction.label }}
+                    </a>
+                </div>
             </div>
 
             <RiderRuntimeSequencer

@@ -42,6 +42,38 @@ function publicClaimPreviewPayload(): array
     ];
 }
 
+it('renders a loan settlement claim preview', function (): void {
+    actingAsTestUser(0);
+    config()->set('x-change.legal.eula.enabled', false);
+    $payload = array_replace_recursive(publicClaimPreviewPayload(), [
+        'cash' => ['amount' => 50],
+        'voucher_type' => 'settlement',
+        'target_amount' => 75,
+        'rules' => ['settlement_mode' => 'disburse_then_repay', 'min_payment' => 25, 'max_payment' => 25],
+        'execution' => ['schema' => 'voucher.execution.v2', 'driver' => 'default'],
+        'metadata' => ['custom' => [
+            'cockpit' => ['template_key' => 'loan', 'template_version' => 1],
+            'claim_presentation' => ['title' => 'Receive your loan', 'primary_action_label' => 'Receive loan'],
+            'loan_presentation' => ['destination_title' => 'Where should we send your loan?'],
+        ]],
+    ]);
+    $response = $this->postJson('/x/cockpit/quick-generate/claim-previews', $payload)->assertSuccessful();
+    $entry = collect($response->json('journey.steps'))->firstWhere('key', 'claim-entry');
+    expect(data_get($entry, 'screen.xray.presentation.title'))->toBe('Receive your loan')
+        ->and(data_get($entry, 'screen.xray.presentation.primary_action_label'))->toBe('Receive loan');
+});
+
+it('renders a neutral settlement claim preview', function (): void {
+    actingAsTestUser(0);
+    config()->set('x-change.legal.eula.enabled', false);
+    $payload = array_replace_recursive(publicClaimPreviewPayload(), [
+        'voucher_type' => 'settlement',
+        'target_amount' => 75,
+        'execution' => ['schema' => 'voucher.execution.v2', 'driver' => 'default', 'metadata' => ['settlement_workflow' => 'collect_for_settlement']],
+    ]);
+    $this->postJson('/x/cockpit/quick-generate/claim-previews', $payload)->assertSuccessful();
+});
+
 it('renders a guest preview using the escrow issuer without financial or delivery side effects', function (): void {
     $this->freezeTime();
     Http::preventStrayRequests();

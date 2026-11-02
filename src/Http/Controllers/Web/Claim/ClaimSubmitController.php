@@ -65,6 +65,11 @@ class ClaimSubmitController extends Controller
 
         $this->flowStateGuard->assertBelongsToVoucher($state, $code, $referenceId);
 
+        if (isset($state['status']) && $state['status'] !== 'completed') {
+            return redirect()->route('x-change.claim.start', ['code' => $code])
+                ->withErrors(['error' => 'Your claim session was not completed. Please review and submit your details again.']);
+        }
+
         $lockKey = hash('sha256', implode('|', [
             'x-change-claim-submit',
             $code,
@@ -158,6 +163,10 @@ class ClaimSubmitController extends Controller
                 ]);
 
                 return redirect()->route('x-change.claim.approval', ['code' => $code]);
+            }
+
+            if ($result->claim_type === 'settlement') {
+                $this->compiledClaimResultSession->put($result);
             }
 
             try {

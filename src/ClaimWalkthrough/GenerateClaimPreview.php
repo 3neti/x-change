@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\ClaimWalkthrough;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
+use LBHurtado\Voucher\Data\VoucherMetadataData;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftCompilerContract;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftValidatorContract;
 use LBHurtado\XChange\Contracts\CockpitQuickGenerateDraftFactoryContract;
@@ -76,8 +77,14 @@ final class GenerateClaimPreview
             data_set($payload, 'metadata.collection_wallet_id', 'claim-preview-only');
         }
 
+        $instructions = VoucherInstructionsData::createFromAttribs($payload);
+        if (is_array(data_get($payload, 'metadata.custom'))) {
+            $instructions->metadata ??= VoucherMetadataData::from([]);
+            $instructions->metadata->custom = data_get($payload, 'metadata.custom');
+        }
+
         $result = $this->previews->renderFromInstructions(
-            VoucherInstructionsData::createFromAttribs($payload),
+            $instructions,
             new ClaimExperiencePreviewOptions(
                 issuer: $request->user(),
                 storageScope: $this->context->storageScope($request),

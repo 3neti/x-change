@@ -279,6 +279,17 @@ describe('claim Success redirect countdown rendering', () => {
         wrapper.unmount();
     });
 
+    it('places the payment action on its own row below the Pay Code', () => {
+        const wrapper = mount(Success, { props: {
+            ...baseProps,
+            success_action: { key: 'x-change.claim-success.continue-to-payment', label: 'Continue to payment', enabled: true, target: { url: '/x/pay/TEST123', method: 'GET' } },
+        } });
+        const code = wrapper.get('[data-testid="claim-success-code"]').element;
+        const action = wrapper.get('[data-testid="claim-success-primary-action"]').element;
+        expect(code.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(action.parentElement?.classList.contains('flex')).toBe(true);
+    });
+
     it.each([
         { key: 'other-action', label: 'Continue to payment', enabled: true, target: { url: '/other' } },
         { key: 'x-change.claim-success.continue-to-payment', label: 'Continue', enabled: false, target: { url: '/x/pay/TEST123' } },

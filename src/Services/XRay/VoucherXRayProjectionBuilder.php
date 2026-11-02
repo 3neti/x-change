@@ -235,6 +235,11 @@ class VoucherXRayProjectionBuilder
         $default = $this->defaultPresentation($voucher, $instructions, $status, $sliceVoucher, $workflow);
         $override = $this->presentationOverride($instructions);
 
+        if (data_get($instructions, 'metadata.custom.cockpit.template_key') === 'loan'
+            && in_array($status, ['payable', 'paid'], true)) {
+            return $default;
+        }
+
         if ($override === []) {
             return $default;
         }
