@@ -1254,6 +1254,7 @@ it('funds a settlement principal and routes fixed repayments with one accepted s
         ->assertJsonPath('props.payment.principal_due_minor', $installment * 100)
         ->assertJsonPath('props.payment.remaining_to_collect_minor', $target * 100);
     $paymentCount = intdiv($target, $installment);
+    $failedPayout = null;
     for ($number = 1; $number <= $paymentCount; $number++) {
         $voucher->refresh();
         $fee = $number === 1 && $bearer === 'payer' ? $sale->total_price_minor : 0;
@@ -1268,7 +1269,7 @@ it('funds a settlement principal and routes fixed repayments with one accepted s
         expect(app(CompleteVoucherCollection::class)->handle($voucher, $confirmed)->id)->toBe($collection->id);
         $payout = DisbursementReconciliation::query()->where('claim_type', 'value_flow')->latest('id')->firstOrFail();
         if ($failedRepayment && $number === 2) {
-            $provider->willReturnFailedResult(provider: 'netbank');
+            $provider->willReturnFailedResult(provider: 'netbank', metadata: ['provider_submission_accepted' => false]);
         } else {
             $provider->willReturnSuccessfulResult(provider: 'netbank');
         }
@@ -1277,11 +1278,27 @@ it('funds a settlement principal and routes fixed repayments with one accepted s
         expect($payout->fresh()->internal_status)->toBe($failedRepayment && $number === 2 ? 'recovery_opened' : 'finalized')
             ->and((float) $payout->amount)->toBe((float) $installment)
             ->and($provider->lastRequest->account_number)->toBe('09179999999');
+        if ($failedRepayment && $number === 2) {
+            $failedPayout = $payout;
+        }
     }
     expect($provider->disburseCallCount)->toBe($paymentCount + 1)
         ->and($voucher->fresh()->isClosed())->toBeTrue()
         ->and($sale->fresh()->status)->toBe('posted')
-        ->and(CommercialSale::query()->count())->toBe(1);
+        ->and(CommercialSale::query()->count())->toBe(1)
+        ->and(ExecutionJournalEntry::query()->where('event_type', 'voucher.collection.completed')->count())->toBe($paymentCount);
+    if ($failedPayout !== null) {
+        $provider->willReturnSuccessfulResult(provider: 'netbank');
+        $this->artisan('xchange:value-flow:recovery', [
+            'voucher' => $voucher->code,
+            '--id' => $failedPayout->id,
+            '--retry-unaccepted' => true,
+            '--confirm-no-transfer' => true,
+            '--evidence' => 'simulated-provider-rejection',
+        ])->assertSuccessful();
+        expect($failedPayout->fresh()->internal_status)->toBe('finalized')
+            ->and($provider->disburseCallCount)->toBe($paymentCount + 2);
+    }
     expect(fn () => app(CreatePaymentAttempt::class)->handle($voucher->fresh(), 'netbank', 'repayment-browser', 'fifth'))
         ->toThrow(LogicException::class, 'fully paid');
 })->with([
