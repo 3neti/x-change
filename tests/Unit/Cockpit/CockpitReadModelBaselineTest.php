@@ -2035,6 +2035,14 @@ it('adapts safe quick generate catalog facts without invoking voucher lifecycle 
                     'disabled' => false,
                 ],
                 [
+                    'key' => 'loan',
+                    'name' => 'Loan',
+                    'description' => 'Disburse a principal, then collect fixed repayments.',
+                    'profile' => 'settlement',
+                    'estimated_time' => 'Configure amounts',
+                    'disabled' => false,
+                ],
+                [
                     'key' => 'ofw-remittance',
                     'name' => 'OFW Remittance',
                     'description' => 'Template-first remittance issuance with recipient details.',

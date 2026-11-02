@@ -139,10 +139,11 @@ final class DefaultClaimWorkflowResolver implements ClaimWorkflowResolverContrac
             );
         }
 
-        if (SettlementRepaymentPolicy::forVoucher($voucher)
-            && data_get($voucher->metadata, 'instructions.metadata.custom.cockpit.template_key') === 'loan'
-            && data_get($voucher->metadata, 'instructions.metadata.custom.cockpit.template_version') === 1) {
-            $presentation = (array) data_get($voucher->metadata, 'instructions.metadata.custom.loan_presentation', []);
+        $metadata = $voucher->getAttribute('metadata');
+        if (data_get($metadata, 'instructions.metadata.custom.cockpit.template_key') === 'loan'
+            && data_get($metadata, 'instructions.metadata.custom.cockpit.template_version') === 1
+            && SettlementRepaymentPolicy::applies((array) data_get($metadata, 'instructions', []))) {
+            $presentation = (array) data_get($metadata, 'instructions.metadata.custom.loan_presentation', []);
 
             return new ClaimWorkflowDescriptorData(
                 key: 'disbursement.v1',

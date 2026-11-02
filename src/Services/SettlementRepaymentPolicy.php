@@ -26,7 +26,7 @@ final class SettlementRepaymentPolicy
      * @param  array<string, mixed>  $input
      * @return array<string, mixed>
      */
-    public function normalize(array $input): array
+    public function normalize(array $input, bool $requireWorkflow = true): array
     {
         $mode = data_get($input, 'rules.settlement_mode');
         if (data_get($input, 'metadata.custom.cockpit.template_key') === 'loan'
@@ -38,7 +38,7 @@ final class SettlementRepaymentPolicy
             ]);
         }
         if ($mode === null) {
-            if (data_get($input, 'voucher_type') === 'settlement'
+            if ($requireWorkflow && data_get($input, 'voucher_type') === 'settlement'
                 && data_get($input, 'execution.schema') === 'voucher.execution.v2'
                 && blank(data_get($input, 'execution.settlement.driver'))
                 && data_get($input, 'execution.metadata.settlement_workflow') !== 'collect_for_settlement') {
