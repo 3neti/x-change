@@ -15,7 +15,7 @@ export interface XRayClaimPreviewResult {
     }>;
     redactions?: Record<string, unknown>[];
     warnings?: string[];
-    presentation?: { title?: string | null };
+    presentation?: { title?: string | null; primary_action_label?: string | null };
 }
 import {
     AlertCircle,
