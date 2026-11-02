@@ -33,12 +33,14 @@ use LBHurtado\XChange\Jobs\Feedback\DeliverQueuedFeedbackSmsJob;
 use LBHurtado\XChange\Models\CampaignDeliveryAttempt;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Models\PayCodeTemplate;
+use LBHurtado\XChange\Services\Campaigns\CampaignLifecycleJournal;
 use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetAuthorizationExecutionService;
 use LBHurtado\XChange\Services\Leads\LeadCampaignTemplateVersionId;
 use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
 use LBHurtado\XFeedback\Drivers\SmsFeedbackChannelDriver;
 use LBHurtado\XFeedback\Mail\FeedbackEmailMessage;
 use LBHurtado\XFeedback\Models\FeedbackDeliveryRecord;
+use LBHurtado\XJournal\Exceptions\JournalEntryIdempotencyConflictException;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -1141,10 +1143,17 @@ it('directly authorizes a frozen worksheet and plans its payout without an offic
         ->and($record->authorizations()->count())->toBe(1)
         ->and($authorization->fulfillments()->count())->toBe(1);
 
+    $this->travel(10)->seconds();
+
     $this->post(route('x-change.cockpit.campaigns.authorizations.store', $worksheet->reference))
         ->assertSessionHas('campaign_notice', 'Worksheet authorized. Beneficiary payouts are ready to issue.');
 
-    expect($record->authorizations()->count())->toBe(1);
+    expect($record->authorizations()->count())->toBe(1)
+        ->and(ExecutionJournalEntry::query()->where('event_type', 'campaign.owner.authorized')->count())->toBe(1);
+
+    expect(fn () => app(CampaignLifecycleJournal::class)
+        ->recordAuthorization('campaign.owner.authorized', $authorization, $owner, ['changed' => true]))
+        ->toThrow(JournalEntryIdempotencyConflictException::class);
 });
 
 it('rejects an invalid approval mode without freezing the worksheet', function () {
