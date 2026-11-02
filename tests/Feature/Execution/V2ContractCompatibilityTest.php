@@ -283,6 +283,8 @@ it('issues the supported v2 PhilHealth settlement through x-change with its even
     ]);
     $result = app(GeneratePayCode::class)->handle($payload);
     $voucher = Voucher::query()->findOrFail($result->voucher_id);
+    expect($voucher->envelope()->firstOrFail()->driver_id)->toBe('philhealth.bst.demo')
+        ->and($voucher->envelope()->firstOrFail()->isSettleable())->toBeFalse();
     expect(data_get($voucher->metadata, 'instructions.execution.events.settle.actor'))->toBe('payer')
         ->and(data_get($voucher->metadata, 'instructions.feedback.webhooks.0.events'))->toBe(['settlement.ready', 'settlement.payment_collected', 'settlement.payout_failed', 'settlement.payout_confirmed'])
         ->and(data_get($voucher->metadata, 'instructions.presentation.share.title'))->toBe('Hospital settlement')

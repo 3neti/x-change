@@ -18,6 +18,7 @@ import PayCodeLogo from '../../components/x-change/PayCodeLogo.vue';
 import XRayClaimPreview from '../../components/x-change/XRayClaimPreview.vue';
 import ClaimCodeField from '../../components/x-change/ClaimCodeField.vue';
 import ClaimPendingReceipt from '../../components/x-change/ClaimPendingReceipt.vue';
+import ParticipantDocuments from '../../components/x-change/ParticipantDocuments.vue';
 import { isVerifiedClaimCode } from '../../components/x-change/claimCodeVerification';
 import type { XRayClaimPreviewResult } from '../../components/x-change/xrayClaimPreviewViewModel';
 
@@ -35,6 +36,7 @@ type ClaimPreviewScreen = {
     title?: string;
     description?: string;
     fields?: ClaimPreviewField[];
+    document_requirements?: { type: string; timing: string; requires_acceptance: boolean }[];
     message?: string | null;
     artwork_url?: string | null;
     handoff?: {
@@ -127,6 +129,11 @@ const actualScreenComponent = computed<Component | null>(() => {
                         :result="screen.xray"
                         compact
                         data-testid="cockpit-claim-entry-xray"
+                    />
+                    <ParticipantDocuments
+                        v-if="screen.document_requirements?.length"
+                        :requirements="screen.document_requirements"
+                        preview-mode
                     />
                 </div>
             </div>

@@ -8,12 +8,14 @@ const props = defineProps<{
   evidenceManifest: string;
   reviewed: boolean;
   paid: boolean;
+  requiresClaimReference?: boolean;
   preview?: boolean;
   evidence: { requirement: string; summary: string | null; status: string }[];
 }>();
 const form = useForm({
   amount_minor: props.amountMinor,
   evidence_manifest: props.evidenceManifest,
+  claim_reference: "",
 });
 const amount = new Intl.NumberFormat("en-PH", {
   style: "currency",
@@ -58,6 +60,10 @@ const amount = new Intl.NumberFormat("en-PH", {
         class="mt-7"
         @submit.prevent="!preview && form.post(store.url(code))"
       >
+        <label v-if="requiresClaimReference" class="mb-4 grid gap-2 text-sm font-medium">Claim reference
+          <input v-model="form.claim_reference" required maxlength="50" pattern="[A-Za-z0-9-]{3,50}" class="min-h-12 rounded-xl border border-slate-600 bg-slate-950 px-3 text-base text-white" />
+        </label>
+        <p v-if="form.errors.claim_reference" class="mb-3 text-rose-300">{{ form.errors.claim_reference }}</p>
         <p v-if="form.errors.amount_minor" class="mb-3 text-rose-300">
           {{ form.errors.amount_minor }}
         </p>

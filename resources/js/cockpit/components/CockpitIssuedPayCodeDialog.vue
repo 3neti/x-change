@@ -98,6 +98,7 @@ const expandedQrMode = ref<'direct_claim' | 'claim_entry'>('direct_claim');
 const paymentQr = ref<string | null>(null);
 const paymentQrStatus = ref<'idle' | 'loading' | 'ready' | 'failed'>('idle');
 const paymentQrMessage = ref('');
+const shareCardFailed = ref(false);
 const loadedPaymentCode = ref<string | null>(null);
 let returnFocus: HTMLElement | null = null;
 let qrTriggerTestId: string | null = null;
@@ -144,6 +145,7 @@ const normalizedShareCardUrl = computed<string | null>(() => {
 
     return value ? value : null;
 });
+watch(normalizedShareCardUrl, () => { shareCardFailed.value = false; });
 const formattedAmount = computed<string>(() => {
     const amount = Number(props.amount);
 
@@ -453,7 +455,7 @@ function handleEscape(): void {
                         </template>
                     </CockpitExpandedStampQr>
                     <div
-                        v-else-if="normalizedShareCardUrl"
+                        v-else-if="normalizedShareCardUrl && !shareCardFailed"
                         class="rounded-3xl border border-slate-200 bg-slate-100/80 p-3 shadow-inner dark:border-slate-800 dark:bg-slate-900/80"
                         data-testid="cockpit-issued-pay-code-artifact"
                     >
@@ -486,6 +488,7 @@ function handleEscape(): void {
                                 height="630"
                                 loading="eager"
                                 decoding="async"
+                                @error="shareCardFailed = true"
                                 data-testid="cockpit-issued-pay-code-artifact-image"
                             />
                             <span
@@ -504,6 +507,7 @@ function handleEscape(): void {
                             height="630"
                             loading="eager"
                             decoding="async"
+                            @error="shareCardFailed = true"
                             data-testid="cockpit-issued-pay-code-artifact-image"
                         />
                     </div>

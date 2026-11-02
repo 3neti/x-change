@@ -158,6 +158,18 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             $voucher = Voucher::query()->find((int) $voucherId);
 
             if ($voucher instanceof Voucher) {
+                $actor = auth()->user();
+                if ($actor instanceof Model && $voucher->owner_type === $actor->getMorphClass()
+                    && (string) $voucher->owner_id === (string) $actor->getKey()
+                    && is_array(data_get($detail, 'settlement_envelope.attachments'))) {
+                    $detail['settlement_envelope']['attachments'] = array_map(function (array $attachment) use ($voucher): array {
+                        $attachment['review_href'] = Route::has('x-change.cockpit.documents.review')
+                            ? route('x-change.cockpit.documents.review', ['code' => $voucher->code, 'attachment' => $attachment['id']])
+                            : null;
+
+                        return $attachment;
+                    }, $detail['settlement_envelope']['attachments']);
+                }
                 $sliceProjection = ($this->slicePlans ?? app(VoucherSlicePlanProjection::class))->forVoucher($voucher);
                 $detail['pos_reference'] = $this->posSaleReferenceService()->forVoucher($voucher);
                 if (is_array($detail['collection'] ?? null)) {

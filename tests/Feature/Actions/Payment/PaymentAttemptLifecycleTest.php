@@ -3,15 +3,18 @@
 declare(strict_types=1);
 
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use LBHurtado\EmiCore\Data\Funding\FundingQrMerchantData;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\Merchant\Contracts\MerchantProfileRepositoryContract;
 use LBHurtado\PaymentGateway\Funding\NetbankFundingApiClient;
 use LBHurtado\PaymentGateway\Funding\NetbankFundingProviderAdapter;
+use LBHurtado\SettlementEnvelope\Services\EnvelopeService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\Services\ExecutionEngine;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
@@ -47,10 +50,12 @@ use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Models\V2EvidenceOutbox;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Claim\VoucherClaimFlowCompiler;
+use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Execution\ValueFlowPayoutService;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\FundingQrMerchantProfileResolver;
+use LBHurtado\XChange\Services\Settlement\IssuerInvoiceDrafts;
 use LBHurtado\XChange\Services\Settlement\V2EventWebhookDelivery;
 use LBHurtado\XChange\Services\Settlement\V2EvidenceEventJournal;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
@@ -127,6 +132,7 @@ it('follows the PhilHealth v2 attestation and verified settlement lifecycle', fu
         'execution' => [
             'schema' => 'voucher.execution.v2', 'driver' => 'settlement_envelope',
             'settlement' => ['driver' => 'philhealth-bst', 'version' => '1.0.0', 'readiness_gate' => 'settleable'],
+            'document_requirements' => [['type' => 'CLAIM_FORM', 'timing' => 'before_payment', 'requires_acceptance' => false, 'contributor' => 'claimant']],
             'value_flow' => ['destination' => 'instapay.gcash.mobile:09179999999'],
             'events' => [
                 'attest' => ['actor' => 'beneficiary', 'requires' => [], 'surface' => 'claim', 'authentication' => 'anonymous'],
@@ -146,8 +152,14 @@ it('follows the PhilHealth v2 attestation and verified settlement lifecycle', fu
     expect(data_get($voucher->metadata, 'instructions.execution.schema'))->toBe('voucher.execution.v2');
     auth()->logout();
     config()->set('inertia.testing.ensure_pages_exist', false);
+    Storage::fake('local');
+    config()->set('filesystems.disks.local.visibility', 'private');
     $this->withHeader('X-Inertia', 'true');
-    $this->get('/x/claim/'.$voucher->code)->assertOk()->assertJsonPath('component', 'x-change/claim/Entry');
+    $this->get('/x/claim/'.$voucher->code)->assertOk()->assertJsonPath('component', 'x-change/claim/Entry')
+        ->assertJsonPath('props.claim_documents.requirements.0.type', 'CLAIM_FORM');
+    $this->postJson(route('x-change.claim.documents.store', ['code' => $voucher->code]), [
+        'document_type' => 'CLAIM_FORM', 'file' => UploadedFile::fake()->createWithContent('claim.pdf', "%PDF-1.4\nexample\n%%EOF"),
+    ])->assertCreated();
     $flow = app(VoucherClaimFlowCompiler::class)->compile($voucher)->instructions->toArray();
     $fields = collect($flow['steps'])->flatMap(fn (array $step) => data_get($step, 'config.fields', []))->pluck('name')->all();
     expect($fields)->toContain('mobile')->not->toContain('bank_code', 'account_number');
@@ -160,6 +172,18 @@ it('follows the PhilHealth v2 attestation and verified settlement lifecycle', fu
     app(SubmitPayCodeClaim::class)->handle($voucher->refresh(), $claimPayload);
     expect(data_get($voucher->fresh()->metadata, 'settlement_envelope.attestation.claim_id'))->not->toBeNull();
     expect($voucher->claims()->count())->toBe(1);
+    config()->set('settlement-envelope.driver_disk', 'test-envelope-drivers');
+    config()->set('filesystems.disks.test-envelope-drivers', ['driver' => 'local', 'root' => dirname(__DIR__, 4).'/vendor/3neti/settlement-envelope/resources/stubs/drivers']);
+    $envelopes = app(EnvelopeService::class);
+    $envelope = $voucher->envelope()->firstOrFail();
+    expect($envelope->driver_id)->toBe('philhealth.bst.demo');
+    $envelopes->updatePayload($envelope, [
+        'patient_name' => 'Patient', 'patient_mobile' => '09171234567', 'reference' => 'CLAIM-123',
+    ], $user);
+    foreach (['HOSPITAL_BILL'] as $type) {
+        $envelopes->uploadAttachment($envelope, $type, UploadedFile::fake()->createWithContent('evidence.pdf', "%PDF-1.4\nexample\n%%EOF"), $user, storageDisk: 'local');
+    }
+    expect($envelope->fresh()->isSettleable())->toBeFalse();
     auth()->logout();
     $this->get('/x/claim/'.$voucher->code)->assertOk()->assertJsonPath('component', 'x-change/claim/SettlementWaiting')
         ->assertJsonPath('props.reviewed', false)->assertJsonMissingPath('props.evidence');
@@ -190,6 +214,7 @@ it('follows the PhilHealth v2 attestation and verified settlement lifecycle', fu
         throw new RuntimeException('rollback review');
     }))->toThrow(RuntimeException::class, 'rollback review');
     expect(data_get($voucher->fresh()->metadata, 'settlement_envelope.amount_review'))->toBeNull()
+        ->and($envelope->fresh()->getSignalBool('amount_verified'))->toBeFalse()
         ->and(V2EvidenceOutbox::query()->where('event_type', 'settlement.amount_reviewed')->count())->toBe(0)
         ->and(V2EvidenceOutbox::query()->where('event_type', 'settlement.ready')->count())->toBe(0);
     $incomplete = $voucher->fresh()->metadata;
@@ -203,6 +228,8 @@ it('follows the PhilHealth v2 attestation and verified settlement lifecycle', fu
     ])
         ->assertRedirect(route('x-change.claim.settlement-review.show', ['code' => $voucher->code]));
     $voucher->refresh();
+    expect($envelope->fresh()->getSignalBool('amount_verified'))->toBeTrue()
+        ->and($envelope->fresh()->isSettleable())->toBeTrue();
     app(VerifyPhilhealthSettlementAmount::class)->handle($voucher, $user, 10000, $reference);
     expect(V2EvidenceOutbox::query()->where('voucher_id', $voucher->id)->where('event_type', 'settlement.amount_reviewed')->count())->toBe(1);
     expect(V2EvidenceOutbox::query()->where('voucher_id', $voucher->id)->where('event_type', 'settlement.ready')->count())->toBe(0);
@@ -436,10 +463,20 @@ it('records a payable v2 verified-payment subscription only once on replay', fun
 });
 
 it('issues, collects and delivers a payable v2 payment event without replaying it', function (): void {
+    config()->set('settlement-envelope.driver_disk', 'test-envelope-drivers');
+    config()->set('filesystems.disks.test-envelope-drivers', [
+        'driver' => 'local', 'root' => dirname(__DIR__, 4).'/vendor/3neti/settlement-envelope/resources/stubs/drivers',
+    ]);
+    Storage::fake('local');
+    config()->set('filesystems.disks.local.visibility', 'private');
     config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
     config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
     app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:v2-payable-lifecycle');
     $issuer = actingAsTestUser(0);
+    $drafts = app(IssuerInvoiceDrafts::class);
+    $reference = $drafts->create($issuer, UploadedFile::fake()->createWithContent('invoice.pdf', "%PDF-1.4\nexample\n%%EOF"));
+    $drafts->bind($issuer, $reference, 'payment-lifecycle');
+    $documentId = $drafts->documentId($issuer, $reference);
     enableNetbankTreasuryForTests();
     config()->set('x-change.commercial.enabled', true);
     config()->set('x-change.provider_runtime.default_provider', 'netbank');
@@ -451,12 +488,15 @@ it('issues, collects and delivers a payable v2 payment event without replaying i
     $payload = validPayCodePayload(0, 'INSTAPAY', [
         'provider' => 'netbank', 'issuer_id' => $issuer->getKey(), 'voucher_type' => 'payable',
         'target_amount' => 100, 'fee_bearer' => 'payer',
+        'payment_details' => ['description' => 'Repair', 'documents' => [['id' => $documentId, 'type' => 'invoice', 'label' => 'Invoice']]],
+        'issuer_invoice_drafts' => [$reference], '_meta' => ['idempotency_key' => 'payment-lifecycle'],
         'feedback' => ['webhooks' => [['url' => 'https://example.test/events', 'events' => ['settlement.payment_collected']]]],
         'execution' => ['schema' => 'voucher.execution.v2', 'driver' => 'default',
             'events' => ['settle' => ['actor' => 'payer', 'requires' => ['confirmed_payment'], 'surface' => 'pay', 'authentication' => 'optional']]],
     ]);
     $issued = app(GeneratePayCode::class)->handle($payload);
     $voucher = Voucher::query()->findOrFail($issued->voucher_id);
+    expect($voucher->envelope()->firstOrFail()->attachments()->sole()->document_id)->toBe($documentId);
     $sender = new class implements FeedbackWebhookSenderContract
     {
         public int $calls = 0;
@@ -479,6 +519,42 @@ it('issues, collects and delivers a payable v2 payment event without replaying i
     expect(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(1)
         ->and(V2EvidenceOutbox::query()->where('voucher_id', $voucher->id)->where('event_type', 'settlement.payment_collected')->count())->toBe(1)
         ->and($sender->calls)->toBe(1);
+});
+
+it('removes staged attachment copies if commercial posting rolls back issuance', function (): void {
+    config()->set('settlement-envelope.driver_disk', 'test-envelope-drivers');
+    config()->set('filesystems.disks.test-envelope-drivers', [
+        'driver' => 'local', 'root' => dirname(__DIR__, 4).'/vendor/3neti/settlement-envelope/resources/stubs/drivers',
+    ]);
+    Storage::fake('local');
+    config()->set('filesystems.disks.local.visibility', 'private');
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:v2-payable-rollback');
+    $issuer = actingAsTestUser(0);
+    $drafts = app(IssuerInvoiceDrafts::class);
+    $reference = $drafts->create($issuer, UploadedFile::fake()->createWithContent('invoice.pdf', "%PDF-1.4\nexample\n%%EOF"));
+    $drafts->bind($issuer, $reference, 'payment-rollback');
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.commercial.enabled', true);
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision($issuer, ['netbank-primary']);
+    $funding = Mockery::mock(ProviderFundingPolicyContract::class);
+    $funding->shouldReceive('assertCanIssue')->once()->andReturn(FundingDecisionData::allowed(authority: 'local_ledger', availableMinor: 10000, requiredMinor: 0, currency: 'PHP', meta: ['provider' => 'netbank', 'topology' => 'ledger_pooled']));
+    app()->instance(ProviderFundingPolicyContract::class, $funding);
+    $sales = Mockery::mock(PayCodeCommercialSaleService::class);
+    $sales->shouldReceive('post')->once()->andThrow(new RuntimeException('simulated posting failure'));
+    app()->instance(PayCodeCommercialSaleService::class, $sales);
+    $payload = validPayCodePayload(0, 'INSTAPAY', [
+        'provider' => 'netbank', 'issuer_id' => $issuer->getKey(), 'voucher_type' => 'payable',
+        'target_amount' => 100, 'fee_bearer' => 'payer',
+        'payment_details' => ['documents' => [['id' => $drafts->documentId($issuer, $reference), 'type' => 'invoice', 'label' => 'Invoice']]],
+        'issuer_invoice_drafts' => [$reference], '_meta' => ['idempotency_key' => 'payment-rollback'],
+        'execution' => ['schema' => 'voucher.execution.v2', 'driver' => 'default'],
+    ]);
+    expect(fn () => app(GeneratePayCode::class)->handle($payload))->toThrow(RuntimeException::class, 'simulated posting failure');
+    expect(Storage::disk('local')->allFiles('envelopes'))->toBe([])
+        ->and(DB::table('x_change_issuer_invoice_drafts')->where('reference', $reference)->value('voucher_id'))->toBeNull();
 });
 
 it('records settlement readiness only after the readiness evaluator permits it', function (): void {

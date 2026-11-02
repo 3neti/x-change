@@ -49,6 +49,7 @@ use LBHurtado\PaymentGateway\Contracts\WalletProxy;
 use LBHurtado\PaymentGateway\Funding\NetbankReusableFundingAddressProvider;
 use LBHurtado\SettlementEnvelope\Contracts\WorkflowCatalog;
 use LBHurtado\SettlementEnvelope\Services\DriverService;
+use LBHurtado\SettlementEnvelope\Services\DriverSourceRegistry;
 use LBHurtado\SettlementEnvelope\Services\WorkflowConnectionReadiness;
 use LBHurtado\SettlementEnvelope\Services\YamlWorkflowCatalog;
 use LBHurtado\Voucher\Contracts\PayableCollectionExecutionGateway;
@@ -1775,6 +1776,10 @@ class XChangeServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        if ($this->app->bound(DriverSourceRegistry::class)) {
+            $this->app->make(DriverSourceRegistry::class)
+                ->register('x-change-documents', dirname(__DIR__, 2).'/resources/envelope-drivers');
+        }
         $this->bootStoredValueCollectorGate();
         $this->bootSettlementReviewSentinel();
         $stampCollection = InstalledVersions::getInstallPath('3neti/x-stamp-designs');

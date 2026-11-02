@@ -77,6 +77,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestTransfer
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingVerificationCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitInstanceKeepsakeDownloadController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitInstanceKeepsakeDownloadShowController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitIssuerInvoiceDraftController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitLeadCampaignScenarioRunnerController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitNetbankStandingFundingAddressController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitOnDemandIssuanceFundingOrderController;
@@ -163,6 +164,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentAttemptController;
 use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentQrCodeDownloadController;
 use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentVerificationCheckController;
+use LBHurtado\XChange\Http\Controllers\Web\Payment\SharedInvoiceController;
 use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationAcceptanceController;
 use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationPageController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicAnalyticsPageController;
@@ -934,6 +936,8 @@ Route::prefix('x')->middleware([
             ->middleware('throttle:3,1')
             ->name('x-change.cockpit.instance-keepsakes.download');
         Route::post('quick-generate', CockpitQuickGenerateMutationRouteShellController::class)->name('x-change.cockpit.quick-generate.store');
+        Route::post('quick-generate/invoice-drafts', CockpitIssuerInvoiceDraftController::class)
+            ->middleware('throttle:12,1')->name('x-change.cockpit.quick-generate.invoice-drafts.store');
         Route::get(
             'quick-generate/funding-orders/{order:reference}',
             [CockpitOnDemandIssuanceFundingOrderController::class, 'show'],
@@ -1103,6 +1107,8 @@ Route::prefix('x')->middleware(['web', ShareXChangeBranding::class, GuardPairedC
         ->name('x-change.pay.show');
     Route::post('pay/{code}/documents', UploadParticipantDocumentController::class)
         ->defaults('participant_role', 'payer')->middleware('throttle:12,1,participant-payer-upload:')->name('x-change.pay.documents.store');
+    Route::get('pay/{code}/invoice/{attachment}', SharedInvoiceController::class)
+        ->whereNumber('attachment')->middleware('throttle:30,1')->name('x-change.pay.invoice.show');
     Route::post('claim/{code}/documents', UploadParticipantDocumentController::class)
         ->defaults('participant_role', 'claimant')->middleware('throttle:12,1,participant-claimant-upload:')->name('x-change.claim.documents.store');
     Route::post('pay/{code}/attempts', PaymentAttemptController::class)

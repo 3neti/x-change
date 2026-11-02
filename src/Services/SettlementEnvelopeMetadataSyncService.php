@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use LBHurtado\SettlementEnvelope\Services\EnvelopeService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Settlement\V2EvidenceEventJournal;
@@ -157,6 +158,28 @@ class SettlementEnvelopeMetadataSyncService
         $voucher->forceFill([
             'metadata' => $metadata,
         ])->save();
+
+        if ($instructionDriver === 'philhealth-bst') {
+            $record = $voucher->envelope()->lockForUpdate()->first();
+            if ($record !== null) {
+                if ($record->driver_id !== 'philhealth.bst.demo' || $record->driver_version !== '1.0.0') {
+                    throw new \LogicException('The attached envelope is not the supported PhilHealth evidence envelope.');
+                }
+                $projection = array_intersect_key($envelopePayload, array_flip(['patient_name', 'patient_mobile', 'reference']));
+                if (filled($projection['patient_name'] ?? null) && filled($projection['patient_mobile'] ?? null) && filled($projection['reference'] ?? null)) {
+                    $existingReference = data_get($record->payload, 'reference');
+                    if (is_string($existingReference) && $existingReference !== $projection['reference']) {
+                        throw new \LogicException('The PhilHealth envelope reference cannot be changed.');
+                    }
+                    if ($projection !== $record->payload) {
+                        if (data_get($metadata, 'settlement_envelope.amount_review') !== null) {
+                            throw new \LogicException('Reviewed PhilHealth envelope evidence cannot be changed.');
+                        }
+                        app(EnvelopeService::class)->updatePayload($record, $projection);
+                    }
+                }
+            }
+        }
 
         return $voucher->refresh();
     }

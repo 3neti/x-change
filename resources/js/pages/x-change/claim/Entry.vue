@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import ClaimWidget from '@/components/x-change/ClaimWidget.vue';
 import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
+import ParticipantDocuments from '@/components/x-change/ParticipantDocuments.vue';
 import ProvisioningSetup from '../../../components/x-change/ProvisioningSetup.vue';
 import {
     normalizeProvisioningRequirement,
@@ -23,6 +24,7 @@ const props = defineProps<{
     claim_experience?: Record<string, unknown> | null;
     provisioning_requirement?: ProvisioningRequirement | null;
     claim_surface?: Record<string, unknown> | null;
+    claim_documents?: { requirements: { type: string; timing: string; requires_acceptance: boolean; status?: string | null }[]; upload_url: string } | null;
 }>();
 
 const compiledFormSubmitted = ref(false);
@@ -83,6 +85,12 @@ function resetCompiledFormSubmitState(): void {
                 :requirement="provisioningRequirement"
                 resume-label="Continue setup"
                 @resume="resumeClaimFlow"
+            />
+            <ParticipantDocuments
+                v-if="!hasProvisioningRequirement && claim_documents"
+                :requirements="claim_documents.requirements"
+                :upload-url="claim_documents.upload_url"
+                reload-only="claim_documents"
             />
             <ClaimWidget
                 v-if="!hasProvisioningRequirement"

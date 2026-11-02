@@ -1841,6 +1841,7 @@ export type CockpitCollectionDestination = {
 };
 
 export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
+  invoice_draft_url?: string;
   v2_event_catalog?: Record<string, { label: string; stage: string; workflows: string[]; requires_destination?: boolean }>;
   stored_value_collect_url?: string;
   composer_view?: "prompt" | "standard";

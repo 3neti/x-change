@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services;
 
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\SettlementEnvelope\Services\DriverService;
+use LBHurtado\SettlementEnvelope\Services\EnvelopeService;
 use LBHurtado\Voucher\Contracts\GeneratesVouchers;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Data\VoucherMetadataData;
@@ -21,6 +25,7 @@ use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Services\Cockpit\CockpitPosSaleReferenceService;
 use LBHurtado\XChange\Services\Commercial\CommercialPricingAcceptanceGuard;
 use LBHurtado\XChange\Services\Payment\PayCodePaymentLinkResolver;
+use LBHurtado\XChange\Services\Settlement\IssuerInvoiceDrafts;
 use LBHurtado\XChange\Services\Stamp\StampProviderIdentity;
 
 class PayCodeIssuanceService implements PayCodeIssuanceContract
@@ -63,14 +68,84 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
         /** @var Authenticatable|null $previousUser */
         $previousUser = Auth::user();
 
+        $createdFiles = [];
         try {
             Auth::setUser($issuer);
 
-            return DB::transaction(function () use ($input, $instructions, $issuer): array {
+            return DB::transaction(function () use ($input, $instructions, $issuer, &$createdFiles): array {
                 $issued = app(GeneratesVouchers::class)->handle($instructions)->first();
 
                 if (! $issued) {
                     throw new PayCodeIssuanceFailed('Pay Code issuance did not return a voucher.');
+                }
+
+                $requirements = data_get($input, 'execution.document_requirements') ?? [];
+                $invoiceDraft = data_get($input, 'issuer_invoice_draft');
+                $invoiceDrafts = data_get($input, 'issuer_invoice_drafts', []);
+                $paymentDocuments = data_get($input, 'payment_details.documents', []);
+                if (! is_array($invoiceDrafts) || ! is_array($paymentDocuments) || count($invoiceDrafts) !== count($paymentDocuments)) {
+                    throw ValidationException::withMessages(['issuer_invoice_drafts' => 'The payment documents do not match their uploads.']);
+                }
+                $isPhilhealth = data_get($input, 'execution.schema') === 'voucher.execution.v2'
+                    && data_get($input, 'execution.driver') === 'settlement_envelope'
+                    && data_get($input, 'execution.settlement.driver') === 'philhealth-bst';
+                if ($isPhilhealth) {
+                    app(EnvelopeService::class)->create(
+                        referenceCode: (string) $issued->code,
+                        driverId: 'philhealth.bst.demo',
+                        driverVersion: '1.0.0',
+                        reference: $issued,
+                        actor: $issuer instanceof Model ? $issuer : null,
+                    );
+                } elseif ($requirements !== [] || is_string($invoiceDraft) || $invoiceDrafts !== []) {
+                    $driver = app(DriverService::class)->load('x-change.documents', '1.0.0');
+                    foreach ($requirements as $requirement) {
+                        if ($driver->getDocumentType($requirement['type']) === null) {
+                            throw ValidationException::withMessages(['execution.document_requirements' => 'A requested document type is not supported.']);
+                        }
+                    }
+                    app(EnvelopeService::class)->create(
+                        referenceCode: (string) $issued->code,
+                        driverId: 'x-change.documents',
+                        driverVersion: '1.0.0',
+                        reference: $issued,
+                        actor: $issuer instanceof Model ? $issuer : null,
+                    );
+                }
+
+                if (is_string($invoiceDraft)) {
+                    $orderKey = data_get($input, '_meta.idempotency_key');
+                    if (! $issuer instanceof Model || ! is_string($orderKey) || $orderKey === '') {
+                        throw ValidationException::withMessages(['issuer_invoice_draft' => 'The invoice order could not be verified.']);
+                    }
+                    $stored = app(IssuerInvoiceDrafts::class)->attach($issuer, $issued, $invoiceDraft, $orderKey, $isPhilhealth ? 'HOSPITAL_BILL' : 'INVOICE');
+                    if ($stored !== null) {
+                        $createdFiles[] = $stored;
+                        $register = data_get($input, '_meta.register_issuance_file');
+                        if ($register instanceof \Closure) {
+                            $register($stored);
+                        }
+                    }
+                }
+                if ($invoiceDrafts !== []) {
+                    $orderKey = data_get($input, '_meta.idempotency_key');
+                    if (! $issuer instanceof Model || ! is_string($orderKey) || $orderKey === '' || is_string($invoiceDraft)) {
+                        throw ValidationException::withMessages(['issuer_invoice_drafts' => 'The document order could not be verified.']);
+                    }
+                    foreach ($invoiceDrafts as $index => $reference) {
+                        $documentId = data_get($paymentDocuments, $index.'.id');
+                        if (! is_string($reference) || ! is_string($documentId)) {
+                            throw ValidationException::withMessages(['issuer_invoice_drafts' => 'The document order is invalid.']);
+                        }
+                        $stored = app(IssuerInvoiceDrafts::class)->attach($issuer, $issued, $reference, $orderKey, $isPhilhealth ? 'HOSPITAL_BILL' : 'INVOICE', $documentId, $index + 1);
+                        if ($stored !== null) {
+                            $createdFiles[] = $stored;
+                            $register = data_get($input, '_meta.register_issuance_file');
+                            if ($register instanceof \Closure) {
+                                $register($stored);
+                            }
+                        }
+                    }
                 }
 
                 $this->splashArtwork->assertStored($issued);
@@ -80,8 +155,9 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
                 $code = (string) $issued->code;
                 $redeemPath = $this->redeemPath($code);
                 $redeemUrl = $this->redeemUrl($redeemPath);
-                $this->stampArtifacts->materialize($issued, $redeemUrl);
                 $paymentLinks = $this->paymentLinks->forVoucher($issued);
+                $stampUrl = data_get($input, 'voucher_type') === 'payable' ? ($paymentLinks['pay'] ?? $redeemUrl) : $redeemUrl;
+                $this->stampArtifacts->materialize($issued, $stampUrl);
 
                 return [
                     'voucher_id' => $issued->id,
@@ -100,6 +176,11 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
                     'metadata' => $issued->metadata ?? null,
                 ];
             });
+        } catch (\Throwable $exception) {
+            foreach ($createdFiles as $stored) {
+                Storage::disk($stored['disk'])->delete($stored['path']);
+            }
+            throw $exception;
         } finally {
             if ($previousUser instanceof Authenticatable) {
                 Auth::setUser($previousUser);

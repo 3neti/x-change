@@ -60,6 +60,8 @@ it('allows only the voucher owner to create and revoke scoped invitations', func
         ->and($attachment->disk)->toBe('local');
     $this->post(route('x-change.contributions.documents.show', ['attachment' => $attachment->id]), ['token' => $token->token])->assertSuccessful();
     $review = route('x-change.cockpit.documents.review', ['code' => $voucher->code, 'attachment' => $attachment->id]);
+    $this->actingAs($owner)->get(route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code]), ['X-Inertia' => 'true'])
+        ->assertSuccessful()->assertJsonPath('props.read_model.voucher.settlement.envelope.attachments.0.review_href', $review);
     $this->actingAs($other)->postJson($review, ['decision' => 'accepted'])->assertNotFound();
     $this->actingAs($owner)->postJson($review, ['decision' => 'rejected'])->assertUnprocessable();
     $this->postJson($review, ['decision' => 'rejected', 'reason' => 'Please resubmit'])->assertNoContent();

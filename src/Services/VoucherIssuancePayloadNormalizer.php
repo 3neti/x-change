@@ -8,6 +8,7 @@ use BackedEnum;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\SettlementEnvelope\Services\DriverService;
 use LBHurtado\XChange\Services\Settlement\V2EventCatalog;
 use UnitEnum;
 
@@ -24,6 +25,10 @@ class VoucherIssuancePayloadNormalizer
     public function normalize(array $input): array
     {
         $input = $this->normalizeEnumValues($input);
+        if (isset($input['payment_details']) && (data_get($input, 'execution.schema') !== 'voucher.execution.v2'
+            || ! in_array(data_get($input, 'voucher_type'), ['payable', 'settlement'], true))) {
+            throw ValidationException::withMessages(['payment_details' => 'Payment details require a v2 payable or settlement voucher.']);
+        }
         $documentRequirements = data_get($input, 'execution.document_requirements');
         if ($documentRequirements !== null) {
             if (data_get($input, 'execution.schema') !== 'voucher.execution.v2'
@@ -43,6 +48,19 @@ class VoucherIssuancePayloadNormalizer
                     }
                 }],
             ])->validate();
+            if ($documentRequirements !== []) {
+                $philhealth = data_get($input, 'execution.driver') === 'settlement_envelope'
+                    && data_get($input, 'execution.settlement.driver') === 'philhealth-bst';
+                if (data_get($input, 'execution.driver') === 'settlement_envelope' && ! $philhealth) {
+                    throw ValidationException::withMessages(['execution.document_requirements' => 'Document requirements for a dedicated settlement driver are not yet supported.']);
+                }
+                $driver = app(DriverService::class)->load($philhealth ? 'philhealth.bst.demo' : 'x-change.documents', '1.0.0');
+                foreach ($documentRequirements as $requirement) {
+                    if ($driver->getDocumentType($requirement['type']) === null) {
+                        throw ValidationException::withMessages(['execution.document_requirements' => 'A requested document type is not supported.']);
+                    }
+                }
+            }
         }
         if (data_get($input, 'execution.schema') === 'voucher.execution.v2') {
             foreach (['mode', 'pipeline', 'fallback', 'visibility', 'metadata'] as $key) {
@@ -158,7 +176,7 @@ class VoucherIssuancePayloadNormalizer
             && data_get($input, 'execution.driver') === 'settlement_envelope'
             && data_get($input, 'execution.settlement.driver') === 'philhealth-bst'
             && data_get($input, 'execution.settlement.readiness_gate') === 'settleable'
-            && is_array($execution) && array_diff(array_keys($execution), ['schema', 'driver', 'settlement', 'value_flow', 'events']) === []
+            && is_array($execution) && array_diff(array_keys($execution), ['schema', 'driver', 'settlement', 'value_flow', 'events', 'document_requirements']) === []
             && is_array($settlement) && array_diff(array_keys($settlement), ['driver', 'version', 'readiness_gate', 'payment_requirement']) === []
             && data_get($input, 'execution.settlement.payment_requirement') === null
             && is_string(data_get($input, 'execution.value_flow.destination'))
@@ -200,7 +218,7 @@ class VoucherIssuancePayloadNormalizer
 
         return is_array($settle)
             && is_array($execution)
-            && array_diff(array_keys($execution), ['schema', 'driver', 'value_flow', 'events']) === []
+            && array_diff(array_keys($execution), ['schema', 'driver', 'value_flow', 'events', 'document_requirements']) === []
             && array_diff(array_keys($settle), ['actor', 'requires', 'surface', 'authentication']) === []
             && ($settle['actor'] ?? null) === 'payer'
             && ($settle['requires'] ?? null) === ['confirmed_payment']

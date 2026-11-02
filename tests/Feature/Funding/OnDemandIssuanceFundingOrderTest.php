@@ -1638,7 +1638,15 @@ it('resumes an expired issuance-attention order whose provider payment was alrea
     $order = app(ReserveOnDemandIssuanceAmountLease::class)->handle(
         issuanceFundingOrder($user),
     );
-    $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();
+    $instructions = $order->instructions_ciphertext;
+    $instructions['issuer_invoice_draft'] = 'test-invoice-draft';
+    $instructions['issuer_invoice_drafts'] = ['test-draft-1', 'test-draft-2'];
+    $instructions['payment_details'] = ['description' => 'Order', 'documents' => [['id' => 'doc-1'], ['id' => 'doc-2']]];
+    $instructions['_meta']['idempotency_key'] = 'test-invoice-order';
+    $order->forceFill([
+        'funding_intent_id' => $intent->getKey(),
+        'instructions_ciphertext' => $instructions,
+    ])->saveQuietly();
 
     app(SettleVerifiedFundingIntent::class)->handle($intent);
 
@@ -1698,7 +1706,11 @@ it('resumes an expired issuance-attention order whose provider payment was alrea
         ->once()
         ->with(Mockery::on(
             fn (array $instructions): bool => data_get($instructions, '_meta.on_demand_funding_order') === $order->reference
-                && data_get($instructions, 'metadata.issuer_id') === (string) $user->getKey(),
+                && data_get($instructions, 'metadata.issuer_id') === (string) $user->getKey()
+                && data_get($instructions, 'issuer_invoice_draft') === 'test-invoice-draft'
+                && data_get($instructions, 'issuer_invoice_drafts') === ['test-draft-1', 'test-draft-2']
+                && data_get($instructions, 'payment_details.documents.1.id') === 'doc-2'
+                && data_get($instructions, '_meta.idempotency_key') === 'test-invoice-order',
         ))
         ->andReturn($result);
     app()->instance(GeneratePayCode::class, $generate);

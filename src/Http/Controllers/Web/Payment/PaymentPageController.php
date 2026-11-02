@@ -86,6 +86,16 @@ class PaymentPageController extends Controller
                 && is_string($item['type'] ?? null) && is_string($item['timing'] ?? null) && is_bool($item['requires_acceptance'] ?? null))
             ->map(fn ($item) => ['type' => $item['type'], 'timing' => $item['timing'], 'requires_acceptance' => $item['requires_acceptance']])
             ->values()->all();
+        $paymentDetails = data_get($voucher->metadata, 'instructions.payment_details');
+        $documentIds = is_array($paymentDetails) ? array_column($paymentDetails['documents'] ?? [], 'id') : null;
+        $sharedInvoices = $voucher->envelope()->first()?->attachments()->get()->filter(
+            fn ($item): bool => data_get($item->metadata, 'shared_with_payer') === true
+                && data_get($item->metadata, 'contributor_role') === 'issuer'
+                && ($documentIds === null || in_array($item->document_id, $documentIds, true))
+        )->map(fn ($item): array => [
+            'name' => $item->original_filename,
+            'url' => route('x-change.pay.invoice.show', ['code' => $voucher->code, 'attachment' => $item->getKey()]),
+        ])->values()->all() ?? [];
         if ($requirements !== [] && is_string(config('app.key')) && trim(config('app.key')) !== '') {
             $sessionHash = app(ParticipantDocumentSession::class)->fingerprint($request, $voucher, 'payer');
             $attachments = $voucher->envelope()->first()?->attachments()->orderByDesc('id')->get() ?? collect();
@@ -112,6 +122,12 @@ class PaymentPageController extends Controller
                 'fee_due_minor' => $feeMinor,
                 'is_fully_paid' => $collection->is_fully_collected,
                 'rider_message' => $this->riderMessage($voucher),
+                'payment_details' => is_array($paymentDetails) ? [
+                    'description' => $paymentDetails['description'] ?? null,
+                    'reference' => $paymentDetails['reference'] ?? null,
+                    'fields' => $paymentDetails['fields'] ?? [],
+                ] : null,
+                'shared_invoices' => $sharedInvoices,
                 'document_requirements' => $requirements,
                 'document_upload_url' => $requirements === [] ? null : route('x-change.pay.documents.store', ['code' => $voucher->code]),
                 'documents_ready' => $documentsReady,

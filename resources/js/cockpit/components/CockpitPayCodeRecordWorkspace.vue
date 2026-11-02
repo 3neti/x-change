@@ -5,6 +5,7 @@ import BankEMISelect from "@/components/financial/BankEMISelect.vue";
 import CockpitPayCodeShareCard from "./CockpitPayCodeShareCard.vue";
 import CockpitPayCodeTerminalControls from "./CockpitPayCodeTerminalControls.vue";
 import CockpitManualCopyButton from "./CockpitManualCopyButton.vue";
+import CockpitDocumentReview from "./CockpitDocumentReview.vue";
 import { Form, Link } from "@inertiajs/vue3";
 import {
   Activity,
@@ -2005,9 +2006,11 @@ function number(value: unknown): number {
               <div
                 class="mt-2 divide-y divide-slate-200 rounded-2xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800"
               >
-                <a
+                <div
                   v-for="attachment in list(envelope.attachments)"
                   :key="number(attachment.id)"
+                >
+                <a
                   :href="text(attachment.reveal_href)"
                   target="_blank"
                   class="flex items-center justify-between gap-3 p-3 text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800/50"
@@ -2020,6 +2023,11 @@ function number(value: unknown): number {
                     >{{ title(attachment.review_status)
                     }}<ChevronRight class="h-3.5 w-3.5" /></span
                 ></a>
+                <CockpitDocumentReview
+                  v-if="text(attachment.review_href) && text(attachment.review_status) === 'pending'"
+                  :review-url="text(attachment.review_href)"
+                />
+                </div>
               </div>
             </section>
           </div>

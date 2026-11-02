@@ -26,7 +26,8 @@ final readonly class RiderStampClaimShareMetadataResolver implements ClaimShareM
             ? (array) data_get($voucher->metadata, 'instructions.presentation.share', []) : [];
         $title = is_string($share['title'] ?? null) && trim($share['title']) !== '' ? trim($share['title']) : $copy->title;
         $description = is_string($share['description'] ?? null) && trim($share['description']) !== '' ? trim($share['description']) : $copy->description;
-        $artifact = RiderStampArtifactData::fromArray(data_get($voucher, 'instructions.metadata.custom.rider_stamp_artifact'));
+        $artifact = RiderStampArtifactData::fromArray(data_get($voucher, 'metadata.rider_stamp_artifact')
+            ?? data_get($voucher, 'instructions.metadata.custom.rider_stamp_artifact'));
 
         return new ClaimShareMetadataData(
             title: $title,

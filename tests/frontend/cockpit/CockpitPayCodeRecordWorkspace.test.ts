@@ -694,8 +694,9 @@ describe("Cockpit Pay Code record workspace", () => {
       {
         id: 9,
         label: "Claim receipt",
-        review_status: "approved",
+        review_status: "pending",
         reveal_href: "/attachments/9",
+        review_href: "/attachments/9/review",
       },
     ];
     const wrapper = mount(CockpitPayCodeRecordWorkspace, {
@@ -723,6 +724,7 @@ describe("Cockpit Pay Code record workspace", () => {
       expect(card.classes()).toContain("rounded-2xl");
       expect(card.classes()).toContain("border-slate-200");
     }
+    expect(wrapper.get('[data-testid="document-review"]').text()).toContain("Accept");
   });
 
   it("enriches Journal and Delivery entries when sanitized context is available", async () => {

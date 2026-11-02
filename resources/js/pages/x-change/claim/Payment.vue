@@ -81,6 +81,8 @@ type PaymentReadModel = {
     fee_due_minor?: number;
     is_fully_paid: boolean;
     rider_message: string | null;
+    payment_details?: { description?: string | null; reference?: string | null; fields?: { label: string; value: string }[] } | null;
+    shared_invoices?: { name: string; url: string | null }[];
     document_requirements?: { type: string; timing: string; requires_acceptance: boolean }[];
     document_upload_url?: string | null;
     documents_ready?: boolean;
@@ -451,14 +453,22 @@ function printReceipt(): void {
                 </CardHeader>
                 <CardContent>
                     <p
-                        v-if="payment.rider_message"
+                        v-if="payment.payment_details?.description || payment.rider_message"
                         class="whitespace-pre-line text-sm leading-6 text-foreground"
                     >
-                        {{ payment.rider_message }}
+                        {{ payment.payment_details?.description || payment.rider_message }}
                     </p>
+                    <dl v-if="payment.payment_details?.reference || payment.payment_details?.fields?.length" class="mt-4 grid gap-2 text-sm">
+                        <div v-if="payment.payment_details?.reference" class="flex justify-between gap-4"><dt>Reference</dt><dd>{{ payment.payment_details.reference }}</dd></div>
+                        <div v-for="field in payment.payment_details?.fields ?? []" :key="field.label" class="flex justify-between gap-4"><dt>{{ field.label }}</dt><dd>{{ field.value }}</dd></div>
+                    </dl>
                     <p v-else class="text-sm leading-6 text-muted-foreground">
                         The issuer did not include a payment message.
                     </p>
+                    <div v-for="(invoice, index) in payment.shared_invoices ?? []" :key="index" class="mt-3 text-sm font-medium text-primary">
+                        <a v-if="invoice.url" :href="invoice.url" class="underline" target="_blank" rel="noopener">{{ invoice.name }}</a>
+                        <span v-else>{{ invoice.name }}</span>
+                    </div>
                 </CardContent>
             </Card>
 

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b50a60f54137ad00453f98c92950d38a",
+    "content-hash": "3adf40cbd63429109b8e239d8156fa9f",
     "packages": [
         {
             "name": "3neti/cash",
@@ -1201,16 +1201,16 @@
         },
         {
             "name": "3neti/settlement-envelope",
-            "version": "v1.4.0",
+            "version": "v1.5.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/settlement-envelope.git",
-                "reference": "b874a44229c968dc12bf753842de2df7a176b972"
+                "reference": "f8af1fe2aa593b7b73a2318d36dec94b5bbd8b48"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/settlement-envelope/zipball/b874a44229c968dc12bf753842de2df7a176b972",
-                "reference": "b874a44229c968dc12bf753842de2df7a176b972",
+                "url": "https://api.github.com/repos/3neti/settlement-envelope/zipball/f8af1fe2aa593b7b73a2318d36dec94b5bbd8b48",
+                "reference": "f8af1fe2aa593b7b73a2318d36dec94b5bbd8b48",
                 "shasum": ""
             },
             "require": {
@@ -1253,9 +1253,9 @@
             "description": "Driver-based evidence envelope system for settlement gating",
             "support": {
                 "issues": "https://github.com/3neti/settlement-envelope/issues",
-                "source": "https://github.com/3neti/settlement-envelope/tree/v1.4.0"
+                "source": "https://github.com/3neti/settlement-envelope/tree/v1.5.0"
             },
-            "time": "2026-09-25T10:11:13+00:00"
+            "time": "2026-11-02T02:25:08+00:00"
         },
         {
             "name": "3neti/settlement-envelope-aui",
@@ -1358,16 +1358,16 @@
         },
         {
             "name": "3neti/voucher",
-            "version": "v1.3.0",
+            "version": "v1.4.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/voucher.git",
-                "reference": "21e5d26d8ac001738522a9b0730ea70cf06c9b1e"
+                "reference": "45cf4de878511b441c090cffe19349b4e25bf2ca"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/voucher/zipball/21e5d26d8ac001738522a9b0730ea70cf06c9b1e",
-                "reference": "21e5d26d8ac001738522a9b0730ea70cf06c9b1e",
+                "url": "https://api.github.com/repos/3neti/voucher/zipball/45cf4de878511b441c090cffe19349b4e25bf2ca",
+                "reference": "45cf4de878511b441c090cffe19349b4e25bf2ca",
                 "shasum": ""
             },
             "require": {
@@ -1435,7 +1435,7 @@
                 "issues": "https://github.com/3neti/voucher/issues",
                 "source": "https://github.com/3neti/voucher"
             },
-            "time": "2026-10-31T00:15:05+00:00"
+            "time": "2026-11-02T02:25:08+00:00"
         },
         {
             "name": "3neti/wallet",

@@ -1,0 +1,43 @@
+driver:
+  id: x-change.documents
+  version: 1.0.0
+  title: Pay Code documents
+  description: Documents contributed for a Pay Code
+  domain: payments
+payload:
+  schema:
+    id: x-change.documents.v1
+    format: json_schema
+    inline:
+      type: object
+      properties: {}
+  storage:
+    mode: versioned
+    patch_strategy: merge
+documents:
+  registry:
+    - type: INVOICE
+      title: Invoice
+      allowed_mimes: [application/pdf, image/jpeg, image/png, application/msword, application/x-ole-storage, application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, text/csv, text/plain]
+      max_size_mb: 10
+      multiple: true
+    - type: SUPPORTING_DOCUMENT
+      title: Supporting document
+      allowed_mimes: [application/pdf, image/jpeg, image/png]
+      max_size_mb: 5
+      multiple: true
+    - type: PROOF_OF_PAYMENT
+      title: Proof of payment
+      allowed_mimes: [application/pdf, image/jpeg, image/png]
+      max_size_mb: 5
+      multiple: true
+checklist:
+  template: []
+signals:
+  definitions: []
+gates:
+  definitions: []
+audit:
+  enabled: true
+manifest:
+  enabled: true

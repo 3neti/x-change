@@ -57,7 +57,9 @@ final readonly class DefaultRiderStampArtifactStore implements RiderStampArtifac
         $metadata = is_array($voucher->metadata) ? $voucher->metadata : [];
         data_set(
             $metadata,
-            'instructions.metadata.custom.rider_stamp_artifact',
+            data_get($metadata, 'instructions.execution.schema') === 'voucher.execution.v2'
+                ? 'rider_stamp_artifact'
+                : 'instructions.metadata.custom.rider_stamp_artifact',
             $artifact->toArray(),
         );
         $voucher->forceFill(['metadata' => $metadata])->save();
@@ -72,10 +74,8 @@ final readonly class DefaultRiderStampArtifactStore implements RiderStampArtifac
 
     public function descriptor(Voucher $voucher): ?RiderStampArtifactData
     {
-        return RiderStampArtifactData::fromArray(data_get(
-            $voucher,
-            'instructions.metadata.custom.rider_stamp_artifact',
-        ));
+        return RiderStampArtifactData::fromArray(data_get($voucher, 'metadata.rider_stamp_artifact')
+            ?? data_get($voucher, 'instructions.metadata.custom.rider_stamp_artifact'));
     }
 
     public function read(Voucher $voucher): ?ClaimShareCardData

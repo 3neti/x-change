@@ -8,6 +8,7 @@ const props = defineProps<{
     requirements: Requirement[];
     uploadUrl?: string | null;
     previewMode?: boolean;
+    reloadOnly?: string;
 }>();
 const uploading = ref<string | null>(null);
 const error = ref('');
@@ -31,7 +32,7 @@ async function upload(type: string, event: Event): Promise<void> {
         if (!response.ok) throw new Error('Upload failed');
         const result = await response.json();
         uploaded.value = { ...uploaded.value, [type]: result.review_status === 'accepted' ? 'Accepted' : 'Uploaded for review' };
-        router.reload({ only: ['payment'], preserveScroll: true });
+        router.reload({ only: [props.reloadOnly ?? 'payment'], preserveScroll: true });
     } catch {
         error.value = 'Could not upload the document. Please try again.';
     } finally {

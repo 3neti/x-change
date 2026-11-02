@@ -62,6 +62,29 @@ it('projects only payer document requirements into the payment walkthrough', fun
         ->and(data_get($journey, 'steps.0.screen.props.payment.document_upload_url'))->toBeNull();
 });
 
+it('shows the approved payment details and document labels in the payable walkthrough', function (): void {
+    $details = ['description' => 'Repair', 'reference' => 'INV-001', 'fields' => [['label' => 'Item', 'value' => 'Screen']],
+        'documents' => [['id' => '01ARZ3NDEKTSV4RRFFQ69G5FAV', 'type' => 'invoice', 'label' => 'Invoice.pdf']]];
+    $scenario = ['fixture' => ['instructions' => [
+        'voucher_type' => 'payable', 'target_amount' => 100, 'cash' => ['amount' => 0, 'currency' => 'PHP'],
+        'execution' => ['schema' => 'voucher.execution.v2'], 'payment_details' => $details,
+    ]], 'checkpoints' => []];
+    $journey = app(ClaimPreviewJourneyManifestFactory::class)->fromReport([], $scenario);
+    expect(data_get($journey, 'steps.0.screen.props.payment.payment_details'))->toBe($details)
+        ->and(data_get($journey, 'steps.0.screen.props.payment.shared_invoices'))->toBe([['name' => 'Invoice.pdf', 'url' => null]]);
+});
+
+it('projects only claimant document requirements into the claim walkthrough', function (): void {
+    $claimant = ['type' => 'CLAIM_FORM', 'timing' => 'later_review', 'requires_acceptance' => true, 'contributor' => 'claimant'];
+    $payer = ['type' => 'PAYMENT_FORM', 'timing' => 'before_payment', 'requires_acceptance' => true, 'contributor' => 'payer'];
+    $scenario = ['fixture' => ['instructions' => [
+        'execution' => ['schema' => 'voucher.execution.v2', 'document_requirements' => [$claimant, $payer]],
+    ]], 'checkpoints' => [['key' => 'claim-entry']]];
+
+    $journey = app(ClaimPreviewJourneyManifestFactory::class)->fromReport([], $scenario);
+    expect(data_get($journey, 'steps.0.screen.document_requirements'))->toBe([collect($claimant)->except('contributor')->all()]);
+});
+
 it('projects the patient, hospital and payment waits for a PhilHealth settlement', function (): void {
     $scenario = ['fixture' => ['instructions' => [
         'target_amount' => 20000,
