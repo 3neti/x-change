@@ -12,6 +12,7 @@ use LBHurtado\XChange\Enums\ClaimAuthenticationMode;
 use LBHurtado\XChange\Services\Execution\CampaignCoverageCompletionExecutionDriver;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 use LBHurtado\XChange\Services\Settlement\CampaignWalletPayerMobile;
+use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
 
 final class DefaultClaimWorkflowResolver implements ClaimWorkflowResolverContract
 {
@@ -135,6 +136,24 @@ final class DefaultClaimWorkflowResolver implements ClaimWorkflowResolverContrac
                     'lead_intake' => true,
                     'completion_destination' => 'claim_success',
                 ],
+            );
+        }
+
+        if (SettlementRepaymentPolicy::forVoucher($voucher)
+            && data_get($voucher->metadata, 'instructions.metadata.custom.cockpit.template_key') === 'loan'
+            && data_get($voucher->metadata, 'instructions.metadata.custom.cockpit.template_version') === 1) {
+            $presentation = (array) data_get($voucher->metadata, 'instructions.metadata.custom.loan_presentation', []);
+
+            return new ClaimWorkflowDescriptorData(
+                key: 'disbursement.v1',
+                requires_mobile: true,
+                requires_destination: true,
+                requires_amount: true,
+                title: (string) ($presentation['destination_title'] ?? 'Where should we send your loan?'),
+                description: (string) ($presentation['destination_description'] ?? 'Provide the destination for your loan.'),
+                confirmation_label: (string) ($presentation['confirmation_label'] ?? 'Confirm Loan Details'),
+                confirmation_title: (string) ($presentation['confirmation_title'] ?? 'Confirm loan details'),
+                required_claim_fields: ['mobile'],
             );
         }
 

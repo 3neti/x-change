@@ -382,6 +382,27 @@ it('rejects an invalid payout destination before issuance', function (): void {
     ]))->toThrow(ValidationException::class);
 });
 
+it('requires an explicit workflow for new v2 default settlement instructions', function (): void {
+    $input = [
+        'voucher_type' => 'settlement', 'cash' => ['amount' => 50, 'currency' => 'PHP'],
+        'target_amount' => 75, 'execution' => ['schema' => 'voucher.execution.v2', 'driver' => 'default'],
+    ];
+    $normalizer = app(VoucherIssuancePayloadNormalizer::class);
+    expect(fn () => $normalizer->normalize($input))->toThrow(ValidationException::class);
+    data_set($input, 'execution.metadata.settlement_workflow', 'collect_for_settlement');
+    expect(data_get($normalizer->normalize($input), 'execution.metadata.settlement_workflow'))->toBe('collect_for_settlement');
+});
+
+it('rejects a loan template that does not declare its versioned disburse then collect workflow', function (): void {
+    $input = [
+        'voucher_type' => 'settlement', 'cash' => ['amount' => 50, 'currency' => 'PHP'],
+        'target_amount' => 75, 'execution' => ['schema' => 'voucher.execution.v2', 'driver' => 'default'],
+        'rules' => ['settlement_mode' => 'collect_for_settlement'],
+        'metadata' => ['custom' => ['cockpit' => ['template_key' => 'loan', 'template_version' => 1]]],
+    ];
+    expect(fn () => app(VoucherIssuancePayloadNormalizer::class)->normalize($input))->toThrow(ValidationException::class);
+});
+
 it('rejects repayment instructions whose fixed installments cannot settle the target', function (array $changes): void {
     $input = array_replace_recursive([
         'voucher_type' => 'settlement', 'cash' => ['amount' => 100, 'currency' => 'PHP'],

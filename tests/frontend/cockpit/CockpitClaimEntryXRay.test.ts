@@ -78,10 +78,20 @@ describe('Cockpit claim entry walkthrough', () => {
         expect(wrapper.get('[data-testid="claim-code-left-pipes"]').text()).toBe('||');
         expect(wrapper.get('[data-testid="claim-code-right-pipes"]').text()).toBe('||');
         expect(wrapper.get('[data-testid="xray-requirements-toggle"]').text()).toContain('Mobile number');
-        expect(wrapper.findAll('button').filter((button) => button.text() === 'Continue')).toHaveLength(1);
+        expect(wrapper.findAll('button').filter((button) => button.text() === 'Start Claim')).toHaveLength(1);
 
         await wrapper.get('[data-testid="xray-requirements-toggle"]').trigger('click');
 
         expect(wrapper.get('[data-testid="xray-required-inputs"]').isVisible()).toBe(true);
+    });
+
+    it('uses the issued presentation for the entry action', () => {
+        const wrapper = mount(CockpitClaimLiveScreen, { props: { screen: {
+            kind: 'claim_entry', code: 'AA317',
+            xray: { visible: true, status: 'claimable', disclosures: [], requirements: [],
+                presentation: { title: 'Receive your loan', primary_action_label: 'Receive loan' } },
+        } } });
+        expect(wrapper.text()).toContain('Receive your loan');
+        expect(wrapper.findAll('button').filter((button) => button.text() === 'Receive loan')).toHaveLength(1);
     });
 });

@@ -62,6 +62,41 @@ BLADE);
         ->name('x-change.pay.show');
 });
 
+it('does not present an unfulfilled settlement as a successful disbursement', function (): void {
+    $user = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'voucher_type' => 'settlement',
+        'target_amount' => 75,
+        'metadata' => ['flow_type' => 'settlement', 'issuer_id' => (string) $user->id, 'collection_wallet_id' => $user->wallet->id],
+    ]));
+
+    $this->withoutMiddleware()->getJson(route('x-change.claim.success', ['code' => $voucher->code]))
+        ->assertOk()
+        ->assertJsonPath('claimOutcome', 'accepted_pending')
+        ->assertJsonPath('success_presentation.title', 'Settlement not completed')
+        ->assertJsonPath('success_action', null)
+        ->assertJsonPath('rider', null);
+});
+
+it('shows a blocked settlement outcome only for the matching voucher session', function (): void {
+    $user = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'voucher_type' => 'settlement', 'target_amount' => 75,
+        'metadata' => ['flow_type' => 'settlement', 'issuer_id' => (string) $user->id, 'collection_wallet_id' => $user->wallet->id],
+    ]));
+
+    $this->withoutMiddleware()->withSession(['compiled_claim_result' => [
+        'voucher_code' => $voucher->code, 'status' => 'blocked', 'claim_type' => 'settlement',
+    ]])->getJson(route('x-change.claim.success', ['code' => $voucher->code]))
+        ->assertOk()->assertJsonPath('success_presentation.title', 'Settlement needs attention')
+        ->assertJsonPath('success_action', null);
+
+    $this->withSession(['compiled_claim_result' => [
+        'voucher_code' => 'OTHER', 'status' => 'blocked', 'claim_type' => 'settlement',
+    ]])->getJson(route('x-change.claim.success', ['code' => $voucher->code]))
+        ->assertOk()->assertJsonPath('success_presentation.title', 'Settlement not completed');
+});
+
 it('reveals the submitted destination only in the matching unexpired claim session', function (): void {
     $voucher = issueVoucher(validVoucherInstructions(amount: 50));
     $claim = VoucherClaim::query()->create([

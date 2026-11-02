@@ -691,6 +691,12 @@ const quickGenerateTemplateDefaults: Record<
   },
 };
 
+quickGenerateTemplateDefaults.loan = {
+  ...quickGenerateTemplateDefaults['blank-pay-code'],
+  voucherType: 'settlement',
+  includeExecutionInstruction: true,
+};
+
 const selectedTemplate = ref(
   stringValue(props.campaignContext?.draft?.template_key) ??
     stringValue(props.draftContract?.template_key) ??
@@ -935,6 +941,14 @@ function addRequestedDocument(): void {
   if (type) requestedDocuments.value.push({ type, timing: "before_payment", requires_acceptance: true, contributor: philhealthSettlement.value ? "claimant" : "payer" });
 }
 const settlementRepayment = ref(false);
+const settlementWorkflowChosen = ref(false);
+const settlementInstallmentRemainder = computed(() => {
+  const target = Math.round(Number(targetAmount.value) * 100);
+  const installment = Math.round(Number(rulesMinPayment.value) * 100);
+  return Number.isFinite(target) && Number.isFinite(installment) && target > 0 && installment > 0
+    ? target % installment
+    : 0;
+});
 const valueFlowVisible = computed(
   () => reusableBalance.value || ["payable", "settlement"].includes(voucherType.value),
 );
@@ -955,6 +969,15 @@ const claimOutcome = ref<ClaimOutcomeMode>("provider_disbursement");
 const targetAmount = ref("");
 const rulesMinPayment = ref("");
 const rulesMaxPayment = ref("");
+function seedBlankSettlementAmounts(): void {
+  const principal = Number(amount.value);
+  if (voucherType.value !== 'settlement' || philhealthSettlement.value || !Number.isFinite(principal) || principal <= 0) return;
+  if (targetAmount.value.trim() === '') targetAmount.value = amount.value;
+  if (rulesMinPayment.value.trim() === '' && rulesMaxPayment.value.trim() === '') {
+    rulesMinPayment.value = amount.value;
+    rulesMaxPayment.value = amount.value;
+  }
+}
 const rulesAllowOverpayment = ref(false);
 const rulesAutoCloseOnFullPayment = ref(true);
 const includeExecutionInstruction = ref(false);
@@ -962,10 +985,11 @@ const executionSchema = ref("voucher.execution.v2");
 const philhealthSettlement = ref(false);
 const amountBeforePhilhealth = ref<string | null>(null);
 const settlementWorkflow = computed(() =>
-  philhealthSettlement.value ? "philhealth" : settlementRepayment.value ? "repayment" : "other",
+  !settlementWorkflowChosen.value ? "" : philhealthSettlement.value ? "philhealth" : settlementRepayment.value ? "repayment" : "other",
 );
 function selectSettlementWorkflow(event: Event): void {
   const selected = (event.target as HTMLSelectElement).value;
+  settlementWorkflowChosen.value = selected !== '';
   if (selected === "philhealth") {
     requestedDocuments.value = [];
     amountBeforePhilhealth.value = amount.value;
@@ -1167,7 +1191,10 @@ watch(riderStampShowTagline, (visible): void => {
   }
 });
 
-watch(amount, (): void => {
+watch(amount, (currentAmount, previousAmount): void => {
+  if (!(Number(previousAmount) > 0) && Number(currentAmount) > 0) {
+    seedBlankSettlementAmounts();
+  }
   if (sliceMode.value === "whole") {
     configureWholeAmountSlices();
   }
@@ -1231,7 +1258,14 @@ watch(claimOutcome, (outcome): void => {
 watch(voucherType, (type, previousType): void => {
   destinationDrafts[previousType] = valueFlowDestination.value;
   valueFlowDestination.value = destinationDrafts[type];
+  if (type === 'settlement') {
+    settlementRepayment.value = true;
+    settlementWorkflowChosen.value = true;
+    seedBlankSettlementAmounts();
+  }
   if (type !== "settlement") {
+    settlementWorkflowChosen.value = false;
+    settlementRepayment.value = false;
     requestedDocuments.value = requestedDocuments.value.map((item) => item.contributor === "claimant" ? { ...item, contributor: "payer" } : item);
     if (philhealthSettlement.value && amountBeforePhilhealth.value !== null) {
       amount.value = amountBeforePhilhealth.value;
@@ -1351,7 +1385,8 @@ function applyTemplateDefaults(templateKey: string): void {
   );
   storedValueOtpAbove.value = "";
   valueFlowDestination.value = "";
-  settlementRepayment.value = false;
+  settlementRepayment.value = templateKey === 'loan';
+  settlementWorkflowChosen.value = templateKey === 'loan';
   feeBearer.value = "issuer";
   voucherType.value = defaults.voucherType;
   targetAmount.value = defaults.targetAmount;
@@ -1365,7 +1400,7 @@ function applyTemplateDefaults(templateKey: string): void {
     defaults.executionDriver === "settlement_envelope"
       ? "readiness, authorize, execute"
       : "";
-  metadataFlowType.value = templateKey;
+  metadataFlowType.value = templateKey === 'loan' ? 'settlement' : templateKey;
   lastStatus.value = "ready";
   lastMessage.value = `${selectedTemplateName.value} defaults applied. Submit will call the existing x-change issuance handoff route.`;
   lastResponse.value = null;
@@ -2146,6 +2181,7 @@ function applyInstructionBlueprint(
   philhealthSettlement.value = instructionString(execution, ["schema"]) === "voucher.execution.v2"
     && instructionString(execution, ["settlement", "driver"]) === "philhealth-bst";
   settlementRepayment.value = instructionString(instructions, ["rules", "settlement_mode"]) === "disburse_then_repay";
+  settlementWorkflowChosen.value = settlementRepayment.value || instructionString(instructions, ["execution", "metadata", "settlement_workflow"]) === 'collect_for_settlement' || philhealthSettlement.value;
   feeBearer.value = instructionString(instructions, ["fee_bearer"]) === "payer" ? "payer" : "issuer";
   valueFlowDestination.value =
     instructionString(instructions, ["value_flow", "destination"]) ||
@@ -2642,6 +2678,11 @@ const canSubmit = computed<boolean>(() => {
   const settlementTargetIsValid =
     voucherType.value !== "settlement" ||
     (Number.isFinite(normalizedTargetAmount) && normalizedTargetAmount > 0);
+  const principalMinor = Math.round(normalizedAmount * 100);
+  const targetMinor = Math.round(normalizedTargetAmount * 100);
+  const installmentMinor = Math.round(Number(rulesMinPayment.value) * 100);
+  const settlementScheduleIsValid = !settlementRepayment.value || voucherType.value !== 'settlement' ||
+    (principalMinor > 0 && targetMinor >= principalMinor && installmentMinor > 0 && targetMinor % installmentMinor === 0);
 
   return (
     props.mutationContract?.runtime_enabled === true &&
@@ -2666,6 +2707,9 @@ const canSubmit = computed<boolean>(() => {
     (specializedJourney.value === null || (voucherType.value === 'redeemable' && count.value === '1' && claimOutcome.value === 'provider_disbursement')) &&
     payableAmountIsValid &&
     settlementTargetIsValid &&
+    settlementScheduleIsValid &&
+    (selectedTemplate.value !== 'loan' || (voucherType.value === 'settlement' && settlementRepayment.value)) &&
+    (voucherType.value !== 'settlement' || settlementWorkflowChosen.value) &&
     (!philhealthSettlement.value || (valueFlowDestination.value !== "" && selectedInputFields.value.length > 0)) &&
     onDemandFundingProjection.value === null &&
     (!isAccountFundingClaim.value || sliceMode.value === "whole")
@@ -2680,6 +2724,8 @@ const canGenerateClaimPreview = computed<boolean>(() => {
     !previewProcessing.value &&
     Number.isFinite(normalizedAmount) &&
     (normalizedAmount > 0 || (philhealthSettlement.value && Number(targetAmount.value) > 0)) &&
+    (!isSettlementVoucher.value || (settlementWorkflowChosen.value && Number(targetAmount.value) > 0
+      && (!settlementRepayment.value || settlementInstallmentRemainder.value === 0 && Number(rulesMinPayment.value) > 0))) &&
     (!philhealthSettlement.value || (valueFlowDestination.value !== "" && selectedInputFields.value.length > 0)) &&
     payeePolicy.value.issuable &&
     feedbackValid.value &&
@@ -5055,6 +5101,12 @@ watch(canvasView, (view): void => {
   }
 });
 
+watch(settlementWorkflowChosen, (chosen, previouslyChosen): void => {
+  if (chosen && !previouslyChosen && canvasView.value === 'claim' && canGenerateClaimPreview.value) {
+    void generateClaimPreview(false);
+  }
+});
+
 const settlementRulesSummary = computed<Record<string, unknown> | null>(() => {
   const minPayment = Number(rulesMinPayment.value);
   const maxPayment = Number(rulesMaxPayment.value);
@@ -5063,11 +5115,11 @@ const settlementRulesSummary = computed<Record<string, unknown> | null>(() => {
     rules.settlement_mode = "disburse_then_repay";
   }
 
-  if (Number.isFinite(minPayment) && minPayment > 0) {
+  if ((!isSettlementVoucher.value || settlementRepayment.value) && Number.isFinite(minPayment) && minPayment > 0) {
     rules.min_payment = minPayment;
   }
 
-  if (Number.isFinite(maxPayment) && maxPayment > 0) {
+  if ((!isSettlementVoucher.value || settlementRepayment.value) && Number.isFinite(maxPayment) && maxPayment > 0) {
     rules.max_payment = maxPayment;
   }
 
@@ -5848,8 +5900,23 @@ function buildPayloadShape(
           } : {}),
         } }),
         ...(stampPresentation.value && !usesRiderArtwork.value ? { stamp_presentation: stampPresentation.value } : {}),
+        ...(selectedTemplate.value === 'loan' && voucherType.value === 'settlement' && settlementRepayment.value ? {
+          claim_presentation: {
+            title: 'Receive your loan',
+            primary_action_label: 'Receive loan',
+            confirmation_title: 'Confirm loan details',
+            confirmation_label: 'Confirm loan details',
+          },
+          loan_presentation: {
+            destination_title: 'Where should we send your loan?',
+            destination_description: 'Provide the destination for your loan.',
+            confirmation_title: 'Confirm loan details',
+            confirmation_label: 'Confirm Loan Details',
+          },
+        } : {}),
         cockpit: {
           template_key: selectedTemplate.value,
+          ...(selectedTemplate.value === 'loan' && voucherType.value === 'settlement' && settlementRepayment.value ? { template_version: 1 } : {}),
           ...(activeSavedTemplate.value === null
             ? {}
             : {
@@ -5936,6 +6003,9 @@ function buildPayloadShape(
   if (execution !== null) {
     payload.execution = {
       ...execution,
+      ...(isV2Execution && isSettlementVoucher.value && settlementWorkflowChosen.value && !settlementRepayment.value && !philhealthSettlement.value
+        ? { metadata: { ...((execution.metadata as Record<string, unknown> | undefined) ?? {}), settlement_workflow: 'collect_for_settlement' } }
+        : {}),
       ...(destination && isV2Execution ? { value_flow: destination } : {}),
       ...(isV2Execution && (isPayableVoucher.value || isSettlementVoucher.value) && requestedDocuments.value.length
         ? { document_requirements: requestedDocuments.value.filter((item) => !(philhealthSettlement.value && invoiceDraft.value && item.type === "HOSPITAL_BILL")).map((item) => ({ ...item })) }
@@ -7225,10 +7295,13 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
           <label v-if="isSettlementVoucher && !publicMode" class="grid gap-2 text-sm font-semibold text-slate-800 sm:col-span-2 dark:text-slate-200">
             Settlement workflow
             <select :value="settlementWorkflow" :disabled="processing" class="min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-normal dark:border-slate-700 dark:bg-slate-900" data-testid="settlement-workflow" @change="selectSettlementWorkflow">
-              <option value="other">Other settlement</option>
-              <option value="repayment">Loan and repayments</option>
+              <option value="" disabled>Select a workflow</option>
+              <option value="other">Collect for settlement</option>
+              <option value="repayment">Disburse, then collect</option>
               <option value="philhealth" :disabled="onboardingEnabled">PhilHealth settlement</option>
             </select>
+            <span v-if="!settlementWorkflowChosen" class="text-xs font-normal text-slate-600 dark:text-slate-300">Choose how this settlement should work before issuing.</span>
+            <span v-if="selectedTemplate === 'loan' && !settlementRepayment" class="text-xs font-normal text-rose-600 dark:text-rose-300">The Loan template requires disburse, then collect. Choose another template to use a different workflow.</span>
           </label>
           <div
             v-if="!philhealthSettlement"
@@ -7280,32 +7353,27 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
               </span>
             </div>
           </div>
-          <label
+          <div
             v-if="isSettlementVoucher"
             class="grid min-w-0 max-w-72 gap-1.5 text-xs font-medium text-slate-700 sm:col-span-2 dark:text-slate-300"
             data-testid="cockpit-quick-generate-target-amount-field"
           >
-            <span class="flex items-center gap-1">
+            <label for="cockpit-quick-generate-target-amount" class="flex items-center gap-1">
               {{ philhealthSettlement ? 'Settlement Amount' : 'Total to Collect' }}
               <CockpitFieldHelp
                 :label="philhealthSettlement ? 'About Settlement Amount' : 'About Total to Collect'"
                 :tooltip="philhealthSettlement ? 'The amount to be paid after the patient attestation and hospital review.' : 'The total collection target, separate from any amount disbursed.'"
               />
-            </span>
-            <input
+            </label>
+            <CockpitAmountPicker
               v-model="targetAmount"
-              type="number"
-              min="0"
-              step="0.01"
-              class="h-12 w-full min-w-0 rounded-xl border bg-white px-3 text-sm text-slate-950 shadow-sm dark:bg-slate-900 dark:text-slate-50"
-              :class="
-                targetAmountError
-                  ? 'border-rose-300 ring-2 ring-rose-100 dark:border-rose-800 dark:ring-rose-950'
-                  : 'border-slate-200 dark:border-slate-800'
-              "
-              data-testid="cockpit-quick-generate-target-amount"
+              input-id="cockpit-quick-generate-target-amount"
+              test-id="cockpit-quick-generate-target-amount"
+              :label="philhealthSettlement ? 'Settlement amount' : 'Total to collect'"
+              :title="philhealthSettlement ? 'Settlement Amount' : 'Total to Collect'"
+              :show-estimate="false"
+              :invalid="Boolean(targetAmountError)"
               :disabled="processing"
-              :aria-invalid="targetAmountError ? 'true' : undefined"
             />
             <span
               v-if="targetAmountError"
@@ -7314,13 +7382,23 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
             >
               {{ targetAmountError }}
             </span>
-          </label>
+          </div>
           <div v-if="isPayableVoucher || isSettlementVoucher || reusableBalance" class="grid min-w-0 gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:col-span-2 dark:border-slate-700 dark:bg-slate-900/50" data-testid="cockpit-quick-generate-money-flow-controls">
             <fieldset v-if="isSettlementVoucher && settlementRepayment && !philhealthSettlement" class="grid gap-2" data-testid="settlement-repayment-control">
-              <label class="grid gap-1 text-sm">Fixed repayment amount
-                <input :value="rulesMinPayment" type="number" min="0.01" step="0.01" :disabled="processing" data-testid="settlement-repayment-amount" class="min-h-12 rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900" @input="rulesMinPayment = ($event.target as HTMLInputElement).value; rulesMaxPayment = rulesMinPayment" />
-              </label>
-              <p class="text-xs text-slate-600 dark:text-slate-400">Repayments begin after confirmed disbursement and continue until the target is paid.</p>
+              <label for="settlement-repayment-amount" class="text-sm">{{ selectedTemplate === 'loan' ? 'Fixed repayment amount' : 'Fixed collection amount' }}</label>
+              <CockpitAmountPicker
+                :model-value="rulesMinPayment"
+                input-id="settlement-repayment-amount"
+                test-id="settlement-repayment-amount"
+                :label="selectedTemplate === 'loan' ? 'Fixed repayment amount' : 'Fixed collection amount'"
+                :title="selectedTemplate === 'loan' ? 'Fixed Repayment Amount' : 'Fixed Collection Amount'"
+                :show-estimate="false"
+                :disabled="processing"
+                class="w-full max-w-72"
+                @update:model-value="rulesMinPayment = $event; rulesMaxPayment = $event"
+              />
+              <p class="text-xs text-slate-600 dark:text-slate-400">Collections begin after the initial disbursement is accepted and continue until the target is paid.</p>
+              <p v-if="settlementInstallmentRemainder > 0" role="alert" class="text-xs text-rose-600 dark:text-rose-300">The total to collect must be a multiple of the fixed collection amount. Adjust either amount to continue.</p>
             </fieldset>
 
             <ValueFlowDestination
@@ -8005,10 +8083,10 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
           </template>
           <template #claim>
             <CockpitClaimExperiencePreview
-              :status="previewStatus"
+              :status="isSettlementVoucher && !settlementWorkflowChosen ? 'idle' : previewStatus"
               :processing="previewProcessing"
-              :message="previewMessage"
-              :manifest="previewResult"
+              :message="isSettlementVoucher && !settlementWorkflowChosen ? 'Choose a settlement workflow to see its claim journey.' : previewMessage"
+              :manifest="isSettlementVoucher && !settlementWorkflowChosen ? null : previewResult"
               :stale="previewStale"
               :can-generate="canGenerateClaimPreview"
               :simulation-state="previewSimulationState"

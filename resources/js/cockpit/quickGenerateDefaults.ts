@@ -21,6 +21,13 @@ export const cockpitQuickGenerateTemplates: CockpitQuickGenerateTemplate[] = [
         estimatedTime: 'Build your own',
     },
     {
+        key: 'loan',
+        name: 'Loan',
+        description: 'Disburse a principal, then collect fixed repayments.',
+        profile: 'settlement',
+        estimatedTime: 'Configure amounts',
+    },
+    {
         key: 'ofw-remittance',
         name: 'OFW Remittance',
         description:

@@ -707,8 +707,121 @@ it('builds an explicit settlement with separate principal, target and fixed repa
   expect(instruction.target_amount).toBe(120);
   expect(instruction.rules).toMatchObject({ settlement_mode: 'disburse_then_repay', min_payment: 30, max_payment: 30 });
   expect(instruction.fee_bearer).toBe('issuer');
+  await wrapper.get('[data-testid="cockpit-quick-generate-target-amount"]').setValue('125');
+  expect(wrapper.text()).toContain('The total to collect must be a multiple of the fixed collection amount.');
+  await wrapper.get('[data-testid="cockpit-quick-generate-target-amount"]').setValue('120');
+  expect(wrapper.text()).not.toContain('The total to collect must be a multiple of the fixed collection amount.');
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
   expect(preview(wrapper).rules).not.toHaveProperty('settlement_mode');
+});
+
+it('uses the amount calculator for the settlement target without changing the principal', async () => {
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });
+  await openOrderOptions(wrapper);
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
+  await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('50');
+  await wrapper.get('[data-testid="cockpit-quick-generate-target-amount"]').trigger('click');
+  expect(wrapper.get('[data-testid="numeric-keypad-dialog"]').text()).toContain('Total to Collect');
+  expect(wrapper.find('[data-testid="cockpit-amount-picker-estimated-cost"]').exists()).toBe(false);
+  await wrapper.get('[data-testid="numeric-keypad-quick-100"]').trigger('click');
+  await wrapper.get('[data-testid="numeric-keypad-confirm"]').trigger('click');
+  expect(preview(wrapper).target_amount).toBe(100);
+  expect(preview(wrapper).cash.amount).toBe(50);
+});
+
+it('uses the amount calculator for fixed collections and keeps both payment limits equal', async () => {
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });
+  await openOrderOptions(wrapper);
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
+  await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('100');
+  await wrapper.get('[data-testid="settlement-repayment-amount"]').trigger('click');
+  expect(wrapper.get('[data-testid="numeric-keypad-dialog"]').text()).toContain('Fixed Collection Amount');
+  expect(wrapper.find('[data-testid="cockpit-amount-picker-estimated-cost"]').exists()).toBe(false);
+  await wrapper.get('[data-testid="numeric-keypad-quick-500"]').trigger('click');
+  await wrapper.get('[data-testid="numeric-keypad-confirm"]').trigger('click');
+  expect(preview(wrapper).rules).toMatchObject({ min_payment: 500, max_payment: 500 });
+  expect(preview(wrapper).cash.amount).toBe(100);
+  expect(preview(wrapper).target_amount).toBe(100);
+  expect(wrapper.text()).toContain('The total to collect must be a multiple of the fixed collection amount.');
+});
+
+it('defaults blank settlement amounts once and keeps them independent afterwards', async () => {
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });
+  await openOrderOptions(wrapper);
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
+  await wrapper.get('[data-testid="settlement-workflow"]').setValue('repayment');
+  await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('100');
+  expect(preview(wrapper).target_amount).toBe(100);
+  expect(preview(wrapper).rules).toMatchObject({ min_payment: 100, max_payment: 100 });
+  await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('200');
+  expect(preview(wrapper).target_amount).toBe(100);
+  expect(preview(wrapper).rules).toMatchObject({ min_payment: 100, max_payment: 100 });
+  await wrapper.get('[data-testid="cockpit-quick-generate-target-amount"]').setValue('250');
+  await wrapper.get('[data-testid="settlement-repayment-amount"]').setValue('50');
+  await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('300');
+  expect(preview(wrapper).target_amount).toBe(250);
+  expect(preview(wrapper).rules).toMatchObject({ min_payment: 50, max_payment: 50 });
+});
+
+it('does not add fixed payment rules to the generic settlement workflow', async () => {
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });
+  await openOrderOptions(wrapper);
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
+  await wrapper.get('[data-testid="settlement-workflow"]').setValue('other');
+  await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('100');
+  expect(preview(wrapper).target_amount).toBe(100);
+  expect(preview(wrapper).rules).not.toHaveProperty('min_payment');
+  expect(preview(wrapper).rules).not.toHaveProperty('max_payment');
+});
+
+it('requests the claim preview using the selected settlement workflow', async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: false, json: async () => ({ message: 'Preview test' }) });
+  vi.stubGlobal('fetch', fetchMock);
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: {
+    templates: cockpitQuickGenerateTemplates,
+    claimPreviewContract: { status: 'registered', route: 'preview', route_url: '/preview-test', money_movement: false, preview_cache: true },
+  } });
+  await openOrderOptions(wrapper);
+  await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('100');
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
+  await wrapper.get('[data-testid="settlement-workflow"]').setValue('other');
+  await wrapper.get('[data-testid="cockpit-quick-generate-target-amount"]').setValue('120');
+  await wrapper.get('[data-testid="cockpit-pay-code-canvas-claim-button"]').trigger('click');
+  await flushPromises();
+  const previewCall = fetchMock.mock.calls.find(([url]) => url === '/preview-test');
+  expect(previewCall).toBeDefined();
+  expect(JSON.parse(previewCall![1].body).execution.metadata.settlement_workflow).toBe('collect_for_settlement');
+});
+
+it('applies the versioned loan template to a disburse-then-collect instruction', async () => {
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });
+  await wrapper.get('[data-testid="cockpit-quick-generate-choose-template"]').trigger('click');
+  const loan = wrapper.findAll('[data-testid="cockpit-quick-generate-template-option"]').find((option) => option.text().includes('Loan'));
+  expect(loan).toBeDefined();
+  await loan!.trigger('click');
+  await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('50');
+  await wrapper.get('[data-testid="cockpit-quick-generate-target-amount"]').setValue('75');
+  await wrapper.get('[data-testid="settlement-repayment-amount"]').setValue('25');
+  const instruction = preview(wrapper);
+  expect(instruction.voucher_type).toBe('settlement');
+  expect(instruction.rules).toMatchObject({ settlement_mode: 'disburse_then_repay', min_payment: 25, max_payment: 25 });
+  expect(instruction.metadata.custom.cockpit).toMatchObject({ template_key: 'loan', template_version: 1 });
+  expect(instruction.metadata.custom.claim_presentation.primary_action_label).toBe('Receive loan');
+});
+
+it('defaults settlement to disburse then collect and allows another workflow', async () => {
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: {
+    templates: cockpitQuickGenerateTemplates,
+    mutationContract: { runtime_enabled: true, route: 'x-change.cockpit.quick-generate.store', route_url: '/issue', allowed_methods: ['POST'] },
+  } });
+  await openOrderOptions(wrapper);
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
+  await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('75');
+  expect(wrapper.get('[data-testid="settlement-workflow"]').element.value).toBe('repayment');
+  expect(preview(wrapper).rules).toMatchObject({ settlement_mode: 'disburse_then_repay', min_payment: 75, max_payment: 75 });
+  expect(wrapper.get('[data-testid="cockpit-order-flow-summary"]').text()).toContain('Recipient claims');
+  await wrapper.get('[data-testid="settlement-workflow"]').setValue('other');
+  expect(preview(wrapper).execution.metadata.settlement_workflow).toBe('collect_for_settlement');
 });
 
 it('keeps destinations separate by purpose and reflects the active instruction in the summary', async () => {

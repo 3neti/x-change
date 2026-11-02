@@ -11,17 +11,20 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Data\Claim\ClaimWorkflowInterpretationData;
+use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Claim\ClaimWorkflowReadModelProjector;
 use LBHurtado\XChange\Services\Claim\OnboardingSuccessActionResolver;
 use LBHurtado\XChange\Services\Claim\VoucherRiderFallbackPolicy;
 use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
 use LBHurtado\XChange\Services\Settlement\DemonstrationPolicySummary;
+use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LBHurtado\XChange\Services\XRay\VoucherXRayProjectionBuilder;
 use LBHurtado\XChange\Support\Claim\ClaimDestinationReceipt;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\ClaimRiderHandoff;
+use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSuccessPayload;
 use LBHurtado\XChange\Support\Claim\CompletionClaimReceipt;
 use LBHurtado\XChange\Support\Rider\XChangeRiderOutcomeResolver;
@@ -63,6 +66,35 @@ class ClaimSuccessPageController
         $instructions = $voucher->instructions?->toArray() ?? [];
         $successPresentation = $this->successPresentation($voucher, $xray);
 
+        $unfulfilledSettlement = data_get($voucher->metadata, 'instructions.voucher_type') === 'settlement'
+            && in_array(data_get($voucher->metadata, 'instructions.execution.driver', 'default'), ['default', null], true)
+            && (float) data_get($voucher->metadata, 'instructions.cash.amount', 0) > 0
+            && ! SettlementRepaymentPolicy::disbursed($voucher);
+        if ($unfulfilledSettlement) {
+            $result = app(CompiledClaimResultSession::class)->get();
+            $status = data_get($result, 'voucher_code') === $voucher->code ? data_get($result, 'status') : null;
+            $payout = DisbursementReconciliation::query()
+                ->where('voucher_id', $voucher->getKey())->where('claim_type', '!=', 'value_flow')->latest('id')->first();
+            if ($payout?->needs_review) {
+                $status = 'blocked';
+            } elseif (in_array($payout?->status, ['failed', 'rejected', 'cancelled'], true)) {
+                $status = 'failed';
+            }
+            $successPresentation = [
+                'state' => in_array($status, ['blocked', 'failed'], true) ? $status : 'pending',
+                'suppress_legacy_rider' => true,
+                'intent' => 'settlement.pending',
+                'eyebrow' => 'Pay Code',
+                'title' => match ($status) {
+                    'blocked' => 'Settlement needs attention',
+                    'failed' => 'Settlement could not be completed',
+                    default => 'Settlement not completed',
+                },
+                'body' => 'The initial disbursement has not been accepted. Contact the issuer for assistance.',
+                'source' => 'settlement_state',
+            ];
+        }
+
         $experience = ! ($successPresentation['suppress_legacy_rider'] ?? false) && $riderFallbacks->shouldResolve($instructions)
             ? $riders->resolve($subject, [
                 'state' => $state->value,
@@ -82,7 +114,7 @@ class ClaimSuccessPageController
                 'amount' => data_get($voucher, 'cash.amount'),
                 'currency' => data_get($voucher, 'cash.currency'),
             ],
-            'claimOutcome' => $state->value,
+            'claimOutcome' => $unfulfilledSettlement ? 'accepted_pending' : $state->value,
             'claimWorkflowKey' => $workflow->workflow?->key,
             'sender_content_source' => $this->senderContentSource($instructions),
             'rider' => $experience?->toArray(),

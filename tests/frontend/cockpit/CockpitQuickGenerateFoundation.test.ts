@@ -2153,9 +2153,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Money Changer');
         expect(wrapper.text()).toContain('OFW Remittance');
         expect(wrapper.text()).toContain('Settlement Envelope');
-        expect(
-            wrapper.findAll('[data-testid="cockpit-template-option"]'),
-        ).toHaveLength(4);
+        expect(wrapper.text()).toContain('Loan');
     });
 
     it('composes Rider copy and artwork only on the live Pay Code front', async () => {

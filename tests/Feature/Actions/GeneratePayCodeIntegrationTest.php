@@ -22,6 +22,7 @@ use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Actions\Payment\CompleteVoucherCollection;
 use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
+use LBHurtado\XChange\Contracts\ClaimWorkflowResolverContract;
 use LBHurtado\XChange\Contracts\CommercialComponentEconomicsResolverContract;
 use LBHurtado\XChange\Contracts\CommercialOfferingResolverContract;
 use LBHurtado\XChange\Contracts\CommercialPartnerResolverContract;
@@ -57,6 +58,7 @@ use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Execution\ValueFlowPayoutService;
 use LBHurtado\XChange\Services\Payment\PaymentReceiptReadModel;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
+use LBHurtado\XChange\Services\XRay\VoucherXRayProjectionBuilder;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XCommerce\Data\CommercialComponentEconomicsSetData;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
@@ -1170,7 +1172,7 @@ it('rolls back issuer-paid payable issuance when the fee cannot be debited', fun
         ->and(CommercialSale::query()->count())->toBe(0);
 });
 
-it('funds a settlement principal and routes four fixed repayments with one accepted service charge', function (string $bearer, bool $failedRepayment): void {
+it('funds a settlement principal and routes fixed repayments with one accepted service charge', function (string $bearer, bool $failedRepayment, bool $v2, int $principal, int $target, int $installment): void {
     $issuer = actingAsTestUser(0);
     enableNetbankTreasuryForTests();
     config()->set('x-change.commercial.enabled', true);
@@ -1181,31 +1183,49 @@ it('funds a settlement principal and routes four fixed repayments with one accep
     fundTestUserClientFunds($issuer, 50_000);
     recognizeAccountingInventoryForTest(50_000, 'settlement-repayment');
     $funding = Mockery::mock(ProviderFundingPolicyContract::class);
-    $funding->shouldReceive('assertCanIssue')->once()->andReturnUsing(function ($owner, $wallet, float $amount) use ($bearer): FundingDecisionData {
-        expect($amount)->{$bearer === 'payer' ? 'toBe' : 'toBeGreaterThan'}(100.0);
+    $funding->shouldReceive('assertCanIssue')->once()->andReturnUsing(function ($owner, $wallet, float $amount) use ($bearer, $principal): FundingDecisionData {
+        expect($amount)->{$bearer === 'payer' ? 'toBe' : 'toBeGreaterThan'}((float) $principal);
 
         return FundingDecisionData::allowed(authority: 'local_ledger', availableMinor: 50_000,
             requiredMinor: (int) round($amount * 100), currency: 'PHP',
             meta: ['provider' => 'netbank', 'topology' => 'ledger_pooled']);
     });
     app()->instance(ProviderFundingPolicyContract::class, $funding);
-    $payload = validPayCodePayload(100, 'INSTAPAY', [
+    $payload = validPayCodePayload($principal, 'INSTAPAY', [
         'provider' => 'netbank', 'issuer_id' => $issuer->getKey(),
-        'voucher_type' => 'settlement', 'target_amount' => 120, 'fee_bearer' => $bearer,
-        'rules' => ['settlement_mode' => 'disburse_then_repay', 'min_payment' => 30, 'max_payment' => 30],
+        'voucher_type' => 'settlement', 'target_amount' => $target, 'fee_bearer' => $bearer,
+        'rules' => ['settlement_mode' => 'disburse_then_repay', 'min_payment' => $installment, 'max_payment' => $installment],
         'value_flow' => ['destination' => 'instapay.gcash.mobile:09179999999'],
         'inputs' => ['fields' => []], 'feedback' => [],
     ]);
     $payload['inputs']['fields'] = [];
+    if ($v2) {
+        $payload['execution'] = ['schema' => 'voucher.execution.v2', 'driver' => 'default', 'value_flow' => $payload['value_flow']];
+        unset($payload['value_flow']);
+        data_set($payload, 'metadata.custom.cockpit.template_key', 'loan');
+        data_set($payload, 'metadata.custom.cockpit.template_version', 1);
+        data_set($payload, 'metadata.custom.claim_presentation', ['title' => 'Receive your loan', 'primary_action_label' => 'Receive loan']);
+        data_set($payload, 'metadata.custom.loan_presentation', ['destination_title' => 'Where should we send your loan?', 'confirmation_label' => 'Confirm Loan Details']);
+    }
     $result = app(GeneratePayCode::class)->handle($payload);
     $voucher = Voucher::findOrFail($result->voucher_id);
     $sale = CommercialSale::query()->sole();
-    expect(data_get($voucher->metadata, 'treasury.pay_code_reservation.amount_minor'))->toBe(10_000)
-        ->and($voucher->instructions->cash->amount)->toBe(100.0)
-        ->and((float) $voucher->target_amount)->toBe(120.0)
-        ->and(treasuryClientFundsLedger($issuer)->balanceInt)->toBe(40_000 - ($bearer === 'issuer' ? $sale->total_price_minor : 0));
+    expect(data_get($voucher->metadata, 'treasury.pay_code_reservation.amount_minor'))->toBe($principal * 100)
+        ->and($voucher->instructions->cash->amount)->toBe((float) $principal)
+        ->and((float) $voucher->target_amount)->toBe((float) $target)
+        ->and(treasuryClientFundsLedger($issuer)->balanceInt)->toBe(50_000 - $principal * 100 - ($bearer === 'issuer' ? $sale->total_price_minor : 0));
     expect(data_get($voucher->metadata, 'instructions.rules.settlement_mode'))->toBe('disburse_then_repay');
     expect(data_get($voucher->metadata, 'instructions.voucher_type'))->toBe('settlement');
+    if ($v2) {
+        expect(data_get($voucher->metadata, 'instructions.metadata.custom.cockpit.template_version'))->toBe(1)
+            ->and(data_get($voucher->metadata, 'instructions.execution.value_flow.destination'))->toBe('instapay.gcash.mobile:09179999999');
+        $projection = app(VoucherXRayProjectionBuilder::class)->build($voucher);
+        expect(data_get($projection, 'presentation.title'))->toBe('Receive your loan')
+            ->and(data_get($projection, 'presentation.primary_action_label'))->toBe('Receive loan');
+        $workflow = app(ClaimWorkflowResolverContract::class)->resolve($voucher);
+        expect($workflow->title)->toBe('Where should we send your loan?')
+            ->and($workflow->confirmation_label)->toBe('Confirm Loan Details');
+    }
     expect(fn () => app(CreatePaymentAttempt::class)->handle($voucher, 'netbank', 'repayment-browser', 'early'))
         ->toThrow(RuntimeException::class, 'after the initial disbursement');
     app(SettlementCollectionGate::class)->assertSettlementDoesNotDisburse($voucher);
@@ -1231,15 +1251,16 @@ it('funds a settlement principal and routes four fixed repayments with one accep
     $this->withHeader('X-Inertia', 'true')->get(route('x-change.pay.show', ['code' => $voucher->code]))
         ->assertOk()->assertJsonPath('props.payment.repayment_mode', true)
         ->assertJsonPath('props.payment.repayment_ready', true)
-        ->assertJsonPath('props.payment.principal_due_minor', 3_000)
-        ->assertJsonPath('props.payment.remaining_to_collect_minor', 12_000);
-    for ($number = 1; $number <= 4; $number++) {
+        ->assertJsonPath('props.payment.principal_due_minor', $installment * 100)
+        ->assertJsonPath('props.payment.remaining_to_collect_minor', $target * 100);
+    $paymentCount = intdiv($target, $installment);
+    for ($number = 1; $number <= $paymentCount; $number++) {
         $voucher->refresh();
         $fee = $number === 1 && $bearer === 'payer' ? $sale->total_price_minor : 0;
         $attempt = app(CreatePaymentAttempt::class)->handle($voucher, 'netbank', 'repayment-browser', 'repayment-'.$number);
-        expect($attempt->expected_amount_minor)->toBe(3_000 + $fee);
+        expect($attempt->expected_amount_minor)->toBe($installment * 100 + $fee);
         $confirmed = new ConfirmedVoucherCollectionData(
-            amountMinor: 3_000 + $fee, currency: 'PHP', executionDriver: 'provider_wallet',
+            amountMinor: $installment * 100 + $fee, currency: 'PHP', executionDriver: 'provider_wallet',
             authority: 'authoritative_provider', authorityReference: 'repayment-'.$number,
             idempotencyKey: 'repayment-'.$number, provider: 'netbank', providerTransactionId: 'repayment-'.$number,
         );
@@ -1254,13 +1275,20 @@ it('funds a settlement principal and routes four fixed repayments with one accep
         app(ValueFlowPayoutService::class)->submit($payout->id);
         app(ValueFlowPayoutService::class)->submit($payout->id);
         expect($payout->fresh()->internal_status)->toBe($failedRepayment && $number === 2 ? 'recovery_opened' : 'finalized')
-            ->and((float) $payout->amount)->toBe(30.0)
+            ->and((float) $payout->amount)->toBe((float) $installment)
             ->and($provider->lastRequest->account_number)->toBe('09179999999');
     }
-    expect($provider->disburseCallCount)->toBe(5)
+    expect($provider->disburseCallCount)->toBe($paymentCount + 1)
         ->and($voucher->fresh()->isClosed())->toBeTrue()
         ->and($sale->fresh()->status)->toBe('posted')
         ->and(CommercialSale::query()->count())->toBe(1);
     expect(fn () => app(CreatePaymentAttempt::class)->handle($voucher->fresh(), 'netbank', 'repayment-browser', 'fifth'))
         ->toThrow(LogicException::class, 'fully paid');
-})->with(['issuer' => ['issuer', false], 'payer' => ['payer', false], 'failed repayment payout' => ['issuer', true]]);
+})->with([
+    'v1 issuer' => ['issuer', false, false, 100, 120, 30],
+    'v1 payer' => ['payer', false, false, 100, 120, 30],
+    'v1 failed repayment payout' => ['issuer', true, false, 100, 120, 30],
+    'v2 issuer' => ['issuer', false, true, 100, 120, 30],
+    'v2 failed repayment payout' => ['issuer', true, true, 100, 120, 30],
+    'v2 UXZB amounts' => ['issuer', false, true, 50, 75, 25],
+]);

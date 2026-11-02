@@ -33,6 +33,12 @@ class DefaultCockpitIssuanceTemplateRegistry implements CockpitIssuanceTemplateR
                 metadata: ['purpose' => 'operator-defined'],
             ),
             new CockpitIssuanceTemplateProfileData(
+                key: 'loan',
+                name: 'Loan',
+                profile: 'settlement',
+                metadata: ['purpose' => 'loan', 'version' => 1],
+            ),
+            new CockpitIssuanceTemplateProfileData(
                 key: 'ofw-remittance',
                 name: 'OFW Remittance',
                 profile: 'operations',

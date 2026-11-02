@@ -207,7 +207,7 @@ describe('Quick Generate last instructions', () => {
             wrapper.get<HTMLInputElement>(
                 '[data-testid="cockpit-quick-generate-target-amount"]',
             ).element.value,
-        ).toBe('900');
+        ).toBe('900.00');
     });
 
     it('keeps the last successful design behind Repeat Last and restores it without its secret', async () => {
