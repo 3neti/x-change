@@ -44,12 +44,18 @@ it('allows only the voucher owner to create and revoke scoped invitations', func
         ->and($token->verifyPassword('secret-password'))->toBeTrue()
         ->and(data_get($token->metadata, 'scope.document_types'))->toBe(['TEST_DOC']);
 
+    $context = route('x-change.contributions.context');
+    $this->postJson($context, ['token' => $token->token])->assertSuccessful()
+        ->assertJsonPath('verified', false)->assertJsonPath('document_types', []);
+
     Storage::fake('local');
     config()->set('filesystems.disks.local.visibility', 'private');
     $upload = route('x-change.contributions.documents.store');
     $file = fn () => UploadedFile::fake()->createWithContent('document.pdf', "%PDF-1.4\nexample\n%%EOF");
     $this->postJson($upload, ['token' => $token->token, 'document_type' => 'TEST_DOC', 'file' => $file()])->assertNotFound();
     $this->postJson(route('x-change.contributions.password.verify'), ['token' => $token->token, 'password' => 'secret-password'])->assertNoContent();
+    $this->postJson($context, ['token' => $token->token])->assertSuccessful()
+        ->assertJsonPath('verified', true)->assertJsonPath('document_types.0', 'TEST_DOC');
     $this->postJson($upload, ['token' => $token->token, 'document_type' => 'WRONG', 'file' => $file()])->assertForbidden();
     $this->postJson($upload, ['token' => $token->token, 'document_type' => 'TEST_DOC', 'file' => UploadedFile::fake()->createWithContent('document.txt', 'not a document')])->assertUnprocessable();
     $uploaded = $this->postJson($upload, [
@@ -58,10 +64,18 @@ it('allows only the voucher owner to create and revoke scoped invitations', func
     $attachment = $envelope->attachments()->findOrFail($uploaded->json('id'));
     expect(data_get($attachment->metadata, 'contributor_role'))->toBe('invited')
         ->and($attachment->disk)->toBe('local');
+    $this->postJson($context, ['token' => $token->token])->assertSuccessful()
+        ->assertJsonCount(1, 'documents')->assertJsonPath('documents.0.id', $attachment->id);
+    $separate = $this->postJson($url, ['document_types' => ['TEST_DOC'], 'expires_days' => 1])->assertCreated();
+    $this->postJson($context, ['token' => $separate->json('token')])->assertSuccessful()->assertJsonCount(0, 'documents');
+    $this->get(route('x-change.contributions.show'), ['X-Inertia' => 'true'])->assertSuccessful()
+        ->assertHeader('Referrer-Policy', 'no-referrer');
     $this->post(route('x-change.contributions.documents.show', ['attachment' => $attachment->id]), ['token' => $token->token])->assertSuccessful();
     $review = route('x-change.cockpit.documents.review', ['code' => $voucher->code, 'attachment' => $attachment->id]);
     $this->actingAs($owner)->get(route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code]), ['X-Inertia' => 'true'])
-        ->assertSuccessful()->assertJsonPath('props.read_model.voucher.settlement.envelope.attachments.0.review_href', $review);
+        ->assertSuccessful()->assertJsonPath('props.read_model.voucher.settlement.envelope.attachments.0.review_href', $review)
+        ->assertJsonPath('props.read_model.voucher.settlement.envelope.contribution.types.0', 'TEST_DOC')
+        ->assertJsonPath('props.read_model.voucher.settlement.envelope.contribution.invitations.0.id', $separate->json('id'));
     $this->actingAs($other)->postJson($review, ['decision' => 'accepted'])->assertNotFound();
     $this->actingAs($owner)->postJson($review, ['decision' => 'rejected'])->assertUnprocessable();
     $this->postJson($review, ['decision' => 'rejected', 'reason' => 'Please resubmit'])->assertNoContent();
@@ -78,6 +92,7 @@ it('allows only the voucher owner to create and revoke scoped invitations', func
     $this->actingAs($other)->deleteJson($revoke)->assertNotFound();
     $this->actingAs($owner)->deleteJson($revoke)->assertNoContent();
     expect($token->fresh()->isRevoked())->toBeTrue();
+    $this->postJson($context, ['token' => $token->token])->assertNotFound();
     $this->postJson($upload, ['token' => $token->token, 'document_type' => 'TEST_DOC', 'file' => $file()])->assertNotFound();
     $this->deleteJson($revoke)->assertNoContent();
 });

@@ -142,6 +142,8 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliation
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliationRunController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliationRunExecutionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitVoucherDetailPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Contribution\ContributionContextController;
+use LBHurtado\XChange\Http\Controllers\Web\Contribution\ContributionPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Contribution\UploadInvitedDocumentController;
 use LBHurtado\XChange\Http\Controllers\Web\Contribution\UploadParticipantDocumentController;
 use LBHurtado\XChange\Http\Controllers\Web\Contribution\VerifyContributionPasswordController;
@@ -1086,6 +1088,10 @@ Route::get('x/demo/policies/{outcome:reference}', DemonstrationPolicySummaryCont
 
 // Public claim routes (no auth required)
 Route::prefix('x')->middleware(['web', ShareXChangeBranding::class, GuardPairedCampaignClaim::class])->group(function (): void {
+    Route::get('contribute', ContributionPageController::class)
+        ->name('x-change.contributions.show');
+    Route::post('contributions/context', ContributionContextController::class)
+        ->middleware('throttle:30,1,contribution-context:')->name('x-change.contributions.context');
     Route::post('contributions/password', VerifyContributionPasswordController::class)
         ->middleware('throttle:6,1,contribution-password:')
         ->name('x-change.contributions.password.verify');

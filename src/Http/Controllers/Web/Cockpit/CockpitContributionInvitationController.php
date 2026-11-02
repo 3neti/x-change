@@ -34,6 +34,7 @@ final class CockpitContributionInvitationController extends Controller
             'id' => $token->getKey(),
             'token' => $token->token,
             'expires_at' => $token->expires_at->toIso8601String(),
+            'revoke_url' => route('x-change.cockpit.contribution-invitations.destroy', ['code' => $voucher->code, 'invitation' => $token->getKey()]),
         ], 201)->header('Cache-Control', 'no-store, private');
     }
 

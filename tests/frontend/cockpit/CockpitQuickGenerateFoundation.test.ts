@@ -1,7 +1,7 @@
-import { config, flushPromises, mount } from '@vue/test-utils';
+import { config, enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import type { VueWrapper } from '@vue/test-utils';
 import { router, usePage } from '@inertiajs/vue3';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import CockpitDiagnosticsDisclosure from '../../../resources/js/cockpit/components/CockpitDiagnosticsDisclosure.vue';
 import CockpitGenerateActionPanel from '../../../resources/js/cockpit/components/CockpitGenerateActionPanel.vue';
 import CockpitIssuanceBoundaryPanel from '../../../resources/js/cockpit/components/CockpitIssuanceBoundaryPanel.vue';
@@ -27,6 +27,8 @@ import {
     cockpitRuntimeInputs,
 } from '../../../resources/js/cockpit/quickGenerateDefaults';
 import { resolveRiderStampPreview } from '../../../resources/js/cockpit/riderStampPreview';
+
+enableAutoUnmount(afterEach);
 
 vi.mock('@inertiajs/vue3', () => ({
     Link: {

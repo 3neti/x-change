@@ -6,6 +6,7 @@ import CockpitPayCodeShareCard from "./CockpitPayCodeShareCard.vue";
 import CockpitPayCodeTerminalControls from "./CockpitPayCodeTerminalControls.vue";
 import CockpitManualCopyButton from "./CockpitManualCopyButton.vue";
 import CockpitDocumentReview from "./CockpitDocumentReview.vue";
+import CockpitContributionInvitations from "./CockpitContributionInvitations.vue";
 import { Form, Link } from "@inertiajs/vue3";
 import {
   Activity,
@@ -1995,6 +1996,13 @@ function number(value: unknown): number {
                 >
               </div>
             </section>
+            <CockpitContributionInvitations
+              v-if="text(record(envelope.contribution).create_url)"
+              :create-url="text(record(envelope.contribution).create_url)"
+              :page-url="text(record(envelope.contribution).page_url)"
+              :types="(record(envelope.contribution).types as string[]) ?? []"
+              :invitations="(record(envelope.contribution).invitations as any[]) ?? []"
+            />
             <section
               v-if="list(envelope.attachments).length"
               class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/30"

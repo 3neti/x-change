@@ -56,7 +56,7 @@ it('does not count evidence submitted by a different participant', function (): 
 });
 
 it('preserves valid v2 payable requirements through issuance normalization', function (): void {
-    $requirements = [['type' => 'IDENTITY', 'timing' => 'before_payment', 'requires_acceptance' => true, 'contributor' => 'payer']];
+    $requirements = [['type' => 'INVOICE', 'timing' => 'before_payment', 'requires_acceptance' => true, 'contributor' => 'payer']];
     $input = [
         'voucher_type' => 'payable',
         'execution' => ['schema' => 'voucher.execution.v2', 'driver' => 'default', 'document_requirements' => $requirements],
