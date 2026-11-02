@@ -20,6 +20,19 @@ afterEach(() => {
 });
 
 describe('issued Pay Code dialog', () => {
+    it('falls back to the Pay Code canvas if the finalized stamp image fails', async () => {
+        const wrapper = mount(CockpitIssuedPayCodeDialog, {
+            props: {
+                open: true, code: 'PAY-1', amount: 35, currency: 'PHP',
+                claimOutcome: 'provider_disbursement', voucherType: 'payable',
+                shareCardUrl: 'https://example.test/x/claim/PAY-1/share-card.png',
+            },
+            global: { stubs: { Teleport: true } },
+        });
+        await wrapper.get('[data-testid="cockpit-issued-pay-code-artifact-image"]').trigger('error');
+        expect(wrapper.find('[data-testid="cockpit-issued-pay-code-artifact-image"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="cockpit-pay-code-canvas"]').exists()).toBe(true);
+    });
     it('offers a public receipt and professional account handoff', () => {
         const wrapper = mount(CockpitIssuedPayCodeDialog, {
             props: {

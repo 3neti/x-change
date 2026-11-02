@@ -48,6 +48,19 @@ class SettlementCollectionGate
         if (data_get($voucher->metadata, 'instructions.execution.schema') === 'voucher.execution.v2'
             && data_get($voucher->metadata, 'instructions.execution.settlement.driver') === 'philhealth-bst') {
             $this->assertVerifiedPhilhealthReview($voucher);
+            $envelope = $voucher->envelope()->first();
+            if ($envelope !== null && ($envelope->driver_id !== 'philhealth.bst.demo'
+                || $envelope->driver_version !== '1.0.0' || ! $envelope->isSettleable())) {
+                throw new VoucherRequiresSettlementEnvelope(voucher: $voucher, capabilities: $capabilities, message: 'The PhilHealth evidence envelope is not ready for payment.');
+            }
+            if ($envelope !== null) {
+                foreach (['patient_name', 'patient_mobile', 'reference'] as $field) {
+                    $reviewedValue = data_get($voucher->metadata, 'settlement_envelope.payload.'.$field);
+                    if ($reviewedValue !== null && $reviewedValue !== data_get($envelope->payload, $field)) {
+                        throw new VoucherRequiresSettlementEnvelope(voucher: $voucher, capabilities: $capabilities, message: 'PhilHealth envelope evidence does not match the reviewed attestation.');
+                    }
+                }
+            }
         }
 
         $this->settlementGate->ensureReady(

@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Actions\PayCode;
 
 use Bavix\Wallet\Interfaces\Wallet;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
 use LBHurtado\XChange\Contracts\ProviderReadinessGuardContract;
@@ -148,60 +149,78 @@ class GeneratePayCode
             throw new RuntimeException('Explicit fee bearers require Treasury commercial posting.');
         }
 
-        return app(PayCodeIssuanceTransaction::class)->run(function () use ($issuer, $wallet, $input, $estimate, $funding): GeneratePayCodeResultData {
-            $this->synchronizeCompatibilityLedger($issuer, $wallet, $funding);
-            $balanceBefore = $this->wallets->getBalance($wallet);
-            $issuanceInput = $input;
-            $effectiveProvider = data_get($funding->meta, 'provider');
-            if (is_string($effectiveProvider) && $effectiveProvider !== '') {
-                $issuanceInput['provider'] = $effectiveProvider;
+        $createdFiles = [];
+        $cleanupFiles = static function () use (&$createdFiles): void {
+            foreach ($createdFiles as $file) {
+                Storage::disk($file['disk'])->delete($file['path']);
             }
-            $issued = $this->issuance->issue($issuer, $issuanceInput);
-            $allocation = $this->shouldAllocateLocalRevenue($funding->authority)
-                ? $this->allocateCommercialRevenue($issuer, $input, $issued, $estimate, $funding)
-                : $this->providerWalletAllocationPlaceholder($funding);
-            $this->reserveTreasuryPrincipal(
-                issuer: $issuer,
-                input: $input,
-                issued: $issued,
-                funding: $funding,
-            );
-            $this->prepareAccountFunding(
-                issuer: $issuer,
-                input: $input,
-                issued: $issued,
-                allocation: $allocation,
-                funding: $funding,
-            );
-            $this->reconcileCompatibilityLedger($issuer, $wallet, $funding);
+            $createdFiles = [];
+        };
+        try {
+            return app(PayCodeIssuanceTransaction::class)->run(function () use ($issuer, $wallet, $input, $estimate, $funding, &$createdFiles, $cleanupFiles): GeneratePayCodeResultData {
+                $cleanupFiles();
+                $this->synchronizeCompatibilityLedger($issuer, $wallet, $funding);
+                $balanceBefore = $this->wallets->getBalance($wallet);
+                $issuanceInput = $input;
+                if (! empty($issuanceInput['issuer_invoice_draft']) || ! empty($issuanceInput['issuer_invoice_drafts'])) {
+                    $issuanceInput['_meta']['register_issuance_file'] = static function (array $file) use (&$createdFiles): void {
+                        $createdFiles[] = $file;
+                    };
+                }
+                $effectiveProvider = data_get($funding->meta, 'provider');
+                if (is_string($effectiveProvider) && $effectiveProvider !== '') {
+                    $issuanceInput['provider'] = $effectiveProvider;
+                }
+                $issued = $this->issuance->issue($issuer, $issuanceInput);
+                $allocation = $this->shouldAllocateLocalRevenue($funding->authority)
+                    ? $this->allocateCommercialRevenue($issuer, $input, $issued, $estimate, $funding)
+                    : $this->providerWalletAllocationPlaceholder($funding);
+                $this->reserveTreasuryPrincipal(
+                    issuer: $issuer,
+                    input: $input,
+                    issued: $issued,
+                    funding: $funding,
+                );
+                $this->prepareAccountFunding(
+                    issuer: $issuer,
+                    input: $input,
+                    issued: $issued,
+                    allocation: $allocation,
+                    funding: $funding,
+                );
+                $this->reconcileCompatibilityLedger($issuer, $wallet, $funding);
 
-            $balanceAfter = $this->wallets->getBalance($wallet);
+                $balanceAfter = $this->wallets->getBalance($wallet);
 
-            return new GeneratePayCodeResultData(
-                voucher_id: $issued['voucher_id'],
-                code: (string) $issued['code'],
-                amount: $issued['amount'],
-                currency: (string) $issued['currency'],
-                issuer: new IssuerData(
-                    id: is_object($issuer) ? ($issuer->id ?? null) : data_get($issuer, 'id'),
-                ),
-                cost: $estimate,
-                wallet: [
-                    'balance_before' => $balanceBefore,
-                    'balance_after' => $balanceAfter,
-                ],
-                debit: $this->normalizeDebit($allocation['debit'] ?? null),
-                links: new PayCodeLinksData(
-                    redeem: (string) data_get($issued, 'links.redeem'),
-                    redeem_path: (string) data_get($issued, 'links.redeem_path'),
-                    pay: data_get($issued, 'links.pay'),
-                    pay_path: data_get($issued, 'links.pay_path'),
-                ),
-                allocations: $allocation['allocations'] ?? [],
-                stamp_provider: data_get($issued, 'metadata.instructions.metadata.custom.stamp_provider'),
-                stamp_presentation: data_get($issued, 'metadata.instructions.metadata.custom.stamp_presentation'),
-            );
-        });
+                return new GeneratePayCodeResultData(
+                    voucher_id: $issued['voucher_id'],
+                    code: (string) $issued['code'],
+                    amount: $issued['amount'],
+                    currency: (string) $issued['currency'],
+                    issuer: new IssuerData(
+                        id: is_object($issuer) ? ($issuer->id ?? null) : data_get($issuer, 'id'),
+                    ),
+                    cost: $estimate,
+                    wallet: [
+                        'balance_before' => $balanceBefore,
+                        'balance_after' => $balanceAfter,
+                    ],
+                    debit: $this->normalizeDebit($allocation['debit'] ?? null),
+                    links: new PayCodeLinksData(
+                        redeem: (string) data_get($issued, 'links.redeem'),
+                        redeem_path: (string) data_get($issued, 'links.redeem_path'),
+                        pay: data_get($issued, 'links.pay'),
+                        pay_path: data_get($issued, 'links.pay_path'),
+                    ),
+                    allocations: $allocation['allocations'] ?? [],
+                    stamp_provider: data_get($issued, 'metadata.instructions.metadata.custom.stamp_provider'),
+                    stamp_presentation: data_get($issued, 'metadata.instructions.metadata.custom.stamp_presentation'),
+                );
+            });
+        } catch (\Throwable $exception) {
+            $cleanupFiles();
+            throw $exception;
+        }
     }
 
     /**

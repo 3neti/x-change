@@ -55,6 +55,7 @@ describe("settlement claim screens", () => {
             code: "AA317",
             amountMinor: 2000000,
             evidenceManifest: "",
+            requiresClaimReference: true,
             reviewed: false,
             paid: false,
             preview: true,
@@ -66,6 +67,7 @@ describe("settlement claim screens", () => {
     await flushPromises();
     expect(screen.text()).toContain("Hospital review");
     expect(screen.text()).toContain("20,000.00");
+    expect(screen.text()).toContain("Claim reference");
     expect(screen.get("button").attributes("disabled")).toBeDefined();
   });
 });

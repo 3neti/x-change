@@ -8,6 +8,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use LBHurtado\SettlementEnvelope\Services\EnvelopeService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Services\Settlement\V2EvidenceEventJournal;
 use LogicException;
@@ -16,7 +17,7 @@ final class VerifyPhilhealthSettlementAmount
 {
     public function __construct(private readonly V2EvidenceEventJournal $events) {}
 
-    public function handle(Voucher $voucher, Model&Authenticatable $reviewer, int $amountMinor, string $reference, ?string $expectedManifest = null): Voucher
+    public function handle(Voucher $voucher, Model&Authenticatable $reviewer, int $amountMinor, string $reference, ?string $expectedManifest = null, ?string $claimReference = null): Voucher
     {
         Gate::forUser($reviewer)->authorize('x-change.settlement.verify-amount', $voucher);
         $reference = trim($reference);
@@ -24,7 +25,7 @@ final class VerifyPhilhealthSettlementAmount
             throw new LogicException('A positive verified amount and review reference are required.');
         }
 
-        return DB::transaction(function () use ($voucher, $reviewer, $amountMinor, $reference, $expectedManifest): Voucher {
+        return DB::transaction(function () use ($voucher, $reviewer, $amountMinor, $reference, $expectedManifest, $claimReference): Voucher {
             $locked = Voucher::query()->lockForUpdate()->findOrFail($voucher->getKey());
             Gate::forUser($reviewer)->authorize('x-change.settlement.verify-amount', $locked);
             $metadata = (array) $locked->metadata;
@@ -46,6 +47,9 @@ final class VerifyPhilhealthSettlementAmount
             }
             $existing = data_get($metadata, 'settlement_envelope.amount_review');
             if (is_array($existing)) {
+                if ($claimReference !== null && $claimReference !== data_get($metadata, 'settlement_envelope.payload.reference')) {
+                    throw new LogicException('The PhilHealth envelope reference cannot be changed.');
+                }
                 if (($existing['reference'] ?? null) === $reference
                     && ($existing['reviewer_type'] ?? null) === $reviewer->getMorphClass()
                     && ($existing['reviewer_id'] ?? null) === (string) $reviewer->getKey()
@@ -58,6 +62,24 @@ final class VerifyPhilhealthSettlementAmount
                 throw new LogicException('The settlement amount was already reviewed with different evidence.');
             }
 
+            $envelope = $locked->envelope()->lockForUpdate()->first();
+            if ($envelope !== null && $claimReference !== null) {
+                if (! preg_match('/^[A-Za-z0-9-]{3,50}$/D', $claimReference)) {
+                    throw new LogicException('The claim reference is invalid.');
+                }
+                $oldReference = data_get($envelope->payload, 'reference');
+                if ($oldReference !== null && $oldReference !== $claimReference) {
+                    throw new LogicException('The PhilHealth envelope reference cannot be changed.');
+                }
+                $name = data_get($metadata, 'settlement_envelope.payload.patient_name') ?? data_get($envelope->payload, 'patient_name');
+                $mobile = data_get($metadata, 'settlement_envelope.payload.patient_mobile') ?? data_get($envelope->payload, 'patient_mobile');
+                if (! filled($name) || ! filled($mobile)) {
+                    throw new LogicException('Patient name and mobile are required before recording the claim reference.');
+                }
+                app(EnvelopeService::class)->updatePayload($envelope, ['patient_name' => $name, 'patient_mobile' => $mobile, 'reference' => $claimReference], $reviewer);
+                data_set($metadata, 'settlement_envelope.payload.reference', $claimReference);
+                data_set($metadata, 'settlement_payload.reference', $claimReference);
+            }
             data_set($metadata, 'settlement_envelope.amount_review', [
                 'reference' => $reference, 'reviewer_type' => $reviewer->getMorphClass(),
                 'reviewer_id' => (string) $reviewer->getKey(), 'amount_minor' => $amountMinor,
@@ -66,6 +88,12 @@ final class VerifyPhilhealthSettlementAmount
             data_set($metadata, 'settlement_envelope.checklist.amount_verified', true);
             data_set($metadata, 'settlement_checklist.amount_verified', true);
             $locked->forceFill(['metadata' => $metadata])->save();
+            if ($envelope !== null) {
+                if ($envelope->driver_id !== 'philhealth.bst.demo' || $envelope->driver_version !== '1.0.0') {
+                    throw new LogicException('The attached envelope is not the supported PhilHealth review envelope.');
+                }
+                app(EnvelopeService::class)->setSignal($envelope, 'amount_verified', true, $reviewer);
+            }
             $this->events->amountReviewed($locked, $reference, $manifest, $amountMinor);
             $this->events->settlementReadyAfterReview($locked);
 

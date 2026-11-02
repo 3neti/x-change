@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Http\Controllers\Web\Cockpit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\Voucher\Models\Voucher;
@@ -44,6 +45,7 @@ use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceInstructionPolicy;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceOrderAccess;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceTurnstileVerifier;
 use LBHurtado\XChange\Services\QrArtifactFactory;
+use LBHurtado\XChange\Services\Settlement\IssuerInvoiceDrafts;
 use Throwable;
 
 class CockpitQuickGenerateMutationRouteShellController extends Controller
@@ -150,6 +152,40 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         }
 
         $payload = $this->posSaleReferences->attachCanonicalReference($payload);
+
+        $invoiceDraft = data_get($payload, 'issuer_invoice_draft');
+        $invoiceDrafts = data_get($payload, 'issuer_invoice_drafts', []);
+        $documents = data_get($payload, 'payment_details.documents', []);
+        $philhealth = data_get($payload, 'execution.driver') === 'settlement_envelope'
+            && data_get($payload, 'execution.settlement.driver') === 'philhealth-bst';
+        if ($invoiceDrafts !== [] || $documents !== []) {
+            if ($publicAutoGenerate || ! $request->user() instanceof Model || ! is_string($key) || trim($key) === ''
+                || ! in_array(data_get($payload, 'voucher_type'), ['payable', 'settlement'], true)
+                || data_get($payload, 'execution.schema') !== 'voucher.execution.v2'
+                || (int) data_get($payload, 'count', 1) !== 1 || is_string($invoiceDraft)
+                || ! is_array($invoiceDrafts) || ! is_array($documents) || count($invoiceDrafts) !== count($documents)) {
+                throw ValidationException::withMessages(['issuer_invoice_drafts' => 'Documents require one authenticated v2 Collect or Settle order.']);
+            }
+            DB::transaction(function () use ($request, $invoiceDrafts, $documents, $key, $philhealth): void {
+                $drafts = app(IssuerInvoiceDrafts::class);
+                foreach ($invoiceDrafts as $index => $reference) {
+                    if ($drafts->documentId($request->user(), $reference) !== data_get($documents, $index.'.id')) {
+                        throw ValidationException::withMessages(['issuer_invoice_drafts' => 'A document does not match its upload.']);
+                    }
+                    $drafts->assertAllowed($request->user(), $reference, $philhealth);
+                    $drafts->bind($request->user(), $reference, $key);
+                }
+            });
+        }
+        if (is_string($invoiceDraft)) {
+            if ($publicAutoGenerate || ! $request->user() instanceof Model || ! is_string($key) || trim($key) === ''
+                || ! in_array(data_get($payload, 'voucher_type'), ['payable', 'settlement'], true)
+                || (int) data_get($payload, 'count', 1) !== 1) {
+                throw ValidationException::withMessages(['issuer_invoice_draft' => 'An invoice requires a single authenticated Collect or Settle order.']);
+            }
+            app(IssuerInvoiceDrafts::class)->assertAllowed($request->user(), $invoiceDraft, $philhealth);
+            app(IssuerInvoiceDrafts::class)->bind($request->user(), $invoiceDraft, $key);
+        }
 
         $pricingPreflight = $this->pricingPreflight($payload, $estimatePayCodeCost);
         $fundingPreflight = $this->fundingPreflight($request, $balanceOverview);

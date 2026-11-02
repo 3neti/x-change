@@ -29,6 +29,7 @@ final class ClaimSettlementReviewController extends Controller
             'reviewed' => is_array(data_get($voucher->metadata, 'settlement_envelope.amount_review')),
             'paid' => $progress->compute($voucher)->is_fully_collected,
             'evidenceManifest' => data_get($voucher->metadata, 'settlement_envelope.attestation.evidence_manifest_sha256'),
+            'requiresClaimReference' => $voucher->envelope()->exists() && blank(data_get($voucher->envelope()->first()?->payload, 'reference')),
             'evidence' => $claim->evidence()->get()->map(fn ($item): array => [
                 'requirement' => $item->requirement_key,
                 'summary' => $item->summary,
@@ -44,11 +45,12 @@ final class ClaimSettlementReviewController extends Controller
         $validated = $request->validate([
             'amount_minor' => ['required', 'integer', 'min:1'],
             'evidence_manifest' => ['required', 'string', 'regex:/^[a-f0-9]{64}$/'],
+            'claim_reference' => [$voucher->envelope()->exists() && blank(data_get($voucher->envelope()->first()?->payload, 'reference')) ? 'required' : 'nullable', 'string', 'regex:/^[A-Za-z0-9-]{3,50}$/'],
         ]);
         $claimId = data_get($voucher->metadata, 'settlement_envelope.attestation.claim_id');
         abort_unless($claimId, 404);
         try {
-            $review->handle($voucher, $request->user(), (int) $validated['amount_minor'], 'claim-review:'.$claimId, $validated['evidence_manifest']);
+            $review->handle($voucher, $request->user(), (int) $validated['amount_minor'], 'claim-review:'.$claimId, $validated['evidence_manifest'], $validated['claim_reference'] ?? null);
         } catch (\LogicException $exception) {
             throw ValidationException::withMessages(['evidence_manifest' => $exception->getMessage()]);
         }

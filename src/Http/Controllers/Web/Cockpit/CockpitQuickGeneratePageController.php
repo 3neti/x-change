@@ -90,6 +90,7 @@ class CockpitQuickGeneratePageController extends Controller
             ],
             'composer_view' => $request->query('view') === 'prompt' ? 'prompt' : 'standard',
             'prompt_interpret_endpoint' => route('x-change.cockpit.quick-generate.interpret'),
+            'invoice_draft_url' => route('x-change.cockpit.quick-generate.invoice-drafts.store'),
         ]);
     }
 

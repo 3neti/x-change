@@ -142,8 +142,42 @@ it('surfaces claimed facts on the cockpit pay code list without exposing raw con
         ->assertJsonPath('props.pay_codes_read_model.records.0.claim_summary.schema', 'x-change.cockpit.pay-code-claim-summary.v1')
         ->assertJsonPath('props.pay_codes_read_model.records.0.claim_summary.claimed_mobile_masked', '•••• 1987')
         ->assertJsonPath('props.pay_codes_read_model.records.0.claim_summary.amount_minor', 3000)
+        ->assertJsonPath('props.pay_codes_read_model.records.0.claim_summary.amount_kind', 'disbursed')
         ->assertJsonMissing(['09173011987']);
 });
+
+it('reports the requested amount without presenting it as disbursed before payout completion', function (string $status, ?int $requested, int $disbursed, ?int $amount, ?string $kind, ?string $payoutStatus): void {
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher();
+    if ($payoutStatus !== null) {
+        $metadata = $voucher->metadata;
+        data_set($metadata, 'disbursement.status', $payoutStatus);
+        $voucher->forceFill(['metadata' => $metadata])->save();
+    }
+    VoucherClaim::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'claim_number' => 1,
+        'claim_type' => 'claim',
+        'status' => $status,
+        'requested_amount_minor' => $requested,
+        'disbursed_amount_minor' => $disbursed,
+        'remaining_balance_minor' => 0,
+        'currency' => 'PHP',
+        'attempted_at' => now(),
+    ]);
+
+    $this->actingAs($issuer)->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.index'))
+        ->assertOk()
+        ->assertJsonPath('props.pay_codes_read_model.records.0.claim_summary.amount_minor', $amount)
+        ->assertJsonPath('props.pay_codes_read_model.records.0.claim_summary.amount_kind', $kind);
+})->with([
+    'pending' => ['pending', 1000000, 0, 1000000, 'requested', 'pending'],
+    'pending payout with a completed claim' => ['succeeded', 1000000, 1000000, 1000000, 'requested', 'pending'],
+    'failed' => ['failed', 1000000, 0, 1000000, 'requested', 'failed'],
+    'completed' => ['succeeded', 1000000, 1000000, 1000000, 'disbursed', 'succeeded'],
+    'unavailable' => ['pending', 0, 0, null, null, 'pending'],
+]);
 
 it('projects a rejected payout as the primary outcome with destination attention', function () {
     $issuer = actingAsTestUser();

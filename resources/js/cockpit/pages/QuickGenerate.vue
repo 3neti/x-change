@@ -1304,6 +1304,7 @@ function stringValue(value: unknown): string | null {
           :client-funds-minor="clientFundsMinor"
           :collection-destination="props.collection_destination"
           :mutation-contract="mutationContract"
+          :invoice-draft-url="props.invoice_draft_url"
           :claim-preview-contract="claimPreviewContract"
           :draft-contract="draftContract"
           :campaign-context="campaignContext"

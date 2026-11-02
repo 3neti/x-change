@@ -54,11 +54,13 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialPartnerDesti
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialPartnerDestinationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialPayCodeScenarioRunnerController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCommercialProviderCostBatchController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitContributionInvitationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDistributionWorkspacePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDocumentationPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitEnrollmentOfferController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitEntryPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitEnvelopeDocumentReviewController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingDestinationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingInstructionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingIntentController;
@@ -75,6 +77,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestTransfer
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingVerificationCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitInstanceKeepsakeDownloadController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitInstanceKeepsakeDownloadShowController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitIssuerInvoiceDraftController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitLeadCampaignScenarioRunnerController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitNetbankStandingFundingAddressController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitOnDemandIssuanceFundingOrderController;
@@ -139,6 +142,12 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliation
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliationRunController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliationRunExecutionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitVoucherDetailPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Contribution\ContributionContextController;
+use LBHurtado\XChange\Http\Controllers\Web\Contribution\ContributionPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Contribution\UploadInvitedDocumentController;
+use LBHurtado\XChange\Http\Controllers\Web\Contribution\UploadParticipantDocumentController;
+use LBHurtado\XChange\Http\Controllers\Web\Contribution\VerifyContributionPasswordController;
+use LBHurtado\XChange\Http\Controllers\Web\Contribution\ViewContributionDocumentController;
 use LBHurtado\XChange\Http\Controllers\Web\DashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\EnrollmentController;
 use LBHurtado\XChange\Http\Controllers\Web\Leads\LeadCampaignEndpointController;
@@ -157,6 +166,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentAttemptController;
 use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentQrCodeDownloadController;
 use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentVerificationCheckController;
+use LBHurtado\XChange\Http\Controllers\Web\Payment\SharedInvoiceController;
 use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationAcceptanceController;
 use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationPageController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicAnalyticsPageController;
@@ -928,6 +938,8 @@ Route::prefix('x')->middleware([
             ->middleware('throttle:3,1')
             ->name('x-change.cockpit.instance-keepsakes.download');
         Route::post('quick-generate', CockpitQuickGenerateMutationRouteShellController::class)->name('x-change.cockpit.quick-generate.store');
+        Route::post('quick-generate/invoice-drafts', CockpitIssuerInvoiceDraftController::class)
+            ->middleware('throttle:12,1')->name('x-change.cockpit.quick-generate.invoice-drafts.store');
         Route::get(
             'quick-generate/funding-orders/{order:reference}',
             [CockpitOnDemandIssuanceFundingOrderController::class, 'show'],
@@ -1007,6 +1019,12 @@ Route::prefix('x')->middleware([
         Route::get('diagnostics/runtime-profile', CockpitRuntimeProfilePageController::class)->name('x-change.cockpit.diagnostics.runtime-profile');
         Route::prefix('pay-codes')->group(function (): void {
             Route::get('/', CockpitPayCodeExplorerPageController::class)->name('x-change.cockpit.pay-codes.index');
+            Route::post('{code}/documents/{attachment}/review', CockpitEnvelopeDocumentReviewController::class)
+                ->whereNumber('attachment')->middleware('throttle:20,1,contribution-review:')->name('x-change.cockpit.documents.review');
+            Route::post('{code}/contribution-invitations', [CockpitContributionInvitationController::class, 'store'])
+                ->middleware('throttle:20,1,contribution-invite:')->name('x-change.cockpit.contribution-invitations.store');
+            Route::delete('{code}/contribution-invitations/{invitation}', [CockpitContributionInvitationController::class, 'destroy'])
+                ->whereNumber('invitation')->middleware('throttle:20,1,contribution-revoke:')->name('x-change.cockpit.contribution-invitations.destroy');
             Route::get('{code}/stamp/{size}/{sha256}.png', CockpitPayCodeStampController::class)
                 ->whereIn('size', ['full', 'thumbnail'])
                 ->where('sha256', '(?:[a-f0-9]{64}|current)')
@@ -1070,6 +1088,19 @@ Route::get('x/demo/policies/{outcome:reference}', DemonstrationPolicySummaryCont
 
 // Public claim routes (no auth required)
 Route::prefix('x')->middleware(['web', ShareXChangeBranding::class, GuardPairedCampaignClaim::class])->group(function (): void {
+    Route::get('contribute', ContributionPageController::class)
+        ->name('x-change.contributions.show');
+    Route::post('contributions/context', ContributionContextController::class)
+        ->middleware('throttle:30,1,contribution-context:')->name('x-change.contributions.context');
+    Route::post('contributions/password', VerifyContributionPasswordController::class)
+        ->middleware('throttle:6,1,contribution-password:')
+        ->name('x-change.contributions.password.verify');
+    Route::post('contributions/documents', UploadInvitedDocumentController::class)
+        ->middleware('throttle:12,1,contribution-upload:')->name('x-change.contributions.documents.store');
+    Route::post('contributions/documents/{attachment}', ViewContributionDocumentController::class)
+        ->whereNumber('attachment')
+        ->middleware('throttle:30,1,contribution-view:')
+        ->name('x-change.contributions.documents.show');
     Route::get('enroll/{reference}', [EnrollmentController::class, 'show'])
         ->whereUlid('reference')
         ->name('x-change.enrollment.show');
@@ -1080,6 +1111,12 @@ Route::prefix('x')->middleware(['web', ShareXChangeBranding::class, GuardPairedC
     Route::get('pay/{code}', PaymentPageController::class)
         ->middleware((array) config('x-change.payment.attempts.public_read_middleware', []))
         ->name('x-change.pay.show');
+    Route::post('pay/{code}/documents', UploadParticipantDocumentController::class)
+        ->defaults('participant_role', 'payer')->middleware('throttle:12,1,participant-payer-upload:')->name('x-change.pay.documents.store');
+    Route::get('pay/{code}/invoice/{attachment}', SharedInvoiceController::class)
+        ->whereNumber('attachment')->middleware('throttle:30,1')->name('x-change.pay.invoice.show');
+    Route::post('claim/{code}/documents', UploadParticipantDocumentController::class)
+        ->defaults('participant_role', 'claimant')->middleware('throttle:12,1,participant-claimant-upload:')->name('x-change.claim.documents.store');
     Route::post('pay/{code}/attempts', PaymentAttemptController::class)
         ->middleware((array) config('x-change.payment.attempts.public_start_middleware', []))
         ->name('x-change.pay.attempts.store');

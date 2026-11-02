@@ -54,6 +54,7 @@ final readonly class StampPreviewComposer
             'feedback' => ['sometimes', 'nullable', 'array'],
             'inputs.fields' => ['sometimes', 'array', 'max:32'],
             'voucher_type' => ['nullable', 'in:redeemable,payable,settlement'],
+            'target_amount' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'claim.default_outcome' => ['nullable', 'in:provider_disbursement,account_funding'],
             'cash.amount' => ['required', 'numeric', 'min:0', 'max:999999999999.99'],
             'cash.currency' => ['required', 'string', 'regex:/^[A-Z]{3}$/'],
@@ -113,7 +114,9 @@ final readonly class StampPreviewComposer
             throw ValidationException::withMessages(['instructions' => 'The Stamp instructions or expiry are invalid.']);
         }
         $started = hrtime(true);
-        $claimUrl = $code === null ? route('x-change.claim.start') : route('x-change.claim.show', ['code' => $code]);
+        $claimUrl = ($instructions['voucher_type'] ?? null) === 'payable' && $code !== null
+            ? route('x-change.pay.show', ['code' => $code])
+            : ($code === null ? route('x-change.claim.start') : route('x-change.claim.show', ['code' => $code]));
         if ($this->composer instanceof GdRiderStampClaimShareCardRenderer) {
             $card = $this->composer->preview($voucher, $claimUrl, $code === null);
         } else {

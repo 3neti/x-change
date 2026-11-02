@@ -110,6 +110,26 @@ it('serves the exact immutable artifact materialized during issuance', function 
     ]))->assertNotFound();
 });
 
+it('serves a payable voucher’s finalized stamp after issuance and collection', function (): void {
+    Storage::fake('local');
+    $user = actingAsTestUser();
+    $input = validVoucherInstructions(overrides: [
+        'cash' => ['amount' => 0, 'currency' => 'PHP'],
+        'voucher_type' => 'payable', 'target_amount' => 35,
+        'metadata' => ['collection_wallet_id' => (string) $user->wallet->id],
+        'execution' => ['schema' => 'voucher.execution.v2', 'driver' => 'default'],
+    ])->toArray();
+    $issued = app(PayCodeIssuanceContract::class)->issue($user, $input);
+    $voucher = Voucher::query()->findOrFail($issued['voucher_id']);
+    $descriptor = app(RiderStampArtifactStoreContract::class)->descriptor($voucher);
+    expect($descriptor)->not->toBeNull();
+    $url = route('x-change.claim.share-card.artifact', ['code' => $voucher->code, 'sha256' => $descriptor->sha256]);
+    $response = $this->get($url)->assertOk()->assertHeader('Content-Type', 'image/png');
+    expect((string) $response->getContent())->toStartWith("\x89PNG\r\n\x1a\n");
+    $voucher->forceFill(['state' => 'closed', 'closed_at' => now()])->save();
+    $this->get($url)->assertOk();
+});
+
 it('advertises the dynamic share card when immutable Stamp bytes are unavailable', function (): void {
     Storage::fake('local');
     $user = actingAsTestUser();

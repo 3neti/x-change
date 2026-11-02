@@ -27,3 +27,13 @@ it('keeps the currency code for non-PHP claim share cards', function (): void {
     expect(app(ClaimShareCardAmountFormatter::class)->format($voucher))
         ->toBe('USD 57.00');
 });
+
+it('shows the collection target for a payable stamp', function (): void {
+    $user = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(overrides: [
+        'cash' => ['amount' => 0, 'currency' => 'PHP'],
+        'voucher_type' => 'payable', 'target_amount' => 100,
+        'metadata' => ['collection_wallet_id' => (string) $user->wallet->id],
+    ]));
+    expect(app(ClaimShareCardAmountFormatter::class)->format($voucher))->toBe('₱100.00');
+});

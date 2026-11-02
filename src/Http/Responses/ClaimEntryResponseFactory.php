@@ -17,12 +17,14 @@ class ClaimEntryResponseFactory
         ?array $provisioningRequirement = null,
         ?ClaimShareMetadataData $shareMetadata = null,
         ?ClaimSurfaceData $claimSurface = null,
+        ?array $claimDocuments = null,
     ): Response {
         $response = Inertia::render('x-change/claim/Entry', [
             'initial_code' => $initialCode,
             'claim_experience' => $claimExperience,
             'provisioning_requirement' => $provisioningRequirement,
             'claim_surface' => $claimSurface?->toArray(),
+            'claim_documents' => $claimDocuments,
         ])->rootView('x-change::claim-root');
 
         if ($shareMetadata !== null) {

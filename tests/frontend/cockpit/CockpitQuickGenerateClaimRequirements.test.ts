@@ -1,8 +1,10 @@
-import { flushPromises, mount } from '@vue/test-utils';
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import type { VueWrapper } from '@vue/test-utils';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import CockpitQuickGenerateSubmitPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateSubmitPanel.vue';
 import { cockpitQuickGenerateTemplates } from '../../../resources/js/cockpit/quickGenerateDefaults';
+
+enableAutoUnmount(afterEach);
 
 vi.mock('@inertiajs/vue3', () => ({
     Link: { props: ['href'], template: '<a :href="href?.url ?? href"><slot /></a>' },

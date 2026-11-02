@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Http\Controllers\Web\Claim;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
+use LBHurtado\Voucher\Enums\VoucherType;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimShareCardRendererContract;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
@@ -24,15 +25,17 @@ final class ClaimShareCardController extends Controller
             ->where('code', strtoupper(trim($code)))
             ->first();
 
-        abort_unless(
-            $voucher instanceof Voucher
-                && $capabilities->resolve($voucher)->can_disburse,
-            404,
-        );
+        abort_unless($voucher instanceof Voucher, 404);
+        $flow = $capabilities->resolve($voucher);
+        abort_unless($flow->can_disburse || $flow->can_collect, 404);
+
+        $destination = $voucher->voucher_type === VoucherType::PAYABLE
+            ? route('x-change.pay.show', ['code' => $voucher->code])
+            : route('x-change.claim.show', ['code' => $voucher->code]);
 
         $card = $renderer->render(
             $voucher,
-            route('x-change.claim.show', ['code' => $voucher->code]),
+            $destination,
         );
 
         if ($sha256 !== null) {

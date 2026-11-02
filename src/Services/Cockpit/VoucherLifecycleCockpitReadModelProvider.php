@@ -158,6 +158,37 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             $voucher = Voucher::query()->find((int) $voucherId);
 
             if ($voucher instanceof Voucher) {
+                $actor = auth()->user();
+                if ($actor instanceof Model && $voucher->owner_type === $actor->getMorphClass()
+                    && (string) $voucher->owner_id === (string) $actor->getKey()
+                    && is_array(data_get($detail, 'settlement_envelope'))) {
+                    $detail['settlement_envelope']['attachments'] = array_map(function (array $attachment) use ($voucher): array {
+                        $attachment['review_href'] = Route::has('x-change.cockpit.documents.review')
+                            ? route('x-change.cockpit.documents.review', ['code' => $voucher->code, 'attachment' => $attachment['id']])
+                            : null;
+
+                        return $attachment;
+                    }, data_get($detail, 'settlement_envelope.attachments', []));
+                    $types = collect(data_get($voucher->instructions, 'execution.document_requirements', []))
+                        ->filter(fn ($requirement): bool => data_get($requirement, 'contributor') === 'invited')
+                        ->map(fn ($requirement) => data_get($requirement, 'type'))
+                        ->filter(fn ($type): bool => is_string($type) && $type !== '')
+                        ->unique()->values()->all();
+                    if ($types !== [] && ($envelope = $voucher->envelope()->first()) !== null) {
+                        $detail['settlement_envelope']['contribution'] = [
+                            'types' => $types,
+                            'create_url' => route('x-change.cockpit.contribution-invitations.store', ['code' => $voucher->code]),
+                            'page_url' => route('x-change.contributions.show'),
+                            'invitations' => $envelope->contributionTokens()->latest()->orderByDesc('id')->limit(50)->get()->map(fn ($invitation): array => [
+                                'id' => $invitation->getKey(),
+                                'expires_at' => $invitation->expires_at->toIso8601String(),
+                                'revoked' => $invitation->revoked_at !== null,
+                                'types' => data_get($invitation->metadata, 'scope.document_types', []),
+                                'revoke_url' => route('x-change.cockpit.contribution-invitations.destroy', ['code' => $voucher->code, 'invitation' => $invitation->getKey()]),
+                            ])->all(),
+                        ];
+                    }
+                }
                 $sliceProjection = ($this->slicePlans ?? app(VoucherSlicePlanProjection::class))->forVoucher($voucher);
                 $detail['pos_reference'] = $this->posSaleReferenceService()->forVoucher($voucher);
                 if (is_array($detail['collection'] ?? null)) {
@@ -1744,6 +1775,8 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             return [];
         }
 
+        $vouchersById = $vouchers->keyBy(fn (Voucher $voucher): int => (int) $voucher->getKey());
+
         return VoucherClaim::query()
             ->withCount('evidence')
             ->whereIn('voucher_id', $voucherIds->all())
@@ -1751,22 +1784,30 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             ->orderByDesc('id')
             ->get()
             ->unique('voucher_id')
-            ->mapWithKeys(function (VoucherClaim $claim): array {
+            ->mapWithKeys(function (VoucherClaim $claim) use ($vouchersById): array {
                 $claimedAt = $claim->completed_at
                     ?? $claim->attempted_at
                     ?? $claim->created_at;
                 $mobile = $this->maskedMobile($claim->claimer_mobile);
+                $isPaid = in_array($claim->status, ['paid', 'succeeded', 'withdrawn'], true);
+                $voucher = $vouchersById->get((int) $claim->voucher_id);
+                $payoutStatus = strtolower((string) data_get($voucher?->metadata, 'disbursement.status', ''));
+                $payoutUnresolved = data_get($voucher?->metadata, 'disbursement.requires_recovery') === true
+                    || in_array($payoutStatus, ['pending', 'processing', 'queued', 'accepted', 'submitted', 'failed', 'rejected', 'payout_rejected'], true);
+                $hasDisbursedAmount = $isPaid && ! $payoutUnresolved && $claim->disbursed_amount_minor > 0;
+                $amount = $hasDisbursedAmount
+                    ? $claim->disbursed_amount_minor
+                    : $claim->requested_amount_minor;
 
                 return [
                     (string) $claim->voucher_id => [
                         'schema' => 'x-change.cockpit.pay-code-claim-summary.v1',
-                        'status' => in_array($claim->status, ['paid', 'succeeded', 'withdrawn'], true)
-                            ? 'paid'
-                            : (string) $claim->status,
+                        'status' => $isPaid ? 'paid' : (string) $claim->status,
                         'claimed_at' => $claimedAt?->toIso8601String(),
                         'claimed_by_label' => $mobile,
                         'claimed_mobile_masked' => $mobile,
-                        'amount_minor' => $claim->disbursed_amount_minor ?? $claim->requested_amount_minor,
+                        'amount_minor' => $amount > 0 ? $amount : null,
+                        'amount_kind' => $amount > 0 ? ($hasDisbursedAmount ? 'disbursed' : 'requested') : null,
                         'currency' => $claim->currency ?? 'PHP',
                         'location_label' => null,
                         'evidence_count' => (int) $claim->evidence_count,

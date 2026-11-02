@@ -22,6 +22,7 @@ use LBHurtado\XChange\Data\Claim\ClaimSurfaceData;
 use LBHurtado\XChange\Enums\ClaimAuthenticationMode;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Services\Payment\PaymentReceiptReadModel;
+use LBHurtado\XChange\Services\Settlement\ParticipantDocumentSession;
 use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LBHurtado\XChange\Support\Claim\ClaimAuthenticationIntent;
@@ -144,7 +145,9 @@ class ClaimPageController extends Controller
             );
         }
 
-        return $this->renderEntry($responses, $shareMetadata, $shareCardUrls, $voucher, $code, $surface);
+        app(ParticipantDocumentSession::class)->grant($request, $voucher, 'claimant');
+
+        return $this->renderEntry($responses, $shareMetadata, $shareCardUrls, $voucher, $code, $surface, $this->claimDocuments($request, $voucher));
     }
 
     private function requiresAuthentication(
@@ -162,6 +165,7 @@ class ClaimPageController extends Controller
         Voucher $voucher,
         string $code,
         ClaimSurfaceData $surface,
+        ?array $claimDocuments = null,
     ): Response {
         return $responses->render(
             initialCode: $code,
@@ -175,6 +179,32 @@ class ClaimPageController extends Controller
                 $shareCardUrls->resolve($voucher),
             ),
             claimSurface: $surface,
+            claimDocuments: $claimDocuments,
         );
+    }
+
+    private function claimDocuments(Request $request, Voucher $voucher): ?array
+    {
+        $sessions = app(ParticipantDocumentSession::class);
+        $items = collect((array) data_get($voucher->metadata, 'instructions.execution.document_requirements', []))
+            ->filter(fn ($item) => is_array($item) && ($item['contributor'] ?? null) === 'claimant'
+                && is_string($item['type'] ?? null) && is_string($item['timing'] ?? null) && is_bool($item['requires_acceptance'] ?? null)
+                && $sessions->allows($request, $voucher, 'claimant', $item['type']))
+            ->map(fn ($item) => ['type' => $item['type'], 'timing' => $item['timing'], 'requires_acceptance' => $item['requires_acceptance']])
+            ->values()->all();
+        if ($items === []) {
+            return null;
+        }
+        $fingerprint = $sessions->fingerprint($request, $voucher, 'claimant');
+        $attachments = $voucher->envelope()->first()?->attachments()->orderByDesc('id')->get() ?? collect();
+        foreach ($items as &$item) {
+            $own = $attachments->first(fn ($document) => $document->doc_type === $item['type']
+                && data_get($document->metadata, 'contributor_role') === 'claimant'
+                && is_string($fingerprint) && data_get($document->metadata, 'participant_session_hash') === $fingerprint);
+            $item['status'] = $own?->review_status;
+        }
+        unset($item);
+
+        return ['requirements' => $items, 'upload_url' => route('x-change.claim.documents.store', ['code' => $voucher->code])];
     }
 }

@@ -503,6 +503,46 @@ it('shows the destination for payable and settlement vouchers', async () => {
   expect(wrapper.find('[data-testid="value-flow-destination"]').exists()).toBe(true);
 });
 
+it('shows the issuer upload without exposing document requests for payable vouchers', async () => {
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates, invoiceDraftUrl: '/invoice-drafts' } });
+  await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('100');
+  await openOrderOptions(wrapper);
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
+  expect(wrapper.find('[data-testid="document-requirement-control"]').exists()).toBe(false);
+  expect(wrapper.get('[data-testid="issuer-invoice-upload"]').text()).toContain('Upload document');
+  expect(wrapper.get('[data-testid="issuer-invoice-upload"] input').attributes('type')).toBe('file');
+});
+
+it('stages an issuer invoice and includes its reference in the order', async () => {
+  const fetchMock = vi.fn().mockImplementation(async (url: string) => ({
+    ok: true, json: async () => url === '/invoice-drafts' ? { reference: '00000000-0000-4000-8000-000000000001', document_id: '01ARZ3NDEKTSV4RRFFQ69G5FAV' } : { status: 'issued', result: { code: 'TEST' } },
+  }));
+  vi.stubGlobal('fetch', fetchMock);
+  vi.stubGlobal('crypto', { randomUUID: () => 'invoice-order' });
+  const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: {
+    templates: cockpitQuickGenerateTemplates, invoiceDraftUrl: '/invoice-drafts',
+    mutationContract: { runtime_enabled: true, route: 'x-change.cockpit.quick-generate.store', route_url: '/issue', allowed_methods: ['POST'] },
+  } });
+  await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('100');
+  await openOrderOptions(wrapper);
+  await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
+  await wrapper.get('[data-testid="issuer-payment-details"] textarea').setValue('Laptop repair');
+  await wrapper.get('[data-testid="issuer-payment-details"] input').setValue('INV-1');
+  const input = wrapper.get('[data-testid="issuer-invoice-upload"] input');
+  Object.defineProperty(input.element, 'files', { configurable: true, value: [new File(['invoice'], 'invoice.pdf', { type: 'application/pdf' })] });
+  await input.trigger('change');
+  await flushPromises();
+  expect(wrapper.text()).toContain('invoice.pdf');
+  await wrapper.get('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
+  await flushPromises();
+  const order = fetchMock.mock.calls.find(([url]) => url === '/issue');
+  expect(JSON.parse(order![1].body).issuer_invoice_drafts).toEqual(['00000000-0000-4000-8000-000000000001']);
+  expect(JSON.parse(order![1].body).payment_details.documents).toEqual([{ id: '01ARZ3NDEKTSV4RRFFQ69G5FAV', type: 'invoice', label: 'invoice.pdf' }]);
+  expect(JSON.parse(order![1].body).payment_details.description).toBe('Laptop repair');
+  expect(preview(wrapper).payment_details.reference).toBe('INV-1');
+  expect(order![1].headers['Idempotency-Key']).toBe('invoice-order');
+});
+
 it('keeps the loan repayment destination consistent when switching between a bank and Client Funds', async () => {
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'issued', result: { code: 'FIXED' } }) });
   vi.stubGlobal('fetch', fetchMock);
@@ -600,6 +640,10 @@ it('builds the zero-disbursement PhilHealth attestation, review and payment work
   expect(instruction.execution).toMatchObject({
     schema: 'voucher.execution.v2', driver: 'settlement_envelope',
     settlement: { driver: 'philhealth-bst', readiness_gate: 'settleable' },
+    document_requirements: [
+      { type: 'CLAIM_FORM', timing: 'before_payment', requires_acceptance: false, contributor: 'claimant' },
+      { type: 'HOSPITAL_BILL', timing: 'before_payment', requires_acceptance: false, contributor: 'claimant' },
+    ],
     value_flow: { destination: 'instapay.gcash.mobile:09179999999' },
     events: { attest: { actor: 'beneficiary' }, review: { actor: 'hospital_reviewer' }, settle: { actor: 'payer' } },
   });

@@ -131,6 +131,7 @@ const props = withDefaults(
     clientFundsMinor?: number | null;
     collectionDestination?: CockpitCollectionDestination | null;
     mutationContract?: CockpitQuickGenerateMutationContract;
+    invoiceDraftUrl?: string | null;
     claimPreviewContract?: CockpitQuickGenerateClaimPreviewContract;
     draftContract?: CockpitQuickGenerateDraftContract;
     campaignContext?: CockpitQuickGenerateCampaignContext;
@@ -890,6 +891,49 @@ const rememberedScheduledClaimSlices = ref<NamedClaimSlice[] | null>(null);
 const reusableBalance = ref(false);
 const valueFlowDestination = ref("");
 const feeBearer = ref<"issuer" | "payer">("issuer");
+const invoiceUploads = ref<{ reference: string; documentId: string; name: string }[]>([]);
+const invoiceDraft = computed(() => invoiceUploads.value[0]?.reference ?? null);
+const invoiceOrderKey = ref<string | null>(null);
+const invoiceUploading = ref(false);
+const invoiceError = ref("");
+const paymentDescription = ref("");
+const paymentReference = ref("");
+const paymentFields = ref<{ label: string; value: string }[]>([]);
+const documentRequestsEnabled = false;
+async function stageInvoice(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement;
+  const files = Array.from(input.files ?? []);
+  invoiceError.value = "";
+  if (!files.length || !props.invoiceDraftUrl) return;
+  if (files.length + invoiceUploads.value.length > 5) { invoiceError.value = "You can attach up to five documents."; input.value = ""; return; }
+  if (philhealthSettlement.value && files.some((file) => file.size > 5 * 1024 * 1024 || !['application/pdf', 'image/jpeg', 'image/png'].includes(file.type))) {
+    invoiceError.value = "For PhilHealth, attach a PDF, JPEG, or PNG up to 5 MB."; input.value = ""; return;
+  }
+  invoiceUploading.value = true;
+  try {
+    for (const file of files) {
+      const body = new FormData();
+      body.append("invoice", file);
+      const response = await fetch(props.invoiceDraftUrl, { method: "POST", credentials: "same-origin", headers: { Accept: "application/json", ...csrfHeader() }, body });
+      const result = await response.json();
+      if (!response.ok || typeof result.reference !== "string" || typeof result.document_id !== "string") throw new Error("upload failed");
+      invoiceUploads.value.push({ reference: result.reference, documentId: result.document_id, name: file.name });
+      invoiceOrderKey.value ??= generateIdempotencyKey();
+    }
+  } catch {
+    invoiceError.value = "Could not upload the invoice. Please try again.";
+  } finally {
+    invoiceUploading.value = false;
+    input.value = "";
+  }
+}
+type RequestedDocument = { type: string; timing: "optional" | "before_payment" | "later_review"; requires_acceptance: boolean; contributor: "payer" | "claimant" | "invited" };
+const requestedDocuments = ref<RequestedDocument[]>([]);
+const documentTypes = computed(() => philhealthSettlement.value ? ["CLAIM_FORM", "HOSPITAL_BILL"] : ["INVOICE", "SUPPORTING_DOCUMENT", "PROOF_OF_PAYMENT"]);
+function addRequestedDocument(): void {
+  const type = documentTypes.value.find((candidate) => !requestedDocuments.value.some((item) => item.type === candidate));
+  if (type) requestedDocuments.value.push({ type, timing: "before_payment", requires_acceptance: true, contributor: philhealthSettlement.value ? "claimant" : "payer" });
+}
 const settlementRepayment = ref(false);
 const valueFlowVisible = computed(
   () => reusableBalance.value || ["payable", "settlement"].includes(voucherType.value),
@@ -923,6 +967,7 @@ const settlementWorkflow = computed(() =>
 function selectSettlementWorkflow(event: Event): void {
   const selected = (event.target as HTMLSelectElement).value;
   if (selected === "philhealth") {
+    requestedDocuments.value = [];
     amountBeforePhilhealth.value = amount.value;
     philhealthSettlement.value = true;
     configurePhilhealthSettlement();
@@ -932,6 +977,7 @@ function selectSettlementWorkflow(event: Event): void {
     amount.value = amountBeforePhilhealth.value;
   }
   amountBeforePhilhealth.value = null;
+  if (philhealthSettlement.value) requestedDocuments.value = [];
   philhealthSettlement.value = false;
   settlementRepayment.value = selected === "repayment";
 }
@@ -956,6 +1002,9 @@ const eventWebhookError = computed<string | null>(() => {
 });
 function configurePhilhealthSettlement(): void {
   if (!philhealthSettlement.value) return;
+  if (requestedDocuments.value.length === 0) {
+    requestedDocuments.value = ["CLAIM_FORM", "HOSPITAL_BILL"].map((type) => ({ type, timing: "before_payment", requires_acceptance: false, contributor: "claimant" }));
+  }
   if (!(Number(targetAmount.value) > 0) && Number(amount.value) > 0) {
     targetAmount.value = amount.value;
   }
@@ -1183,6 +1232,7 @@ watch(voucherType, (type, previousType): void => {
   destinationDrafts[previousType] = valueFlowDestination.value;
   valueFlowDestination.value = destinationDrafts[type];
   if (type !== "settlement") {
+    requestedDocuments.value = requestedDocuments.value.map((item) => item.contributor === "claimant" ? { ...item, contributor: "payer" } : item);
     if (philhealthSettlement.value && amountBeforePhilhealth.value !== null) {
       amount.value = amountBeforePhilhealth.value;
     }
@@ -2595,6 +2645,7 @@ const canSubmit = computed<boolean>(() => {
 
   return (
     props.mutationContract?.runtime_enabled === true &&
+    !invoiceUploading.value && invoiceError.value === "" &&
     !publicIssuancePaused.value &&
     routeUrl.value !== null &&
     (!props.turnstile?.enabled || props.turnstileToken !== "") &&
@@ -5221,7 +5272,7 @@ watch([livePricingEstimate, livePricingEstimateError], () => {
 });
 
 async function submit(): Promise<void> {
-  if (!canSubmit.value || processing.value || routeUrl.value === null) {
+  if (!canSubmit.value || processing.value || invoiceUploading.value || routeUrl.value === null) {
     return;
   }
 
@@ -5232,7 +5283,7 @@ async function submit(): Promise<void> {
   submissionErrors.value = [];
   submissionErrorHeading.value = "Fix these fields before issuing";
 
-  const idempotencyKey = generateIdempotencyKey();
+  const idempotencyKey = invoiceOrderKey.value ?? generateIdempotencyKey();
   const payload = buildIssuancePayload();
 
   emit("submitStart", payload);
@@ -5301,6 +5352,8 @@ async function submit(): Promise<void> {
       return;
     }
 
+    invoiceUploads.value = [];
+    invoiceOrderKey.value = null;
     if (body.schema === "x-change.cockpit.on-demand-issuance-funding.v1") {
       checkoutDraftToken.value = null;
       checkoutDraftMessage.value = null;
@@ -5623,6 +5676,7 @@ function buildPayload(): Record<string, unknown> {
 
 function buildIssuancePayload(): Record<string, unknown> {
   const payload = buildPayload();
+  if (invoiceUploads.value.length && (isPayableVoucher.value || isSettlementVoucher.value)) payload.issuer_invoice_drafts = invoiceUploads.value.map((item) => item.reference);
   const estimate = livePricingEstimate.value;
 
   if (
@@ -5883,7 +5937,18 @@ function buildPayloadShape(
     payload.execution = {
       ...execution,
       ...(destination && isV2Execution ? { value_flow: destination } : {}),
+      ...(isV2Execution && (isPayableVoucher.value || isSettlementVoucher.value) && requestedDocuments.value.length
+        ? { document_requirements: requestedDocuments.value.filter((item) => !(philhealthSettlement.value && invoiceDraft.value && item.type === "HOSPITAL_BILL")).map((item) => ({ ...item })) }
+        : {}),
     };
+  }
+
+  if (isV2Execution && (isPayableVoucher.value || isSettlementVoucher.value)) {
+    const fields = paymentFields.value.filter((field) => field.label.trim() && field.value.trim()).map((field) => ({ label: field.label.trim(), value: field.value.trim() }));
+    const documents = invoiceUploads.value.map((item) => ({ id: item.documentId, type: "invoice", label: item.name }));
+    if (paymentDescription.value.trim() || paymentReference.value.trim() || fields.length || documents.length) {
+      payload.payment_details = { description: paymentDescription.value.trim() || null, reference: paymentReference.value.trim() || null, fields, documents };
+    }
   }
 
   const flowType = philhealthSettlement.value ? "settlement" : metadataFlowType.value.trim();
@@ -7265,6 +7330,29 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
               :disabled="processing"
             />
 
+            <fieldset v-if="isPayableVoucher || isSettlementVoucher" class="grid gap-3" data-testid="issuer-payment-details">
+              <legend class="text-xs font-semibold">Payment details for the payer</legend>
+              <label class="grid gap-1 text-sm">What is this payment for?<textarea v-model="paymentDescription" maxlength="2000" class="min-h-20 rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900" /></label>
+              <label class="grid gap-1 text-sm">Reference (optional)<input v-model="paymentReference" maxlength="255" class="min-h-12 rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900" /></label>
+              <div v-for="(field, index) in paymentFields" :key="index" class="grid gap-2 sm:grid-cols-2">
+                <input v-model="field.label" placeholder="Label" aria-label="Detail label" maxlength="100" class="min-h-12 rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900" />
+                <input v-model="field.value" placeholder="Value" aria-label="Detail value" maxlength="1000" class="min-h-12 rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900" />
+                <button type="button" class="w-fit text-xs underline" @click="paymentFields.splice(index, 1)">Remove detail</button>
+              </div>
+              <button v-if="paymentFields.length < 20" type="button" class="w-fit text-xs underline" @click="paymentFields.push({ label: '', value: '' })">Add detail</button>
+            </fieldset>
+            <div v-if="!publicMode && invoiceDraftUrl && (isPayableVoucher || isSettlementVoucher)" class="grid gap-2 text-sm" data-testid="issuer-invoice-upload">
+              <span class="font-medium">Documents for the payer <span class="font-normal text-slate-500 dark:text-slate-400">(optional)</span></span>
+              <label class="inline-flex min-h-11 w-fit cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-emerald-500 hover:text-emerald-700 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-emerald-600 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-emerald-400">
+                <FilePlus2 class="size-4" aria-hidden="true" />
+                <span>{{ invoiceUploading ? 'Uploading…' : 'Upload document' }}</span>
+                <input type="file" multiple class="sr-only" :accept="philhealthSettlement ? '.pdf,.jpg,.jpeg,.png' : '.pdf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png'" :disabled="processing || invoiceUploading || invoiceUploads.length >= 5" @change="stageInvoice" />
+              </label>
+              <span class="text-xs">{{ philhealthSettlement ? 'PDF, JPEG, or PNG up to 5 MB each.' : 'Up to five files, 10 MB each.' }}</span>
+              <span v-for="(item, index) in invoiceUploads" :key="item.documentId" class="flex gap-2 text-xs">{{ item.name }} <button type="button" class="underline" @click.prevent="invoiceUploads.splice(index, 1)">Remove</button></span>
+              <span v-if="invoiceError" role="alert" class="text-xs text-rose-600">{{ invoiceError }}</span>
+            </div>
+
             <fieldset v-if="isPayableVoucher || isSettlementVoucher" class="grid gap-2" data-testid="fee-bearer-control">
               <legend class="text-xs font-semibold">Who pays the service fee?</legend>
               <label class="flex items-center gap-2 text-sm">
@@ -7275,6 +7363,33 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                 <input v-model="feeBearer" type="radio" value="payer" :disabled="processing" data-testid="fee-bearer-payer" />
                 Customer pays with the payment
               </label>
+            </fieldset>
+
+            <fieldset v-if="documentRequestsEnabled && (isPayableVoucher || isSettlementVoucher) && (philhealthSettlement || !includeExecutionInstruction || executionSchema !== 'voucher.execution.v1')" class="grid gap-3" data-testid="document-requirement-control">
+              <legend class="text-xs font-semibold">Request a document from the payer or claimant</legend>
+              <div v-for="(document, index) in requestedDocuments" :key="index" class="grid gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                <p v-if="philhealthSettlement && invoiceDraft && document.type === 'HOSPITAL_BILL'" class="text-xs text-slate-600 dark:text-slate-400">The uploaded invoice supplies the hospital bill.</p>
+                <label class="grid gap-1 text-sm">Document type
+                  <select v-model="document.type" :disabled="processing || philhealthSettlement" class="min-h-12 rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900">
+                    <option v-for="type in documentTypes" :key="type" :value="type" :disabled="requestedDocuments.some((item, i) => i !== index && item.type === type)">{{ type.replaceAll('_', ' ') }}</option>
+                  </select>
+                </label>
+                <label class="grid gap-1 text-sm">When is it needed?
+                  <select v-model="document.timing" :disabled="processing || philhealthSettlement" class="min-h-12 rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900">
+                    <option value="optional">Optional</option>
+                    <option value="before_payment">Before payment</option>
+                    <option value="later_review">For later review</option>
+                  </select>
+                </label>
+                <label class="grid gap-1 text-sm">Who provides it?
+                  <select v-model="document.contributor" :disabled="processing || (philhealthSettlement && !!invoiceDraft && document.type === 'HOSPITAL_BILL')" class="min-h-12 rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900">
+                    <option value="payer">Payer</option><option v-if="isSettlementVoucher" value="claimant">Claimant</option>
+                  </select>
+                </label>
+                <label class="flex items-center gap-2 text-sm"><input v-model="document.requires_acceptance" type="checkbox" :disabled="processing || (philhealthSettlement && !!invoiceDraft && document.type === 'HOSPITAL_BILL')" /> Reviewer acceptance required</label>
+                <button v-if="!philhealthSettlement" type="button" :disabled="processing" class="w-fit text-xs font-semibold underline" @click="requestedDocuments.splice(index, 1)">Remove document</button>
+              </div>
+              <button v-if="requestedDocuments.length < documentTypes.length" type="button" :disabled="processing" class="w-fit rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold dark:border-slate-700" data-testid="add-document-requirement" @click="addRequestedDocument">Add document</button>
             </fieldset>
 
 
