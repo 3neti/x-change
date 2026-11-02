@@ -32,7 +32,7 @@ async function upload(type: string, event: Event): Promise<void> {
         if (!response.ok) throw new Error('Upload failed');
         const result = await response.json();
         uploaded.value = { ...uploaded.value, [type]: result.review_status === 'accepted' ? 'Accepted' : 'Uploaded for review' };
-        router.reload({ only: [props.reloadOnly ?? 'payment'], preserveScroll: true });
+        router.reload({ only: [props.reloadOnly ?? 'payment'] });
     } catch {
         error.value = 'Could not upload the document. Please try again.';
     } finally {
