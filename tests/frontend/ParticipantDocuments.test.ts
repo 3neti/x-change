@@ -32,7 +32,7 @@ describe('ParticipantDocuments', () => {
         await flushPromises();
         expect(request).toHaveBeenCalledWith('/test', expect.objectContaining({ method: 'POST', body: expect.any(FormData) }));
         expect(wrapper.text()).toContain('Uploaded for review');
-        expect(reload).toHaveBeenCalledWith({ only: ['payment'], preserveScroll: true });
+        expect(reload).toHaveBeenCalledWith({ only: ['payment'] });
         vi.unstubAllGlobals();
     });
 });
