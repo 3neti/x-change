@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use LBHurtado\EmiCore\Contracts\DirectQrFundingInstructionIssuer;
+use LBHurtado\EmiCore\Data\Funding\FundingInstructionRequestData;
+use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
 use LBHurtado\EmiCore\Data\Funding\FundingQrMerchantData;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\Merchant\Contracts\MerchantProfileRepositoryContract;
@@ -847,6 +850,28 @@ it('issues encrypted provider QR instructions once without Account funding', fun
         ->and($this->paymentAdapter->instructionCalls)->toBe(1)
         ->and(DB::table('x_change_funding_intents')->count())->toBe(0)
         ->and(DB::table('x_change_account_funding_receipts')->count())->toBe(0);
+});
+
+it('uses the optional direct QR capability without a concrete provider class', function (): void {
+    $adapter = new class extends FakeFundingProviderAdapter implements DirectQrFundingInstructionIssuer
+    {
+        public int $directCalls = 0;
+
+        public function createDirectQrFundingInstructions(FundingInstructionRequestData $request): FundingInstructionsData
+        {
+            $this->directCalls++;
+
+            return $this->createFundingInstructions($request);
+        }
+    };
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    $voucher = paymentAttemptCollectibleVoucher();
+    $attempt = app(CreatePaymentAttempt::class)->handle($voucher, 'netbank', 'payer-session-1', 'request-1');
+
+    $issued = app(IssuePaymentInstructions::class)->handle($attempt);
+
+    expect($issued->status)->toBe(PaymentAttemptStatus::AwaitingPayment)
+        ->and($adapter->directCalls)->toBe(1);
 });
 
 it('issues a provisional NetBank payer QR with one provider call and no VCA registration', function (): void {

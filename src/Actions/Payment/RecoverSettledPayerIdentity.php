@@ -8,18 +8,18 @@ use Illuminate\Support\Facades\Cache;
 use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
 use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
-use LBHurtado\PaymentGateway\Funding\NetbankFundingProviderAdapter;
 use LBHurtado\XChange\Actions\Payment\Pipes\AssociateSettledPayerContact;
 use LBHurtado\XChange\Actions\Payment\Pipes\QueueSettledPaymentSms;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\SettledPaymentProcess;
+use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Settlement\CampaignWalletPayerMobile;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 
 final readonly class RecoverSettledPayerIdentity
 {
     public function __construct(
-        private NetbankFundingProviderAdapter $provider,
+        private FundingProviderAdapterRegistry $providers,
         private RecordProviderFundingObservation $observations,
         private CampaignWalletPayerMobile $walletPayerMobile,
         private AssociateSettledPayerContact $contacts,
@@ -63,7 +63,7 @@ final readonly class RecoverSettledPayerIdentity
             return true;
         }
 
-        $fresh = $this->provider->verifyFunding(new FundingVerificationData(
+        $fresh = $this->providers->for($intent->provider_code)->verifyFunding(new FundingVerificationData(
             provider: 'netbank',
             fundingIntentReference: $intent->reference,
             expectedAmountMinor: (int) $intent->expected_amount_minor,

@@ -4,18 +4,19 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Checkout;
 
+use LBHurtado\EmiCore\Contracts\IncomingPaymentReader;
 use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
 use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\EmiCore\Data\Funding\ProviderPayerIdentityData;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
-use LBHurtado\PaymentGateway\Funding\NetbankFundingProviderAdapter;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
+use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 
 final readonly class ReverifyCheckoutQrPayer
 {
     public function __construct(
-        private NetbankFundingProviderAdapter $provider,
+        private FundingProviderAdapterRegistry $providers,
         private CheckoutLifecycle $checkouts,
     ) {}
 
@@ -37,7 +38,11 @@ final readonly class ReverifyCheckoutQrPayer
             fundingAddress: $address,
             destination: is_array($destination) ? FundingDestinationData::from($destination) : null,
         );
-        $verified = $this->provider->verifyFunding($verification);
+        $provider = $this->providers->for($intent->provider_code);
+        if (! $provider instanceof IncomingPaymentReader) {
+            return false;
+        }
+        $verified = $provider->verifyFunding($verification);
 
         if ($verified->providerTransactionId !== $observation->provider_transaction_id
             || $verified->fundingAddress !== $observation->funding_address
@@ -47,7 +52,7 @@ final readonly class ReverifyCheckoutQrPayer
             return false;
         }
 
-        $payment = collect($this->provider->incomingPayments($verification))
+        $payment = collect($provider->incomingPayments($verification))
             ->first(fn ($payment): bool => $payment->transactionId === $verified->providerTransactionId);
 
         if ($payment === null

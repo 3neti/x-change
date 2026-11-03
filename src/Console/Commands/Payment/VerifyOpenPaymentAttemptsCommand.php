@@ -51,6 +51,8 @@ class VerifyOpenPaymentAttemptsCommand extends Command
                 PaymentAttemptStatus::Verifying,
                 PaymentAttemptStatus::Verified,
             ])
+            ->orderByRaw('case when last_checked_at is null then 0 else 1 end')
+            ->oldest('last_checked_at')
             ->oldest('expires_at')
             ->oldest('id')
             ->limit($limit)

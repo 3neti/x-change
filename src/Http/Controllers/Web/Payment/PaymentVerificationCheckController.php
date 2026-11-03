@@ -8,9 +8,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Actions\Payment\VerifyPaymentAttempt;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
+use LBHurtado\XChange\Jobs\Payment\VerifyPaymentAttemptJob;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptSessionGuard;
 use Throwable;
@@ -22,7 +22,6 @@ class PaymentVerificationCheckController extends Controller
         string $code,
         PaymentAttempt $attempt,
         PaymentAttemptSessionGuard $sessions,
-        VerifyPaymentAttempt $verify,
     ): RedirectResponse {
         $voucher = Voucher::query()
             ->where('code', strtoupper(trim($code)))
@@ -34,7 +33,12 @@ class PaymentVerificationCheckController extends Controller
         $sessions->assertOwner($attempt, $browserKey);
 
         try {
-            $checked = $verify->handle($attempt, PaymentVerificationTrigger::Payer);
+            VerifyPaymentAttemptJob::dispatch(
+                paymentAttemptId: (int) $attempt->getKey(),
+                providerCode: $attempt->provider_code,
+                trigger: PaymentVerificationTrigger::Payer,
+            )->afterCommit();
+            $checked = $attempt->fresh()->load('events');
         } catch (Throwable $exception) {
             $checked = $attempt->fresh();
             if ($checked?->status !== PaymentAttemptStatus::Verified) {
@@ -48,12 +52,20 @@ class PaymentVerificationCheckController extends Controller
                 'code' => $voucher->code,
                 'attempt' => $checked->reference,
             ])
-            ->with('payment_notice', $this->notice($checked->status));
+            ->with('payment_notice', $checked->version === $attempt->version
+                && in_array($checked->status, [PaymentAttemptStatus::AwaitingPayment, PaymentAttemptStatus::Verifying], true)
+                ? 'We are checking your payment. Please do not pay again.'
+                : $this->notice($checked));
     }
 
-    private function notice(PaymentAttemptStatus $status): string
+    private function notice(PaymentAttempt $attempt): string
     {
-        return match ($status) {
+        if ($attempt->status === PaymentAttemptStatus::AwaitingPayment
+            && $attempt->events->sortByDesc('sequence')->first()?->event_type === 'provider_verification_unavailable') {
+            return 'Payment verification is temporarily unavailable. Please do not pay again.';
+        }
+
+        return match ($attempt->status) {
             PaymentAttemptStatus::Settled => 'Payment confirmed from NetBank history.',
             PaymentAttemptStatus::Verified => 'Your bank payment is verified. Collection completion is pending. Do not pay again.',
             PaymentAttemptStatus::AwaitingPayment => 'No settled matching payment is visible yet.',

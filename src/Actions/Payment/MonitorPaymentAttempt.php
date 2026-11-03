@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Payment;
 
+use LBHurtado\EmiCore\Contracts\IncomingPaymentReader;
 use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
 use LBHurtado\XChange\Data\Payment\ObservedPaymentTransactionData;
 use LBHurtado\XChange\Models\PaymentAttempt;
@@ -32,7 +33,7 @@ final class MonitorPaymentAttempt
 
         $adapter = $this->providers->for($attempt->provider_code);
 
-        if (! method_exists($adapter, 'incomingPayments')) {
+        if (! $adapter instanceof IncomingPaymentReader) {
             throw new LogicException('This funding provider does not support incoming payment monitoring.');
         }
 

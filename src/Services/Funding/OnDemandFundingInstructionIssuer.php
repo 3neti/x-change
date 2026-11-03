@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Funding;
 
 use InvalidArgumentException;
+use LBHurtado\EmiCore\Contracts\DirectQrFundingInstructionIssuer;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionRequestData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
 use LBHurtado\XChange\Models\FundingIntent;
@@ -14,7 +15,6 @@ final readonly class OnDemandFundingInstructionIssuer
     public function __construct(
         private FundingProviderAdapterRegistry $providers,
         private StandingBankTransferFundingInstructionIssuer $standingBankTransfers,
-        private NetbankDirectQrFundingInstructionIssuer $directNetbankQr,
     ) {}
 
     public function create(
@@ -29,10 +29,17 @@ final readonly class OnDemandFundingInstructionIssuer
             return $this->standingBankTransfers->create($request);
         }
 
-        return match ($this->netbankQrMode()) {
-            'direct_qr' => $this->directNetbankQr->create($request),
-            'registered_vca' => $this->providers->for('netbank')->createFundingInstructions($request),
-        };
+        $provider = $this->providers->for($intent->provider_code);
+
+        if ($this->netbankQrMode() === 'registered_vca') {
+            return $provider->createFundingInstructions($request);
+        }
+
+        if (! $provider instanceof DirectQrFundingInstructionIssuer) {
+            throw new InvalidArgumentException('The funding provider does not support direct QR instructions.');
+        }
+
+        return $provider->createDirectQrFundingInstructions($request);
     }
 
     private function netbankQrMode(): string

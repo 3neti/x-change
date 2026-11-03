@@ -6,10 +6,12 @@ namespace LBHurtado\XChange\Tests\Fakes;
 
 use Closure;
 use LBHurtado\EmiCore\Contracts\FundingProviderAdapter;
+use LBHurtado\EmiCore\Contracts\IncomingPaymentReader;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionRequestData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
 use LBHurtado\EmiCore\Data\Funding\FundingQrCodeData;
 use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
+use LBHurtado\EmiCore\Data\Funding\IncomingPaymentData;
 use LBHurtado\EmiCore\Data\Funding\ProviderEventHintData;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\EmiCore\Data\Funding\ProviderWebhookReceiptData;
@@ -18,7 +20,7 @@ use LBHurtado\EmiCore\Data\Funding\WebhookAuthenticationData;
 use LBHurtado\XChange\Data\Payment\ObservedPaymentTransactionData;
 use Throwable;
 
-class FakeFundingProviderAdapter implements FundingProviderAdapter
+class FakeFundingProviderAdapter implements FundingProviderAdapter, IncomingPaymentReader
 {
     public int $instructionCalls = 0;
 
@@ -128,12 +130,25 @@ class FakeFundingProviderAdapter implements FundingProviderAdapter
         );
     }
 
-    /** @return list<ObservedPaymentTransactionData> */
+    /** @return list<IncomingPaymentData> */
     public function incomingPayments(FundingVerificationData $verification): array
     {
         $this->lastVerification = $verification;
         $this->incomingPaymentCalls++;
 
-        return $this->incomingPayments;
+        return array_map(static fn (ObservedPaymentTransactionData $payment): IncomingPaymentData => new IncomingPaymentData(
+            transactionId: $payment->providerTransactionId,
+            amountMinor: $payment->amountMinor,
+            currency: $payment->currency,
+            status: $payment->providerStatus,
+            occurredAt: $payment->occurredAt === null ? null : \DateTimeImmutable::createFromInterface($payment->occurredAt),
+            settledAt: $payment->settledAt === null ? null : \DateTimeImmutable::createFromInterface($payment->settledAt),
+            referenceId: null,
+            settlementRail: $payment->settlementRail,
+            payerName: $payment->payerName,
+            payerAccountNumber: $payment->payerAccountNumber,
+            payerInstitutionCode: $payment->payerInstitutionCode,
+            payerMobile: $payment->payerMobile,
+        ), $this->incomingPayments);
     }
 }

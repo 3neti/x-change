@@ -17,6 +17,7 @@ use LBHurtado\XChange\Jobs\Payment\RecoverSettledPayerIdentityJob;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\SettledPaymentProcess;
+use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XFeedback\Models\FeedbackDeliveryRecord;
 
 it('records a settled payment once and snapshots the SMS policy', function () {
@@ -107,7 +108,8 @@ it('recovers a later NetBank wallet payer for an already settled payment exactly
     $stillMissing->payerIdentity = null;
     $provider = Mockery::mock(NetbankFundingProviderAdapter::class);
     $provider->shouldReceive('verifyFunding')->twice()->andReturn($stillMissing, recoveredPayerObservation($original));
-    app()->instance(NetbankFundingProviderAdapter::class, $provider);
+    $provider->shouldReceive('providerCode')->andReturn('netbank');
+    app()->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$provider]));
 
     $recovery = app(RecoverSettledPayerIdentity::class);
     expect($recovery->handle($process->getKey()))->toBeFalse()
@@ -129,7 +131,8 @@ it('does not recover payer identity from a different provider transaction', func
     $different->providerTransactionId = 'another-transaction';
     $provider = Mockery::mock(NetbankFundingProviderAdapter::class);
     $provider->shouldReceive('verifyFunding')->once()->andReturn($different);
-    app()->instance(NetbankFundingProviderAdapter::class, $provider);
+    $provider->shouldReceive('providerCode')->andReturn('netbank');
+    app()->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$provider]));
 
     expect(app(RecoverSettledPayerIdentity::class)->handle($process->getKey()))->toBeTrue()
         ->and($process->fresh()->observation_id)->toBe($original->getKey())
@@ -168,7 +171,8 @@ it('resumes SMS without another provider read after contact association was save
     ])->save();
     $provider = Mockery::mock(NetbankFundingProviderAdapter::class);
     $provider->shouldNotReceive('verifyFunding');
-    app()->instance(NetbankFundingProviderAdapter::class, $provider);
+    $provider->shouldReceive('providerCode')->andReturn('netbank');
+    app()->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$provider]));
 
     expect(app(RecoverSettledPayerIdentity::class)->handle($process->getKey()))->toBeTrue()
         ->and($process->fresh()->sms_status)->toBe('queued')

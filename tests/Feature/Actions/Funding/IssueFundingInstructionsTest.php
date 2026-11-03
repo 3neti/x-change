@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
 use LBHurtado\PaymentGateway\Funding\NetbankFundingApiClient;
+use LBHurtado\PaymentGateway\Funding\NetbankFundingProviderAdapter;
 use LBHurtado\XChange\Actions\Funding\CreateFundingIntent;
 use LBHurtado\XChange\Actions\Funding\IssueFundingInstructions;
 use LBHurtado\XChange\Data\Funding\CreateFundingIntentData;
@@ -156,6 +157,9 @@ it('uses the shared direct NetBank QR issuer without token registration or an ex
             && $currency === 'PHP')
         ->andReturn($qrPayload);
     $this->app->instance(NetbankFundingApiClient::class, $client);
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([
+        app(NetbankFundingProviderAdapter::class),
+    ]));
 
     $intent = app(CreateFundingIntent::class)->handle(issueFundingIntentData([
         'purpose' => FundingIntentPurpose::OnDemandIssuance,

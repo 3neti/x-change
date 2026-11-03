@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Exceptions;
+use Illuminate\Support\Facades\Queue;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\PaymentGateway\Exceptions\NetbankFundingRequestFailed;
 use LBHurtado\PaymentGateway\Funding\NetbankFundingApiClient;
@@ -13,7 +14,9 @@ use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
 use LBHurtado\XChange\Actions\Payment\IssuePaymentInstructions;
 use LBHurtado\XChange\Actions\Payment\SettleVerifiedPaymentAttempt;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
+use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
+use LBHurtado\XChange\Jobs\Payment\VerifyPaymentAttemptJob;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Models\VoucherCollection;
@@ -347,6 +350,43 @@ it('checks NetBank history and applies an exact settled payment once', function 
             ->whereType('props.payment.receipt.completed_at', 'string')
             ->whereType('props.payment.receipt.payments.0.completed_at', 'string')
             ->etc());
+});
+
+it('queues manual verification through the same job as scheduled checks', function (): void {
+    $voucher = publicPaymentVoucher();
+    $this->post(route('x-change.pay.attempts.store', ['code' => $voucher->code]))->assertRedirect();
+    $attempt = PaymentAttempt::query()->sole();
+    Queue::fake();
+
+    $this->post(route('x-change.pay.attempts.checks.store', [
+        'code' => $voucher->code,
+        'attempt' => $attempt->reference,
+    ]))->assertRedirect()->assertSessionHas('payment_notice', 'We are checking your payment. Please do not pay again.');
+
+    Queue::assertPushed(
+        VerifyPaymentAttemptJob::class,
+        fn ($job): bool => $job->paymentAttemptId === $attempt->getKey()
+            && $job->trigger === PaymentVerificationTrigger::Payer,
+    );
+});
+
+it('tells the payer when provider verification is unavailable', function (): void {
+    $voucher = publicPaymentVoucher();
+    $this->post(route('x-change.pay.attempts.store', ['code' => $voucher->code]))->assertRedirect();
+    $attempt = PaymentAttempt::query()->sole();
+    $this->paymentAdapter->fundingVerificationResolver = static function (): never {
+        throw new RuntimeException('simulated provider outage');
+    };
+
+    $this->post(route('x-change.pay.attempts.checks.store', [
+        'code' => $voucher->code,
+        'attempt' => $attempt->reference,
+    ]))->assertRedirect()->assertSessionHas(
+        'payment_notice',
+        'Payment verification is temporarily unavailable. Please do not pay again.',
+    );
+
+    expect($attempt->fresh()->status)->toBe(PaymentAttemptStatus::AwaitingPayment);
 });
 
 it('hands collectible payment from the outward claim route to the payment page', function (): void {

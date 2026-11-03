@@ -61,6 +61,22 @@ it('queues verified Payment Attempts for provider-free settlement retry', functi
     );
 });
 
+it('prioritizes the least recently checked payment attempts', function (): void {
+    $recent = scheduledPaymentAttempt(expiresAt: now()->addMinute());
+    $older = scheduledPaymentAttempt(expiresAt: now()->addMinutes(10));
+    $unverified = scheduledPaymentAttempt(expiresAt: now()->addMinutes(15));
+    PaymentAttempt::query()->whereKey($recent->getKey())->update(['last_checked_at' => now()->subMinute()]);
+    PaymentAttempt::query()->whereKey($older->getKey())->update(['last_checked_at' => now()->subMinutes(5)]);
+    config()->set('x-change.payment.attempts.scheduled_batch_size', 2);
+
+    $this->artisan('xchange:payments:verify-open')->assertSuccessful();
+
+    Queue::assertPushed(VerifyPaymentAttemptJob::class, 2);
+    Queue::assertPushed(VerifyPaymentAttemptJob::class, fn (VerifyPaymentAttemptJob $job): bool => $job->paymentAttemptId === $older->getKey());
+    Queue::assertPushed(VerifyPaymentAttemptJob::class, fn (VerifyPaymentAttemptJob $job): bool => $job->paymentAttemptId === $unverified->getKey());
+    Queue::assertNotPushed(VerifyPaymentAttemptJob::class, fn (VerifyPaymentAttemptJob $job): bool => $job->paymentAttemptId === $recent->getKey());
+});
+
 it('registers the package-owned non-overlapping payment verification schedule', function (): void {
     $event = collect(app(Schedule::class)->events())
         ->first(fn ($event): bool => $event->description === 'xchange:payments:verify-open:netbank');
