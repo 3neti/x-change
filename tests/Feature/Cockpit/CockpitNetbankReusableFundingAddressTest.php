@@ -6,6 +6,7 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Route;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Merchant\Contracts\MerchantProfileRepositoryContract;
@@ -50,6 +51,27 @@ beforeEach(function () {
     ]);
 });
 
+it('keeps reusable QR requests independent of stamp traffic and provider checks', function () {
+    actingAsTestUser();
+    Route::get('/test-funding-stamp', fn () => response()->noContent())->middleware('throttle:240,1');
+    Route::get('/test-funding-qr', fn () => response()->noContent())
+        ->middleware(config('x-change.funding.standing_addresses.instruction_middleware'));
+    Route::get('/test-funding-history', fn () => response()->noContent())
+        ->middleware('throttle:3,1,standing-funding-operations:');
+
+    for ($i = 0; $i < 15; $i++) {
+        $this->get('/test-funding-stamp')->assertNoContent();
+    }
+    for ($i = 0; $i < 12; $i++) {
+        $this->get('/test-funding-qr')->assertNoContent();
+    }
+    $this->get('/test-funding-qr')->assertStatus(429);
+    for ($i = 0; $i < 3; $i++) {
+        $this->get('/test-funding-history')->assertNoContent();
+    }
+    $this->get('/test-funding-history')->assertStatus(429);
+});
+
 it('separates reusable QR opening from stricter provider verification throttling', function () {
     $routes = app('router')->getRoutes();
     $open = $routes->getByName(
@@ -63,13 +85,13 @@ it('separates reusable QR opening from stricter provider verification throttling
     );
 
     expect($open)->not->toBeNull()
-        ->and($open?->gatherMiddleware())->toContain('throttle:12,1')
-        ->not->toContain('throttle:3,1')
+        ->and($open?->gatherMiddleware())->toContain('throttle:12,1,standing-funding-instructions:')
+        ->not->toContain('throttle:3,1,standing-funding-operations:')
         ->and($history)->not->toBeNull()
-        ->and($history?->gatherMiddleware())->toContain('throttle:3,1')
-        ->not->toContain('throttle:12,1')
+        ->and($history?->gatherMiddleware())->toContain('throttle:3,1,standing-funding-operations:')
+        ->not->toContain('throttle:12,1,standing-funding-instructions:')
         ->and($approval)->not->toBeNull()
-        ->and($approval?->gatherMiddleware())->toContain('throttle:3,1');
+        ->and($approval?->gatherMiddleware())->toContain('throttle:3,1,standing-funding-operations:');
 });
 
 it('generates an owner-stable Account Funding Address without creating or crediting a Funding Intent', function () {
