@@ -1487,8 +1487,8 @@ return [
                     'settled',
                 )),
             ))),
-            'instruction_middleware' => ['throttle:12,1'],
-            'middleware' => ['throttle:3,1'],
+            'instruction_middleware' => ['throttle:12,1,standing-funding-instructions:'],
+            'middleware' => ['throttle:3,1,standing-funding-operations:'],
             'lock_seconds' => (int) env('XCHANGE_STANDING_FUNDING_LOCK_SECONDS', 120),
             'lock_wait_seconds' => (int) env('XCHANGE_STANDING_FUNDING_LOCK_WAIT_SECONDS', 5),
             'qr_artifact_version' => env(
