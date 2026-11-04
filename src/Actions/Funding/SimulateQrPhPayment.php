@@ -9,7 +9,9 @@ use Illuminate\Support\Str;
 use InvalidArgumentException;
 use LBHurtado\XChange\Data\Funding\SimulatedQrPhPaymentData;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
+use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Models\FundingIntent;
+use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Models\SimulatedFundingTransaction;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use LBHurtado\XChange\Support\Funding\QrPhFundingSimulatorGuard;
@@ -38,19 +40,43 @@ class SimulateQrPhPayment
             throw new InvalidArgumentException('A valid payer mobile number is required.');
         }
 
+        return $this->record($intent->provider_request_id, $intent->funding_address_ciphertext, $intent->expected_amount_minor, $intent->currency, $mobile, $payerName);
+    }
+
+    public function handlePaymentAttempt(PaymentAttempt $attempt, string $payerMobile, ?string $payerName = null): SimulatedQrPhPaymentData
+    {
+        $this->guard->assertAvailable();
+        $attempt = PaymentAttempt::query()->findOrFail($attempt->getKey());
+        $mobile = MobileNumber::normalize($payerMobile);
+
+        if ($attempt->provider_code !== 'qrph_simulator'
+            || $attempt->status !== PaymentAttemptStatus::AwaitingPayment
+            || blank($attempt->provider_request_id_ciphertext)
+            || blank($attempt->funding_address_ciphertext)) {
+            throw new InvalidArgumentException('A ready QR Ph simulator Payment Attempt is required.');
+        }
+        if ($mobile === null) {
+            throw new InvalidArgumentException('A valid payer mobile number is required.');
+        }
+
+        return $this->record($attempt->provider_request_id_ciphertext, $attempt->funding_address_ciphertext, $attempt->expected_amount_minor, $attempt->currency, $mobile, $payerName);
+    }
+
+    private function record(string $requestId, string $fundingAddress, int $amountMinor, string $currency, string $mobile, ?string $payerName): SimulatedQrPhPaymentData
+    {
         $name = trim((string) $payerName);
 
         $attributes = [
-            'provider_request_id' => $intent->provider_request_id,
+            'provider_request_id' => $requestId,
             'provider_transaction_id' => 'QRSIM-TXN-'.Str::upper((string) Str::ulid()),
             'provider_event_id' => 'QRSIM-EVT-'.Str::upper((string) Str::ulid()),
-            'funding_address' => $intent->funding_address_ciphertext,
+            'funding_address' => $fundingAddress,
             'payer_mobile_ciphertext' => $mobile,
             'payer_mobile_hash' => $this->mobileHash($mobile),
             'payer_name_ciphertext' => $name !== '' ? $name : null,
-            'gross_amount_minor' => $intent->expected_amount_minor,
+            'gross_amount_minor' => $amountMinor,
             'fee_amount_minor' => 0,
-            'currency' => $intent->currency,
+            'currency' => $currency,
             'status' => 'settled',
             'occurred_at' => now(),
             'settled_at' => now(),
@@ -64,7 +90,7 @@ class SimulateQrPhPayment
             ]);
         } catch (UniqueConstraintViolationException $exception) {
             $transaction = SimulatedFundingTransaction::query()
-                ->where('provider_request_id', $intent->provider_request_id)
+                ->where('provider_request_id', $requestId)
                 ->first();
 
             if (! $transaction instanceof SimulatedFundingTransaction

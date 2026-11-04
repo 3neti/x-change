@@ -16,6 +16,7 @@ use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Data\Funding\FundingIntentTransitionData;
 use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
+use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Exceptions\FundingEvidenceAlreadyClaimed;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
@@ -37,14 +38,23 @@ class SettleVerifiedFundingIntent
         private readonly PlaceSettledOnDemandIssuanceHold $onDemandIssuanceHold,
         private readonly RecordLateOnDemandIssuancePayment $lateOnDemandPayment,
         private readonly ClaimFundingEvidence $claimEvidence,
+        private readonly AssessIssuanceFundingAttribution $attribution,
+        private readonly LockIssuanceFundingAttribution $attributionLock,
         private readonly CheckoutLifecycle $checkouts,
         private readonly RecordSettledPayment $settledPayments,
     ) {}
 
-    public function handle(FundingIntent $intent): FundingSettlement
+    public function handle(FundingIntent $intent, bool $reviewedClosedOrder = false): FundingSettlement
     {
-        return DB::transaction(function () use ($intent): FundingSettlement {
+        return DB::transaction(function () use ($intent, $reviewedClosedOrder): FundingSettlement {
+            if ($intent->purpose === FundingIntentPurpose::OnDemandIssuance) {
+                $this->attributionLock->handle($intent->provider_code, $intent->currency);
+            }
             $locked = FundingIntent::query()->lockForUpdate()->findOrFail($intent->getKey());
+
+            if ($locked->provider_code !== $intent->provider_code || $locked->currency !== $intent->currency || $locked->purpose !== ($intent->purpose ?? FundingIntentPurpose::AccountFunding)) {
+                throw FundingSettlementDenied::because('the funding attribution scope changed');
+            }
             $existing = FundingSettlement::query()
                 ->where('funding_intent_id', $locked->getKey())
                 ->first();
@@ -58,6 +68,16 @@ class SettleVerifiedFundingIntent
             }
 
             $observation = $this->verifiedObservation($locked);
+
+            if ($locked->purpose === FundingIntentPurpose::OnDemandIssuance) {
+                $order = $locked->issuanceFundingOrder()->lockForUpdate()->first();
+                if (! $reviewedClosedOrder && $order !== null && in_array($order->status, [PayCodeIssuanceFundingOrderStatus::Expired, PayCodeIssuanceFundingOrderStatus::Cancelled], true)) {
+                    throw FundingSettlementDenied::because('the closed funding order requires payment review');
+                }
+                if ($order !== null && ! $this->attribution->isUnambiguous($order, $observation)) {
+                    throw FundingSettlementDenied::because('the provider payment cannot be uniquely attributed to the funding order');
+                }
+            }
 
             try {
                 $this->claimEvidence->handle($locked, $observation);

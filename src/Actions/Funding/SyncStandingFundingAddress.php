@@ -34,7 +34,7 @@ final class SyncStandingFundingAddress
         private readonly StandingFundingAddressProviderRegistry $providers,
         private readonly RecordProviderFundingObservation $recordObservation,
         private readonly ClassifyStandingFundingObservation $classify,
-        private readonly CorrectNetbankStandingFundingReceiptNormalization $correctNormalization,
+        private readonly CorrectStandingFundingReceiptNormalization $correctNormalization,
         private readonly IgnorePreActivationFundingReceipts $ignorePreActivationReceipts,
         private readonly SynchronizeStandingFundingRecognitionMode $synchronizeRecognitionMode,
         private readonly StandingFundingRecognitionPolicy $recognitionPolicy,

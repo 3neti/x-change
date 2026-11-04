@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services;
 
 use Bavix\Wallet\Interfaces\Wallet;
-use LBHurtado\PaymentGateway\Contracts\WalletProxy;
+use LBHurtado\EmiCore\Contracts\ProviderWalletResolver;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use RuntimeException;
 
-class SystemWalletProxy implements WalletProxy
+class SystemWalletProxy implements ProviderWalletResolver
 {
     public function __construct(
         private readonly SystemUserResolverContract $systemUsers,

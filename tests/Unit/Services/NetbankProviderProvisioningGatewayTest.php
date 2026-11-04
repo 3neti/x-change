@@ -2,10 +2,43 @@
 
 declare(strict_types=1);
 
+use LBHurtado\EmiCore\Contracts\ProviderProvisioningProfile;
 use LBHurtado\PaymentGateway\Contracts\PaymentGatewayInterface;
+use LBHurtado\PaymentGateway\Support\NetbankSourceAccountReadiness;
 use LBHurtado\XChange\Contracts\WalletProvisioningContract;
 use LBHurtado\XChange\Enums\ProviderProvisioningMode;
 use LBHurtado\XChange\Services\Provisioning\NetbankProviderProvisioningGateway;
+use LBHurtado\XChange\Services\Provisioning\ProviderProvisioningProfileResolver;
+
+it('resolves provisioning profiles through the EMI Core contract', function () {
+    $profile = new class implements ProviderProvisioningProfile
+    {
+        public function providerCode(): string
+        {
+            return 'other-provider';
+        }
+
+        public function supportsMode(string $mode): bool
+        {
+            return $mode === 'ledger_wallet';
+        }
+
+        public function legacyBankAccountReference(?string $bankCode, ?string $maskedAccountNumber): ?string
+        {
+            return null;
+        }
+
+        public function legacyPrincipalReference(string $ownerKey, string $mode): string
+        {
+            return $ownerKey;
+        }
+    };
+    app()->instance('test.provisioning.profile', $profile);
+    app()->tag('test.provisioning.profile', 'emi.provider-provisioning-profiles');
+
+    expect(app(ProviderProvisioningProfileResolver::class)->for('other-provider'))->toBe($profile)
+        ->and(app(ProviderProvisioningProfileResolver::class)->for('missing-provider'))->toBeNull();
+});
 
 it('provisions NetBank bank-account readiness from collected destination details', function () {
     $wallets = Mockery::mock(WalletProvisioningContract::class);
@@ -13,7 +46,6 @@ it('provisions NetBank bank-account readiness from collected destination details
 
     $gateway = new NetbankProviderProvisioningGateway(
         $wallets,
-        Mockery::mock(PaymentGatewayInterface::class),
     );
 
     $result = $gateway->provision(new stdClass, [
@@ -57,13 +89,13 @@ it('provisions NetBank ledger-wallet readiness by opening the owner wallet', fun
 
     $gateway = new NetbankProviderProvisioningGateway(
         $wallets,
-        Mockery::mock(PaymentGatewayInterface::class),
     );
 
     $result = $gateway->provision($owner, [
         'provider' => 'netbank',
         'mode' => ProviderProvisioningMode::LedgerWallet->value,
         'purpose' => 'IssuePayCode',
+        '_local_wallet' => (object) ['id' => 999, 'slug' => 'untrusted'],
     ]);
 
     expect($result)->toMatchArray([
@@ -93,7 +125,7 @@ it('optionally records NetBank source-account readiness metadata', function () {
             'raw' => [],
         ]);
 
-    $gateway = new NetbankProviderProvisioningGateway($wallets, $paymentGateway);
+    $gateway = new NetbankProviderProvisioningGateway($wallets, new NetbankSourceAccountReadiness($paymentGateway));
 
     $result = $gateway->provision(new stdClass, [
         'provider' => 'netbank',

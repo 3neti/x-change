@@ -13,8 +13,10 @@ use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\XChange\Actions\Operations\RecordExternalJobFailure;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
+use LBHurtado\XChange\Exceptions\LatePaymentRequiresReview;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
+use LBHurtado\XChange\Services\Payment\LatePaymentEligibility;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use Throwable;
 
@@ -26,6 +28,7 @@ class VerifyPaymentAttempt
         private readonly TransitionPaymentAttempt $transition,
         private readonly SettleVerifiedPaymentAttempt $settle,
         private readonly RecordExternalJobFailure $failures,
+        private readonly LatePaymentEligibility $lateEligibility,
     ) {}
 
     public function handle(
@@ -60,7 +63,14 @@ class VerifyPaymentAttempt
             max(0, (int) config('x-change.payment.attempts.settlement_grace_seconds', 300)),
         );
 
-        if ($expiryBoundary?->isPast()) {
+        $lateReconciliation = $attempt->status === PaymentAttemptStatus::Expired;
+        if ($lateReconciliation && ($attempt->expires_at === null
+            || $attempt->expires_at->addDays(max(1, (int) config('x-change.payment.attempts.late_reconciliation_days', 7)))->isPast())) {
+            return $attempt->load('events');
+        }
+
+        if (! $lateReconciliation && $expiryBoundary?->isPast()
+            && in_array($attempt->status, [PaymentAttemptStatus::AwaitingPayment, PaymentAttemptStatus::Verifying], true)) {
             return $this->transition->handle(
                 $attempt,
                 PaymentAttemptStatus::Expired,
@@ -73,7 +83,7 @@ class VerifyPaymentAttempt
             );
         }
 
-        if (! in_array($attempt->status, [
+        if (! $lateReconciliation && ! in_array($attempt->status, [
             PaymentAttemptStatus::AwaitingPayment,
             PaymentAttemptStatus::Verifying,
         ], true)) {
@@ -111,7 +121,7 @@ class VerifyPaymentAttempt
         } catch (Throwable $exception) {
             return $this->transition->handle(
                 $attempt,
-                PaymentAttemptStatus::AwaitingPayment,
+                $lateReconciliation ? PaymentAttemptStatus::Expired : PaymentAttemptStatus::AwaitingPayment,
                 'provider_verification_unavailable',
                 $trigger,
                 ['last_checked_at' => now()],
@@ -132,6 +142,12 @@ class VerifyPaymentAttempt
                 'provider_payment_mismatch',
                 $observation,
             );
+        }
+
+        $discoveredAfterExpiry = $attempt->expires_at?->isPast() ?? false;
+        if ($discoveredAfterExpiry && (! $this->onTime($attempt, $observation)
+            || ! $this->lateEligibility->canApply($attempt, $attempt->voucher, $observation))) {
+            return $this->suspense($attempt, $trigger, 'late_payment_requires_review', $observation);
         }
 
         $verified = $this->transition->handle(
@@ -158,6 +174,8 @@ class VerifyPaymentAttempt
     ): PaymentAttempt {
         try {
             return $this->settle->handle($attempt, $trigger);
+        } catch (LatePaymentRequiresReview) {
+            return $this->suspense($attempt, $trigger, 'late_payment_requires_review', ProviderFundingObservation::query()->find($attempt->matched_observation_id));
         } catch (Throwable $exception) {
             $providerTransactionId = trim((string) $attempt->provider_transaction_id);
 
@@ -207,6 +225,15 @@ class VerifyPaymentAttempt
             && data_get($observation->metadata, 'destination_verified') === true;
     }
 
+    private function onTime(PaymentAttempt $attempt, ProviderFundingObservation $observation): bool
+    {
+        return $attempt->instructions_created_at !== null
+            && $attempt->expires_at !== null
+            && $observation->occurred_at !== null
+            && $observation->occurred_at->greaterThanOrEqualTo($attempt->instructions_created_at)
+            && $observation->occurred_at->lessThanOrEqualTo($attempt->expires_at);
+    }
+
     private function awaitPayment(
         PaymentAttempt $attempt,
         PaymentVerificationTrigger $trigger,
@@ -215,7 +242,7 @@ class VerifyPaymentAttempt
     ): PaymentAttempt {
         return $this->transition->handle(
             $attempt,
-            PaymentAttemptStatus::AwaitingPayment,
+            $attempt->status === PaymentAttemptStatus::Expired ? PaymentAttemptStatus::Expired : PaymentAttemptStatus::AwaitingPayment,
             $eventType,
             $trigger,
             ['last_checked_at' => now()],

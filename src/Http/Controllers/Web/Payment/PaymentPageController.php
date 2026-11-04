@@ -24,6 +24,7 @@ use LBHurtado\XChange\Services\Settlement\ParticipantDocumentSession;
 use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class PaymentPageController extends Controller
 {
@@ -58,7 +59,11 @@ class PaymentPageController extends Controller
         $principalDue = $repayment
             ? min($collection->remaining_to_collect_minor, SettlementRepaymentPolicy::paymentMinor($voucher))
             : $collection->remaining_to_collect_minor;
-        $attempt = $this->attempt($request, $voucher, $sessions);
+        try {
+            $attempt = $this->attempt($request, $voucher, $sessions);
+        } catch (NotFoundHttpException) {
+            return redirect()->route('x-change.pay.show', ['code' => $voucher->code, 'recover' => 1]);
+        }
         $attempt ??= $display?->attempt;
         $attemptData = $attempt === null ? null : $presenter->present($attempt);
         $deliveryModes = $attempt === null
@@ -111,6 +116,7 @@ class PaymentPageController extends Controller
         $response = Inertia::render('x-change/claim/Payment', [
             'payment' => [
                 'pay_code' => (string) $voucher->code,
+                'recovery_mode' => $request->boolean('recover'),
                 'currency' => $collection->currency,
                 'target_amount_minor' => $collection->target_amount_minor,
                 'collected_amount_minor' => $collection->collected_total_minor,
@@ -134,6 +140,7 @@ class PaymentPageController extends Controller
                 'provider' => $provider,
                 'provider_available' => $providerEnabled,
                 'can_create_attempt' => (bool) config('x-change.payment.attempts.enabled', true)
+                    && ! $request->boolean('recover')
                     && $providerEnabled
                     && $repaymentReady
                     && $documentsReady
@@ -180,7 +187,11 @@ class PaymentPageController extends Controller
         $attempt = PaymentAttempt::query()
             ->where('reference', $reference)
             ->where('voucher_id', $voucher->getKey())
-            ->firstOrFail();
+            ->first();
+
+        if ($attempt === null) {
+            throw new NotFoundHttpException;
+        }
 
         $browserKey = (string) $request->session()->get('x-change.payment.browser-key', '');
         $sessions->assertOwner($attempt, $browserKey);

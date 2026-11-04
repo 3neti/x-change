@@ -10,6 +10,7 @@
 /resources/js/routes
 /resources/js/wayfinder
 /vendor
+/.ci-packages
 .DS_Store
 .env
 .env.backup

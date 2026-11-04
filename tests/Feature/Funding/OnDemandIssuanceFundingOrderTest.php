@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
+use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
 use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\EmiCore\Exceptions\ProviderFundingNotObserved;
@@ -21,11 +22,13 @@ use LBHurtado\Wallet\Treasury\Models\TreasuryAllocation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
 use LBHurtado\XChange\Actions\Funding\ApproveFundingReconciliation;
+use LBHurtado\XChange\Actions\Funding\AssessIssuanceFundingAttribution;
 use LBHurtado\XChange\Actions\Funding\AssessPaidOnDemandIssuanceRecovery;
 use LBHurtado\XChange\Actions\Funding\CancelPaidCockpitIssuanceToClientFunds;
 use LBHurtado\XChange\Actions\Funding\ClaimFundingEvidence;
 use LBHurtado\XChange\Actions\Funding\ClassifyOnDemandIssuanceFundingMismatch;
 use LBHurtado\XChange\Actions\Funding\ExpireOnDemandIssuanceFundingOrder;
+use LBHurtado\XChange\Actions\Funding\LockIssuanceFundingAttribution;
 use LBHurtado\XChange\Actions\Funding\OpenFundingSuspenseCase;
 use LBHurtado\XChange\Actions\Funding\PrepareOnDemandPayCodeIssuance;
 use LBHurtado\XChange\Actions\Funding\RequestFundingReconciliation;
@@ -51,6 +54,7 @@ use LBHurtado\XChange\Enums\FundingVerificationTrigger;
 use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Exceptions\FundingEvidenceAlreadyClaimed;
+use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingIntentJob;
@@ -58,6 +62,7 @@ use LBHurtado\XChange\Models\FundingEvidenceClaim;
 use LBHurtado\XChange\Models\FundingEvidenceClaimSupersession;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingSettlement;
+use LBHurtado\XChange\Models\FundingSuspenseCase;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrderEvent;
 use LBHurtado\XChange\Services\Cockpit\FundingCockpitReadModelProvider;
@@ -552,6 +557,155 @@ it('enforces active amount ownership with a database uniqueness boundary', funct
     })->toThrow(QueryException::class);
 });
 
+it('reserves distinct transfer amounts across provider connections', function (): void {
+    $user = actingAsTestUser(0);
+    $first = issuanceFundingOrder($user, 'lease-connection-first');
+    $second = issuanceFundingOrder($user, 'lease-connection-second');
+    $second->forceFill(['connection_reference' => 'netbank-secondary'])->saveQuietly();
+
+    $leases = app(ReserveOnDemandIssuanceAmountLease::class);
+    $first = $leases->handle($first);
+    $second = $leases->handle($second);
+
+    expect($first->expected_payment_minor)->toBe(5_000)
+        ->and($second->expected_payment_minor)->toBe(5_001);
+});
+
+it('serializes concurrent cross-connection amount reservations on a row-locking database', function (): void {
+    if (! in_array(DB::connection()->getDriverName(), ['mysql', 'pgsql'], true) || ! function_exists('pcntl_fork')) {
+        test()->markTestSkipped('Requires a dedicated MySQL or PostgreSQL database and pcntl.');
+    }
+
+    expect(DB::connection()->transactionLevel())->toBe(0);
+    $user = actingAsTestUser(0);
+    $orders = [issuanceFundingOrder($user, 'race-connection-first'), issuanceFundingOrder($user, 'race-connection-second')];
+    $orders[1]->forceFill(['connection_reference' => 'netbank-secondary'])->saveQuietly();
+    config()->set('cache.default', 'array');
+    Cache::forgetDriver('array');
+    $children = [];
+    $channels = [];
+    $paths = [];
+
+    foreach ($orders as $order) {
+        $channel = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
+        $path = tempnam(sys_get_temp_dir(), 'xchange-lease-race-');
+        if ($channel === false || $path === false) {
+            throw new RuntimeException('Unable to prepare the amount reservation race.');
+        }
+        $pid = pcntl_fork();
+        if ($pid === -1) {
+            throw new RuntimeException('Unable to start the amount reservation race.');
+        }
+        if ($pid === 0) {
+            fclose($channel[0]);
+            DB::purge();
+            fread($channel[1], 1);
+            try {
+                $reserved = app(ReserveOnDemandIssuanceAmountLease::class)->handle($order);
+                file_put_contents($path, (string) $reserved->expected_payment_minor);
+                exit(0);
+            } catch (Throwable $exception) {
+                file_put_contents($path, get_class($exception).': '.$exception->getMessage());
+                exit(1);
+            }
+        }
+
+        fclose($channel[1]);
+        $children[] = $pid;
+        $channels[] = $channel[0];
+        $paths[] = $path;
+    }
+
+    foreach ($channels as $channel) {
+        fwrite($channel, '1');
+        fclose($channel);
+    }
+    $exitCodes = [];
+    foreach ($children as $pid) {
+        pcntl_waitpid($pid, $status);
+        $exitCodes[] = pcntl_wexitstatus($status);
+    }
+    $results = array_map(static fn (string $path): string => (string) file_get_contents($path), $paths);
+    foreach ($paths as $path) {
+        unlink($path);
+    }
+    DB::purge();
+    sort($results);
+
+    expect($exitCodes)->toBe([0, 0], implode('; ', $results))
+        ->and($results)->toBe(['5000', '5001']);
+});
+
+it('blocks a reservation while the attribution scope is locked on a row-locking database', function (): void {
+    $driver = DB::connection()->getDriverName();
+    if (! in_array($driver, ['mysql', 'pgsql'], true) || ! function_exists('pcntl_fork')) {
+        test()->markTestSkipped('Requires a dedicated MySQL or PostgreSQL database and pcntl.');
+    }
+
+    $user = actingAsTestUser(0);
+    $order = issuanceFundingOrder($user, 'scope-lock-race');
+    $scopeKey = hash('sha256', 'netbank|PHP');
+    DB::transaction(fn () => app(LockIssuanceFundingAttribution::class)->handle('netbank', 'PHP'));
+    $configuration = config('database.connections.testing');
+    $dsn = sprintf('%s:host=%s;port=%d;dbname=%s', $driver, $configuration['host'], $configuration['port'], $configuration['database']);
+    $lock = new PDO($dsn, $configuration['username'], $configuration['password'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $lock->beginTransaction();
+    $statement = $lock->prepare('select scope_key from x_change_issuance_funding_attribution_locks where scope_key = ? for update');
+    $statement->execute([$scopeKey]);
+
+    $channel = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
+    if ($channel === false) {
+        throw new RuntimeException('Unable to prepare the attribution lock test.');
+    }
+    $pid = pcntl_fork();
+    if ($pid === -1) {
+        throw new RuntimeException('Unable to start the attribution lock test.');
+    }
+    if ($pid === 0) {
+        fclose($channel[0]);
+        DB::purge();
+        fwrite($channel[1], 'S');
+        try {
+            app(ReserveOnDemandIssuanceAmountLease::class)->handle($order);
+            fwrite($channel[1], 'D');
+            exit(0);
+        } catch (Throwable $exception) {
+            fwrite($channel[1], 'E'.$exception->getMessage());
+            exit(1);
+        }
+    }
+
+    fclose($channel[1]);
+    $started = fread($channel[0], 1);
+    $read = [$channel[0]];
+    $write = null;
+    $except = null;
+    $completedWhileLocked = stream_select($read, $write, $except, 0, 500_000) > 0;
+    $lock->commit();
+    $result = stream_get_contents($channel[0]);
+    fclose($channel[0]);
+    pcntl_waitpid($pid, $status);
+    DB::purge();
+
+    expect($started)->toBe('S')
+        ->and($completedWhileLocked)->toBeFalse()
+        ->and(pcntl_wexitstatus($status))->toBe(0, $result)
+        ->and($result)->toBe('D');
+});
+
+it('respects active leases created with the previous connection-scoped key', function (): void {
+    $user = actingAsTestUser(0);
+    $legacy = issuanceFundingOrder($user, 'lease-legacy');
+    $legacy->forceFill([
+        'amount_lease_active_key' => hash('sha256', 'legacy-connection-key'),
+        'amount_lease_reserved_at' => now(),
+    ])->saveQuietly();
+    $next = issuanceFundingOrder($user, 'lease-after-legacy');
+    $next->forceFill(['connection_reference' => 'netbank-secondary'])->saveQuietly();
+
+    expect(app(ReserveOnDemandIssuanceAmountLease::class)->handle($next)->expected_payment_minor)->toBe(5_001);
+});
+
 it('keeps a cancelled amount leased until its cooling period ends and then permits reuse', function (): void {
     config()->set('x-change.issuance_funding.on_demand.amount_lease.reuse_delay_seconds', 60);
     $user = actingAsTestUser(0);
@@ -594,7 +748,7 @@ it('expires an unpaid order without releasing its identifying amount early', fun
         ->and($expired->events->last()->event_type)->toBe('funding_order_expired');
 });
 
-it('credits a late verified payment to Client Funds without reviving issuance', function (): void {
+it('does not settle a verified payment when the issuance order has since expired', function (): void {
     Queue::fake();
     enableNetbankTreasuryForTests();
     $user = actingAsTestUser(0);
@@ -610,21 +764,36 @@ it('credits a late verified payment to Client Funds without reviving issuance', 
         'expired_at' => now(),
     ])->saveQuietly();
 
-    app(SettleVerifiedFundingIntent::class)->handle($intent);
+    expect(fn () => app(SettleVerifiedFundingIntent::class)->handle($intent))
+        ->toThrow(FundingSettlementDenied::class, 'closed funding order requires payment review');
 
     $order->refresh();
     expect($order->status)->toBe(PayCodeIssuanceFundingOrderStatus::Expired)
-        ->and($order->late_payment_disposition)->toBe('client_funds')
-        ->and($order->late_payment_detected_at)->not->toBeNull()
-        ->and($order->amount_lease_active_key)->toBeNull()
-        ->and($order->amount_lease_released_at)->not->toBeNull()
+        ->and($order->late_payment_detected_at)->toBeNull()
+        ->and($order->amount_lease_active_key)->not->toBeNull()
         ->and($order->events()->where(
             'event_type',
             'late_payment_credited_to_client_funds',
-        )->exists())->toBeTrue()
-        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(5_000);
+        )->exists())->toBeFalse()
+        ->and(FundingSettlement::query()->where('funding_intent_id', $intent->getKey())->count())->toBe(0);
 
     Queue::assertNotPushed(ResumeOnDemandPayCodeIssuanceJob::class);
+});
+
+it('creates a review case when an order expires between verification and settlement', function (): void {
+    $owner = actingAsTestUser(0);
+    $wallet = $owner->wallet()->where('slug', 'platform')->sole();
+    $observation = onDemandFundingObservation(5_000);
+    $intent = onDemandFundingIntent($wallet->uuid, $observation, 5_000);
+    $order = issuanceFundingOrder($owner, 'closed-after-verification');
+    $order->forceFill(['funding_intent_id' => $intent->getKey(), 'status' => PayCodeIssuanceFundingOrderStatus::Expired])->saveQuietly();
+
+    $job = new VerifyFundingIntentJob((int) $intent->getKey(), 'netbank', FundingVerificationTrigger::Schedule, 'funding-scheduler');
+    $job->handle(app(VerifyFundingIntent::class), app(SettleVerifiedFundingIntent::class));
+
+    expect($intent->refresh()->status)->toBe(FundingIntentStatus::Suspense)
+        ->and(FundingSuspenseCase::query()->where('funding_intent_id', $intent->getKey())->where('status', 'open')->exists())->toBeTrue()
+        ->and(FundingSettlement::query()->count())->toBe(0);
 });
 
 it('classifies an authoritative underpayment without issuing or offering cancellation', function (): void {
@@ -813,15 +982,12 @@ it('restores the signed-in owner active funding order on quick generate reload',
         ->assertJsonPath('props.active_on_demand_funding_order.order.status', 'awaiting_payment');
 });
 
-it('falls back to the owning NetBank account for an on-demand bank transfer', function (): void {
+it('permits provider destination-history fallback for on-demand issuance', function (): void {
     $this->travelTo(new DateTimeImmutable('2026-09-29T14:00:00+00:00'));
     $adapter = new FakeFundingProviderAdapter;
     $adapter->fundingVerificationResolver = static function ($verification): ProviderFundingObservationData {
-        if ($verification->fundingAddress === '915008422914050308952') {
-            throw new ProviderFundingNotObserved('No incoming QR transaction was observed.');
-        }
-
-        expect($verification->fundingAddress)->toBe('113001000019');
+        expect($verification->fundingAddress)->toBe('915008422914050308952')
+            ->and($verification->allowDestinationHistoryFallback)->toBeTrue();
 
         return new ProviderFundingObservationData(
             provider: 'netbank',
@@ -831,13 +997,13 @@ it('falls back to the owning NetBank account for an on-demand bank transfer', fu
             netAmountMinor: 6_650,
             currency: 'PHP',
             providerStatus: 'settled',
-            verificationSource: 'netbank-vca-transaction-history',
+            verificationSource: 'netbank-corporate-account-transaction-history',
             payloadHash: hash('sha256', '433061247'),
             fundingAddress: 'sha256:'.hash('sha256', '113001000019'),
             providerAccountReference: 'sha256:'.hash('sha256', '113001000019'),
             occurredAt: new DateTimeImmutable('2026-09-29T13:56:36+00:00'),
             settledAt: new DateTimeImmutable('2026-09-29T13:56:36+00:00'),
-            metadata: ['destination_verified' => true],
+            metadata: ['destination_verified' => true, 'verification_path' => 'corporate_account'],
         );
     };
     $this->app->instance(FakeFundingProviderAdapter::class, $adapter);
@@ -855,14 +1021,12 @@ it('falls back to the owning NetBank account for an on-demand bank transfer', fu
 
     expect($verified->status)->toBe(FundingIntentStatus::Verified)
         ->and($verified->provider_transaction_id)->toBe('433061247')
-        ->and($adapter->fundingVerifications)->toHaveCount(2)
+        ->and($adapter->fundingVerifications)->toHaveCount(1)
         ->and($adapter->fundingVerifications[0]->fundingAddress)
         ->toBe('915008422914050308952')
-        ->and($adapter->fundingVerifications[1]->fundingAddress)
-        ->toBe('113001000019')
-        ->and($adapter->fundingVerifications[1]->observedAfter?->format(DATE_ATOM))
+        ->and($adapter->fundingVerifications[0]->observedAfter?->format(DATE_ATOM))
         ->toBe('2026-09-29T13:53:00+00:00')
-        ->and($adapter->fundingVerifications[1]->observedBefore?->format(DATE_ATOM))
+        ->and($adapter->fundingVerifications[0]->observedBefore?->format(DATE_ATOM))
         ->toBe('2026-09-29T14:02:00+00:00')
         ->and(ProviderFundingObservation::query()->sole()->verification_source)
         ->toBe('netbank-corporate-account-transaction-history')
@@ -1065,6 +1229,254 @@ it('lets the issuer complete an eligible paid order recovery in one request', fu
         ->and($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
         ->and($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::Funded);
     Queue::assertPushed(ResumeOnDemandPayCodeIssuanceJob::class, 1);
+});
+
+it('holds ambiguous reused-amount provider evidence without claiming or settling it', function (): void {
+    $owner = actingAsTestUser(0);
+    $order = issuanceFundingOrder($owner, 'ambiguous-verification-first');
+    issuanceFundingOrder($owner, 'ambiguous-verification-second');
+    $intent = fundingIntentAwaitingOnDemandBankTransfer();
+    $intent->forceFill(['expected_amount_minor' => 5_000])->saveQuietly();
+    $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();
+
+    $adapter = new FakeFundingProviderAdapter;
+    $adapter->fundingVerificationResolver = static fn (): ProviderFundingObservationData => new ProviderFundingObservationData(
+        provider: 'netbank',
+        providerTransactionId: 'REUSED-AMOUNT-AMBIGUOUS',
+        grossAmountMinor: 5_000,
+        feeAmountMinor: 0,
+        netAmountMinor: 5_000,
+        currency: 'PHP',
+        providerStatus: 'settled',
+        verificationSource: 'reused-amount-test',
+        payloadHash: hash('sha256', 'reused-amount-test'),
+        occurredAt: now()->toDateTimeImmutable(),
+        settledAt: now()->toDateTimeImmutable(),
+        metadata: ['destination_verified' => true],
+    );
+    $this->app->instance(FakeFundingProviderAdapter::class, $adapter);
+    $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
+    $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
+
+    $result = app(VerifyFundingIntent::class)->handle($intent, new FundingIntentVerificationData(
+        trigger: FundingVerificationTrigger::Operator,
+        actorId: 'operator-1',
+    ));
+
+    expect($result->status)->toBe(FundingIntentStatus::Suspense)
+        ->and(FundingEvidenceClaim::query()->count())->toBe(0)
+        ->and(FundingSettlement::query()->count())->toBe(0)
+        ->and(FundingSuspenseCase::query()->where('reason_code', 'on_demand_issuance_ambiguous_amount_reuse')->exists())->toBeTrue();
+});
+
+it('detects a settled payment for an expired issuance intent without claiming or posting it', function (): void {
+    $user = actingAsTestUser(0);
+    $order = issuanceFundingOrder($user, 'late-discovery-review');
+    $intent = fundingIntentAwaitingOnDemandBankTransfer();
+    $intent->forceFill([
+        'status' => FundingIntentStatus::Expired,
+        'expected_amount_minor' => 5_000,
+        'expires_at' => now()->subHour(),
+    ])->saveQuietly();
+    $order->forceFill([
+        'funding_intent_id' => $intent->getKey(),
+        'status' => PayCodeIssuanceFundingOrderStatus::Expired,
+    ])->saveQuietly();
+    $adapter = new FakeFundingProviderAdapter;
+    $adapter->fundingVerificationResolver = static fn (): ProviderFundingObservationData => new ProviderFundingObservationData(
+        provider: 'netbank',
+        providerTransactionId: 'LATE-DISCOVERY-REVIEW-1',
+        grossAmountMinor: 5_000,
+        feeAmountMinor: 0,
+        netAmountMinor: 5_000,
+        currency: 'PHP',
+        providerStatus: 'settled',
+        verificationSource: 'late-discovery-test',
+        payloadHash: hash('sha256', 'late-discovery-payload'),
+        occurredAt: now()->subHours(2)->toDateTimeImmutable(),
+        settledAt: now()->toDateTimeImmutable(),
+        metadata: ['destination_verified' => true],
+    );
+    $this->app->instance(FakeFundingProviderAdapter::class, $adapter);
+    $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
+    $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
+
+    $result = app(VerifyFundingIntent::class)->handle($intent, new FundingIntentVerificationData(
+        trigger: FundingVerificationTrigger::Schedule,
+        actorId: 'funding-scheduler',
+    ));
+
+    expect($result->status)->toBe(FundingIntentStatus::Suspense)
+        ->and(FundingEvidenceClaim::query()->count())->toBe(0)
+        ->and(FundingSettlement::query()->count())->toBe(0)
+        ->and(FundingSuspenseCase::query()->where('funding_intent_id', $intent->getKey())->exists())->toBeTrue()
+        ->and(DB::table('x_change_funding_reconciliation_checks')->where('funding_intent_id', $intent->getKey())->value('last_outcome'))->toBe('review');
+});
+
+it('automatically recovers a uniquely matched timely issuance payment discovered after expiry', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    $owner = actingAsTestUser(0);
+    $wallet = $owner->wallet()->where('slug', 'platform')->sole();
+    $order = issuanceFundingOrder($owner, 'automatic-paid-recovery');
+    $this->travel(1)->minute();
+    $occurredAt = now()->toDateTimeImmutable();
+    $observation = onDemandFundingObservation(5_000);
+    $intent = onDemandFundingIntent($wallet->uuid, $observation, 5_000);
+    $intent->forceFill([
+        'status' => FundingIntentStatus::Expired,
+        'created_by_type' => $owner::class,
+        'created_by_id' => (string) $owner->getKey(),
+        'instructions_created_at' => $order->created_at,
+        'expires_at' => $order->expires_at,
+    ])->saveQuietly();
+    $order->forceFill([
+        'funding_intent_id' => $intent->getKey(),
+        'status' => PayCodeIssuanceFundingOrderStatus::Expired,
+    ])->saveQuietly();
+    $this->travel(31)->minutes();
+
+    $adapter = new FakeFundingProviderAdapter;
+    $adapter->fundingVerificationResolver = static fn (): ProviderFundingObservationData => new ProviderFundingObservationData(
+        provider: 'netbank',
+        providerTransactionId: 'AUTOMATIC-LATE-RECOVERY-1',
+        grossAmountMinor: 5_000,
+        feeAmountMinor: 0,
+        netAmountMinor: 5_000,
+        currency: 'PHP',
+        providerStatus: 'settled',
+        verificationSource: 'late-recovery-test',
+        payloadHash: hash('sha256', 'automatic-late-recovery'),
+        occurredAt: $occurredAt,
+        settledAt: $occurredAt,
+        metadata: ['destination_verified' => true],
+    );
+    $this->app->instance(FakeFundingProviderAdapter::class, $adapter);
+    $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
+    $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
+
+    $result = app(VerifyFundingIntent::class)->handle($intent, new FundingIntentVerificationData(
+        trigger: FundingVerificationTrigger::Schedule,
+        actorId: 'funding-scheduler',
+    ));
+
+    expect($result->status)->toBe(FundingIntentStatus::Settled)
+        ->and($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::Funded)
+        ->and(FundingSettlement::query()->where('funding_intent_id', $intent->getKey())->count())->toBe(1)
+        ->and(FundingEvidenceClaim::query()->where('funding_intent_id', $intent->getKey())->count())->toBe(1)
+        ->and(DB::table('x_change_funding_reconciliation_checks')->where('funding_intent_id', $intent->getKey())->value('last_outcome'))->toBe('recovered');
+    $replayed = app(VerifyFundingIntent::class)->handle($result, new FundingIntentVerificationData(
+        trigger: FundingVerificationTrigger::Schedule,
+        actorId: 'funding-scheduler',
+    ));
+    expect($replayed->status)->toBe(FundingIntentStatus::Settled)
+        ->and(FundingSettlement::query()->where('funding_intent_id', $intent->getKey())->count())->toBe(1)
+        ->and(FundingEvidenceClaim::query()->where('funding_intent_id', $intent->getKey())->count())->toBe(1);
+    Queue::assertPushed(ResumeOnDemandPayCodeIssuanceJob::class, 1);
+});
+
+it('does not automatically recover late-discovered payments with ambiguous or cancelled instructions', function (bool $isCancelled): void {
+    $owner = actingAsTestUser(0);
+    $wallet = $owner->wallet()->where('slug', 'platform')->sole();
+    $order = issuanceFundingOrder($owner, 'automatic-ambiguous-first');
+    if (! $isCancelled) {
+        $other = issuanceFundingOrder($owner, 'automatic-ambiguous-second');
+        $other->forceFill(['connection_reference' => 'netbank-secondary'])->saveQuietly();
+    }
+    $this->travel(1)->minute();
+    $occurredAt = now()->toDateTimeImmutable();
+    $observation = onDemandFundingObservation(5_000);
+    $intent = onDemandFundingIntent($wallet->uuid, $observation, 5_000);
+    $intent->forceFill([
+        'status' => $isCancelled ? FundingIntentStatus::Cancelled : FundingIntentStatus::Expired,
+        'created_by_type' => $owner::class,
+        'created_by_id' => (string) $owner->getKey(),
+        'instructions_created_at' => $order->created_at,
+        'expires_at' => $order->expires_at,
+    ])->saveQuietly();
+    $order->forceFill(['funding_intent_id' => $intent->getKey(), 'status' => PayCodeIssuanceFundingOrderStatus::Expired])->saveQuietly();
+    $this->travel(31)->minutes();
+    $adapter = new FakeFundingProviderAdapter;
+    $adapter->fundingVerificationResolver = static fn (): ProviderFundingObservationData => new ProviderFundingObservationData(
+        provider: 'netbank', providerTransactionId: 'AUTOMATIC-AMBIGUOUS-1', grossAmountMinor: 5_000,
+        feeAmountMinor: 0, netAmountMinor: 5_000, currency: 'PHP', providerStatus: 'settled',
+        verificationSource: 'late-recovery-test', payloadHash: hash('sha256', 'automatic-ambiguous'),
+        occurredAt: $occurredAt, settledAt: $occurredAt, metadata: ['destination_verified' => true],
+    );
+    $this->app->instance(FakeFundingProviderAdapter::class, $adapter);
+    $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
+    $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
+
+    $result = app(VerifyFundingIntent::class)->handle($intent, new FundingIntentVerificationData(
+        trigger: FundingVerificationTrigger::Schedule, actorId: 'funding-scheduler',
+    ));
+
+    expect($result->status)->toBe(FundingIntentStatus::Suspense)
+        ->and(FundingEvidenceClaim::query()->count())->toBe(0)
+        ->and(FundingSettlement::query()->count())->toBe(0)
+        ->and(DB::table('x_change_funding_reconciliation_checks')->where('funding_intent_id', $intent->getKey())->value('last_outcome'))->toBe('review');
+})->with(['overlapping amount' => [false], 'cancelled intent' => [true]]);
+
+it('keeps a closed issuance intent eligible for another check when no payment is observed', function (FundingIntentStatus $closedStatus): void {
+    $intent = fundingIntentAwaitingOnDemandBankTransfer();
+    $intent->forceFill(['status' => $closedStatus, 'expires_at' => now()->subHour()])->saveQuietly();
+    $adapter = new FakeFundingProviderAdapter;
+    $adapter->fundingVerificationResolver = static function (): never {
+        throw new ProviderFundingNotObserved('No payment was observed.');
+    };
+    $this->app->instance(FakeFundingProviderAdapter::class, $adapter);
+    $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
+    $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
+
+    $result = app(VerifyFundingIntent::class)->handle($intent, new FundingIntentVerificationData(
+        trigger: FundingVerificationTrigger::Schedule,
+        actorId: 'funding-scheduler',
+    ));
+
+    expect($result->status)->toBe($closedStatus)
+        ->and(FundingSuspenseCase::query()->count())->toBe(0)
+        ->and(DB::table('x_change_funding_reconciliation_checks')->where('funding_intent_id', $intent->getKey())->value('last_outcome'))->toBe('not_observed');
+})->with([FundingIntentStatus::Expired, FundingIntentStatus::Cancelled]);
+
+it('rechecks reused-amount attribution before settling a previously verified intent', function (): void {
+    $owner = actingAsTestUser(0);
+    $wallet = $owner->wallet()->where('slug', 'platform')->sole();
+    $order = issuanceFundingOrder($owner, 'attribution-settlement-first');
+    $other = issuanceFundingOrder($owner, 'attribution-settlement-second');
+    $other->forceFill(['connection_reference' => 'netbank-secondary'])->saveQuietly();
+    $observation = onDemandFundingObservation(5_000);
+    $observation->forceFill(['occurred_at' => now()])->saveQuietly();
+    $intent = onDemandFundingIntent($wallet->uuid, $observation, 5_000);
+    $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();
+
+    expect(fn () => app(SettleVerifiedFundingIntent::class)->handle($intent))
+        ->toThrow(FundingSettlementDenied::class, 'cannot be uniquely attributed')
+        ->and(FundingSettlement::query()->count())->toBe(0)
+        ->and(FundingEvidenceClaim::query()->count())->toBe(0);
+});
+
+it('requires review when a reused transfer amount has overlapping payment windows', function (): void {
+    $owner = actingAsTestUser(0);
+    $first = issuanceFundingOrder($owner, 'attribution-first');
+    $second = issuanceFundingOrder($owner, 'attribution-second');
+    $second->forceFill(['connection_reference' => 'netbank-secondary'])->saveQuietly();
+    $observation = onDemandFundingObservation(5_000);
+    $observation->forceFill(['occurred_at' => now()])->saveQuietly();
+
+    $assessment = app(AssessIssuanceFundingAttribution::class);
+
+    expect($assessment->isUnambiguous($first, $observation))->toBeFalse();
+
+    $second->forceFill([
+        'created_at' => now()->addHour(),
+        'expires_at' => now()->addHours(2),
+    ])->saveQuietly();
+
+    expect($assessment->isUnambiguous($first, $observation))->toBeTrue();
+
+    $observation->forceFill(['occurred_at' => null])->saveQuietly();
+
+    expect($assessment->isUnambiguous($first, $observation))->toBeFalse();
 });
 
 it('does not recover payment evidence that arrived after the order deadline', function (): void {
@@ -1347,23 +1759,19 @@ it('refuses to supersede evidence while either issuance order remains active', f
 
 it('rejects one provider transaction from funding two issuance orders', function (): void {
     $user = actingAsTestUser(0);
-    $firstOrder = issuanceFundingOrder($user, 'exclusive-provider-evidence-first');
     $secondOrder = issuanceFundingOrder($user, 'exclusive-provider-evidence-second');
 
-    foreach ([$firstOrder, $secondOrder] as $order) {
-        $order->forceFill([
-            'required_amount_minor' => 6_650,
-            'on_demand_amount_minor' => 6_650,
-            'expected_payment_minor' => 6_650,
-        ])->saveQuietly();
-    }
+    $secondOrder->forceFill([
+        'required_amount_minor' => 6_650,
+        'on_demand_amount_minor' => 6_650,
+        'expected_payment_minor' => 6_650,
+    ])->saveQuietly();
 
     $firstIntent = fundingIntentAwaitingOnDemandBankTransfer();
     $secondIntent = fundingIntentAwaitingOnDemandBankTransfer();
-    $firstOrder->forceFill(['funding_intent_id' => $firstIntent->getKey()])->saveQuietly();
     $secondOrder->forceFill(['funding_intent_id' => $secondIntent->getKey()])->saveQuietly();
     $adapter = new FakeFundingProviderAdapter;
-    $adapter->fundingVerificationResolver = static fn (): ProviderFundingObservationData => new ProviderFundingObservationData(
+    $observationData = new ProviderFundingObservationData(
         provider: 'netbank',
         providerTransactionId: 'EXCLUSIVE-TX-1',
         grossAmountMinor: 6_650,
@@ -1379,6 +1787,7 @@ it('rejects one provider transaction from funding two issuance orders', function
         settledAt: now()->toDateTimeImmutable(),
         metadata: ['destination_verified' => true],
     );
+    $adapter->fundingVerificationResolver = static fn (): ProviderFundingObservationData => $observationData;
     $this->app->instance(FakeFundingProviderAdapter::class, $adapter);
     $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
     $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
@@ -1387,11 +1796,11 @@ it('rejects one provider transaction from funding two issuance orders', function
         actorId: 'operator-1',
     );
 
-    $first = app(VerifyFundingIntent::class)->handle($firstIntent, $verification);
+    $observation = app(RecordProviderFundingObservation::class)->handle($observationData);
+    app(ClaimFundingEvidence::class)->handle($firstIntent, $observation);
     $second = app(VerifyFundingIntent::class)->handle($secondIntent, $verification);
 
-    expect($first->status)->toBe(FundingIntentStatus::Verified)
-        ->and($second->status)->toBe(FundingIntentStatus::Suspense)
+    expect($second->status)->toBe(FundingIntentStatus::Suspense)
         ->and($second->events()->where(
             'event_type',
             'on_demand_issuance_duplicate_evidence',
@@ -1427,7 +1836,8 @@ it('does not use corporate account fallback outside on-demand issuance', functio
     expect($pending->status)->toBe(FundingIntentStatus::AwaitingFunds)
         ->and($adapter->fundingVerifications)->toHaveCount(1)
         ->and($adapter->fundingVerifications[0]->fundingAddress)
-        ->toBe('915008422914050308952');
+        ->toBe('915008422914050308952')
+        ->and($adapter->fundingVerifications[0]->allowDestinationHistoryFallback)->toBeFalse();
 });
 
 it('cancels a paid cockpit order and releases its hold to the issuing Account exactly once', function (): void {

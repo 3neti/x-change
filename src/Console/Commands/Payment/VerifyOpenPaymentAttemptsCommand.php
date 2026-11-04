@@ -46,11 +46,23 @@ class VerifyOpenPaymentAttemptsCommand extends Command
 
         PaymentAttempt::query()
             ->where('provider_code', $provider)
-            ->whereIn('status', [
-                PaymentAttemptStatus::AwaitingPayment,
-                PaymentAttemptStatus::Verifying,
-                PaymentAttemptStatus::Verified,
-            ])
+            ->where(function ($query): void {
+                $query->whereIn('status', [
+                    PaymentAttemptStatus::AwaitingPayment,
+                    PaymentAttemptStatus::Verifying,
+                    PaymentAttemptStatus::Verified,
+                ])->orWhere(function ($late): void {
+                    $late->where('status', PaymentAttemptStatus::Expired)
+                        ->whereNotNull('instructions_created_at')
+                        ->where('expires_at', '>=', now()->subDays(max(1, (int) config('x-change.payment.attempts.late_reconciliation_days', 7))))
+                        ->where(function ($checked): void {
+                            $checked->whereNull('last_checked_at')
+                                ->orWhere('last_checked_at', '<=', now()->subMinutes(max(1, (int) config('x-change.payment.attempts.late_reconciliation_interval_minutes', 15))));
+                        });
+                });
+            })
+            ->orderByRaw('case when last_checked_at is null then 0 else 1 end')
+            ->oldest('last_checked_at')
             ->oldest('expires_at')
             ->oldest('id')
             ->limit($limit)

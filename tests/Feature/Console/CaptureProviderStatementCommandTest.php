@@ -8,9 +8,15 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use LBHurtado\EmiCore\Contracts\ProviderStatementReader;
+use LBHurtado\EmiCore\Data\Providers\ProviderStatementRequestData;
+use LBHurtado\EmiCore\Data\Providers\ProviderStatementTransactionData;
+use LBHurtado\PaymentGateway\Support\NetbankProviderStatementReader;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 
 beforeEach(function () {
+    $this->app->singleton(NetbankProviderStatementReader::class);
+    $this->app->tag(NetbankProviderStatementReader::class, 'emi.provider-statement-readers');
     Http::preventStrayRequests();
     Storage::fake('provider-statements');
     config()->set('filesystems.disks.provider-statements', [
@@ -176,6 +182,47 @@ it('rejects local statement storage in durable runtime tiers before calling the 
         ->and(Storage::disk('provider-statements')->allFiles())->toBe([]);
     Http::assertNothingSent();
 });
+
+it('captures a statement through an independent EMI Core reader', function (): void {
+    $connection = config('x-change.treasury.connections.netbank-primary');
+    $connection['provider'] = 'example';
+    config()->set('x-change.treasury.connections.example-primary', $connection);
+    app()->forgetInstance(TreasuryProviderConnectionCatalog::class);
+    $this->app->singleton(ExampleStatementReader::class);
+    $this->app->tag(ExampleStatementReader::class, 'emi.provider-statement-readers');
+
+    $exitCode = Artisan::call('x-change:continuity:capture-provider-statement', [
+        '--connection' => 'example-primary',
+        '--from' => '2026-09-01',
+        '--to' => '2026-09-21',
+        '--max-rows' => '5',
+        '--confirm-sensitive-capture' => true,
+        '--json' => true,
+    ]);
+    $result = json_decode(Artisan::output(), true);
+
+    expect($exitCode)->toBe(Command::SUCCESS, Artisan::output())
+        ->and($result['provider'])->toBe('example')
+        ->and($result['row_count'])->toBe(1)
+        ->and(Storage::disk('provider-statements')->get($result['artifact']['statement_path']))
+        ->toContain('example-1,credit,50.00,PHP,settled,2026-09-20T10:00:00+00:00');
+    Http::assertNothingSent();
+});
+
+final class ExampleStatementReader implements ProviderStatementReader
+{
+    public function providerCode(): string
+    {
+        return 'example';
+    }
+
+    public function readStatement(ProviderStatementRequestData $request): iterable
+    {
+        yield new ProviderStatementTransactionData(
+            'example-1', 'credit', '5000', 'PHP', 'settled', new DateTimeImmutable('2026-09-20T10:00:00Z'),
+        );
+    }
+}
 
 /** @return array<string, mixed> */
 function providerCaptureTransaction(string $transactionId, string $type, string $amountMinor): array

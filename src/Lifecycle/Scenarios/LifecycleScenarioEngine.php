@@ -8,9 +8,6 @@ use Illuminate\Console\Command;
 use Illuminate\Contracts\Container\Container;
 use InvalidArgumentException;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
-use LBHurtado\EmiPaynamicsConstellation\Adapters\ConstellationPayoutProvider;
-use LBHurtado\EmiPaynamicsConstellation\Contracts\ConstellationOtpResolver;
-use LBHurtado\EmiPaynamicsConstellation\Support\InteractiveOtpResolver;
 use LBHurtado\XChange\Contracts\MoneyMovementAccountingDecisionContract;
 use LBHurtado\XChange\Contracts\MoneyMovementLifecycleTriggerMatrixContract;
 use LBHurtado\XChange\Contracts\MoneyMovementTargetModelContract;
@@ -24,6 +21,7 @@ use LBHurtado\XChange\Lifecycle\Runners\ScenarioRunnerContract;
 use LBHurtado\XChange\Lifecycle\Runners\ScenarioRunnerResolver;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleUserSummary;
 use LBHurtado\XChange\Lifecycle\Runners\Support\WalletTransactionSnapshot;
+use LBHurtado\XChange\Support\Claim\UseDeferredPaynamicsOtpResolver;
 use RuntimeException;
 
 final class LifecycleScenarioEngine
@@ -510,22 +508,7 @@ final class LifecycleScenarioEngine
 
     private function requiresInteractiveOtp(): bool
     {
-        // Only relevant when the active payout provider is Constellation.
-        $activeProvider = $this->container->make(PayoutProvider::class);
-
-        if (! $activeProvider instanceof ConstellationPayoutProvider) {
-            return false;
-        }
-
-        if (! interface_exists(ConstellationOtpResolver::class)) {
-            return false;
-        }
-
-        if (! $this->container->bound(ConstellationOtpResolver::class)) {
-            return false;
-        }
-
-        return $this->container->make(ConstellationOtpResolver::class) instanceof InteractiveOtpResolver;
+        return $this->container->make(UseDeferredPaynamicsOtpResolver::class)->requiresInteractiveApproval();
     }
 
     private function liveProviderRefusal(

@@ -6,19 +6,28 @@ namespace LBHurtado\XChange\Tests\Fakes;
 
 use Closure;
 use LBHurtado\EmiCore\Contracts\FundingProviderAdapter;
+use LBHurtado\EmiCore\Contracts\IncomingPaymentReader;
+use LBHurtado\EmiCore\Contracts\OnDemandFundingInstructionProvider;
+use LBHurtado\EmiCore\Contracts\ProviderFundingDestinationConfigurator;
+use LBHurtado\EmiCore\Contracts\ProviderFundingHistoryRequestFactory;
+use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionRequestData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
 use LBHurtado\EmiCore\Data\Funding\FundingQrCodeData;
 use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
+use LBHurtado\EmiCore\Data\Funding\IncomingPaymentData;
 use LBHurtado\EmiCore\Data\Funding\ProviderEventHintData;
+use LBHurtado\EmiCore\Data\Funding\ProviderFundingDestinationConfigurationData;
+use LBHurtado\EmiCore\Data\Funding\ProviderFundingHistoryRequestData;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\EmiCore\Data\Funding\ProviderWebhookReceiptData;
 use LBHurtado\EmiCore\Data\Funding\ProviderWebhookRequestData;
 use LBHurtado\EmiCore\Data\Funding\WebhookAuthenticationData;
+use LBHurtado\PaymentGateway\Funding\NetbankFundingProviderAdapter;
 use LBHurtado\XChange\Data\Payment\ObservedPaymentTransactionData;
 use Throwable;
 
-class FakeFundingProviderAdapter implements FundingProviderAdapter
+class FakeFundingProviderAdapter implements FundingProviderAdapter, IncomingPaymentReader, OnDemandFundingInstructionProvider, ProviderFundingDestinationConfigurator, ProviderFundingHistoryRequestFactory
 {
     public int $instructionCalls = 0;
 
@@ -55,6 +64,58 @@ class FakeFundingProviderAdapter implements FundingProviderAdapter
     public function providerCode(): string
     {
         return $this->provider;
+    }
+
+    public function createOnDemandFundingInstructions(FundingInstructionRequestData $request, bool $fixedQrEnabled): FundingInstructionsData
+    {
+        if ($this->provider !== 'netbank') {
+            return $this->createFundingInstructions($request);
+        }
+
+        if (! $fixedQrEnabled) {
+            return app(NetbankFundingProviderAdapter::class)->createOnDemandFundingInstructions($request, false);
+        }
+
+        $mode = strtolower(trim((string) config('x-change.issuance_funding.on_demand.fixed_qr_ph.netbank_mode', 'direct_qr')));
+        if (! in_array($mode, ['direct_qr', 'registered_vca'], true)) {
+            throw new \InvalidArgumentException("Unsupported NetBank on-demand QR mode [{$mode}].");
+        }
+
+        return $this->createFundingInstructions($request);
+    }
+
+    public function configureFundingDestination(array $input): ProviderFundingDestinationConfigurationData
+    {
+        $number = (string) ($input['account_number'] ?? '');
+        $name = (string) ($input['account_name'] ?? '');
+        $alias = (string) ($input['vca_alias'] ?? '');
+
+        return new ProviderFundingDestinationConfigurationData(
+            mode: 'bank_account_link', verificationStatus: 'routing_configured', identityLevel: 'corporate_account_vca',
+            capabilities: ['funding', 'vca'], metadata: ['registration_token_lifecycle' => 'ephemeral_per_vca'],
+            routingProfile: ['bank_account_number' => $number, 'bank_account_name' => $name, 'vca_alias' => $alias],
+            fingerprint: hash('sha256', "{$this->provider}|{$number}|{$alias}"),
+            displayReference: '•••• '.substr($number, -4)." · VCA {$alias}",
+        );
+    }
+
+    public function createFundingHistoryRequest(ProviderFundingHistoryRequestData $request): ?FundingVerificationData
+    {
+        $account = trim((string) config('payment-gateway.netbank.funding.corporate_account_number'));
+        $address = preg_replace('/\D+/', '', $account) ?? '';
+        if (strlen($address) < 12) {
+            return null;
+        }
+
+        return new FundingVerificationData(
+            provider: $request->provider, fundingIntentReference: $request->reference,
+            expectedAmountMinor: $request->expectedAmountMinor, currency: $request->currency,
+            fundingAddress: $address,
+            destination: new FundingDestinationData(provider: $request->provider, mode: 'shared', destinationType: 'bank_account',
+                accountReference: 'treasury-connection:'.$request->connectionReference, displayReference: 'configured',
+                fingerprint: hash('sha256', $account), verificationStatus: 'configured', bankAccountNumber: $account),
+            observedAfter: $request->observedAfter, observedBefore: $request->observedBefore,
+        );
     }
 
     public function createFundingInstructions(FundingInstructionRequestData $request): FundingInstructionsData
@@ -128,12 +189,25 @@ class FakeFundingProviderAdapter implements FundingProviderAdapter
         );
     }
 
-    /** @return list<ObservedPaymentTransactionData> */
+    /** @return list<IncomingPaymentData> */
     public function incomingPayments(FundingVerificationData $verification): array
     {
         $this->lastVerification = $verification;
         $this->incomingPaymentCalls++;
 
-        return $this->incomingPayments;
+        return array_map(static fn (ObservedPaymentTransactionData $payment): IncomingPaymentData => new IncomingPaymentData(
+            transactionId: $payment->providerTransactionId,
+            amountMinor: $payment->amountMinor,
+            currency: $payment->currency,
+            status: $payment->providerStatus,
+            occurredAt: $payment->occurredAt === null ? null : \DateTimeImmutable::createFromInterface($payment->occurredAt),
+            settledAt: $payment->settledAt === null ? null : \DateTimeImmutable::createFromInterface($payment->settledAt),
+            referenceId: null,
+            settlementRail: $payment->settlementRail,
+            payerName: $payment->payerName,
+            payerAccountNumber: $payment->payerAccountNumber,
+            payerInstitutionCode: $payment->payerInstitutionCode,
+            payerMobile: $payment->payerMobile,
+        ), $this->incomingPayments);
     }
 }

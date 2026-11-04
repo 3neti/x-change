@@ -33,6 +33,7 @@ use LBHurtado\XChange\Services\Checkout\PublicCheckoutDraftAccess;
 use LBHurtado\XChange\Services\Checkout\ReverifyCheckoutQrPayer;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
+use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XFeedback\Models\FeedbackDeliveryRecord;
 
 beforeEach(function (): void {
@@ -300,7 +301,8 @@ it('recovers a missing QR payer Contact only from the same settled provider tran
             payerMobile: null,
         ),
     ]);
-    app()->instance(NetbankFundingProviderAdapter::class, $provider);
+    $provider->shouldReceive('providerCode')->andReturn('netbank');
+    app()->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$provider]));
 
     $recheck = app(ReverifyCheckoutQrPayer::class);
 

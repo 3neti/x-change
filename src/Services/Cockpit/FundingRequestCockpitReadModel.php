@@ -8,8 +8,11 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Number;
+use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
+use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Enums\FundingTransferWindow;
+use LBHurtado\XChange\Exceptions\FundingDestinationUnavailable;
 use LBHurtado\XChange\Models\FundingRequest;
 use LBHurtado\XChange\Models\FundingRequestNotice;
 
@@ -226,13 +229,7 @@ final readonly class FundingRequestCockpitReadModel
                 'provider_transfer_credited',
             ])
             ->last();
-        $accountNumber = preg_replace(
-            '/\D/',
-            '',
-            (string) config(
-                'payment-gateway.netbank.funding.corporate_account_number',
-            ),
-        );
+        $accountNumber = preg_replace('/\D/', '', (string) $this->bankTransferDestination()?->bankAccountNumber);
         $status = match (true) {
             $request->status === FundingRequestStatus::Completed => 'credited',
             $request->status === FundingRequestStatus::AwaitingApproval
@@ -259,7 +256,7 @@ final readonly class FundingRequestCockpitReadModel
             )),
             'target_label' => $accountNumber === ''
                 ? 'Configured receiving account'
-                : 'NetBank ••••'.mb_substr($accountNumber, -4),
+                : $this->bankTransferProviderLabel().' ••••'.mb_substr($accountNumber, -4),
             'reference_hint' => $reference === ''
                 ? null
                 : '••••'.mb_substr($reference, -4),
@@ -339,15 +336,9 @@ final readonly class FundingRequestCockpitReadModel
                 'x-change.funding.requests.bank_transfer.provider',
                 'netbank',
             )),
-            'institution' => 'NetBank',
-            'account_name' => (string) config(
-                'payment-gateway.netbank.funding.corporate_account_name',
-                '',
-            ),
-            'account_number' => (string) config(
-                'payment-gateway.netbank.funding.corporate_account_number',
-                '',
-            ),
+            'institution' => $this->bankTransferProviderLabel(),
+            'account_name' => (string) $this->bankTransferDestination()?->bankAccountName,
+            'account_number' => (string) $this->bankTransferDestination()?->bankAccountNumber,
             'currency' => 'PHP',
             'minimum_requested_amount_minor' => $minimumRequestedAmountMinor,
             'minimum_requested_amount' => $this->money(
@@ -377,6 +368,28 @@ final readonly class FundingRequestCockpitReadModel
                 ->all(),
             'sender_reference_authority' => false,
         ];
+    }
+
+    private function bankTransferDestination(): ?FundingDestinationData
+    {
+        $provider = mb_strtolower((string) config('x-change.funding.requests.bank_transfer.provider', 'netbank'));
+
+        try {
+            return app(FundingDestinationResolverContract::class)->shared($provider, 'funding-request:shared');
+        } catch (FundingDestinationUnavailable) {
+            return null;
+        }
+    }
+
+    private function bankTransferProviderLabel(): string
+    {
+        $provider = mb_strtolower((string) config('x-change.funding.requests.bank_transfer.provider', 'netbank'));
+
+        return match ($provider) {
+            'netbank' => 'NetBank',
+            'paynamics', 'paynamics_constellation' => 'Paynamics',
+            default => ucfirst(str_replace('_', ' ', $provider)),
+        };
     }
 
     private function storedInstant(

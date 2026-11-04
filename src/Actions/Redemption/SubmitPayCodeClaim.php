@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Actions\Redemption;
 
 use BadMethodCallException;
+use LBHurtado\EmiCore\Contracts\PendingPayoutApproval;
+use LBHurtado\EmiCore\Contracts\ProviderClaimantBankProvisioningPolicy;
+use LBHurtado\EmiCore\Contracts\ProviderPayoutApprovalReplayPolicy;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
-use LBHurtado\EmiPaynamicsConstellation\Exceptions\PendingConstellationOtpException;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Settlement\ProjectCompletionClaimEvidence;
 use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
@@ -31,6 +33,7 @@ use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
 use LBHurtado\XChange\Services\Claim\ClaimExecutionPreflight;
 use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
+use LBHurtado\XChange\Services\Provisioning\ProviderProvisioningProfileResolver;
 use LBHurtado\XChange\Services\ResumeProviderProvisioningFromOnboarding;
 use LBHurtado\XChange\Services\Slices\VoucherSliceExecutionCoordinator;
 use LBHurtado\XChange\Services\WithdrawalDisbursementExecutor;
@@ -117,7 +120,7 @@ class SubmitPayCodeClaim
             }
 
             $result = $executor->handle($voucher, $payload);
-        } catch (PendingConstellationOtpException $e) {
+        } catch (PendingPayoutApproval $e) {
             return ClaimApprovalInitiationResultData::from(
                 $this->pendingPaynamicsOtpResult()
                     ->fromException($voucher, $e)
@@ -528,14 +531,20 @@ class SubmitPayCodeClaim
 
     protected function requiresClaimantProvisioning(Voucher $voucher, string $provider): bool
     {
-        if ($provider !== 'netbank') {
+        if (! (bool) (
+            data_get($voucher->metadata, 'instructions.redemption_form.collect_bank_account')
+            ?? data_get($voucher->instructions?->toArray(), 'redemption_form.collect_bank_account', false)
+        )) {
             return false;
         }
 
-        return (bool) (
-            data_get($voucher->metadata, 'instructions.redemption_form.collect_bank_account')
-            ?? data_get($voucher->instructions?->toArray(), 'redemption_form.collect_bank_account', false)
-        );
+        $profile = app(ProviderProvisioningProfileResolver::class)->for($provider);
+        if ($profile instanceof ProviderClaimantBankProvisioningPolicy) {
+            return $profile->requiresClaimantBankProvisioning();
+        }
+
+        return preg_match('/\A[a-z0-9_]+\z/', $provider) === 1
+            && (bool) config("x-change.provider_runtime.providers.{$provider}.claimant_bank_provisioning_required", false);
     }
 
     /**
@@ -636,53 +645,28 @@ class SubmitPayCodeClaim
      */
     protected function shouldReplayApprovedPaynamicsPayout(Voucher $voucher, array $payload, Throwable $e): bool
     {
-        if (
-            ! $this->isApprovalReplay($payload)
-            || data_get($payload, 'approval.provider') !== 'paynamics'
-            || data_get($payload, 'otp.verified') !== true
-        ) {
+        if (! $this->isApprovalReplay($payload)) {
             return false;
         }
+        $policy = $this->payoutApprovalPolicy($payload);
 
-        $message = mb_strtolower($e->getMessage());
-        $class = mb_strtolower($e::class);
+        return $policy !== null
+            && $policy->shouldResume($payload, fn (): array => $this->voucherMetadata($voucher), $e);
+    }
 
-        if (
-            str_contains($message, 'already been redeemed')
-            || str_contains($class, 'voucherredeemed')
-        ) {
-            return true;
+    /** @param array<string, mixed> $payload */
+    protected function payoutApprovalPolicy(array $payload): ?ProviderPayoutApprovalReplayPolicy
+    {
+        $provider = data_get($payload, 'approval.provider');
+        if (! is_string($provider) || $provider === '') {
+            return null;
         }
+        $policies = collect(app()->tagged('emi.payout-approval-replay-policies'))
+            ->filter(fn (mixed $candidate): bool => $candidate instanceof ProviderPayoutApprovalReplayPolicy
+                && $candidate->supportsProvider($provider))
+            ->uniqueStrict();
 
-        if (! str_contains($message, 'failed to redeem voucher')) {
-            return false;
-        }
-
-        $metadata = $this->voucherMetadata($voucher);
-        $reference = data_get($payload, 'approval.reference_id') ?? data_get($payload, 'reference_id');
-        $metadataReference = data_get($metadata, 'disbursement.transaction_id')
-            ?? data_get($metadata, 'disbursement.reference_id')
-            ?? data_get($metadata, 'disbursement.provider_reference')
-            ?? data_get($metadata, 'disbursement.provider_tx')
-            ?? data_get($metadata, 'disbursement.request_id');
-
-        if (
-            is_string($reference)
-            && trim($reference) !== ''
-            && is_string($metadataReference)
-            && trim($metadataReference) !== ''
-            && trim($reference) !== trim($metadataReference)
-        ) {
-            return false;
-        }
-
-        $haystack = mb_strtolower(json_encode(
-            data_get($metadata, 'disbursement', []),
-            JSON_THROW_ON_ERROR,
-        ));
-
-        return str_contains($haystack, 'otp')
-            && str_contains($haystack, 'pending');
+        return $policies->count() === 1 ? $policies->first() : null;
     }
 
     /**
@@ -787,7 +771,7 @@ class SubmitPayCodeClaim
             'requirements' => ['otp'],
             'actions' => ['otp'],
             'meta' => [
-                'provider' => 'paynamics',
+                'provider' => data_get($pendingOtp, 'provider', 'paynamics'),
                 'authorization_type' => 'otp',
                 'reference_id' => $referenceId,
                 'amount' => data_get($pendingOtp, 'amount'),
@@ -796,7 +780,7 @@ class SubmitPayCodeClaim
                 'reason' => data_get($pendingOtp, 'reason'),
                 'target' => data_get($pendingOtp, 'target'),
                 'otp_required' => true,
-                'message' => 'Paynamics payout OTP is pending.',
+                'message' => data_get($pendingOtp, 'message', 'Paynamics payout OTP is pending.'),
             ],
             'messages' => [
                 'Payout OTP approval required.',
@@ -886,11 +870,11 @@ class SubmitPayCodeClaim
             'requirements' => ['otp'],
             'actions' => ['otp'],
             'meta' => [
-                'provider' => 'paynamics',
+                'provider' => data_get($payload, 'approval.provider'),
                 'authorization_type' => 'otp',
                 'reference_id' => $referenceId,
                 'otp_required' => true,
-                'message' => 'Paynamics payout OTP is pending.',
+                'message' => $this->payoutApprovalPolicy($payload)?->pendingMessage() ?? 'Payout OTP is pending.',
             ],
             'messages' => [
                 'Payout OTP approval required.',
@@ -904,7 +888,7 @@ class SubmitPayCodeClaim
     protected function isApprovalPipelinePaynamicsPayload(array $payload): bool
     {
         return data_get($payload, 'approval.pipeline') === true
-            && data_get($payload, 'approval.provider') === 'paynamics';
+            && $this->payoutApprovalPolicy($payload) !== null;
     }
 
     /**
@@ -919,33 +903,12 @@ class SubmitPayCodeClaim
             return false;
         }
 
-        $haystack = mb_strtolower(json_encode([
+        return $this->payoutApprovalPolicy($payload)?->isDeferredApprovalPending([
+            'claim_type' => $result->claim_type,
             'status' => $result->status,
             'messages' => $result->messages,
             'disbursement' => $result->disbursement,
-            'voucher_disbursement' => data_get($this->voucherMetadata($voucher), 'disbursement'),
-        ], JSON_THROW_ON_ERROR));
-
-        if (
-            str_contains($haystack, 'otp')
-            && str_contains($haystack, 'pending')
-        ) {
-            return true;
-        }
-
-        /*
-         * In deferred Paynamics approval-pipeline mode, the voucher pipeline may
-         * swallow the provider OTP exception and return a successful redemption
-         * result with no usable disbursement reference yet.
-         */
-        return $result->claim_type === 'redeem'
-            && $result->status === 'redeemed'
-            && (
-                $result->disbursement === null
-                || $result->disbursement === []
-                || data_get($result, 'disbursement.status') === null
-                || data_get($result, 'disbursement.needs_review') === true
-            );
+        ], fn (): array => $this->voucherMetadata($voucher)) ?? false;
     }
 
     /**

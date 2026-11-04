@@ -15,6 +15,7 @@ use LBHurtado\XChange\Actions\Operations\RecordExternalJobFailure;
 use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
+use LBHurtado\XChange\Queue\Concerns\ProviderVerificationRetryPolicy;
 use LBHurtado\XChange\Services\Funding\StandingFundingSyncRuntime;
 use Throwable;
 
@@ -23,6 +24,7 @@ final class SyncStandingFundingAddressJob implements ShouldQueue
     use Dispatchable;
     use HasSafeQueueTags;
     use InteractsWithQueue;
+    use ProviderVerificationRetryPolicy;
     use Queueable;
     use SerializesModels;
 
@@ -55,7 +57,7 @@ final class SyncStandingFundingAddressJob implements ShouldQueue
     public function middleware(): array
     {
         return [
-            new RateLimited('x-change-funding-verification'),
+            new RateLimited('x-change-provider-verification'),
         ];
     }
 

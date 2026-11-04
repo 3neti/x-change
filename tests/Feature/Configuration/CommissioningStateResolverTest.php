@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Schema;
+use LBHurtado\EmiPaynamicsConstellation\ConstellationServiceProvider;
 use LBHurtado\PaymentGateway\PaymentGatewayServiceProvider;
 use LBHurtado\XChange\Enums\CommissioningState;
 use LBHurtado\XChange\Models\XChangeInstallationManifest;
@@ -117,6 +118,43 @@ it('tracks active settlement accounts without tracking provider credentials', fu
 
     config()->set('disbursement.source.account_number', 'different-settlement-account');
     expect($fingerprint->current())->not->toBe($original);
+});
+
+it('preserves the existing NetBank fingerprint inputs and their order', function (): void {
+    $this->app->register(PaymentGatewayServiceProvider::class);
+    $this->app->forgetInstance(DeploymentConnectionCatalog::class);
+    config()->set('disbursement.source.account_number', 'source');
+    config()->set('omnipay.gateways.netbank.options.senderCustomerId', 'customer');
+    config()->set('disbursement.client.alias', 'alias');
+    config()->set('payment-gateway.netbank.funding.corporate_account_number', 'corporate');
+    config()->set('payment-gateway.netbank.funding.vca_alias', 'funding-alias');
+
+    expect(app(DeploymentConnectionCatalog::class)->settlementAccountFingerprintInputs('netbank'))->toBe([
+        'source_account_number' => 'source',
+        'sender_customer_id' => 'customer',
+        'vca_alias' => 'alias',
+        'funding_corporate_account_number' => 'corporate',
+        'funding_vca_alias' => 'funding-alias',
+    ]);
+});
+
+it('fails closed when an active provider has no fingerprint capability', function (): void {
+    expect(fn () => (new DeploymentConnectionCatalog([]))->settlementAccountFingerprintInputs('missing'))
+        ->toThrow(RuntimeException::class, 'unique commissioning fingerprint capability');
+});
+
+it('preserves the existing Paynamics fingerprint inputs and their order', function (): void {
+    $this->app->register(ConstellationServiceProvider::class);
+    $this->app->forgetInstance(DeploymentConnectionCatalog::class);
+    config()->set('constellation.settlement_wallet_id', 'settlement');
+    config()->set('constellation.revenue_wallet_id', 'revenue');
+    config()->set('constellation.funding.wallet_id', 'funding');
+
+    expect(app(DeploymentConnectionCatalog::class)->settlementAccountFingerprintInputs('paynamics_constellation'))->toBe([
+        'settlement_wallet_id' => 'settlement',
+        'revenue_wallet_id' => 'revenue',
+        'funding_wallet_id' => 'funding',
+    ]);
 });
 
 it('fails closed for a manifest recorded by the interrupted commissioning contract', function (): void {

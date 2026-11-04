@@ -8,7 +8,9 @@ use DateTimeImmutable;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
-use LBHurtado\PaymentGateway\Funding\NetbankFundingApiClient;
+use LBHurtado\EmiCore\Contracts\ProviderStatementReader;
+use LBHurtado\EmiCore\Data\Providers\ProviderStatementRequestData;
+use LBHurtado\EmiCore\Data\Providers\ProviderStatementTransactionData;
 use LBHurtado\XChange\Data\Treasury\TreasuryProviderConnectionData;
 use LBHurtado\XChange\Enums\DeploymentRuntimeTier;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
@@ -28,7 +30,7 @@ final readonly class CaptureProviderStatementSnapshot
 
     public function __construct(
         private TreasuryProviderConnectionCatalog $connections,
-        private NetbankFundingApiClient $netbank,
+
     ) {}
 
     /** @return array<string, mixed> */
@@ -47,12 +49,6 @@ final readonly class CaptureProviderStatementSnapshot
         $startDate = $this->date($from, 'from');
         $endDate = $this->date($to, 'to');
         $this->assertBounds($startDate, $endDate, $maximumRows);
-        $accountNumber = trim((string) config('payment-gateway.netbank.funding.corporate_account_number'));
-
-        if ($accountNumber === '') {
-            throw new InvalidArgumentException('The configured NetBank corporate account is unavailable.');
-        }
-
         [$diskName, $directory, $disk] = $this->privateDisk();
         $stream = tmpfile();
 
@@ -64,7 +60,15 @@ final readonly class CaptureProviderStatementSnapshot
             fputcsv($stream, self::CSV_HEADER);
             $rows = 0;
 
-            foreach ($this->netbank->accountTransactions($accountNumber, $startDate, $endDate, $maximumRows) as $transaction) {
+            foreach ($this->reader($connection->provider)->readStatement(new ProviderStatementRequestData(
+                provider: $connection->provider,
+                connectionReference: $connection->reference,
+                settlementResourceReference: $connection->settlementResourceReference,
+                currency: $connection->currency,
+                from: $startDate,
+                until: $endDate,
+                maximumRows: $maximumRows,
+            )) as $transaction) {
                 fputcsv($stream, $this->normalize($transaction, $connection));
                 $rows++;
 
@@ -155,10 +159,6 @@ final readonly class CaptureProviderStatementSnapshot
 
         $connection = $this->connections->active([$reference])[0];
 
-        if ($connection->provider !== 'netbank') {
-            throw new InvalidArgumentException('Provider statement capture currently supports NetBank connections only.');
-        }
-
         if (preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{0,190}$/', $connection->reference) !== 1) {
             throw new InvalidArgumentException('The Treasury connection reference is not safe for private evidence storage.');
         }
@@ -228,38 +228,36 @@ final readonly class CaptureProviderStatementSnapshot
         return [$diskName, $directory, Storage::disk($diskName)];
     }
 
-    /** @param array<string, mixed> $transaction
-     * @return list<string>
-     */
-    private function normalize(array $transaction, TreasuryProviderConnectionData $connection): array
+    private function reader(string $provider): ProviderStatementReader
     {
-        $transactionId = trim((string) ($transaction['transaction_id'] ?? ''));
-        $direction = mb_strtolower(trim((string) ($transaction['type'] ?? '')));
-        $currency = mb_strtoupper(trim((string) data_get($transaction, 'amount.cur', '')));
-        $amountMinor = trim((string) data_get($transaction, 'amount.num', ''));
-        $status = mb_strtolower(trim((string) ($transaction['status'] ?? '')));
-        $occurredAt = trim((string) ($transaction['date'] ?? ''));
-
-        if ($transactionId === '' || mb_strlen($transactionId) > 191 || preg_match('/[\x00-\x1F\x7F]/u', $transactionId) === 1) {
-            throw new InvalidArgumentException('The provider returned an invalid transaction identifier.');
+        $readers = [];
+        foreach (app()->tagged('emi.provider-statement-readers') as $reader) {
+            if ($reader instanceof ProviderStatementReader && strtolower(trim($reader->providerCode())) === strtolower(trim($provider))) {
+                $readers[] = $reader;
+            }
         }
 
-        if (! in_array($direction, ['credit', 'debit'], true)) {
-            throw new InvalidArgumentException('The provider returned an invalid transaction direction.');
+        if (count($readers) !== 1) {
+            throw new InvalidArgumentException('Exactly one provider statement reader must be configured for this connection.');
         }
 
-        if ($currency !== $connection->currency || preg_match('/^\d{1,24}$/', $amountMinor) !== 1) {
-            throw new InvalidArgumentException('The provider returned invalid transaction amount data.');
-        }
+        return $readers[0];
+    }
 
-        if ($status === '' || mb_strlen($status) > 64 || preg_match('/[\x00-\x1F\x7F]/u', $status) === 1) {
-            throw new InvalidArgumentException('The provider returned an invalid transaction status.');
-        }
+    /** @return list<string> */
+    private function normalize(ProviderStatementTransactionData $transaction, TreasuryProviderConnectionData $connection): array
+    {
+        $transactionId = trim($transaction->transactionId);
+        $direction = mb_strtolower(trim($transaction->direction));
+        $currency = mb_strtoupper(trim($transaction->currency));
+        $amountMinor = trim($transaction->amountMinor);
+        $status = mb_strtolower(trim($transaction->status));
 
-        try {
-            $date = new DateTimeImmutable($occurredAt);
-        } catch (Throwable) {
-            throw new InvalidArgumentException('The provider returned an invalid transaction timestamp.');
+        if ($transactionId === '' || mb_strlen($transactionId) > 191 || preg_match('/[\x00-\x1F\x7F]/u', $transactionId) === 1
+            || ! in_array($direction, ['credit', 'debit'], true)
+            || $currency !== $connection->currency || preg_match('/^\d{1,24}$/', $amountMinor) !== 1
+            || $status === '' || mb_strlen($status) > 64 || preg_match('/[\x00-\x1F\x7F]/u', $status) === 1) {
+            throw new InvalidArgumentException('The provider returned invalid transaction data.');
         }
 
         return [
@@ -268,7 +266,7 @@ final readonly class CaptureProviderStatementSnapshot
             $this->decimalAmount($amountMinor, $connection->decimalPlaces),
             $currency,
             $status,
-            $date->format(DATE_ATOM),
+            $transaction->occurredAt->format(DATE_ATOM),
         ];
     }
 

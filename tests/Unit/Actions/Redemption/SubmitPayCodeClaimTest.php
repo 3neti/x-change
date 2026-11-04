@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use LBHurtado\EmiCore\Contracts\ProviderClaimantBankProvisioningPolicy;
+use LBHurtado\EmiCore\Contracts\ProviderProvisioningProfile;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Redemption\RecordVoucherClaim;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
@@ -320,6 +322,56 @@ it('submits settlement claims through the selected settlement executor and norma
     expect($result->settlement)->toMatchArray([
         'settlement_mode' => 'stub',
     ]);
+});
+
+it('uses the provider capability for claimant bank provisioning', function (): void {
+    $profile = new class implements ProviderClaimantBankProvisioningPolicy, ProviderProvisioningProfile
+    {
+        public function providerCode(): string
+        {
+            return 'other_provider';
+        }
+
+        public function supportsMode(string $mode): bool
+        {
+            return true;
+        }
+
+        public function legacyBankAccountReference(?string $bankCode, ?string $maskedAccountNumber): ?string
+        {
+            return null;
+        }
+
+        public function legacyPrincipalReference(string $ownerKey, string $mode): string
+        {
+            return 'test';
+        }
+
+        public function requiresClaimantBankProvisioning(): bool
+        {
+            return true;
+        }
+    };
+    app()->instance('test.claimant-provisioning-profile', $profile);
+    app()->tag('test.claimant-provisioning-profile', 'emi.provider-provisioning-profiles');
+    $voucher = new Voucher;
+    $voucher->metadata = ['instructions' => ['redemption_form' => ['collect_bank_account' => true]]];
+    $action = new SubmitPayCodeClaim(Mockery::mock(ClaimExecutionFactoryContract::class), Mockery::mock(RecordVoucherClaim::class));
+    $method = new ReflectionMethod(SubmitPayCodeClaim::class, 'requiresClaimantProvisioning');
+
+    expect($method->invoke($action, $voucher, 'other_provider'))->toBeTrue();
+    $voucher->metadata = ['instructions' => ['redemption_form' => ['collect_bank_account' => false]]];
+    expect($method->invoke($action, $voucher, 'other_provider'))->toBeFalse();
+});
+
+it('preserves configured claimant provisioning for a provider without the new capability', function (): void {
+    config()->set('x-change.provider_runtime.providers.legacy_provider.claimant_bank_provisioning_required', true);
+    $voucher = new Voucher;
+    $voucher->metadata = ['instructions' => ['redemption_form' => ['collect_bank_account' => true]]];
+    $action = new SubmitPayCodeClaim(Mockery::mock(ClaimExecutionFactoryContract::class), Mockery::mock(RecordVoucherClaim::class));
+    $method = new ReflectionMethod(SubmitPayCodeClaim::class, 'requiresClaimantProvisioning');
+
+    expect($method->invoke($action, $voucher, 'legacy_provider'))->toBeTrue();
 });
 
 it('throws provisioning required when claimant bank-account readiness is missing', function () {

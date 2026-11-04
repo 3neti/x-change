@@ -9,17 +9,16 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
+use LBHurtado\EmiCore\Contracts\DirectQrFundingInstructionIssuer;
+use LBHurtado\EmiCore\Contracts\ProviderFundingConfigurationFailure;
+use LBHurtado\EmiCore\Contracts\ProviderFundingRequestFailure;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionRequestData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
-use LBHurtado\PaymentGateway\Exceptions\NetbankFundingConfigurationException;
-use LBHurtado\PaymentGateway\Exceptions\NetbankFundingRequestFailed;
-use LBHurtado\PaymentGateway\Funding\NetbankFundingProviderAdapter;
 use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\FundingQrMerchantProfileResolver;
-use LBHurtado\XChange\Services\Funding\NetbankDirectQrFundingInstructionIssuer;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use LBHurtado\XChange\Support\Funding\FundingMerchantSnapshot;
 use LogicException;
@@ -31,7 +30,6 @@ class IssuePaymentInstructions
     public function __construct(
         private readonly FundingProviderAdapterRegistry $providers,
         private readonly FundingDestinationResolverContract $destinations,
-        private readonly NetbankDirectQrFundingInstructionIssuer $directNetbankQr,
         private readonly FundingQrMerchantProfileResolver $merchantProfiles,
     ) {}
 
@@ -89,8 +87,8 @@ class IssuePaymentInstructions
              * QR embeds the exact amount, while settlement remains governed by
              * authoritative provider-history verification.
              */
-            $instructions = $provider instanceof NetbankFundingProviderAdapter
-                ? $this->directNetbankQr->create($request)
+            $instructions = $provider instanceof DirectQrFundingInstructionIssuer
+                ? $provider->createDirectQrFundingInstructions($request)
                 : $provider->createFundingInstructions($request);
 
             $this->assertInstructionsMatch($current, $instructions);
@@ -206,8 +204,8 @@ class IssuePaymentInstructions
     private function failureStage(Throwable $exception): string
     {
         return match (true) {
-            $exception instanceof NetbankFundingRequestFailed => $exception->operation,
-            $exception instanceof NetbankFundingConfigurationException => 'configuration',
+            $exception instanceof ProviderFundingRequestFailure => $exception->operation(),
+            $exception instanceof ProviderFundingConfigurationFailure => 'configuration',
             $exception instanceof ValidationException => 'merchant_profile',
             default => 'unknown',
         };

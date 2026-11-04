@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services;
 
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
+use LBHurtado\EmiCore\Contracts\ProviderWalletProjectionSynchronizer;
 use LBHurtado\EmiCore\Models\Wallet as EmiWallet;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\ProviderAccountLinkRepositoryContract;
@@ -25,8 +26,8 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
         protected ProviderAccountLinkRepositoryContract $links,
         protected ProviderProvisioningGatewayContract $provisioning,
         protected WalletAccessContract $wallets,
-        protected ?SyncPaynamicsWalletBalance $paynamicsBalances = null,
-        protected ?CheckNetbankSourceAccountReadiness $netbankSourceAccount = null,
+        protected ?ProviderWalletProjectionSynchronizer $paynamicsBalances = null,
+        protected ?CheckProviderSourceAccountReadiness $netbankSourceAccount = null,
         protected ?AccountBalanceReadModelContract $accountBalances = null,
     ) {}
 
@@ -80,16 +81,13 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
             ));
         }
 
-        if ($provider === 'netbank') {
-            $sourceAccount = $this->netbankSourceAccountReadiness($requiredMinor);
-
-            if (! (bool) ($sourceAccount['ready'] ?? false)) {
-                if ($this->canBypassUnavailableNetbankSourceAccount($sourceAccount)) {
-                    $sourceAccount['bypassed'] = true;
-                    $sourceAccount['bypass_reason'] = 'NetBank source account balance is unavailable and unavailable-balance bypass is enabled.';
-                } else {
-                    throw new InsufficientWalletBalance((string) ($sourceAccount['message'] ?? 'NetBank source account is not ready.'));
-                }
+        $sourceAccount = $this->netbankSourceAccountReadiness($requiredMinor, $provider);
+        if (! (bool) ($sourceAccount['ready'] ?? false)) {
+            if ($this->canBypassUnavailableNetbankSourceAccount($sourceAccount, $provider)) {
+                $sourceAccount['bypassed'] = true;
+                $sourceAccount['bypass_reason'] = 'Provider source account balance is unavailable and unavailable-balance bypass is enabled.';
+            } else {
+                throw new InsufficientWalletBalance((string) ($sourceAccount['message'] ?? 'Provider source account is not ready.'));
             }
         }
 
@@ -102,9 +100,7 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
             meta: [
                 'provider' => $provider,
                 'topology' => $topology,
-                'source_account' => $provider === 'netbank'
-                    ? ($sourceAccount ?? null)
-                    : null,
+                'source_account' => ($sourceAccount['applicable'] ?? true) ? $sourceAccount : null,
             ],
         );
     }
@@ -173,9 +169,15 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
         }
 
         try {
-            $refresh = $provider === 'paynamics'
-                ? $this->syncPaynamicsWallet($link->provider_wallet_id, $owner)
-                : $this->provisioning->refresh($link);
+            $synchronizer = $this->paynamicsBalances?->supportsProvider($provider)
+                ? $this->paynamicsBalances
+                : app(ProviderWalletProjectionResolver::class)->for($provider);
+            if ($synchronizer !== null) {
+                $synchronizer->handle($link->provider_wallet_id, $owner);
+                $refresh = ['refreshed' => true];
+            } else {
+                $refresh = $this->provisioning->refresh($link);
+            }
         } catch (Throwable $e) {
             return FundingDecisionData::blocked(
                 authority: 'provider_wallet',
@@ -283,9 +285,9 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
     /**
      * @param  array<string, mixed>  $sourceAccount
      */
-    protected function canBypassUnavailableNetbankSourceAccount(array $sourceAccount): bool
+    protected function canBypassUnavailableNetbankSourceAccount(array $sourceAccount, string $provider): bool
     {
-        if (! (bool) config('x-change.provider_runtime.providers.netbank.source_account_readiness.allow_unavailable', false)) {
+        if (! (bool) config("x-change.provider_runtime.providers.{$provider}.source_account_readiness.allow_unavailable", false)) {
             return false;
         }
 
@@ -314,11 +316,11 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
     /**
      * @return array<string, mixed>
      */
-    protected function netbankSourceAccountReadiness(int $requiredMinor): array
+    protected function netbankSourceAccountReadiness(int $requiredMinor, string $provider): array
     {
-        $this->netbankSourceAccount ??= app(CheckNetbankSourceAccountReadiness::class);
+        $this->netbankSourceAccount ??= app(CheckProviderSourceAccountReadiness::class);
 
-        return $this->netbankSourceAccount->handle($requiredMinor);
+        return $this->netbankSourceAccount->handle($requiredMinor, $provider);
     }
 
     protected function effectiveProviderForOwner(mixed $owner, mixed $provider): string

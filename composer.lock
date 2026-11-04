@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3adf40cbd63429109b8e239d8156fa9f",
+    "content-hash": "60414c8d20befe6603081f1b5c018720",
     "packages": [
         {
             "name": "3neti/cash",
@@ -127,16 +127,16 @@
         },
         {
             "name": "3neti/emi-core",
-            "version": "v2.0.2",
+            "version": "v2.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/emi-core.git",
-                "reference": "edf2d41d3cc0e9a46779cad19644fdab785aa58d"
+                "reference": "8c7c69b105ba9b65a27033add5b08cd60e663af6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/emi-core/zipball/edf2d41d3cc0e9a46779cad19644fdab785aa58d",
-                "reference": "edf2d41d3cc0e9a46779cad19644fdab785aa58d",
+                "url": "https://api.github.com/repos/3neti/emi-core/zipball/8c7c69b105ba9b65a27033add5b08cd60e663af6",
+                "reference": "8c7c69b105ba9b65a27033add5b08cd60e663af6",
                 "shasum": ""
             },
             "require": {
@@ -176,26 +176,26 @@
             "description": "Provider-agnostic EMI domain: contracts, enums, models, DTOs, events",
             "support": {
                 "issues": "https://github.com/3neti/emi-core/issues",
-                "source": "https://github.com/3neti/emi-core/tree/v2.0.2"
+                "source": "https://github.com/3neti/emi-core/tree/v2.1.0"
             },
-            "time": "2026-09-24T05:38:56+00:00"
+            "time": "2026-11-04T03:51:34+00:00"
         },
         {
             "name": "3neti/emi-netbank",
-            "version": "v2.3.9",
+            "version": "v2.4.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/emi-netbank.git",
-                "reference": "546c6e1e6a85ce19b9fecab346b46c508af9edf4"
+                "reference": "4975d9fef8a919637431704fa8fbba8319f599da"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/emi-netbank/zipball/546c6e1e6a85ce19b9fecab346b46c508af9edf4",
-                "reference": "546c6e1e6a85ce19b9fecab346b46c508af9edf4",
+                "url": "https://api.github.com/repos/3neti/emi-netbank/zipball/4975d9fef8a919637431704fa8fbba8319f599da",
+                "reference": "4975d9fef8a919637431704fa8fbba8319f599da",
                 "shasum": ""
             },
             "require": {
-                "3neti/emi-core": "^2.0.1",
+                "3neti/emi-core": "^2.1.0",
                 "3neti/laravel-model-channel": "^1.1",
                 "3neti/merchant": "^1.2",
                 "3neti/money-issuer": "^1.1",
@@ -244,26 +244,26 @@
             "description": "NetBank EMI provider adapter for emi-core",
             "support": {
                 "issues": "https://github.com/3neti/emi-netbank/issues",
-                "source": "https://github.com/3neti/emi-netbank/tree/v2.3.9"
+                "source": "https://github.com/3neti/emi-netbank/tree/v2.4.0"
             },
-            "time": "2026-09-24T05:38:56+00:00"
+            "time": "2026-11-04T04:07:31+00:00"
         },
         {
             "name": "3neti/emi-paynamics",
-            "version": "v2.0.0",
+            "version": "v2.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/emi-paynamics.git",
-                "reference": "7d36263cd6092ed117db863dc41c2c462185385a"
+                "reference": "a5072a2795641006e25bb85a90829060089bdbc5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/emi-paynamics/zipball/7d36263cd6092ed117db863dc41c2c462185385a",
-                "reference": "7d36263cd6092ed117db863dc41c2c462185385a",
+                "url": "https://api.github.com/repos/3neti/emi-paynamics/zipball/a5072a2795641006e25bb85a90829060089bdbc5",
+                "reference": "a5072a2795641006e25bb85a90829060089bdbc5",
                 "shasum": ""
             },
             "require": {
-                "3neti/emi-core": "^2.0",
+                "3neti/emi-core": "^2.1.0",
                 "illuminate/http": "^12.0 || ^13.0",
                 "illuminate/support": "^12.0 || ^13.0",
                 "lorisleiva/laravel-actions": "^2.9",
@@ -302,9 +302,9 @@
             "description": "Paynamics Constellation adapter for EMI core",
             "support": {
                 "issues": "https://github.com/3neti/emi-paynamics/issues",
-                "source": "https://github.com/3neti/emi-paynamics/tree/v2.0.0"
+                "source": "https://github.com/3neti/emi-paynamics/tree/v2.1.0"
             },
-            "time": "2026-09-12T09:39:36+00:00"
+            "time": "2026-11-04T04:07:31+00:00"
         },
         {
             "name": "3neti/form-flow",
@@ -11129,16 +11129,16 @@
         },
         {
             "name": "symfony/mime",
-            "version": "v8.1.7",
+            "version": "v8.1.10",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/mime.git",
-                "reference": "773ac57f20e2795bdadb65b5b1b5f4850d498283"
+                "reference": "8d1232052c9cdef170ed9608b3147bca4f61ff69"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/mime/zipball/773ac57f20e2795bdadb65b5b1b5f4850d498283",
-                "reference": "773ac57f20e2795bdadb65b5b1b5f4850d498283",
+                "url": "https://api.github.com/repos/symfony/mime/zipball/8d1232052c9cdef170ed9608b3147bca4f61ff69",
+                "reference": "8d1232052c9cdef170ed9608b3147bca4f61ff69",
                 "shasum": ""
             },
             "require": {
@@ -11191,7 +11191,7 @@
                 "mime-type"
             ],
             "support": {
-                "source": "https://github.com/symfony/mime/tree/v8.1.7"
+                "source": "https://github.com/symfony/mime/tree/v8.1.10"
             },
             "funding": [
                 {
@@ -11211,7 +11211,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-09-04T11:02:17+00:00"
+            "time": "2026-10-28T17:58:38+00:00"
         },
         {
             "name": "symfony/polyfill-ctype",
@@ -12793,16 +12793,16 @@
         },
         {
             "name": "symfony/yaml",
-            "version": "v7.4.15",
+            "version": "v7.4.22",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/yaml.git",
-                "reference": "e101850ded5d2c0d44bf32abb8996404afec2dec"
+                "reference": "1ed6afa13d48c579c51cbf32e38f50686313497b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/yaml/zipball/e101850ded5d2c0d44bf32abb8996404afec2dec",
-                "reference": "e101850ded5d2c0d44bf32abb8996404afec2dec",
+                "url": "https://api.github.com/repos/symfony/yaml/zipball/1ed6afa13d48c579c51cbf32e38f50686313497b",
+                "reference": "1ed6afa13d48c579c51cbf32e38f50686313497b",
                 "shasum": ""
             },
             "require": {
@@ -12845,7 +12845,7 @@
             "description": "Loads and dumps YAML files",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/yaml/tree/v7.4.15"
+                "source": "https://github.com/symfony/yaml/tree/v7.4.22"
             },
             "funding": [
                 {
@@ -12865,7 +12865,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-07-21T15:13:06+00:00"
+            "time": "2026-10-18T14:39:27+00:00"
         },
         {
             "name": "tecnickcom/tcpdf",

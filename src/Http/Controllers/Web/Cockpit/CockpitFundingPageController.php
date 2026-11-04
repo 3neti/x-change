@@ -10,10 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
-use LBHurtado\EmiCore\Data\Funding\StandingFundingAddressRequestData;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
-use LBHurtado\PaymentGateway\Enums\NetbankStandingAddressScheme;
-use LBHurtado\PaymentGateway\Funding\NetbankStandingAddressProfile;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Services\Cockpit\FundingActivityCockpitReadModel;
 use LBHurtado\XChange\Services\Cockpit\FundingCockpitReadModelProvider;
@@ -22,7 +19,7 @@ use LBHurtado\XChange\Services\Cockpit\FundingQrMerchantProfileReadModel;
 use LBHurtado\XChange\Services\Cockpit\FundingRequestCockpitReadModel;
 use LBHurtado\XChange\Services\Funding\Base64PngQrPhFundingSimulationQrRenderer;
 use LBHurtado\XChange\Services\Funding\FundingProjectionChannel;
-use LBHurtado\XChange\Support\Auth\MobileNumber;
+use LBHurtado\XChange\Services\Funding\StandingFundingProfileResolver;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
 use Throwable;
 
@@ -36,7 +33,7 @@ class CockpitFundingPageController extends Controller
         private readonly FundingActivityCockpitReadModel $fundingActivity,
         private readonly FundingQrMerchantProfileReadModel $merchantProfiles,
         private readonly Base64PngQrPhFundingSimulationQrRenderer $simulationQr,
-        private readonly NetbankStandingAddressProfile $standingAddressProfile,
+        private readonly StandingFundingProfileResolver $standingAddressProfile,
         private readonly FundingProjectionChannel $fundingChannels,
     ) {}
 
@@ -117,23 +114,6 @@ class CockpitFundingPageController extends Controller
     private function standingFundingAddressAvailability(Model $operator): array
     {
         $enabled = (bool) config('x-change.funding.standing_addresses.enabled', false);
-        $required = [
-            'payment-gateway.netbank.funding.api_url',
-            'payment-gateway.netbank.funding.token_url',
-            'payment-gateway.netbank.funding.client_id',
-            'payment-gateway.netbank.funding.client_secret',
-            'payment-gateway.netbank.funding.corporate_account_number',
-            'payment-gateway.netbank.funding.corporate_account_name',
-            'payment-gateway.netbank.funding.vca_alias',
-            'payment-gateway.netbank.funding.reference_key',
-            'payment-gateway.netbank.funding.qr_endpoint',
-            'payment-gateway.netbank.funding.qr_merchant_name',
-            'payment-gateway.netbank.funding.qr_merchant_city',
-        ];
-        $configured = collect($required)->every(
-            fn (string $key): bool => is_string(config($key))
-                && trim((string) config($key)) !== '',
-        );
         $address = StandingFundingAddress::query()
             ->where('owner_type', $operator::class)
             ->where('owner_id', $operator->getKey())
@@ -145,47 +125,18 @@ class CockpitFundingPageController extends Controller
                 'x-change.funding.standing_addresses.default_recognition_mode',
                 'observe_only',
             );
-        $scheme = $address?->derivation_scheme;
-        $profileReady = false;
-        $status = 'available';
-
-        if ($enabled && $configured) {
+        $profile = null;
+        if ($enabled) {
             try {
-                $this->standingAddressProfile->referenceLength();
-
-                if ($address instanceof StandingFundingAddress) {
-                    $profileReady = strlen($address->funding_address_ciphertext) === 16;
-                    $status = $profileReady ? 'available' : 'legacy_address_requires_retirement';
-                    $scheme ??= 'legacy-unclassified';
-                } else {
-                    $selectedScheme = $this->standingAddressProfile->scheme();
-                    $scheme = $selectedScheme->value;
-
-                    if ($selectedScheme === NetbankStandingAddressScheme::MobileV1) {
-                        $mobile = MobileNumber::normalize(
-                            $operator->getAttribute('mobile'),
-                        );
-                        $profileReady = $operator->getAttribute('mobile_verified_at') !== null
-                            && is_string($mobile)
-                            && preg_match('/\A639\d{9}\z/', $mobile) === 1;
-                        $status = $profileReady ? 'available' : 'mobile_not_verified';
-                    } else {
-                        $this->standingAddressProfile->derive(
-                            new StandingFundingAddressRequestData(
-                                ownerReference: 'cockpit-readiness',
-                                accountReference: 'cockpit-readiness',
-                                purpose: FundingAddressPurpose::AccountFunding,
-                                currency: 'PHP',
-                            ),
-                        );
-                        $profileReady = true;
-                    }
-                }
+                $profile = $this->standingAddressProfile->forOwner('netbank', $operator, $address);
             } catch (Throwable) {
-                $profileReady = false;
-                $status = 'not_configured';
+                $profile = null;
             }
         }
+        $configured = $profile?->configured ?? false;
+        $profileReady = $profile?->ready ?? false;
+        $status = $profile?->status ?? 'not_configured';
+        $scheme = $profile?->scheme ?? $address?->derivation_scheme;
 
         $available = $enabled && $configured && $profileReady;
 
@@ -200,15 +151,9 @@ class CockpitFundingPageController extends Controller
             'provider' => 'netbank',
             'exists' => $address !== null,
             'address_scheme' => $scheme,
-            'scheme_label' => match ($scheme) {
-                NetbankStandingAddressScheme::MobileV1->value => 'Verified mobile suffix',
-                NetbankStandingAddressScheme::AccountHmacV2->value => 'Opaque Account reference',
-                default => 'Persisted legacy address',
-            },
-            'scheme_warning' => $scheme === NetbankStandingAddressScheme::MobileV1->value
-                ? 'Development-friendly but easier to correlate; production rejects this scheme.'
-                : null,
-            'production_safe' => $scheme === NetbankStandingAddressScheme::AccountHmacV2->value,
+            'scheme_label' => $profile?->schemeLabel ?? 'Persisted legacy address',
+            'scheme_warning' => $profile?->schemeWarning,
+            'production_safe' => $profile?->productionSafe ?? false,
             'purpose' => FundingAddressPurpose::AccountFunding->value,
             'recognition_mode' => $mode,
             'address_status' => $address?->status->value,

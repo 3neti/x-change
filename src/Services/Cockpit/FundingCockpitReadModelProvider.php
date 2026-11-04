@@ -24,6 +24,7 @@ use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\FundingSuspenseCase;
 use LBHurtado\XChange\Models\SystemAccountFundingPayCodeIssuance;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\Funding\ManualFundingVerificationEligibility;
 
 class FundingCockpitReadModelProvider
 {
@@ -33,6 +34,7 @@ class FundingCockpitReadModelProvider
         private readonly FundingTreasuryPortfolioReadModel $treasury,
         private readonly CockpitTreasuryAccessContract $treasuryAccess,
         private readonly AssessPaidOnDemandIssuanceRecovery $issuanceRecovery,
+        private readonly ManualFundingVerificationEligibility $manualVerification,
     ) {}
 
     public function forOperator(Authenticatable $operator): CockpitFundingReadModelData
@@ -274,12 +276,9 @@ class FundingCockpitReadModelProvider
                     'amount' => $this->formatMoney($intent->expected_amount_minor, $intent->currency),
                     'currency' => $intent->currency,
                     'status' => $intent->status->value,
-                    'can_check_provider' => $intent->provider_code === 'netbank'
-                        && $intent->status->value === 'awaiting_funds'
-                        && $unexpired
-                        && (bool) config('x-change.funding.providers.netbank.enabled', false),
-                    'can_reopen_instructions' => $intent->provider_code === 'netbank'
-                        && $open
+                    'can_check_provider' => $this->manualVerification->allows($intent),
+                    'can_reopen_instructions' => $open
+                        && $intent->instructions_created_at !== null
                         && $unexpired,
                     'verification_status' => $intent->status->value === 'verifying'
                         ? 'checking'

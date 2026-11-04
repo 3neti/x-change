@@ -1019,7 +1019,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                 </details>
 
                 <details
-                    v-if="hasJournalDetails(presentation.journalSummary)"
+                    v-if="presentation.journalSummary && hasJournalDetails(presentation.journalSummary)"
                     class="mt-4 rounded-lg bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-950 dark:text-slate-300"
                     data-testid="cockpit-operator-issuance-activity-journal-summary"
                 >
@@ -1086,7 +1086,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                 </details>
 
                 <details
-                    v-if="hasActionDetails(presentation.actionSummary)"
+                    v-if="presentation.actionSummary && hasActionDetails(presentation.actionSummary)"
                     class="mt-4 rounded-lg bg-indigo-50 p-3 text-xs text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200"
                     data-testid="cockpit-operator-issuance-activity-action-summary"
                 >
@@ -1134,7 +1134,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                 </details>
 
                 <details
-                    v-if="hasFeedbackDetails(presentation.feedbackSummary)"
+                    v-if="presentation.feedbackSummary && hasFeedbackDetails(presentation.feedbackSummary)"
                     class="mt-4 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
                     data-testid="cockpit-operator-issuance-activity-feedback-summary"
                 >

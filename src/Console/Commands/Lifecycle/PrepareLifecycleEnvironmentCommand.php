@@ -347,9 +347,15 @@ class PrepareLifecycleEnvironmentCommand extends Command
         $wallet = method_exists($systemUser, 'getWallet')
             ? $systemUser->getWallet('platform')
             : $systemUser->wallet;
+        if ($wallet === null && method_exists($systemUser, 'createWallet')) {
+            $wallet = $systemUser->createWallet([
+                'name' => 'Platform Wallet',
+                'slug' => 'platform',
+            ]);
+        }
         $difference = $amount - (float) ($wallet?->balanceFloat ?? 0);
 
-        if ($difference > 0 && method_exists($wallet, 'depositFloat')) {
+        if ($difference > 0 && $wallet !== null && method_exists($wallet, 'depositFloat')) {
             $wallet->depositFloat($difference);
         } elseif ($difference > 0 && method_exists($systemUser, 'depositFloat')) {
             $systemUser->depositFloat($difference);

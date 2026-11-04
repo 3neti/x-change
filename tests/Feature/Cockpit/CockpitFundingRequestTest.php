@@ -5,9 +5,11 @@ declare(strict_types=1);
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
+use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
 use LBHurtado\SettlementEnvelope\Models\EnvelopeAttachment;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Funding\CreateFundingRequest;
+use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Data\Funding\CreateFundingRequestData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Enums\FundingRequestType;
@@ -17,6 +19,24 @@ use LBHurtado\XChange\Models\FundingRequestNotice;
 use LBHurtado\XChange\Services\Claim\VoucherClaimantReference;
 use LBHurtado\XChange\Services\Cockpit\FundingRequestCockpitReadModel;
 use LBHurtado\XChange\Tests\Fakes\User;
+
+it('presents bank transfer details supplied by the funding destination contract', function (): void {
+    config()->set('x-change.funding.requests.bank_transfer.provider', 'other_provider');
+    $destination = new FundingDestinationData(
+        provider: 'other_provider', mode: 'shared', destinationType: 'bank_account',
+        accountReference: 'funding-request:shared', displayReference: 'masked', fingerprint: 'fingerprint',
+        verificationStatus: 'configured', bankAccountNumber: '12345678', bankAccountName: 'Example Account',
+    );
+    $resolver = Mockery::mock(FundingDestinationResolverContract::class);
+    $resolver->shouldReceive('shared')->with('other_provider', 'funding-request:shared')->andReturn($destination);
+    app()->instance(FundingDestinationResolverContract::class, $resolver);
+    $operator = actingAsTestUser(0);
+
+    $view = app(FundingRequestCockpitReadModel::class)->forOperator($operator);
+    expect($view['bank_transfer']['account_number'])->toBe('12345678')
+        ->and($view['bank_transfer']['account_name'])->toBe('Example Account')
+        ->and($view['bank_transfer']['institution'])->toBe('Other provider');
+});
 
 it('creates a locked requester-owned Pay Code from an amount-only request', function () {
     $requester = actingAsTestUser(0);

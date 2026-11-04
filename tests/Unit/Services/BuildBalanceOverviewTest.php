@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Str;
+use LBHurtado\EmiCore\Contracts\ProviderSourceAccountReadiness;
+use LBHurtado\EmiCore\Contracts\ProviderWalletProjectionSynchronizer;
+use LBHurtado\EmiCore\Data\Providers\ProviderSourceAccountReadinessRequestData;
 use LBHurtado\EmiCore\Enums\ComplianceLevel;
 use LBHurtado\EmiCore\Enums\ProviderCode;
 use LBHurtado\EmiCore\Enums\VerificationStatus;
@@ -63,7 +66,7 @@ it('includes NetBank source account liquidity when the provider uses ledger pool
     $sourceAccount = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
     $sourceAccount->shouldReceive('handle')
         ->once()
-        ->with()
+        ->with(null, 'netbank')
         ->andReturn([
             'enabled' => true,
             'ready' => true,
@@ -97,6 +100,40 @@ it('includes NetBank source account liquidity when the provider uses ledger pool
         ->and($sourceBalance['account_number_masked'])->toBe('**********0001')
         ->and($sourceBalance['sync_message'])->toBe('NetBank source account balance was refreshed.')
         ->and($overview['sync_status'])->toBe('fresh');
+});
+
+it('shows another provider source account using its capability and snapshot key', function (): void {
+    $provider = new class implements ProviderSourceAccountReadiness
+    {
+        public function providerCode(): string
+        {
+            return 'other';
+        }
+
+        public function inspectSourceAccount(ProviderSourceAccountReadinessRequestData $request): ?array
+        {
+            return ['enabled' => true, 'ready' => true, 'checked' => true, 'available_balance_minor' => 12000];
+        }
+    };
+    app()->instance('test.other-source-account', $provider);
+    app()->tag('test.other-source-account', 'emi.provider-source-account-readiness');
+    $settings = Mockery::mock(ProviderRuntimeSettingsResolverContract::class);
+    $settings->shouldReceive('provider')->with('other')->andReturn('other');
+    $settings->shouldReceive('topology')->with('other')->andReturn('ledger_pooled');
+    $wallets = Mockery::mock(WalletAccessContract::class);
+    $wallets->shouldReceive('resolveForUser')->andThrow(new RuntimeException('No local wallet.'));
+    $overview = (new BuildBalanceOverview(
+        $settings,
+        Mockery::mock(ProviderAccountLinkRepositoryContract::class),
+        Mockery::mock(ProviderProvisioningGatewayContract::class),
+        $wallets,
+        null,
+        app(CheckNetbankSourceAccountReadiness::class),
+    ))->handle(new stdClass, 'other');
+
+    expect(collect($overview['balances'])->firstWhere('key', 'other_source_account'))->toMatchArray([
+        'label' => 'Other Source Account Balance', 'source' => 'other', 'available_balance_minor' => 12000,
+    ]);
 });
 
 it('reads cached NetBank liquidity without calling the provider when synchronization is disabled', function () {
@@ -195,6 +232,7 @@ it('refreshes a stale Paynamics provider wallet projection before building the o
     $provisioning->shouldNotReceive('refresh');
 
     $paynamicsBalances = Mockery::mock(SyncPaynamicsWalletBalance::class);
+    $paynamicsBalances->shouldReceive('supportsProvider')->with('paynamics')->andReturnTrue();
     $paynamicsBalances->shouldReceive('handle')
         ->once()
         ->with('CNSTWLLTBALANCE01', $owner)
@@ -231,6 +269,47 @@ it('refreshes a stale Paynamics provider wallet projection before building the o
         ->and($overview['sync_status'])->toBe('synced')
         ->and((float) $overview['authoritative']['balance'])->toBe(1500.0)
         ->and($overview['authoritative']['is_stale'])->toBeFalse();
+});
+
+it('labels a provider wallet using its actual provider', function (): void {
+    $owner = User::query()->create([
+        'name' => 'Other Provider Owner',
+        'email' => 'other-provider-balance@example.test',
+        'mobile' => '639171235000',
+        'password' => 'password',
+    ]);
+    $link = app(ProviderAccountLinkRepositoryContract::class)->storeFromProvisioningResult($owner, [
+        'provider' => 'other', 'topology' => 'provider_customer_wallet', 'mode' => 'wallet_resolve',
+        'status' => 'ready', 'provider_wallet_id' => 'OTHER-BALANCE-01',
+    ]);
+    EmiWallet::unguarded(fn () => EmiWallet::query()->create([
+        'holder_type' => $owner::class, 'holder_id' => $owner->getKey(), 'name' => 'Other wallet',
+        'slug' => 'other-balance-01', 'uuid' => (string) Str::uuid(), 'balance' => 0, 'decimal_places' => 2,
+        'provider_code' => ProviderCode::PaynamicsConstellation->value, 'provider_wallet_id' => $link->provider_wallet_id,
+        'wallet_type' => WalletType::Customer->value, 'status' => WalletStatus::Active->value,
+        'compliance_level' => ComplianceLevel::Level1->value, 'verification_status' => VerificationStatus::Approved->value,
+        'balance_cached' => '42.00', 'currency' => 'PHP',
+    ]));
+    $settings = Mockery::mock(ProviderRuntimeSettingsResolverContract::class);
+    $settings->shouldReceive('provider')->with('other')->andReturn('other');
+    $settings->shouldReceive('topology')->with('other')->andReturn('provider_customer_wallet');
+    $wallets = Mockery::mock(WalletAccessContract::class);
+    $wallets->shouldReceive('resolveForUser')->andThrow(new RuntimeException('No local wallet.'));
+    $synchronizer = Mockery::mock(ProviderWalletProjectionSynchronizer::class);
+    $synchronizer->shouldReceive('supportsProvider')->with('other')->once()->andReturnTrue();
+    $synchronizer->shouldReceive('handle')->with('OTHER-BALANCE-01', $owner)->once()->andReturn([]);
+
+    $overview = (new BuildBalanceOverview(
+        $settings,
+        app(ProviderAccountLinkRepositoryContract::class),
+        Mockery::mock(ProviderProvisioningGatewayContract::class),
+        $wallets,
+        $synchronizer,
+    ))->handle($owner, 'other', true, true);
+
+    expect($overview['authoritative'])->toMatchArray([
+        'label' => 'Other Provider Balance', 'source' => 'other', 'balance_minor' => 4200, 'sync_status' => 'synced',
+    ]);
 });
 
 it('uses a linked Paynamics wallet when the runtime default provider is still manual', function () {

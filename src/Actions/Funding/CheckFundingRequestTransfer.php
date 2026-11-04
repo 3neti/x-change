@@ -8,8 +8,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
-use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
-use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
+use LBHurtado\EmiCore\Contracts\ProviderFundingHistoryRequestFactory;
+use LBHurtado\EmiCore\Data\Funding\ProviderFundingHistoryRequestData;
 use LBHurtado\EmiCore\Exceptions\ProviderFundingNotObserved;
 use LBHurtado\EmiCore\Exceptions\ProviderFundingVerificationIndeterminate;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
@@ -269,43 +269,24 @@ final readonly class CheckFundingRequestTransfer
             return null;
         }
 
-        $configuredAccountNumber = trim((string) config(
-            'payment-gateway.netbank.funding.corporate_account_number',
-        ));
-        $fundingAddress = preg_replace('/\D+/', '', $configuredAccountNumber) ?? '';
-
-        if (strlen($fundingAddress) < 12) {
-            return 'ProviderAccountNotConfigured';
-        }
-
         try {
-            $observation = $this->providers
-                ->for($provider)
-                ->verifyFunding(new FundingVerificationData(
-                    provider: $provider,
-                    fundingIntentReference: 'funding-request:'.$request->reference,
-                    expectedAmountMinor: $expectedAmountMinor,
-                    currency: $request->currency,
-                    fundingAddress: $fundingAddress,
-                    destination: new FundingDestinationData(
-                        provider: $provider,
-                        mode: 'shared_corporate_account',
-                        destinationType: 'bank_account',
-                        accountReference: 'treasury-connection:'.$connectionReference,
-                        displayReference: 'configured-corporate-account',
-                        fingerprint: hash('sha256', $configuredAccountNumber),
-                        verificationStatus: 'configured',
-                        bankAccountNumber: $configuredAccountNumber,
-                        bankAccountName: trim((string) config(
-                            'payment-gateway.netbank.funding.corporate_account_name',
-                        )),
-                        routingAlias: trim((string) config(
-                            'payment-gateway.netbank.funding.vca_alias',
-                        )),
-                    ),
-                    observedAfter: $observedAfter->toDateTimeImmutable(),
-                    observedBefore: $observedBefore->toDateTimeImmutable(),
-                ));
+            $adapter = $this->providers->for($provider);
+            if (! $adapter instanceof ProviderFundingHistoryRequestFactory) {
+                return 'ProviderHistoryNotSupported';
+            }
+            $verification = $adapter->createFundingHistoryRequest(new ProviderFundingHistoryRequestData(
+                provider: $provider,
+                reference: 'funding-request:'.$request->reference,
+                connectionReference: $connectionReference,
+                expectedAmountMinor: $expectedAmountMinor,
+                currency: $request->currency,
+                observedAfter: $observedAfter->toDateTimeImmutable(),
+                observedBefore: $observedBefore->toDateTimeImmutable(),
+            ));
+            if ($verification === null) {
+                return 'ProviderAccountNotConfigured';
+            }
+            $observation = $adapter->verifyFunding($verification);
             $observation->metadata = array_merge(
                 $observation->metadata,
                 [

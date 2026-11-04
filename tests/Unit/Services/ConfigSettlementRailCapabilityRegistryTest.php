@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use LBHurtado\EmiCore\Contracts\ProviderSettlementRailConfiguration;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
 use LBHurtado\EmiCore\Enums\SettlementRail;
 use LBHurtado\XChange\Contracts\SettlementRailCapabilityRegistryContract;
@@ -93,4 +94,50 @@ it('rejects disabled and out-of-range rails before provider dispatch', function 
         'bank_code' => 'BNORPHMMXXX',
         'settlement_rail' => SettlementRail::PESONET->value,
     ])))->toThrow(RuntimeException::class, 'NetBank is disabled for PESONET.');
+});
+
+it('uses another provider capability and fails closed without one', function (): void {
+    config()->set('x-change.provider_runtime.default_provider', 'other');
+    config()->set('x-change.payout.provider', null);
+    $registry = app(SettlementRailCapabilityRegistryContract::class);
+
+    expect($registry->rail(SettlementRail::INSTAPAY)['enabled'])->toBeFalse();
+
+    app()->instance('test.other-rail-configuration', new class implements ProviderSettlementRailConfiguration
+    {
+        public function providerCode(): string
+        {
+            return 'other';
+        }
+
+        public function configurationFor(SettlementRail $rail): array
+        {
+            return ['enabled' => true, 'max_amount' => 12345];
+        }
+    });
+    app()->tag('test.other-rail-configuration', 'emi.provider-settlement-rail-configurations');
+
+    expect($registry->rail(SettlementRail::INSTAPAY))->toMatchArray([
+        'enabled' => true,
+        'maximum_amount_minor' => 12345,
+    ]);
+});
+
+it('rejects ambiguous rail configurations for the same provider', function (): void {
+    app()->instance('test.duplicate-rail-configuration', new class implements ProviderSettlementRailConfiguration
+    {
+        public function providerCode(): string
+        {
+            return 'netbank';
+        }
+
+        public function configurationFor(SettlementRail $rail): array
+        {
+            return ['enabled' => true];
+        }
+    });
+    app()->tag('test.duplicate-rail-configuration', 'emi.provider-settlement-rail-configurations');
+
+    expect(fn () => app(SettlementRailCapabilityRegistryContract::class)->rail(SettlementRail::INSTAPAY))
+        ->toThrow(RuntimeException::class, 'Multiple settlement rail configurations');
 });

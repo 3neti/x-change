@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Lifecycle\Runners;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\DatabaseManager;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Actions\Funding\SimulateQrPhPayment;
 use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
 use LBHurtado\XChange\Actions\Payment\GenerateVoucherPaymentQr;
 use LBHurtado\XChange\Actions\Payment\IssuePaymentInstructions;
@@ -14,8 +16,10 @@ use LBHurtado\XChange\Data\Payment\RenderedVoucherPaymentQrData;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Models\PaymentAttempt;
+use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\PayCodeIssuanceService;
 use LBHurtado\XChange\Services\VoucherPaymentQrRendererFactory;
+use LBHurtado\XChange\Support\Funding\QrPhFundingSimulatorGuard;
 use Throwable;
 
 final readonly class PaymentVoucherCollectionScenarioRunner implements ScenarioRunnerContract
@@ -27,9 +31,40 @@ final readonly class PaymentVoucherCollectionScenarioRunner implements ScenarioR
         private CreatePaymentAttempt $attempts,
         private IssuePaymentInstructions $instructions,
         private VerifyPaymentAttempt $verification,
+        private SimulateQrPhPayment $simulator,
+        private QrPhFundingSimulatorGuard $simulatorGuard,
+        private DatabaseManager $databases,
     ) {}
 
     public function run(ScenarioRunContext $context): ScenarioRunResult
+    {
+        if ((bool) data_get($context->scenario, 'payment.simulate', false)) {
+            if (! $this->simulatorGuard->available() || data_get($context->scenario, 'payment.provider') !== 'qrph_simulator') {
+                return new ScenarioRunResult(Command::FAILURE, ['success' => false, 'message' => 'The payable simulation is unavailable.']);
+            }
+            $connection = $this->databases->connection();
+            $level = $connection->transactionLevel();
+            $connection->beginTransaction();
+            try {
+                $result = $this->execute($context);
+            } finally {
+                while ($connection->transactionLevel() > $level) {
+                    $connection->rollBack();
+                }
+            }
+
+            $rollbackCompleted = $connection->transactionLevel() === $level;
+
+            return new ScenarioRunResult(
+                $rollbackCompleted ? $result->exitCode : Command::FAILURE,
+                [...$result->payload, 'success' => $rollbackCompleted && ($result->payload['success'] ?? false), 'rollback_completed' => $rollbackCompleted],
+            );
+        }
+
+        return $this->execute($context);
+    }
+
+    private function execute(ScenarioRunContext $context): ScenarioRunResult
     {
         try {
             $voucher = $this->issueCollectibleVoucher($context);
@@ -41,7 +76,23 @@ final readonly class PaymentVoucherCollectionScenarioRunner implements ScenarioR
                 idempotencyKey: 'lifecycle-payment-attempt:'.$context->idempotencyKey,
             );
             $attempt = $this->instructions->handle($attempt);
+            if ((bool) data_get($context->scenario, 'payment.simulate', false)) {
+                $waiting = $this->verification->handle($attempt, PaymentVerificationTrigger::Payer);
+                if ($waiting->status !== PaymentAttemptStatus::AwaitingPayment) {
+                    throw new \RuntimeException('The simulated payment did not remain safely awaiting provider evidence.');
+                }
+                $this->simulator->handlePaymentAttempt($attempt, $context->baseClaimMobile);
+            }
             $settledAttempt = $this->maybeVerify($context, $attempt);
+            if ((bool) data_get($context->scenario, 'payment.simulate', false)) {
+                $replayed = $this->verification->handle($settledAttempt, PaymentVerificationTrigger::Payer);
+                if ($settledAttempt->status !== PaymentAttemptStatus::Settled
+                    || $settledAttempt->voucher_collection_id === null
+                    || $replayed->voucher_collection_id !== $settledAttempt->voucher_collection_id
+                    || VoucherCollection::query()->where('voucher_id', $voucher->getKey())->count() !== 1) {
+                    throw new \RuntimeException('Simulated payment did not settle or replay safely.');
+                }
+            }
 
             return new ScenarioRunResult(
                 exitCode: Command::SUCCESS,
@@ -93,6 +144,8 @@ final readonly class PaymentVoucherCollectionScenarioRunner implements ScenarioR
                         'uses_payment_attempt_flow' => true,
                         'provider_instruction_call' => true,
                         'provider_verification_call' => (bool) data_get($context->scenario, 'payment.verify', false),
+                        'recovered_after_missing_evidence' => (bool) data_get($context->scenario, 'payment.simulate', false),
+                        'replay_checked' => (bool) data_get($context->scenario, 'payment.simulate', false),
                     ],
                 ],
             );

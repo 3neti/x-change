@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Settlement;
 
+use LBHurtado\EmiCore\Contracts\ProviderPayerMobileInterpreter;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Models\CampaignPaymentRecognition;
 use LBHurtado\XChange\Models\CompletionPayCodeIssuance;
 use LBHurtado\XChange\Services\Execution\CampaignCoverageCompletionExecutionDriver;
-use LBHurtado\XChange\Support\Auth\MobileNumber;
+use LogicException;
 
 final class CampaignWalletPayerMobile
 {
@@ -36,16 +37,38 @@ final class CampaignWalletPayerMobile
 
     public function fromObservation(?ProviderFundingObservation $observation): ?string
     {
-        $institution = strtoupper(trim((string) $observation?->payer_institution_ciphertext));
-        $account = trim((string) $observation?->payer_account_ciphertext);
-        $mobile = MobileNumber::normalize($account);
-
-        if (! in_array($institution, ['GXCHPHM2XXX', 'PAPHPHM1XXX', 'GCASH', 'MAYA', 'PAYMAYA'], true)
-            || ! preg_match('/^(?:0|63|\+63)9[0-9]{9}$/', $account)
-            || ! preg_match('/^639[0-9]{9}$/', (string) $mobile)) {
+        if ($observation === null) {
             return null;
         }
 
-        return $mobile;
+        return $this->interpret($observation->provider_code, $observation->payer_institution_ciphertext, $observation->payer_account_ciphertext);
+    }
+
+    public function interpret(string $provider, ?string $institution, ?string $account): ?string
+    {
+        $interpreter = $this->interpreterFor($provider);
+        $mobile = $interpreter?->resolve($institution, $account);
+
+        return is_string($mobile) && preg_match('/^639[0-9]{9}$/', $mobile) === 1 ? $mobile : null;
+    }
+
+    public function supports(string $provider): bool
+    {
+        return $this->interpreterFor($provider) !== null;
+    }
+
+    private function interpreterFor(string $provider): ?ProviderPayerMobileInterpreter
+    {
+        $matches = [];
+        foreach (app()->tagged('emi.provider-payer-mobile-interpreters') as $candidate) {
+            if ($candidate instanceof ProviderPayerMobileInterpreter && strtolower($candidate->providerCode()) === strtolower($provider)) {
+                $matches[] = $candidate;
+            }
+        }
+        if (count($matches) > 1) {
+            throw new LogicException('Multiple provider payer mobile interpreters are registered.');
+        }
+
+        return $matches[0] ?? null;
     }
 }

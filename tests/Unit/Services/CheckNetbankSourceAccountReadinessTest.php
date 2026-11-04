@@ -2,8 +2,46 @@
 
 declare(strict_types=1);
 
+use LBHurtado\EmiCore\Contracts\ProviderSourceAccountReadiness;
+use LBHurtado\EmiCore\Data\Providers\ProviderSourceAccountReadinessRequestData;
 use LBHurtado\PaymentGateway\Contracts\PaymentGatewayInterface;
+use LBHurtado\PaymentGateway\Support\NetbankSourceAccountReadiness;
 use LBHurtado\XChange\Services\CheckNetbankSourceAccountReadiness;
+use LBHurtado\XChange\Services\CheckProviderSourceAccountReadiness;
+
+it('accepts a provider-neutral readiness capability', function (): void {
+    $source = new class implements ProviderSourceAccountReadiness
+    {
+        public function providerCode(): string
+        {
+            return 'netbank';
+        }
+
+        public function inspectSourceAccount(ProviderSourceAccountReadinessRequestData $request): ?array
+        {
+            return ['enabled' => true, 'checked' => true, 'ready' => $request->requiredAmountMinor === 500];
+        }
+    };
+
+    expect((new CheckNetbankSourceAccountReadiness($source))->handle(500))->toMatchArray(['enabled' => true, 'checked' => true, 'ready' => true]);
+});
+
+it('fails closed without exposing a provider exception', function (): void {
+    $source = Mockery::mock(ProviderSourceAccountReadiness::class);
+    $source->shouldReceive('providerCode')->once()->andReturn('netbank');
+    $source->shouldReceive('inspectSourceAccount')->once()->andThrow(new RuntimeException('private provider data'));
+
+    $result = (new CheckNetbankSourceAccountReadiness($source))->handle(500);
+    expect($result)->toMatchArray(['ready' => false, 'reason' => 'balance_unavailable'])
+        ->and(json_encode($result))->not->toContain('private provider data');
+});
+
+it('fails closed when an enabled provider has no readiness capability', function (): void {
+    config()->set('x-change.provider_runtime.providers.missing_provider.source_account_readiness.enabled', true);
+
+    $result = (new CheckProviderSourceAccountReadiness)->handle(500, 'missing_provider');
+    expect($result)->toMatchArray(['enabled' => true, 'ready' => false, 'checked' => false]);
+});
 
 it('normalizes the NetBank source account balance response', function () {
     config()->set('x-change.provider_runtime.providers.netbank.source_account_readiness.enabled', true);
@@ -21,7 +59,7 @@ it('normalizes the NetBank source account balance response', function () {
             'raw' => [],
         ]);
 
-    $readiness = (new CheckNetbankSourceAccountReadiness($gateway))->handle(150000);
+    $readiness = (new CheckNetbankSourceAccountReadiness(new NetbankSourceAccountReadiness($gateway)))->handle(150000);
 
     expect($readiness['enabled'])->toBeTrue()
         ->and($readiness['ready'])->toBeTrue()
@@ -48,7 +86,7 @@ it('marks the NetBank source account unready when available balance is insuffici
             'raw' => [],
         ]);
 
-    $readiness = (new CheckNetbankSourceAccountReadiness($gateway))->handle(150000);
+    $readiness = (new CheckNetbankSourceAccountReadiness(new NetbankSourceAccountReadiness($gateway)))->handle(150000);
 
     expect($readiness['enabled'])->toBeTrue()
         ->and($readiness['ready'])->toBeFalse()
@@ -73,7 +111,7 @@ it('normalizes decimal NetBank source account balance values for display checks'
             'raw' => [],
         ]);
 
-    $readiness = (new CheckNetbankSourceAccountReadiness($gateway))->handle();
+    $readiness = (new CheckNetbankSourceAccountReadiness(new NetbankSourceAccountReadiness($gateway)))->handle();
 
     expect($readiness['enabled'])->toBeTrue()
         ->and($readiness['ready'])->toBeTrue()
@@ -99,7 +137,7 @@ it('normalizes nested NetBank raw balance values when adapter values are missing
             ],
         ]);
 
-    $readiness = (new CheckNetbankSourceAccountReadiness($gateway))->handle();
+    $readiness = (new CheckNetbankSourceAccountReadiness(new NetbankSourceAccountReadiness($gateway)))->handle();
 
     expect($readiness['currency'])->toBe('PHP')
         ->and($readiness['balance_minor'])->toBe(68389)
@@ -122,7 +160,7 @@ it('does not treat a failed NetBank adapter balance response as a fresh zero bal
             'raw' => [],
         ]);
 
-    $readiness = (new CheckNetbankSourceAccountReadiness($gateway))->handle();
+    $readiness = (new CheckNetbankSourceAccountReadiness(new NetbankSourceAccountReadiness($gateway)))->handle();
 
     expect($readiness['enabled'])->toBeTrue()
         ->and($readiness['ready'])->toBeFalse()

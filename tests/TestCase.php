@@ -7,6 +7,8 @@ namespace LBHurtado\XChange\Tests;
 use Bavix\Wallet\WalletServiceProvider as BavixWalletServiceProvider;
 use FrittenKeeZ\Vouchers\VouchersServiceProvider;
 use Illuminate\Cookie\CookieServiceProvider;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\Builder;
 use Illuminate\Session\SessionServiceProvider;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -16,6 +18,13 @@ use LBHurtado\Cash\CashServiceProvider;
 use LBHurtado\Contact\ContactServiceProvider;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiCore\EmiCoreServiceProvider;
+use LBHurtado\EmiPaynamicsConstellation\Adapters\ConstellationFundingProviderAdapter;
+use LBHurtado\EmiPaynamicsConstellation\Support\ConstellationCustomerProvisioner;
+use LBHurtado\EmiPaynamicsConstellation\Support\ConstellationDeferredApprovalScope;
+use LBHurtado\EmiPaynamicsConstellation\Support\ConstellationPayoutApprovalReplayPolicy;
+use LBHurtado\EmiPaynamicsConstellation\Support\ConstellationPendingPayoutOtpInterpreter;
+use LBHurtado\EmiPaynamicsConstellation\Support\ConstellationProvisioningGateway;
+use LBHurtado\EmiPaynamicsConstellation\Support\ConstellationWalletProjectionSynchronizer;
 use LBHurtado\FormFlowManager\Services\DriverService as FormFlowDriverService;
 use LBHurtado\Instruction\Database\Seeders\InstructionItemSeeder;
 use LBHurtado\Instruction\InstructionServiceProvider;
@@ -23,12 +32,20 @@ use LBHurtado\Merchant\MerchantServiceProvider;
 use LBHurtado\ModelChannel\ModelChannelServiceProvider;
 use LBHurtado\ModelInput\ModelInputServiceProvider;
 use LBHurtado\Onboarding\OnboardingServiceProvider;
+use LBHurtado\PaymentGateway\Funding\NetbankFundingProviderAdapter;
+use LBHurtado\PaymentGateway\Funding\NetbankReusableFundingAddressProvider;
+use LBHurtado\PaymentGateway\Support\NetbankPayerMobileInterpreter;
+use LBHurtado\PaymentGateway\Support\NetbankProvisioningGatewayFactory;
+use LBHurtado\PaymentGateway\Support\NetbankProvisioningProfile;
+use LBHurtado\PaymentGateway\Support\NetbankSettlementRailConfiguration;
+use LBHurtado\PaymentGateway\Support\NetbankSourceAccountReadiness;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\VoucherServiceProvider;
 use LBHurtado\Wallet\WalletServiceProvider as LBHurtadoWalletServiceProvider;
 use LBHurtado\XAffiliation\XAffiliationServiceProvider;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Providers\XChangeServiceProvider;
+use LBHurtado\XChange\Services\Funding\StandingFundingAddressProviderRegistry;
 use LBHurtado\XChange\Tests\Fakes\FakeAuditLogger;
 use LBHurtado\XChange\Tests\Fakes\FakePayoutProvider;
 use LBHurtado\XChange\Tests\Fakes\User;
@@ -58,6 +75,36 @@ abstract class TestCase extends Orchestra
     {
         parent::setUp();
 
+        $this->app->singleton(NetbankReusableFundingAddressProvider::class);
+        $this->app->tag(NetbankReusableFundingAddressProvider::class, 'emi.standing-funding-address-providers');
+        $this->app->forgetInstance(StandingFundingAddressProviderRegistry::class);
+        $this->app->singleton(NetbankSourceAccountReadiness::class);
+        $this->app->tag(NetbankSourceAccountReadiness::class, 'emi.provider-source-account-readiness');
+        $this->app->singleton(NetbankProvisioningProfile::class);
+        $this->app->tag(NetbankProvisioningProfile::class, 'emi.provider-provisioning-profiles');
+        $this->app->singleton(NetbankProvisioningGatewayFactory::class);
+        $this->app->tag(NetbankProvisioningGatewayFactory::class, 'emi.provider-provisioning-gateway-factories');
+        $this->app->singleton(NetbankSettlementRailConfiguration::class);
+        $this->app->tag(NetbankSettlementRailConfiguration::class, 'emi.provider-settlement-rail-configurations');
+        $this->app->singleton(NetbankPayerMobileInterpreter::class);
+        $this->app->tag(NetbankPayerMobileInterpreter::class, 'emi.provider-payer-mobile-interpreters');
+        $this->app->singleton(NetbankFundingProviderAdapter::class);
+        $this->app->tag(NetbankFundingProviderAdapter::class, 'emi.funding-destination-resolvers');
+        $this->app->singleton(ConstellationFundingProviderAdapter::class);
+        $this->app->tag(ConstellationFundingProviderAdapter::class, 'emi.funding-destination-resolvers');
+        $this->app->singleton(ConstellationDeferredApprovalScope::class);
+        $this->app->tag(ConstellationDeferredApprovalScope::class, 'emi.deferred-payout-approval-scopes');
+        $this->app->singleton(ConstellationCustomerProvisioner::class);
+        $this->app->tag(ConstellationCustomerProvisioner::class, 'emi.provider-customer-provisioners');
+        $this->app->singleton(ConstellationProvisioningGateway::class);
+        $this->app->tag(ConstellationProvisioningGateway::class, 'emi.provider-provisioning-gateways');
+        $this->app->singleton(ConstellationWalletProjectionSynchronizer::class);
+        $this->app->tag(ConstellationWalletProjectionSynchronizer::class, 'emi.provider-wallet-projection-synchronizers');
+        $this->app->singleton(ConstellationPendingPayoutOtpInterpreter::class);
+        $this->app->tag(ConstellationPendingPayoutOtpInterpreter::class, 'emi.pending-payout-otp-interpreters');
+        $this->app->singleton(ConstellationPayoutApprovalReplayPolicy::class);
+        $this->app->tag(ConstellationPayoutApprovalReplayPolicy::class, 'emi.payout-approval-replay-policies');
+
         $this->app->bind(FormFlowDriverService::class, fn () => new class extends FormFlowDriverService
         {
             public function loadConfig(string $driverName = 'voucher-redemption'): void
@@ -79,6 +126,16 @@ abstract class TestCase extends Orchestra
         $this->app->instance(AuditLoggerContract::class, $this->fakeAuditLogger);
 
         $this->seedInstructionItems();
+    }
+
+    protected function tearDown(): void
+    {
+        if (getenv('XCHANGE_MYSQL_TEST_DATABASE') || getenv('XCHANGE_PGSQL_TEST_DATABASE')) {
+            // Dedicated database fixtures are preserved for inspection; unrelated package rollbacks are not part of this concurrency test.
+            $this->cachedTestMigratorProcessors = [];
+        }
+
+        parent::tearDown();
     }
 
     public function fakePayoutProvider(): FakePayoutProvider
@@ -130,12 +187,63 @@ abstract class TestCase extends Orchestra
         $app['config']->set('app.locale', 'en');
 
         $app['config']->set('database.default', 'testing');
-        $app['config']->set('database.connections.testing', [
-            'driver' => 'sqlite',
-            'database' => ':memory:',
-            'prefix' => '',
-            'foreign_key_constraints' => true,
-        ]);
+        $mysqlDatabase = getenv('XCHANGE_MYSQL_TEST_DATABASE');
+        $postgresDatabase = getenv('XCHANGE_PGSQL_TEST_DATABASE');
+        if (is_string($postgresDatabase) && $postgresDatabase !== '') {
+            if (preg_match('/\Axchange_boundary_test_[a-z0-9_]+\z/', $postgresDatabase) !== 1) {
+                throw new \RuntimeException('The PostgreSQL test database name must begin with xchange_boundary_test_.');
+            }
+
+            $app['config']->set('database.connections.testing', [
+                'driver' => 'pgsql',
+                'host' => '127.0.0.1',
+                'port' => (int) (getenv('XCHANGE_PGSQL_TEST_PORT') ?: 5432),
+                'database' => $postgresDatabase,
+                'username' => getenv('XCHANGE_PGSQL_TEST_USERNAME') ?: 'postgres',
+                'password' => getenv('XCHANGE_PGSQL_TEST_PASSWORD') ?: '',
+                'charset' => 'utf8',
+                'prefix' => '',
+                'schema' => 'public',
+                'timezone' => 'UTC',
+            ]);
+        } elseif (is_string($mysqlDatabase) && $mysqlDatabase !== '') {
+            if (preg_match('/\Axchange_boundary_test_[a-z0-9_]+\z/', $mysqlDatabase) !== 1) {
+                throw new \RuntimeException('The MySQL test database name must begin with xchange_boundary_test_.');
+            }
+
+            Builder::defaultStringLength(150);
+
+            $app['config']->set('database.connections.testing', [
+                'driver' => 'mysql',
+                'host' => '127.0.0.1',
+                'port' => (int) (getenv('XCHANGE_MYSQL_TEST_PORT') ?: 3306),
+                'database' => $mysqlDatabase,
+                'username' => getenv('XCHANGE_MYSQL_TEST_USERNAME') ?: 'root',
+                'password' => getenv('XCHANGE_MYSQL_TEST_PASSWORD') ?: '',
+                'charset' => 'utf8mb4',
+                'collation' => 'utf8mb4_unicode_ci',
+                'prefix' => '',
+                'strict' => true,
+            ]);
+            $app->bind(Blueprint::class, function ($app, array $parameters) {
+                return new class($parameters['connection'], $parameters['table'], $parameters['callback'] ?? null) extends Blueprint
+                {
+                    protected function createIndexName($type, array $columns)
+                    {
+                        $name = parent::createIndexName($type, $columns);
+
+                        return strlen($name) <= 64 ? $name : substr($name, 0, 47).'_'.substr(hash('sha256', $name), 0, 16);
+                    }
+                };
+            });
+        } else {
+            $app['config']->set('database.connections.testing', [
+                'driver' => 'sqlite',
+                'database' => ':memory:',
+                'prefix' => '',
+                'foreign_key_constraints' => true,
+            ]);
+        }
 
         $app['config']->set('cache.default', 'array');
         $app['config']->set('queue.default', 'sync');
@@ -288,7 +396,25 @@ abstract class TestCase extends Orchestra
         // Extra voucher-support tables used by voucher package tests/flows.
         $this->runVoucherSupportMigrations();
 
-        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        $packageMigrations = __DIR__.'/../database/migrations';
+        if (getenv('XCHANGE_MYSQL_TEST_DATABASE')) {
+            $temporaryMigrations = sys_get_temp_dir().'/xchange-mysql-test-migrations-'.getmypid();
+            if (! is_dir($temporaryMigrations) && ! mkdir($temporaryMigrations, 0700, true) && ! is_dir($temporaryMigrations)) {
+                throw new \RuntimeException('Unable to prepare isolated MySQL test migrations.');
+            }
+
+            foreach (glob($packageMigrations.'/*.php') ?: [] as $migration) {
+                if (str_contains(basename($migration), 'standing_funding_address_binding_effective_time_corrections')) {
+                    continue;
+                }
+                $target = $temporaryMigrations.'/'.basename($migration);
+                if (! file_exists($target) && ! symlink($migration, $target)) {
+                    throw new \RuntimeException('Unable to link an isolated MySQL test migration.');
+                }
+            }
+            $packageMigrations = $temporaryMigrations;
+        }
+        $this->loadMigrationsFrom($packageMigrations);
     }
 
     protected function loadInstructionPackageMigrations(): void

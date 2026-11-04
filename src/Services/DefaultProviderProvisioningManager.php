@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services;
 
+use LBHurtado\EmiCore\Contracts\ProviderDefaultProvisioningMode;
 use LBHurtado\XChange\Contracts\ProviderAccountLinkRepositoryContract;
 use LBHurtado\XChange\Contracts\ProviderProvisioningGatewayContract;
 use LBHurtado\XChange\Contracts\ProviderProvisioningManagerContract;
@@ -27,7 +28,9 @@ class DefaultProviderProvisioningManager implements ProviderProvisioningManagerC
             throw new RuntimeException("Provider [{$provider}] is disabled.");
         }
 
-        $mode = (string) data_get($payload, 'mode', $this->defaultMode($provider));
+        $mode = array_key_exists('mode', $payload)
+            ? (string) $payload['mode']
+            : $this->defaultMode($provider);
         $topology = $this->settings->topology($provider);
 
         if (! $this->gateway->supports($provider, $mode)) {
@@ -56,10 +59,20 @@ class DefaultProviderProvisioningManager implements ProviderProvisioningManagerC
 
     protected function defaultMode(string $provider): string
     {
-        return match ($provider) {
-            'paynamics' => ProviderProvisioningMode::WalletCreate->value,
-            'netbank' => ProviderProvisioningMode::BankAccountLink->value,
-            default => ProviderProvisioningMode::LedgerWallet->value,
-        };
+        $matches = [];
+        foreach (['emi.provider-provisioning-profiles', 'emi.provider-provisioning-gateways'] as $tag) {
+            foreach (app()->tagged($tag) as $candidate) {
+                if ($candidate instanceof ProviderDefaultProvisioningMode && $candidate->providerCode() === $provider) {
+                    $matches[] = $candidate;
+                }
+            }
+        }
+        if (count($matches) > 1) {
+            throw new RuntimeException("Multiple default provisioning modes are registered for provider [{$provider}].");
+        }
+
+        return $matches === []
+            ? (string) config("x-change.provider_runtime.providers.{$provider}.default_provisioning_mode", ProviderProvisioningMode::LedgerWallet->value)
+            : $matches[0]->defaultProvisioningMode();
     }
 }

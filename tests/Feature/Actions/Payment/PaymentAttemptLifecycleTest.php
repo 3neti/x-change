@@ -4,13 +4,19 @@ declare(strict_types=1);
 
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use LBHurtado\EmiCore\Contracts\DirectQrFundingInstructionIssuer;
+use LBHurtado\EmiCore\Data\Funding\FundingInstructionRequestData;
+use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
 use LBHurtado\EmiCore\Data\Funding\FundingQrMerchantData;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
+use LBHurtado\EmiCore\Exceptions\ProviderFundingNotObserved;
 use LBHurtado\Merchant\Contracts\MerchantProfileRepositoryContract;
 use LBHurtado\PaymentGateway\Funding\NetbankFundingApiClient;
 use LBHurtado\PaymentGateway\Funding\NetbankFundingProviderAdapter;
@@ -849,6 +855,28 @@ it('issues encrypted provider QR instructions once without Account funding', fun
         ->and(DB::table('x_change_account_funding_receipts')->count())->toBe(0);
 });
 
+it('uses the optional direct QR capability without a concrete provider class', function (): void {
+    $adapter = new class extends FakeFundingProviderAdapter implements DirectQrFundingInstructionIssuer
+    {
+        public int $directCalls = 0;
+
+        public function createDirectQrFundingInstructions(FundingInstructionRequestData $request): FundingInstructionsData
+        {
+            $this->directCalls++;
+
+            return $this->createFundingInstructions($request);
+        }
+    };
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    $voucher = paymentAttemptCollectibleVoucher();
+    $attempt = app(CreatePaymentAttempt::class)->handle($voucher, 'netbank', 'payer-session-1', 'request-1');
+
+    $issued = app(IssuePaymentInstructions::class)->handle($attempt);
+
+    expect($issued->status)->toBe(PaymentAttemptStatus::AwaitingPayment)
+        ->and($adapter->directCalls)->toBe(1);
+});
+
 it('issues a provisional NetBank payer QR with one provider call and no VCA registration', function (): void {
     config()->set('payment-gateway.netbank.funding.reference_key', 'test-payment-reference-key');
     config()->set('payment-gateway.netbank.funding.pre_transaction_validation_enabled', true);
@@ -1136,6 +1164,284 @@ it('expires an unpaid attempt after the configured settlement grace', function (
         ->and($checked->expired_at)->not->toBeNull()
         ->and($checked->events->last()->event_type)->toBe('payment_attempt_expired')
         ->and(VoucherCollection::query()->count())->toBe(0);
+});
+
+it('settles an on-time payment discovered after the QR expired exactly once', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $attempt = issuedPaymentAttempt($voucher);
+    $observation = exactPaymentObservation($attempt);
+    $observation->occurredAt = DateTimeImmutable::createFromInterface($attempt->instructions_created_at->addMinute());
+    $observation->settledAt = DateTimeImmutable::createFromInterface($attempt->expires_at->addMinutes(5));
+    $this->travelTo($attempt->expires_at->addMinutes(6));
+    $expired = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Schedule);
+    expect($expired->status)->toBe(PaymentAttemptStatus::Expired);
+
+    $this->paymentAdapter->fundingObservation = $observation;
+    $checked = app(VerifyPaymentAttempt::class)->handle($expired, PaymentVerificationTrigger::Schedule);
+    $replayed = app(VerifyPaymentAttempt::class)->handle($checked, PaymentVerificationTrigger::Schedule);
+
+    expect($checked->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and($replayed->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and(VoucherCollection::query()->count())->toBe(1);
+});
+
+it('holds a payment made after QR expiry during the settlement grace period for review', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $attempt = issuedPaymentAttempt($voucher);
+    $observation = exactPaymentObservation($attempt);
+    $observation->occurredAt = DateTimeImmutable::createFromInterface($attempt->expires_at->addSeconds(30));
+    $observation->settledAt = DateTimeImmutable::createFromInterface($attempt->expires_at->addMinute());
+    $this->travelTo($attempt->expires_at->addMinutes(2));
+    $this->paymentAdapter->fundingObservation = $observation;
+
+    expect(app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Schedule)->status)
+        ->toBe(PaymentAttemptStatus::Suspense)
+        ->and(VoucherCollection::query()->count())->toBe(0);
+});
+
+it('holds a second active payment when the first has already met the target', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $first = issuedPaymentAttempt($voucher);
+    $second = issuedPaymentAttempt($voucher);
+    $this->paymentAdapter->fundingObservation = exactPaymentObservation($first);
+    expect(app(VerifyPaymentAttempt::class)->handle($first, PaymentVerificationTrigger::Payer)->status)
+        ->toBe(PaymentAttemptStatus::Settled);
+    $this->paymentAdapter->fundingObservation = exactPaymentObservation($second);
+
+    expect(app(VerifyPaymentAttempt::class)->handle($second, PaymentVerificationTrigger::Payer)->status)
+        ->toBe(PaymentAttemptStatus::Suspense)
+        ->and(VoucherCollection::query()->count())->toBe(1);
+});
+
+it('holds a payment made after QR expiry for review', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $attempt = issuedPaymentAttempt($voucher);
+    $observation = exactPaymentObservation($attempt);
+    $observation->occurredAt = DateTimeImmutable::createFromInterface($attempt->expires_at->addMinute());
+    $observation->settledAt = DateTimeImmutable::createFromInterface($attempt->expires_at->addMinutes(2));
+    $this->travelTo($attempt->expires_at->addMinutes(6));
+    $expired = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Schedule);
+    $this->paymentAdapter->fundingObservation = $observation;
+
+    $checked = app(VerifyPaymentAttempt::class)->handle($expired, PaymentVerificationTrigger::Schedule);
+
+    expect($checked->status)->toBe(PaymentAttemptStatus::Suspense)
+        ->and(VoucherCollection::query()->count())->toBe(0);
+});
+
+it('holds late evidence without a transaction timestamp for review', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $attempt = issuedPaymentAttempt($voucher);
+    $observation = exactPaymentObservation($attempt);
+    $observation->occurredAt = null;
+    $this->travelTo($attempt->expires_at->addMinutes(6));
+    $expired = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Schedule);
+    $this->paymentAdapter->fundingObservation = $observation;
+
+    expect(app(VerifyPaymentAttempt::class)->handle($expired, PaymentVerificationTrigger::Schedule)->status)
+        ->toBe(PaymentAttemptStatus::Suspense)
+        ->and(VoucherCollection::query()->count())->toBe(0);
+});
+
+it('does not check provider history after the late reconciliation window', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $attempt = issuedPaymentAttempt($voucher);
+    $this->travelTo($attempt->expires_at->addMinutes(6));
+    $expired = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Schedule);
+    $this->travelTo($attempt->expires_at->addDays(8));
+
+    expect(app(VerifyPaymentAttempt::class)->handle($expired, PaymentVerificationTrigger::Schedule)->status)
+        ->toBe(PaymentAttemptStatus::Expired)
+        ->and($this->paymentAdapter->fundingVerifications)->toBeEmpty();
+});
+
+it('keeps an expired QR expired when no payment is observed', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $attempt = issuedPaymentAttempt($voucher);
+    $this->travelTo($attempt->expires_at->addMinutes(6));
+    $expired = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Schedule);
+    $this->paymentAdapter->fundingVerificationResolver = static function (): never {
+        throw new ProviderFundingNotObserved('no payment');
+    };
+
+    $checked = app(VerifyPaymentAttempt::class)->handle($expired, PaymentVerificationTrigger::Schedule);
+
+    expect($checked->status)->toBe(PaymentAttemptStatus::Expired)
+        ->and($checked->events->last()->event_type)->toBe('provider_payment_not_observed')
+        ->and(VoucherCollection::query()->count())->toBe(0);
+});
+
+it('holds a late-discovered payment when another payment has already closed the voucher', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $first = issuedPaymentAttempt($voucher);
+    $second = issuedPaymentAttempt($voucher);
+    $this->paymentAdapter->fundingObservation = exactPaymentObservation($first);
+    expect(app(VerifyPaymentAttempt::class)->handle($first, PaymentVerificationTrigger::Payer)->status)
+        ->toBe(PaymentAttemptStatus::Settled);
+    $late = exactPaymentObservation($second);
+    $late->occurredAt = DateTimeImmutable::createFromInterface($second->instructions_created_at->addMinute());
+    $late->settledAt = DateTimeImmutable::createFromInterface($second->expires_at->addMinutes(5));
+    $this->travelTo($second->expires_at->addMinutes(6));
+    $expired = app(VerifyPaymentAttempt::class)->handle($second, PaymentVerificationTrigger::Schedule);
+    $this->paymentAdapter->fundingObservation = $late;
+
+    $checked = app(VerifyPaymentAttempt::class)->handle($expired, PaymentVerificationTrigger::Schedule);
+
+    expect($checked->status)->toBe(PaymentAttemptStatus::Suspense)
+        ->and(VoucherCollection::query()->count())->toBe(1);
+});
+
+it('rolls back affected foreign key migrations on mysql', function (): void {
+    if (DB::connection()->getDriverName() !== 'mysql') {
+        test()->markTestSkipped('Requires the dedicated MySQL test database.');
+    }
+
+    foreach ([
+        '2026_10_12_000000_add_partner_client_to_x_change_checkouts.php',
+        '2026_09_24_000000_add_settlement_collection_sources_to_campaign_payments.php',
+        '2026_08_08_130000_add_commercial_partner_links_to_allocations_and_payout_batches.php',
+        '2026_07_25_214455_add_voucher_id_to_x_change_funding_requests_table.php',
+    ] as $migration) {
+        (require __DIR__.'/../../../../database/migrations/'.$migration)->down();
+    }
+
+    expect(Schema::hasColumn('x_change_checkouts', 'partner_api_client_id'))->toBeFalse()
+        ->and(Schema::hasColumn('x_change_campaign_payment_recognitions', 'campaign_payment_source_id'))->toBeFalse()
+        ->and(Schema::hasColumn('x_change_partner_commission_payout_batches', 'commercial_partner_id'))->toBeFalse()
+        ->and(Schema::hasColumn('x_change_funding_requests', 'voucher_id'))->toBeFalse();
+});
+
+it('serializes concurrent payments for the same voucher on a row-locking database', function (): void {
+    $driver = DB::connection()->getDriverName();
+    if (! in_array($driver, ['mysql', 'pgsql'], true) || ! function_exists('pcntl_fork')) {
+        test()->markTestSkipped('Requires a dedicated MySQL or PostgreSQL database and pcntl.');
+    }
+
+    expect(DB::connection()->transactionLevel())->toBe(0);
+    $voucher = paymentAttemptCollectibleVoucher();
+    $attempts = [issuedPaymentAttempt($voucher), issuedPaymentAttempt($voucher)];
+    $expiryDetails = 'expires='.$attempts[0]->fresh()->expires_at?->toIso8601String().', now='.now()->toIso8601String();
+    $children = [];
+    $channels = [];
+    $resultPaths = [];
+
+    foreach ($attempts as $attempt) {
+        $channel = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
+        $resultPath = tempnam(sys_get_temp_dir(), 'xchange-payment-race-');
+        if ($channel === false || $resultPath === false) {
+            throw new RuntimeException('Unable to prepare the payment concurrency test.');
+        }
+        $pid = pcntl_fork();
+        if ($pid === -1) {
+            throw new RuntimeException('Unable to start the payment concurrency test.');
+        }
+
+        if ($pid === 0) {
+            fclose($channel[0]);
+            DB::purge();
+            fread($channel[1], 1);
+            try {
+                $this->paymentAdapter->fundingObservation = exactPaymentObservation($attempt);
+                $result = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+                file_put_contents($resultPath, $result->status->value);
+                exit(0);
+            } catch (Throwable $exception) {
+                file_put_contents($resultPath, 'error:'.get_class($exception).':'.$exception->getMessage());
+                exit(1);
+            }
+        }
+
+        fclose($channel[1]);
+        $children[] = $pid;
+        $channels[] = $channel[0];
+        $resultPaths[] = $resultPath;
+    }
+
+    $configuration = config('database.connections.testing');
+    $dsn = sprintf('%s:host=%s;port=%d;dbname=%s', $driver, $configuration['host'], $configuration['port'], $configuration['database']);
+    $lock = new PDO($dsn, $configuration['username'], $configuration['password'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $observer = new PDO($dsn, $configuration['username'], $configuration['password'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $lock->beginTransaction();
+    $statement = $lock->prepare('select id from vouchers where id = ? for update');
+    $statement->execute([$voucher->getKey()]);
+    foreach ($channels as $channel) {
+        fwrite($channel, '1');
+        fclose($channel);
+    }
+
+    $deadline = microtime(true) + 15;
+    $bothVerified = false;
+    try {
+        $query = $observer->prepare('select count(*) from x_change_payment_attempts where voucher_id = ? and status = ?');
+        do {
+            $query->execute([$voucher->getKey(), PaymentAttemptStatus::Verified->value]);
+            $bothVerified = (int) $query->fetchColumn() === 2;
+            if (! $bothVerified) {
+                usleep(50_000);
+            }
+        } while (! $bothVerified && microtime(true) < $deadline);
+    } finally {
+        $lock->commit();
+    }
+
+    $exitCodes = [];
+    foreach ($children as $pid) {
+        pcntl_waitpid($pid, $status);
+        $exitCodes[] = pcntl_wexitstatus($status);
+    }
+    $results = array_map(static fn (string $path): string => (string) file_get_contents($path), $resultPaths);
+    foreach ($resultPaths as $path) {
+        unlink($path);
+    }
+    DB::purge();
+    sort($results);
+
+    expect($bothVerified)->toBeTrue('Both workers must reach verified state while the voucher is locked; '.$expiryDetails.'; results: '.implode('; ', $results))
+        ->and($exitCodes)->toBe([0, 0], implode('; ', $results))
+        ->and($results)->toBe([PaymentAttemptStatus::Settled->value, PaymentAttemptStatus::Suspense->value])
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->getKey())->count())->toBe(1);
+});
+
+it('accepts a lost-session report without exposing attempt state and encrypts its evidence', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $payload = [
+        'transaction_reference' => 'PROVIDER-REFERENCE-123',
+        'amount_minor' => 5000,
+        'paid_at' => '2026-11-03T12:00:00+08:00',
+        'contact' => 'payer@example.test',
+    ];
+    $response = $this->postJson(route('x-change.pay.recovery-reports.store', ['code' => $voucher->code]), $payload);
+    $unknown = $this->postJson(route('x-change.pay.recovery-reports.store', ['code' => 'UNKNOWN-CODE']), $payload);
+
+    $response->assertStatus(202)->assertJsonMissingPath('attempt');
+    $unknown->assertStatus(202)->assertExactJson($response->json());
+    $report = DB::table('x_change_payment_recovery_reports')->sole();
+    expect($report->voucher_id)->toBe($voucher->getKey())
+        ->and($report->evidence_ciphertext)->not->toContain('PROVIDER-REFERENCE-123')
+        ->and(json_decode(Crypt::decryptString($report->evidence_ciphertext), true))->toMatchArray($payload)
+        ->and(PaymentAttempt::query()->count())->toBe(0);
+});
+
+it('only allows the voucher owner to review its lost-session reports', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $owner = auth()->user();
+    $payload = ['transaction_reference' => 'REFERENCE-XYZ', 'amount_minor' => 5000, 'paid_at' => '2026-11-03T12:00:00+08:00'];
+    $this->postJson(route('x-change.pay.recovery-reports.store', ['code' => $voucher->code]), $payload)->assertStatus(202);
+    $report = DB::table('x_change_payment_recovery_reports')->sole();
+    $index = route('x-change.cockpit.pay-codes.payment-recovery-reports.index', ['code' => $voucher->code]);
+    $review = route('x-change.cockpit.pay-codes.payment-recovery-reports.review', ['code' => $voucher->code, 'reference' => $report->reference]);
+    actingAsTestUser();
+    $this->getJson($index)->assertNotFound();
+    $this->postJson($review, ['note' => 'reviewed'])->assertNotFound();
+    $this->actingAs($owner);
+    $this->getJson($index)->assertSuccessful()->assertJsonPath('reports.0.evidence.transaction_reference', 'REFERENCE-XYZ');
+    $this->postJson($review, ['note' => 'Reviewed against provider records'])->assertSuccessful();
+    $this->getJson($index)->assertSuccessful()->assertJsonPath('reports.0.review_note', 'Reviewed against provider records');
+    $this->postJson($review, ['note' => 'Repeat'])->assertNotFound();
+    $updated = DB::table('x_change_payment_recovery_reports')->where('id', $report->id)->first();
+    expect($updated->status)->toBe('reviewed')
+        ->and(Crypt::decryptString($updated->review_note_ciphertext))->toBe('Reviewed against provider records')
+        ->and(PaymentAttempt::query()->count())->toBe(0);
 });
 
 function paymentAttemptCollectibleVoucher(): Voucher

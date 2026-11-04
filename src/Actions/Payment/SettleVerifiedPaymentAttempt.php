@@ -13,8 +13,10 @@ use LBHurtado\Voucher\Services\ExecutionEngine;
 use LBHurtado\XChange\Actions\Settlement\AdvanceSettlementCampaignLifecycle;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
+use LBHurtado\XChange\Exceptions\LatePaymentRequiresReview;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Services\Payment\LatePaymentEligibility;
 use LBHurtado\XChange\Services\Settlement\V2EvidenceEventJournal;
 use LogicException;
 
@@ -24,6 +26,7 @@ class SettleVerifiedPaymentAttempt
         private readonly RecognizeSettlementVoucherCollection $recognizeCampaignPayment,
         private readonly AdvanceSettlementCampaignLifecycle $advanceCampaignLifecycle,
         private readonly V2EvidenceEventJournal $v2Events,
+        private readonly LatePaymentEligibility $lateEligibility,
     ) {}
 
     public function handle(
@@ -54,6 +57,9 @@ class SettleVerifiedPaymentAttempt
 
             $observation = $this->observation($locked);
             $voucher = Voucher::query()->lockForUpdate()->findOrFail($locked->voucher_id);
+            if (! $this->lateEligibility->canApply($locked, $voucher, $observation)) {
+                throw new LatePaymentRequiresReview('The payment requires operator review.');
+            }
             $duplicate = VoucherCollection::query()
                 ->where('provider', $locked->provider_code)
                 ->where('provider_transaction_id', $observation->provider_transaction_id)

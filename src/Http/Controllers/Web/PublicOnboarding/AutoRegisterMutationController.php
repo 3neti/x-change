@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
-use LBHurtado\PaymentGateway\Exceptions\NetbankFundingRequestFailed;
+use LBHurtado\EmiCore\Contracts\ProviderFundingRequestFailure;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\FundingVerificationTrigger;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingIntentJob;
@@ -27,7 +27,7 @@ final class AutoRegisterMutationController extends Controller
         $request->attributes->set('x_change_public_auto_register', true);
         try {
             $registration = $registrations->start($operator, (string) ($request->input('idempotency_key') ?: Str::ulid()), $request);
-        } catch (NetbankFundingRequestFailed $exception) {
+        } catch (ProviderFundingRequestFailure $exception) {
             report($exception);
 
             return response()->json([

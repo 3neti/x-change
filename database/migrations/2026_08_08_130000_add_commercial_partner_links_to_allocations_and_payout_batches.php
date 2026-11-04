@@ -45,10 +45,11 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('x_change_partner_commission_payout_batches', function (Blueprint $table): void {
-            $table->dropForeign(['commercial_partner_destination_revision_id']);
-            $table->dropForeign(['commercial_partner_revision_id']);
-            $table->dropForeign(['commercial_partner_id']);
+        $sqlite = Schema::getConnection()->getDriverName() === 'sqlite';
+        Schema::table('x_change_partner_commission_payout_batches', function (Blueprint $table) use ($sqlite): void {
+            $table->dropForeign($sqlite ? ['commercial_partner_destination_revision_id'] : 'commission_batch_partner_destination_fk');
+            $table->dropForeign($sqlite ? ['commercial_partner_revision_id'] : 'commission_batch_partner_revision_fk');
+            $table->dropForeign($sqlite ? ['commercial_partner_id'] : 'commission_batch_partner_fk');
             $table->dropColumn([
                 'commercial_partner_destination_revision_id',
                 'commercial_partner_revision_id',
@@ -56,11 +57,11 @@ return new class extends Migration
             ]);
         });
 
-        Schema::table('x_change_commercial_allocations', function (Blueprint $table): void {
+        Schema::table('x_change_commercial_allocations', function (Blueprint $table) use ($sqlite): void {
             $table->dropIndex('x_change_commercial_allocations_legacy_partner_reference_index');
             $table->dropColumn('legacy_partner_reference');
-            $table->dropForeign(['commercial_partner_revision_id']);
-            $table->dropForeign(['commercial_partner_id']);
+            $table->dropForeign($sqlite ? ['commercial_partner_revision_id'] : 'commercial_allocation_partner_revision_fk');
+            $table->dropForeign($sqlite ? ['commercial_partner_id'] : 'commercial_allocation_partner_fk');
             $table->dropColumn(['commercial_partner_revision_id', 'commercial_partner_id']);
         });
     }

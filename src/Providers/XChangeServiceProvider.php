@@ -37,16 +37,14 @@ use LBHurtado\Contact\Models\Contact;
 use LBHurtado\EmiCore\Contracts\DeploymentConnectionContributor;
 use LBHurtado\EmiCore\Contracts\DeploymentEnvironmentContributor;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
+use LBHurtado\EmiCore\Contracts\PendingPayoutOtpStore;
+use LBHurtado\EmiCore\Contracts\ProviderWalletResolver;
 use LBHurtado\EmiCore\Contracts\SettlementProviderRegistryContract;
-use LBHurtado\EmiPaynamicsConstellation\Contracts\PendingOtpStore;
 use LBHurtado\FormHandlerOtp\Contracts\OtpChallengeGateway;
 use LBHurtado\FormHandlerOtp\Services\TxtcmdrOtpChallengeGateway;
 use LBHurtado\FormHandlerOtp\Services\UnavailableOtpChallengeGateway;
 use LBHurtado\Onboarding\Contracts\ContactUserProvisionerContract;
 use LBHurtado\Onboarding\Support\OnboardingGuard;
-use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
-use LBHurtado\PaymentGateway\Contracts\WalletProxy;
-use LBHurtado\PaymentGateway\Funding\NetbankReusableFundingAddressProvider;
 use LBHurtado\SettlementEnvelope\Contracts\WorkflowCatalog;
 use LBHurtado\SettlementEnvelope\Services\DriverService;
 use LBHurtado\SettlementEnvelope\Services\DriverSourceRegistry;
@@ -900,11 +898,6 @@ class XChangeServiceProvider extends ServiceProvider
                 $app->tagged('emi.funding-provider-adapters'),
             ),
         );
-        $this->app->singleton(NetbankReusableFundingAddressProvider::class);
-        $this->app->tag(
-            NetbankReusableFundingAddressProvider::class,
-            'emi.standing-funding-address-providers',
-        );
         $this->app->singleton(
             StandingFundingAddressProviderRegistry::class,
             fn ($app) => new StandingFundingAddressProviderRegistry(
@@ -1359,7 +1352,7 @@ class XChangeServiceProvider extends ServiceProvider
 
         $this->app->bind(PricingServiceContract::class, InstructionBackedPricingService::class);
 
-        $this->app->bind(WalletProxy::class, function ($app) {
+        $this->app->bind(ProviderWalletResolver::class, function ($app) {
             $service = config(
                 'x-change.payout.wallet_proxy',
                 SystemWalletProxy::class
@@ -1399,7 +1392,7 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(PayoutProvider::class, function ($app) {
             $provider = config(
                 'x-change.payout.provider',
-                NetbankPayoutProvider::class
+                'netbank'
             );
 
             return $app->make($app->make(PayoutProviderResolver::class)->resolve($provider));
@@ -1724,7 +1717,7 @@ class XChangeServiceProvider extends ServiceProvider
 
         $this->app->singleton(SettlementCollectionGate::class);
 
-        $this->app->bind(PendingOtpStore::class, ClaimApprovalPendingOtpStore::class);
+        $this->app->bind(PendingPayoutOtpStore::class, ClaimApprovalPendingOtpStore::class);
 
         $this->app->singleton(
             ClaimApprovalStatusResolver::class,
@@ -2078,6 +2071,13 @@ class XChangeServiceProvider extends ServiceProvider
 
     protected function bootFundingVerificationRateLimiter(): void
     {
+        RateLimiter::for('x-change-provider-verification', function (object $job): Limit {
+            return Limit::perMinute(max(1, min(
+                (int) config('x-change.funding.verification_provider_rate_limit_per_minute', 30),
+                (int) config('x-change.payment.attempts.verification_provider_rate_limit_per_minute', 30),
+            )))->by(strtolower(trim((string) data_get($job, 'providerCode', 'unknown'))));
+        });
+
         RateLimiter::for('x-change-funding-verification', function (object $job): Limit {
             return Limit::perMinute(max(
                 1,

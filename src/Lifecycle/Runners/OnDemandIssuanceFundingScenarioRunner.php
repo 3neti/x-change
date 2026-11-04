@@ -199,7 +199,7 @@ final class OnDemandIssuanceFundingScenarioRunner implements ScenarioRunnerContr
         $firstIntent->refresh();
         $this->accountBalances->forget($owner, 'PHP');
         $clientFundsAfter = $this->accountBalances->balanceMinor($owner, 'PHP') ?? 0;
-        $steps[] = $this->step('late_payment_disposed', 'A verified late payment becomes Client Funds without reviving issuance', 'protected', [
+        $steps[] = $this->step('late_payment_disposed', 'A payment made after expiry is held for review', 'protected', [
             'Payment authenticated' => $authentication->authenticated ? 'Yes' : 'No',
             'Funding intent' => $firstIntent->status->value,
             'Order status' => $expired->status->value,
@@ -210,10 +210,11 @@ final class OnDemandIssuanceFundingScenarioRunner implements ScenarioRunnerContr
         $success = data_get($qr, 'embedded_amount') === true
             && $first->expected_payment_minor !== $second->expected_payment_minor
             && $expired->status === PayCodeIssuanceFundingOrderStatus::Expired
-            && $expired->late_payment_disposition === 'client_funds'
+            && $expired->late_payment_disposition !== 'client_funds'
             && $expired->voucher_id === null
-            && $firstIntent->status === FundingIntentStatus::Settled
-            && $clientFundsAfter - $clientFundsBefore === $first->expected_payment_minor;
+            && $firstIntent->status === FundingIntentStatus::Suspense
+            && $firstIntent->suspenseCases()->whereIn('status', ['open', 'monitoring'])->exists()
+            && $clientFundsAfter === $clientFundsBefore;
 
         return [
             'success' => $success,

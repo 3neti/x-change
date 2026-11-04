@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 use LBHurtado\EmiCore\Models\WebhookReceipt;
 use LBHurtado\XChange\Data\Funding\FundingIntentVerificationData;
+use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\FundingVerificationTrigger;
 use LBHurtado\XChange\Models\FundingIntent;
@@ -101,12 +102,19 @@ class VerifyFundingWebhookReceipt
     {
         return FundingIntent::query()
             ->where('provider_code', $receipt->provider_code)
-            ->whereIn('status', [
-                FundingIntentStatus::AwaitingFunds,
-                FundingIntentStatus::EvidenceReceived,
-                FundingIntentStatus::Verifying,
-                FundingIntentStatus::Settled,
-            ])
+            ->where(function ($query): void {
+                $query->whereIn('status', [
+                    FundingIntentStatus::AwaitingFunds,
+                    FundingIntentStatus::EvidenceReceived,
+                    FundingIntentStatus::Verifying,
+                    FundingIntentStatus::Settled,
+                ])->orWhere(function ($query): void {
+                    $query->where('purpose', FundingIntentPurpose::OnDemandIssuance)
+                        ->whereIn('status', [FundingIntentStatus::Expired, FundingIntentStatus::Cancelled])
+                        ->whereNotNull('instructions_created_at')
+                        ->where('expires_at', '>=', now()->subDays(max(0, (int) config('x-change.funding.issuance_late_reconciliation_days', 7))));
+                });
+            })
             ->when(
                 $receipt->request_id !== null,
                 fn ($query) => $query->where('provider_request_id', $receipt->request_id),

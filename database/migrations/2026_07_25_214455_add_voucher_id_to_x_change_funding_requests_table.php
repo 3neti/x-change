@@ -27,8 +27,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('x_change_funding_requests', function (Blueprint $table): void {
-            $table->dropUnique(['voucher_id']);
             $table->dropForeign(['voucher_id']);
+            $table->dropUnique(['voucher_id']);
             $table->dropColumn('voucher_id');
         });
     }

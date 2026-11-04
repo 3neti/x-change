@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Lifecycle\Runners\Support;
 
-use LBHurtado\EmiCore\Contracts\PayoutProvider;
-use LBHurtado\EmiPaynamicsConstellation\Adapters\ConstellationPayoutProvider;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Data\Claims\ClaimApprovalInitiationResultData;
@@ -51,6 +49,6 @@ final class LifecycleClaimSubmitter
             return false;
         }
 
-        return app(PayoutProvider::class) instanceof ConstellationPayoutProvider;
+        return $this->deferredOtpResolver->isActiveProvider();
     }
 }

@@ -7,11 +7,11 @@ namespace LBHurtado\XChange\Http\Controllers\Web\Cockpit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\FundingVerificationTrigger;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingIntentJob;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Services\Funding\FundingIntentOwnerGuard;
+use LBHurtado\XChange\Services\Funding\ManualFundingVerificationEligibility;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 class CockpitFundingVerificationCheckController extends Controller
@@ -20,15 +20,13 @@ class CockpitFundingVerificationCheckController extends Controller
         Request $request,
         FundingIntent $intent,
         FundingIntentOwnerGuard $owners,
+        ManualFundingVerificationEligibility $eligibility,
     ): RedirectResponse {
         $operator = $request->user();
         $owners->authorize($intent, $operator);
 
-        if ($intent->provider_code !== 'netbank'
-            || ! (bool) config('x-change.funding.providers.netbank.enabled', false)
-            || $intent->status !== FundingIntentStatus::AwaitingFunds
-            || $intent->expires_at?->isPast() !== false) {
-            throw new ConflictHttpException('This Funding Intent is not eligible for a NetBank check.');
+        if (! $eligibility->allows($intent)) {
+            throw new ConflictHttpException('This Funding Intent is not eligible for provider verification.');
         }
 
         VerifyFundingIntentJob::dispatch(
@@ -40,6 +38,6 @@ class CockpitFundingVerificationCheckController extends Controller
 
         return redirect()
             ->route('x-change.cockpit.funding.index')
-            ->with('funding_notice', 'NetBank verification queued. Provider history will determine the result.');
+            ->with('funding_notice', ($intent->provider_code === 'netbank' ? 'NetBank' : 'Provider').' verification queued. Provider history will determine the result.');
     }
 }

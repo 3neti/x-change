@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
+use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\FundingVerificationTrigger;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingIntentJob;
@@ -140,6 +142,45 @@ it('keeps checking after provider outages and recovers verified settlement work'
         VerifyFundingIntentJob::class,
         fn (VerifyFundingIntentJob $job): bool => $job->fundingIntentId === $verifiedIntent->getKey(),
     );
+});
+
+it('queues expired issuance funding for seven days after expiry', function () {
+    $withinWindow = scheduledFundingIntent(status: FundingIntentStatus::Expired, expiresAt: now()->subDays(6));
+    $beyondWindow = scheduledFundingIntent(status: FundingIntentStatus::Expired, expiresAt: now()->subDays(8));
+    $cancelled = scheduledFundingIntent(status: FundingIntentStatus::Cancelled, expiresAt: now()->subDays(1));
+    foreach ([$withinWindow, $beyondWindow, $cancelled] as $intent) {
+        $intent->forceFill([
+            'purpose' => FundingIntentPurpose::OnDemandIssuance,
+            'instructions_created_at' => now()->subDays(9),
+        ])->saveQuietly();
+    }
+
+    $this->artisan('xchange:funding:verify-open')->assertSuccessful();
+
+    Queue::assertPushed(VerifyFundingIntentJob::class, fn (VerifyFundingIntentJob $job): bool => $job->fundingIntentId === $withinWindow->getKey());
+    Queue::assertNotPushed(VerifyFundingIntentJob::class, fn (VerifyFundingIntentJob $job): bool => $job->fundingIntentId === $beyondWindow->getKey());
+    Queue::assertPushed(VerifyFundingIntentJob::class, fn (VerifyFundingIntentJob $job): bool => $job->fundingIntentId === $cancelled->getKey());
+});
+
+it('prioritizes the least recently checked expired issuance intent', function () {
+    $recent = scheduledFundingIntent(status: FundingIntentStatus::Expired, expiresAt: now()->subDays(2));
+    $older = scheduledFundingIntent(status: FundingIntentStatus::Expired, expiresAt: now()->subDay());
+    foreach ([$recent, $older] as $intent) {
+        $intent->forceFill([
+            'purpose' => FundingIntentPurpose::OnDemandIssuance,
+            'instructions_created_at' => now()->subDays(3),
+        ])->saveQuietly();
+    }
+    DB::table('x_change_funding_reconciliation_checks')->insert([
+        ['funding_intent_id' => $recent->getKey(), 'last_checked_at' => now()->subMinute(), 'last_outcome' => 'not_observed'],
+        ['funding_intent_id' => $older->getKey(), 'last_checked_at' => now()->subHour(), 'last_outcome' => 'not_observed'],
+    ]);
+    config()->set('x-change.funding.scheduled_verification_batch_size', 1);
+
+    $this->artisan('xchange:funding:verify-open')->assertSuccessful();
+
+    Queue::assertPushed(VerifyFundingIntentJob::class, fn (VerifyFundingIntentJob $job): bool => $job->fundingIntentId === $older->getKey());
+    Queue::assertNotPushed(VerifyFundingIntentJob::class, fn (VerifyFundingIntentJob $job): bool => $job->fundingIntentId === $recent->getKey());
 });
 
 it('registers the package-owned non-overlapping minute schedule', function () {

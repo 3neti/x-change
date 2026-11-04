@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Http;
+use LBHurtado\EmiCore\Contracts\ProviderDefaultProvisioningMode;
 use LBHurtado\XChange\Contracts\ProviderProvisioningManagerContract;
 use LBHurtado\XChange\Enums\ProviderProvisioningMode;
 use LBHurtado\XChange\Models\ProviderAccountLink;
+use LBHurtado\XChange\Services\DefaultProviderProvisioningManager;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 beforeEach(function () {
@@ -16,6 +18,30 @@ beforeEach(function () {
     config()->set('constellation.notification_url', 'https://example.com/webhook');
     config()->set('constellation.company.email', 'company@example.test');
     config()->set('constellation.company.mobile_no', '639170000000');
+});
+
+it('chooses defaults from the provider capabilities', function (): void {
+    $provider = new class implements ProviderDefaultProvisioningMode
+    {
+        public function providerCode(): string
+        {
+            return 'other';
+        }
+
+        public function defaultProvisioningMode(): string
+        {
+            return 'bank_account_link';
+        }
+    };
+    app()->instance('test.default-provisioning-mode', $provider);
+    app()->tag('test.default-provisioning-mode', 'emi.provider-provisioning-profiles');
+    $manager = app(DefaultProviderProvisioningManager::class);
+    $method = new ReflectionMethod($manager, 'defaultMode');
+
+    expect($method->invoke($manager, 'netbank'))->toBe('bank_account_link')
+        ->and($method->invoke($manager, 'paynamics'))->toBe('wallet_create')
+        ->and($method->invoke($manager, 'other'))->toBe('bank_account_link')
+        ->and($method->invoke($manager, 'unknown'))->toBe('ledger_wallet');
 });
 
 it('routes NetBank provisioning through the configured gateway and persists a ready link', function () {

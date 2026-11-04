@@ -16,6 +16,7 @@ use LBHurtado\XChange\Actions\Operations\RecordExternalJobFailure;
 use LBHurtado\XChange\Actions\Payment\MonitorPaymentAttempt;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
+use LBHurtado\XChange\Queue\Concerns\ProviderVerificationRetryPolicy;
 use Throwable;
 
 final class MonitorPaymentAttemptJob implements ShouldBeUnique, ShouldQueue
@@ -23,6 +24,7 @@ final class MonitorPaymentAttemptJob implements ShouldBeUnique, ShouldQueue
     use Dispatchable;
     use HasSafeQueueTags;
     use InteractsWithQueue;
+    use ProviderVerificationRetryPolicy;
     use Queueable;
     use SerializesModels;
 
@@ -50,7 +52,7 @@ final class MonitorPaymentAttemptJob implements ShouldBeUnique, ShouldQueue
                 ->releaseAfter(5)
                 ->expireAfter($this->uniqueFor)
                 ->shared(),
-            new RateLimited('x-change-payment-verification'),
+            new RateLimited('x-change-provider-verification'),
         ];
     }
 

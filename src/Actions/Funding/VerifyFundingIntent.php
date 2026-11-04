@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Actions\Funding;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
 use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
 use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
@@ -19,6 +20,7 @@ use LBHurtado\XChange\Data\Funding\FundingIntentVerificationData;
 use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\FundingVerificationTrigger;
+use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Exceptions\FundingEvidenceAlreadyClaimed;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Models\FundingIntent;
@@ -39,6 +41,10 @@ class VerifyFundingIntent
         private readonly ReverseSettledFundingIntent $reverseSettlement,
         private readonly ClaimFundingEvidence $claimEvidence,
         private readonly ClassifyOnDemandIssuanceFundingMismatch $classifyOnDemandMismatch,
+        private readonly AssessIssuanceFundingAttribution $attribution,
+        private readonly LockIssuanceFundingAttribution $attributionLock,
+        private readonly AssessPaidOnDemandIssuanceRecovery $recoveryAssessment,
+        private readonly ExecutePaidOnDemandIssuanceRecovery $paidRecovery,
     ) {}
 
     public function handle(
@@ -57,6 +63,29 @@ class VerifyFundingIntent
         );
     }
 
+    public function recoverClosedVerified(FundingIntent $intent, FundingIntentVerificationData $verification): ?FundingIntent
+    {
+        return DB::transaction(function () use ($intent, $verification): ?FundingIntent {
+            if ($intent->purpose !== FundingIntentPurpose::OnDemandIssuance) {
+                return null;
+            }
+            $this->attributionLock->handle($intent->provider_code, $intent->currency);
+            $locked = FundingIntent::query()->lockForUpdate()->findOrFail($intent->getKey());
+            $order = $locked->issuanceFundingOrder()->lockForUpdate()->first();
+            if ($locked->status !== FundingIntentStatus::Verified || $order === null
+                || ! in_array($order->status, [PayCodeIssuanceFundingOrderStatus::Expired, PayCodeIssuanceFundingOrderStatus::Cancelled], true)) {
+                return null;
+            }
+            $observation = ProviderFundingObservation::query()->lockForUpdate()->find($locked->matched_observation_id);
+            if ($observation === null || $observation->provider_code !== $locked->provider_code
+                || $observation->provider_transaction_id !== $locked->provider_transaction_id) {
+                return null;
+            }
+
+            return $this->reviewAndRecoverLateObservation($locked, $observation, $verification, null);
+        }, attempts: 5);
+    }
+
     private function verify(
         FundingIntent $intent,
         FundingIntentVerificationData $verification,
@@ -65,6 +94,13 @@ class VerifyFundingIntent
 
         if ($intent->status === FundingIntentStatus::Settled) {
             return $this->verifySettledIntent($intent, $verification, $receipt);
+        }
+
+        if (in_array($intent->status, [FundingIntentStatus::Expired, FundingIntentStatus::Cancelled], true)
+            && $intent->purpose === FundingIntentPurpose::OnDemandIssuance
+            && $intent->instructions_created_at !== null
+            && $intent->expires_at?->greaterThanOrEqualTo(now()->subDays(max(0, (int) config('x-change.funding.issuance_late_reconciliation_days', 7))))) {
+            return $this->verifyExpiredIssuance($intent, $verification, $receipt);
         }
 
         if (! in_array($intent->status, [
@@ -176,24 +212,171 @@ class VerifyFundingIntent
 
         if ($intent->purpose === FundingIntentPurpose::OnDemandIssuance
             && $observation->provider_status === 'settled') {
-            try {
-                $this->claimEvidence->handle($intent, $observation);
-            } catch (FundingEvidenceAlreadyClaimed) {
-                $classification = $this->classifyOnDemandMismatch->handle(
-                    intent: $intent,
-                    observation: $observation,
-                    duplicateEvidence: true,
-                );
+            return DB::transaction(function () use ($intent, $observation, $verification, $receipt, $targetStatus): FundingIntent {
+                $this->attributionLock->handle($intent->provider_code, $intent->currency);
+                $lockedIntent = FundingIntent::query()->lockForUpdate()->findOrFail($intent->getKey());
+                if ($lockedIntent->provider_code !== $intent->provider_code || $lockedIntent->currency !== $intent->currency || $lockedIntent->purpose !== $intent->purpose) {
+                    throw new LogicException('The funding attribution scope changed during verification.');
+                }
+
+                return $this->verifyOnDemandSettlement($lockedIntent, $observation, $verification, $receipt, $targetStatus);
+            }, attempts: 5);
+        }
+
+        return $this->transition->handle($intent, $this->transitionData(
+            status: $targetStatus,
+            eventType: $targetStatus === FundingIntentStatus::Verified
+                ? 'provider_settlement_verified'
+                : 'provider_settlement_pending',
+            verification: $verification,
+            intent: $intent,
+            receipt: $receipt,
+            observation: $observation,
+        ));
+    }
+
+    private function verifyExpiredIssuance(
+        FundingIntent $intent,
+        FundingIntentVerificationData $verification,
+        ?WebhookReceipt $receipt,
+    ): FundingIntent {
+        try {
+            $data = $this->verifyProviderFunding($intent, $receipt);
+        } catch (ProviderFundingNotObserved) {
+            $this->recordLateCheck($intent, 'not_observed');
+
+            return $intent;
+        } catch (ProviderFundingVerificationIndeterminate) {
+            return DB::transaction(function () use ($intent, $verification, $receipt): FundingIntent {
+                $locked = FundingIntent::query()->lockForUpdate()->findOrFail($intent->getKey());
+                if (! in_array($locked->status, [FundingIntentStatus::Expired, FundingIntentStatus::Cancelled], true)) {
+                    return $locked;
+                }
+                $this->recordLateCheck($locked, 'indeterminate');
 
                 return $this->moveToSuspense(
-                    intent: $intent,
+                    intent: $locked,
                     verification: $verification,
-                    reasonCode: $classification->reasonCode,
+                    reasonCode: 'provider_verification_indeterminate',
                     receipt: $receipt,
-                    observation: $observation,
-                    details: $classification->details,
+                    details: ['late_discovery' => true],
                 );
+            }, attempts: 5);
+        } catch (Throwable) {
+            $this->recordLateCheck($intent, 'unavailable');
+
+            return $intent;
+        }
+
+        $observation = $this->recordObservation->handle($this->matchPayerIdentity->handle($intent, $data));
+        if ($observation->provider_status !== 'settled') {
+            $this->recordLateCheck($intent, 'pending');
+
+            return $intent;
+        }
+
+        return DB::transaction(function () use ($intent, $verification, $receipt, $observation): FundingIntent {
+            $this->attributionLock->handle($intent->provider_code, $intent->currency);
+            $locked = FundingIntent::query()->lockForUpdate()->findOrFail($intent->getKey());
+            if (! in_array($locked->status, [FundingIntentStatus::Expired, FundingIntentStatus::Cancelled], true)) {
+                return $locked;
             }
+
+            return $this->reviewAndRecoverLateObservation($locked, $observation, $verification, $receipt);
+        }, attempts: 5);
+    }
+
+    private function reviewAndRecoverLateObservation(
+        FundingIntent $intent,
+        ProviderFundingObservation $observation,
+        FundingIntentVerificationData $verification,
+        ?WebhookReceipt $receipt,
+        bool $allowAutomaticRecovery = true,
+    ): FundingIntent {
+        $mayAutomaticallyRecover = $allowAutomaticRecovery && $intent->status !== FundingIntentStatus::Cancelled;
+        $suspended = $this->moveToSuspense(
+            intent: $intent,
+            verification: $verification,
+            reasonCode: 'on_demand_issuance_provider_evidence_mismatch',
+            receipt: $receipt,
+            observation: $observation,
+            details: ['late_discovery' => true],
+        );
+        $case = $suspended->suspenseCases()
+            ->where('provider_funding_observation_id', $observation->getKey())
+            ->where('reason_code', 'on_demand_issuance_provider_evidence_mismatch')
+            ->whereIn('status', ['open', 'monitoring'])
+            ->latest('id')
+            ->first();
+        if ($mayAutomaticallyRecover && $case !== null && $this->recoveryAssessment->eligible($case)) {
+            try {
+                $this->paidRecovery->handle($case, $suspended, (int) $observation->getKey(), 'system_scheduler', 'funding-scheduler');
+                $this->recordLateCheck($suspended, 'recovered');
+
+                return $suspended->refresh();
+            } catch (InvalidArgumentException) {
+                // The authoritative evidence may already have been claimed by a different intent.
+            }
+        }
+        $this->recordLateCheck($suspended, 'review');
+
+        return $suspended;
+    }
+
+    private function recordLateCheck(FundingIntent $intent, string $outcome): void
+    {
+        DB::table('x_change_funding_reconciliation_checks')->updateOrInsert(
+            ['funding_intent_id' => $intent->getKey()],
+            ['last_checked_at' => now(), 'last_outcome' => $outcome],
+        );
+    }
+
+    private function verifyOnDemandSettlement(
+        FundingIntent $intent,
+        ProviderFundingObservation $observation,
+        FundingIntentVerificationData $verification,
+        ?WebhookReceipt $receipt,
+        FundingIntentStatus $targetStatus,
+    ): FundingIntent {
+        $order = $intent->issuanceFundingOrder()->first();
+        if ($order !== null && in_array($order->status, [PayCodeIssuanceFundingOrderStatus::Expired, PayCodeIssuanceFundingOrderStatus::Cancelled], true)) {
+            return $this->reviewAndRecoverLateObservation(
+                $intent,
+                $observation,
+                $verification,
+                $receipt,
+                $order->status !== PayCodeIssuanceFundingOrderStatus::Cancelled,
+            );
+        }
+        if ($order !== null && ! $this->attribution->isUnambiguous($order, $observation)) {
+            $this->classifyOnDemandMismatch->handle($intent, $observation);
+
+            return $this->moveToSuspense(
+                intent: $intent,
+                verification: $verification,
+                reasonCode: 'on_demand_issuance_ambiguous_amount_reuse',
+                receipt: $receipt,
+                observation: $observation,
+            );
+        }
+
+        try {
+            $this->claimEvidence->handle($intent, $observation);
+        } catch (FundingEvidenceAlreadyClaimed) {
+            $classification = $this->classifyOnDemandMismatch->handle(
+                intent: $intent,
+                observation: $observation,
+                duplicateEvidence: true,
+            );
+
+            return $this->moveToSuspense(
+                intent: $intent,
+                verification: $verification,
+                reasonCode: $classification->reasonCode,
+                receipt: $receipt,
+                observation: $observation,
+                details: $classification->details,
+            );
         }
 
         return $this->transition->handle($intent, $this->transitionData(
@@ -407,6 +590,7 @@ class VerifyFundingIntent
             observedBefore: now()
                 ->addSeconds($clockSkewSeconds)
                 ->toDateTimeImmutable(),
+            allowDestinationHistoryFallback: $intent->purpose === FundingIntentPurpose::OnDemandIssuance,
         );
     }
 
@@ -414,64 +598,7 @@ class VerifyFundingIntent
         FundingIntent $intent,
         ?WebhookReceipt $receipt,
     ): ProviderFundingObservationData {
-        $provider = $this->providers->for($intent->provider_code);
-        $verification = $this->providerVerification($intent, $receipt);
-
-        try {
-            return $provider->verifyFunding($verification);
-        } catch (ProviderFundingNotObserved $exception) {
-            $corporateAccountVerification = $this->corporateAccountVerification(
-                $intent,
-                $verification,
-            );
-
-            if ($corporateAccountVerification === null) {
-                throw $exception;
-            }
-
-            $observation = $provider->verifyFunding($corporateAccountVerification);
-            $observation->verificationSource = 'netbank-corporate-account-transaction-history';
-            $observation->metadata = [
-                ...$observation->metadata,
-                'verification_path' => 'corporate_account',
-            ];
-
-            return $observation;
-        }
-    }
-
-    private function corporateAccountVerification(
-        FundingIntent $intent,
-        FundingVerificationData $verification,
-    ): ?FundingVerificationData {
-        if ($intent->purpose !== FundingIntentPurpose::OnDemandIssuance
-            || $intent->provider_code !== 'netbank'
-            || $verification->destination === null) {
-            return null;
-        }
-
-        $accountNumber = preg_replace(
-            '/\D+/',
-            '',
-            (string) $verification->destination->bankAccountNumber,
-        ) ?? '';
-
-        if (strlen($accountNumber) < 12) {
-            return null;
-        }
-
-        return new FundingVerificationData(
-            provider: $verification->provider,
-            fundingIntentReference: $verification->fundingIntentReference,
-            expectedAmountMinor: $verification->expectedAmountMinor,
-            currency: $verification->currency,
-            providerRequestId: $verification->providerRequestId,
-            fundingAddress: $accountNumber,
-            webhookReceiptId: $verification->webhookReceiptId,
-            destination: $verification->destination,
-            observedAfter: $verification->observedAfter,
-            observedBefore: $verification->observedBefore,
-        );
+        return $this->providers->for($intent->provider_code)->verifyFunding($this->providerVerification($intent, $receipt));
     }
 
     private function receipt(

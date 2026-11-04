@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Configuration;
 
 use LBHurtado\EmiCore\Contracts\DeploymentConnectionContributor;
+use LBHurtado\EmiCore\Contracts\ProviderCommissioningFingerprintInputs;
 use LBHurtado\EmiCore\Data\Configuration\ProviderConnectionTemplateData;
 use RuntimeException;
 
@@ -43,5 +44,22 @@ final readonly class DeploymentConnectionCatalog
         ksort($templates);
 
         return $templates;
+    }
+
+    /** @return array<string, mixed> */
+    public function settlementAccountFingerprintInputs(string $provider): array
+    {
+        $matches = [];
+        foreach ($this->contributors as $contributor) {
+            if ($contributor->providerCode() === $provider) {
+                $matches[] = $contributor;
+            }
+        }
+
+        if (count($matches) !== 1 || ! $matches[0] instanceof ProviderCommissioningFingerprintInputs) {
+            throw new RuntimeException("Provider [{$provider}] must supply a unique commissioning fingerprint capability.");
+        }
+
+        return $matches[0]->settlementAccountFingerprintInputs();
     }
 }
