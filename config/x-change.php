@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use LBHurtado\Instruction\Models\InstructionItem;
-use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
 use LBHurtado\XChange\Actions\Payment\Pipes\AssociateSettledPayerContact;
 use LBHurtado\XChange\Actions\Payment\Pipes\QueueSettledPaymentSms;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
@@ -1570,6 +1569,7 @@ return [
             'XCHANGE_FUNDING_SETTLEMENT_GRACE_SECONDS',
             300,
         ),
+        'issuance_late_reconciliation_days' => (int) env('XCHANGE_ISSUANCE_LATE_RECONCILIATION_DAYS', 7),
         'simulator' => [
             'enabled' => (bool) env(
                 'XCHANGE_QRPH_SIMULATOR_ENABLED',
@@ -1996,6 +1996,7 @@ return [
             'netbank' => [
                 'enabled' => env('XCHANGE_PROVIDER_NETBANK_ENABLED', true),
                 'provisioning_gateway' => NetbankProviderProvisioningGateway::class,
+                'claimant_bank_provisioning_required' => true,
                 'source_account_readiness' => [
                     'enabled' => env('XCHANGE_PROVIDER_NETBANK_SOURCE_ACCOUNT_READINESS_ENABLED', true),
                     'allow_unavailable' => env('XCHANGE_PROVIDER_NETBANK_SOURCE_ACCOUNT_ALLOW_UNAVAILABLE', false),
@@ -2042,7 +2043,7 @@ return [
         ],
     ],
     'payout' => [
-        'provider' => env('XCHANGE_PAYOUT_PROVIDER', NetbankPayoutProvider::class),
+        'provider' => env('XCHANGE_PAYOUT_PROVIDER', 'netbank'),
         'automatic_rail_threshold_minor' => 5_000_000,
         'wallet_proxy' => SystemWalletProxy::class,
         'system_user_id' => env('XCHANGE_SYSTEM_USER_ID'),
@@ -3014,6 +3015,8 @@ return [
             'scheduled_verification_enabled' => true,
             'scheduled_batch_size' => 100,
             'settlement_grace_seconds' => 300,
+            'late_reconciliation_days' => 7,
+            'late_reconciliation_interval_minutes' => 15,
             'public_read_middleware' => [
                 'throttle:x-change-payment-read',
             ],

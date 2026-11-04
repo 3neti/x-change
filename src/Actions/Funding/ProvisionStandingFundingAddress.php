@@ -249,7 +249,7 @@ final class ProvisionStandingFundingAddress
                 break;
             }
 
-            if (data_get($providerAddress->displayData, 'derivation_scheme') !== 'netbank-account-hmac-v2') {
+            if (! $providerAddress->supportsCollisionRetry) {
                 $corrected = $this->bindingCorrection->handle(
                     owner: $owner,
                     accountReference: $accountReference,

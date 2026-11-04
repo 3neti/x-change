@@ -58,13 +58,13 @@ final readonly class RecoverSettledPayerIdentity
         $intent = $settlement->fundingIntent;
         $address = trim((string) $intent?->funding_address_ciphertext);
 
-        if ($original->provider_code !== 'netbank' || $intent?->provider_code !== 'netbank'
+        if ($intent === null || $original->provider_code !== $intent->provider_code
             || $address === '' || ! is_array($intent->destination_snapshot_ciphertext)) {
             return true;
         }
 
         $fresh = $this->providers->for($intent->provider_code)->verifyFunding(new FundingVerificationData(
-            provider: 'netbank',
+            provider: $intent->provider_code,
             fundingIntentReference: $intent->reference,
             expectedAmountMinor: (int) $intent->expected_amount_minor,
             currency: $intent->currency,
@@ -73,7 +73,7 @@ final readonly class RecoverSettledPayerIdentity
             destination: FundingDestinationSnapshot::toData($intent->destination_snapshot_ciphertext),
         ));
 
-        if ($fresh->provider !== 'netbank'
+        if ($fresh->provider !== $intent->provider_code
             || $fresh->providerTransactionId !== $original->provider_transaction_id
             || $fresh->fundingAddress !== $original->funding_address
             || $fresh->providerAccountReference !== $original->provider_account_reference
@@ -92,16 +92,13 @@ final readonly class RecoverSettledPayerIdentity
             return false;
         }
 
-        $institution = strtoupper(trim((string) $identity->institutionCode));
-        $account = trim((string) $identity->accountNumber);
-        if (! in_array($institution, ['GXCHPHM2XXX', 'PAPHPHM1XXX', 'GCASH', 'MAYA', 'PAYMAYA'], true)
-            || preg_match('/^(?:0|63|\+63)9[0-9]{9}$/', $account) !== 1) {
+        if ($this->walletPayerMobile->interpret($fresh->provider, $identity->institutionCode, $identity->accountNumber) === null) {
             return false;
         }
 
         $fresh->metadata = [
             ...$fresh->metadata,
-            'normalization_version' => 'netbank-incoming-credit-v2-payer-recovery-v1',
+            'normalization_version' => 'provider-payer-recovery-v1',
         ];
         $observation = $this->observations->handle($fresh);
         if ($this->walletPayerMobile->fromObservation($observation) === null) {

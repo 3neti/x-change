@@ -11,11 +11,12 @@ use RuntimeException;
 
 final class ReserveOnDemandIssuanceAmountLease
 {
+    public function __construct(private readonly LockIssuanceFundingAttribution $attributionLock) {}
+
     public function handle(PayCodeIssuanceFundingOrder $order): PayCodeIssuanceFundingOrder
     {
         $lockName = 'x-change:on-demand-amount-lease:'.hash('sha256', implode('|', [
             $order->provider,
-            $order->connection_reference,
             $order->currency,
         ]));
         $lockSeconds = (int) config('x-change.issuance_funding.on_demand.amount_lease.lock_seconds', 15);
@@ -32,6 +33,7 @@ final class ReserveOnDemandIssuanceAmountLease
 
     private function reserve(PayCodeIssuanceFundingOrder $order): PayCodeIssuanceFundingOrder
     {
+        $this->attributionLock->handle($order->provider, $order->currency);
         $locked = PayCodeIssuanceFundingOrder::query()->lockForUpdate()->findOrFail($order->getKey());
 
         if ($locked->amount_lease_active_key !== null) {
@@ -48,7 +50,10 @@ final class ReserveOnDemandIssuanceAmountLease
             $activeKey = $this->activeKey($locked, $expectedPaymentMinor);
 
             if (PayCodeIssuanceFundingOrder::query()
-                ->where('amount_lease_active_key', $activeKey)
+                ->where('provider', $locked->provider)
+                ->where('currency', $locked->currency)
+                ->where('expected_payment_minor', $expectedPaymentMinor)
+                ->whereNotNull('amount_lease_active_key')
                 ->exists()) {
                 continue;
             }
@@ -91,7 +96,6 @@ final class ReserveOnDemandIssuanceAmountLease
     {
         return hash('sha256', implode('|', [
             $order->provider,
-            $order->connection_reference,
             $order->currency,
             $expectedPaymentMinor,
         ]));

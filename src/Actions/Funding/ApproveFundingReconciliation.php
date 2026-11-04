@@ -11,13 +11,10 @@ use LBHurtado\EmiCore\Models\WebhookReceipt;
 use LBHurtado\XChange\Data\Funding\FundingIntentTransitionData;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\FundingReconciliationAction;
-use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
-use LBHurtado\XChange\Exceptions\FundingEvidenceAlreadyClaimed;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingWebhookReceiptJob;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingReconciliationRequest;
 use LBHurtado\XChange\Models\FundingSuspenseCase;
-use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 
 class ApproveFundingReconciliation
 {
@@ -26,8 +23,7 @@ class ApproveFundingReconciliation
         private readonly SettleVerifiedFundingIntent $settle,
         private readonly SupersedeMismatchedFundingEvidenceClaim $supersedeEvidence,
         private readonly AssessPaidOnDemandIssuanceRecovery $issuanceRecovery,
-        private readonly ClaimFundingEvidence $claimEvidence,
-        private readonly TransitionPayCodeIssuanceFundingOrder $transitionOrder,
+        private readonly ExecutePaidOnDemandIssuanceRecovery $paidRecovery,
     ) {}
 
     public function handle(
@@ -214,7 +210,7 @@ class ApproveFundingReconciliation
                 'funding_reconciliation_case_id' => $case->getKey(),
             ],
         ));
-        $settlement = $this->settle->handle($intent);
+        $settlement = $this->settle->handle($intent, reviewedClosedOrder: true);
         $this->resolveCase($case, 'observation_matched_and_settled', [
             'funding_settlement_id' => $settlement->getKey(),
             'provider_observation_id' => $observation->getKey(),
@@ -246,63 +242,7 @@ class ApproveFundingReconciliation
             throw new InvalidArgumentException('Pay Code recovery requires a suspended Funding Intent and provider observation.');
         }
 
-        $observation = ProviderFundingObservation::query()->lockForUpdate()->findOrFail($observationId);
-        $order = PayCodeIssuanceFundingOrder::query()
-            ->where('funding_intent_id', $intent->getKey())
-            ->lockForUpdate()
-            ->firstOrFail();
-
-        if (! $this->issuanceRecovery->matches($case, $intent, $observation, $order)) {
-            throw new InvalidArgumentException('This payment is no longer eligible for Pay Code recovery.');
-        }
-
-        try {
-            $this->claimEvidence->handle($intent, $observation);
-        } catch (FundingEvidenceAlreadyClaimed) {
-            throw new InvalidArgumentException('This provider payment already belongs to another funding order.');
-        }
-        $this->transitionOrder->handle(
-            order: $order,
-            status: PayCodeIssuanceFundingOrderStatus::Verifying,
-            eventType: 'reconciliation_paid_order_recovery_approved',
-            actorType: $actorType,
-            actorId: $actorId,
-            attributes: ['expired_at' => null, 'attention_at' => null],
-            metadata: ['provider_observation_id' => $observation->getKey()],
-            approvedPreExpiryPaymentRecovery: true,
-        );
-        $intent = $this->transition->handle($intent, new FundingIntentTransitionData(
-            status: FundingIntentStatus::Verifying,
-            eventType: 'reconciliation_paid_order_recovery_approved',
-            actorType: $actorType,
-            actorId: $actorId,
-            expectedVersion: $intent->version,
-            evidenceReference: 'provider-observation:'.$observation->getKey(),
-            metadata: ['funding_reconciliation_case_id' => $case->getKey()],
-        ));
-        $intent = $this->transition->handle($intent, new FundingIntentTransitionData(
-            status: FundingIntentStatus::Verified,
-            eventType: 'reconciliation_provider_settlement_verified',
-            actorType: $actorType,
-            actorId: $actorId,
-            expectedVersion: $intent->version,
-            evidenceReference: 'provider-observation:'.$observation->getKey(),
-            providerObservationId: $observation->getKey(),
-            providerTransactionId: $observation->provider_transaction_id,
-            metadata: ['funding_reconciliation_case_id' => $case->getKey()],
-        ));
-        $settlement = $this->settle->handle($intent);
-        $this->resolveCase($case, 'paid_order_recovery_approved', [
-            'funding_settlement_id' => $settlement->getKey(),
-            'provider_observation_id' => $observation->getKey(),
-            'funding_order_id' => $order->getKey(),
-        ], $actorType, $actorId);
-
-        return [
-            'outcome' => 'pay_code_recovery_queued',
-            'funding_settlement_id' => $settlement->getKey(),
-            'funding_order_id' => $order->getKey(),
-        ];
+        return $this->paidRecovery->handle($case, $intent, $observationId, $actorType, $actorId);
     }
 
     /**

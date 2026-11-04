@@ -28,6 +28,7 @@ import XChangeQrArtifact from '@/components/x-change/XChangeQrArtifact.vue';
 import { store as createPaymentAttempt } from '@/routes/x-change/pay/attempts';
 import { store as checkPaymentAttempt } from '@/routes/x-change/pay/attempts/checks';
 import { download as downloadPaymentQr } from '@/routes/x-change/pay/attempts/qr';
+import { store as submitPaymentRecoveryReport } from '@/routes/x-change/pay/recovery-reports';
 
 defineOptions({ layout: null });
 
@@ -40,6 +41,7 @@ type PaymentAttempt = {
     expires_at: string | null;
     last_checked_at: string | null;
     can_check: boolean;
+    late_reconciliation_active?: boolean;
     qr_delivery_modes?: string[];
     qr_code: {
         mime_type: string | null;
@@ -51,7 +53,11 @@ type PaymentAttempt = {
 };
 
 type ReceiptPayment = {
-    delivery?: { status: 'pending' | 'delivered' | 'review'; account: string | null; bank_code: string | null } | null;
+    delivery?: {
+        status: 'pending' | 'delivered' | 'review';
+        account: string | null;
+        bank_code: string | null;
+    } | null;
     collection_number: number;
     amount_paid_minor: number;
     provider: string;
@@ -68,6 +74,7 @@ type PaymentReceipt = {
 };
 
 type PaymentReadModel = {
+    recovery_mode?: boolean;
     repayment_mode?: boolean;
     repayment_ready?: boolean;
     remaining_to_collect_minor?: number;
@@ -81,9 +88,17 @@ type PaymentReadModel = {
     fee_due_minor?: number;
     is_fully_paid: boolean;
     rider_message: string | null;
-    payment_details?: { description?: string | null; reference?: string | null; fields?: { label: string; value: string }[] } | null;
+    payment_details?: {
+        description?: string | null;
+        reference?: string | null;
+        fields?: { label: string; value: string }[];
+    } | null;
     shared_invoices?: { name: string; url: string | null }[];
-    document_requirements?: { type: string; timing: string; requires_acceptance: boolean }[];
+    document_requirements?: {
+        type: string;
+        timing: string;
+        requires_acceptance: boolean;
+    }[];
     document_upload_url?: string | null;
     documents_ready?: boolean;
     provider: string;
@@ -103,6 +118,72 @@ const props = defineProps<{
 }>();
 const creating = ref(false);
 const checking = ref(false);
+const showRecoveryReport = ref(props.payment.recovery_mode === true);
+const recoveryReference = ref('');
+const recoveryAmount = ref('');
+const recoveryPaidAt = ref('');
+const recoveryContact = ref('');
+const recoverySending = ref(false);
+const recoveryMessage = ref('');
+
+async function sendRecoveryReport(): Promise<void> {
+    if (recoverySending.value || props.previewMode) return;
+    const amount = Number(recoveryAmount.value);
+    if (
+        !Number.isFinite(amount) ||
+        amount <= 0 ||
+        !recoveryReference.value.trim() ||
+        !recoveryPaidAt.value
+    ) {
+        recoveryMessage.value =
+            'Enter your payment reference, amount and payment date.';
+        return;
+    }
+    recoverySending.value = true;
+    recoveryMessage.value = '';
+    try {
+        const csrf =
+            document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')
+                ?.content ?? '';
+        const xsrfCookie = document.cookie
+            .split('; ')
+            .find((part) => part.startsWith('XSRF-TOKEN='))
+            ?.slice('XSRF-TOKEN='.length);
+        const response = await fetch(
+            submitPaymentRecoveryReport({ code: props.payment.pay_code }).url,
+            {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    ...(csrf ? { 'X-CSRF-TOKEN': csrf } : {}),
+                    ...(xsrfCookie
+                        ? { 'X-XSRF-TOKEN': decodeURIComponent(xsrfCookie) }
+                        : {}),
+                },
+                body: JSON.stringify({
+                    transaction_reference: recoveryReference.value.trim(),
+                    amount_minor: Math.round(amount * 100),
+                    paid_at: recoveryPaidAt.value,
+                    contact: recoveryContact.value.trim() || null,
+                }),
+            },
+        );
+        if (!response.ok) throw new Error('request failed');
+        recoveryMessage.value =
+            'Your report has been received for review. Do not pay again.';
+        recoveryReference.value = '';
+        recoveryAmount.value = '';
+        recoveryPaidAt.value = '';
+        recoveryContact.value = '';
+    } catch {
+        recoveryMessage.value =
+            'We could not submit your report. Please try again.';
+    } finally {
+        recoverySending.value = false;
+    }
+}
 const retrySeconds = ref(0);
 const checkCooldownSeconds = ref(0);
 let retryUntil = 0;
@@ -130,7 +211,12 @@ onUnmounted(() => {
 });
 
 onMounted(async () => {
-    if (!props.previewMode || !props.previewStage || props.previewStage === 'payment-page') return;
+    if (
+        !props.previewMode ||
+        !props.previewStage ||
+        props.previewStage === 'payment-page'
+    )
+        return;
     const sections: Record<string, string> = {
         'payment-qr': '[data-testid="payer-preview-qr"]',
         'payment-verifying': '[data-testid="payer-completion-pending"]',
@@ -187,22 +273,32 @@ const amountDue = computed(() =>
         : money(props.payment.amount_due_minor, props.payment.currency),
 );
 const attemptAmount = computed(() =>
-    props.previewMode && props.previewFeePending ? 'Amount shown on QR' : money(
-        props.payment.attempt?.amount_minor ?? 0,
-        props.payment.attempt?.currency ?? props.payment.currency,
-    ),
+    props.previewMode && props.previewFeePending
+        ? 'Amount shown on QR'
+        : money(
+              props.payment.attempt?.amount_minor ?? 0,
+              props.payment.attempt?.currency ?? props.payment.currency,
+          ),
 );
 const deliveryPending = computed(
-    () => props.payment.receipt?.payments.some((entry) => entry.delivery?.status === 'pending') ?? false,
+    () =>
+        props.payment.receipt?.payments.some(
+            (entry) => entry.delivery?.status === 'pending',
+        ) ?? false,
 );
 const shouldPoll = computed(
     () =>
-        !props.previewMode && retrySeconds.value === 0 &&
+        !props.previewMode &&
+        retrySeconds.value === 0 &&
         (deliveryPending.value ||
             (!props.payment.is_fully_paid &&
-                ((props.payment.repayment_mode === true && props.payment.repayment_ready === false) ||
+                ((props.payment.repayment_mode === true &&
+                    props.payment.repayment_ready === false) ||
                     (props.payment.attempt !== null &&
-                        (props.payment.attempt.can_check === true || completionPending.value))))),
+                        (props.payment.attempt.can_check === true ||
+                            completionPending.value ||
+                            props.payment.attempt.late_reconciliation_active ===
+                                true))))),
 );
 const { start: startPaymentPoll, stop: stopPaymentPoll } = usePoll(
     Math.max(1000, props.payment.poll_interval_ms ?? 5000),
@@ -358,15 +454,21 @@ function printReceipt(): void {
                     Secure Pay Code payment
                 </p>
                 <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">
-                    {{ payment.repayment_mode ? 'Repay' : 'Pay' }} {{ payment.pay_code }}
+                    {{ payment.repayment_mode ? 'Repay' : 'Pay' }}
+                    {{ payment.pay_code }}
                 </h1>
                 <p class="text-sm text-muted-foreground">
                     Review the purpose and invoice before choosing how to pay.
                 </p>
             </header>
 
-            <Card v-if="payment.repayment_mode" data-testid="repayment-progress">
-                <CardHeader><CardTitle>Repayment progress</CardTitle></CardHeader>
+            <Card
+                v-if="payment.repayment_mode"
+                data-testid="repayment-progress"
+            >
+                <CardHeader
+                    ><CardTitle>Repayment progress</CardTitle></CardHeader
+                >
                 <CardContent class="space-y-2">
                     <p v-if="!payment.repayment_ready">
                         Waiting for the initial disbursement to be confirmed.
@@ -408,19 +510,98 @@ function printReceipt(): void {
                 </CardContent>
             </Card>
 
-            <Card v-if="payment.receipt?.payments.some((entry) => entry.delivery)" data-testid="payment-delivery">
-                <CardHeader><CardTitle>Delivery to destination</CardTitle></CardHeader>
+            <Card
+                v-if="payment.receipt?.payments.some((entry) => entry.delivery)"
+                data-testid="payment-delivery"
+            >
+                <CardHeader
+                    ><CardTitle>Delivery to destination</CardTitle></CardHeader
+                >
                 <CardContent class="space-y-3">
-                    <p class="text-sm text-muted-foreground">Your payments are recorded. Delivery status is tracked separately.</p>
-                    <template v-for="entry in payment.receipt.payments" :key="entry.receipt_reference">
+                    <p class="text-sm text-muted-foreground">
+                        Your payments are recorded. Delivery status is tracked
+                        separately.
+                    </p>
+                    <template
+                        v-for="entry in payment.receipt.payments"
+                        :key="entry.receipt_reference"
+                    >
                         <div v-if="entry.delivery" class="text-sm">
-                            <p>Payment {{ entry.collection_number }} · {{ entry.delivery.account }}</p>
-                            <p role="status">{{ entry.delivery.status === 'delivered' ? 'Delivered to destination' : entry.delivery.status === 'review' ? 'Delivery needs review. Your payment remains recorded.' : 'Delivery pending. This page updates automatically.' }}</p>
+                            <p>
+                                Payment {{ entry.collection_number }} ·
+                                {{ entry.delivery.account }}
+                            </p>
+                            <p role="status">
+                                {{
+                                    entry.delivery.status === 'delivered'
+                                        ? 'Delivered to destination'
+                                        : entry.delivery.status === 'review'
+                                          ? 'Delivery needs review. Your payment remains recorded.'
+                                          : 'Delivery pending. This page updates automatically.'
+                                }}
+                            </p>
                         </div>
                     </template>
                 </CardContent>
             </Card>
 
+            <section
+                v-if="!previewMode"
+                class="rounded-lg border p-4 print:hidden"
+                data-testid="payer-recovery-report"
+            >
+                <button
+                    type="button"
+                    class="text-sm font-medium underline"
+                    @click="showRecoveryReport = !showRecoveryReport"
+                >
+                    Already paid but lost your payment session?
+                </button>
+                <form
+                    v-if="showRecoveryReport"
+                    class="mt-4 grid gap-3"
+                    @submit.prevent="sendRecoveryReport"
+                >
+                    <p class="text-sm text-muted-foreground">
+                        Send your payment details for review. Do not pay again.
+                    </p>
+                    <label class="grid gap-1 text-sm"
+                        >Payment reference<input
+                            v-model="recoveryReference"
+                            required
+                            maxlength="120"
+                            class="rounded-md border bg-background px-3 py-2"
+                    /></label>
+                    <label class="grid gap-1 text-sm"
+                        >Amount paid (PHP)<input
+                            v-model="recoveryAmount"
+                            required
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            class="rounded-md border bg-background px-3 py-2"
+                    /></label>
+                    <label class="grid gap-1 text-sm"
+                        >Payment date and time<input
+                            v-model="recoveryPaidAt"
+                            required
+                            type="datetime-local"
+                            class="rounded-md border bg-background px-3 py-2"
+                    /></label>
+                    <label class="grid gap-1 text-sm"
+                        >Contact details (optional)<input
+                            v-model="recoveryContact"
+                            maxlength="190"
+                            class="rounded-md border bg-background px-3 py-2"
+                    /></label>
+                    <Button type="submit" :disabled="recoverySending">{{
+                        recoverySending ? 'Sending…' : 'Send for review'
+                    }}</Button>
+                    <p v-if="recoveryMessage" role="status" class="text-sm">
+                        {{ recoveryMessage }}
+                    </p>
+                </form>
+            </section>
             <p
                 v-if="retrySeconds > 0"
                 role="status"
@@ -453,20 +634,58 @@ function printReceipt(): void {
                 </CardHeader>
                 <CardContent>
                     <p
-                        v-if="payment.payment_details?.description || payment.rider_message"
+                        v-if="
+                            payment.payment_details?.description ||
+                            payment.rider_message
+                        "
                         class="whitespace-pre-line text-sm leading-6 text-foreground"
                     >
-                        {{ payment.payment_details?.description || payment.rider_message }}
+                        {{
+                            payment.payment_details?.description ||
+                            payment.rider_message
+                        }}
                     </p>
-                    <dl v-if="payment.payment_details?.reference || payment.payment_details?.fields?.length" class="mt-4 grid gap-2 text-sm">
-                        <div v-if="payment.payment_details?.reference" class="flex justify-between gap-4"><dt>Reference</dt><dd>{{ payment.payment_details.reference }}</dd></div>
-                        <div v-for="field in payment.payment_details?.fields ?? []" :key="field.label" class="flex justify-between gap-4"><dt>{{ field.label }}</dt><dd>{{ field.value }}</dd></div>
+                    <dl
+                        v-if="
+                            payment.payment_details?.reference ||
+                            payment.payment_details?.fields?.length
+                        "
+                        class="mt-4 grid gap-2 text-sm"
+                    >
+                        <div
+                            v-if="payment.payment_details?.reference"
+                            class="flex justify-between gap-4"
+                        >
+                            <dt>Reference</dt>
+                            <dd>{{ payment.payment_details.reference }}</dd>
+                        </div>
+                        <div
+                            v-for="field in payment.payment_details?.fields ??
+                            []"
+                            :key="field.label"
+                            class="flex justify-between gap-4"
+                        >
+                            <dt>{{ field.label }}</dt>
+                            <dd>{{ field.value }}</dd>
+                        </div>
                     </dl>
                     <p v-else class="text-sm leading-6 text-muted-foreground">
                         The issuer did not include a payment message.
                     </p>
-                    <div v-for="(invoice, index) in payment.shared_invoices ?? []" :key="index" class="mt-3 text-sm font-medium text-primary">
-                        <a v-if="invoice.url" :href="invoice.url" class="underline" target="_blank" rel="noopener">{{ invoice.name }}</a>
+                    <div
+                        v-for="(invoice, index) in payment.shared_invoices ??
+                        []"
+                        :key="index"
+                        class="mt-3 text-sm font-medium text-primary"
+                    >
+                        <a
+                            v-if="invoice.url"
+                            :href="invoice.url"
+                            class="underline"
+                            target="_blank"
+                            rel="noopener"
+                            >{{ invoice.name }}</a
+                        >
                         <span v-else>{{ invoice.name }}</span>
                     </div>
                 </CardContent>
@@ -477,7 +696,14 @@ function printReceipt(): void {
                 :upload-url="payment.document_upload_url"
                 :preview-mode="previewMode"
             />
-            <p v-if="payment.documents_ready === false && (payment.document_requirements?.length ?? 0) > 0" class="text-sm text-muted-foreground" role="status">
+            <p
+                v-if="
+                    payment.documents_ready === false &&
+                    (payment.document_requirements?.length ?? 0) > 0
+                "
+                class="text-sm text-muted-foreground"
+                role="status"
+            >
                 Payment becomes available when the required documents are ready.
             </p>
 
@@ -684,7 +910,12 @@ function printReceipt(): void {
                         </Button>
                     </div>
 
-                    <template v-if="payment.attempt && payment.attempt.status !== 'settled'">
+                    <template
+                        v-if="
+                            payment.attempt &&
+                            payment.attempt.status !== 'settled'
+                        "
+                    >
                         <div
                             class="flex flex-wrap items-center justify-between gap-2"
                         >
@@ -701,7 +932,21 @@ function printReceipt(): void {
                             }}</Badge>
                         </div>
                         <div
-                            v-if="payment.paired_display"
+                            v-if="
+                                payment.attempt.status === 'expired' ||
+                                payment.attempt.status === 'suspense'
+                            "
+                            class="rounded-lg border border-amber-500/25 bg-amber-500/10 px-4 py-5 text-center text-sm text-foreground"
+                            data-testid="payer-payment-review"
+                        >
+                            {{
+                                payment.attempt.status === 'expired'
+                                    ? 'This QR has expired. If you already paid, do not pay again. Contact the issuer if you need help.'
+                                    : 'Your payment needs review. Please do not pay again.'
+                            }}
+                        </div>
+                        <div
+                            v-else-if="payment.paired_display"
                             class="rounded-lg border border-primary/20 bg-primary/5 p-5 text-center"
                             data-testid="payer-paired-display-instructions"
                         >
@@ -745,8 +990,12 @@ function printReceipt(): void {
                             class="rounded-lg border border-dashed border-primary/40 p-6 text-center"
                         >
                             <ScanLine class="mx-auto size-12 text-primary" />
-                            <p class="mt-2 text-sm font-semibold">Sample QR Ph</p>
-                            <p class="text-xs text-muted-foreground">Illustration only · not scannable</p>
+                            <p class="mt-2 text-sm font-semibold">
+                                Sample QR Ph
+                            </p>
+                            <p class="text-xs text-muted-foreground">
+                                Illustration only · not scannable
+                            </p>
                         </div>
                         <div
                             v-else-if="qrSource"
@@ -780,7 +1029,10 @@ function printReceipt(): void {
                             The provider did not return a usable QR image.
                         </div>
                         <div
-                            v-if="!pairedUnavailable"
+                            v-if="
+                                !pairedUnavailable &&
+                                payment.attempt.status === 'awaiting_payment'
+                            "
                             class="rounded-lg border border-border bg-muted p-4"
                         >
                             <p class="text-sm font-medium">
@@ -803,6 +1055,7 @@ function printReceipt(): void {
                             </p>
                         </div>
                         <Button
+                            v-if="payment.attempt.status === 'awaiting_payment'"
                             type="button"
                             data-testid="payer-check-status"
                             variant="outline"
@@ -896,10 +1149,12 @@ function printReceipt(): void {
                                 class="mt-1 text-3xl font-bold tracking-tight text-foreground tabular-nums"
                             >
                                 {{
-                                    previewMode && previewFeePending ? 'Calculated at payment' : money(
-                                        payment.receipt.amount_paid_minor,
-                                        payment.receipt.currency,
-                                    )
+                                    previewMode && previewFeePending
+                                        ? 'Calculated at payment'
+                                        : money(
+                                              payment.receipt.amount_paid_minor,
+                                              payment.receipt.currency,
+                                          )
                                 }}
                             </p>
                             <Badge variant="outline" class="mt-2">{{
@@ -969,10 +1224,12 @@ function printReceipt(): void {
                                         receiptPayment.provider
                                     }}</span
                                     ><span class="tabular-nums">{{
-                                        previewMode && previewFeePending ? 'Calculated at payment' : money(
-                                            receiptPayment.amount_paid_minor,
-                                            payment.receipt.currency,
-                                        )
+                                        previewMode && previewFeePending
+                                            ? 'Calculated at payment'
+                                            : money(
+                                                  receiptPayment.amount_paid_minor,
+                                                  payment.receipt.currency,
+                                              )
                                     }}</span>
                                 </div>
                                 <p

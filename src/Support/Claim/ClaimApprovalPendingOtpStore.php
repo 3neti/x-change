@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Support\Claim;
 
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
-use LBHurtado\EmiPaynamicsConstellation\Contracts\PendingOtpStore;
+use LBHurtado\EmiCore\Contracts\DeferredPayoutApprovalScope;
+use LBHurtado\EmiCore\Contracts\PendingPayoutOtpInterpreter;
+use LBHurtado\EmiCore\Contracts\PendingPayoutOtpStore;
+use RuntimeException;
 
-final class ClaimApprovalPendingOtpStore implements PendingOtpStore
+final class ClaimApprovalPendingOtpStore implements PendingPayoutOtpStore
 {
     public function __construct(
         private readonly CacheRepository $cache,
@@ -48,22 +51,7 @@ final class ClaimApprovalPendingOtpStore implements PendingOtpStore
         $ttl = now()->addMinutes((int) config('x-change.claim_approval.ttl_minutes', 15));
 
         $this->cache->put($this->pendingKey($referenceId), [
-            'provider' => 'paynamics',
-            'authorization_type' => 'otp',
-            'reference_id' => $referenceId,
-            'amount' => data_get($otpRequestPayload, 'amount'),
-            'bank_account_no' => data_get($otpRequestPayload, 'bank_account_no'),
-            'bank_id' => data_get($otpRequestPayload, 'bank_id'),
-            'reason' => data_get($otpRequestPayload, 'reason'),
-            'target' => is_string(data_get($otpRequestResult, 'data'))
-                ? data_get($otpRequestResult, 'data')
-                : null,
-            'otp_required' => true,
-            'polling_required' => false,
-            'manual_review' => false,
-            'message' => 'Paynamics payout OTP is pending.',
-            'payload' => $otpRequestPayload,
-            'result' => $otpRequestResult,
+            ...$this->interpreter()->pendingMetadata($otpRequestPayload, $otpRequestResult),
             'expires_at' => $ttl->toIso8601String(),
         ], $ttl);
     }
@@ -102,13 +90,27 @@ final class ClaimApprovalPendingOtpStore implements PendingOtpStore
      */
     private function referenceId(array $otpRequestPayload): ?string
     {
-        $referenceId = data_get($otpRequestPayload, 'request_id');
+        return $this->interpreter()->reference($otpRequestPayload);
+    }
 
-        if (! is_string($referenceId) || trim($referenceId) === '') {
-            return null;
+    private function interpreter(): PendingPayoutOtpInterpreter
+    {
+        $matches = collect(app()->tagged('emi.pending-payout-otp-interpreters'))
+            ->filter(fn (mixed $candidate): bool => $candidate instanceof PendingPayoutOtpInterpreter)
+            ->uniqueStrict();
+        $activeProviders = collect(app()->tagged('emi.deferred-payout-approval-scopes'))
+            ->filter(fn (mixed $scope): bool => $scope instanceof DeferredPayoutApprovalScope && $scope->isActiveProvider())
+            ->map(fn (DeferredPayoutApprovalScope $scope): string => $scope->providerCode())
+            ->unique();
+        if ($activeProviders->isNotEmpty()) {
+            $matches = $matches->filter(fn (PendingPayoutOtpInterpreter $candidate): bool => $activeProviders->contains($candidate->providerCode()));
         }
 
-        return trim($referenceId);
+        if ($matches->count() !== 1) {
+            throw new RuntimeException('A unique pending payout OTP interpreter is required.');
+        }
+
+        return $matches->first();
     }
 
     private function pendingKey(string $referenceId): string

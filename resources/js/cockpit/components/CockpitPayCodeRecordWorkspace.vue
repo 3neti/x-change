@@ -7,6 +7,7 @@ import CockpitPayCodeTerminalControls from "./CockpitPayCodeTerminalControls.vue
 import CockpitManualCopyButton from "./CockpitManualCopyButton.vue";
 import CockpitDocumentReview from "./CockpitDocumentReview.vue";
 import CockpitContributionInvitations from "./CockpitContributionInvitations.vue";
+import CockpitPaymentRecoveryReports from "./CockpitPaymentRecoveryReports.vue";
 import { Form, Link } from "@inertiajs/vue3";
 import {
   Activity,
@@ -453,6 +454,8 @@ const claimantInstructionGroups = computed(() =>
     .filter((group) => !["value", "controls"].includes(text(group.key)))
     .map((group) => ({
       ...group,
+      key: group.key,
+      label: group.label,
       facts: list(group.facts).map((fact) =>
         claimantInstructionFact(text(group.key), fact),
       ),
@@ -1877,6 +1880,7 @@ function number(value: unknown): number {
         class="space-y-5"
         data-testid="pay-code-settlement-tab"
       >
+        <CockpitPaymentRecoveryReports :code="code" />
         <div>
           <h3 class="text-sm font-semibold text-slate-950 dark:text-white">Money</h3>
           <dl class="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">

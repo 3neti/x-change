@@ -3,10 +3,16 @@
 declare(strict_types=1);
 
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Queue\SyncQueue;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+use LBHurtado\XChange\Enums\FundingVerificationTrigger;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
+use LBHurtado\XChange\Jobs\Funding\SyncStandingFundingAddressJob;
+use LBHurtado\XChange\Jobs\Funding\VerifyFundingIntentJob;
+use LBHurtado\XChange\Jobs\Funding\VerifyFundingWebhookReceiptJob;
 use LBHurtado\XChange\Jobs\Payment\MonitorPaymentAttemptJob;
 use LBHurtado\XChange\Jobs\Payment\VerifyPaymentAttemptJob;
 use LBHurtado\XChange\Models\PaymentAttempt;
@@ -75,6 +81,20 @@ it('prioritizes the least recently checked payment attempts', function (): void 
     Queue::assertPushed(VerifyPaymentAttemptJob::class, fn (VerifyPaymentAttemptJob $job): bool => $job->paymentAttemptId === $older->getKey());
     Queue::assertPushed(VerifyPaymentAttemptJob::class, fn (VerifyPaymentAttemptJob $job): bool => $job->paymentAttemptId === $unverified->getKey());
     Queue::assertNotPushed(VerifyPaymentAttemptJob::class, fn (VerifyPaymentAttemptJob $job): bool => $job->paymentAttemptId === $recent->getKey());
+});
+
+it('schedules bounded late reconciliation without repeatedly checking recent attempts', function (): void {
+    $eligible = scheduledPaymentAttempt(status: PaymentAttemptStatus::Expired, expiresAt: now()->subDay());
+    $recent = scheduledPaymentAttempt(status: PaymentAttemptStatus::Expired, expiresAt: now()->subDay());
+    $old = scheduledPaymentAttempt(status: PaymentAttemptStatus::Expired, expiresAt: now()->subDays(8));
+    PaymentAttempt::query()->whereKey($eligible->getKey())->update(['instructions_created_at' => now()->subDays(2)]);
+    PaymentAttempt::query()->whereKey($recent->getKey())->update(['instructions_created_at' => now()->subDays(2), 'last_checked_at' => now()->subMinute()]);
+    PaymentAttempt::query()->whereKey($old->getKey())->update(['instructions_created_at' => now()->subDays(9)]);
+
+    $this->artisan('xchange:payments:verify-open')->assertSuccessful();
+
+    Queue::assertPushed(VerifyPaymentAttemptJob::class, 1);
+    Queue::assertPushed(VerifyPaymentAttemptJob::class, fn (VerifyPaymentAttemptJob $job): bool => $job->paymentAttemptId === $eligible->getKey());
 });
 
 it('registers the package-owned non-overlapping payment verification schedule', function (): void {
@@ -173,3 +193,51 @@ function scheduledPaymentAttempt(
         'expires_at' => $expiresAt ?? now()->addMinutes(15),
     ]);
 }
+it('shares a provider rate limit between funding and payment verification jobs', function (): void {
+    config()->set('x-change.funding.verification_provider_rate_limit_per_minute', 1);
+    config()->set('x-change.payment.attempts.verification_provider_rate_limit_per_minute', 2);
+    $key = md5('x-change-provider-verificationnetbank');
+    RateLimiter::clear($key);
+
+    $funding = (new VerifyFundingIntentJob(
+        1, 'netbank', FundingVerificationTrigger::Schedule, 'test',
+    ))->withFakeQueueInteractions();
+    $payment = (new VerifyPaymentAttemptJob(
+        1, 'NETBANK', PaymentVerificationTrigger::Schedule,
+    ))->withFakeQueueInteractions();
+    $fundingRan = false;
+    $paymentRan = false;
+    $funding->middleware()[1]->handle($funding, function () use (&$fundingRan): void {
+        $fundingRan = true;
+    });
+    $payment->middleware()[1]->handle($payment, function () use (&$paymentRan): void {
+        $paymentRan = true;
+    });
+
+    expect($fundingRan)->toBeTrue()->and($paymentRan)->toBeFalse();
+    $payment->assertReleased();
+    RateLimiter::clear($key);
+});
+
+it('keeps rate-limited provider checks retryable without hiding repeated exceptions', function (): void {
+    $queue = new class extends SyncQueue
+    {
+        public function payload(object $job): array
+        {
+            return $this->createPayloadArray($job, 'test');
+        }
+    };
+    $jobs = [
+        new VerifyFundingIntentJob(1, 'netbank', FundingVerificationTrigger::Schedule, 'test'),
+        new SyncStandingFundingAddressJob(1, 'netbank', 'schedule'),
+        new VerifyFundingWebhookReceiptJob(1),
+        new VerifyPaymentAttemptJob(1, 'netbank', PaymentVerificationTrigger::Schedule),
+        new MonitorPaymentAttemptJob(1, 'netbank'),
+    ];
+
+    foreach ($jobs as $job) {
+        $payload = $queue->payload($job);
+        expect($payload['retryUntil'])->toBeGreaterThan(now()->addHours(23)->timestamp)
+            ->and($payload['maxExceptions'])->toBe(5);
+    }
+});

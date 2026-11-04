@@ -115,10 +115,12 @@ class VerifyOpenFundingIntentsCommand extends Command
      */
     private function eligibleIntents(string $providerCode, int $limit): Builder
     {
+        $lateBoundary = now()->subDays(max(0, (int) config('x-change.funding.issuance_late_reconciliation_days', 7)));
+
         return FundingIntent::query()
             ->where('provider_code', $providerCode)
             ->whereNotNull('expires_at')
-            ->where(function (Builder $builder): void {
+            ->where(function (Builder $builder) use ($lateBoundary): void {
                 $builder->whereIn('status', [
                     FundingIntentStatus::AwaitingFunds,
                     FundingIntentStatus::EvidenceReceived,
@@ -127,8 +129,14 @@ class VerifyOpenFundingIntentsCommand extends Command
                 ])->orWhere(function (Builder $pending): void {
                     $pending->where('status', FundingIntentStatus::PendingInstructions)
                         ->where('expires_at', '<=', now());
+                })->orWhere(function (Builder $late) use ($lateBoundary): void {
+                    $late->whereIn('status', [FundingIntentStatus::Expired, FundingIntentStatus::Cancelled])
+                        ->where('purpose', FundingIntentPurpose::OnDemandIssuance)
+                        ->where('expires_at', '>=', $lateBoundary)
+                        ->whereNotNull('instructions_created_at');
                 });
             })
+            ->orderByRaw("coalesce((select last_checked_at from x_change_funding_reconciliation_checks where funding_intent_id = x_change_funding_intents.id), (select max(occurred_at) from x_change_funding_intent_events where funding_intent_id = x_change_funding_intents.id and event_type in ('provider_funds_not_observed', 'provider_verification_unavailable', 'provider_settlement_pending', 'provider_settlement_verified')), x_change_funding_intents.created_at) asc")
             ->oldest('expires_at')
             ->oldest('id')
             ->limit($limit);
@@ -139,6 +147,10 @@ class VerifyOpenFundingIntentsCommand extends Command
         int $graceSeconds,
     ): bool {
         if ($intent->status === FundingIntentStatus::Verified) {
+            return false;
+        }
+
+        if (in_array($intent->status, [FundingIntentStatus::Expired, FundingIntentStatus::Cancelled], true)) {
             return false;
         }
 

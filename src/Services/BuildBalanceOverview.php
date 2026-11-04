@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services;
 
+use LBHurtado\EmiCore\Contracts\ProviderWalletProjectionSynchronizer;
 use LBHurtado\EmiCore\Models\Wallet as EmiWallet;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\ProviderAccountLinkRepositoryContract;
@@ -11,6 +12,7 @@ use LBHurtado\XChange\Contracts\ProviderProvisioningGatewayContract;
 use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Models\ProviderBalanceSnapshot;
+use LBHurtado\XChange\Services\Funding\SourceAccountReadinessResolver;
 use Throwable;
 
 class BuildBalanceOverview
@@ -20,7 +22,7 @@ class BuildBalanceOverview
         protected ProviderAccountLinkRepositoryContract $links,
         protected ProviderProvisioningGatewayContract $provisioning,
         protected WalletAccessContract $wallets,
-        protected ?SyncPaynamicsWalletBalance $paynamicsBalances = null,
+        protected ?ProviderWalletProjectionSynchronizer $paynamicsBalances = null,
         protected ?CheckNetbankSourceAccountReadiness $netbankSourceAccount = null,
         protected ?ProviderBalanceSnapshotStore $providerBalanceSnapshots = null,
         protected ?AccountBalanceReadModelContract $accountBalances = null,
@@ -113,7 +115,7 @@ class BuildBalanceOverview
                 'label' => $authoritative ? 'Available Local Ledger Balance' : 'Local Ledger Projection',
                 'description' => $authoritative
                     ? 'This is the balance x-change uses for this provider topology.'
-                    : 'Shown for accounting context only. The Paynamics provider balance is authoritative.',
+                    : 'Shown for accounting context only. The provider balance is authoritative.',
                 'authority' => 'local_ledger',
                 'source' => 'bavix_wallet',
                 'is_authoritative' => $authoritative,
@@ -166,9 +168,15 @@ class BuildBalanceOverview
 
         if ($forceSync || ($syncIfStale && $wasStale)) {
             try {
-                $refresh = $provider === 'paynamics'
-                    ? $this->syncPaynamicsWallet($link->provider_wallet_id, $owner)
-                    : $this->provisioning->refresh($link);
+                $synchronizer = $this->paynamicsBalances?->supportsProvider($provider)
+                    ? $this->paynamicsBalances
+                    : app(ProviderWalletProjectionResolver::class)->for($provider);
+                if ($synchronizer !== null) {
+                    $synchronizer->handle($link->provider_wallet_id, $owner);
+                    $refresh = ['refreshed' => true];
+                } else {
+                    $refresh = $this->provisioning->refresh($link);
+                }
 
                 if ((bool) data_get($refresh, 'refreshed', false) === true) {
                     $wallet = $this->resolveEmiWallet($link->provider_wallet_id);
@@ -194,10 +202,10 @@ class BuildBalanceOverview
 
         return [
             'key' => 'provider_wallet',
-            'label' => 'Paynamics Provider Balance',
-            'description' => 'Externally funded Paynamics provider account balance. This is authoritative for Paynamics issuance.',
+            'label' => ucfirst($provider).' Provider Balance',
+            'description' => 'Externally funded provider account balance. This is authoritative for issuance.',
             'authority' => 'provider_wallet',
-            'source' => 'paynamics',
+            'source' => $provider,
             'is_authoritative' => true,
             'is_stale' => $this->isStale($wallet),
             'balance_minor' => $balanceMinor,
@@ -240,7 +248,14 @@ class BuildBalanceOverview
         string $topology,
         bool $syncIfStale,
     ): ?array {
-        if ($provider !== 'netbank' || $topology !== 'ledger_pooled') {
+        if ($topology !== 'ledger_pooled') {
+            return null;
+        }
+
+        $sourceKey = $provider.'_source_account';
+        $providerLabel = $provider === 'netbank' ? 'NetBank' : ucfirst($provider);
+        if (app(SourceAccountReadinessResolver::class)->for($provider) === null
+            && ! config("x-change.provider_runtime.providers.{$provider}.source_account_readiness.enabled", false)) {
             return null;
         }
 
@@ -248,12 +263,12 @@ class BuildBalanceOverview
 
         if (! $syncIfStale) {
             return $this->netbankSourceAccountBalanceFromSnapshot(
-                $this->providerBalanceSnapshots->find('netbank', 'netbank_source_account'),
+                $this->providerBalanceSnapshots->find($provider, $sourceKey), $provider, $sourceKey, $providerLabel,
             );
         }
 
         $this->netbankSourceAccount ??= app(CheckNetbankSourceAccountReadiness::class);
-        $readiness = $this->netbankSourceAccount->handle();
+        $readiness = $this->netbankSourceAccount->handle(null, $provider);
         $checked = (bool) ($readiness['checked'] ?? false);
         $ready = (bool) ($readiness['ready'] ?? false);
 
@@ -263,19 +278,19 @@ class BuildBalanceOverview
             && array_key_exists('available_balance_minor', $readiness)
         ) {
             $this->providerBalanceSnapshots->recordSuccess(
-                'netbank',
-                'netbank_source_account',
+                $provider,
+                $sourceKey,
                 $readiness,
             );
         } elseif ($checked) {
             $snapshot = $this->providerBalanceSnapshots->recordFailure(
-                'netbank',
-                'netbank_source_account',
-                'NetBank source account refresh failed.',
+                $provider,
+                $sourceKey,
+                "{$providerLabel} source account refresh failed.",
             );
 
             if ($snapshot !== null) {
-                return $this->netbankSourceAccountBalanceFromSnapshot($snapshot);
+                return $this->netbankSourceAccountBalanceFromSnapshot($snapshot, $provider, $sourceKey, $providerLabel);
             }
         }
 
@@ -294,11 +309,11 @@ class BuildBalanceOverview
         };
 
         return [
-            'key' => 'netbank_source_account',
-            'label' => 'NetBank Source Account Balance',
-            'description' => 'Provider-side mother account liquidity used to back NetBank Pay Code issuance.',
+            'key' => $sourceKey,
+            'label' => "{$providerLabel} Source Account Balance",
+            'description' => "Provider-side mother account liquidity used to back {$providerLabel} Pay Code issuance.",
             'authority' => 'provider_source_account',
-            'source' => 'netbank',
+            'source' => $provider,
             'is_authoritative' => false,
             'is_liquidity_guard' => true,
             'is_stale' => ! $checked || ! $ready,
@@ -311,23 +326,23 @@ class BuildBalanceOverview
             'account_number_masked' => $readiness['account_number_masked'] ?? null,
             'sync_status' => $syncStatus,
             'sync_message' => $checked && ! $ready
-                ? 'NetBank source account refresh failed.'
-                : ($readiness['message'] ?? 'NetBank source account readiness was not checked.'),
+                ? "{$providerLabel} source account refresh failed."
+                : ($readiness['message'] ?? "{$providerLabel} source account readiness was not checked."),
         ];
     }
 
     /**
      * @return array<string, mixed>
      */
-    protected function netbankSourceAccountBalanceFromSnapshot(?ProviderBalanceSnapshot $snapshot): array
+    protected function netbankSourceAccountBalanceFromSnapshot(?ProviderBalanceSnapshot $snapshot, string $provider, string $sourceKey, string $providerLabel): array
     {
         if ($snapshot === null) {
             return [
-                'key' => 'netbank_source_account',
-                'label' => 'NetBank Source Account Balance',
-                'description' => 'No cached NetBank liquidity snapshot is available.',
+                'key' => $sourceKey,
+                'label' => "{$providerLabel} Source Account Balance",
+                'description' => "No cached {$providerLabel} liquidity snapshot is available.",
                 'authority' => 'provider_source_account',
-                'source' => 'netbank',
+                'source' => $provider,
                 'is_authoritative' => false,
                 'is_liquidity_guard' => true,
                 'is_stale' => true,
@@ -339,7 +354,7 @@ class BuildBalanceOverview
                 'provider_as_of' => null,
                 'account_number_masked' => null,
                 'sync_status' => 'unavailable',
-                'sync_message' => 'Open Balances to refresh NetBank liquidity.',
+                'sync_message' => "Open Balances to refresh {$providerLabel} liquidity.",
             ];
         }
 
@@ -351,8 +366,8 @@ class BuildBalanceOverview
 
         return [
             'key' => $snapshot->balance_key,
-            'label' => 'NetBank Source Account Balance',
-            'description' => 'Cached provider-side mother account liquidity used to back NetBank Pay Code issuance.',
+            'label' => "{$providerLabel} Source Account Balance",
+            'description' => "Cached provider-side mother account liquidity used to back {$providerLabel} Pay Code issuance.",
             'authority' => 'provider_source_account',
             'source' => $snapshot->provider_code,
             'is_authoritative' => false,
@@ -367,7 +382,7 @@ class BuildBalanceOverview
             'account_number_masked' => $snapshot->account_reference_masked,
             'sync_status' => $isStale ? $snapshot->refresh_status : 'cached',
             'sync_message' => $snapshot->failure_reason
-                ?? 'Cached NetBank liquidity snapshot; no provider call was made.',
+                ?? "Cached {$providerLabel} liquidity snapshot; no provider call was made.",
         ];
     }
 

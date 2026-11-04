@@ -4,52 +4,23 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Funding;
 
-use InvalidArgumentException;
-use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
+use LBHurtado\EmiCore\Contracts\OnDemandFundingInstructionProvider;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionRequestData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
+use RuntimeException;
 
-final class StandingBankTransferFundingInstructionIssuer
+/** Compatibility entry point for callers requesting a standing transfer. */
+final readonly class StandingBankTransferFundingInstructionIssuer
 {
+    public function __construct(private FundingProviderAdapterRegistry $providers) {}
+
     public function create(FundingInstructionRequestData $request): FundingInstructionsData
     {
-        $destination = $request->destination;
-
-        if ($request->provider !== 'netbank'
-            || ! $destination instanceof FundingDestinationData
-            || $destination->provider !== 'netbank'
-            || $destination->destinationType !== 'bank_account') {
-            throw new InvalidArgumentException(
-                'Standing bank-transfer instructions require a NetBank bank-account destination.',
-            );
+        $provider = $this->providers->for($request->provider);
+        if (! $provider instanceof OnDemandFundingInstructionProvider) {
+            throw new RuntimeException('The provider does not support on-demand funding instructions.');
         }
 
-        $accountNumber = trim((string) $destination->bankAccountNumber);
-        $accountName = trim((string) $destination->bankAccountName);
-
-        if ($accountNumber === '' || $accountName === '') {
-            throw new InvalidArgumentException(
-                'Standing bank-transfer instructions require an account number and account name.',
-            );
-        }
-
-        return new FundingInstructionsData(
-            provider: 'netbank',
-            providerReference: 'bank-transfer:'.$request->fundingReference,
-            amountMinor: $request->amountMinor,
-            currency: mb_strtoupper($request->currency),
-            expiresAt: $request->expiresAt,
-            fundingAddress: $accountNumber,
-            displayData: [
-                'institution' => 'NetBank',
-                'account_name' => $accountName,
-                'destination_account' => $accountNumber,
-                'amount_minor' => $request->amountMinor,
-                'currency' => mb_strtoupper($request->currency),
-                'payment_reference' => $request->fundingReference,
-                'one_time' => true,
-                'delivery' => 'bank-transfer',
-            ],
-        );
+        return $provider->createOnDemandFundingInstructions($request, false);
     }
 }

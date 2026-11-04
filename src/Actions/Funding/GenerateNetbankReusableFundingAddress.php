@@ -8,8 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
-use LBHurtado\PaymentGateway\Enums\NetbankStandingAddressScheme;
-use LBHurtado\PaymentGateway\Funding\NetbankStandingAddressProfile;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Data\Funding\NetbankReusableFundingAddressData;
 use LBHurtado\XChange\Enums\FundingAddressStatus;
@@ -20,14 +18,14 @@ use LBHurtado\XChange\Services\Funding\FundingQrMerchantProfileResolver;
 use LBHurtado\XChange\Services\Funding\StandingFundingAccountReferenceResolver;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressBindingResolver;
 use LBHurtado\XChange\Services\Funding\StandingFundingDestinationResolver;
-use LBHurtado\XChange\Support\Auth\MobileNumber;
+use LBHurtado\XChange\Services\Funding\StandingFundingProfileResolver;
 
 final class GenerateNetbankReusableFundingAddress
 {
     public function __construct(
         private readonly StandingFundingAccountReferenceResolver $accounts,
         private readonly StandingFundingDestinationResolver $destinations,
-        private readonly NetbankStandingAddressProfile $profile,
+        private readonly StandingFundingProfileResolver $profile,
         private readonly ProvisionStandingFundingAddress $provision,
         private readonly FundingQrMerchantProfileResolver $merchantProfiles,
         private readonly AuditLoggerContract $audit,
@@ -114,7 +112,8 @@ final class GenerateNetbankReusableFundingAddress
         string $accountReference,
         ?StandingFundingAddress $existingAddress,
     ): ?string {
-        if ($this->profile->scheme() !== NetbankStandingAddressScheme::MobileV1) {
+        $profile = $this->profile->forOwner('netbank', $owner, validateReadiness: false);
+        if (! $profile->requiresVerifiedMobile) {
             return null;
         }
 
@@ -132,15 +131,13 @@ final class GenerateNetbankReusableFundingAddress
             ]);
         }
 
-        $mobile = MobileNumber::normalize($owner->getAttribute('mobile'));
-
-        if (! is_string($mobile) || preg_match('/\A639\d{9}\z/', $mobile) !== 1) {
+        if ($profile->routingReference === null) {
             throw ValidationException::withMessages([
                 'standing_funding_address' => 'A valid verified Philippine mobile is required.',
             ]);
         }
 
-        return '0'.substr($mobile, 2);
+        return $profile->routingReference;
     }
 
     private function existingAddress(Model $owner): ?StandingFundingAddress

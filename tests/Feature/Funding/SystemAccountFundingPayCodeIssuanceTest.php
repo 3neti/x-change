@@ -311,7 +311,7 @@ it('lets guest web claims use the onboarding driver before Account Funding settl
     $readiness = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
     $readiness->shouldReceive('handle')
         ->once()
-        ->with()
+        ->with(null, 'netbank')
         ->andReturn([
             'enabled' => true,
             'ready' => true,
@@ -450,7 +450,7 @@ MARKDOWN);
         auth()->logout();
 
         $readiness = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
-        $readiness->shouldReceive('handle')->once()->with()->andReturn([
+        $readiness->shouldReceive('handle')->once()->with(null, 'netbank')->andReturn([
             'enabled' => true,
             'ready' => true,
             'checked' => true,

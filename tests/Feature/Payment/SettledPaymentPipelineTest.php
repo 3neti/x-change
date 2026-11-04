@@ -159,7 +159,7 @@ it('resumes SMS without another provider read after contact association was save
     $original = settledPaymentObservationWithoutPayer();
     $process = settledPaymentProcessForRecovery($original);
     $enrichedData = recoveredPayerObservation($original);
-    $enrichedData->metadata['normalization_version'] = 'netbank-incoming-credit-v2-payer-recovery-v1';
+    $enrichedData->metadata['normalization_version'] = 'provider-payer-recovery-v1';
     $enriched = app(RecordProviderFundingObservation::class)->handle($enrichedData);
     $contact = Contact::fromPhoneNumber(phone('09171234567', 'PH'));
     $process->forceFill([

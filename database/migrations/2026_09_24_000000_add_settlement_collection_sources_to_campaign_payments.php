@@ -96,8 +96,9 @@ return new class extends Migration
             $table->foreign('campaign_payment_qr_binding_id')->references('id')->on('x_change_campaign_payment_qr_bindings')->restrictOnDelete();
         });
         Schema::table('x_change_campaign_payment_recognitions', function (Blueprint $table): void {
+            $table->dropForeign(['campaign_payment_source_id']);
             $table->dropUnique('xchg_campaign_payment_source_transaction_unique');
-            $table->dropConstrainedForeignId('campaign_payment_source_id');
+            $table->dropColumn('campaign_payment_source_id');
             $table->dropForeign(['campaign_payment_qr_binding_id']);
         });
         Schema::table('x_change_campaign_payment_recognitions', function (Blueprint $table): void {

@@ -229,6 +229,29 @@ it('queues an owner-authorized NetBank check without accepting settlement facts'
         ->and($intent->funding_address_ciphertext)->toBe('915001234567890123456');
 });
 
+it('queues an authorized check for another enabled provider with a funding adapter', function () {
+    $operator = actingAsTestUser();
+    $this->post(route('x-change.cockpit.funding.intents.store'), [
+        'provider' => 'netbank', 'amount_minor' => 25000, 'currency' => 'PHP',
+        'idempotency_key' => 'cockpit-other-provider-check',
+    ])->assertRedirect();
+
+    $intent = FundingIntent::query()->sole();
+    $intent->forceFill(['provider_code' => 'other_provider'])->saveQuietly();
+    config()->set('x-change.funding.providers.other_provider.enabled', true);
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([
+        new FakeFundingProviderAdapter('other_provider'),
+    ]));
+    Queue::fake();
+
+    $this->post(route('x-change.cockpit.funding.intents.verification-checks.store', $intent))
+        ->assertRedirect(route('x-change.cockpit.funding.index'));
+    Queue::assertPushed(VerifyFundingIntentJob::class, fn (VerifyFundingIntentJob $job): bool => $job->providerCode === 'other_provider' && $job->actorId === (string) $operator->getAuthIdentifier());
+
+    config()->set('x-change.funding.providers.other_provider.enabled', false);
+    $this->postJson(route('x-change.cockpit.funding.intents.verification-checks.store', $intent))->assertConflict();
+});
+
 it('rejects checks from other owners and ineligible intent states', function () {
     $operator = actingAsTestUser();
 

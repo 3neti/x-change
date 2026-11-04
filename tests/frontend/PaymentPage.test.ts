@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PaymentPage from '../../resources/js/pages/x-change/claim/Payment.vue';
 
@@ -36,6 +36,42 @@ const pendingPayment = {
 };
 
 describe('PaymentPage', () => {
+    it('opens the report in recovery mode without enabling a new payment', () => {
+        const wrapper = mount(PaymentPage, { props: { payment: { ...pendingPayment, repayment_mode: true, repayment_ready: true, recovery_mode: true, can_create_attempt: false } } });
+        expect(wrapper.find('[data-testid="payer-recovery-report"] form').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="payer-create-qr"]').attributes('disabled')).toBeDefined();
+        wrapper.unmount();
+    });
+    it('lets a payer submit a lost-session report without selecting an attempt', async () => {
+        const send = vi.fn().mockResolvedValue({ ok: true });
+        vi.stubGlobal('fetch', send);
+        const wrapper = mount(PaymentPage, { props: { payment: pendingPayment } });
+        await wrapper.get('[data-testid="payer-recovery-report"] button').trigger('click');
+        const fields = wrapper.findAll('[data-testid="payer-recovery-report"] input');
+        await fields[0].setValue('TX-123');
+        await fields[1].setValue('50');
+        await fields[2].setValue('2026-11-03T12:00');
+        await wrapper.get('[data-testid="payer-recovery-report"] form').trigger('submit');
+        await flushPromises();
+        expect(send).toHaveBeenCalledWith('/x/pay/PAY-1234/recovery-reports', expect.objectContaining({ method: 'POST', body: expect.stringContaining('"amount_minor":5000') }));
+        expect(wrapper.get('[role="status"]').text()).toContain('Do not pay again');
+        wrapper.unmount();
+        vi.unstubAllGlobals();
+    });
+    it('warns an already-paying customer when a QR expires and continues reconciliation updates', () => {
+        const payment = { ...pendingPayment, attempt: { reference: 'EXPIRED', status: 'expired',
+            provider: 'netbank', amount_minor: 7500, currency: 'PHP', expires_at: null,
+            last_checked_at: null, can_check: false, late_reconciliation_active: true, qr_code: null } };
+        const wrapper = mount(PaymentPage, { props: { payment } });
+
+        expect(wrapper.get('[data-testid="payer-payment-review"]').text()).toContain('If you already paid, do not pay again');
+        expect(wrapper.text()).not.toContain('The provider did not return a usable QR image');
+        expect(wrapper.text()).not.toContain('Scan with any QR Ph app');
+        expect(wrapper.find('[data-testid="payer-check-status"]').exists()).toBe(false);
+        expect(usePoll).toHaveBeenCalledWith(5000, expect.any(Object), { autoStart: true, mode: 'rest' });
+        wrapper.unmount();
+    });
+
     it('shows an unscannable QR illustration without polling or submitting', () => {
         const payment = { ...pendingPayment, attempt: { reference: 'PREVIEW', status: 'awaiting_payment',
             provider: 'netbank', amount_minor: 10000, currency: 'PHP', expires_at: null,

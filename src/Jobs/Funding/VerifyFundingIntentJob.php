@@ -18,8 +18,10 @@ use LBHurtado\XChange\Actions\Operations\RecordExternalJobFailure;
 use LBHurtado\XChange\Data\Funding\FundingIntentVerificationData;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\FundingVerificationTrigger;
+use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
+use LBHurtado\XChange\Queue\Concerns\ProviderVerificationRetryPolicy;
 use Throwable;
 
 class VerifyFundingIntentJob implements ShouldBeUnique, ShouldQueue
@@ -27,6 +29,7 @@ class VerifyFundingIntentJob implements ShouldBeUnique, ShouldQueue
     use Dispatchable;
     use HasSafeQueueTags;
     use InteractsWithQueue;
+    use ProviderVerificationRetryPolicy;
     use Queueable;
     use SerializesModels;
 
@@ -64,7 +67,7 @@ class VerifyFundingIntentJob implements ShouldBeUnique, ShouldQueue
                 ->releaseAfter(5)
                 ->expireAfter($this->uniqueFor)
                 ->shared(),
-            new RateLimited('x-change-funding-verification'),
+            new RateLimited('x-change-provider-verification'),
         ];
     }
 
@@ -90,7 +93,18 @@ class VerifyFundingIntentJob implements ShouldBeUnique, ShouldQueue
         ));
 
         if ($intent->status === FundingIntentStatus::Verified) {
-            $settle->handle($intent);
+            try {
+                $settle->handle($intent);
+            } catch (FundingSettlementDenied $exception) {
+                $recovered = $verify->recoverClosedVerified($intent, new FundingIntentVerificationData(
+                    trigger: $this->trigger,
+                    actorId: $this->actorId,
+                    webhookReceiptId: $this->webhookReceiptId,
+                ));
+                if ($recovered === null) {
+                    throw $exception;
+                }
+            }
         }
     }
 

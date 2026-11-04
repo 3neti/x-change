@@ -23,10 +23,10 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('x_change_checkouts', function (Blueprint $table): void {
+            $table->dropForeign(['partner_api_client_id']);
             $table->dropUnique('x_change_checkout_partner_key_unique');
             $table->dropIndex('x_change_checkout_partner_status_idx');
-            $table->dropConstrainedForeignId('partner_api_client_id');
-            $table->dropColumn(['api_idempotency_key_hash', 'api_request_fingerprint']);
+            $table->dropColumn(['partner_api_client_id', 'api_idempotency_key_hash', 'api_request_fingerprint']);
         });
     }
 };

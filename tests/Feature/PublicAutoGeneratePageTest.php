@@ -18,7 +18,9 @@ use LBHurtado\XChange\Models\CommercialPrincipal;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Commercial\ConfiguredCommercialPrincipalResolver;
+use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceOrderAccess;
+use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -91,6 +93,9 @@ it('offers reusable balance on the public surface only when staff collection is 
 
 it('holds public reusable balance issuance behind the full funding order', function (): void {
     commissionPublicStoredValueForTest();
+    $this->app->instance(FakeFundingProviderAdapter::class, new FakeFundingProviderAdapter);
+    $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
+    $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
     $estimate = Mockery::mock(EstimatePayCodeCost::class);
     $estimate->shouldReceive('handle')->andReturn(new PricingEstimateData(
         total: 15.0,

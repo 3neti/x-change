@@ -12,12 +12,14 @@ use LBHurtado\EmiCore\Data\Funding\ProviderPayerIdentityData;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
+use LBHurtado\XChange\Services\Settlement\CampaignWalletPayerMobile;
 
 final readonly class ReverifyCheckoutQrPayer
 {
     public function __construct(
         private FundingProviderAdapterRegistry $providers,
         private CheckoutLifecycle $checkouts,
+        private CampaignWalletPayerMobile $payerMobile,
     ) {}
 
     public function handle(PayCodeIssuanceFundingOrder $order, ProviderFundingObservation $observation): bool
@@ -25,13 +27,13 @@ final readonly class ReverifyCheckoutQrPayer
         $intent = $order->fundingIntent;
         $address = trim((string) $intent?->funding_address_ciphertext);
 
-        if ($intent === null || $observation->provider_code !== 'netbank' || $address === '') {
+        if ($intent === null || $observation->provider_code !== $intent->provider_code || $address === '') {
             return false;
         }
 
         $destination = $intent->destination_snapshot_ciphertext;
         $verification = new FundingVerificationData(
-            provider: 'netbank',
+            provider: $intent->provider_code,
             fundingIntentReference: $intent->reference,
             expectedAmountMinor: (int) $intent->expected_amount_minor,
             currency: $intent->currency,
@@ -59,8 +61,7 @@ final readonly class ReverifyCheckoutQrPayer
             || $payment->amountMinor !== $verified->grossAmountMinor
             || $payment->currency !== $verified->currency
             || $payment->status !== 'settled'
-            || ! in_array(strtoupper(trim((string) $payment->payerInstitutionCode)), ['GXCHPHM2XXX', 'PAPHPHM1XXX', 'GCASH', 'MAYA', 'PAYMAYA'], true)
-            || preg_match('/^(?:0|63|\+63)9[0-9]{9}$/', trim((string) $payment->payerAccountNumber)) !== 1) {
+            || $this->payerMobile->interpret($intent->provider_code, $payment->payerInstitutionCode, $payment->payerAccountNumber) === null) {
             return false;
         }
 
@@ -87,7 +88,7 @@ final readonly class ReverifyCheckoutQrPayer
                 accountNumber: $payment->payerAccountNumber,
                 institutionCode: $payment->payerInstitutionCode,
                 mobile: $payment->payerMobile,
-                verificationSource: 'netbank-vca-transaction-history',
+                verificationSource: $intent->provider_code.'-vca-transaction-history',
                 providerVerified: false,
             ),
         ));

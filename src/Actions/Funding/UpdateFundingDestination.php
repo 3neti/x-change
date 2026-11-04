@@ -8,9 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\EmiCore\Contracts\ProviderFundingDestinationConfigurator;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
+use LBHurtado\XChange\Exceptions\FundingProviderUnavailable;
 use LBHurtado\XChange\Models\FundingDestinationPreference;
 use LBHurtado\XChange\Models\ProviderAccountLink;
+use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\LinkExistingPaynamicsWallet;
 
 class UpdateFundingDestination
@@ -18,6 +21,7 @@ class UpdateFundingDestination
     public function __construct(
         private readonly LinkExistingPaynamicsWallet $paynamics,
         private readonly AuditLoggerContract $audit,
+        private readonly FundingProviderAdapterRegistry $providers,
     ) {}
 
     /**
@@ -32,13 +36,9 @@ class UpdateFundingDestination
             return $this->selectShared($owner, $provider);
         }
 
-        $link = match ($provider) {
-            'netbank' => $this->connectNetbank($owner, $data),
-            'paynamics_constellation' => $this->connectPaynamics($owner, $data),
-            default => throw ValidationException::withMessages([
-                'provider' => 'This funding provider is unsupported.',
-            ]),
-        };
+        $link = $provider === 'paynamics_constellation'
+            ? $this->connectPaynamics($owner, $data)
+            : $this->connectConfiguredProvider($owner, $provider, $data);
 
         return DB::transaction(function () use ($owner, $provider, $link): FundingDestinationPreference {
             $preference = $this->preference($owner, $provider);
@@ -91,41 +91,40 @@ class UpdateFundingDestination
     /**
      * @param  array<string, mixed>  $data
      */
-    private function connectNetbank(Model $owner, array $data): ProviderAccountLink
+    private function connectConfiguredProvider(Model $owner, string $provider, array $data): ProviderAccountLink
     {
-        $accountNumber = (string) data_get($data, 'account_number');
-        $accountName = (string) data_get($data, 'account_name');
-        $alias = (string) data_get($data, 'vca_alias');
-        $fingerprint = hash('sha256', "netbank|{$accountNumber}|{$alias}");
+        try {
+            $adapter = $this->providers->for($provider);
+        } catch (FundingProviderUnavailable) {
+            throw ValidationException::withMessages(['provider' => 'This funding provider is unsupported.']);
+        }
+        if (! $adapter instanceof ProviderFundingDestinationConfigurator) {
+            throw ValidationException::withMessages(['provider' => 'This funding provider is unsupported.']);
+        }
+        $configuration = $adapter->configureFundingDestination($data);
 
         $link = ProviderAccountLink::query()
             ->whereMorphedTo('owner', $owner)
-            ->where('provider', 'netbank')
-            ->where('routing_fingerprint', $fingerprint)
+            ->where('provider', $provider)
+            ->where('routing_fingerprint', $configuration->fingerprint)
             ->whereNull('disabled_at')
             ->firstOrNew();
 
         $link->forceFill([
             'owner_type' => $owner::class,
             'owner_id' => $owner->getKey(),
-            'provider' => 'netbank',
+            'provider' => $provider,
             'topology' => 'dedicated',
             'purpose' => 'funding',
-            'mode' => 'bank_account_link',
+            'mode' => $configuration->mode,
             'status' => 'ready',
-            'verification_status' => 'routing_configured',
-            'identity_level' => 'corporate_account_vca',
-            'capabilities' => ['funding', 'vca'],
-            'metadata' => [
-                'registration_token_lifecycle' => 'ephemeral_per_vca',
-            ],
-            'routing_profile_ciphertext' => [
-                'bank_account_number' => $accountNumber,
-                'bank_account_name' => $accountName,
-                'vca_alias' => $alias,
-            ],
-            'routing_fingerprint' => $fingerprint,
-            'display_reference' => '•••• '.Str::substr($accountNumber, -4)." · VCA {$alias}",
+            'verification_status' => $configuration->verificationStatus,
+            'identity_level' => $configuration->identityLevel,
+            'capabilities' => $configuration->capabilities,
+            'metadata' => $configuration->metadata,
+            'routing_profile_ciphertext' => $configuration->routingProfile,
+            'routing_fingerprint' => $configuration->fingerprint,
+            'display_reference' => $configuration->displayReference,
             'ready_at' => now(),
             'verified_at' => null,
             'activated_at' => now(),

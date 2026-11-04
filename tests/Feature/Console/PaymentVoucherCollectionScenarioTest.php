@@ -51,6 +51,40 @@ it('runs payment voucher collection scenario with a provider generated payment Q
         ->and(data_get($payload, 'safety.payment_rail_qr_synthesized'))->toBeFalse();
 });
 
+it('recovers a simulated payment after missing evidence and rolls back the settled replay', function (): void {
+    config()->set('x-change.funding.simulator.enabled', true);
+    config()->set('x-change.funding.providers.qrph_simulator.enabled', true);
+    $vouchersBefore = Voucher::query()->count();
+    $collectionsBefore = VoucherCollection::query()->count();
+
+    $exitCode = Artisan::call('xchange:lifecycle:run', [
+        'scenario' => 'payment_voucher_collection_simulated',
+        '--json' => true,
+    ]);
+    $payload = json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
+
+    expect($exitCode)->toBe(0)
+        ->and(data_get($payload, 'payment_attempt.status'))->toBe('settled')
+        ->and(data_get($payload, 'safety.recovered_after_missing_evidence'))->toBeTrue()
+        ->and(data_get($payload, 'safety.replay_checked'))->toBeTrue()
+        ->and(data_get($payload, 'rollback_completed'))->toBeTrue()
+        ->and(Voucher::query()->count())->toBe($vouchersBefore)
+        ->and(VoucherCollection::query()->count())->toBe($collectionsBefore);
+});
+
+it('refuses the simulated payable scenario when the simulator is disabled', function (): void {
+    config()->set('x-change.funding.simulator.enabled', false);
+    $before = Voucher::query()->count();
+    $exitCode = Artisan::call('xchange:lifecycle:run', [
+        'scenario' => 'payment_voucher_collection_simulated', '--json' => true,
+    ]);
+    $payload = json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
+
+    expect($exitCode)->toBe(1)
+        ->and(data_get($payload, 'success'))->toBeFalse()
+        ->and(Voucher::query()->count())->toBe($before);
+});
+
 it('settles an explicit value flow into the named account through the lifecycle runner', function (): void {
     enableNetbankTreasuryForTests();
     config()->set('x-change.onboarding.issuer_model', User::class);

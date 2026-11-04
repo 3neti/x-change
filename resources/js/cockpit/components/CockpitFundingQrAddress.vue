@@ -60,7 +60,7 @@ function updateQr(): void {
         return;
     }
 
-    merchantProfileForm.patch(updateFundingQrMerchantProfile(), {
+    merchantProfileForm.patch(updateFundingQrMerchantProfile.url(), {
         preserveScroll: true,
         onSuccess: () => emit('updated'),
     });

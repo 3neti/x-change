@@ -26,6 +26,10 @@ final class PaymentAttemptPresenter
             'expires_at' => $attempt->expires_at?->toIso8601String(),
             'last_checked_at' => $attempt->last_checked_at?->toIso8601String(),
             'can_check' => $attempt->status === PaymentAttemptStatus::AwaitingPayment,
+            'late_reconciliation_active' => $attempt->status === PaymentAttemptStatus::Expired
+                && $attempt->instructions_created_at !== null
+                && $attempt->expires_at !== null
+                && $attempt->expires_at->addDays(max(1, (int) config('x-change.payment.attempts.late_reconciliation_days', 7)))->isFuture(),
             'qr_code' => $attempt->status === PaymentAttemptStatus::AwaitingPayment && is_array($qr) ? [
                 'mime_type' => data_get($qr, 'mime_type'),
                 'base64_payload' => data_get($qr, 'base64_payload'),

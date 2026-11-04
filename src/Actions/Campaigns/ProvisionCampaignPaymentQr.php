@@ -8,8 +8,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
-use LBHurtado\PaymentGateway\Enums\NetbankStandingAddressScheme;
-use LBHurtado\PaymentGateway\Funding\NetbankStandingAddressProfile;
 use LBHurtado\XCampaign\Models\EndpointCampaign;
 use LBHurtado\XChange\Actions\Funding\ProvisionStandingFundingAddress;
 use LBHurtado\XChange\Enums\CampaignEntryMode;
@@ -18,8 +16,8 @@ use LBHurtado\XChange\Enums\FundingRecognitionMode;
 use LBHurtado\XChange\Models\CampaignPaymentQrBinding;
 use LBHurtado\XChange\Services\Funding\FundingQrMerchantProfileResolver;
 use LBHurtado\XChange\Services\Funding\StandingFundingDestinationResolver;
+use LBHurtado\XChange\Services\Funding\StandingFundingProfileResolver;
 use LBHurtado\XChange\Services\Funding\StandingFundingQrArtifactStore;
-use LBHurtado\XChange\Support\Auth\MobileNumber;
 
 final readonly class ProvisionCampaignPaymentQr
 {
@@ -29,7 +27,7 @@ final readonly class ProvisionCampaignPaymentQr
         private StandingFundingDestinationResolver $destinations,
         private FundingQrMerchantProfileResolver $merchantProfiles,
         private StandingFundingQrArtifactStore $qrArtifacts,
-        private NetbankStandingAddressProfile $profile,
+        private StandingFundingProfileResolver $profile,
     ) {}
 
     /**
@@ -106,7 +104,8 @@ final readonly class ProvisionCampaignPaymentQr
 
     private function routingReference(Model $owner): ?string
     {
-        if ($this->profile->scheme() !== NetbankStandingAddressScheme::MobileV1) {
+        $profile = $this->profile->forOwner('netbank', $owner, validateReadiness: false);
+        if (! $profile->requiresVerifiedMobile) {
             return null;
         }
 
@@ -116,15 +115,13 @@ final readonly class ProvisionCampaignPaymentQr
             ]);
         }
 
-        $mobile = MobileNumber::normalize($owner->getAttribute('mobile'));
-
-        if (! is_string($mobile) || preg_match('/\A639\d{9}\z/', $mobile) !== 1) {
+        if ($profile->routingReference === null) {
             throw ValidationException::withMessages([
                 'payment_qr' => 'A valid verified Philippine mobile is required to create this campaign QR Ph.',
             ]);
         }
 
-        return '0'.substr($mobile, 2);
+        return $profile->routingReference;
     }
 
     private function assertProvisionable(Model $owner, EndpointCampaign $campaign): string

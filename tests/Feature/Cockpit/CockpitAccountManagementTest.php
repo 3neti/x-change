@@ -6,8 +6,18 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use LBHurtado\Merchant\Contracts\MerchantProfileRepositoryContract;
 use LBHurtado\XChange\Actions\Funding\UpdateFundingDestination;
+use LBHurtado\XChange\Exceptions\FundingDestinationUnavailable;
 use LBHurtado\XChange\Models\FundingDestinationPreference;
 use LBHurtado\XChange\Models\ProviderAccountLink;
+use LBHurtado\XChange\Services\Funding\DefaultFundingDestinationResolver;
+use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
+use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
+
+beforeEach(function (): void {
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([
+        new FakeFundingProviderAdapter('netbank'),
+    ]));
+});
 
 it('publishes package-owned Accounts routes with verified and PIN-confirmed mutations', function () {
     $page = Route::getRoutes()->getByName('x-change.cockpit.accounts.index');
@@ -159,6 +169,24 @@ it('stores dedicated NetBank routing without generating or persisting a token', 
         ->and($this->fakeAuditLogger->hasEvent('funding.destination.selected'))->toBeTrue();
 });
 
+it('configures a dedicated destination using a provider-neutral adapter', function () {
+    $owner = actingAsTestUser();
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([
+        new FakeFundingProviderAdapter('example'),
+    ]));
+
+    $preference = app(UpdateFundingDestination::class)->handle($owner, 'example', [
+        'mode' => 'dedicated',
+        'account_number' => '991100001234',
+        'account_name' => 'Example Treasury',
+        'vca_alias' => '54321',
+    ]);
+
+    expect($preference->provider_code)->toBe('example')
+        ->and($preference->providerAccountLink->provider)->toBe('example')
+        ->and($preference->providerAccountLink->routing_fingerprint)->toBe(hash('sha256', 'example|991100001234|54321'));
+});
+
 it('records a new routing configuration without treating token generation as enrollment', function () {
     $owner = actingAsTestUser();
     $update = app(UpdateFundingDestination::class);
@@ -182,6 +210,25 @@ it('records a new routing configuration without treating token generation as enr
                 (array) $link->routing_profile_ciphertext,
             ),
         ))->toBeTrue();
+});
+
+it('resolves only the owner’s matching dedicated provider destination', function () {
+    $owner = actingAsTestUser();
+    $preference = app(UpdateFundingDestination::class)->handle($owner, 'netbank', [
+        'mode' => 'dedicated',
+        'account_number' => '991100001234',
+        'account_name' => 'Dedicated Treasury',
+        'vca_alias' => '54321',
+    ]);
+    $resolver = app(DefaultFundingDestinationResolver::class);
+    $destination = $resolver->resolve($owner, 'netbank', 'account-1');
+
+    expect($destination->bankAccountNumber)->toBe('991100001234')
+        ->and($destination->accountReference)->toBe('account-1');
+
+    $preference->providerAccountLink->forceFill(['provider' => 'paynamics'])->save();
+    expect(fn () => $resolver->resolve($owner, 'netbank', 'account-1'))
+        ->toThrow(FundingDestinationUnavailable::class);
 });
 
 it('returns a destination to shared mode without deleting its connection history', function () {

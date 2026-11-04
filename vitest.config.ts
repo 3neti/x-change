@@ -357,6 +357,7 @@ export default defineConfig({
         import.meta.dirname,
         "tests/frontend/stubs/campaign-worksheet-route.ts",
       ),
+      "@/routes/x-change/cockpit/pay-codes/payment-recovery-reports": path.resolve(import.meta.dirname, "tests/frontend/stubs/cockpit-payment-recovery-report-route.ts"),
       "@/routes/x-change/cockpit/pay-codes": path.resolve(
         import.meta.dirname,
         "tests/frontend/stubs/pay-code-detail-route.ts",
@@ -373,6 +374,7 @@ export default defineConfig({
         import.meta.dirname,
         "tests/frontend/stubs/payment-verification-check-route.ts",
       ),
+      "@/routes/x-change/pay/recovery-reports": path.resolve(import.meta.dirname, "tests/frontend/stubs/payment-recovery-report-route.ts"),
       "@/routes/x-change/pay/attempts/qr": path.resolve(
         import.meta.dirname,
         "tests/frontend/stubs/payment-qr-download-route.ts",

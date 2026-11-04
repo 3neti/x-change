@@ -32,7 +32,7 @@ it('refreshes provider liquidity without accepting financial facts or posting mo
     $readiness = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
     $readiness->shouldReceive('handle')
         ->once()
-        ->with()
+        ->with(null, 'netbank')
         ->andReturn([
             'enabled' => true,
             'ready' => true,
@@ -85,7 +85,7 @@ it('refreshes the cached provider liquidity from the package-owned command', fun
     $readiness = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
     $readiness->shouldReceive('handle')
         ->once()
-        ->with()
+        ->with(null, 'netbank')
         ->andReturn([
             'enabled' => true,
             'ready' => true,
@@ -189,7 +189,7 @@ it('retains the last good snapshot and returns a sanitized failure', function ()
     $readiness = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
     $readiness->shouldReceive('handle')
         ->once()
-        ->with()
+        ->with(null, 'netbank')
         ->andReturn([
             'enabled' => true,
             'ready' => false,

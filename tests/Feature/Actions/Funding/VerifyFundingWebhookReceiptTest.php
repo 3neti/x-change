@@ -6,6 +6,7 @@ use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\RateLimiter;
 use LBHurtado\EmiCore\Actions\Funding\StoreProviderWebhookReceipt;
 use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
 use LBHurtado\EmiCore\Data\Funding\ProviderEventHintData;
@@ -25,11 +26,14 @@ use LBHurtado\XChange\Actions\Funding\VerifyFundingIntent;
 use LBHurtado\XChange\Actions\Funding\VerifyFundingWebhookReceipt;
 use LBHurtado\XChange\Data\Funding\CreateFundingIntentData;
 use LBHurtado\XChange\Data\Funding\FundingIntentVerificationData;
+use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\FundingReconciliationAction;
 use LBHurtado\XChange\Enums\FundingVerificationTrigger;
+use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingIntentJob;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingWebhookReceiptJob;
+use LBHurtado\XChange\Jobs\Payment\VerifyPaymentAttemptJob;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingRecovery;
 use LBHurtado\XChange\Models\FundingSettlement;
@@ -44,6 +48,27 @@ beforeEach(function () {
     $this->app->instance(FakeFundingProviderAdapter::class, $this->fundingAdapter);
     $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
     $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
+});
+
+it('uses the shared provider limit for webhook verification', function (): void {
+    config()->set('x-change.funding.verification_provider_rate_limit_per_minute', 1);
+    config()->set('x-change.payment.attempts.verification_provider_rate_limit_per_minute', 1);
+    $key = md5('x-change-provider-verificationnetbank');
+    RateLimiter::clear($key);
+    $receipt = authenticatedFundingReceipt('rate-limit');
+    $webhook = (new VerifyFundingWebhookReceiptJob($receipt->getKey()))->withFakeQueueInteractions();
+    $payment = (new VerifyPaymentAttemptJob(
+        1, 'netbank', PaymentVerificationTrigger::Schedule,
+    ))->withFakeQueueInteractions();
+    $webhook->middleware()[0]->handle($webhook, static fn () => null);
+    $ran = false;
+    $payment->middleware()[1]->handle($payment, function () use (&$ran): void {
+        $ran = true;
+    });
+
+    expect($webhook->providerCode)->toBe('netbank')->and($ran)->toBeFalse();
+    $payment->assertReleased();
+    RateLimiter::clear($key);
 });
 
 it('records authoritative evidence and stops at verified without crediting the Account', function () {
@@ -94,6 +119,23 @@ it('settles authoritative evidence through the retryable verification job', func
         ->and(FundingSettlement::query()->count())->toBe(1)
         ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(24_950)
         ->and($receipt->refresh()->processing_status)->toBe('processed');
+});
+
+it('includes recently expired issuance intents in webhook reconciliation', function () {
+    $intent = verifiedFundingIntent();
+    $intent->forceFill([
+        'purpose' => FundingIntentPurpose::OnDemandIssuance,
+        'status' => FundingIntentStatus::Expired,
+        'expires_at' => now()->subDay(),
+    ])->saveQuietly();
+    $receipt = authenticatedFundingReceipt('expired-issuance-review');
+
+    app()->call([new VerifyFundingWebhookReceiptJob($receipt->getKey()), 'handle']);
+
+    expect($receipt->refresh()->processing_status)->toBe('processed')
+        ->and($intent->refresh()->status)->toBe(FundingIntentStatus::Suspense)
+        ->and($intent->suspenseCases()->where('status', 'open')->exists())->toBeTrue()
+        ->and(FundingSettlement::query()->count())->toBe(0);
 });
 
 it('recovers settlement after verification completed on an earlier attempt', function () {

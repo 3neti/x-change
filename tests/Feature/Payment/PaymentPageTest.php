@@ -293,7 +293,15 @@ it('conceals a Payment Attempt owned by another browser session', function (): v
     $this->get(route('x-change.pay.show', [
         'code' => $voucher->code,
         'attempt' => $attempt->reference,
-    ]))->assertNotFound();
+    ]))->assertRedirect(route('x-change.pay.show', ['code' => $voucher->code, 'recover' => 1]));
+    $this->get(route('x-change.pay.show', [
+        'code' => $voucher->code,
+        'attempt' => 'unknown-reference',
+    ]))->assertRedirect(route('x-change.pay.show', ['code' => $voucher->code, 'recover' => 1]));
+    $this->getJson(route('x-change.pay.show', ['code' => $voucher->code, 'recover' => 1]), ['X-Inertia' => 'true'])
+        ->assertOk()->assertJsonPath('props.payment.attempt', null)
+        ->assertJsonPath('props.payment.recovery_mode', true)
+        ->assertJsonPath('props.payment.can_create_attempt', false);
 });
 
 it('checks NetBank history and applies an exact settled payment once', function (): void {

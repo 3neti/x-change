@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
 use LBHurtado\EmiCore\Contracts\StandingFundingAddressProvider;
+use LBHurtado\EmiCore\Contracts\StandingFundingCorrectionPolicy;
 use LBHurtado\EmiCore\Data\Funding\FundingQrCodeData;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\EmiCore\Data\Funding\StandingFundingAddressData;
@@ -61,9 +62,13 @@ beforeEach(function () {
 });
 use Carbon\CarbonImmutable;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\EmiCore\Contracts\StandingFundingAddressProfileInspector;
+use LBHurtado\EmiCore\Data\Funding\StandingFundingAddressProfileData;
+use LBHurtado\EmiCore\Data\Funding\StandingFundingAddressProfileRequestData;
 use LBHurtado\XChange\Exceptions\StandingFundingAddressBindingTimeUnavailable;
 use LBHurtado\XChange\Exceptions\StandingFundingAddressConflict;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressProviderRegistry;
+use LBHurtado\XChange\Support\Auth\MobileNumber;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
 beforeEach(function () {
@@ -1590,7 +1595,7 @@ function standingFundingObservation(
     );
 }
 
-final class StandingFundingAddressProviderFake implements StandingFundingAddressProvider
+final class StandingFundingAddressProviderFake implements StandingFundingAddressProfileInspector, StandingFundingAddressProvider, StandingFundingCorrectionPolicy
 {
     public string $fundingAddress = '9150012345678901';
 
@@ -1610,6 +1615,34 @@ final class StandingFundingAddressProviderFake implements StandingFundingAddress
     public function providerCode(): string
     {
         return 'netbank';
+    }
+
+    public function correctionVersion(ProviderFundingObservation $original, ProviderFundingObservation $corrected): ?string
+    {
+        return $original->provider_code === 'netbank'
+            && $corrected->provider_code === 'netbank'
+            && $original->fee_amount_minor === $original->gross_amount_minor
+            && $original->net_amount_minor === 0
+            && $corrected->fee_amount_minor === 0
+            && $corrected->net_amount_minor === $corrected->gross_amount_minor
+            && data_get($corrected->metadata, 'normalization_version') === 'netbank-standing-credit-v2'
+            && data_get($corrected->metadata, 'incoming_credit_amount_is_net_received') === true
+                ? 'netbank-standing-credit-v2'
+                : null;
+    }
+
+    public function inspectStandingFundingAddressProfile(StandingFundingAddressProfileRequestData $request): StandingFundingAddressProfileData
+    {
+        $scheme = (string) config('payment-gateway.netbank.funding.standing_address.scheme', 'netbank-account-hmac-v2');
+        $requiresMobile = $scheme === 'netbank-mobile-v1';
+        $mobile = MobileNumber::normalize($request->mobile);
+        $valid = $request->mobileVerified && is_string($mobile) && preg_match('/\A639\d{9}\z/', $mobile) === 1;
+
+        return new StandingFundingAddressProfileData(
+            configured: true, ready: ! $requiresMobile || $valid, status: $valid ? 'available' : 'mobile_not_verified',
+            scheme: $scheme, schemeLabel: 'Test profile', schemeWarning: null, productionSafe: ! $requiresMobile,
+            requiresVerifiedMobile: $requiresMobile, routingReference: $requiresMobile && $valid ? '0'.substr($mobile, 2) : null,
+        );
     }
 
     public function createStandingFundingAddress(
@@ -1644,6 +1677,8 @@ final class StandingFundingAddressProviderFake implements StandingFundingAddress
                 embeddedAmount: $request->qrAmountMinor !== null,
                 providerGenerated: true,
             ),
+            supportsCollisionRetry: $request->existingFundingAddress === null
+                && $this->scheme === 'netbank-account-hmac-v2',
             displayData: [
                 'derivation_scheme' => $request->existingFundingAddress === null
                     ? $this->scheme

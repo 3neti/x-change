@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Support\Claim;
 
-use LBHurtado\EmiPaynamicsConstellation\Exceptions\PendingConstellationOtpException;
+use LBHurtado\EmiCore\Contracts\PendingPayoutApproval;
 use LBHurtado\Voucher\Models\Voucher;
 
 final class PendingPaynamicsOtpClaimResult
@@ -12,7 +12,7 @@ final class PendingPaynamicsOtpClaimResult
     /**
      * @return array<string, mixed>
      */
-    public function fromException(Voucher $voucher, PendingConstellationOtpException $exception): array
+    public function fromException(Voucher $voucher, PendingPayoutApproval $exception): array
     {
         $metadata = $exception->toApprovalMetadata();
 
@@ -21,7 +21,7 @@ final class PendingPaynamicsOtpClaimResult
             'voucher_code' => (string) $voucher->code,
             'requirements' => ['otp'],
             'reference_id' => $exception->requestId(),
-            'provider' => 'paynamics',
+            'provider' => $exception->provider(),
             'messages' => [
                 'Payout OTP approval required.',
             ],

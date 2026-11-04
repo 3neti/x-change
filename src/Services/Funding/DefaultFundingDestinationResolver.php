@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Funding;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
+use LBHurtado\EmiCore\Contracts\ProviderFundingDestinationResolver;
 use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
+use LBHurtado\EmiCore\Data\Funding\ProviderFundingDestinationLinkData;
+use LBHurtado\EmiCore\Exceptions\ProviderFundingDestinationUnavailable;
 use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Exceptions\FundingDestinationUnavailable;
 use LBHurtado\XChange\Models\FundingDestinationPreference;
@@ -40,33 +42,67 @@ class DefaultFundingDestinationResolver implements FundingDestinationResolverCon
         if (! $link instanceof ProviderAccountLink
             || $link->owner_type !== $owner::class
             || (string) $link->owner_id !== (string) $owner->getKey()
+            || $this->providerCode((string) $link->provider) !== $provider
             || ! $link->isReady()) {
             throw new FundingDestinationUnavailable(
                 'The selected dedicated funding destination is not active.',
             );
         }
 
-        return match ($provider) {
-            'netbank' => $this->dedicatedNetbank($link, $accountReference),
-            'paynamics_constellation' => $this->dedicatedPaynamics($link, $accountReference),
-            default => throw new FundingDestinationUnavailable(
-                "Dedicated funding destination [{$provider}] is unsupported.",
-            ),
-        };
+        try {
+            $destination = $this->providerResolver($provider)->dedicatedFundingDestination(
+                new ProviderFundingDestinationLinkData(
+                    verificationStatus: (string) $link->verification_status,
+                    providerAccountId: $link->provider_account_id,
+                    providerWalletId: $link->provider_wallet_id,
+                    displayReference: $link->display_reference,
+                    fingerprint: $link->routing_fingerprint,
+                    routing: $link->routing_profile_ciphertext,
+                ),
+                $accountReference,
+            );
+
+            return $this->validateDestination($destination, $provider, $accountReference, 'dedicated');
+        } catch (ProviderFundingDestinationUnavailable $exception) {
+            throw new FundingDestinationUnavailable($exception->getMessage(), previous: $exception);
+        }
     }
 
     public function shared(string $provider, string $accountReference): FundingDestinationData
     {
         $provider = $this->providerCode($provider);
+        if ($provider === 'qrph_simulator') {
+            return $this->sharedQrPhSimulator($accountReference);
+        }
 
-        return match ($provider) {
-            'netbank' => $this->sharedNetbank($accountReference),
-            'paynamics_constellation' => $this->sharedPaynamics($accountReference),
-            'qrph_simulator' => $this->sharedQrPhSimulator($accountReference),
-            default => throw new FundingDestinationUnavailable(
-                "Shared funding destination [{$provider}] is unsupported.",
-            ),
-        };
+        try {
+            $destination = $this->providerResolver($provider)->sharedFundingDestination($accountReference);
+
+            return $this->validateDestination($destination, $provider, $accountReference, 'shared');
+        } catch (ProviderFundingDestinationUnavailable $exception) {
+            throw new FundingDestinationUnavailable($exception->getMessage(), previous: $exception);
+        }
+    }
+
+    private function providerResolver(string $provider): ProviderFundingDestinationResolver
+    {
+        $matches = collect(app()->tagged('emi.funding-destination-resolvers'))
+            ->filter(fn (mixed $candidate): bool => $candidate instanceof ProviderFundingDestinationResolver
+                && $candidate->providerCode() === $provider);
+        if ($matches->count() !== 1) {
+            throw new FundingDestinationUnavailable('A unique provider funding destination resolver is required.');
+        }
+
+        return $matches->first();
+    }
+
+    private function validateDestination(FundingDestinationData $destination, string $provider, string $accountReference, string $mode): FundingDestinationData
+    {
+        if ($destination->provider !== $provider || $destination->accountReference !== $accountReference || $destination->mode !== $mode) {
+            throw new FundingDestinationUnavailable('The provider returned a mismatched funding destination.');
+        }
+
+        return $destination;
     }
 
     private function sharedQrPhSimulator(string $accountReference): FundingDestinationData
@@ -83,110 +119,6 @@ class DefaultFundingDestinationResolver implements FundingDestinationResolverCon
         );
     }
 
-    private function sharedNetbank(string $accountReference): FundingDestinationData
-    {
-        $accountNumber = $this->requiredConfig('payment-gateway.netbank.funding.corporate_account_number');
-        $accountName = $this->requiredConfig('payment-gateway.netbank.funding.corporate_account_name');
-        $alias = $this->requiredConfig('payment-gateway.netbank.funding.vca_alias');
-
-        return new FundingDestinationData(
-            provider: 'netbank',
-            mode: 'shared',
-            destinationType: 'bank_account',
-            accountReference: $accountReference,
-            displayReference: $this->maskedAccount($accountNumber)." · VCA {$alias}",
-            fingerprint: $this->fingerprint('netbank', $accountNumber, $alias),
-            verificationStatus: 'platform_configured',
-            bankAccountNumber: $accountNumber,
-            bankAccountName: $accountName,
-            routingAlias: $alias,
-        );
-    }
-
-    private function sharedPaynamics(string $accountReference): FundingDestinationData
-    {
-        $walletId = $this->requiredConfig('constellation.funding.wallet_id');
-
-        return new FundingDestinationData(
-            provider: 'paynamics_constellation',
-            mode: 'shared',
-            destinationType: 'wallet',
-            accountReference: $accountReference,
-            displayReference: $this->maskedIdentifier($walletId),
-            fingerprint: $this->fingerprint('paynamics_constellation', $walletId),
-            verificationStatus: 'platform_configured',
-            providerWalletId: $walletId,
-        );
-    }
-
-    private function dedicatedNetbank(
-        ProviderAccountLink $link,
-        string $accountReference,
-    ): FundingDestinationData {
-        if (! in_array($link->verification_status, [
-            'verified',
-            'credential_supplied',
-            'routing_configured',
-        ], true)) {
-            throw new FundingDestinationUnavailable(
-                'The dedicated NetBank destination has not completed provider verification.',
-            );
-        }
-
-        $routing = $link->routing_profile_ciphertext;
-        $accountNumber = $this->requiredRouting($routing, 'bank_account_number');
-        $accountName = $this->requiredRouting($routing, 'bank_account_name');
-        $alias = $this->requiredRouting($routing, 'vca_alias');
-
-        return new FundingDestinationData(
-            provider: 'netbank',
-            mode: 'dedicated',
-            destinationType: 'bank_account',
-            accountReference: $accountReference,
-            displayReference: $link->display_reference
-                ?? $this->maskedAccount($accountNumber)." · VCA {$alias}",
-            fingerprint: $link->routing_fingerprint
-                ?? $this->fingerprint('netbank', $accountNumber, $alias),
-            verificationStatus: (string) $link->verification_status,
-            providerAccountId: $link->provider_account_id,
-            bankAccountNumber: $accountNumber,
-            bankAccountName: $accountName,
-            routingAlias: $alias,
-        );
-    }
-
-    private function dedicatedPaynamics(
-        ProviderAccountLink $link,
-        string $accountReference,
-    ): FundingDestinationData {
-        if ($link->verification_status !== 'ownership_verified') {
-            throw new FundingDestinationUnavailable(
-                'Paynamics dedicated funding requires authoritative wallet ownership verification.',
-            );
-        }
-
-        $walletId = trim((string) $link->provider_wallet_id);
-
-        if ($walletId === '') {
-            throw new FundingDestinationUnavailable(
-                'The dedicated Paynamics destination has no wallet ID.',
-            );
-        }
-
-        return new FundingDestinationData(
-            provider: 'paynamics_constellation',
-            mode: 'dedicated',
-            destinationType: 'wallet',
-            accountReference: $accountReference,
-            displayReference: $link->display_reference ?? $this->maskedIdentifier($walletId),
-            fingerprint: $link->routing_fingerprint
-                ?? $this->fingerprint('paynamics_constellation', $walletId),
-            verificationStatus: 'ownership_verified',
-            providerAccountId: $link->provider_account_id,
-            providerWalletId: $walletId,
-        );
-    }
-
     private function providerCode(string $provider): string
     {
         return match (strtolower(trim($provider))) {
@@ -195,47 +127,8 @@ class DefaultFundingDestinationResolver implements FundingDestinationResolverCon
         };
     }
 
-    /**
-     * @param  array<string, mixed>|null  $routing
-     */
-    private function requiredRouting(?array $routing, string $key): string
-    {
-        $value = data_get($routing, $key);
-
-        if (! is_string($value) || trim($value) === '') {
-            throw new FundingDestinationUnavailable(
-                "Dedicated funding routing [{$key}] is unavailable.",
-            );
-        }
-
-        return trim($value);
-    }
-
-    private function requiredConfig(string $key): string
-    {
-        $value = config($key);
-
-        if (! is_string($value) || trim($value) === '') {
-            throw new FundingDestinationUnavailable(
-                "Shared funding destination configuration [{$key}] is unavailable.",
-            );
-        }
-
-        return trim($value);
-    }
-
     private function fingerprint(string ...$parts): string
     {
         return hash('sha256', implode('|', $parts));
-    }
-
-    private function maskedAccount(string $accountNumber): string
-    {
-        return '•••• '.Str::substr($accountNumber, -4);
-    }
-
-    private function maskedIdentifier(string $identifier): string
-    {
-        return '•••• '.Str::substr($identifier, -6);
     }
 }

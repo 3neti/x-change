@@ -103,6 +103,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeStampController
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeTemplateStoreController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeTemplateUpdateController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeTerminalStateController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPaymentRecoveryReportsController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningActivationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningApprovalController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitProvisioningOfferController;
@@ -165,6 +166,7 @@ use LBHurtado\XChange\Http\Controllers\Web\PayCodeShowPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentAttemptController;
 use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentQrCodeDownloadController;
+use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentRecoveryReportController;
 use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentVerificationCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Payment\SharedInvoiceController;
 use LBHurtado\XChange\Http\Controllers\Web\Provisioning\ProvisioningInvitationAcceptanceController;
@@ -1052,6 +1054,10 @@ Route::prefix('x')->middleware([
                 CockpitPayCodePaymentTransactionsController::class,
             )->middleware('throttle:30,1')
                 ->name('x-change.cockpit.pay-codes.payment-transactions.index');
+            Route::get('{code}/payment-recovery-reports', [CockpitPaymentRecoveryReportsController::class, 'index'])
+                ->middleware('throttle:30,1')->name('x-change.cockpit.pay-codes.payment-recovery-reports.index');
+            Route::post('{code}/payment-recovery-reports/{reference}/review', [CockpitPaymentRecoveryReportsController::class, 'review'])
+                ->whereUlid('reference')->middleware('throttle:10,1')->name('x-change.cockpit.pay-codes.payment-recovery-reports.review');
             Route::post(
                 '{code}/payout-corrections',
                 CockpitPayCodePayoutCorrectionController::class,
@@ -1111,6 +1117,8 @@ Route::prefix('x')->middleware(['web', ShareXChangeBranding::class, GuardPairedC
     Route::get('pay/{code}', PaymentPageController::class)
         ->middleware((array) config('x-change.payment.attempts.public_read_middleware', []))
         ->name('x-change.pay.show');
+    Route::post('pay/{code}/recovery-reports', PaymentRecoveryReportController::class)
+        ->middleware('throttle:5,10')->name('x-change.pay.recovery-reports.store');
     Route::post('pay/{code}/documents', UploadParticipantDocumentController::class)
         ->defaults('participant_role', 'payer')->middleware('throttle:12,1,participant-payer-upload:')->name('x-change.pay.documents.store');
     Route::get('pay/{code}/invoice/{attachment}', SharedInvoiceController::class)

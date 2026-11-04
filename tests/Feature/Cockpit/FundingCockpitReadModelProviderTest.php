@@ -20,6 +20,8 @@ use LBHurtado\XChange\Models\FundingSuspenseCase;
 use LBHurtado\XChange\Models\ProviderAccountLink;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Services\Cockpit\FundingCockpitReadModelProvider;
+use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
+use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('presents account scoped funding controls without exposing Treasury oversight', function () {
@@ -249,6 +251,10 @@ it('exposes provider-wide Treasury oversight only to the resolved system princip
 
 it('offers checks and QR reopening only for the owners unexpired NetBank intents', function () {
     config()->set('x-change.funding.providers.netbank.enabled', true);
+    app()->instance(FundingProviderAdapterRegistry::class,
+        new FundingProviderAdapterRegistry([
+            new FakeFundingProviderAdapter('netbank'),
+        ]));
     $operator = actingAsTestUser(0);
     $wallet = $operator->wallet()->where('slug', 'platform')->firstOrFail();
     $intent = fundingCockpitIntent($operator, $wallet, FundingIntentStatus::AwaitingFunds);
@@ -283,6 +289,26 @@ it('offers checks and QR reopening only for the owners unexpired NetBank intents
             'provider_transaction_id',
             'provider_request_id',
         ]);
+
+    app()->instance(FundingProviderAdapterRegistry::class,
+        new FundingProviderAdapterRegistry([]));
+    $unavailable = app(FundingCockpitReadModelProvider::class)->forOperator($operator)->toArray()['intents'][0];
+    expect($unavailable['can_check_provider'])->toBeFalse();
+});
+
+it('offers provider checks for another enabled funding adapter', function () {
+    config()->set('x-change.funding.providers.other_provider.enabled', true);
+    app()->instance(FundingProviderAdapterRegistry::class,
+        new FundingProviderAdapterRegistry([
+            new FakeFundingProviderAdapter('other_provider'),
+        ]));
+    $operator = actingAsTestUser(0);
+    $wallet = $operator->wallet()->where('slug', 'platform')->firstOrFail();
+    fundingCockpitIntent($operator, $wallet, FundingIntentStatus::AwaitingFunds, provider: 'other_provider');
+
+    $summary = app(FundingCockpitReadModelProvider::class)->forOperator($operator)->toArray()['intents'][0];
+    expect($summary['can_check_provider'])->toBeTrue()
+        ->and($summary['can_reopen_instructions'])->toBeTrue();
 });
 
 it('blocks an unverified dedicated destination in the Funding read model', function () {

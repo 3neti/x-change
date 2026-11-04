@@ -4,64 +4,41 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services;
 
+use LBHurtado\EmiCore\Contracts\ProviderProvisioningPresentation;
 use LBHurtado\XChange\Data\ProvisioningFlowDescriptorData;
-use LBHurtado\XChange\Enums\ProviderProvisioningMode;
+use RuntimeException;
 
 class BuildProvisioningFlowDescriptor
 {
     public function handle(string $provider, string $mode, ?string $topology = null): ProvisioningFlowDescriptorData
     {
         $provider = strtolower($provider);
-        $topology ??= match ($provider) {
-            'paynamics' => 'provider_customer_wallet',
-            'netbank' => 'ledger_pooled',
-            default => 'manual',
-        };
+        $matches = [];
+        foreach (['emi.provider-provisioning-profiles', 'emi.provider-provisioning-gateways'] as $tag) {
+            foreach (app()->tagged($tag) as $candidate) {
+                if ($candidate instanceof ProviderProvisioningPresentation && $candidate->providerCode() === $provider) {
+                    $matches[] = $candidate;
+                }
+            }
+        }
+        if (count($matches) > 1) {
+            throw new RuntimeException("Multiple provisioning presentations are registered for provider [{$provider}].");
+        }
 
-        return match ("{$provider}:{$mode}") {
-            'paynamics:'.ProviderProvisioningMode::WalletCreate->value,
-            'paynamics:'.ProviderProvisioningMode::WalletResolve->value => new ProvisioningFlowDescriptorData(
-                provider: $provider,
-                topology: $topology,
-                mode: $mode,
-                title: 'Create your Paynamics wallet',
-                description: 'Complete wallet setup so Pay Codes can be issued and paid out.',
-                steps: ['profile', 'wallet', 'kyc', 'ready'],
-                fields: ['mobile', 'name', 'email', 'address', 'source_of_funds'],
-                actions: ['continue', 'open_capture_link'],
-            ),
+        $presentation = $matches[0] ?? null;
+        $topology ??= $presentation?->defaultProvisioningTopology() ?? 'manual';
+        $data = $presentation?->provisioningPresentation($mode) ?? [
+            'title' => 'Complete account setup',
+            'steps' => ['profile', 'consent', 'ready'],
+            'fields' => ['mobile', 'name'],
+            'actions' => ['continue'],
+        ];
 
-            'paynamics:'.ProviderProvisioningMode::BankAccountLink->value => new ProvisioningFlowDescriptorData(
-                provider: $provider,
-                topology: $topology,
-                mode: $mode,
-                title: 'Add your payout bank account',
-                description: 'Bind a bank account to your Paynamics wallet for payouts.',
-                steps: ['bank_account', 'consent', 'provider_bind', 'ready'],
-                fields: ['bank_code', 'account_number', 'account_name', 'consent'],
-                actions: ['continue'],
-            ),
-
-            'netbank:'.ProviderProvisioningMode::BankAccountLink->value => new ProvisioningFlowDescriptorData(
-                provider: $provider,
-                topology: $topology,
-                mode: $mode,
-                title: 'Add payout destination',
-                description: 'Add a payout destination for NetBank ledger-backed disbursement.',
-                steps: ['bank_account', 'consent', 'ready'],
-                fields: ['bank_code', 'account_number', 'account_name', 'consent'],
-                actions: ['continue'],
-            ),
-
-            default => new ProvisioningFlowDescriptorData(
-                provider: $provider,
-                topology: $topology,
-                mode: $mode,
-                title: 'Complete account setup',
-                steps: ['profile', 'consent', 'ready'],
-                fields: ['mobile', 'name'],
-                actions: ['continue'],
-            ),
-        };
+        return ProvisioningFlowDescriptorData::from([
+            ...$data,
+            'provider' => $provider,
+            'topology' => $topology,
+            'mode' => $mode,
+        ]);
     }
 }

@@ -49,21 +49,7 @@ final readonly class CommissioningConfigurationFingerprint
                 'required_capabilities' => $capabilities,
                 'decimal_places' => $template->decimalPlaces,
                 'treasury_mode' => config("x-change.treasury.connections.{$reference}.mode"),
-                'settlement_accounts' => match ($template->provider) {
-                    'netbank' => [
-                        'source_account_number' => config('disbursement.source.account_number'),
-                        'sender_customer_id' => config('omnipay.gateways.netbank.options.senderCustomerId'),
-                        'vca_alias' => config('disbursement.client.alias'),
-                        'funding_corporate_account_number' => config('payment-gateway.netbank.funding.corporate_account_number'),
-                        'funding_vca_alias' => config('payment-gateway.netbank.funding.vca_alias'),
-                    ],
-                    'paynamics_constellation' => [
-                        'settlement_wallet_id' => config('constellation.settlement_wallet_id'),
-                        'revenue_wallet_id' => config('constellation.revenue_wallet_id'),
-                        'funding_wallet_id' => config('constellation.funding.wallet_id'),
-                    ],
-                    default => [],
-                },
+                'settlement_accounts' => $this->connections->settlementAccountFingerprintInputs($template->provider),
             ];
         }
 

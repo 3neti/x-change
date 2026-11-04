@@ -17,6 +17,7 @@ use LBHurtado\XChange\Actions\Payment\VerifyPaymentAttempt;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
+use LBHurtado\XChange\Queue\Concerns\ProviderVerificationRetryPolicy;
 use Throwable;
 
 class VerifyPaymentAttemptJob implements ShouldBeUnique, ShouldQueue
@@ -24,6 +25,7 @@ class VerifyPaymentAttemptJob implements ShouldBeUnique, ShouldQueue
     use Dispatchable;
     use HasSafeQueueTags;
     use InteractsWithQueue;
+    use ProviderVerificationRetryPolicy;
     use Queueable;
     use SerializesModels;
 
@@ -59,7 +61,7 @@ class VerifyPaymentAttemptJob implements ShouldBeUnique, ShouldQueue
                 ->releaseAfter(5)
                 ->expireAfter($this->uniqueFor)
                 ->shared(),
-            new RateLimited('x-change-payment-verification'),
+            new RateLimited('x-change-provider-verification'),
         ];
     }
 

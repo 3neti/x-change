@@ -1047,6 +1047,17 @@ return [
             ],
         ],
 
+        'payment_voucher_collection_simulated' => [
+            'label' => 'Simulated Payment Voucher Collection',
+            'mode' => 'payment_voucher_collection',
+            'amount' => 0,
+            'target_amount' => 100,
+            'currency' => 'PHP',
+            'prefix' => 'PAY',
+            'mask' => '****',
+            'payment' => ['provider' => 'qrph_simulator', 'verify' => true, 'simulate' => true],
+        ],
+
         'payment_voucher_collection' => [
             'label' => 'Payment Voucher Collection',
             'mode' => 'payment_voucher_collection',

@@ -8,6 +8,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Queue\SerializesModels;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\EmiCore\Models\WebhookReceipt;
@@ -20,6 +21,7 @@ use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
+use LBHurtado\XChange\Queue\Concerns\ProviderVerificationRetryPolicy;
 use LBHurtado\XChange\Services\Funding\StandingFundingSyncAdmission;
 use Throwable;
 
@@ -28,6 +30,7 @@ class VerifyFundingWebhookReceiptJob implements ShouldQueue
     use Dispatchable;
     use HasSafeQueueTags;
     use InteractsWithQueue;
+    use ProviderVerificationRetryPolicy;
     use Queueable;
     use SerializesModels;
 
@@ -39,6 +42,8 @@ class VerifyFundingWebhookReceiptJob implements ShouldQueue
 
     public bool $failOnTimeout = true;
 
+    public ?string $providerCode = null;
+
     /** @var list<int> */
     public array $backoff = [30, 120, 300, 900];
 
@@ -46,6 +51,16 @@ class VerifyFundingWebhookReceiptJob implements ShouldQueue
         public readonly int $webhookReceiptId,
     ) {
         $this->onQueue(self::Queue);
+    }
+
+    /** @return list<RateLimited> */
+    public function middleware(): array
+    {
+        $this->providerCode = WebhookReceipt::query()
+            ->whereKey($this->webhookReceiptId)
+            ->value('provider_code');
+
+        return [new RateLimited('x-change-provider-verification')];
     }
 
     public function handle(

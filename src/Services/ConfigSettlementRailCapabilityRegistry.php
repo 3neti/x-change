@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services;
 
+use LBHurtado\EmiCore\Contracts\ProviderSettlementRailConfiguration;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
 use LBHurtado\EmiCore\Enums\SettlementRail;
 use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
@@ -129,10 +130,19 @@ final class ConfigSettlementRailCapabilityRegistry implements SettlementRailCapa
      */
     private function railConfiguration(string $provider, SettlementRail $rail): array
     {
-        return match ($provider) {
-            'netbank' => (array) config("omnipay.gateways.netbank.options.rails.{$rail->value}", []),
-            default => [],
-        };
+        $matches = [];
+
+        foreach (app()->tagged('emi.provider-settlement-rail-configurations') as $candidate) {
+            if ($candidate instanceof ProviderSettlementRailConfiguration && strtolower(trim($candidate->providerCode())) === $provider) {
+                $matches[] = $candidate;
+            }
+        }
+
+        if (count($matches) > 1) {
+            throw new RuntimeException('Multiple settlement rail configurations are registered for the provider.');
+        }
+
+        return $matches === [] ? [] : $matches[0]->configurationFor($rail);
     }
 
     private function provider(): string

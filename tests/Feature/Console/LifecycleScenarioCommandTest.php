@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Wallet\Traits\HasPlatformWallets;
+use LBHurtado\XChange\Console\Commands\Lifecycle\PrepareLifecycleEnvironmentCommand;
 use LBHurtado\XChange\Tests\Fakes\FakePayoutProvider;
 use LBHurtado\XChange\Tests\Fakes\User;
 
@@ -20,6 +22,31 @@ beforeEach(function () {
         '--seed' => true,
     ]);
     provisionTestCommercialOfferings();
+});
+
+it('creates a missing platform wallet when preparing synthetic lifecycle funds', function () {
+    $user = new class extends User
+    {
+        use HasPlatformWallets;
+    };
+    $user->fill([
+        'name' => 'Fresh lifecycle system',
+        'email' => 'fresh-lifecycle-system@example.test',
+        'password' => bcrypt('password'),
+    ])->save();
+    expect($user->getWallet('platform'))->toBeNull();
+
+    $command = new class extends PrepareLifecycleEnvironmentCommand
+    {
+        public function fundForTest(User $user): void
+        {
+            $this->fundSystemWallet($user, 100);
+        }
+    };
+    $command->fundForTest($user);
+
+    expect($user->getWallet('platform'))->not->toBeNull()
+        ->and((float) $user->getWallet('platform')->balanceFloat)->toBe(100.0);
 });
 
 it('runs a legacy lifecycle scenario through issuance successfully', function () {

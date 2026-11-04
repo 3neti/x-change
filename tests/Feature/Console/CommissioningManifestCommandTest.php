@@ -518,7 +518,7 @@ it('rejects funded commissioning invitations when provider liquidity cannot be r
     $readiness = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
     $readiness->shouldReceive('handle')
         ->once()
-        ->with()
+        ->with(null, 'netbank')
         ->andReturn([
             'enabled' => true,
             'ready' => false,
@@ -633,7 +633,7 @@ function mockCommissioningNetbankLiquidityRefresh(int $availableMinor, int $time
     $readiness = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
     $readiness->shouldReceive('handle')
         ->times($times)
-        ->with()
+        ->with(null, 'netbank')
         ->andReturn([
             'enabled' => true,
             'ready' => true,

@@ -15,6 +15,8 @@ use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 
 final class AssessPaidOnDemandIssuanceRecovery
 {
+    public function __construct(private readonly AssessIssuanceFundingAttribution $attribution) {}
+
     public function order(FundingSuspenseCase $case): ?PayCodeIssuanceFundingOrder
     {
         $intent = $case->fundingIntent;
@@ -77,8 +79,14 @@ final class AssessPaidOnDemandIssuanceRecovery
             && $observation->settled_at !== null
             && $observation->occurred_at !== null
             && $observation->occurred_at->greaterThanOrEqualTo($order->created_at)
+            && $intent->instructions_created_at !== null
+            && $observation->occurred_at->greaterThanOrEqualTo($intent->instructions_created_at)
+            && $intent->expires_at !== null
+            && $observation->occurred_at->lessThanOrEqualTo($intent->expires_at)
             && $observation->occurred_at->lessThanOrEqualTo($order->expires_at)
+            && $this->attribution->isUnambiguous($order, $observation)
             && data_get($observation->metadata, 'destination_verified') === true
+            && (data_get($observation->metadata, 'payer_identity_required') !== true || data_get($observation->metadata, 'payer_identity_matched') === true)
             && ! FundingSettlement::query()->where('funding_intent_id', $intent->getKey())->exists();
     }
 }

@@ -43,13 +43,14 @@ final readonly class QueueSettledPaymentSms
         if (! $process->sms_enabled_snapshot || $process->contact_id === null) {
             $process->forceFill(['sms_status' => 'skipped'])->save();
 
-            if ($process->sms_enabled_snapshot && $process->contact_id === null
+            $observation = $process->sms_enabled_snapshot && $process->contact_id === null
                 && $process->payment_type === 'funding_settlement'
-                && ProviderFundingObservation::query()->whereKey($process->observation_id)
-                    ->where('provider_code', 'netbank')
+                ? ProviderFundingObservation::query()->whereKey($process->observation_id)
                     ->whereNull('payer_account_ciphertext')
                     ->whereNull('payer_institution_ciphertext')
-                    ->exists()) {
+                    ->first()
+                : null;
+            if ($observation !== null && $this->walletPayerMobile->supports($observation->provider_code)) {
                 RecoverSettledPayerIdentityJob::dispatch((int) $process->getKey())
                     ->delay(now()->addSeconds(30));
             }
