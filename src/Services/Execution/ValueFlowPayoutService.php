@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
+use LBHurtado\EmiCore\Enums\PayoutStatus;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
@@ -234,6 +235,70 @@ final readonly class ValueFlowPayoutService
                 'completed_at' => null, 'meta' => $meta])->save();
         });
         $this->submit($id);
+    }
+
+    public function retryRejectedPayout(int $id, string $evidenceReference, string $operatorReference): DisbursementReconciliation
+    {
+        if (trim($evidenceReference) === '' || trim($operatorReference) === '') {
+            throw new RuntimeException('Rejected payout recovery requires evidence and operator references.');
+        }
+
+        $original = DisbursementReconciliation::query()->findOrFail($id);
+        if ($original->claim_type !== 'value_flow' || $original->status !== 'failed'
+            || $original->internal_status !== 'recovery_opened' || $original->needs_review
+            || blank($original->provider_transaction_id) || $original->provider !== $this->runtime->provider()) {
+            throw new RuntimeException('This payout is not eligible for rejected payout recovery.');
+        }
+        $providerResult = $this->provider->checkStatus($original->provider_transaction_id);
+        if ($providerResult->status !== PayoutStatus::FAILED
+            || $providerResult->provider !== $original->provider
+            || $providerResult->transaction_id !== $original->provider_transaction_id) {
+            throw new RuntimeException('Provider evidence does not confirm the original payout was rejected.');
+        }
+
+        $verifiedTransactionId = $original->provider_transaction_id;
+
+        return DB::transaction(function () use ($id, $evidenceReference, $operatorReference, $verifiedTransactionId): DisbursementReconciliation {
+            $original = DisbursementReconciliation::query()->whereKey($id)->lockForUpdate()->firstOrFail();
+            if ($original->claim_type !== 'value_flow' || $original->status !== 'failed'
+                || $original->internal_status !== 'recovery_opened' || $original->needs_review
+                || $original->provider_transaction_id !== $verifiedTransactionId) {
+                throw new RuntimeException('The payout is no longer eligible for recovery.');
+            }
+            $voucher = Voucher::query()->whereKey($original->voucher_id)->lockForUpdate()->firstOrFail();
+            $meta = $original->meta;
+            $amount = (int) data_get($meta, 'amount_minor');
+            $connection = (string) data_get($meta, 'connection_reference');
+            $source = $this->bridge($voucher, $connection, $original->currency);
+            $identity = 'rejected-payout:'.$original->id.':'.$original->provider_transaction_id;
+            $reference = 'value-flow-recovery:'.$original->id;
+            $this->operations->releasePayoutRecovery(new TreasuryPositionPayoutRecoveryData(
+                operationReference: $reference.':release',
+                sourcePositionReference: (string) data_get($meta, 'recovery_position'),
+                destinationPositionReference: $source->positionReference,
+                amountMinor: $amount,
+                currency: $original->currency,
+                idempotencyKey: $reference.':release',
+                externalReference: $identity,
+                metadata: ['source' => 'x_change_rejected_payout_retry', 'original_payout_id' => $original->id],
+            ));
+            $retry = $this->prepare($voucher, $source, $amount, $identity);
+            if ($retry->bank_code !== $original->bank_code
+                || $retry->account_number_masked !== $original->account_number_masked
+                || ! hash_equals(
+                    Crypt::decryptString((string) data_get($meta, 'account_ciphertext')),
+                    Crypt::decryptString((string) data_get($retry->meta, 'account_ciphertext')),
+                )) {
+                throw new RuntimeException('The recovery destination does not match the original payout.');
+            }
+            $retryMeta = $retry->meta;
+            $retryMeta['recovery'] = ['original_payout_id' => $original->id, 'evidence_reference' => $evidenceReference, 'operator_reference' => $operatorReference];
+            $retry->forceFill(['meta' => $retryMeta])->save();
+            $meta['recovery_retry'] = ['payout_id' => $retry->id, 'evidence_reference' => $evidenceReference, 'operator_reference' => $operatorReference];
+            $original->forceFill(['internal_status' => 'recovery_retried', 'meta' => $meta])->save();
+
+            return $retry;
+        }, attempts: 5);
     }
 
     public function converge(DisbursementReconciliation $payout): void

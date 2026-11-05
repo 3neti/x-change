@@ -15,8 +15,10 @@ class ValueFlowPayoutRecoveryCommand extends Command
         {voucher : Pay Code whose delivery is being reviewed}
         {--id= : Exact payout record to inspect or recover}
         {--retry-unaccepted : Retry a confirmed unaccepted submission to its original destination}
+        {--retry-rejected : Retry a provider-confirmed rejection to the original destination}
         {--confirm-no-transfer : Confirm provider evidence establishes no transfer occurred}
         {--evidence= : Operator evidence reference for the no-transfer confirmation}
+        {--operator= : Auditable operator reference for rejected payout recovery}
         {--json : Output a redacted status report}';
 
     protected $description = 'Inspect value-flow delivery and recover an evidenced unaccepted submission.';
@@ -27,6 +29,28 @@ class ValueFlowPayoutRecoveryCommand extends Command
             ->where('voucher_code', strtoupper(trim((string) $this->argument('voucher'))))
             ->where('claim_type', 'value_flow')
             ->when($this->option('id') !== null, fn ($query) => $query->whereKey((int) $this->option('id')));
+
+        if ($this->option('retry-rejected')) {
+            if ($this->option('retry-unaccepted') || $this->option('id') === null || ! $this->option('confirm-no-transfer') || trim((string) $this->option('evidence')) === '' || trim((string) $this->option('operator')) === '') {
+                $this->error('Rejected payout recovery requires --id, --confirm-no-transfer, --evidence and --operator.');
+
+                return self::FAILURE;
+            }
+            $row = (clone $query)->first();
+            if ($row === null) {
+                $this->error('No matching value-flow payout exists for this Pay Code.');
+
+                return self::FAILURE;
+            }
+            try {
+                $retry = $payouts->retryRejectedPayout((int) $row->getKey(), (string) $this->option('evidence'), (string) $this->option('operator'));
+                $this->info('Recovery payout prepared: '.$retry->getKey());
+            } catch (\Throwable $exception) {
+                $this->error($exception->getMessage());
+
+                return self::FAILURE;
+            }
+        }
 
         if ($this->option('retry-unaccepted')) {
             if ($this->option('id') === null || ! $this->option('confirm-no-transfer') || trim((string) $this->option('evidence')) === '') {

@@ -35,10 +35,11 @@ final class PaymentReceiptReadModel
             return null;
         }
 
-        $references = $collections->map(fn (VoucherCollection $collection): ?string => data_get($collection->meta, 'posting.payout_reference'))->filter()->values();
         $payouts = DisbursementReconciliation::query()
             ->where('voucher_id', $voucher->getKey())->where('claim_type', 'value_flow')
-            ->whereIn('provider_reference', $references)->get()->keyBy('provider_reference');
+            ->get();
+        $payoutsByReference = $payouts->keyBy('provider_reference');
+        $payoutsById = $payouts->keyBy('id');
 
         $latest = $collections
             ->sortByDesc(fn (VoucherCollection $collection): int => $collection->completed_at?->getTimestamp() ?? 0)
@@ -54,7 +55,7 @@ final class PaymentReceiptReadModel
             'payments' => $collections
                 ->map(fn (VoucherCollection $collection): array => [
                     'collection_number' => (int) $collection->collection_number,
-                    'delivery' => $this->delivery($payouts->get(data_get($collection->meta, 'posting.payout_reference')), filled(data_get($collection->meta, 'posting.payout_reference'))),
+                    'delivery' => $this->delivery($this->latestPayout($payoutsByReference->get(data_get($collection->meta, 'posting.payout_reference')), $payoutsById), filled(data_get($collection->meta, 'posting.payout_reference'))),
                     'amount_paid_minor' => (int) data_get($collection->meta, 'gross_amount_minor', $collection->collected_amount_minor),
                     'principal_paid_minor' => (int) $collection->collected_amount_minor,
                     'fee_paid_minor' => (int) data_get($collection->meta, 'fee_amount_minor', 0),
@@ -69,6 +70,24 @@ final class PaymentReceiptReadModel
                 ->values()
                 ->all(),
         ];
+    }
+
+    private function latestPayout(?DisbursementReconciliation $payout, Collection $payouts): ?DisbursementReconciliation
+    {
+        $visited = [];
+        while ($payout !== null && $payout->internal_status === 'recovery_retried') {
+            if (isset($visited[$payout->id])) {
+                return null;
+            }
+            $visited[$payout->id] = true;
+            $next = $payouts->get(data_get($payout->meta, 'recovery_retry.payout_id'));
+            if ($next === null || (int) data_get($next->meta, 'recovery.original_payout_id') !== (int) $payout->id) {
+                return null;
+            }
+            $payout = $next;
+        }
+
+        return $payout;
     }
 
     /** @return array{status: string, account: ?string, bank_code: ?string}|null */
