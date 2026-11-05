@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use LBHurtado\Contact\Models\Contact;
+use LBHurtado\EmiCore\Enums\PayoutStatus;
 use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Enums\VoucherType;
 use LBHurtado\Voucher\Models\Voucher;
@@ -126,6 +127,54 @@ it('keeps rejected payouts payable without changing the voucher or later destina
         ->and(data_get($voucher->fresh()->metadata, 'instructions.execution.metadata.value_flow.destination'))->toBe('instapay.gcash.mobile:09179999999');
     $next = DB::transaction(fn () => $service->prepare($voucher, $source, 1_000, 'later-spend'));
     expect($next->bank_code)->toBe('GXCHPHM2XXX');
+});
+
+it('retries a verified rejected payout once using its held recovery balance', function (): void {
+    [$service, $voucher, $source] = valueFlowPayoutFixture();
+    $original = DB::transaction(fn () => $service->prepare($voucher, $source, 2_000, 'rejected-installment'));
+    $provider = fakePayoutProvider()->willReturnFailedResult(transactionId: 'rejected-transaction', provider: 'netbank');
+    $service->submit($original->id);
+    $provider->nextCheckStatus = PayoutStatus::FAILED;
+    $retry = $service->retryRejectedPayout($original->id, 'recipient-confirmed-account-available', 'operator:123');
+
+    expect($retry->id)->not->toBe($original->id)
+        ->and($retry->status)->toBe('intent')
+        ->and($retry->provider_reference)->not->toBe($original->provider_reference)
+        ->and(data_get($retry->meta, 'recovery.original_payout_id'))->toBe($original->id)
+        ->and($original->fresh()->internal_status)->toBe('recovery_retried')
+        ->and(app(TreasuryPositionReadModelContract::class)->find(data_get($original->meta, 'recovery_position'))->balanceMinor)->toBe(0);
+    expect(fn () => $service->retryRejectedPayout($original->id, 'recipient-confirmed-account-available', 'operator:123'))
+        ->toThrow(RuntimeException::class);
+    $provider->willReturnSuccessfulResult(transactionId: 'retry-transaction', provider: 'netbank');
+    $service->submit($retry->id);
+    $service->submit($retry->id);
+    expect($retry->fresh()->internal_status)->toBe('finalized')
+        ->and($provider->disburseCallCount)->toBe(2);
+});
+
+it('refuses a retry when the provider does not confirm the original failure', function (): void {
+    [$service, $voucher, $source] = valueFlowPayoutFixture();
+    $original = DB::transaction(fn () => $service->prepare($voucher, $source, 2_000, 'uncertain-original'));
+    $provider = fakePayoutProvider()->willReturnFailedResult(transactionId: 'uncertain-transaction', provider: 'netbank');
+    $service->submit($original->id);
+    $provider->nextCheckStatus = PayoutStatus::PENDING;
+    expect(fn () => $service->retryRejectedPayout($original->id, 'recipient-confirmed-account-available', 'operator:123'))
+        ->toThrow(RuntimeException::class, 'Provider evidence');
+    expect($original->fresh()->internal_status)->toBe('recovery_opened')
+        ->and(DisbursementReconciliation::query()->count())->toBe(1);
+});
+
+it('requires an operator and evidence before the rejected-payout command can prepare a retry', function (): void {
+    [$service, $voucher, $source] = valueFlowPayoutFixture();
+    $original = DB::transaction(fn () => $service->prepare($voucher, $source, 2_000, 'command-rejected'));
+    $provider = fakePayoutProvider()->willReturnFailedResult(transactionId: 'command-rejected-transaction', provider: 'netbank');
+    $service->submit($original->id);
+    $provider->nextCheckStatus = PayoutStatus::FAILED;
+    $arguments = ['voucher' => $voucher->code, '--id' => $original->id, '--retry-rejected' => true, '--confirm-no-transfer' => true, '--evidence' => 'provider-rejection'];
+    $this->artisan('xchange:value-flow:recovery', $arguments)->assertFailed();
+    expect(DisbursementReconciliation::query()->count())->toBe(1);
+    $this->artisan('xchange:value-flow:recovery', [...$arguments, '--operator' => 'operator:123'])->assertSuccessful();
+    expect(DisbursementReconciliation::query()->count())->toBe(2);
 });
 
 it('settles a confirmed payout exactly once and never submits an uncertain outcome again', function (): void {

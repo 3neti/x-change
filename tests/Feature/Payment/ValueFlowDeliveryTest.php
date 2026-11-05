@@ -38,3 +38,31 @@ it('shows recorded collection separately from masked destination delivery', func
     ['failed', 'recovery_opened', 'review'],
     ['unknown', 'reserved', 'review'],
 ]);
+
+it('shows the outcome of a linked retry on the original collection receipt', function (): void {
+    $this->withoutMiddleware(ShareXChangeBranding::class);
+    $user = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 30, 'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $user->id, 'collection_wallet_id' => $user->wallet->id],
+    ]));
+    VoucherCollection::query()->create([
+        'voucher_id' => $voucher->id, 'collection_number' => 1, 'status' => 'collected',
+        'requested_amount_minor' => 3000, 'collected_amount_minor' => 3000, 'currency' => 'PHP',
+        'provider' => 'netbank', 'completed_at' => now(), 'meta' => ['posting' => ['payout_reference' => 'ORIGINAL']],
+    ]);
+    $original = DisbursementReconciliation::query()->create([
+        'voucher_id' => $voucher->id, 'voucher_code' => $voucher->code, 'claim_type' => 'value_flow',
+        'provider' => 'netbank', 'provider_reference' => 'ORIGINAL', 'status' => 'failed',
+        'internal_status' => 'recovery_retried', 'amount' => 30, 'currency' => 'PHP',
+    ]);
+    $retry = DisbursementReconciliation::query()->create([
+        'voucher_id' => $voucher->id, 'voucher_code' => $voucher->code, 'claim_type' => 'value_flow',
+        'provider' => 'netbank', 'provider_reference' => 'RETRY', 'status' => 'succeeded',
+        'internal_status' => 'finalized', 'amount' => 30, 'currency' => 'PHP',
+        'account_number_masked' => '*******9999', 'bank_code' => 'GXCHPHM2XXX',
+        'meta' => ['recovery' => ['original_payout_id' => $original->id]],
+    ]);
+    $original->forceFill(['meta' => ['recovery_retry' => ['payout_id' => $retry->id]]])->save();
+    $this->withHeader('X-Inertia', 'true')->get(route('x-change.pay.show', $voucher->code))
+        ->assertOk()->assertJsonPath('props.payment.receipt.payments.0.delivery.status', 'delivered');
+});
