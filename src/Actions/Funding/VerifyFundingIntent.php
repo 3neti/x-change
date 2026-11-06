@@ -72,13 +72,25 @@ class VerifyFundingIntent
             $this->attributionLock->handle($intent->provider_code, $intent->currency);
             $locked = FundingIntent::query()->lockForUpdate()->findOrFail($intent->getKey());
             $order = $locked->issuanceFundingOrder()->lockForUpdate()->first();
-            if ($locked->status !== FundingIntentStatus::Verified || $order === null
-                || ! in_array($order->status, [PayCodeIssuanceFundingOrderStatus::Expired, PayCodeIssuanceFundingOrderStatus::Cancelled], true)) {
+            if ($locked->status !== FundingIntentStatus::Verified) {
                 return null;
             }
             $observation = ProviderFundingObservation::query()->lockForUpdate()->find($locked->matched_observation_id);
             if ($observation === null || $observation->provider_code !== $locked->provider_code
                 || $observation->provider_transaction_id !== $locked->provider_transaction_id) {
+                return null;
+            }
+
+            if ($order === null) {
+                return $this->moveToSuspense(
+                    intent: $locked,
+                    verification: $verification,
+                    reasonCode: 'issuance_funding_order_missing',
+                    observation: $observation,
+                );
+            }
+
+            if (! in_array($order->status, [PayCodeIssuanceFundingOrderStatus::Expired, PayCodeIssuanceFundingOrderStatus::Cancelled], true)) {
                 return null;
             }
 
@@ -182,6 +194,15 @@ class VerifyFundingIntent
 
         if ($targetStatus === FundingIntentStatus::Suspense) {
             if ($intent->purpose === FundingIntentPurpose::OnDemandIssuance) {
+                if (! $intent->issuanceFundingOrder()->exists()) {
+                    return $this->moveToSuspense(
+                        intent: $intent,
+                        verification: $verification,
+                        reasonCode: 'issuance_funding_order_missing',
+                        receipt: $receipt,
+                        observation: $observation,
+                    );
+                }
                 $classification = $this->classifyOnDemandMismatch->handle($intent, $observation);
 
                 return $this->moveToSuspense(
@@ -339,6 +360,15 @@ class VerifyFundingIntent
         FundingIntentStatus $targetStatus,
     ): FundingIntent {
         $order = $intent->issuanceFundingOrder()->first();
+        if ($order === null) {
+            return $this->moveToSuspense(
+                intent: $intent,
+                verification: $verification,
+                reasonCode: 'issuance_funding_order_missing',
+                receipt: $receipt,
+                observation: $observation,
+            );
+        }
         if ($order !== null && in_array($order->status, [PayCodeIssuanceFundingOrderStatus::Expired, PayCodeIssuanceFundingOrderStatus::Cancelled], true)) {
             return $this->reviewAndRecoverLateObservation(
                 $intent,

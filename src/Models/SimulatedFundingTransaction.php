@@ -14,6 +14,7 @@ class SimulatedFundingTransaction extends Model
     protected $fillable = [
         'reference',
         'provider_request_id',
+        'simulation_key_hash',
         'provider_transaction_id',
         'provider_event_id',
         'funding_address',

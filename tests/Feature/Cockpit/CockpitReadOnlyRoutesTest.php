@@ -1466,6 +1466,8 @@ it('registers only the guarded issuance, funding, payout recovery, and Account C
         'x-change.cockpit.contribution-invitations.destroy',
         'x-change.cockpit.pay-codes.collection-attempts.store',
         'x-change.cockpit.pay-codes.payment-recovery-reports.review',
+        'x-change.cockpit.pay-codes.value-flow-payouts.check',
+        'x-change.cockpit.pay-codes.value-flow-payouts.retry',
         'x-change.cockpit.pay-codes.payout-corrections.store',
         'x-change.cockpit.pay-codes.terminal-actions.store',
     ])->and(Route::getRoutes()->getByName('x-change.cockpit.funding.intents.store')?->getActionName())

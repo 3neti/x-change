@@ -503,7 +503,7 @@ describe("Cockpit Pay Code record workspace", () => {
     await teaser.trigger("click");
 
     expect(
-      wrapper.get('[data-testid="pay-code-settlement-tab"]').exists(),
+      wrapper.get('[data-testid="settlement-envelope-workspace"]').exists(),
     ).toBe(true);
   });
 
@@ -679,10 +679,10 @@ describe("Cockpit Pay Code record workspace", () => {
     const settlement = wrapper
       .get('[data-testid="pay-code-settlement-tab"]')
       .text();
-    expect(settlement).toContain("Required evidence");
-    expect(settlement).toContain("100%");
     expect(settlement).toContain("From Treasury Position");
     expect(settlement).toContain("Funds are recorded in this account’s Treasury position.");
+    await wrapper.findAll('[role="tab"]').find((tab) => tab.text().includes("Settlement Envelope"))!.trigger("click");
+    expect(wrapper.get('[data-testid="settlement-envelope-workspace"]').text()).toContain("Checklist");
   });
 
   it("uses consistent cards for settlement status, gates, and documents", async () => {
@@ -690,6 +690,11 @@ describe("Cockpit Pay Code record workspace", () => {
     settlementVoucher.settlement.envelope.gates = [
       { key: "identity", label: "Identity verified", satisfied: true },
     ];
+    Object.assign(settlementVoucher.settlement.envelope, {
+      checklist_items: [{ key: 'claim', label: 'Claim form', status: 'accepted', required: true }],
+      signals: [{ key: 'approved', label: 'Approved', present: true, value: false }],
+      activity: [{ action: 'attachment_review', occurred_at: '2026-11-05T00:00:00Z' }],
+    });
     settlementVoucher.settlement.envelope.attachments = [
       {
         id: 9,
@@ -711,12 +716,10 @@ describe("Cockpit Pay Code record workspace", () => {
 
     await wrapper
       .findAll('[role="tab"]')
-      .find((tab) => tab.text().includes("Money"))!
+      .find((tab) => tab.text().includes("Settlement Envelope"))!
       .trigger("click");
 
     for (const testId of [
-      "pay-code-settlement-status-card",
-      "pay-code-settlement-version-card",
       "pay-code-settlement-gates",
       "pay-code-settlement-documents",
     ]) {
@@ -725,6 +728,9 @@ describe("Cockpit Pay Code record workspace", () => {
       expect(card.classes()).toContain("border-slate-200");
     }
     expect(wrapper.get('[data-testid="document-review"]').text()).toContain("Accept");
+    expect(wrapper.get('[data-testid="pay-code-settlement-checklist"]').text()).toContain('Claim form');
+    expect(wrapper.get('[data-testid="pay-code-settlement-signals"]').text()).toContain('Approved · No');
+    expect(wrapper.get('[data-testid="pay-code-settlement-activity"]').text()).toContain('Attachment Review');
   });
 
   it("enriches Journal and Delivery entries when sanitized context is available", async () => {

@@ -2,10 +2,14 @@
 
 declare(strict_types=1);
 
+use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use LBHurtado\Contact\Models\Contact;
+use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiCore\Enums\PayoutStatus;
 use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Enums\VoucherType;
@@ -18,12 +22,16 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
+use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusFetcherContract;
 use LBHurtado\XChange\Contracts\Execution\StoredValueDestinationAuthorityContract;
 use LBHurtado\XChange\Contracts\SettlementRailCapabilityRegistryContract;
 use LBHurtado\XChange\Data\Execution\StoredValueDestinationAuthorityData;
+use LBHurtado\XChange\Jobs\Payment\ReconcileValueFlowPayoutJob;
+use LBHurtado\XChange\Lifecycle\Runners\Support\RecoverySimulationPayoutProvider;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\StoredValueHolderBinding;
+use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Execution\ValueFlowPayoutService;
 use LBHurtado\XChange\Services\Execution\WalletStoredValueExecutionGateway;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
@@ -152,6 +160,35 @@ it('retries a verified rejected payout once using its held recovery balance', fu
         ->and($provider->disburseCallCount)->toBe(2);
 });
 
+it('simulates a rejected payout and recovery only on an explicitly isolated database', function (): void {
+    config()->set('x-change.recovery_simulation.enabled', true);
+    config()->set('x-change.recovery_simulation.database', ':memory:');
+    app()->instance(PayoutProvider::class, app(RecoverySimulationPayoutProvider::class));
+    [$service, $voucher, $source] = valueFlowPayoutFixture();
+    $original = DB::transaction(fn () => $service->prepare($voucher, $source, 2_000, 'simulation-installment'));
+    $service->submit($original->id);
+    expect($original->fresh()->status)->toBe('failed')
+        ->and($original->fresh()->internal_status)->toBe('recovery_opened');
+    $retry = $service->retryRejectedPayout($original->id, 'simulated evidence', 'operator:test');
+    $service->submit($retry->id);
+    $service->submit($retry->id);
+    expect($retry->fresh()->internal_status)->toBe('finalized')
+        ->and($original->fresh()->internal_status)->toBe('recovery_retried')
+        ->and(data_get($retry->fresh()->meta, 'recovery.original_payout_id'))->toBe($original->id);
+    config()->set('x-change.recovery_simulation.database', '/different.sqlite');
+    expect(fn () => app(PayoutProvider::class)->checkStatus((string) $original->fresh()->provider_transaction_id))
+        ->toThrow(LogicException::class, 'isolated database');
+    config()->set('x-change.recovery_simulation.database', ':memory:');
+    $environment = app()->environment();
+    try {
+        app()->instance('env', 'production');
+        expect(fn () => app(PayoutProvider::class)->checkStatus((string) $original->fresh()->provider_transaction_id))
+            ->toThrow(LogicException::class, 'isolated database');
+    } finally {
+        app()->instance('env', $environment);
+    }
+});
+
 it('refuses a retry when the provider does not confirm the original failure', function (): void {
     [$service, $voucher, $source] = valueFlowPayoutFixture();
     $original = DB::transaction(fn () => $service->prepare($voucher, $source, 2_000, 'uncertain-original'));
@@ -162,6 +199,119 @@ it('refuses a retry when the provider does not confirm the original failure', fu
         ->toThrow(RuntimeException::class, 'Provider evidence');
     expect($original->fresh()->internal_status)->toBe('recovery_opened')
         ->and(DisbursementReconciliation::query()->count())->toBe(1);
+});
+
+it('only lets the voucher owner retry a rejected value-flow payout after confirming the destination is ready', function (): void {
+    $this->withoutMiddleware(ThrottleRequests::class);
+    [$service, $voucher, $source] = valueFlowPayoutFixture();
+    $owner = $voucher->owner;
+    $original = DB::transaction(fn () => $service->prepare($voucher, $source, 2_000, 'owner-retry'));
+    $provider = fakePayoutProvider()->willReturnFailedResult(transactionId: 'owner-rejected', provider: 'netbank');
+    $service->submit($original->id);
+    $provider->nextCheckStatus = PayoutStatus::FAILED;
+    $url = route('x-change.cockpit.pay-codes.value-flow-payouts.retry', ['code' => $voucher->code, 'payout' => $original->id]);
+    $listUrl = route('x-change.cockpit.pay-codes.value-flow-payouts.index', ['code' => $voucher->code]);
+    VoucherCollection::query()->create([
+        'voucher_id' => $voucher->id, 'collection_number' => 1, 'status' => 'collected',
+        'requested_amount_minor' => 2_000, 'collected_amount_minor' => 2_000,
+        'currency' => 'PHP', 'provider' => 'netbank', 'completed_at' => now(),
+        'meta' => ['posting' => ['payout_reference' => $original->provider_reference]],
+    ]);
+
+    $other = actingAsTestUser(0);
+    $this->actingAs($other)->getJson($listUrl)->assertNotFound();
+    $this->actingAs($other)->postJson($url, ['destination_ready' => true])->assertNotFound();
+    $this->actingAs($owner)->postJson(route('x-change.cockpit.pay-codes.value-flow-payouts.retry', ['code' => $voucher->code, 'payout' => $original->id + 1000]), ['destination_ready' => true])->assertNotFound();
+    $this->actingAs($owner)->getJson($listUrl)->assertOk()
+        ->assertJsonPath('payments.0.delivery_status', 'review')
+        ->assertJsonPath('payments.0.retry_url', $url);
+    $this->actingAs($owner)->postJson($url, [])->assertUnprocessable();
+    expect(DisbursementReconciliation::query()->count())->toBe(1);
+    $this->postJson($url, ['destination_ready' => true])->assertAccepted();
+    $retry = DisbursementReconciliation::query()->whereKeyNot($original->id)->sole();
+    expect(data_get($retry->meta, 'recovery.original_payout_id'))->toBe($original->id)
+        ->and(data_get($retry->meta, 'recovery.operator_reference'))->toBe($owner->getMorphClass().':'.$owner->getKey());
+    $this->getJson($listUrl)->assertOk()->assertJsonPath('payments.0.delivery_status', 'pending')
+        ->assertJsonPath('payments.0.retry_url', null);
+    $provider->willReturnSuccessfulResult(transactionId: 'owner-retry-settled', provider: 'netbank');
+    $service->submit($retry->id);
+    $this->getJson($listUrl)->assertOk()->assertJsonPath('payments.0.delivery_status', 'delivered');
+    $voucher->forceFill(['metadata' => ['instructions' => validVoucherInstructions(0, overrides: [
+        'voucher_type' => 'payable', 'target_amount' => 20,
+        'metadata' => ['collection_wallet_id' => (string) $owner->wallet()->where('slug', 'platform')->sole()->getKey()],
+    ])->toArray()]])->save();
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code]))
+        ->assertOk()->assertJsonPath('props.read_model.voucher.collection.payout_status', 'completed');
+    $this->postJson($url, ['destination_ready' => true])->assertStatus(409);
+    expect(DisbursementReconciliation::query()->count())->toBe(2);
+});
+
+it('denies the operator recovery workspace by default and allows a host-authorized operator to see masked cases', function (): void {
+    [$service, $voucher, $source] = valueFlowPayoutFixture();
+    $operator = $voucher->owner;
+    $original = DB::transaction(fn () => $service->prepare($voucher, $source, 2_000, 'operator-workspace'));
+    fakePayoutProvider()->willReturnFailedResult(transactionId: 'workspace-rejected', provider: 'netbank');
+    $service->submit($original->id);
+    $url = route('x-change.operations.recovery.index');
+    $this->actingAs($operator)->withHeader('X-Inertia', 'true')->get($url)->assertForbidden();
+    Gate::define('x-change.recovery.manage', fn ($user): bool => $user->is($operator));
+    $this->get($url)->assertOk()->assertJsonPath('component', 'x-change/operations/PaymentRecovery')
+        ->assertJsonPath('props.payouts.0.code', $voucher->code)
+        ->assertJsonPath('props.payouts.0.status', 'failed')
+        ->assertJsonMissingPath('props.payouts.0.provider_transaction_id');
+});
+
+it('checks an existing payout without submitting a new transfer', function (): void {
+    [$service, $voucher, $source] = valueFlowPayoutFixture();
+    $original = DB::transaction(fn () => $service->prepare($voucher, $source, 2_000, 'status-only-check'));
+    $provider = fakePayoutProvider()->willReturnPendingResult(transactionId: 'pending-payout-id', provider: 'netbank');
+    $service->submit($original->id);
+    $reconciler = Mockery::mock(DisbursementReconciliationContract::class);
+    $reconciler->shouldReceive('reconcile')->once()->withArgs(fn ($row): bool => $row->id === $original->id)->andReturn([]);
+    (new ReconcileValueFlowPayoutJob($original->id, 'netbank'))->handle($reconciler);
+    expect($provider->disburseCallCount)->toBe(1);
+});
+
+it('requires operator authorization and an audit reason to retry the original rejected payout', function (): void {
+    [$service, $voucher, $source] = valueFlowPayoutFixture();
+    $operator = $voucher->owner;
+    $original = DB::transaction(fn () => $service->prepare($voucher, $source, 2_000, 'operator-workspace-retry'));
+    $provider = fakePayoutProvider()->willReturnFailedResult(transactionId: 'workspace-retry-rejected', provider: 'netbank');
+    $service->submit($original->id);
+    $provider->nextCheckStatus = PayoutStatus::FAILED;
+    $url = route('x-change.operations.recovery.payout.retry', ['payout' => $original->id]);
+    $this->actingAs($operator)->post($url, ['reason' => 'Recipient confirmed account available', 'destination_ready' => true])->assertForbidden();
+    Gate::define('x-change.recovery.manage', fn ($user): bool => $user->is($operator));
+    $this->post($url, ['destination_ready' => true])->assertSessionHasErrors('reason');
+    $this->post($url, ['reason' => 'Recipient confirmed account available', 'destination_ready' => true])->assertRedirect();
+    $retry = DisbursementReconciliation::query()->whereKeyNot($original->id)->sole();
+    expect(data_get($retry->meta, 'recovery.original_payout_id'))->toBe($original->id)
+        ->and(data_get($retry->meta, 'recovery.evidence_reference'))->toBe('Recipient confirmed account available')
+        ->and(data_get($retry->meta, 'recovery.operator_reference'))->toBe($operator->getMorphClass().':'.$operator->getKey());
+});
+
+it('protects payer reports and records the authorized operator review without moving funds', function (): void {
+    [, $voucher] = valueFlowPayoutFixture();
+    $operator = $voucher->owner;
+    $this->postJson(route('x-change.pay.recovery-reports.store', ['code' => $voucher->code]), [
+        'transaction_reference' => 'provider-reference-123', 'amount_minor' => 2000,
+        'paid_at' => now()->toIso8601String(), 'contact' => 'payer@example.test',
+    ])->assertAccepted();
+    $report = DB::table('x_change_payment_recovery_reports')->first();
+    expect($report->evidence_ciphertext)->not->toContain('provider-reference-123');
+    $url = route('x-change.operations.recovery.report.review', ['reference' => $report->reference]);
+    $this->actingAs($operator)->post($url, ['note' => 'Evidence reviewed with provider'])->assertForbidden();
+    Gate::define('x-change.recovery.manage', fn ($user): bool => $user->is($operator));
+    $this->withHeader('X-Inertia', 'true')->get(route('x-change.operations.recovery.index'))
+        ->assertOk()->assertJsonPath('props.reports.0.evidence.transaction_reference', 'provider-reference-123');
+    $this->post($url, [])->assertSessionHasErrors('note');
+    $this->post($url, ['note' => 'Evidence reviewed with provider'])->assertRedirect();
+    $reviewed = DB::table('x_change_payment_recovery_reports')->where('id', $report->id)->first();
+    expect($reviewed->status)->toBe('reviewed')
+        ->and($reviewed->reviewed_by_id)->toBe((string) $operator->getKey())
+        ->and(Crypt::decryptString($reviewed->review_note_ciphertext))->toBe('Evidence reviewed with provider')
+        ->and(VoucherCollection::query()->count())->toBe(0);
 });
 
 it('requires an operator and evidence before the rejected-payout command can prepare a retry', function (): void {

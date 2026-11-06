@@ -26,6 +26,7 @@ final class ContributionContextController extends Controller
             'name' => $attachment->original_filename,
             'type' => $attachment->doc_type,
             'status' => $attachment->review_status,
+            'rejection_reason' => $attachment->rejection_reason,
             'view_url' => route('x-change.contributions.documents.show', ['attachment' => $attachment->getKey()]),
         ])->values()->all() : [];
 

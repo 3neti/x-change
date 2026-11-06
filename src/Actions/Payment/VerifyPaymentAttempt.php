@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Actions\Payment;
 
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
 use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
 use LBHurtado\EmiCore\Exceptions\ProviderFundingNotObserved;
@@ -14,9 +15,13 @@ use LBHurtado\XChange\Actions\Operations\RecordExternalJobFailure;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Exceptions\LatePaymentRequiresReview;
+use LBHurtado\XChange\Exceptions\ProviderPaymentAlreadyApplied;
+use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
+use LBHurtado\XChange\Models\ObservedPaymentTransaction;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Payment\LatePaymentEligibility;
+use LBHurtado\XChange\Services\Payment\SpecificPaymentAttribution;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use Throwable;
 
@@ -29,7 +34,46 @@ class VerifyPaymentAttempt
         private readonly SettleVerifiedPaymentAttempt $settle,
         private readonly RecordExternalJobFailure $failures,
         private readonly LatePaymentEligibility $lateEligibility,
+        private readonly SpecificPaymentAttribution $specificAttribution,
     ) {}
+
+    public function handleSpecificObservation(PaymentAttempt $attempt, ObservedPaymentTransaction $transaction, ProviderFundingObservation $observation, ?int $reviewId = null): PaymentAttempt
+    {
+        return Cache::lock(
+            'x-change:payment-verification:'.$attempt->getKey(),
+            (int) config('x-change.payment.attempts.verification_lock_seconds', 120),
+        )->block((int) config('x-change.payment.attempts.verification_lock_wait_seconds', 5), function () use ($attempt, $transaction, $observation, $reviewId): PaymentAttempt {
+            return DB::transaction(function () use ($attempt, $transaction, $observation, $reviewId): PaymentAttempt {
+                $locked = PaymentAttempt::query()->with('voucher')->lockForUpdate()->findOrFail($attempt->getKey());
+                if ($locked->status === PaymentAttemptStatus::Settled) {
+                    return $locked;
+                }
+                if ($locked->status === PaymentAttemptStatus::Verified) {
+                    if ($reviewId !== null && $locked->provider_transaction_id !== $observation->provider_transaction_id) {
+                        throw new LatePaymentRequiresReview('The attempt has a different verified payment.');
+                    }
+
+                    return $this->settleVerified($locked, PaymentVerificationTrigger::Schedule, false);
+                }
+                $ambiguous = $locked->status === PaymentAttemptStatus::Suspense
+                    && $locked->events()->reorder()->latest('sequence')->value('event_type') === 'provider_verification_indeterminate';
+                if (! $ambiguous && ! in_array($locked->status, [PaymentAttemptStatus::AwaitingPayment, PaymentAttemptStatus::Verifying, PaymentAttemptStatus::Expired], true)) {
+                    throw new LatePaymentRequiresReview('The payment attempt requires review.');
+                }
+                if (! $this->specificAttribution->matches($locked, $transaction, $observation, $reviewId)
+                    || ! $this->lateEligibility->canApply($locked, $locked->voucher, $observation)) {
+                    throw new LatePaymentRequiresReview('The payment cannot be uniquely attributed or is no longer eligible.');
+                }
+                $verified = $this->transition->handle($locked, PaymentAttemptStatus::Verified, 'provider_payment_verified', PaymentVerificationTrigger::Schedule, [
+                    'matched_observation_id' => $observation->getKey(),
+                    'provider_transaction_id' => $observation->provider_transaction_id,
+                    'verified_at' => now(), 'last_checked_at' => now(),
+                ], ['provider_status' => $observation->provider_status]);
+
+                return $this->settleVerified($verified, PaymentVerificationTrigger::Schedule, true);
+            }, 5);
+        });
+    }
 
     public function handle(
         PaymentAttempt $attempt,
@@ -176,6 +220,10 @@ class VerifyPaymentAttempt
             return $this->settle->handle($attempt, $trigger);
         } catch (LatePaymentRequiresReview) {
             return $this->suspense($attempt, $trigger, 'late_payment_requires_review', ProviderFundingObservation::query()->find($attempt->matched_observation_id));
+        } catch (ProviderPaymentAlreadyApplied) {
+            return $this->suspense($attempt, $trigger, 'provider_payment_already_applied', ProviderFundingObservation::query()->find($attempt->matched_observation_id));
+        } catch (VoucherRequiresSettlementEnvelope) {
+            return $this->suspense($attempt, $trigger, 'payment_documents_require_review', ProviderFundingObservation::query()->find($attempt->matched_observation_id));
         } catch (Throwable $exception) {
             $providerTransactionId = trim((string) $attempt->provider_transaction_id);
 

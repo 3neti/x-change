@@ -10,12 +10,15 @@ use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\XChange\Exceptions\FundingEvidenceAlreadyClaimed;
 use LBHurtado\XChange\Models\FundingEvidenceClaim;
 use LBHurtado\XChange\Models\FundingIntent;
+use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Funding\FundingEvidenceClaimOwnership;
+use LBHurtado\XChange\Services\Payment\ProviderEvidenceLock;
 
 final readonly class ClaimFundingEvidence
 {
     public function __construct(
         private FundingEvidenceClaimOwnership $ownership,
+        private ProviderEvidenceLock $evidenceLock,
     ) {}
 
     public function handle(
@@ -24,6 +27,11 @@ final readonly class ClaimFundingEvidence
     ): FundingEvidenceClaim {
         try {
             return DB::transaction(function () use ($intent, $observation): FundingEvidenceClaim {
+                $this->evidenceLock->acquire($observation->provider_code, $observation->provider_transaction_id);
+                if (VoucherCollection::query()->where('provider', $observation->provider_code)
+                    ->where('provider_transaction_id', $observation->provider_transaction_id)->exists()) {
+                    throw FundingEvidenceAlreadyClaimed::forAnotherIntent();
+                }
                 $ownedClaim = $this->ownership->effectiveClaimForIntent(
                     (int) $intent->getKey(),
                     lock: true,

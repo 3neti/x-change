@@ -73,7 +73,8 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
             Auth::setUser($issuer);
 
             return DB::transaction(function () use ($input, $instructions, $issuer, &$createdFiles): array {
-                $issued = app(GeneratesVouchers::class)->handle($instructions)->first();
+                $generated = app(GeneratesVouchers::class)->handle($instructions);
+                $issued = $generated->first();
 
                 if (! $issued) {
                     throw new PayCodeIssuanceFailed('Pay Code issuance did not return a voucher.');
@@ -90,27 +91,32 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
                     && data_get($input, 'execution.driver') === 'settlement_envelope'
                     && data_get($input, 'execution.settlement.driver') === 'philhealth-bst';
                 if ($isPhilhealth) {
-                    app(EnvelopeService::class)->create(
-                        referenceCode: (string) $issued->code,
-                        driverId: 'philhealth.bst.demo',
-                        driverVersion: '1.0.0',
-                        reference: $issued,
-                        actor: $issuer instanceof Model ? $issuer : null,
-                    );
-                } elseif ($requirements !== [] || is_string($invoiceDraft) || $invoiceDrafts !== []) {
+                    foreach ($generated as $voucher) {
+                        app(EnvelopeService::class)->create(
+                            referenceCode: (string) $voucher->code,
+                            driverId: 'philhealth.bst.demo',
+                            driverVersion: '1.0.0',
+                            reference: $voucher,
+                            actor: $issuer instanceof Model ? $issuer : null,
+                        );
+                    }
+                } elseif (in_array(data_get($input, 'voucher_type'), ['payable', 'settlement'], true)
+                    || $requirements !== [] || is_string($invoiceDraft) || $invoiceDrafts !== []) {
                     $driver = app(DriverService::class)->load('x-change.documents', '1.0.0');
                     foreach ($requirements as $requirement) {
                         if ($driver->getDocumentType($requirement['type']) === null) {
                             throw ValidationException::withMessages(['execution.document_requirements' => 'A requested document type is not supported.']);
                         }
                     }
-                    app(EnvelopeService::class)->create(
-                        referenceCode: (string) $issued->code,
-                        driverId: 'x-change.documents',
-                        driverVersion: '1.0.0',
-                        reference: $issued,
-                        actor: $issuer instanceof Model ? $issuer : null,
-                    );
+                    foreach ($generated as $voucher) {
+                        app(EnvelopeService::class)->create(
+                            referenceCode: (string) $voucher->code,
+                            driverId: 'x-change.documents',
+                            driverVersion: '1.0.0',
+                            reference: $voucher,
+                            actor: $issuer instanceof Model ? $issuer : null,
+                        );
+                    }
                 }
 
                 if (is_string($invoiceDraft)) {

@@ -6,7 +6,14 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      "@/routes/x-change/stamps": path.resolve(import.meta.dirname, "tests/frontend/stubs/stamp-preview-route.ts"),
+      "@/routes/x-change/cockpit/pay-codes/value-flow-payouts": path.resolve(
+        import.meta.dirname,
+        "tests/frontend/stubs/value-flow-payout-routes.ts",
+      ),
+      "@/routes/x-change/stamps": path.resolve(
+        import.meta.dirname,
+        "tests/frontend/stubs/stamp-preview-route.ts",
+      ),
       "@/routes/x-change/public-auto-generate/checkouts": path.resolve(
         import.meta.dirname,
         "tests/frontend/stubs/public-checkout-draft-route.ts",
@@ -88,7 +95,10 @@ export default defineConfig({
         import.meta.dirname,
         "tests/frontend/stubs/ui-select.ts",
       ),
-      "@/components/financial/ValueFlowDestination.vue": path.resolve(import.meta.dirname, "resources/js/components/x-change-shared-financial/ValueFlowDestination.vue"),
+      "@/components/financial/ValueFlowDestination.vue": path.resolve(
+        import.meta.dirname,
+        "resources/js/components/x-change-shared-financial/ValueFlowDestination.vue",
+      ),
       "@/components/financial/BankEMISelect.vue": path.resolve(
         import.meta.dirname,
         "resources/js/components/x-change-shared-financial/BankEMISelect.vue",
@@ -357,7 +367,11 @@ export default defineConfig({
         import.meta.dirname,
         "tests/frontend/stubs/campaign-worksheet-route.ts",
       ),
-      "@/routes/x-change/cockpit/pay-codes/payment-recovery-reports": path.resolve(import.meta.dirname, "tests/frontend/stubs/cockpit-payment-recovery-report-route.ts"),
+      "@/routes/x-change/cockpit/pay-codes/payment-recovery-reports":
+        path.resolve(
+          import.meta.dirname,
+          "tests/frontend/stubs/cockpit-payment-recovery-report-route.ts",
+        ),
       "@/routes/x-change/cockpit/pay-codes": path.resolve(
         import.meta.dirname,
         "tests/frontend/stubs/pay-code-detail-route.ts",
@@ -374,7 +388,10 @@ export default defineConfig({
         import.meta.dirname,
         "tests/frontend/stubs/payment-verification-check-route.ts",
       ),
-      "@/routes/x-change/pay/recovery-reports": path.resolve(import.meta.dirname, "tests/frontend/stubs/payment-recovery-report-route.ts"),
+      "@/routes/x-change/pay/recovery-reports": path.resolve(
+        import.meta.dirname,
+        "tests/frontend/stubs/payment-recovery-report-route.ts",
+      ),
       "@/routes/x-change/pay/attempts/qr": path.resolve(
         import.meta.dirname,
         "tests/frontend/stubs/payment-qr-download-route.ts",

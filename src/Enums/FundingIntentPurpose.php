@@ -8,4 +8,5 @@ enum FundingIntentPurpose: string
 {
     case AccountFunding = 'account_funding';
     case OnDemandIssuance = 'on_demand_issuance';
+    case ReviewedExcess = 'reviewed_excess';
 }

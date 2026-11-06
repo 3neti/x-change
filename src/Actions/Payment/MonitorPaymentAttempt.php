@@ -4,9 +4,15 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Payment;
 
+use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Contracts\IncomingPaymentReader;
+use LBHurtado\EmiCore\Contracts\SpecificIncomingPaymentVerifier;
 use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
 use LBHurtado\XChange\Data\Payment\ObservedPaymentTransactionData;
+use LBHurtado\XChange\Exceptions\ObservedPaymentEvidenceConflict;
+use LBHurtado\XChange\Exceptions\ObservedPaymentOwnershipConflict;
+use LBHurtado\XChange\Jobs\Payment\VerifyAdditionalQrPaymentJob;
+use LBHurtado\XChange\Models\ObservedPaymentTransaction;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
@@ -25,9 +31,9 @@ final class MonitorPaymentAttempt
             return 0;
         }
 
-        $grace = max(0, (int) config('x-change.payment.monitoring.expiry_grace_seconds', 300));
+        $days = max(1, (int) config('x-change.payment.attempts.late_reconciliation_days', 7));
 
-        if ($attempt->expires_at?->addSeconds($grace)->isPast()) {
+        if ($attempt->expires_at?->addDays($days)->isPast()) {
             return 0;
         }
 
@@ -67,7 +73,29 @@ final class MonitorPaymentAttempt
                     payerMobile: $incoming->payerMobile,
                 );
 
-            $this->record->handle($attempt, $payment);
+            try {
+                $transaction = $this->record->handle($attempt, $payment);
+            } catch (ObservedPaymentOwnershipConflict|ObservedPaymentEvidenceConflict $exception) {
+                $existing = ObservedPaymentTransaction::query()->where('provider_code', $attempt->provider_code)
+                    ->where('provider_transaction_hash', hash('sha256', trim($payment->providerTransactionId)))->firstOrFail();
+                DB::transaction(function () use ($existing, $attempt, $exception): void {
+                    DB::table('x_change_payment_transaction_reviews')->insertOrIgnore([
+                        'observed_payment_transaction_id' => $existing->getKey(),
+                        'reason_code' => $exception instanceof ObservedPaymentOwnershipConflict ? 'payment_observed_on_multiple_qrs' : 'payment_evidence_changed',
+                        'status' => 'open', 'created_at' => now(), 'updated_at' => now(),
+                    ]);
+                    $reviewId = DB::table('x_change_payment_transaction_reviews')->where('observed_payment_transaction_id', $existing->getKey())->value('id');
+                    foreach ([$existing->payment_attempt_id, $attempt->getKey()] as $attemptId) {
+                        DB::table('x_change_payment_review_attempts')->insertOrIgnore(['review_id' => $reviewId, 'payment_attempt_id' => $attemptId]);
+                    }
+                }, 3);
+                $count++;
+
+                continue;
+            }
+            if ($adapter instanceof SpecificIncomingPaymentVerifier) {
+                VerifyAdditionalQrPaymentJob::dispatch((int) $transaction->getKey(), $attempt->provider_code);
+            }
             $count++;
         }
 

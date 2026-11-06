@@ -14,9 +14,13 @@ use LBHurtado\XChange\Actions\Settlement\AdvanceSettlementCampaignLifecycle;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Exceptions\LatePaymentRequiresReview;
+use LBHurtado\XChange\Exceptions\ProviderPaymentAlreadyApplied;
+use LBHurtado\XChange\Models\FundingEvidenceClaim;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Payment\LatePaymentEligibility;
+use LBHurtado\XChange\Services\Payment\ProviderEvidenceLock;
+use LBHurtado\XChange\Services\Settlement\DocumentPaymentGate;
 use LBHurtado\XChange\Services\Settlement\V2EvidenceEventJournal;
 use LogicException;
 
@@ -27,6 +31,8 @@ class SettleVerifiedPaymentAttempt
         private readonly AdvanceSettlementCampaignLifecycle $advanceCampaignLifecycle,
         private readonly V2EvidenceEventJournal $v2Events,
         private readonly LatePaymentEligibility $lateEligibility,
+        private readonly ProviderEvidenceLock $evidenceLock,
+        private readonly DocumentPaymentGate $documentGate,
     ) {}
 
     public function handle(
@@ -56,7 +62,14 @@ class SettleVerifiedPaymentAttempt
             }
 
             $observation = $this->observation($locked);
+            $this->evidenceLock->acquire($observation->provider_code, $observation->provider_transaction_id);
+            if (FundingEvidenceClaim::query()->where('provider_code', $observation->provider_code)
+                ->where('provider_transaction_hash', hash('sha256', implode('|', [$observation->provider_code, $observation->provider_transaction_id])))
+                ->exists()) {
+                throw new ProviderPaymentAlreadyApplied('The provider transaction has already been claimed for funding.');
+            }
             $voucher = Voucher::query()->lockForUpdate()->findOrFail($locked->voucher_id);
+            $this->documentGate->ensureReady($voucher, lockEnvelope: true);
             if (! $this->lateEligibility->canApply($locked, $voucher, $observation)) {
                 throw new LatePaymentRequiresReview('The payment requires operator review.');
             }
@@ -66,7 +79,7 @@ class SettleVerifiedPaymentAttempt
                 ->first();
 
             if ($duplicate instanceof VoucherCollection) {
-                throw new LogicException('The provider transaction has already been applied.');
+                throw new ProviderPaymentAlreadyApplied('The provider transaction has already been applied.');
             }
 
             $idempotencyKey = 'payment-attempt:'.$locked->reference;

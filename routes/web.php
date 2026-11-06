@@ -142,6 +142,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryInstitutionFun
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliationRunApprovalController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliationRunController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliationRunExecutionController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitValueFlowPayoutRecoveryController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitVoucherDetailPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Contribution\ContributionContextController;
 use LBHurtado\XChange\Http\Controllers\Web\Contribution\ContributionPageController;
@@ -160,6 +161,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Onboarding\InitialPinSetupController;
 use LBHurtado\XChange\Http\Controllers\Web\Onboarding\MobileVerificationChallengeController;
 use LBHurtado\XChange\Http\Controllers\Web\Onboarding\MobileVerificationPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Onboarding\MobileVerificationSubmissionController;
+use LBHurtado\XChange\Http\Controllers\Web\Operations\PaymentRecoveryController;
 use LBHurtado\XChange\Http\Controllers\Web\PayCodeCreatePageController;
 use LBHurtado\XChange\Http\Controllers\Web\PayCodeIndexPageController;
 use LBHurtado\XChange\Http\Controllers\Web\PayCodeShowPageController;
@@ -241,6 +243,21 @@ Route::middleware(['web', ShareXChangeBranding::class])->group(function (): void
 });
 
 Route::prefix('x/operations')->middleware(['web', ShareXChangeBranding::class])->group(function (): void {
+    Route::middleware(['auth', 'can:x-change.recovery.manage'])->group(function (): void {
+        Route::get('recovery', [PaymentRecoveryController::class, 'index'])->name('x-change.operations.recovery.index');
+        Route::post('recovery/payouts/{payout}/retry', [PaymentRecoveryController::class, 'retry'])
+            ->middleware('throttle:5,1')->name('x-change.operations.recovery.payout.retry');
+        Route::post('recovery/reports/{reference}/review', [PaymentRecoveryController::class, 'reviewReport'])
+            ->middleware('throttle:10,1')->name('x-change.operations.recovery.report.review');
+        Route::post('recovery/payments/{review}/accounted', [PaymentRecoveryController::class, 'markAccounted'])
+            ->middleware('throttle:5,1')->name('x-change.operations.recovery.payment.accounted');
+        Route::post('recovery/payments/{review}/credit-excess', [PaymentRecoveryController::class, 'creditExcess'])
+            ->middleware('throttle:5,1')->name('x-change.operations.recovery.payment.credit-excess');
+        Route::post('recovery/payments/{review}/apply', [PaymentRecoveryController::class, 'applyPayment'])
+            ->middleware('throttle:5,1')->name('x-change.operations.recovery.payment.apply');
+        Route::post('recovery/payments/{review}/split', [PaymentRecoveryController::class, 'splitPayment'])
+            ->middleware('throttle:5,1')->name('x-change.operations.recovery.payment.split');
+    });
     Route::prefix('stored-value-collections')->group(function (): void {
         Route::get('/', [StoredValueCollectionController::class, 'page'])->defaults('collection_channel', 'operations')->name('x-change.operations.stored-value-collections.index');
         Route::post('/', [StoredValueCollectionController::class, 'start'])->defaults('collection_channel', 'operations')->middleware('throttle:6,1')->name('x-change.operations.stored-value-collections.store');
@@ -1058,6 +1075,12 @@ Route::prefix('x')->middleware([
                 ->middleware('throttle:30,1')->name('x-change.cockpit.pay-codes.payment-recovery-reports.index');
             Route::post('{code}/payment-recovery-reports/{reference}/review', [CockpitPaymentRecoveryReportsController::class, 'review'])
                 ->whereUlid('reference')->middleware('throttle:10,1')->name('x-change.cockpit.pay-codes.payment-recovery-reports.review');
+            Route::get('{code}/value-flow-payouts', [CockpitValueFlowPayoutRecoveryController::class, 'index'])
+                ->middleware('throttle:30,1')->name('x-change.cockpit.pay-codes.value-flow-payouts.index');
+            Route::post('{code}/value-flow-payouts/check', [CockpitValueFlowPayoutRecoveryController::class, 'check'])
+                ->middleware('throttle:5,1')->name('x-change.cockpit.pay-codes.value-flow-payouts.check');
+            Route::post('{code}/value-flow-payouts/{payout}/retry', CockpitValueFlowPayoutRecoveryController::class)
+                ->whereNumber('payout')->middleware('throttle:5,1')->name('x-change.cockpit.pay-codes.value-flow-payouts.retry');
             Route::post(
                 '{code}/payout-corrections',
                 CockpitPayCodePayoutCorrectionController::class,

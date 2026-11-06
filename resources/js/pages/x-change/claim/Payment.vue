@@ -74,6 +74,7 @@ type PaymentReceipt = {
 };
 
 type PaymentReadModel = {
+    session_payment_review?: boolean;
     recovery_mode?: boolean;
     repayment_mode?: boolean;
     repayment_ready?: boolean;
@@ -508,6 +509,11 @@ function printReceipt(): void {
                         {{ dateTime(entry.completed_at) }}
                     </p>
                 </CardContent>
+            </Card>
+
+            <Card v-if="payment.session_payment_review" data-testid="payer-transaction-review">
+                <CardHeader><CardTitle>Payment under review</CardTitle></CardHeader>
+                <CardContent><p role="status">We are reviewing a payment from this session. Please do not pay again.</p></CardContent>
             </Card>
 
             <Card

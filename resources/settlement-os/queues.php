@@ -20,7 +20,9 @@ use LBHurtado\XChange\Jobs\Payment\DeliverPartnerPaymentEvent;
 use LBHurtado\XChange\Jobs\Payment\MonitorPaymentAttemptJob;
 use LBHurtado\XChange\Jobs\Payment\ProcessSettledPaymentJob;
 use LBHurtado\XChange\Jobs\Payment\QueueIssuedPayCodeSmsJob;
+use LBHurtado\XChange\Jobs\Payment\ReconcileValueFlowPayoutJob;
 use LBHurtado\XChange\Jobs\Payment\RecoverSettledPayerIdentityJob;
+use LBHurtado\XChange\Jobs\Payment\VerifyAdditionalQrPaymentJob;
 use LBHurtado\XChange\Jobs\Payment\VerifyPaymentAttemptJob;
 use LBHurtado\XChange\Jobs\Provisioning\DeliverProvisioningOfferJob;
 use LBHurtado\XChange\Jobs\Redemption\DispatchVoucherRedemptionFeedbackJob;
@@ -54,6 +56,8 @@ return [
                 VerifyFundingIntentJob::class => [],
                 VerifyFundingWebhookReceiptJob::class => [],
                 MonitorPaymentAttemptJob::class => [],
+                ReconcileValueFlowPayoutJob::class => [],
+                VerifyAdditionalQrPaymentJob::class => [],
                 VerifyPaymentAttemptJob::class => [],
                 SubmitValueFlowPayout::class => [],
             ],

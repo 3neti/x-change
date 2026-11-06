@@ -503,14 +503,23 @@ it('shows the destination for payable and settlement vouchers', async () => {
   expect(wrapper.find('[data-testid="value-flow-destination"]').exists()).toBe(true);
 });
 
-it('shows the issuer upload without exposing document requests for payable vouchers', async () => {
+it('keeps issuer uploads separate from optional document requests', async () => {
   const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates, invoiceDraftUrl: '/invoice-drafts' } });
   await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('100');
   await openOrderOptions(wrapper);
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
-  expect(wrapper.find('[data-testid="document-requirement-control"]').exists()).toBe(false);
+  expect(wrapper.find('[data-testid="document-requirement-control"]').exists()).toBe(true);
   expect(wrapper.get('[data-testid="issuer-invoice-upload"]').text()).toContain('Upload document');
   expect(wrapper.get('[data-testid="issuer-invoice-upload"] input').attributes('type')).toBe('file');
+  await wrapper.get('[data-testid="add-document-requirement"]').trigger('click');
+  const fields = wrapper.get('[data-testid="document-requirement-control"]').findAll('select');
+  expect((fields[1].element as HTMLSelectElement).value).toBe('optional');
+  expect((wrapper.get('[data-testid="document-requirement-control"] input[type="checkbox"]').element as HTMLInputElement).checked).toBe(false);
+  await fields[2].setValue('invited');
+  expect((fields[2].element as HTMLSelectElement).value).toBe('invited');
+  expect(preview(wrapper).execution.document_requirements).toEqual([
+    { type: 'INVOICE', timing: 'optional', requires_acceptance: false, contributor: 'invited' },
+  ]);
 });
 
 it('stages an issuer invoice and includes its reference in the order', async () => {

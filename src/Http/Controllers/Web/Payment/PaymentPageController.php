@@ -19,6 +19,7 @@ use LBHurtado\XChange\Services\Payment\PaymentAttemptPresenter;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptSessionGuard;
 use LBHurtado\XChange\Services\Payment\PaymentQrDeliveryPolicy;
 use LBHurtado\XChange\Services\Payment\PaymentReceiptReadModel;
+use LBHurtado\XChange\Services\Payment\SessionPaymentReview;
 use LBHurtado\XChange\Services\Settlement\DocumentPaymentGate;
 use LBHurtado\XChange\Services\Settlement\ParticipantDocumentSession;
 use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
@@ -66,6 +67,9 @@ class PaymentPageController extends Controller
         }
         $attempt ??= $display?->attempt;
         $attemptData = $attempt === null ? null : $presenter->present($attempt);
+        $sessionReview = app(SessionPaymentReview::class)->exists(
+            $voucher, (string) $request->session()->get('x-change.payment.browser-key', ''),
+        );
         $deliveryModes = $attempt === null
             ? $delivery->forVoucher($voucher, $display !== null)
             : $delivery->forAttempt($attempt, $voucher, $display !== null);
@@ -117,6 +121,7 @@ class PaymentPageController extends Controller
             'payment' => [
                 'pay_code' => (string) $voucher->code,
                 'recovery_mode' => $request->boolean('recover'),
+                'session_payment_review' => $sessionReview,
                 'currency' => $collection->currency,
                 'target_amount_minor' => $collection->target_amount_minor,
                 'collected_amount_minor' => $collection->collected_total_minor,
@@ -141,6 +146,7 @@ class PaymentPageController extends Controller
                 'provider_available' => $providerEnabled,
                 'can_create_attempt' => (bool) config('x-change.payment.attempts.enabled', true)
                     && ! $request->boolean('recover')
+                    && ! $sessionReview
                     && $providerEnabled
                     && $repaymentReady
                     && $documentsReady
@@ -179,6 +185,9 @@ class PaymentPageController extends Controller
         PaymentAttemptSessionGuard $sessions,
     ): ?PaymentAttempt {
         $reference = trim((string) $request->query('attempt', ''));
+        if ($reference === '' && ! $request->boolean('recover')) {
+            $reference = trim((string) $request->session()->get('x-change.payment.latest-attempt.'.$voucher->getKey(), ''));
+        }
 
         if ($reference === '') {
             return null;

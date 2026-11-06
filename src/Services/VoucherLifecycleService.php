@@ -1238,6 +1238,13 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             'payload_version' => $envelope->payload_version,
             'settleable' => $envelope->isSettleable(),
             'checklist' => $envelope->getChecklistStatus(),
+            'checklist_items' => $envelope->checklistItems->map(fn (Model $item): array => [
+                'key' => (string) $item->getAttribute('key'),
+                'label' => (string) $item->getAttribute('label'),
+                'status' => $item->getAttribute('status') instanceof \BackedEnum
+                    ? $item->getAttribute('status')->value : (string) $item->getAttribute('status'),
+                'required' => (bool) $item->getAttribute('required'),
+            ])->values()->all(),
             'gates' => collect($envelope->gates_cache ?? [])
                 ->map(fn (mixed $value, mixed $key): array => [
                     'key' => (string) $key,

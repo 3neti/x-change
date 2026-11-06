@@ -175,6 +175,10 @@ $defaultDeploymentRuntimeTier = match ((string) env('APP_ENV', 'production')) {
 };
 
 return [
+    'recovery_simulation' => [
+        'enabled' => (bool) env('XCHANGE_RECOVERY_SIMULATION_ENABLED', false),
+        'database' => env('XCHANGE_RECOVERY_SIMULATION_DATABASE'),
+    ],
     'payment_feedback' => [
         'pipes' => [
             AssociateSettledPayerContact::class,
@@ -2988,9 +2992,9 @@ return [
 
     'payment' => [
         'monitoring' => [
-            'scheduled_enabled' => (bool) env('X_CHANGE_PAYMENT_MONITORING_SCHEDULED_ENABLED', false),
+            'scheduled_enabled' => (bool) env('X_CHANGE_PAYMENT_MONITORING_SCHEDULED_ENABLED', true),
             'scheduled_batch_size' => (int) env('X_CHANGE_PAYMENT_MONITORING_BATCH_SIZE', 50),
-            'expiry_grace_seconds' => (int) env('X_CHANGE_PAYMENT_MONITORING_EXPIRY_GRACE_SECONDS', 300),
+            'minimum_interval_seconds' => (int) env('X_CHANGE_PAYMENT_MONITORING_MINIMUM_INTERVAL_SECONDS', 300),
         ],
         'default_provider' => env('X_CHANGE_PAYMENT_PROVIDER', 'manual'),
 

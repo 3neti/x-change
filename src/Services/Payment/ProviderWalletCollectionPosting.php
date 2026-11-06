@@ -64,6 +64,21 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
         }
         $provider = mb_strtolower(trim((string) $collection->provider));
         $currency = mb_strtoupper(trim($collection->currency));
+        $splitId = data_get($collection->metadata, 'reviewed_split_id');
+        $split = null;
+        if ($splitId !== null) {
+            $split = DB::table('x_change_reviewed_payment_splits')->where('id', $splitId)->lockForUpdate()->first();
+            $transactionId = trim((string) $collection->providerTransactionId);
+            if ($split === null || (int) $split->voucher_id !== (int) $voucher->getKey()
+                || $split->provider_code !== $provider || $split->currency !== $currency
+                || ! hash_equals($split->provider_transaction_hash, hash('sha256', $transactionId))
+                || (int) $split->provider_observation_id !== (int) data_get($collection->metadata, 'provider_observation_id')
+                || (int) $split->collection_amount_minor !== $collection->amountMinor
+                || (int) $split->excess_amount_minor <= 0
+                || (int) $split->gross_amount_minor !== $collection->amountMinor + (int) $split->excess_amount_minor) {
+                throw new RuntimeException('The reviewed split does not match the collection evidence.');
+            }
+        }
         $connections = collect($this->connections->active())
             ->filter(
                 static fn ($connection): bool => $connection->provider === $provider
@@ -71,7 +86,7 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
             )
             ->values();
 
-        if ($connections->count() === 0 && ($this->payouts->isExternal($voucher) || data_get($voucher->metadata, 'instructions.fee_bearer', 'issuer') === 'payer')) {
+        if ($connections->count() === 0 && ($split !== null || $this->payouts->isExternal($voucher) || data_get($voucher->metadata, 'instructions.fee_bearer', 'issuer') === 'payer')) {
             throw new RuntimeException('An external destination requires a Treasury-backed collection.');
         }
 
@@ -107,7 +122,7 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
             $provider,
             $providerTransactionId,
             $currency,
-            (string) $collection->amountMinor,
+            (string) ($split?->gross_amount_minor ?? $collection->amountMinor),
         ]));
         $inventoryOperationReference = 'voucher-collection-recognition:'.$scope;
         $saleReference = $this->posSaleReferences->saleReferenceForVoucherId($voucher->getKey());
@@ -128,7 +143,7 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
                 operationReference: $inventoryOperationReference,
                 inventoryReference: $connection->inventoryReference,
                 settlementResourceReference: $connection->settlementResourceReference,
-                amountMinor: $collection->amountMinor,
+                amountMinor: (int) ($split?->gross_amount_minor ?? $collection->amountMinor),
                 currency: $currency,
                 status: 'requested',
                 idempotencyKey: 'voucher-collection-recognition-key:'.$scope,
@@ -158,6 +173,20 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
                 'sale_reference' => $saleReference,
             ],
         );
+
+        $excessAllocation = null;
+        if ($split !== null) {
+            $issuerWallet = app(WalletAccessContract::class)->resolveForUser($voucher->owner);
+            $excessAllocation = $this->allocations->allocate(
+                accountReference: 'wallet:'.$issuerWallet->uuid,
+                provider: $provider,
+                amountMinor: (int) $split->excess_amount_minor,
+                currency: $currency,
+                evidenceReference: 'reviewed-split-excess:'.$provider.':'.$providerTransactionId,
+                metadata: ['source' => 'reviewed_split_excess', 'reviewed_split_id' => $splitId,
+                    'provider_transaction_id' => $providerTransactionId, 'inventory_operation_reference' => $recognition->operationReference],
+            );
+        }
 
         if ($feeMinor > 0) {
             $issuerWallet = app(WalletAccessContract::class)->resolveForUser($voucher->owner);
@@ -196,6 +225,10 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
                 'provider_inventory_changed' => true,
                 'principal_amount_minor' => $principalMinor,
                 'fee_amount_minor' => $feeMinor,
+                'provider_gross_amount_minor' => (int) ($split?->gross_amount_minor ?? $collection->amountMinor),
+                'reviewed_split_id' => $splitId,
+                'excess_amount_minor' => (int) ($split?->excess_amount_minor ?? 0),
+                'excess_allocation_reference' => $excessAllocation?->allocationOperationReference,
                 'payout_reference' => $payout?->provider_reference,
                 'payout_status' => $payout?->status,
                 'treasury_position_recognition_reference' => $allocation->recognitionOperationReference,

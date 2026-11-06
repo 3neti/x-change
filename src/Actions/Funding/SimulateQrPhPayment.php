@@ -43,14 +43,15 @@ class SimulateQrPhPayment
         return $this->record($intent->provider_request_id, $intent->funding_address_ciphertext, $intent->expected_amount_minor, $intent->currency, $mobile, $payerName);
     }
 
-    public function handlePaymentAttempt(PaymentAttempt $attempt, string $payerMobile, ?string $payerName = null): SimulatedQrPhPaymentData
+    public function handlePaymentAttempt(PaymentAttempt $attempt, string $payerMobile, ?string $payerName = null, ?string $paymentKey = null, ?int $amountMinor = null): SimulatedQrPhPaymentData
     {
         $this->guard->assertAvailable();
         $attempt = PaymentAttempt::query()->findOrFail($attempt->getKey());
         $mobile = MobileNumber::normalize($payerMobile);
 
         if ($attempt->provider_code !== 'qrph_simulator'
-            || $attempt->status !== PaymentAttemptStatus::AwaitingPayment
+            || (! in_array($attempt->status, [PaymentAttemptStatus::AwaitingPayment, PaymentAttemptStatus::Settled], true))
+            || ($attempt->status === PaymentAttemptStatus::Settled && blank($paymentKey))
             || blank($attempt->provider_request_id_ciphertext)
             || blank($attempt->funding_address_ciphertext)) {
             throw new InvalidArgumentException('A ready QR Ph simulator Payment Attempt is required.');
@@ -58,16 +59,24 @@ class SimulateQrPhPayment
         if ($mobile === null) {
             throw new InvalidArgumentException('A valid payer mobile number is required.');
         }
+        if ($amountMinor !== null && $amountMinor <= 0) {
+            throw new InvalidArgumentException('A simulated payment amount must be positive.');
+        }
 
-        return $this->record($attempt->provider_request_id_ciphertext, $attempt->funding_address_ciphertext, $attempt->expected_amount_minor, $attempt->currency, $mobile, $payerName);
+        return $this->record($attempt->provider_request_id_ciphertext, $attempt->funding_address_ciphertext, $amountMinor ?? $attempt->expected_amount_minor, $attempt->currency, $mobile, $payerName, $paymentKey);
     }
 
-    private function record(string $requestId, string $fundingAddress, int $amountMinor, string $currency, string $mobile, ?string $payerName): SimulatedQrPhPaymentData
+    private function record(string $requestId, string $fundingAddress, int $amountMinor, string $currency, string $mobile, ?string $payerName, ?string $paymentKey = null): SimulatedQrPhPaymentData
     {
         $name = trim((string) $payerName);
+        if ($paymentKey !== null && (trim($paymentKey) === '' || mb_strlen($paymentKey) > 191)) {
+            throw new InvalidArgumentException('A valid simulation payment key is required.');
+        }
+        $key = hash('sha256', $requestId."\0".($paymentKey === null ? 'single' : 'payment:'.$paymentKey));
 
         $attributes = [
             'provider_request_id' => $requestId,
+            'simulation_key_hash' => $key,
             'provider_transaction_id' => 'QRSIM-TXN-'.Str::upper((string) Str::ulid()),
             'provider_event_id' => 'QRSIM-EVT-'.Str::upper((string) Str::ulid()),
             'funding_address' => $fundingAddress,
@@ -83,14 +92,22 @@ class SimulateQrPhPayment
         ];
         $payloadHash = $this->payloadHash($attributes);
 
+        $transaction = $paymentKey === null ? SimulatedFundingTransaction::query()
+            ->where('provider_request_id', $requestId)->whereNull('simulation_key_hash')->first() : null;
         try {
-            $transaction = SimulatedFundingTransaction::query()->create([
-                ...$attributes,
-                'payload_hash' => $payloadHash,
-            ]);
+            if ($transaction !== null) {
+                if (! hash_equals($transaction->payload_hash, $payloadHash)) {
+                    throw new InvalidArgumentException('This simulator payment key has different payment details.');
+                }
+            } else {
+                $transaction = SimulatedFundingTransaction::query()->create([
+                    ...$attributes,
+                    'payload_hash' => $payloadHash,
+                ]);
+            }
         } catch (UniqueConstraintViolationException $exception) {
             $transaction = SimulatedFundingTransaction::query()
-                ->where('provider_request_id', $requestId)
+                ->where('simulation_key_hash', $key)
                 ->first();
 
             if (! $transaction instanceof SimulatedFundingTransaction

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
@@ -24,9 +25,15 @@ class DefaultDisbursementReconciliationService implements DisbursementReconcilia
 
     public function reconcile(DisbursementReconciliation|DisbursementReconciliationData $reconciliation): array
     {
-        $model = $reconciliation instanceof DisbursementReconciliation
-            ? $reconciliation
-            : DisbursementReconciliation::query()->findOrFail($reconciliation->id);
+        $id = $reconciliation instanceof DisbursementReconciliation ? $reconciliation->getKey() : $reconciliation->id;
+
+        return Cache::lock('x-change:disbursement-reconciliation:'.$id, 120)->block(5, function () use ($id): array {
+            return $this->reconcileLocked(DisbursementReconciliation::query()->findOrFail($id));
+        });
+    }
+
+    private function reconcileLocked(DisbursementReconciliation $model): array
+    {
 
         $beforeStatus = (string) $model->status;
 

@@ -14,6 +14,8 @@ use LBHurtado\XChange\Jobs\Funding\SyncStandingFundingAddressJob;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingIntentJob;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingWebhookReceiptJob;
 use LBHurtado\XChange\Jobs\Payment\MonitorPaymentAttemptJob;
+use LBHurtado\XChange\Jobs\Payment\ReconcileValueFlowPayoutJob;
+use LBHurtado\XChange\Jobs\Payment\VerifyAdditionalQrPaymentJob;
 use LBHurtado\XChange\Jobs\Payment\VerifyPaymentAttemptJob;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Providers\XChangeServiceProvider;
@@ -23,6 +25,7 @@ beforeEach(function (): void {
     config()->set('x-change.funding.providers.netbank.enabled', true);
     config()->set('x-change.payment.attempts.scheduled_verification_enabled', true);
     config()->set('x-change.payment.attempts.scheduled_batch_size', 100);
+    config()->set('x-change.payment.monitoring.scheduled_enabled', false);
 });
 
 it('queues only eligible enabled-provider Payment Attempts within the configured batch', function (): void {
@@ -113,10 +116,10 @@ it('registers the package-owned non-overlapping payment verification schedule', 
 
 it('queues only QR attempts inside the bounded monitoring window including settled attempts', function (): void {
     $live = scheduledPaymentAttempt(status: PaymentAttemptStatus::Settled);
-    $expired = scheduledPaymentAttempt(expiresAt: now()->subMinutes(10));
+    $expired = scheduledPaymentAttempt(expiresAt: now()->subDays(8));
     scheduledPaymentAttempt();
     PaymentAttempt::query()->whereKey($live->getKey())->update(['instructions_created_at' => now()]);
-    PaymentAttempt::query()->whereKey($expired->getKey())->update(['instructions_created_at' => now()->subMinutes(20)]);
+    PaymentAttempt::query()->whereKey($expired->getKey())->update(['instructions_created_at' => now()->subDays(9)]);
 
     $this->artisan('xchange:payments:monitor-open', ['--limit' => 50])->assertSuccessful();
 
@@ -127,19 +130,22 @@ it('queues only QR attempts inside the bounded monitoring window including settl
     );
 });
 
-it('registers monitoring only when explicitly enabled', function (): void {
-    $disabled = collect(app(Schedule::class)->events())
-        ->first(fn ($event): bool => $event->description === 'xchange:payments:monitor-open:netbank');
-
-    expect($disabled)->toBeNull();
-
+it('registers monitoring by default and respects the host setting', function (): void {
+    $schedule = app(Schedule::class);
+    $count = fn (): int => collect($schedule->events())
+        ->filter(fn ($event): bool => $event->description === 'xchange:payments:monitor-open:netbank')->count();
+    expect($count())->toBe(1);
+    config()->set('x-change.payment.monitoring.scheduled_enabled', false);
+    (new XChangeServiceProvider($this->app))->boot();
+    expect($count())->toBe(1);
     config()->set('x-change.payment.monitoring.scheduled_enabled', true);
     $provider = new XChangeServiceProvider($this->app);
     $provider->boot();
-    $enabled = collect(app(Schedule::class)->events())
+    $enabled = collect($schedule->events())
         ->first(fn ($event): bool => $event->description === 'xchange:payments:monitor-open:netbank');
 
     expect($enabled)->not->toBeNull()
+        ->and($count())->toBe(2)
         ->and($enabled->withoutOverlapping)->toBeTrue()
         ->and($enabled->onOneServer)->toBeTrue();
 });
@@ -207,15 +213,27 @@ it('shares a provider rate limit between funding and payment verification jobs',
     ))->withFakeQueueInteractions();
     $fundingRan = false;
     $paymentRan = false;
+    $additional = (new VerifyAdditionalQrPaymentJob(1, 'netbank'))->withFakeQueueInteractions();
+    $payout = (new ReconcileValueFlowPayoutJob(1, 'netbank'))->withFakeQueueInteractions();
+    $additionalRan = false;
+    $payoutRan = false;
     $funding->middleware()[1]->handle($funding, function () use (&$fundingRan): void {
         $fundingRan = true;
     });
     $payment->middleware()[1]->handle($payment, function () use (&$paymentRan): void {
         $paymentRan = true;
     });
+    $additional->middleware()[1]->handle($additional, function () use (&$additionalRan): void {
+        $additionalRan = true;
+    });
+    $payout->middleware()[1]->handle($payout, function () use (&$payoutRan): void {
+        $payoutRan = true;
+    });
 
-    expect($fundingRan)->toBeTrue()->and($paymentRan)->toBeFalse();
+    expect($fundingRan)->toBeTrue()->and($paymentRan)->toBeFalse()->and($additionalRan)->toBeFalse()->and($payoutRan)->toBeFalse();
     $payment->assertReleased();
+    $additional->assertReleased();
+    $payout->assertReleased();
     RateLimiter::clear($key);
 });
 
@@ -233,6 +251,8 @@ it('keeps rate-limited provider checks retryable without hiding repeated excepti
         new VerifyFundingWebhookReceiptJob(1),
         new VerifyPaymentAttemptJob(1, 'netbank', PaymentVerificationTrigger::Schedule),
         new MonitorPaymentAttemptJob(1, 'netbank'),
+        new VerifyAdditionalQrPaymentJob(1, 'netbank'),
+        new ReconcileValueFlowPayoutJob(1, 'netbank'),
     ];
 
     foreach ($jobs as $job) {
