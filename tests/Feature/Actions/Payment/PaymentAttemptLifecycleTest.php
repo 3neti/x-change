@@ -1645,6 +1645,7 @@ it('recovers a rejected routed installment after two payments against one QR', f
 });
 
 it('integrates the local NetBank reader with x-change payment persistence', function (): void {
+    Queue::fake();
     expect(method_exists(NetbankFundingProviderAdapter::class, 'incomingPayments'))->toBeTrue();
 
     config()->set('payment-gateway.netbank.funding.corporate_account_number', '113-001-00001-9');
@@ -1681,6 +1682,7 @@ it('integrates the local NetBank reader with x-change payment persistence', func
         ->and($attempt->observedPayments()->firstOrFail()->payer_mobile_ciphertext)->toBeNull()
         ->and($attempt->fresh()->status)->toBe(PaymentAttemptStatus::AwaitingPayment)
         ->and(DB::table('voucher_collections')->count())->toBe(0);
+    Queue::assertPushed(VerifyAdditionalQrPaymentJob::class, 2);
 });
 
 it('does not call NetBank after the QR observation window closes', function (): void {
