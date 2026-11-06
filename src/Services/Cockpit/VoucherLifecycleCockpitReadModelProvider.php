@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use JsonSerializable;
+use LBHurtado\SettlementEnvelope\Services\DriverService;
 use LBHurtado\Voucher\Data\VoucherOperationalSummaryData;
 use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Models\Voucher;
@@ -72,6 +73,7 @@ use LBHurtado\XChange\Data\Cockpit\CockpitVoucherEvidenceSummaryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitVoucherReadModelData;
 use LBHurtado\XChange\Data\Payment\VoucherCollectionProgressData;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
+use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\StoredValueHolderBinding;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Models\VoucherCollection;
@@ -169,12 +171,34 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
 
                         return $attachment;
                     }, data_get($detail, 'settlement_envelope.attachments', []));
-                    $types = collect(data_get($voucher->instructions, 'execution.document_requirements', []))
-                        ->filter(fn ($requirement): bool => data_get($requirement, 'contributor') === 'invited')
-                        ->map(fn ($requirement) => data_get($requirement, 'type'))
-                        ->filter(fn ($type): bool => is_string($type) && $type !== '')
-                        ->unique()->values()->all();
-                    if ($types !== [] && ($envelope = $voucher->envelope()->first()) !== null) {
+                    if (($envelope = $voucher->envelope()->first()) !== null) {
+                        $rejectionReasons = $envelope->attachments()->pluck('rejection_reason', 'id');
+                        $detail['settlement_envelope']['attachments'] = array_map(
+                            static function (array $attachment) use ($rejectionReasons): array {
+                                $attachment['rejection_reason'] = $rejectionReasons->get($attachment['id']);
+
+                                return $attachment;
+                            },
+                            $detail['settlement_envelope']['attachments'],
+                        );
+                        $detail['settlement_envelope']['signals'] = $envelope->signals()->get()
+                            ->map(fn ($signal): array => [
+                                'key' => (string) $signal->key,
+                                'label' => Str::headline((string) $signal->key),
+                                'present' => filled($signal->value),
+                                'value' => $signal->type === 'boolean' ? $signal->getBoolValue() : null,
+                            ])->all();
+                        $detail['settlement_envelope']['activity'] = $envelope->auditLogs()->limit(50)->get()
+                            ->map(fn ($entry): array => [
+                                'action' => (string) $entry->action,
+                                'occurred_at' => $entry->created_at?->toIso8601String(),
+                            ])->all();
+                        $driver = app(DriverService::class)->load($envelope->driver_id, $envelope->driver_version);
+                        $types = collect($driver->documents->items())
+                            ->map(fn ($document): string => $document->type)
+                            ->filter()->unique()->values()->all();
+                    }
+                    if (isset($envelope) && $envelope !== null && $types !== []) {
                         $detail['settlement_envelope']['contribution'] = [
                             'types' => $types,
                             'create_url' => route('x-change.cockpit.contribution-invitations.store', ['code' => $voucher->code]),
@@ -192,13 +216,21 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 $sliceProjection = ($this->slicePlans ?? app(VoucherSlicePlanProjection::class))->forVoucher($voucher);
                 $detail['pos_reference'] = $this->posSaleReferenceService()->forVoucher($voucher);
                 if (is_array($detail['collection'] ?? null)) {
-                    $payouts = DB::table('disbursement_reconciliations')
+                    $payouts = DisbursementReconciliation::query()
                         ->where('voucher_id', $voucher->getKey())
                         ->where('claim_type', 'value_flow')
-                        ->get(['status', 'internal_status', 'needs_review']);
+                        ->get(['id', 'status', 'internal_status', 'needs_review', 'meta']);
                     if ($payouts->isNotEmpty()) {
-                        $needsAttention = $payouts->contains(fn ($payout): bool => (bool) $payout->needs_review || $payout->status === 'failed');
-                        $allFinalized = $payouts->every(fn ($payout): bool => $payout->status === 'succeeded' && $payout->internal_status === 'finalized');
+                        $byId = $payouts->keyBy('id');
+                        $superseded = $payouts->filter(function ($payout) use ($byId): bool {
+                            $next = $byId->get(data_get($payout->meta, 'recovery_retry.payout_id'));
+
+                            return $next !== null
+                                && (int) data_get($next->meta, 'recovery.original_payout_id') === (int) $payout->id;
+                        })->modelKeys();
+                        $current = $payouts->reject(fn ($payout): bool => in_array($payout->id, $superseded, true));
+                        $needsAttention = $current->isEmpty() || $current->contains(fn ($payout): bool => (bool) $payout->needs_review || $payout->status === 'failed');
+                        $allFinalized = $current->isNotEmpty() && $current->every(fn ($payout): bool => $payout->status === 'succeeded' && $payout->internal_status === 'finalized');
                         $detail['collection']['payout_status'] = $needsAttention ? 'needs_attention' : ($allFinalized ? 'completed' : 'processing');
                     }
                 }

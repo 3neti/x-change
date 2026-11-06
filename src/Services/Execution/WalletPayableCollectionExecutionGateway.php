@@ -68,6 +68,7 @@ final readonly class WalletPayableCollectionExecutionGateway implements PayableC
                     'payment_attempt_reference' => $providerReference,
                     'provider_observation_id' => $context->meta['provider_observation_id'] ?? null,
                     'verification_source' => $context->meta['verification_source'] ?? null,
+                    ...isset($context->meta['reviewed_split_id']) ? ['reviewed_split_id' => $context->meta['reviewed_split_id']] : [],
                 ],
                 messages: ['Pay Code payment collected successfully.'],
             ),

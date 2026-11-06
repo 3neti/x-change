@@ -14,7 +14,7 @@ final class MonitorOpenPaymentAttemptsCommand extends Command
         {--provider=netbank : Payment provider code}
         {--limit= : Maximum QR attempts to inspect in this run}';
 
-    protected $description = 'Queue read-only monitoring of incoming provider payments for live QR attempts';
+    protected $description = 'Queue incoming provider payment monitoring within the reconciliation window';
 
     public function handle(): int
     {
@@ -29,13 +29,15 @@ final class MonitorOpenPaymentAttemptsCommand extends Command
         $batchSize = max(1, (int) config('x-change.payment.monitoring.scheduled_batch_size', 50));
         $requested = $this->option('limit');
         $limit = $requested === null ? $batchSize : min($batchSize, max(1, (int) $requested));
-        $grace = max(0, (int) config('x-change.payment.monitoring.expiry_grace_seconds', 300));
+        $days = max(1, (int) config('x-change.payment.attempts.late_reconciliation_days', 7));
+        $interval = max(60, (int) config('x-change.payment.monitoring.minimum_interval_seconds', 300));
         $queued = 0;
 
         PaymentAttempt::query()
             ->where('provider_code', $provider)
             ->whereNotNull('instructions_created_at')
-            ->where('expires_at', '>', now()->subSeconds($grace))
+            ->where('expires_at', '>', now()->subDays($days))
+            ->where(fn ($query) => $query->whereNull('last_monitored_at')->orWhere('last_monitored_at', '<=', now()->subSeconds($interval)))
             ->orderByRaw('CASE WHEN last_monitored_at IS NULL THEN 0 ELSE 1 END')
             ->oldest('last_monitored_at')
             ->oldest('id')

@@ -10,10 +10,12 @@ use InvalidArgumentException;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentQrDeliveryMode;
+use LBHurtado\XChange\Exceptions\UnresolvedPaymentReview;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\Payment\PaymentAttemptSessionGuard;
 use LBHurtado\XChange\Services\Payment\PaymentQrDeliveryPolicy;
+use LBHurtado\XChange\Services\Payment\SessionPaymentReview;
 use LBHurtado\XChange\Services\Settlement\DocumentPaymentGate;
 use LBHurtado\XChange\Services\Settlement\V2EvidenceEventJournal;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
@@ -32,6 +34,7 @@ class CreatePaymentAttempt
         private readonly PaymentQrDeliveryPolicy $qrDelivery,
         private readonly V2EvidenceEventJournal $v2Events,
         private readonly DocumentPaymentGate $documentGate,
+        private readonly SessionPaymentReview $paymentReview,
     ) {}
 
     /** @param list<PaymentQrDeliveryMode>|null $qrDeliveryModes */
@@ -54,6 +57,9 @@ class CreatePaymentAttempt
 
         $provider = strtolower($this->required($provider, 'Provider'));
         $browserKey = $this->required($browserKey, 'Browser session');
+        if ($this->paymentReview->exists($voucher, $browserKey)) {
+            throw new UnresolvedPaymentReview('A payment in this session requires review.');
+        }
         $idempotencyKey = $this->required($idempotencyKey, 'Idempotency key');
         $progress = $this->progress->compute($voucher);
         $feeMinor = app(PayCodeCommercialSaleService::class)

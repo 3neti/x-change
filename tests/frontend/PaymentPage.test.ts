@@ -36,6 +36,12 @@ const pendingPayment = {
 };
 
 describe('PaymentPage', () => {
+    it('warns a payer when a payment from the current session needs review', () => {
+        const wrapper = mount(PaymentPage, { props: { payment: { ...pendingPayment, session_payment_review: true, can_create_attempt: false } } });
+        expect(wrapper.get('[data-testid="payer-transaction-review"]').text()).toContain('Please do not pay again');
+        expect(wrapper.find('[data-testid="payer-create-qr"]').exists()).toBe(false);
+        wrapper.unmount();
+    });
     it('opens the report in recovery mode without enabling a new payment', () => {
         const wrapper = mount(PaymentPage, { props: { payment: { ...pendingPayment, repayment_mode: true, repayment_ready: true, recovery_mode: true, can_create_attempt: false } } });
         expect(wrapper.find('[data-testid="payer-recovery-report"] form').exists()).toBe(true);

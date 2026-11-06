@@ -8,10 +8,13 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use JsonException;
 use LBHurtado\EmiCore\Contracts\FundingProviderAdapter;
+use LBHurtado\EmiCore\Contracts\IncomingPaymentReader;
+use LBHurtado\EmiCore\Contracts\SpecificIncomingPaymentVerifier;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionRequestData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
 use LBHurtado\EmiCore\Data\Funding\FundingQrCodeData;
 use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
+use LBHurtado\EmiCore\Data\Funding\IncomingPaymentData;
 use LBHurtado\EmiCore\Data\Funding\ProviderEventHintData;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\EmiCore\Data\Funding\ProviderPayerIdentityData;
@@ -19,11 +22,12 @@ use LBHurtado\EmiCore\Data\Funding\ProviderWebhookReceiptData;
 use LBHurtado\EmiCore\Data\Funding\ProviderWebhookRequestData;
 use LBHurtado\EmiCore\Data\Funding\WebhookAuthenticationData;
 use LBHurtado\EmiCore\Exceptions\ProviderFundingNotObserved;
+use LBHurtado\EmiCore\Exceptions\ProviderFundingVerificationIndeterminate;
 use LBHurtado\XChange\Models\SimulatedFundingTransaction;
 use LBHurtado\XChange\Support\Funding\QrPhFundingSimulatorGuard;
 use LogicException;
 
-class QrPhSimulatorFundingProviderAdapter implements FundingProviderAdapter
+class QrPhSimulatorFundingProviderAdapter implements FundingProviderAdapter, IncomingPaymentReader, SpecificIncomingPaymentVerifier
 {
     private const Provider = 'qrph_simulator';
 
@@ -119,14 +123,64 @@ class QrPhSimulatorFundingProviderAdapter implements FundingProviderAdapter
         $this->guard->assertAvailable();
         $this->assertProvider($verification->provider);
         $requestId = trim((string) $verification->providerRequestId);
-        $transaction = SimulatedFundingTransaction::query()
+        $transactions = SimulatedFundingTransaction::query()
             ->where('provider_request_id', $requestId)
-            ->first();
+            ->limit(2)->get();
+        if ($transactions->count() > 1) {
+            throw new ProviderFundingVerificationIndeterminate('Multiple simulated payments require individual verification.');
+        }
+        $transaction = $transactions->first();
 
         if (! $transaction instanceof SimulatedFundingTransaction) {
             throw new ProviderFundingNotObserved('The simulated QR Ph provider has not observed this payment.');
         }
 
+        return $this->observation($verification, $transaction);
+    }
+
+    public function verifyIncomingPayment(FundingVerificationData $verification, string $providerTransactionId): ProviderFundingObservationData
+    {
+        $this->guard->assertAvailable();
+        $this->assertProvider($verification->provider);
+        $transaction = SimulatedFundingTransaction::query()
+            ->where('provider_transaction_id', $providerTransactionId)
+            ->where('provider_request_id', (string) $verification->providerRequestId)->first();
+        if (! $transaction instanceof SimulatedFundingTransaction) {
+            throw new ProviderFundingNotObserved('The simulated QR Ph provider has not observed this payment.');
+        }
+
+        return $this->observation($verification, $transaction);
+    }
+
+    public function incomingPayments(FundingVerificationData $verification): array
+    {
+        $this->guard->assertAvailable();
+        $this->assertProvider($verification->provider);
+        if (blank($verification->providerRequestId) || blank($verification->fundingAddress)) {
+            return [];
+        }
+        $query = SimulatedFundingTransaction::query()->where('provider_request_id', $verification->providerRequestId)
+            ->where('funding_address', $verification->fundingAddress);
+        if ($verification->observedAfter !== null) {
+            $query->where('occurred_at', '>=', $verification->observedAfter);
+        }
+        if ($verification->observedBefore !== null) {
+            $query->where('occurred_at', '<=', $verification->observedBefore);
+        }
+
+        return $query->orderBy('id')->get()->map(static fn (SimulatedFundingTransaction $transaction): IncomingPaymentData => new IncomingPaymentData(
+            transactionId: $transaction->provider_transaction_id, amountMinor: $transaction->gross_amount_minor,
+            currency: $transaction->currency, status: $transaction->status,
+            occurredAt: DateTimeImmutable::createFromInterface($transaction->occurred_at),
+            settledAt: $transaction->settled_at === null ? null : DateTimeImmutable::createFromInterface($transaction->settled_at),
+            referenceId: $transaction->provider_request_id, settlementRail: 'INSTAPAY',
+            payerName: $transaction->payer_name_ciphertext, payerAccountNumber: null,
+            payerInstitutionCode: null, payerMobile: $transaction->payer_mobile_ciphertext,
+        ))->all();
+    }
+
+    private function observation(FundingVerificationData $verification, SimulatedFundingTransaction $transaction): ProviderFundingObservationData
+    {
         $destinationVerified = hash_equals(
             $transaction->funding_address,
             (string) $verification->fundingAddress,

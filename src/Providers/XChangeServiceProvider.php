@@ -390,6 +390,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Leads\LeadCampaignEndpointController;
 use LBHurtado\XChange\Http\Middleware\EnsureXChangeIsCommissioned;
 use LBHurtado\XChange\Http\Middleware\RequireInitialPinSetup;
 use LBHurtado\XChange\Http\Responses\MobileFirstRegisterResponse;
+use LBHurtado\XChange\Lifecycle\Runners\Support\RecoverySimulationPayoutProvider;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRepository;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleUserModelResolver;
 use LBHurtado\XChange\Listeners\HandleConfirmedDisbursement;
@@ -1390,6 +1391,9 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->bind(UserLifecycleServiceContract::class, UserLifecycleService::class);
 
         $this->app->singleton(PayoutProvider::class, function ($app) {
+            if (config('x-change.recovery_simulation.enabled', false)) {
+                return $app->make(RecoverySimulationPayoutProvider::class);
+            }
             $provider = config(
                 'x-change.payout.provider',
                 'netbank'

@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\DB;
 use LBHurtado\XChange\Data\Payment\ObservedPaymentTransactionData;
 use LBHurtado\XChange\Data\Payment\PaymentObservationNoticeData;
 use LBHurtado\XChange\Events\PaymentTransactionObserved;
+use LBHurtado\XChange\Exceptions\ObservedPaymentEvidenceConflict;
+use LBHurtado\XChange\Exceptions\ObservedPaymentOwnershipConflict;
 use LBHurtado\XChange\Models\ObservedPaymentTransaction;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Payment\PaymentObservationJournal;
@@ -50,11 +52,11 @@ class RecordObservedPaymentTransaction
             );
 
             if ($transaction->payment_attempt_id !== $attempt->getKey()) {
-                throw new \LogicException('Provider transaction is already attributed to another Payment Attempt.');
+                throw new ObservedPaymentOwnershipConflict('Provider transaction is already attributed to another Payment Attempt.');
             }
 
             if ($transaction->amount_minor !== $payment->amountMinor || $transaction->currency !== strtoupper($payment->currency)) {
-                throw new \LogicException('Provider transaction evidence changed its amount or currency.');
+                throw new ObservedPaymentEvidenceConflict('Provider transaction evidence changed its amount or currency.');
             }
 
             $normalizedStatus = strtolower(trim($payment->providerStatus));

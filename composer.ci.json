@@ -1,0 +1,165 @@
+{
+    "name": "3neti/x-change",
+    "description": "X-Change API-first financial product platform for onboarding, wallet, pricing, Pay Code issuance, and redemption workflows.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Lester B. Hurtado"
+        },
+        {
+            "name": "Anaïs Santos",
+            "email": "geckaanais17@gmail.com"
+        }
+    ],
+    "repositories": [
+        {
+            "name": "emi-netbank-vcs",
+            "type": "vcs",
+            "url": "https://github.com/3neti/emi-netbank.git"
+        },
+        {
+            "name": "emi-core-vcs",
+            "type": "vcs",
+            "url": "https://github.com/3neti/emi-core.git"
+        },
+        {
+            "type": "git",
+            "url": "https://github.com/3neti/onboarding.git"
+        },
+        {
+            "type": "git",
+            "url": "https://github.com/3neti/x-action.git"
+        },
+        {
+            "type": "git",
+            "url": "https://github.com/3neti/x-campaign.git"
+        },
+        {
+            "type": "git",
+            "url": "https://github.com/3neti/x-commerce.git"
+        },
+        {
+            "type": "git",
+            "url": "https://github.com/3neti/x-feedback.git"
+        },
+        {
+            "type": "git",
+            "url": "https://github.com/3neti/x-journal.git"
+        },
+        {
+            "type": "git",
+            "url": "https://github.com/3neti/x-ray.git"
+        },
+        {
+            "type": "git",
+            "url": "https://github.com/3neti/x-rider.git"
+        },
+        {
+            "type": "git",
+            "url": "https://github.com/3neti/x-provisioning.git"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "3neti/cash": "^1.3",
+        "3neti/contact": "^1.1",
+        "3neti/emi-core": "dev-codex/payment-reliability-transactions as 2.1.0",
+        "3neti/emi-netbank": "dev-codex/payment-reliability-transactions as 2.4.0",
+        "3neti/emi-paynamics": "^2.1.0",
+        "3neti/form-flow": "^1.11.0",
+        "3neti/form-handler-kyc": "^1.1.4",
+        "3neti/form-handler-location": "^1.2.4",
+        "3neti/form-handler-otp": "^1.2.2",
+        "3neti/form-handler-selfie": "^1.1.3",
+        "3neti/form-handler-signature": "^1.2.2",
+        "3neti/instruction": "^0.2",
+        "3neti/laravel-model-channel": "^1.1",
+        "3neti/merchant": "^1.2",
+        "3neti/money-issuer": "^1.1",
+        "3neti/onboarding": "^1.0",
+        "3neti/report-registry": "^1.1",
+        "3neti/settlement-envelope": "^1.5",
+        "3neti/settlement-envelope-aui": "^1.1",
+        "3neti/settlement-envelope-philhealth": "^1.1",
+        "3neti/voucher": "^1.4",
+        "3neti/wallet": "^2.0",
+        "3neti/x-action": "^1.0",
+        "3neti/x-affiliation": "^0.1.1",
+        "3neti/x-campaign": "^1.1.4",
+        "3neti/x-commerce": "^1.2",
+        "3neti/x-feedback": "^1.1.4",
+        "3neti/x-journal": "^1.1",
+        "3neti/x-provisioning": "^1.0",
+        "3neti/x-ray": "^1.0.4",
+        "3neti/x-rider": "^1.0",
+        "3neti/x-stamp": "^1.4",
+        "3neti/x-stamp-designs": "^1.3",
+        "brick/money": "^0.10.3",
+        "endroid/qr-code": "^6.1",
+        "illuminate/contracts": "^13.0",
+        "illuminate/events": "^13.0",
+        "illuminate/http": "^13.0",
+        "illuminate/queue": "^13.0",
+        "illuminate/routing": "^13.0",
+        "illuminate/support": "^13.0",
+        "laravel/passport": "^13.7",
+        "league/flysystem-aws-s3-v3": "^3.25.1",
+        "spatie/laravel-data": "^4.21",
+        "symfony/yaml": "^7.4"
+    },
+    "suggest": {
+        "3neti/x-legal": "Provides jurisdiction-aware advisory Treasury vocabulary and policy traceability.",
+        "laravel/horizon": "Allows a Redis-enabled host application to operate and inspect the declared x-change queue lanes."
+    },
+    "require-dev": {
+        "dedoc/scramble": "^0.13.20",
+        "inertiajs/inertia-laravel": "^3.0",
+        "khanamiryan/qrcode-detector-decoder": "^2.0",
+        "orchestra/testbench": "^11.0",
+        "pestphp/pest": "^4.4",
+        "pestphp/pest-plugin-laravel": "^4.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "LBHurtado\\XChange\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "LBHurtado\\XChange\\Tests\\": "tests/"
+        }
+    },
+    "bin": [
+        "bin/x-change-cloud"
+    ],
+    "extra": {
+        "x-change": {
+            "cloud-recipe": "resources/deployment/laravel-cloud.yaml",
+            "deployment-guide": "docs/deployment/X_CHANGE_CLOUD_RECIPE.md",
+            "adopt-command": "x-change:adopt"
+        },
+        "settlement-os": {
+            "queue-manifest": "resources/settlement-os/queues.php"
+        },
+        "laravel": {
+            "providers": [
+                "LBHurtado\\XChange\\Providers\\XChangeServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "php-http/discovery": true
+        }
+    },
+    "scripts": {
+        "test": "php -d memory_limit=2G vendor/bin/pest",
+        "test:unit": "php -d memory_limit=2G vendor/bin/pest",
+        "test:coverage": "php -d memory_limit=2G vendor/bin/pest --coverage"
+    }
+}

@@ -9,7 +9,7 @@ const password = ref('');
 const verified = ref(false);
 const passwordRequired = ref(false);
 const documentTypes = ref<string[]>([]);
-const documents = ref<{ id: number; name: string; type: string; status: string; view_url: string }[]>([]);
+const documents = ref<{ id: number; name: string; type: string; status: string; rejection_reason?: string | null; view_url: string }[]>([]);
 const documentType = ref('');
 const file = ref<File | null>(null);
 const working = ref(false);
@@ -89,7 +89,7 @@ onMounted(async () => {
       </form>
       <section v-if="documents.length" aria-label="Your submissions">
         <h2 class="font-semibold">Your submissions</h2>
-        <ul class="mt-2 divide-y"><li v-for="document in documents" :key="document.id" class="flex items-center justify-between gap-3 py-3 text-sm"><span>{{ document.name }} · {{ document.status }}</span><form :action="document.view_url" method="POST" target="_blank"><input type="hidden" name="_token" :value="csrf()"><input type="hidden" name="token" :value="token"><button type="submit" class="font-semibold underline">View</button></form></li></ul>
+        <ul class="mt-2 divide-y"><li v-for="document in documents" :key="document.id" class="flex items-center justify-between gap-3 py-3 text-sm"><span>{{ document.name }} · {{ document.status }}<span v-if="document.rejection_reason" class="mt-1 block text-rose-700 dark:text-rose-300">{{ document.rejection_reason }}</span></span><form :action="document.view_url" method="POST" target="_blank"><input type="hidden" name="_token" :value="csrf()"><input type="hidden" name="token" :value="token"><button type="submit" class="font-semibold underline">View</button></form></li></ul>
       </section>
     </div>
   </main>

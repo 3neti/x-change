@@ -5,9 +5,9 @@ import BankEMISelect from "@/components/financial/BankEMISelect.vue";
 import CockpitPayCodeShareCard from "./CockpitPayCodeShareCard.vue";
 import CockpitPayCodeTerminalControls from "./CockpitPayCodeTerminalControls.vue";
 import CockpitManualCopyButton from "./CockpitManualCopyButton.vue";
-import CockpitDocumentReview from "./CockpitDocumentReview.vue";
-import CockpitContributionInvitations from "./CockpitContributionInvitations.vue";
+import CockpitSettlementEnvelope from "./CockpitSettlementEnvelope.vue";
 import CockpitPaymentRecoveryReports from "./CockpitPaymentRecoveryReports.vue";
+import CockpitValueFlowRecovery from "./CockpitValueFlowRecovery.vue";
 import { Form, Link } from "@inertiajs/vue3";
 import {
   Activity,
@@ -54,6 +54,7 @@ type WorkspaceTab =
   | "slices"
   | "claim"
   | "settlement"
+  | "envelope"
   | "audit"
   | "engineering";
 type DetailRecord = Record<string, unknown>;
@@ -372,6 +373,12 @@ const tabs = computed(() => [
     count: envelope.value.available === true ? 1 : 0,
   },
   {
+    key: "envelope" as const,
+    label: "Settlement Envelope",
+    icon: FileCheck2,
+    count: envelope.value.available === true ? 1 : 0,
+  },
+  {
     key: "audit" as const,
     label: "Activity",
     icon: History,
@@ -476,14 +483,6 @@ const instructionCurrency = computed(() => {
   );
 
   return text(currencyFact?.value) || "PHP";
-});
-
-const envelopeProgress = computed(() => {
-  const checklist = record(envelope.value.checklist);
-  const total = number(checklist.required_count);
-  const complete = number(checklist.required_completed);
-
-  return total > 0 ? Math.round((complete / total) * 100) : 0;
 });
 
 function evidenceKey(item: Record<string, unknown>): string {
@@ -773,6 +772,7 @@ function workspaceTarget(): { tab: WorkspaceTab; claimId: number | null } {
     "slices",
     "claim",
     "settlement",
+    "envelope",
     "audit",
     "engineering",
   ];
@@ -1143,7 +1143,7 @@ function number(value: unknown): number {
             type="button"
             class="group flex w-full items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-left transition hover:border-blue-300 hover:bg-blue-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:border-blue-900 dark:bg-blue-950/30 dark:hover:border-blue-800 dark:hover:bg-blue-950/50"
             data-testid="pay-code-overview-settlement-teaser"
-            @click="activeTab = 'settlement'"
+            @click="activeTab = 'envelope'"
           >
             <span class="flex min-w-0 items-center gap-3">
               <span
@@ -1162,7 +1162,7 @@ function number(value: unknown): number {
                   {{
                     envelope.available === true
                       ? `Settlement envelope: ${title(envelope.status) || "Available"}`
-                      : "No settlement envelope required"
+                      : "No settlement envelope attached"
                   }}
                 </span>
               </span>
@@ -1881,6 +1881,7 @@ function number(value: unknown): number {
         data-testid="pay-code-settlement-tab"
       >
         <CockpitPaymentRecoveryReports :code="code" />
+        <CockpitValueFlowRecovery :code="code" />
         <div>
           <h3 class="text-sm font-semibold text-slate-950 dark:text-white">Money</h3>
           <dl class="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
@@ -1904,155 +1905,6 @@ function number(value: unknown): number {
           <p v-if="collection.is_overpaid === true" class="mt-1 text-xs font-semibold text-amber-800 dark:text-amber-200">Overpaid by {{ formatMoney(collection.overpaid_amount_minor, collection.currency) }}</p>
         </div>
         <div
-          v-if="envelope.available === true"
-          class="grid gap-5 xl:grid-cols-[18rem_minmax(0,1fr)]"
-        >
-          <aside class="rounded-2xl bg-slate-950 p-5 text-white">
-            <div class="flex items-center gap-2 text-slate-300">
-              <Landmark class="h-4 w-4" /><span class="text-xs font-semibold"
-                >Settlement Envelope</span
-              >
-            </div>
-            <p class="mt-4 font-mono text-lg font-bold">
-              {{ text(envelope.reference) }}
-            </p>
-            <p class="mt-1 text-xs text-slate-400">
-              {{ text(envelope.driver) }}@{{ text(envelope.driver_version) }}
-            </p>
-            <div class="mt-5">
-              <div class="flex justify-between text-xs">
-                <span>Required evidence</span
-                ><strong>{{ envelopeProgress }}%</strong>
-              </div>
-              <div class="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-                <div
-                  class="h-full rounded-full bg-emerald-400 transition-all"
-                  :style="{ width: `${envelopeProgress}%` }"
-                ></div>
-              </div>
-            </div>
-            <div class="mt-5 flex items-center gap-2">
-              <span
-                :class="[
-                  'h-2.5 w-2.5 rounded-full',
-                  envelope.settleable === true
-                    ? 'bg-emerald-400'
-                    : 'bg-amber-400',
-                ]"
-              ></span
-              ><span class="text-xs font-semibold">{{
-                envelope.settleable === true
-                  ? "Ready for execution"
-                  : "Readiness incomplete"
-              }}</span>
-            </div>
-          </aside>
-          <div class="space-y-4">
-            <div class="grid gap-3 sm:grid-cols-2">
-              <article
-                class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/30"
-                data-testid="pay-code-settlement-status-card"
-              >
-                <p
-                  class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500"
-                >
-                  Envelope Status
-                </p>
-                <p class="mt-1 font-semibold text-slate-950 dark:text-white">
-                  {{ title(envelope.status) }}
-                </p>
-              </article>
-              <article
-                class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/30"
-                data-testid="pay-code-settlement-version-card"
-              >
-                <p
-                  class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500"
-                >
-                  Payload Version
-                </p>
-                <p class="mt-1 font-semibold text-slate-950 dark:text-white">
-                  {{ text(envelope.payload_version) }}
-                </p>
-              </article>
-            </div>
-            <section
-              v-if="list(envelope.gates).length"
-              class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/30"
-              data-testid="pay-code-settlement-gates"
-            >
-              <h4 class="text-xs font-semibold text-slate-950 dark:text-white">
-                Readiness Gates
-              </h4>
-              <div class="mt-2 flex flex-wrap gap-2">
-                <span
-                  v-for="gate in list(envelope.gates)"
-                  :key="text(gate.key)"
-                  :class="[
-                    'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.65rem] font-semibold',
-                    gate.satisfied === true
-                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200'
-                      : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200',
-                  ]"
-                  ><Check v-if="gate.satisfied === true" class="h-3 w-3" />{{
-                    text(gate.label)
-                  }}</span
-                >
-              </div>
-            </section>
-            <CockpitContributionInvitations
-              v-if="text(record(envelope.contribution).create_url)"
-              :create-url="text(record(envelope.contribution).create_url)"
-              :page-url="text(record(envelope.contribution).page_url)"
-              :types="(record(envelope.contribution).types as string[]) ?? []"
-              :invitations="(record(envelope.contribution).invitations as any[]) ?? []"
-            />
-            <section
-              v-if="list(envelope.attachments).length"
-              class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/30"
-              data-testid="pay-code-settlement-documents"
-            >
-              <h4 class="text-xs font-semibold text-slate-950 dark:text-white">
-                Documents
-              </h4>
-              <div
-                class="mt-2 divide-y divide-slate-200 rounded-2xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800"
-              >
-                <div
-                  v-for="attachment in list(envelope.attachments)"
-                  :key="number(attachment.id)"
-                >
-                <a
-                  :href="text(attachment.reveal_href)"
-                  target="_blank"
-                  class="flex items-center justify-between gap-3 p-3 text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                  ><span class="flex min-w-0 items-center gap-2"
-                    ><FileText class="h-4 w-4 shrink-0 text-slate-500" /><span
-                      class="truncate font-semibold text-slate-950 dark:text-white"
-                      >{{ text(attachment.label) }}</span
-                    ></span
-                  ><span class="flex items-center gap-2 text-slate-500"
-                    >{{ title(attachment.review_status)
-                    }}<ChevronRight class="h-3.5 w-3.5" /></span
-                ></a>
-                <CockpitDocumentReview
-                  v-if="text(attachment.review_href) && text(attachment.review_status) === 'pending'"
-                  :review-url="text(attachment.review_href)"
-                />
-                </div>
-              </div>
-            </section>
-          </div>
-        </div>
-        <div
-          v-else
-          class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/30"
-        >
-          <FileCheck2 class="size-5 shrink-0 text-emerald-600" />
-          <p class="text-sm font-medium text-slate-800 dark:text-slate-100">No separate settlement record for this Pay Code.</p>
-        </div>
-
-        <div
           class="rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/30"
         >
           <div class="flex items-start gap-3">
@@ -2074,6 +1926,8 @@ function number(value: unknown): number {
           </div>
         </div>
       </section>
+
+      <CockpitSettlementEnvelope v-else-if="activeTab === 'envelope'" :envelope="envelope" />
 
       <section
         v-else-if="activeTab === 'audit'"

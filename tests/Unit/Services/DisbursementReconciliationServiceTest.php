@@ -11,6 +11,22 @@ use LBHurtado\XChange\Events\DisbursementRejected;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Services\DefaultDisbursementReconciliationService;
 
+it('reloads the payout after acquiring the reconciliation lock', function (): void {
+    Event::fake();
+    $record = DisbursementReconciliation::query()->create([
+        'voucher_code' => 'LOCK-TEST', 'claim_type' => 'value_flow', 'provider' => 'netbank',
+        'provider_reference' => 'LOCK-REF', 'provider_transaction_id' => 'LOCK-TX',
+        'status' => 'pending', 'internal_status' => 'reserved', 'amount' => 20, 'currency' => 'PHP',
+    ]);
+    DisbursementReconciliation::query()->whereKey($record->id)->update(['status' => 'unknown']);
+    $fetcher = Mockery::mock(DisbursementStatusFetcherContract::class);
+    $fetcher->shouldReceive('fetch')->once()->with(Mockery::on(fn ($data): bool => $data->status === 'unknown'))->andReturn(['status' => 'pending']);
+    $resolver = Mockery::mock(DisbursementStatusResolverContract::class);
+    $resolver->shouldReceive('resolveFromFetchedStatus')->once()->andReturn('pending');
+    $result = (new DefaultDisbursementReconciliationService(Mockery::mock(DisbursementReconciliationStoreContract::class), $fetcher, $resolver))->reconcile($record);
+    expect($result['before_status'])->toBe('unknown')->and($record->fresh()->status)->toBe('pending');
+});
+
 it('reconciles a pending record to succeeded', function () {
     Event::fake();
 

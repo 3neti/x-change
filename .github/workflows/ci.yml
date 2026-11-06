@@ -18,6 +18,9 @@ jobs:
   php-shards:
     name: PHP shard ${{ matrix.shard }}/4
     runs-on: ubuntu-latest
+    env:
+      COMPOSER: composer.ci.json
+      COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ secrets.GITHUB_TOKEN }}"}}'
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -56,6 +59,9 @@ jobs:
   php-verification:
     name: PHP verification
     runs-on: ubuntu-latest
+    env:
+      COMPOSER: composer.ci.json
+      COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ secrets.GITHUB_TOKEN }}"}}'
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7

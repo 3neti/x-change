@@ -74,6 +74,40 @@ function frozenCollectionWalletId(array $result): string
     );
 }
 
+it('creates a nonblocking default envelope for newly issued collectible vouchers', function (string $type, string $flow, bool $v2): void {
+    $issuer = actingAsTestUser();
+    $payload = collectionWalletAuthorityPayload($type, $flow, null);
+    if ($v2) {
+        $payload['execution'] = ['schema' => 'voucher.execution.v2', 'driver' => 'default'];
+        if ($type === 'settlement') {
+            $payload['execution']['metadata'] = ['settlement_workflow' => 'collect_for_settlement'];
+        }
+    }
+    $result = app(PayCodeIssuanceContract::class)->issue($issuer, $payload);
+    $voucher = Voucher::query()->findOrFail($result['voucher_id']);
+
+    expect($voucher->envelopes()->count())->toBe(1)
+        ->and($voucher->envelope()->firstOrFail()->driver_id)->toBe('x-change.documents')
+        ->and(data_get($voucher->metadata, 'instructions.execution.document_requirements'))->toBeNull();
+    app(DocumentPaymentGate::class)->ensureReady($voucher);
+})->with([
+    ['payable', 'collectible', false], ['settlement', 'settlement', false],
+    ['payable', 'collectible', true], ['settlement', 'settlement', true],
+]);
+
+it('attaches an envelope to every voucher generated in a batch', function (): void {
+    $issuer = actingAsTestUser();
+    $payload = collectionWalletAuthorityPayload('payable', 'collectible', null);
+    $payload['count'] = 2;
+    app(PayCodeIssuanceContract::class)->issue($issuer, $payload);
+    $vouchers = Voucher::query()->where('owner_type', $issuer->getMorphClass())->where('owner_id', $issuer->getKey())->get();
+
+    expect($vouchers)->toHaveCount(2);
+    foreach ($vouchers as $voucher) {
+        expect($voucher->envelopes()->count())->toBe(1);
+    }
+});
+
 it('issues v2 payment documents with stable identity and separate audit references', function (): void {
     config()->set('settlement-envelope.driver_disk', 'test-envelope-drivers');
     config()->set('filesystems.disks.test-envelope-drivers', [

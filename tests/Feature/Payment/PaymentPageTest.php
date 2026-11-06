@@ -2,22 +2,32 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Exceptions;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Queue;
+use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\PaymentGateway\Exceptions\NetbankFundingRequestFailed;
 use LBHurtado\PaymentGateway\Funding\NetbankFundingApiClient;
 use LBHurtado\PaymentGateway\Funding\NetbankFundingProviderAdapter;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Actions\Funding\ClaimFundingEvidence;
 use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
 use LBHurtado\XChange\Actions\Payment\IssuePaymentInstructions;
+use LBHurtado\XChange\Actions\Payment\RecordObservedPaymentTransaction;
 use LBHurtado\XChange\Actions\Payment\SettleVerifiedPaymentAttempt;
+use LBHurtado\XChange\Actions\Payment\VerifyPaymentAttempt;
+use LBHurtado\XChange\Data\Payment\ObservedPaymentTransactionData;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
+use LBHurtado\XChange\Jobs\Payment\MonitorPaymentAttemptJob;
+use LBHurtado\XChange\Jobs\Payment\ReconcileValueFlowPayoutJob;
 use LBHurtado\XChange\Jobs\Payment\VerifyPaymentAttemptJob;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
@@ -358,6 +368,130 @@ it('checks NetBank history and applies an exact settled payment once', function 
             ->whereType('props.payment.receipt.completed_at', 'string')
             ->whereType('props.payment.receipt.payments.0.completed_at', 'string')
             ->etc());
+});
+
+it('does not collect a provider transaction already claimed for funding', function (): void {
+    $user = actingAsTestUser();
+    $voucher = publicPaymentVoucherForUser($user);
+    $balanceBefore = (float) $user->wallet->balanceFloat;
+    $this->post(route('x-change.pay.attempts.store', ['code' => $voucher->code]))->assertRedirect();
+    $attempt = PaymentAttempt::query()->sole();
+    $data = publicExactPaymentObservation($attempt);
+    $observation = app(RecordProviderFundingObservation::class)->handle($data);
+    $intent = FundingIntent::query()->create([
+        'account_reference' => 'wallet:'.$user->wallet->uuid,
+        'provider_code' => 'netbank', 'purpose' => 'on_demand_issuance',
+        'expected_amount_minor' => 10000, 'currency' => 'PHP', 'status' => 'verified', 'version' => 1,
+        'idempotency_key_hash' => hash('sha256', 'other-funding'),
+        'idempotency_fingerprint' => hash('sha256', 'other-funding-fingerprint'),
+        'created_by_type' => 'test', 'created_by_id' => 'operator-1',
+        'matched_observation_id' => $observation->getKey(), 'provider_transaction_id' => $observation->provider_transaction_id,
+        'expires_at' => now()->addHour(),
+    ]);
+    app(ClaimFundingEvidence::class)->handle($intent, $observation);
+    $this->paymentAdapter->fundingObservation = $data;
+
+    $result = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    expect($result->status)->toBe(PaymentAttemptStatus::Suspense)
+        ->and($result->events()->where('event_type', 'provider_payment_already_applied')->exists())->toBeTrue()
+        ->and(VoucherCollection::query()->count())->toBe(0)
+        ->and((float) $user->wallet->fresh()->balanceFloat)->toBe($balanceBefore);
+});
+
+it('prevents the same payer session from creating another QR while its payment is under review', function (): void {
+    $voucher = publicPaymentVoucher();
+    $this->post(route('x-change.pay.attempts.store', ['code' => $voucher->code]))->assertRedirect();
+    $attempt = PaymentAttempt::query()->sole();
+    $transaction = app(RecordObservedPaymentTransaction::class)->handle($attempt,
+        new ObservedPaymentTransactionData('session-review-transaction', $attempt->expected_amount_minor, 'PHP', 'settled'));
+    DB::table('x_change_payment_transaction_reviews')->insert([
+        'observed_payment_transaction_id' => $transaction->getKey(), 'reason_code' => 'payment_attribution_or_eligibility',
+        'status' => 'open', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+    $this->withHeader('X-Inertia', 'true')->get(route('x-change.pay.show', ['code' => $voucher->code, 'attempt' => $attempt->reference]))
+        ->assertOk()->assertJsonPath('props.payment.session_payment_review', true)->assertJsonPath('props.payment.can_create_attempt', false);
+    $this->post(route('x-change.pay.attempts.store', ['code' => $voucher->code]))
+        ->assertRedirect()->assertSessionHas('payment_notice', 'A payment is under review. Please do not pay again.');
+    expect(PaymentAttempt::query()->count())->toBe(1);
+    $this->flushSession();
+    $this->withHeader('X-Inertia', 'true')->get(route('x-change.pay.show', ['code' => $voucher->code]))
+        ->assertOk()->assertJsonPath('props.payment.session_payment_review', false);
+});
+
+it('only exposes the transaction reference to an authorized recovery operator', function (): void {
+    $user = actingAsTestUser();
+    $voucher = publicPaymentVoucherForUser($user);
+    $this->post(route('x-change.pay.attempts.store', ['code' => $voucher->code]))->assertRedirect();
+    $attempt = PaymentAttempt::query()->sole();
+    $transaction = app(RecordObservedPaymentTransaction::class)->handle($attempt,
+        new ObservedPaymentTransactionData('protected-provider-reference', $attempt->expected_amount_minor, 'PHP', 'settled'));
+    DB::table('x_change_payment_transaction_reviews')->insert([
+        'observed_payment_transaction_id' => $transaction->getKey(), 'reason_code' => 'payment_attribution_or_eligibility',
+        'status' => 'open', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+    $url = route('x-change.operations.recovery.index');
+    $this->actingAs($user)->withHeader('X-Inertia', 'true')->get($url)->assertForbidden()->assertDontSee('protected-provider-reference');
+    Gate::define('x-change.recovery.manage', fn ($actor): bool => $actor->is($user));
+    $this->get($url)->assertOk()->assertJsonPath('props.transactionReviews.0.provider_transaction_reference', 'protected-provider-reference')
+        ->assertJsonPath('props.transactionReviews.0.provider_status', 'settled');
+});
+
+it('requires an audited operator decision to mark a payment accounted elsewhere', function (): void {
+    $user = actingAsTestUser();
+    $voucher = publicPaymentVoucherForUser($user);
+    $this->post(route('x-change.pay.attempts.store', ['code' => $voucher->code]))->assertRedirect();
+    $attempt = PaymentAttempt::query()->sole();
+    $transaction = app(RecordObservedPaymentTransaction::class)->handle($attempt,
+        new ObservedPaymentTransactionData('accounted-provider-transaction', $attempt->expected_amount_minor, 'PHP', 'settled'));
+    $reviewId = DB::table('x_change_payment_transaction_reviews')->insertGetId([
+        'observed_payment_transaction_id' => $transaction->id, 'reason_code' => 'payment_attribution_or_eligibility',
+        'status' => 'open', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+    $url = route('x-change.operations.recovery.payment.accounted', ['review' => $reviewId]);
+    $this->actingAs($user)->post($url, ['accounted_elsewhere' => true, 'reason' => 'Matched to an existing collection'])->assertForbidden();
+    Gate::define('x-change.recovery.manage', fn ($actor): bool => $actor->is($user));
+    $this->post($url, ['reason' => 'Matched to an existing collection'])->assertSessionHasErrors('accounted_elsewhere');
+    $this->post($url, ['accounted_elsewhere' => true, 'reason' => 'Matched to an existing collection'])->assertRedirect();
+    $case = DB::table('x_change_payment_transaction_reviews')->where('id', $reviewId)->first();
+    expect($case->status)->toBe('resolved')->and($case->resolution_code)->toBe('accounted_elsewhere')
+        ->and($case->resolved_by_id)->toBe((string) $user->getKey())
+        ->and(Crypt::decryptString($case->resolution_note_ciphertext))->toBe('Matched to an existing collection')
+        ->and(VoucherCollection::query()->count())->toBe(0);
+    $this->post($url, ['accounted_elsewhere' => true, 'reason' => 'Matched to an existing collection'])->assertNotFound();
+});
+
+it('restores a payer session payment attempt when returning to the Pay Code', function (): void {
+    $voucher = publicPaymentVoucher();
+    $this->post(route('x-change.pay.attempts.store', ['code' => $voucher->code]))->assertRedirect();
+    $attempt = PaymentAttempt::query()->sole();
+    $this->withHeader('X-Inertia', 'true')->get(route('x-change.pay.show', ['code' => $voucher->code]))
+        ->assertOk()->assertJsonPath('props.payment.attempt.reference', $attempt->reference);
+    $this->get(route('x-change.pay.show', ['code' => $voucher->code, 'recover' => 1]))
+        ->assertOk()->assertJsonPath('props.payment.attempt', null);
+    $this->flushSession();
+    $this->get(route('x-change.pay.show', ['code' => $voucher->code]))
+        ->assertOk()->assertJsonPath('props.payment.attempt', null);
+});
+
+it('lets only the voucher owner request the scheduled payment and payout checks', function (): void {
+    $owner = actingAsTestUser();
+    $voucher = publicPaymentVoucherForUser($owner);
+    $this->post(route('x-change.pay.attempts.store', ['code' => $voucher->code]))->assertRedirect();
+    $attempt = PaymentAttempt::query()->sole();
+    $payout = DisbursementReconciliation::query()->create([
+        'voucher_id' => $voucher->id, 'voucher_code' => $voucher->code, 'claim_type' => 'value_flow',
+        'provider' => 'netbank', 'provider_reference' => 'owner-check-payout', 'provider_transaction_id' => 'provider-payout-id',
+        'status' => 'pending', 'internal_status' => 'reserved', 'amount' => 20, 'currency' => 'PHP',
+    ]);
+    Queue::fake();
+    $url = route('x-change.cockpit.pay-codes.value-flow-payouts.check', ['code' => $voucher->code]);
+    $other = actingAsTestUser(0);
+    $this->actingAs($other)->postJson($url)->assertNotFound();
+    Queue::assertNothingPushed();
+    $this->actingAs($owner)->postJson($url)->assertOk();
+    Queue::assertPushed(MonitorPaymentAttemptJob::class, fn ($job): bool => $job->paymentAttemptId === $attempt->id);
+    Queue::assertPushed(VerifyPaymentAttemptJob::class, fn ($job): bool => $job->paymentAttemptId === $attempt->id);
+    Queue::assertPushed(ReconcileValueFlowPayoutJob::class, fn ($job): bool => $job->payoutId === $payout->id);
 });
 
 it('queues manual verification through the same job as scheduled checks', function (): void {

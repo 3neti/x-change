@@ -9,6 +9,38 @@ use LBHurtado\SettlementEnvelope\Models\EnvelopeContributionToken;
 use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
 use LBHurtado\XChange\Services\Settlement\DocumentPaymentGate;
 
+it('allows an owner to invite optional contributions without altering payment requirements', function (): void {
+    config()->set('settlement-envelope.driver_disk', 'test-envelope-drivers');
+    config()->set('filesystems.disks.test-envelope-drivers', [
+        'driver' => 'local', 'root' => dirname(__DIR__, 3).'/vendor/3neti/settlement-envelope/resources/stubs/drivers',
+    ]);
+    $owner = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'voucher_type' => 'payable', 'target_amount' => 100,
+        'metadata' => ['flow_type' => 'collectible', 'collection_wallet_id' => $owner->wallet->id],
+    ]));
+    $envelope = new Envelope(['reference_code' => $voucher->code, 'driver_id' => 'simple.test', 'driver_version' => '1.0.0', 'status' => 'draft']);
+    $envelope->reference()->associate($voucher);
+    $envelope->save();
+    $before = data_get($voucher->metadata, 'instructions');
+
+    $this->get(route('x-change.cockpit.pay-codes.show', ['code' => $voucher->code]), ['X-Inertia' => 'true'])
+        ->assertSuccessful()->assertJsonFragment(['TEST_DOC']);
+    $invitation = $this->postJson(route('x-change.cockpit.contribution-invitations.store', ['code' => $voucher->code]), [
+        'document_types' => ['TEST_DOC'], 'expires_days' => 7,
+    ])->assertCreated()->json('token');
+    Storage::fake('local');
+    config()->set('filesystems.disks.local.visibility', 'private');
+    $this->postJson(route('x-change.contributions.documents.store'), [
+        'token' => $invitation,
+        'document_type' => 'TEST_DOC',
+        'file' => UploadedFile::fake()->createWithContent('support.pdf', "%PDF-1.4\nexample\n%%EOF"),
+    ])->assertCreated();
+
+    expect(data_get($voucher->fresh()->metadata, 'instructions'))->toBe($before);
+    app(DocumentPaymentGate::class)->ensureReady($voucher->fresh());
+});
+
 it('allows only the voucher owner to create and revoke scoped invitations', function (): void {
     config()->set('settlement-envelope.driver_disk', 'test-envelope-drivers');
     config()->set('filesystems.disks.test-envelope-drivers', [
@@ -80,6 +112,9 @@ it('allows only the voucher owner to create and revoke scoped invitations', func
     $this->actingAs($owner)->postJson($review, ['decision' => 'rejected'])->assertUnprocessable();
     $this->postJson($review, ['decision' => 'rejected', 'reason' => 'Please resubmit'])->assertNoContent();
     expect($attachment->fresh()->review_status)->toBe('rejected');
+    $this->postJson($context, ['token' => $token->token])->assertSuccessful()
+        ->assertJsonPath('documents.0.rejection_reason', 'Please resubmit');
+    $this->postJson($context, ['token' => $separate->json('token')])->assertSuccessful()->assertJsonCount(0, 'documents');
     expect(fn () => app(DocumentPaymentGate::class)->ensureReady($voucher->fresh()))
         ->toThrow(VoucherRequiresSettlementEnvelope::class);
     $this->postJson($review, ['decision' => 'accepted'])->assertStatus(409);

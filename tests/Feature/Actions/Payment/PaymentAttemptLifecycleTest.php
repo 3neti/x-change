@@ -11,12 +11,17 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
 use LBHurtado\EmiCore\Contracts\DirectQrFundingInstructionIssuer;
+use LBHurtado\EmiCore\Contracts\SpecificIncomingPaymentVerifier;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionRequestData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
 use LBHurtado\EmiCore\Data\Funding\FundingQrMerchantData;
+use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
+use LBHurtado\EmiCore\Enums\PayoutStatus;
 use LBHurtado\EmiCore\Exceptions\ProviderFundingNotObserved;
+use LBHurtado\EmiCore\Exceptions\ProviderFundingVerificationIndeterminate;
 use LBHurtado\Merchant\Contracts\MerchantProfileRepositoryContract;
 use LBHurtado\PaymentGateway\Funding\NetbankFundingApiClient;
 use LBHurtado\PaymentGateway\Funding\NetbankFundingProviderAdapter;
@@ -24,21 +29,30 @@ use LBHurtado\SettlementEnvelope\Services\EnvelopeService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\Services\ExecutionEngine;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
+use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Actions\Payment\ApplyReviewedPayment;
+use LBHurtado\XChange\Actions\Payment\ApplyReviewedSplitPayment;
 use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
+use LBHurtado\XChange\Actions\Payment\CreditReviewedExcess;
 use LBHurtado\XChange\Actions\Payment\IssuePaymentInstructions;
 use LBHurtado\XChange\Actions\Payment\MonitorPaymentAttempt;
 use LBHurtado\XChange\Actions\Payment\RecordObservedPaymentTransaction;
 use LBHurtado\XChange\Actions\Payment\RecordVoucherCollection;
+use LBHurtado\XChange\Actions\Payment\SettleAdditionalQrPayment;
 use LBHurtado\XChange\Actions\Payment\SettleVerifiedPaymentAttempt;
+use LBHurtado\XChange\Actions\Payment\TransitionPaymentAttempt;
 use LBHurtado\XChange\Actions\Payment\VerifyPaymentAttempt;
 use LBHurtado\XChange\Actions\Redemption\PrepareVoucherClaimEvidence;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Actions\Settlement\VerifyPhilhealthSettlementAmount;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
+use LBHurtado\XChange\Contracts\SettlementReadinessGateContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
+use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Data\FundingDecisionData;
 use LBHurtado\XChange\Data\Payment\ObservedPaymentTransactionData;
 use LBHurtado\XChange\Data\Payment\PaymentObservationNoticeData;
@@ -46,8 +60,11 @@ use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Events\PaymentTransactionObserved;
+use LBHurtado\XChange\Exceptions\LatePaymentRequiresReview;
 use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
+use LBHurtado\XChange\Jobs\Payment\VerifyAdditionalQrPaymentJob;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\ObservedPaymentTransaction;
 use LBHurtado\XChange\Models\PartnerApiClient;
 use LBHurtado\XChange\Models\PartnerApiPayCodeReference;
@@ -61,11 +78,13 @@ use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Execution\ValueFlowPayoutService;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\FundingQrMerchantProfileResolver;
+use LBHurtado\XChange\Services\Payment\SessionPaymentReview;
 use LBHurtado\XChange\Services\Settlement\IssuerInvoiceDrafts;
 use LBHurtado\XChange\Services\Settlement\V2EventWebhookDelivery;
 use LBHurtado\XChange\Services\Settlement\V2EvidenceEventJournal;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\SettlementEnvelopeMetadataSyncService;
+use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LBHurtado\XChange\Support\Funding\FundingMerchantSnapshot;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 use LBHurtado\XChange\Tests\Fakes\User;
@@ -75,6 +94,25 @@ use LBHurtado\XFeedback\Data\FeedbackWebhookMessageData;
 use LBHurtado\XFeedback\Data\FeedbackWebhookSendResultData;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
+
+class SpecificPaymentTestAdapter extends FakeFundingProviderAdapter implements SpecificIncomingPaymentVerifier
+{
+    public array $specificObservations = [];
+
+    public ?Throwable $specificFailure = null;
+
+    public int $specificCalls = 0;
+
+    public function verifyIncomingPayment(FundingVerificationData $verification, string $providerTransactionId): ProviderFundingObservationData
+    {
+        $this->specificCalls++;
+        if ($this->specificFailure !== null) {
+            throw $this->specificFailure;
+        }
+
+        return $this->specificObservations[$providerTransactionId];
+    }
+}
 
 beforeEach(function (): void {
     config()->set('x-change.funding.providers.netbank.enabled', true);
@@ -698,6 +736,581 @@ it('records provider status changes once without altering collection state', fun
         ->toThrow(LogicException::class);
 });
 
+it('records changed provider transaction evidence for review instead of repeatedly failing monitoring', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $attempt = issuedPaymentAttempt($voucher);
+    $this->paymentAdapter->incomingPayments = [new ObservedPaymentTransactionData('changing-amount', 2500, 'PHP', 'settled')];
+    app(MonitorPaymentAttempt::class)->handle($attempt);
+    $this->paymentAdapter->incomingPayments = [new ObservedPaymentTransactionData('changing-amount', 2600, 'PHP', 'settled')];
+    app(MonitorPaymentAttempt::class)->handle($attempt->fresh());
+    app(MonitorPaymentAttempt::class)->handle($attempt->fresh());
+    expect(DB::table('x_change_payment_transaction_reviews')->count())->toBe(1)
+        ->and(DB::table('x_change_payment_transaction_reviews')->value('reason_code'))->toBe('payment_evidence_changed')
+        ->and(VoucherCollection::query()->count())->toBe(0);
+});
+
+it('opens one review and stops repeated verification when provider evidence is ambiguous', function (): void {
+    Queue::fake();
+    $attempt = issuedPaymentAttempt(paymentAttemptCollectibleVoucher());
+    $adapter = new SpecificPaymentTestAdapter;
+    $adapter->incomingPayments = [new ObservedPaymentTransactionData('ambiguous-transaction', $attempt->expected_amount_minor, 'PHP', 'settled')];
+    $adapter->specificFailure = new ProviderFundingVerificationIndeterminate('ambiguous evidence');
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    app(MonitorPaymentAttempt::class)->handle($attempt);
+    $transaction = $attempt->observedPayments()->sole();
+    app()->call([new VerifyAdditionalQrPaymentJob($transaction->getKey(), 'netbank'), 'handle']);
+    app()->call([new VerifyAdditionalQrPaymentJob($transaction->getKey(), 'netbank'), 'handle']);
+    expect($adapter->specificCalls)->toBe(1)
+        ->and(DB::table('x_change_payment_transaction_reviews')->value('reason_code'))->toBe('provider_evidence_ambiguous')
+        ->and(VoucherCollection::query()->count())->toBe(0);
+});
+
+it('credits a verified excess payment to the issuer once with an audited operator decision', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 20,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $issuer->id, 'collection_wallet_id' => $issuer->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    recordPaymentAttemptCollection($voucher, 20);
+    $data = exactPaymentObservation($attempt);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $transaction = app(RecordObservedPaymentTransaction::class)->handle($attempt, new ObservedPaymentTransactionData(
+        $data->providerTransactionId, 2000, 'PHP', 'settled', occurredAt: $data->occurredAt, settledAt: $data->settledAt,
+    ));
+    $reviewId = DB::table('x_change_payment_transaction_reviews')->insertGetId([
+        'observed_payment_transaction_id' => $transaction->id, 'reason_code' => 'excess_payment',
+        'status' => 'open', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+    $adapter = new SpecificPaymentTestAdapter;
+    $adapter->specificObservations[$data->providerTransactionId] = $data;
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    $principal = app(TreasuryPrincipalReferenceResolverContract::class)->resolve($issuer);
+    $clientFunds = fn (): int => collect(app(TreasuryPositionReadModelContract::class)->forPrincipal($principal))
+        ->first(fn ($position): bool => $position->purpose === TreasuryPositionPurpose::ClientFunds)?->balanceMinor ?? 0;
+    $balance = $clientFunds();
+    $action = app(CreditReviewedExcess::class);
+    $incorrectEvidence = clone $data;
+    $incorrectEvidence->fundingAddress = 'sha256:'.hash('sha256', 'different-destination');
+    $incorrectEvidence->payloadHash = hash('sha256', 'incorrect-excess-evidence');
+    $adapter->specificObservations[$data->providerTransactionId] = $incorrectEvidence;
+    expect(fn () => $action->handle($reviewId, $issuer, 'Verified extra payment'))
+        ->toThrow(RuntimeException::class, 'not eligible');
+    expect($clientFunds())->toBe($balance)
+        ->and(DB::table('x_change_payment_transaction_reviews')->where('id', $reviewId)->value('status'))->toBe('open');
+    $adapter->specificObservations[$data->providerTransactionId] = $data;
+    Gate::define('x-change.recovery.manage', fn ($actor): bool => $actor->is($issuer));
+    $this->actingAs($issuer)->post("/x/operations/recovery/payments/{$reviewId}/credit-excess", [
+        'reason' => 'Verified extra payment', 'confirmed' => true,
+    ])->assertRedirect()->assertSessionHasNoErrors();
+    $intent = FundingIntent::query()->findOrFail(
+        DB::table('x_change_payment_transaction_reviews')->where('id', $reviewId)->value('resolution_funding_intent_id'),
+    );
+    $replay = $action->handle($reviewId, $issuer, 'Verified extra payment');
+    $review = DB::table('x_change_payment_transaction_reviews')->where('id', $reviewId)->first();
+    expect($intent->is($replay))->toBeTrue()
+        ->and($adapter->specificCalls)->toBe(2)
+        ->and($clientFunds())->toBe($balance + 2000)
+        ->and($review->resolution_code)->toBe('credited_client_funds')
+        ->and(Crypt::decryptString($review->resolution_note_ciphertext))->toBe('Verified extra payment')
+        ->and(DB::table('x_change_funding_settlements')->where('funding_intent_id', $intent->id)->count())->toBe(1);
+});
+
+it('applies a reviewed payment only to a matching candidate and records the decision once', function (): void {
+    Queue::fake();
+    $issuer = actingAsTestUser();
+    $voucher = paymentAttemptCollectibleVoucherForUser($issuer);
+    $first = issuedPaymentAttempt($voucher);
+    $second = app(IssuePaymentInstructions::class)->handle(app(CreatePaymentAttempt::class)->handle(
+        $voucher, 'netbank', 'review-second-session', 'review-second-request',
+    ));
+    $data = exactPaymentObservation($second);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $transaction = app(RecordObservedPaymentTransaction::class)->handle($first, new ObservedPaymentTransactionData(
+        $data->providerTransactionId, $second->expected_amount_minor, 'PHP', 'settled', occurredAt: $data->occurredAt, settledAt: $data->settledAt,
+    ));
+    $reviewId = DB::table('x_change_payment_transaction_reviews')->insertGetId([
+        'observed_payment_transaction_id' => $transaction->id, 'reason_code' => 'ambiguous',
+        'status' => 'open', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+    DB::table('x_change_payment_review_attempts')->insert(['review_id' => $reviewId, 'payment_attempt_id' => $second->id]);
+    $adapter = new SpecificPaymentTestAdapter;
+    $adapter->specificObservations[$data->providerTransactionId] = $data;
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    $action = app(ApplyReviewedPayment::class);
+    expect(fn () => $action->handle($reviewId, $first->id, $issuer, 'Checked provider evidence'))
+        ->toThrow(RuntimeException::class, 'not a review candidate');
+    $wrongDestination = clone $data;
+    $wrongDestination->fundingAddress = 'sha256:'.hash('sha256', 'another-destination');
+    $wrongDestination->payloadHash = hash('sha256', 'different-provider-evidence');
+    $adapter->specificObservations[$data->providerTransactionId] = $wrongDestination;
+    expect(fn () => $action->handle($reviewId, $second->id, $issuer, 'Checked provider evidence'))
+        ->toThrow(RuntimeException::class, 'does not match');
+    expect(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(0)
+        ->and(DB::table('x_change_payment_transaction_reviews')->where('id', $reviewId)->value('status'))->toBe('open');
+    $adapter->specificObservations[$data->providerTransactionId] = $data;
+    Gate::define('x-change.recovery.manage', fn ($actor): bool => $actor->is($issuer));
+    $this->actingAs($issuer)->post("/x/operations/recovery/payments/{$reviewId}/apply", [
+        'reason' => 'Checked provider evidence', 'confirmed' => true, 'attempt_id' => $second->id,
+    ])->assertRedirect()->assertSessionHasNoErrors();
+    $collection = VoucherCollection::query()->findOrFail(
+        DB::table('x_change_payment_transaction_reviews')->where('id', $reviewId)->value('resolution_voucher_collection_id'),
+    );
+    $replay = $action->handle($reviewId, $second->id, $issuer, 'Checked provider evidence');
+    $review = DB::table('x_change_payment_transaction_reviews')->where('id', $reviewId)->first();
+    expect($collection->is($replay))->toBeTrue()
+        ->and($review->resolution_payment_attempt_id)->toBe($second->id)
+        ->and(Crypt::decryptString($review->resolution_note_ciphertext))->toBe('Checked provider evidence')
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(1)
+        ->and($adapter->specificCalls)->toBe(2);
+    expect(fn () => $action->handle($reviewId, $first->id, $issuer, 'Checked provider evidence'))
+        ->toThrow(RuntimeException::class, 'different attempt');
+});
+
+it('serializes concurrent operator credits for the same excess evidence', function (): void {
+    if (! in_array(DB::connection()->getDriverName(), ['mysql', 'pgsql'], true) || ! function_exists('pcntl_fork')) {
+        test()->markTestSkipped('Requires a dedicated MySQL or PostgreSQL database and pcntl.');
+    }
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $issuer = actingAsTestUser();
+    fundTestUserClientFunds($issuer, 10000);
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 20,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $issuer->id, 'collection_wallet_id' => $issuer->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    recordPaymentAttemptCollection($voucher, 20);
+    $data = exactPaymentObservation($attempt);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $transaction = app(RecordObservedPaymentTransaction::class)->handle($attempt, new ObservedPaymentTransactionData(
+        $data->providerTransactionId, 2000, 'PHP', 'settled', occurredAt: $data->occurredAt, settledAt: $data->settledAt,
+    ));
+    $reviewId = DB::table('x_change_payment_transaction_reviews')->insertGetId([
+        'observed_payment_transaction_id' => $transaction->id, 'reason_code' => 'excess_payment',
+        'status' => 'open', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+    $adapter = new SpecificPaymentTestAdapter;
+    $adapter->specificObservations[$data->providerTransactionId] = $data;
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    $children = [];
+    $channels = [];
+    $paths = [];
+    DB::purge();
+    for ($i = 0; $i < 2; $i++) {
+        $channel = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
+        $path = tempnam(sys_get_temp_dir(), 'excess-race-');
+        if ($channel === false || $path === false) {
+            throw new RuntimeException('Unable to prepare concurrent review.');
+        }
+        $pid = pcntl_fork();
+        if ($pid === -1) {
+            throw new RuntimeException('Unable to start concurrent review.');
+        }
+        if ($pid === 0) {
+            fclose($channel[0]);
+            DB::purge();
+            foreach (array_keys(app()->getBindings()) as $binding) {
+                if (str_starts_with($binding, 'Bavix\\Wallet\\')) {
+                    app()->forgetInstance($binding);
+                }
+            }
+            fread($channel[1], 1);
+            try {
+                $result = app(CreditReviewedExcess::class)->handle($reviewId, $issuer, 'Verified extra payment');
+                file_put_contents($path, (string) $result->id);
+                exit(0);
+            } catch (Throwable $exception) {
+                file_put_contents($path, get_class($exception).': '.$exception->getMessage());
+                exit(1);
+            }
+        }
+        fclose($channel[1]);
+        $children[] = $pid;
+        $channels[] = $channel[0];
+        $paths[] = $path;
+    }
+    foreach ($channels as $channel) {
+        fwrite($channel, 'x');
+        fclose($channel);
+    }
+    foreach ($children as $pid) {
+        pcntl_waitpid($pid, $status);
+    }
+    DB::purge();
+    $results = array_map(fn (string $path): string => trim((string) file_get_contents($path)), $paths);
+    foreach ($paths as $path) {
+        unlink($path);
+    }
+    expect($results[0])->toMatch('/^\d+$/')->and($results[1])->toBe($results[0])
+        ->and(DB::table('x_change_funding_settlements')->where('funding_intent_id', (int) $results[0])->count())->toBe(1)
+        ->and(DB::table('x_change_payment_transaction_reviews')->where('id', $reviewId)->value('resolution_code'))->toBe('credited_client_funds');
+});
+
+it('serializes concurrent operator decisions for an ambiguous payment', function (): void {
+    if (! in_array(DB::connection()->getDriverName(), ['mysql', 'pgsql'], true) || ! function_exists('pcntl_fork')) {
+        test()->markTestSkipped('Requires a dedicated MySQL or PostgreSQL database and pcntl.');
+    }
+    Queue::fake();
+    $issuer = actingAsTestUser();
+    $voucher = paymentAttemptCollectibleVoucherForUser($issuer);
+    $first = issuedPaymentAttempt($voucher);
+    $second = app(IssuePaymentInstructions::class)->handle(app(CreatePaymentAttempt::class)->handle(
+        $voucher, 'netbank', 'race-second-session', 'race-second-request',
+    ));
+    $data = exactPaymentObservation($second);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $transaction = app(RecordObservedPaymentTransaction::class)->handle($first, new ObservedPaymentTransactionData(
+        $data->providerTransactionId, $second->expected_amount_minor, 'PHP', 'settled', occurredAt: $data->occurredAt, settledAt: $data->settledAt,
+    ));
+    $reviewId = DB::table('x_change_payment_transaction_reviews')->insertGetId([
+        'observed_payment_transaction_id' => $transaction->id, 'reason_code' => 'ambiguous',
+        'status' => 'open', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+    foreach ([$first->id, $second->id] as $attemptId) {
+        DB::table('x_change_payment_review_attempts')->insert(['review_id' => $reviewId, 'payment_attempt_id' => $attemptId]);
+    }
+    $adapter = new SpecificPaymentTestAdapter;
+    $adapter->specificObservations[$data->providerTransactionId] = $data;
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    $children = [];
+    $channels = [];
+    $paths = [];
+    DB::purge();
+    for ($i = 0; $i < 2; $i++) {
+        $channel = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
+        $path = tempnam(sys_get_temp_dir(), 'ambiguous-race-');
+        if ($channel === false || $path === false) {
+            throw new RuntimeException('Unable to prepare concurrent review.');
+        }
+        $pid = pcntl_fork();
+        if ($pid === -1) {
+            throw new RuntimeException('Unable to start concurrent review.');
+        }
+        if ($pid === 0) {
+            fclose($channel[0]);
+            DB::purge();
+            foreach (array_keys(app()->getBindings()) as $binding) {
+                if (str_starts_with($binding, 'Bavix\\Wallet\\')) {
+                    app()->forgetInstance($binding);
+                }
+            }
+            fread($channel[1], 1);
+            try {
+                $result = app(ApplyReviewedPayment::class)->handle($reviewId, $second->id, $issuer, 'Checked provider evidence');
+                file_put_contents($path, (string) $result->id);
+                exit(0);
+            } catch (Throwable $exception) {
+                file_put_contents($path, get_class($exception).': '.$exception->getMessage());
+                exit(1);
+            }
+        }
+        fclose($channel[1]);
+        $children[] = $pid;
+        $channels[] = $channel[0];
+        $paths[] = $path;
+    }
+    foreach ($channels as $channel) {
+        fwrite($channel, 'x');
+        fclose($channel);
+    }
+    foreach ($children as $pid) {
+        pcntl_waitpid($pid, $status);
+    }
+    DB::purge();
+    $results = array_map(fn (string $path): string => trim((string) file_get_contents($path)), $paths);
+    foreach ($paths as $path) {
+        unlink($path);
+    }
+    expect($results[0])->toMatch('/^\d+$/')->and($results[1])->toBe($results[0])
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(1)
+        ->and(DB::table('x_change_payment_transaction_reviews')->where('id', $reviewId)->value('resolution_payment_attempt_id'))->toBe($second->id);
+});
+
+it('atomically collects the target and credits an excess from one reviewed provider payment', function (bool $v2): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $issuer = actingAsTestUser();
+    fundTestUserClientFunds($issuer, 10000);
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'voucher_type' => 'payable', 'target_amount' => 100,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $issuer->id, 'collection_wallet_id' => $issuer->wallet->id],
+    ]));
+    if ($v2) {
+        $metadata = $voucher->metadata;
+        data_set($metadata, 'instructions.execution', ['schema' => 'voucher.execution.v2', 'events' => ['settle' => ['actor' => 'payer']]]);
+        $voucher->forceFill(['metadata' => $metadata])->save();
+        $voucher->refresh();
+    }
+    $attempt = issuedPaymentAttempt($voucher);
+    $data = exactPaymentObservation($attempt, amountMinor: 12000);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $transaction = app(RecordObservedPaymentTransaction::class)->handle($attempt, new ObservedPaymentTransactionData(
+        $data->providerTransactionId, 12000, 'PHP', 'settled', occurredAt: $data->occurredAt, settledAt: $data->settledAt,
+    ));
+    $reviewId = DB::table('x_change_payment_transaction_reviews')->insertGetId([
+        'observed_payment_transaction_id' => $transaction->id, 'reason_code' => 'payment_attribution_or_eligibility',
+        'status' => 'open', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+    DB::table('x_change_payment_review_attempts')->insert(['review_id' => $reviewId, 'payment_attempt_id' => $attempt->id]);
+    $adapter = new SpecificPaymentTestAdapter;
+    $adapter->specificObservations[$data->providerTransactionId] = $data;
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    $principal = app(TreasuryPrincipalReferenceResolverContract::class)->resolve($issuer);
+    $balance = fn (): int => collect(app(TreasuryPositionReadModelContract::class)->forPrincipal($principal))
+        ->first(fn ($position): bool => $position->purpose === TreasuryPositionPurpose::ClientFunds)?->balanceMinor ?? 0;
+    $before = $balance();
+    $action = app(ApplyReviewedSplitPayment::class);
+    expect(fn () => $action->handle($reviewId, $attempt->id, $issuer, 'Verified the full payment', 10000, 3000))
+        ->toThrow(RuntimeException::class, 'does not require')
+        ->and(DB::table('x_change_reviewed_payment_splits')->count())->toBe(0)
+        ->and($balance())->toBe($before);
+    expect(fn () => DB::transaction(function () use ($action, $reviewId, $attempt, $issuer): void {
+        $action->handle($reviewId, $attempt->id, $issuer, 'Verified the full payment', 10000, 2000);
+        throw new RuntimeException('Simulated transaction failure');
+    }))->toThrow(RuntimeException::class, 'Simulated transaction failure');
+    expect(DB::table('x_change_reviewed_payment_splits')->count())->toBe(0)
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(0)
+        ->and(DB::table('x_change_payment_transaction_reviews')->where('id', $reviewId)->value('status'))->toBe('open')
+        ->and($balance())->toBe($before);
+    Gate::define('x-change.recovery.manage', fn ($actor): bool => $actor->is($issuer));
+    $this->actingAs($issuer)->post("/x/operations/recovery/payments/{$reviewId}/split", [
+        'reason' => 'Verified the full payment', 'confirmed' => true, 'attempt_id' => $attempt->id,
+        'expected_collection_minor' => 10000, 'expected_excess_minor' => 2000,
+    ])->assertRedirect()->assertSessionHasNoErrors();
+    $collection = VoucherCollection::query()->findOrFail(DB::table('x_change_payment_transaction_reviews')->where('id', $reviewId)->value('resolution_voucher_collection_id'));
+    $replay = $action->handle($reviewId, $attempt->id, $issuer, 'Verified the full payment', 10000, 2000);
+    app(SettleVerifiedPaymentAttempt::class)->handle($attempt->fresh(), PaymentVerificationTrigger::Payer);
+    expect($collection->is($replay))->toBeTrue()
+        ->and($collection->collected_amount_minor)->toBe(10000)
+        ->and($balance())->toBe($before + 12000)
+        ->and(data_get($collection->meta, 'posting.provider_gross_amount_minor'))->toBe(12000)
+        ->and(data_get($collection->meta, 'posting.excess_amount_minor'))->toBe(2000)
+        ->and((int) DB::table('treasury_inventories')->where('inventory_reference', 'inventory:netbank:vca-cash')->value('balance_minor'))->toBe(12000)
+        ->and(DB::table('x_change_reviewed_payment_splits')->where('review_id', $reviewId)->value('excess_amount_minor'))->toBe(2000)
+        ->and(DB::table('x_change_payment_transaction_reviews')->where('id', $reviewId)->value('resolution_code'))->toBe('split_payment')
+        ->and($attempt->fresh()->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(1);
+})->with([false, true]);
+
+it('includes the payer fee once when splitting a reviewed payment', function (): void {
+    Queue::fake();
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:split-fee');
+    $issuer = actingAsTestUser(0);
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.commercial.enabled', true);
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision($issuer, ['netbank-primary']);
+    $funding = Mockery::mock(ProviderFundingPolicyContract::class);
+    $funding->shouldReceive('assertCanIssue')->once()->andReturn(FundingDecisionData::allowed(authority: 'local_ledger', availableMinor: 10000, requiredMinor: 0, currency: 'PHP', meta: ['provider' => 'netbank', 'topology' => 'ledger_pooled']));
+    app()->instance(ProviderFundingPolicyContract::class, $funding);
+    $issued = app(GeneratePayCode::class)->handle(validPayCodePayload(0, 'INSTAPAY', [
+        'provider' => 'netbank', 'issuer_id' => $issuer->getKey(), 'voucher_type' => 'payable', 'target_amount' => 100,
+        'fee_bearer' => 'payer', '_meta' => ['idempotency_key' => 'split-fee-lifecycle'],
+        'execution' => ['schema' => 'voucher.execution.v2', 'driver' => 'default'],
+    ]));
+    $voucher = Voucher::query()->findOrFail($issued->voucher_id);
+    $fee = app(PayCodeCommercialSaleService::class)->outstandingCollectionFee($voucher);
+    expect($fee)->toBeGreaterThan(0);
+    $attempt = issuedPaymentAttempt($voucher);
+    $gross = 10000 + $fee + 2000;
+    $data = exactPaymentObservation($attempt, amountMinor: $gross);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $transaction = app(RecordObservedPaymentTransaction::class)->handle($attempt, new ObservedPaymentTransactionData(
+        $data->providerTransactionId, $gross, 'PHP', 'settled', occurredAt: $data->occurredAt, settledAt: $data->settledAt,
+    ));
+    $reviewId = DB::table('x_change_payment_transaction_reviews')->insertGetId([
+        'observed_payment_transaction_id' => $transaction->id, 'reason_code' => 'payment_attribution_or_eligibility',
+        'status' => 'open', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+    DB::table('x_change_payment_review_attempts')->insert(['review_id' => $reviewId, 'payment_attempt_id' => $attempt->id]);
+    $adapter = new SpecificPaymentTestAdapter;
+    $adapter->specificObservations[$data->providerTransactionId] = $data;
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    $collection = app(ApplyReviewedSplitPayment::class)->handle($reviewId, $attempt->id, $issuer, 'Verified payment and fee', 10000 + $fee, 2000);
+    expect($collection->collected_amount_minor)->toBe(10000)
+        ->and(data_get($collection->meta, 'fee_amount_minor'))->toBe($fee)
+        ->and(data_get($collection->meta, 'posting.excess_amount_minor'))->toBe(2000)
+        ->and(data_get($collection->meta, 'posting.provider_gross_amount_minor'))->toBe($gross)
+        ->and(app(PayCodeCommercialSaleService::class)->outstandingCollectionFee($voucher))->toBe(0);
+});
+
+it('splits a later payment on an already settled QR without changing its first collection', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $issuer = actingAsTestUser();
+    fundTestUserClientFunds($issuer, 10000);
+    $voucher = paymentAttemptCollectibleVoucherForUser($issuer);
+    $attempt = issuedPaymentAttempt($voucher);
+    PaymentAttempt::query()->whereKey($attempt->id)->update(['expected_amount_minor' => 7000]);
+    $attempt = $attempt->fresh();
+    $firstEvidence = exactPaymentObservation($attempt);
+    $firstEvidence->occurredAt = now()->toDateTimeImmutable();
+    $firstEvidence->settledAt = now()->toDateTimeImmutable();
+    $this->paymentAdapter->fundingObservation = $firstEvidence;
+    $first = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    $data = exactPaymentObservation($attempt, amountMinor: 5000);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $observed = app(RecordObservedPaymentTransaction::class)->handle($attempt, new ObservedPaymentTransactionData(
+        $data->providerTransactionId, 5000, 'PHP', 'settled', occurredAt: $data->occurredAt, settledAt: $data->settledAt,
+    ));
+    $reviewId = DB::table('x_change_payment_transaction_reviews')->insertGetId([
+        'observed_payment_transaction_id' => $observed->id, 'reason_code' => 'payment_attribution_or_eligibility',
+        'status' => 'open', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+    DB::table('x_change_payment_review_attempts')->insert(['review_id' => $reviewId, 'payment_attempt_id' => $attempt->id]);
+    $adapter = new SpecificPaymentTestAdapter;
+    $adapter->specificObservations[$data->providerTransactionId] = $data;
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    $collection = app(ApplyReviewedSplitPayment::class)->handle($reviewId, $attempt->id, $issuer, 'Verified the later payment', 3000, 2000);
+    expect($collection->collected_amount_minor)->toBe(3000)
+        ->and($attempt->fresh()->voucher_collection_id)->toBe($first->voucher_collection_id)
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(2)
+        ->and(app(VoucherCollectionProgressService::class)->compute($voucher->fresh())->remaining_to_collect_minor)->toBe(0);
+});
+
+it('routes only the collected portion of a reviewed split to the voucher destination', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    config()->set('omnipay.gateways.netbank.options.rails.INSTAPAY', ['enabled' => true, 'min_amount' => 100, 'max_amount' => 5000000]);
+    $issuer = actingAsTestUser();
+    fundTestUserClientFunds($issuer, 10000);
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'voucher_type' => 'payable', 'target_amount' => 100,
+        'execution' => ['schema' => 'voucher.execution.v2', 'driver' => 'default', 'value_flow' => ['destination' => 'instapay.gcash.mobile:09179999999']],
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $issuer->id, 'collection_wallet_id' => $issuer->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher->refresh());
+    $data = exactPaymentObservation($attempt, amountMinor: 12000);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $transaction = app(RecordObservedPaymentTransaction::class)->handle($attempt, new ObservedPaymentTransactionData(
+        $data->providerTransactionId, 12000, 'PHP', 'settled', occurredAt: $data->occurredAt, settledAt: $data->settledAt,
+    ));
+    $reviewId = DB::table('x_change_payment_transaction_reviews')->insertGetId([
+        'observed_payment_transaction_id' => $transaction->id, 'reason_code' => 'payment_attribution_or_eligibility',
+        'status' => 'open', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+    DB::table('x_change_payment_review_attempts')->insert(['review_id' => $reviewId, 'payment_attempt_id' => $attempt->id]);
+    $adapter = new SpecificPaymentTestAdapter;
+    $adapter->specificObservations[$data->providerTransactionId] = $data;
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    $principal = app(TreasuryPrincipalReferenceResolverContract::class)->resolve($issuer);
+    $balance = fn (): int => collect(app(TreasuryPositionReadModelContract::class)->forPrincipal($principal))
+        ->first(fn ($position): bool => $position->purpose === TreasuryPositionPurpose::ClientFunds)?->balanceMinor ?? 0;
+    $before = $balance();
+    $collection = app(ApplyReviewedSplitPayment::class)->handle($reviewId, $attempt->id, $issuer, 'Verified the full payment', 10000, 2000);
+    $payout = DisbursementReconciliation::query()->where('voucher_id', $voucher->id)->where('claim_type', 'value_flow')->sole();
+    expect($collection->collected_amount_minor)->toBe(10000)
+        ->and((int) data_get($payout->meta, 'amount_minor'))->toBe(10000)
+        ->and($balance())->toBe($before + 2000)
+        ->and((int) DB::table('treasury_inventories')->where('inventory_reference', 'inventory:netbank:vca-cash')->value('balance_minor'))->toBe(12000);
+});
+
+it('serializes concurrent split decisions against the same provider payment', function (): void {
+    if (! in_array(DB::connection()->getDriverName(), ['mysql', 'pgsql'], true) || ! function_exists('pcntl_fork')) {
+        test()->markTestSkipped('Requires a dedicated MySQL or PostgreSQL database and pcntl.');
+    }
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $issuer = actingAsTestUser();
+    fundTestUserClientFunds($issuer, 10000);
+    $voucher = paymentAttemptCollectibleVoucherForUser($issuer);
+    $attempt = issuedPaymentAttempt($voucher);
+    $data = exactPaymentObservation($attempt, amountMinor: 12000);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $transaction = app(RecordObservedPaymentTransaction::class)->handle($attempt, new ObservedPaymentTransactionData(
+        $data->providerTransactionId, 12000, 'PHP', 'settled', occurredAt: $data->occurredAt, settledAt: $data->settledAt,
+    ));
+    $reviewId = DB::table('x_change_payment_transaction_reviews')->insertGetId([
+        'observed_payment_transaction_id' => $transaction->id, 'reason_code' => 'payment_attribution_or_eligibility',
+        'status' => 'open', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+    DB::table('x_change_payment_review_attempts')->insert(['review_id' => $reviewId, 'payment_attempt_id' => $attempt->id]);
+    $adapter = new SpecificPaymentTestAdapter;
+    $adapter->specificObservations[$data->providerTransactionId] = $data;
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    $children = $channels = $paths = [];
+    DB::purge();
+    for ($i = 0; $i < 2; $i++) {
+        $channel = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
+        $path = tempnam(sys_get_temp_dir(), 'split-race-');
+        if ($channel === false || $path === false || ($pid = pcntl_fork()) === -1) {
+            throw new RuntimeException('Unable to start concurrent split review.');
+        }
+        if ($pid === 0) {
+            fclose($channel[0]);
+            DB::purge();
+            foreach (array_keys(app()->getBindings()) as $binding) {
+                if (str_starts_with($binding, 'Bavix\\Wallet\\')) {
+                    app()->forgetInstance($binding);
+                }
+            }
+            fread($channel[1], 1);
+            try {
+                $result = app(ApplyReviewedSplitPayment::class)->handle($reviewId, $attempt->id, $issuer, 'Verified split payment', 10000, 2000);
+                file_put_contents($path, (string) $result->id);
+                exit(0);
+            } catch (Throwable $exception) {
+                file_put_contents($path, get_class($exception).': '.$exception->getMessage());
+                exit(1);
+            }
+        }
+        fclose($channel[1]);
+        $children[] = $pid;
+        $channels[] = $channel[0];
+        $paths[] = $path;
+    }
+    foreach ($channels as $channel) {
+        fwrite($channel, 'x');
+        fclose($channel);
+    }
+    foreach ($children as $pid) {
+        pcntl_waitpid($pid, $status);
+    }
+    DB::purge();
+    $results = array_map(fn (string $path): string => trim((string) file_get_contents($path)), $paths);
+    foreach ($paths as $path) {
+        unlink($path);
+    }
+    expect($results[0])->toMatch('/^\d+$/')->and($results[1])->toBe($results[0])
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(1)
+        ->and(DB::table('x_change_reviewed_payment_splits')->where('review_id', $reviewId)->count())->toBe(1);
+});
+
+it('denies both operator payment decisions to unauthorized users', function (): void {
+    $user = actingAsTestUser();
+    Gate::define('x-change.recovery.manage', fn ($actor): bool => false);
+    $this->actingAs($user)->post('/x/operations/recovery/payments/1/credit-excess', [
+        'reason' => 'Checked provider evidence', 'confirmed' => true,
+    ])->assertForbidden();
+    $this->actingAs($user)->post('/x/operations/recovery/payments/1/apply', [
+        'reason' => 'Checked provider evidence', 'confirmed' => true, 'attempt_id' => 1,
+    ])->assertForbidden();
+    $this->actingAs($user)->post('/x/operations/recovery/payments/1/split', [
+        'reason' => 'Checked provider evidence', 'confirmed' => true, 'attempt_id' => 1,
+        'expected_collection_minor' => 10000, 'expected_excess_minor' => 2000,
+    ])->assertForbidden();
+});
+
 it('monitors multiple credits on a settled QR without invoking settlement', function (): void {
     $voucher = paymentAttemptCollectibleVoucher();
     $attempt = app(IssuePaymentInstructions::class)->handle(app(CreatePaymentAttempt::class)->handle(
@@ -720,6 +1333,315 @@ it('monitors multiple credits on a settled QR without invoking settlement', func
         ->and($attempt->fresh()->last_monitored_at)->not->toBeNull()
         ->and($attempt->fresh()->status)->toBe(PaymentAttemptStatus::Settled)
         ->and(DB::table('voucher_collections')->count())->toBe(0);
+});
+
+it('settles a second verified transaction on the same QR once', function (): void {
+    $user = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 60,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $user->id, 'collection_wallet_id' => $user->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    PaymentAttempt::query()->whereKey($attempt->getKey())->update(['expected_amount_minor' => 2000]);
+    $attempt = $attempt->fresh();
+    $initial = exactPaymentObservation($attempt);
+    $initial->occurredAt = now()->toDateTimeImmutable();
+    $initial->settledAt = now()->toDateTimeImmutable();
+    $this->paymentAdapter->fundingObservation = $initial;
+    $attempt = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    $balance = (float) $user->wallet->fresh()->balanceFloat;
+    $data = exactPaymentObservation($attempt);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $seen = app(RecordObservedPaymentTransaction::class)->handle($attempt, new ObservedPaymentTransactionData(
+        $data->providerTransactionId, 2000, 'PHP', 'settled', occurredAt: $data->occurredAt, settledAt: $data->settledAt,
+    ));
+    $observation = app(RecordProviderFundingObservation::class)->handle($data);
+    $action = app(SettleAdditionalQrPayment::class);
+    $collection = $action->handle($seen, $observation);
+    $replay = $action->handle($seen, $observation);
+
+    expect($collection->is($replay))->toBeTrue()
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(2)
+        ->and((float) $user->wallet->fresh()->balanceFloat)->toBe($balance + 20.00);
+    foreach ([3, 4] as $number) {
+        $data = exactPaymentObservation($attempt);
+        $data->occurredAt = now()->toDateTimeImmutable();
+        $data->settledAt = now()->toDateTimeImmutable();
+        $seen = app(RecordObservedPaymentTransaction::class)->handle($attempt, new ObservedPaymentTransactionData(
+            $data->providerTransactionId, 2000, 'PHP', 'settled', occurredAt: $data->occurredAt, settledAt: $data->settledAt,
+        ));
+        $observation = app(RecordProviderFundingObservation::class)->handle($data);
+        if ($number === 3) {
+            $action->handle($seen, $observation);
+        } else {
+            expect(fn () => $action->handle($seen, $observation))
+                ->toThrow(LatePaymentRequiresReview::class);
+        }
+    }
+    expect(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(3)
+        ->and((float) $user->wallet->fresh()->balanceFloat)->toBe($balance + 40.00);
+});
+
+it('individually verifies and collects monitored QR transactions through the provider capability', function (): void {
+    Queue::fake();
+    $user = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 60,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $user->id, 'collection_wallet_id' => $user->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    PaymentAttempt::query()->whereKey($attempt->getKey())->update(['expected_amount_minor' => 2000]);
+    $attempt = $attempt->fresh();
+    $initial = exactPaymentObservation($attempt);
+    $initial->occurredAt = now()->toDateTimeImmutable();
+    $initial->settledAt = now()->toDateTimeImmutable();
+    $this->paymentAdapter->fundingObservation = $initial;
+    $attempt = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    $adapter = new SpecificPaymentTestAdapter;
+    foreach ([1, 2, 3] as $number) {
+        $data = exactPaymentObservation($attempt);
+        $data->occurredAt = now()->toDateTimeImmutable();
+        $data->settledAt = now()->toDateTimeImmutable();
+        $adapter->specificObservations[$data->providerTransactionId] = $data;
+        $adapter->incomingPayments[] = new ObservedPaymentTransactionData(
+            $data->providerTransactionId, 2000, 'PHP', 'settled', occurredAt: $data->occurredAt, settledAt: $data->settledAt,
+        );
+    }
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    app(MonitorPaymentAttempt::class)->handle($attempt);
+    Queue::assertPushed(VerifyAdditionalQrPaymentJob::class, 3);
+    foreach ($attempt->observedPayments()->get() as $transaction) {
+        app()->call([new VerifyAdditionalQrPaymentJob($transaction->getKey(), 'netbank'), 'handle']);
+        app()->call([new VerifyAdditionalQrPaymentJob($transaction->getKey(), 'netbank'), 'handle']);
+    }
+
+    expect(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(3)
+        ->and(DB::table('x_change_payment_transaction_reviews')->count())->toBe(1);
+});
+
+it('collects two payments observed before the first QR verification without replaying either', function (bool $initiallyAmbiguous): void {
+    Queue::fake();
+    $user = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 60,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $user->id, 'collection_wallet_id' => $user->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    PaymentAttempt::query()->whereKey($attempt->getKey())->update(['expected_amount_minor' => 2000]);
+    $attempt = $attempt->fresh();
+    if ($initiallyAmbiguous) {
+        $attempt = app(TransitionPaymentAttempt::class)->handle(
+            $attempt, PaymentAttemptStatus::Suspense, 'provider_verification_indeterminate', PaymentVerificationTrigger::Payer,
+        );
+    }
+    $adapter = new SpecificPaymentTestAdapter;
+    foreach ([1, 2] as $number) {
+        $data = exactPaymentObservation($attempt);
+        $data->occurredAt = now()->toDateTimeImmutable();
+        $data->settledAt = now()->toDateTimeImmutable();
+        $adapter->specificObservations[$data->providerTransactionId] = $data;
+        $adapter->incomingPayments[] = new ObservedPaymentTransactionData(
+            $data->providerTransactionId, 2000, 'PHP', 'settled', occurredAt: $data->occurredAt, settledAt: $data->settledAt,
+        );
+    }
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    app(MonitorPaymentAttempt::class)->handle($attempt);
+    Queue::assertPushed(VerifyAdditionalQrPaymentJob::class, 2);
+    foreach ($attempt->observedPayments()->get() as $transaction) {
+        app()->call([new VerifyAdditionalQrPaymentJob($transaction->getKey(), 'netbank'), 'handle']);
+        app()->call([new VerifyAdditionalQrPaymentJob($transaction->getKey(), 'netbank'), 'handle']);
+    }
+    expect($attempt->fresh()->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(2)
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->sum('collected_amount_minor'))->toBe(4000)
+        ->and(DB::table('x_change_payment_transaction_reviews')->count())->toBe(0);
+})->with([false, true]);
+
+it('sends a same-amount payment for review when another QR could claim it', function (): void {
+    Queue::fake();
+    $voucher = paymentAttemptCollectibleVoucher();
+    $first = issuedPaymentAttempt($voucher);
+    $second = app(IssuePaymentInstructions::class)->handle(app(CreatePaymentAttempt::class)->handle(
+        $voucher, 'netbank', 'other-payer-session', 'other-payer-request',
+    ));
+    $adapter = new SpecificPaymentTestAdapter;
+    $data = exactPaymentObservation($first);
+    $data->occurredAt = now()->addSecond()->toDateTimeImmutable();
+    $data->settledAt = now()->addSecond()->toDateTimeImmutable();
+    $adapter->specificObservations[$data->providerTransactionId] = $data;
+    $adapter->incomingPayments = [new ObservedPaymentTransactionData(
+        $data->providerTransactionId, $first->expected_amount_minor, 'PHP', 'settled', occurredAt: $data->occurredAt, settledAt: $data->settledAt,
+    )];
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    app(MonitorPaymentAttempt::class)->handle($first);
+    $transaction = $first->observedPayments()->sole();
+    expect(app(MonitorPaymentAttempt::class)->handle($second))->toBe(1);
+    app()->call([new VerifyAdditionalQrPaymentJob($transaction->getKey(), 'netbank'), 'handle']);
+    app()->call([new VerifyAdditionalQrPaymentJob($transaction->getKey(), 'netbank'), 'handle']);
+
+    expect($second->expected_amount_minor)->toBe($first->expected_amount_minor)
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(0)
+        ->and(DB::table('x_change_payment_transaction_reviews')->where('observed_payment_transaction_id', $transaction->id)->value('reason_code'))->toBe('payment_observed_on_multiple_qrs')
+        ->and(app(SessionPaymentReview::class)->exists($voucher, 'payer-session-1'))->toBeTrue()
+        ->and(app(SessionPaymentReview::class)->exists($voucher, 'other-payer-session'))->toBeTrue()
+        ->and(app(SessionPaymentReview::class)->exists($voucher, 'unrelated-session'))->toBeFalse();
+});
+
+it('serializes two different provider payments against the same QR on a real database', function (): void {
+    if (! in_array(DB::connection()->getDriverName(), ['mysql', 'pgsql'], true) || ! function_exists('pcntl_fork')) {
+        test()->markTestSkipped('Requires a dedicated MySQL or PostgreSQL database and pcntl.');
+    }
+    Queue::fake();
+    $user = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 60,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $user->id, 'collection_wallet_id' => $user->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    PaymentAttempt::query()->whereKey($attempt->getKey())->update(['expected_amount_minor' => 2000]);
+    $attempt = $attempt->fresh();
+    $adapter = new SpecificPaymentTestAdapter;
+    foreach ([1, 2] as $number) {
+        $data = exactPaymentObservation($attempt);
+        $data->occurredAt = now()->toDateTimeImmutable();
+        $data->settledAt = now()->toDateTimeImmutable();
+        $adapter->specificObservations[$data->providerTransactionId] = $data;
+        $adapter->incomingPayments[] = new ObservedPaymentTransactionData($data->providerTransactionId, 2000, 'PHP', 'settled', occurredAt: $data->occurredAt, settledAt: $data->settledAt);
+    }
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    app(MonitorPaymentAttempt::class)->handle($attempt);
+    $ids = $attempt->observedPayments()->pluck('id')->all();
+    $children = [];
+    $channels = [];
+    $paths = [];
+    foreach ($ids as $id) {
+        $channel = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
+        $path = tempnam(sys_get_temp_dir(), 'payment-race-');
+        if ($channel === false || $path === false) {
+            throw new RuntimeException('Unable to prepare the payment race.');
+        }
+        $pid = pcntl_fork();
+        if ($pid === 0) {
+            fclose($channel[0]);
+            DB::purge();
+            fread($channel[1], 1);
+            try {
+                app()->call([new VerifyAdditionalQrPaymentJob($id, 'netbank'), 'handle']);
+                file_put_contents($path, 'ok');
+                exit(0);
+            } catch (Throwable $exception) {
+                file_put_contents($path, get_class($exception).': '.$exception->getMessage());
+                exit(1);
+            }
+        }
+        if ($pid < 0) {
+            throw new RuntimeException('Unable to start the payment race.');
+        }
+        fclose($channel[1]);
+        $children[] = $pid;
+        $channels[] = $channel[0];
+        $paths[] = $path;
+    }
+    foreach ($channels as $channel) {
+        fwrite($channel, '1');
+        fclose($channel);
+    }
+    $codes = [];
+    foreach ($children as $pid) {
+        pcntl_waitpid($pid, $status);
+        $codes[] = pcntl_wexitstatus($status);
+    }
+    $results = array_map(fn (string $path): string => (string) file_get_contents($path), $paths);
+    foreach ($paths as $path) {
+        unlink($path);
+    }
+    DB::purge();
+    expect($codes)->toBe([0, 0], implode('; ', $results))
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(2)
+        ->and((int) VoucherCollection::query()->where('voucher_id', $voucher->id)->sum('collected_amount_minor'))->toBe(4000);
+});
+
+it('waits for an incoming pending payment and follows the provider outcome', function (bool $settles): void {
+    Queue::fake();
+    $voucher = paymentAttemptCollectibleVoucher();
+    $attempt = issuedPaymentAttempt($voucher);
+    $adapter = new SpecificPaymentTestAdapter;
+    $data = exactPaymentObservation($attempt, status: 'pending', settledAt: null);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $adapter->specificObservations[$data->providerTransactionId] = $data;
+    $adapter->incomingPayments = [new ObservedPaymentTransactionData($data->providerTransactionId, $attempt->expected_amount_minor, 'PHP', 'pending', occurredAt: $data->occurredAt)];
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    app(MonitorPaymentAttempt::class)->handle($attempt);
+    $transaction = $attempt->observedPayments()->sole();
+    app()->call([new VerifyAdditionalQrPaymentJob($transaction->getKey(), 'netbank'), 'handle']);
+    expect(VoucherCollection::query()->count())->toBe(0)->and(DB::table('x_change_payment_transaction_reviews')->count())->toBe(0);
+    $data->providerStatus = $settles ? 'settled' : 'rejected';
+    $data->settledAt = $settles ? now()->toDateTimeImmutable() : null;
+    $data->payloadHash = hash('sha256', 'settled-payload');
+    $adapter->incomingPayments = [new ObservedPaymentTransactionData($data->providerTransactionId, $attempt->expected_amount_minor, 'PHP', $data->providerStatus, occurredAt: $data->occurredAt, settledAt: $data->settledAt)];
+    app(MonitorPaymentAttempt::class)->handle($attempt->fresh());
+    app()->call([new VerifyAdditionalQrPaymentJob($transaction->getKey(), 'netbank'), 'handle']);
+    expect(VoucherCollection::query()->count())->toBe($settles ? 1 : 0)
+        ->and($attempt->fresh()->status)->toBe($settles ? PaymentAttemptStatus::Settled : PaymentAttemptStatus::AwaitingPayment)
+        ->and(DB::table('x_change_payment_transaction_reviews')->count())->toBe($settles ? 0 : 1)
+        ->and($transaction->statuses()->pluck('provider_status')->all())->toBe(['pending', $data->providerStatus]);
+})->with([true, false]);
+
+it('recovers a rejected routed installment after two payments against one QR', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    config()->set('omnipay.gateways.netbank.options.rails.INSTAPAY', ['enabled' => true, 'min_amount' => 100, 'max_amount' => 5_000_000]);
+    $user = actingAsTestUser();
+    fundTestUserClientFunds($user, 10_000);
+    $inventory = app(TreasuryInventoryOperationContract::class);
+    $inventory->registerInventory(new TreasuryInventoryData(inventoryReference: 'inventory:netbank:vca-cash', resourceType: 'cash_at_bank', currency: 'PHP', capacityMinor: 0, status: 'requested', idempotencyKey: 'register:qr-recovery', externalReference: 'resource:netbank:corporate-vca'));
+    $inventory->recognize(new TreasuryInventoryRecognitionData(operationReference: 'qr-recovery:funding', inventoryReference: 'inventory:netbank:vca-cash', settlementResourceReference: 'resource:netbank:corporate-vca', amountMinor: 10_000, currency: 'PHP', status: 'requested', idempotencyKey: 'qr-recovery:funding', externalReference: 'qr-recovery:test'));
+    $readiness = Mockery::mock(SettlementReadinessGateContract::class);
+    $readiness->shouldReceive('ensureReady')->zeroOrMoreTimes();
+    app()->instance(SettlementReadinessGateContract::class, $readiness);
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'voucher_type' => 'settlement', 'target_amount' => 60,
+        'execution' => ['schema' => 'voucher.execution.v2', 'driver' => 'default', 'metadata' => ['settlement_workflow' => 'collect_for_settlement'], 'settlement' => ['driver' => 'x-change.documents', 'version' => '1.0.0', 'readiness_gate' => 'settleable'], 'value_flow' => ['destination' => 'instapay.gcash.mobile:09179999999']],
+        'metadata' => ['flow_type' => 'settlement', 'issuer_id' => (string) $user->id, 'collection_wallet_id' => $user->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    PaymentAttempt::query()->whereKey($attempt->getKey())->update(['expected_amount_minor' => 2000]);
+    $attempt = $attempt->fresh();
+    $adapter = new SpecificPaymentTestAdapter;
+    foreach ([1, 2] as $number) {
+        $data = exactPaymentObservation($attempt);
+        $data->occurredAt = now()->toDateTimeImmutable();
+        $data->settledAt = now()->toDateTimeImmutable();
+        $adapter->specificObservations[$data->providerTransactionId] = $data;
+        $adapter->incomingPayments[] = new ObservedPaymentTransactionData($data->providerTransactionId, 2000, 'PHP', 'settled', occurredAt: $data->occurredAt, settledAt: $data->settledAt);
+    }
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    app(MonitorPaymentAttempt::class)->handle($attempt);
+    foreach ($attempt->observedPayments()->get() as $transaction) {
+        app()->call([new VerifyAdditionalQrPaymentJob($transaction->getKey(), 'netbank'), 'handle']);
+        app()->call([new VerifyAdditionalQrPaymentJob($transaction->getKey(), 'netbank'), 'handle']);
+    }
+    $payouts = DisbursementReconciliation::query()->where('voucher_id', $voucher->id)->where('claim_type', 'value_flow')->orderBy('id')->get();
+    expect($payouts)->toHaveCount(2);
+    $service = app(ValueFlowPayoutService::class);
+    $provider = fakePayoutProvider()->willReturnSuccessfulResult(transactionId: 'first-payout', provider: 'netbank');
+    $service->submit($payouts[0]->id);
+    $provider->willReturnFailedResult(transactionId: 'rejected-payout', provider: 'netbank');
+    $service->submit($payouts[1]->id);
+    $provider->nextCheckStatus = PayoutStatus::FAILED;
+    $retry = $service->retryRejectedPayout($payouts[1]->id, 'recipient-confirmed-ready', 'operator:test');
+    $provider->willReturnSuccessfulResult(transactionId: 'recovered-payout', provider: 'netbank');
+    $service->submit($retry->id);
+    $service->submit($retry->id);
+
+    expect($payouts[0]->fresh()->internal_status)->toBe('finalized')
+        ->and($payouts[1]->fresh()->internal_status)->toBe('recovery_retried')
+        ->and($retry->fresh()->internal_status)->toBe('finalized')
+        ->and($provider->disburseCallCount)->toBe(3)
+        ->and((int) VoucherCollection::query()->where('voucher_id', $voucher->id)->sum('collected_amount_minor'))->toBe(4000)
+        ->and(app(VoucherCollectionProgressService::class)->compute($voucher->fresh())->remaining_to_collect_minor)->toBe(2000);
 });
 
 it('integrates the local NetBank reader with x-change payment persistence', function (): void {
@@ -766,7 +1688,7 @@ it('does not call NetBank after the QR observation window closes', function (): 
     $attempt = app(IssuePaymentInstructions::class)->handle(app(CreatePaymentAttempt::class)->handle(
         $voucher, 'netbank', 'monitor-expired-session', 'monitor-expired-request',
     ));
-    PaymentAttempt::query()->whereKey($attempt->getKey())->update(['expires_at' => now()->subMinutes(10)]);
+    PaymentAttempt::query()->whereKey($attempt->getKey())->update(['expires_at' => now()->subDays(8)]);
 
     expect(app(MonitorPaymentAttempt::class)->handle($attempt->fresh()))->toBe(0)
         ->and($this->paymentAdapter->incomingPaymentCalls)->toBe(0);

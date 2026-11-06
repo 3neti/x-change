@@ -905,7 +905,7 @@ const invoiceError = ref("");
 const paymentDescription = ref("");
 const paymentReference = ref("");
 const paymentFields = ref<{ label: string; value: string }[]>([]);
-const documentRequestsEnabled = false;
+const documentRequestsEnabled = true;
 async function stageInvoice(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement;
   const files = Array.from(input.files ?? []);
@@ -938,7 +938,7 @@ const requestedDocuments = ref<RequestedDocument[]>([]);
 const documentTypes = computed(() => philhealthSettlement.value ? ["CLAIM_FORM", "HOSPITAL_BILL"] : ["INVOICE", "SUPPORTING_DOCUMENT", "PROOF_OF_PAYMENT"]);
 function addRequestedDocument(): void {
   const type = documentTypes.value.find((candidate) => !requestedDocuments.value.some((item) => item.type === candidate));
-  if (type) requestedDocuments.value.push({ type, timing: "before_payment", requires_acceptance: true, contributor: philhealthSettlement.value ? "claimant" : "payer" });
+  if (type) requestedDocuments.value.push({ type, timing: "optional", requires_acceptance: false, contributor: philhealthSettlement.value ? "claimant" : "payer" });
 }
 const settlementRepayment = ref(false);
 const settlementWorkflowChosen = ref(false);
@@ -7461,7 +7461,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                 </label>
                 <label class="grid gap-1 text-sm">Who provides it?
                   <select v-model="document.contributor" :disabled="processing || (philhealthSettlement && !!invoiceDraft && document.type === 'HOSPITAL_BILL')" class="min-h-12 rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900">
-                    <option value="payer">Payer</option><option v-if="isSettlementVoucher" value="claimant">Claimant</option>
+                    <option value="payer">Payer</option><option v-if="isSettlementVoucher" value="claimant">Claimant</option><option value="invited">Invited contributor</option>
                   </select>
                 </label>
                 <label class="flex items-center gap-2 text-sm"><input v-model="document.requires_acceptance" type="checkbox" :disabled="processing || (philhealthSettlement && !!invoiceDraft && document.type === 'HOSPITAL_BILL')" /> Reviewer acceptance required</label>

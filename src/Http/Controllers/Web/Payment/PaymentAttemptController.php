@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
 use LBHurtado\XChange\Actions\Payment\IssuePaymentInstructions;
+use LBHurtado\XChange\Exceptions\UnresolvedPaymentReview;
 use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
@@ -81,6 +82,9 @@ class PaymentAttemptController extends Controller
                 return $issue->handle($attempt);
             };
             $attempt = $display === null ? $issueAttempt() : $displays->synchronized($display, $issueAttempt);
+        } catch (UnresolvedPaymentReview) {
+            return redirect()->route('x-change.pay.show', ['code' => $voucher->code])
+                ->with('payment_notice', 'A payment is under review. Please do not pay again.');
         } catch (VoucherRequiresSettlementEnvelope) {
             return redirect()
                 ->route('x-change.pay.show', ['code' => $voucher->code])
@@ -93,6 +97,8 @@ class PaymentAttemptController extends Controller
                     'NetBank could not create payment instructions. No payment was recorded. Please try again.',
                 );
         }
+
+        $request->session()->put('x-change.payment.latest-attempt.'.$voucher->getKey(), $attempt->reference);
 
         return redirect()->route('x-change.pay.show', [
             'code' => $voucher->code,

@@ -71,6 +71,9 @@ class SettleVerifiedFundingIntent
 
             if ($locked->purpose === FundingIntentPurpose::OnDemandIssuance) {
                 $order = $locked->issuanceFundingOrder()->lockForUpdate()->first();
+                if ($order === null) {
+                    throw FundingSettlementDenied::because('the issuance funding order is missing and requires review');
+                }
                 if (! $reviewedClosedOrder && $order !== null && in_array($order->status, [PayCodeIssuanceFundingOrderStatus::Expired, PayCodeIssuanceFundingOrderStatus::Cancelled], true)) {
                     throw FundingSettlementDenied::because('the closed funding order requires payment review');
                 }
@@ -170,7 +173,7 @@ class SettleVerifiedFundingIntent
                     $allocation->destinationPositionReference,
                 )
                 : $this->accounts->resolve($locked->account_reference);
-            $recoveryAppliedAmountMinor = $locked->purpose === FundingIntentPurpose::OnDemandIssuance
+            $recoveryAppliedAmountMinor = $locked->purpose !== FundingIntentPurpose::AccountFunding
                 ? 0
                 : $this->applyRecovery->handle(
                     accountReference: $locked->account_reference,
@@ -214,7 +217,7 @@ class SettleVerifiedFundingIntent
             $flow = $locked->purpose === FundingIntentPurpose::OnDemandIssuance
                 ? (data_get($fundingOrder?->metadata, 'source') === 'public.auto-generate'
                     ? 'public_auto_generate' : 'authenticated_issuance')
-                : 'top_up';
+                : ($locked->purpose === FundingIntentPurpose::ReviewedExcess ? 'reviewed_excess' : 'top_up');
             $this->settledPayments->handle(
                 'funding_settlement',
                 (int) $settlement->getKey(),

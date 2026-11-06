@@ -35,6 +35,8 @@ final class CheckoutConsoleController extends Controller
             'pricing_url' => route('x-change.operations.pricing', [], false),
             'economics_url' => route('x-change.operations.economics', [], false),
             'collections_url' => $owner ? route('x-change.operations.stored-value-collections.index', [], false) : null,
+            'recovery_url' => $request->user()?->can('x-change.recovery.manage')
+                ? route('x-change.operations.recovery.index', [], false) : null,
             'monitor' => $owner ? $read->forOwner($principal, is_string($status) ? $status : null, includeFullPayCodes: true) : null,
         ])->toResponse($request)->withHeaders($this->responseHeaders());
     }

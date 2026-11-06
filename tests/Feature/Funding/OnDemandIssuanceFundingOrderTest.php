@@ -65,6 +65,7 @@ use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\FundingSuspenseCase;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrderEvent;
+use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Cockpit\FundingCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\FundingInstructionPresenter;
 use LBHurtado\XChange\Services\Cockpit\FundingMethodSelectorCockpitReadModel;
@@ -72,6 +73,7 @@ use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingPolicy;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingRequirement;
+use LBHurtado\XChange\Services\Payment\ProviderEvidenceLock;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 use LBHurtado\XChange\Tests\Fakes\User;
@@ -796,6 +798,50 @@ it('creates a review case when an order expires between verification and settlem
         ->and(FundingSettlement::query()->count())->toBe(0);
 });
 
+it('moves a verified issuance payment with a missing order to review without crediting or retrying it', function (): void {
+    $owner = actingAsTestUser(0);
+    $wallet = $owner->wallet()->where('slug', 'platform')->sole();
+    $observation = onDemandFundingObservation(5_000);
+    $intent = onDemandFundingIntent($wallet->uuid, $observation, 5_000);
+    $job = new VerifyFundingIntentJob((int) $intent->getKey(), 'netbank', FundingVerificationTrigger::Schedule, 'funding-scheduler');
+
+    expect(fn () => app(SettleVerifiedFundingIntent::class)->handle($intent))
+        ->toThrow(FundingSettlementDenied::class, 'issuance funding order is missing');
+    $job->handle(app(VerifyFundingIntent::class), app(SettleVerifiedFundingIntent::class));
+    $job->handle(app(VerifyFundingIntent::class), app(SettleVerifiedFundingIntent::class));
+
+    expect($intent->refresh()->status)->toBe(FundingIntentStatus::Suspense)
+        ->and(FundingSuspenseCase::query()->where('funding_intent_id', $intent->getKey())->where('reason_code', 'issuance_funding_order_missing')->count())->toBe(1)
+        ->and(FundingSettlement::query()->where('funding_intent_id', $intent->getKey())->count())->toBe(0);
+});
+
+it('opens a review case when new payment evidence arrives for an intent with no order', function (int $observedAmount): void {
+    $owner = actingAsTestUser(0);
+    $wallet = $owner->wallet()->where('slug', 'platform')->sole();
+    $observation = onDemandFundingObservation(5_000);
+    $intent = onDemandFundingIntent($wallet->uuid, $observation, 5_000);
+    $intent->forceFill(['status' => FundingIntentStatus::AwaitingFunds, 'matched_observation_id' => null, 'provider_transaction_id' => null])->saveQuietly();
+    $adapter = new FakeFundingProviderAdapter;
+    $adapter->fundingObservation = new ProviderFundingObservationData(
+        provider: 'netbank', providerTransactionId: 'orphan-payment-'.$observedAmount,
+        grossAmountMinor: $observedAmount, feeAmountMinor: 0, netAmountMinor: $observedAmount,
+        currency: 'PHP', providerStatus: 'settled', verificationSource: 'netbank-test',
+        payloadHash: hash('sha256', 'orphan-payment-'.$observedAmount),
+        occurredAt: now()->toDateTimeImmutable(), settledAt: now()->toDateTimeImmutable(),
+        metadata: ['destination_verified' => true],
+    );
+    app()->instance(FakeFundingProviderAdapter::class, $adapter);
+    app()->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
+    app()->forgetInstance(FundingProviderAdapterRegistry::class);
+
+    $result = app(VerifyFundingIntent::class)->handle($intent, new FundingIntentVerificationData(
+        trigger: FundingVerificationTrigger::Schedule, actorId: 'funding-scheduler',
+    ));
+    expect($result->status)->toBe(FundingIntentStatus::Suspense)
+        ->and(FundingSuspenseCase::query()->where('funding_intent_id', $intent->id)->where('reason_code', 'issuance_funding_order_missing')->count())->toBe(1)
+        ->and(FundingSettlement::query()->where('funding_intent_id', $intent->id)->count())->toBe(0);
+})->with([5_000, 4_999]);
+
 it('classifies an authoritative underpayment without issuing or offering cancellation', function (): void {
     $user = actingAsTestUser(0);
     $order = issuanceFundingOrder($user, 'underpayment-classification');
@@ -869,6 +915,75 @@ it('claims provider evidence once and permits an idempotent same-intent replay',
         ->and(FundingEvidenceClaim::query()->count())->toBe(1)
         ->and(fn () => $claims->handle($secondIntent, $observation))
         ->toThrow(FundingEvidenceAlreadyClaimed::class);
+});
+
+it('does not claim funding evidence already applied to a voucher collection', function (): void {
+    $user = actingAsTestUser(0);
+    $observation = onDemandFundingObservation(5_000);
+    $intent = onDemandFundingIntent($user->wallet()->where('slug', 'platform')->sole()->uuid, $observation, 5_000);
+    $voucher = issueVoucher(validVoucherInstructions());
+    VoucherCollection::query()->create([
+        'voucher_id' => $voucher->getKey(), 'collection_number' => 1, 'status' => 'collected',
+        'requested_amount_minor' => 5_000, 'collected_amount_minor' => 5_000, 'currency' => 'PHP',
+        'provider' => $observation->provider_code, 'provider_transaction_id' => $observation->provider_transaction_id,
+    ]);
+
+    expect(fn () => app(ClaimFundingEvidence::class)->handle($intent, $observation))
+        ->toThrow(FundingEvidenceAlreadyClaimed::class)
+        ->and(FundingEvidenceClaim::query()->count())->toBe(0);
+});
+
+it('serializes a funding claim against a concurrent voucher collection for the same provider evidence', function (): void {
+    $driver = DB::connection()->getDriverName();
+    if (! in_array($driver, ['mysql', 'pgsql'], true) || ! function_exists('pcntl_fork')) {
+        test()->markTestSkipped('Requires a dedicated MySQL or PostgreSQL database and pcntl.');
+    }
+    $user = actingAsTestUser(0);
+    $observation = onDemandFundingObservation(5_000);
+    $intent = onDemandFundingIntent($user->wallet()->where('slug', 'platform')->sole()->uuid, $observation, 5_000);
+    $voucher = issueVoucher(validVoucherInstructions());
+    DB::transaction(fn () => app(ProviderEvidenceLock::class)->acquire($observation->provider_code, $observation->provider_transaction_id));
+    $configuration = config('database.connections.testing');
+    $dsn = sprintf('%s:host=%s;port=%d;dbname=%s', $driver, $configuration['host'], $configuration['port'], $configuration['database']);
+    $lock = new PDO($dsn, $configuration['username'], $configuration['password'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $lock->beginTransaction();
+    $key = hash('sha256', implode("\0", [strtolower($observation->provider_code), $observation->provider_transaction_id]));
+    $statement = $lock->prepare('select evidence_key from x_change_provider_evidence_locks where evidence_key = ? for update');
+    $statement->execute([$key]);
+    $channel = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
+    if ($channel === false) {
+        throw new RuntimeException('Unable to prepare the evidence race.');
+    }
+    $pid = pcntl_fork();
+    if ($pid === 0) {
+        fclose($channel[0]);
+        DB::purge();
+        fwrite($channel[1], 's');
+        try {
+            app(ClaimFundingEvidence::class)->handle($intent, $observation);
+            fwrite($channel[1], 'unexpected');
+        } catch (FundingEvidenceAlreadyClaimed) {
+            fwrite($channel[1], 'blocked');
+        }
+        fclose($channel[1]);
+        exit(0);
+    }
+    if ($pid < 0) {
+        throw new RuntimeException('Unable to start the evidence race.');
+    }
+    fclose($channel[1]);
+    fread($channel[0], 1);
+    usleep(250_000);
+    expect(pcntl_waitpid($pid, $status, WNOHANG))->toBe(0);
+    $insert = $lock->prepare('insert into voucher_collections (voucher_id, collection_number, status, requested_amount_minor, collected_amount_minor, currency, provider, provider_transaction_id) values (?, 1, ?, 5000, 5000, ?, ?, ?)');
+    $insert->execute([$voucher->getKey(), 'collected', 'PHP', $observation->provider_code, $observation->provider_transaction_id]);
+    $lock->commit();
+    $result = stream_get_contents($channel[0]);
+    fclose($channel[0]);
+    pcntl_waitpid($pid, $status);
+    DB::purge();
+    expect($result)->toBe('blocked')->and(pcntl_wexitstatus($status))->toBe(0)
+        ->and(FundingEvidenceClaim::query()->count())->toBe(0);
 });
 
 it('refuses queued issuance after a provider reversal marker is recorded', function (): void {
@@ -1010,6 +1125,8 @@ it('permits provider destination-history fallback for on-demand issuance', funct
     $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
     $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
     $intent = fundingIntentAwaitingOnDemandBankTransfer();
+    $owner = actingAsTestUser(0);
+    issuanceFundingOrder($owner, 'destination-history-order')->forceFill(['funding_intent_id' => $intent->id])->saveQuietly();
 
     $verified = app(VerifyFundingIntent::class)->handle(
         $intent,
