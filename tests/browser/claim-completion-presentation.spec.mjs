@@ -5,7 +5,7 @@ const { test, expect } = require('@playwright/test');
 // Render the installed host assets with synthetic Inertia props. Persisted outcome
 // and receipt authorization are covered by Pest, not simulated by this UI check.
 for (const width of [375, 1440]) {
-    for (const state of ['processing', 'ready', 'ready-without-receipt', 'payment-unverified']) {
+    for (const state of ['ordinary', 'processing', 'ready', 'ready-without-receipt', 'payment-unverified']) {
         test(`completion ${state} at ${width}px never asks for another payment`, async ({ page }) => {
             const base = process.env.WORKFLOW_BROWSER_URL;
             if (!base || !new URL(base).hostname.endsWith('.test')) throw new Error('Local host required.');
@@ -31,14 +31,14 @@ for (const width of [375, 1440]) {
                         ...original.props,
                         voucher: { code: 'SYNTHETIC-COMPLETION', amount: 0, currency: 'PHP' },
                         claimOutcome: 'accepted_success',
-                        success_presentation: {
+                        success_presentation: state === 'ordinary' ? null : {
                             title, suppress_legacy_rider: true,
                             body: state === 'payment-unverified'
                                 ? 'We cannot verify the payment linked to this details request. Do not pay again.'
                                 : ready ? 'Your payment has been received. A demonstration result is not actual insurance coverage.'
                                     : 'Your payment has been received. Your policy result is being prepared.',
                         },
-                        rider: {
+                        rider: state === 'ordinary' ? null : {
                             success: { enabled: true, type: 'text', content: 'Continue to payment to pay the premium.' },
                             redirect: { enabled: true, url: `${base}/x/pay/SYNTHETIC`, timeout: 1 },
                             stages: { stages: [] },
@@ -54,7 +54,12 @@ for (const width of [375, 1440]) {
                 await route.fulfill({ response, body: html });
             });
             await page.goto(`${base}/login`);
-            await expect(page.getByText(title, { exact: true })).toBeVisible();
+            if (state !== 'ordinary') await expect(page.getByText(title, { exact: true })).toBeVisible();
+            const header = await page.getByTestId('claim-brand-header').boundingBox();
+            const logo = await page.getByTestId('claim-brand-logo').boundingBox();
+            expect(header).not.toBeNull();
+            expect(logo).not.toBeNull();
+            expect(Math.abs((header.x + header.width / 2) - (logo.x + logo.width / 2))).toBeLessThan(2);
             await expect(page.getByText('Continue to payment', { exact: false })).toHaveCount(0);
             await expect(page.getByTestId('rider-countdown')).toHaveCount(0);
             await expect(page.getByTestId('rider-runtime')).toHaveCount(0);
