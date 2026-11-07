@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 use Bavix\Wallet\Models\Wallet;
 use Illuminate\Database\DatabaseTransactionsManager;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
 use LBHurtado\EmiPaynamicsConstellation\Exceptions\PendingConstellationOtpException;
@@ -31,11 +33,13 @@ use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PayoutDestinationRevision;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\ClaimPayoutLocalityContext;
+use LBHurtado\XChange\Services\ClaimPayoutLocalityEvidence;
 use LBHurtado\XChange\Services\Execution\DurableTreasuryPayout;
 use LBHurtado\XChange\Services\Execution\ExecutionAwarePostRedemptionGate;
 use LBHurtado\XChange\Services\Execution\TreasuryBackedPayCodeDisbursement;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalResumePayloadSession;
+use LBHurtado\XChange\Support\Claim\FormFlowClaimPayloadNormalizer;
 use LBHurtado\XJournal\Data\ExecutionJournalEntryData;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
@@ -60,12 +64,16 @@ beforeEach(function (): void {
 it('uses the claim locality in the treasury-backed payout', function (): void {
     config()->set('x-change.payout_locality.enabled', true);
     config()->set('x-change.payout_locality.submission_guard_enabled', true);
+    config()->set('x-change.payout_locality.coordinate_endpoint', '');
+    config()->set('x-change.payout_locality.coordinate_api_key', '');
+    config()->set('location-handler.opencage_endpoint', 'https://geocoder.test/reverse');
+    config()->set('location-handler.opencage_api_key', 'test-key');
+    Http::fake(['geocoder.test/*' => Http::response(['results' => [['components' => ['country_code' => 'ph', 'village' => 'Claimant Barangay', 'city' => 'Manila', 'postcode' => '1000']]]])]);
     Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
     ['voucher' => $voucher] = treasuryBackedVoucherForPayout();
-    app(ClaimPayoutLocalityContext::class)->remember($voucher, 'treasury-locality-claim', [
-        'ip_locality' => null,
-        'captured' => ['address1' => 'Claimant Barangay', 'city' => 'Manila', 'country' => 'PH', 'postal_code' => '1000', 'source' => 'location', 'dataset_version' => null],
-    ]);
+    $payload = app(FormFlowClaimPayloadNormalizer::class)->normalize(['location_capture' => ['latitude' => 14.5, 'longitude' => 121.0]]);
+    $evidence = app(ClaimPayoutLocalityEvidence::class)->capture(Request::create('/', 'POST'), $payload['inputs']['location'], true);
+    app(ClaimPayoutLocalityContext::class)->remember($voucher, 'treasury-locality-claim', $evidence);
     $provider = fakePayoutProvider()->willReturnSuccessfulResult(transactionId: 'LOCALITY-1', provider: 'netbank');
     $result = app(SubmitPayCodeClaim::class)->handle($voucher, [
         'mobile' => '09173011987', 'recipient_country' => 'PH',
