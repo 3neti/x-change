@@ -2,9 +2,13 @@
 
 declare(strict_types=1);
 
+use LBHurtado\EmiCore\Contracts\BankRegistryContract;
 use LBHurtado\EmiCore\Contracts\PhilippineLocalityDataset;
+use LBHurtado\EmiCore\Data\PayoutPartyData;
 use LBHurtado\EmiCore\Services\PayoutLocalityResolver;
+use LBHurtado\PaymentGateway\Omnipay\Netbank\Gateway;
 use LBHurtado\XChange\Services\ClaimPayoutLocalityEvidence;
+use LBHurtado\XChange\Services\FallbackPhilippineLocalityDataset;
 
 it('resolves an injectable configured Philippine locality dataset', function (): void {
     $path = tempnam(sys_get_temp_dir(), 'locality-');
@@ -25,7 +29,54 @@ it('uses a bounded synthetic fallback when the configured dataset is unavailable
     config()->set('x-change.payout_locality.dataset_path', '/no/such/locality-dataset.json');
     $address = app(PayoutLocalityResolver::class)->resolve();
     expect($address->source)->toBe('synthetic')->and($address->country)->toBe('PH')
-        ->and($address->dataset_version)->toBe('x-change-fallback-v1');
+        ->and($address->dataset_version)->toBe('x-change-fallback-v2');
+});
+
+it('supplies multiple usable barangay candidates without any configured dataset', function (): void {
+    config()->set('x-change.payout_locality.dataset_path', null);
+    $dataset = app(PhilippineLocalityDataset::class);
+    $candidates = $dataset->candidates();
+
+    expect($dataset)->toBeInstanceOf(FallbackPhilippineLocalityDataset::class)
+        ->and(count($candidates))->toBeGreaterThan(1);
+    foreach ($candidates as $candidate) {
+        expect($candidate->address1)->toStartWith('Barangay ')->not->toContain('N/A')
+            ->and($candidate->city)->not->toBeEmpty()
+            ->and($candidate->country)->toBe('PH')
+            ->and($candidate->postal_code)->toMatch('/^\d{4}$/');
+    }
+});
+
+it('selects different synthetic fallback candidates using the injected random selector', function (): void {
+    $dataset = new FallbackPhilippineLocalityDataset;
+    $first = (new PayoutLocalityResolver($dataset, fn (int $count): int => 0))->resolve();
+    $last = (new PayoutLocalityResolver($dataset, fn (int $count): int => $count - 1))->resolve();
+
+    expect($first->address1)->not->toBe($last->address1)
+        ->and($first->source)->toBe('synthetic')
+        ->and($last->source)->toBe('synthetic');
+});
+
+it('carries the unconfigured synthetic fallback through to both NetBank payload parties', function (): void {
+    config()->set('x-change.payout_locality.dataset_path', null);
+    $dataset = app(PhilippineLocalityDataset::class);
+    $sender = new PayoutPartyData('sender', 'Issuer', (new PayoutLocalityResolver($dataset, fn (int $count): int => 0))->resolve());
+    $recipient = new PayoutPartyData('recipient', 'Recipient', (new PayoutLocalityResolver($dataset, fn (int $count): int => $count - 1))->resolve());
+    $banks = Mockery::mock(BankRegistryContract::class);
+    $banks->shouldReceive('supportsRail')->andReturnTrue();
+    app()->instance(BankRegistryContract::class, $banks);
+    $gateway = new Gateway;
+    $gateway->setRails(['INSTAPAY' => ['enabled' => true]]);
+    $payload = $gateway->disburse([
+        'amount' => 10000, 'accountNumber' => '09170000000', 'bankCode' => 'GXCHPHM2XXX',
+        'reference' => 'synthetic-locality-test', 'via' => 'INSTAPAY',
+        'senderParty' => $sender->toArray(), 'recipientParty' => $recipient->toArray(),
+    ])->getData();
+
+    expect(data_get($payload, 'sender.address.address1'))->toBe($sender->address->address1)->toStartWith('Barangay ')
+        ->and(data_get($payload, 'recipient.address.address1'))->toBe($recipient->address->address1)->toStartWith('Barangay ')
+        ->and($sender->address->source)->toBe('synthetic')
+        ->and($recipient->address->source)->toBe('synthetic');
 });
 
 it('can build the request-bound evidence service without external configuration', function (): void {
