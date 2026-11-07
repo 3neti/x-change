@@ -37,6 +37,7 @@ use LBHurtado\XChange\Services\Claim\ClaimExecutionPreflight;
 use LBHurtado\XChange\Services\ClaimPayoutLocalityScope;
 use LBHurtado\XChange\Services\ClaimPayoutParties;
 use LBHurtado\XChange\Services\Execution\DurableTreasuryPayout;
+use LBHurtado\XChange\Services\Execution\FinalizeApprovedLegacyPayout;
 use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
 use LBHurtado\XChange\Services\Provisioning\ProviderProvisioningProfileResolver;
@@ -710,6 +711,12 @@ class SubmitPayCodeClaim
         $outbox = app(DurableTreasuryPayout::class);
         $treasuryApproval = config('x-change.payout_locality.submission_guard_enabled', false)
             && is_string($claimKey) && $outbox->approvalFor($voucher, $claimKey) !== null;
+
+        if ($treasuryApproval && data_get($voucher->metadata, 'treasury.pay_code_reservation') === null
+            && in_array($disbursement->status, ['succeeded', 'pending'], true)) {
+            app(FinalizeApprovedLegacyPayout::class)
+                ->handle($voucher->fresh() ?? $voucher, $request, $disbursement->response);
+        }
 
         $result = new SubmitPayCodeClaimResultData(
             voucher_code: (string) $voucher->code,

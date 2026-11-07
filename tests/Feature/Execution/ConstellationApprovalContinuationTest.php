@@ -75,6 +75,41 @@ it('continues a guarded payout through the real Constellation adapter with fake 
     expect(json_encode($row->raw_response))->not->toContain('123456')->not->toContain('09170000000');
 });
 
+it('finishes a guarded legacy redemption after real Constellation approval with fake transport', function (): void {
+    Queue::fake([DispatchVoucherRedemptionFeedbackJob::class]);
+    config()->set('x-change.payout_locality.submission_guard_enabled', true);
+    config()->set('x-change.payout_locality.enabled', true);
+    config()->set('constellation.base_url', 'https://provider.invalid');
+    config()->set('constellation.username', 'test-user');
+    config()->set('constellation.password', 'test-pass');
+    config()->set('constellation.merchant_key', 'test-key');
+    config()->set('constellation.log_channel', 'single');
+    config()->set('constellation.settlement_wallet_id', 'test-wallet');
+    config()->set('constellation.bank_map.GXCHPHM2XXX', 'gcash-bank');
+    Http::preventStrayRequests();
+    Http::fake([
+        '*/integration/corp_wallet/view_wallet/*' => Http::response(['success' => true, 'data' => ['wallet_id' => 'test-wallet', 'account_id' => 'test-account']]),
+        '*/integration/corp_wallet/request_otp' => Http::response(['success' => true, 'data' => 'OTP requested']),
+        '*/integration/corp_wallet/withdraw_not_registered' => Http::response(['success' => true, 'data' => ['status' => 'COMPLETED']]),
+    ]);
+    app()->instance(ConstellationOtpResolver::class, app(DeferredOtpResolver::class));
+    app()->instance(PayoutProvider::class, app(ConstellationPayoutProvider::class));
+    $voucher = issueVoucher();
+    $reference = $voucher->code.'-09170000000';
+    $payload = ['mobile' => '09170000000', 'recipient_country' => 'PH', 'bank_account' => ['bank_code' => 'GXCHPHM2XXX', 'account_number' => '09170000000'], '_meta' => ['idempotency_key' => 'legacy-real-adapter']];
+
+    app(SubmitPayCodeClaim::class)->handle($voucher, $payload);
+    $this->artisan('x-change:claim:deliver-treasury-payouts', ['--limit' => 10])->assertSuccessful();
+    expect(app(PaynamicsWithdrawalOtpApprovalService::class)->verify('09170000000', $reference, '123456'))->toBeTrue();
+    $payload['approval'] = ['resume' => true, 'provider' => 'paynamics', 'reference_id' => $reference];
+    $payload['otp'] = ['verified' => true];
+    $result = app(SubmitPayCodeClaim::class)->handle($voucher->fresh(), $payload);
+
+    expect($result->status)->toBe('succeeded')
+        ->and(data_get($voucher->fresh()->metadata, 'disbursement.cash_withdrawal_uuid'))->not->toBeEmpty();
+    Http::assertSentCount(4);
+});
+
 it('continues a Paynamics-configured treasury claim using the real adapter and simulated transport', function (): void {
     Queue::fake([
         DeliverQueuedFeedbackSmsJob::class,

@@ -59,6 +59,21 @@ it('keeps an uncertain payout in review and records the check', function (): voi
         ->and(DB::table('x_change_treasury_payout_review_audits')->value('outcome'))->toBe('unknown');
 });
 
+it('keeps a verified legacy payout in review until its wallet withdrawal is recorded', function (): void {
+    [$actor, $id, $payout] = treasuryReviewFixture();
+    DB::table('x_change_treasury_payout_outbox')->where('id', $id)->update(['payout_kind' => 'legacy']);
+    Gate::define('x-change.recovery.manage', fn () => true);
+    $service = Mockery::mock(DisbursementReconciliationContract::class);
+    $service->shouldReceive('reconcile')->once()->andReturnUsing(function () use ($payout): array {
+        $payout->forceFill(['status' => 'succeeded', 'needs_review' => false])->save();
+
+        return ['resolved_status' => 'succeeded'];
+    });
+    (new ReviewTreasuryPayoutOutbox($service))->handle($actor, $id, 'Verified provider outcome');
+    expect(DB::table('x_change_treasury_payout_outbox')->where('id', $id)->value('status'))->toBe('review')
+        ->and(DB::table('x_change_treasury_payout_review_audits')->value('outcome'))->toBe('accounting_required');
+});
+
 it('does not guess or resend when there is no provider transaction identifier', function (): void {
     [$actor, $id, $payout] = treasuryReviewFixture();
     Gate::define('x-change.recovery.manage', fn () => true);

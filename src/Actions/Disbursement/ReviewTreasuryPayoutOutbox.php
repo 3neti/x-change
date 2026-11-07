@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use RuntimeException;
@@ -63,13 +64,16 @@ final readonly class ReviewTreasuryPayoutOutbox
                 $fresh = DisbursementReconciliation::query()->whereKey($payout->id)->lockForUpdate()->firstOrFail();
                 $verified = in_array($fresh->status, ['succeeded', 'failed'], true)
                     && ! $fresh->needs_review && filled($fresh->provider_transaction_id);
+                $voucher = $row->payout_kind === 'legacy' ? Voucher::query()->find($row->voucher_id) : null;
+                $walletAccountingRequired = $verified && $fresh->status === 'succeeded' && $row->payout_kind === 'legacy'
+                    && (! $voucher instanceof Voucher || ! filled(data_get($voucher->metadata, 'disbursement.cash_withdrawal_uuid')));
                 DB::table('x_change_treasury_payout_review_audits')->insert([
                     'outbox_id' => $id, 'reconciliation_id' => $fresh->id,
                     'actor_type' => $actor::class, 'actor_id' => (string) $actor->getAuthIdentifier(),
-                    'outcome' => $verified ? $fresh->status : 'unknown',
+                    'outcome' => $walletAccountingRequired ? 'accounting_required' : ($verified ? $fresh->status : 'unknown'),
                     'reason_ciphertext' => Crypt::encryptString(trim($reason)), 'created_at' => now(),
                 ]);
-                if ($verified) {
+                if ($verified && ! $walletAccountingRequired) {
                     DB::table('x_change_treasury_payout_outbox')->where('id', $id)->update(['status' => 'completed', 'updated_at' => now()]);
                 }
             }, 5);

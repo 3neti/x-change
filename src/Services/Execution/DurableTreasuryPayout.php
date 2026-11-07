@@ -6,9 +6,11 @@ namespace LBHurtado\XChange\Services\Execution;
 
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use LBHurtado\EmiCore\Contracts\PendingPayoutApproval;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Voucher\Pipelines\RedeemedVoucher\DisburseCash;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Services\ClaimPayoutLocalityScope;
 use RuntimeException;
@@ -18,13 +20,14 @@ final readonly class DurableTreasuryPayout
 {
     public function __construct(private TreasuryBackedPayCodeDisbursement $payouts) {}
 
-    public function enqueue(Voucher $voucher, ?string $claimKey): int
+    public function enqueue(Voucher $voucher, ?string $claimKey, string $payoutKind = 'treasury'): int
     {
-        if (DB::transactionLevel() === 0 || $voucher->getKey() === null) {
+        if (DB::transactionLevel() === 0 || $voucher->getKey() === null || ! in_array($payoutKind, ['treasury', 'legacy'], true)) {
             throw new RuntimeException('Treasury payout must be enqueued in the redemption transaction.');
         }
         DB::table('x_change_treasury_payout_outbox')->insertOrIgnore([
             'voucher_id' => $voucher->getKey(),
+            'payout_kind' => $payoutKind,
             'claim_key_ciphertext' => $claimKey !== null ? Crypt::encryptString($claimKey) : null,
             'status' => 'pending', 'created_at' => now(), 'updated_at' => now(),
         ]);
@@ -76,16 +79,44 @@ final readonly class DurableTreasuryPayout
             $voucher = Voucher::query()->findOrFail($row->voucher_id);
             $scope->set(is_string($row->claim_key_ciphertext) ? Crypt::decryptString($row->claim_key_ciphertext) : null);
             if (! $this->hasExistingSubmission($voucher)) {
-                $this->payouts->handle($voucher);
+                if ($row->payout_kind === 'legacy') {
+                    $voucher->redeemer = $voucher->redeemers()->first();
+                    $provider = app()->makeWith(GuardedLegacyPayoutProvider::class, ['voucher' => $voucher]);
+                    $previousApprovalOption = config('voucher.payout.bubble_pending_approval', false);
+                    config()->set('voucher.payout.bubble_pending_approval', true);
+                    try {
+                        (new DisburseCash($provider))->handle($voucher, fn (Voucher $processed): Voucher => $processed);
+                    } finally {
+                        config()->set('voucher.payout.bubble_pending_approval', $previousApprovalOption);
+                    }
+                } else {
+                    $this->payouts->handle($voucher);
+                }
             }
-            $status = $this->submissionStatus($voucher);
+            $status = $this->submissionStatus($voucher->fresh() ?? $voucher, $row->payout_kind);
         } catch (PendingPayoutApproval $exception) {
-            $status = 'approval_required';
+            $status = 'review';
+            if (isset($voucher) && $row->payout_kind === 'legacy') {
+                $record = DisbursementReconciliation::query()->where('voucher_id', $voucher->getKey())
+                    ->where('claim_type', 'withdraw')->where('provider_reference', $exception->requestId())->firstOrFail();
+                $metadata = (array) $voucher->metadata;
+                data_set($metadata, 'disbursement', [
+                    'gateway' => $exception->provider(), 'reference_id' => $exception->requestId(),
+                    'status' => 'pending', 'amount' => $record->amount, 'currency' => $record->currency,
+                    'settlement_rail' => $record->settlement_rail,
+                    'recipient_identifier' => data_get($record->raw_request, 'account_number'),
+                    'requires_reconciliation' => true, 'error' => 'Payout approval OTP pending.',
+                    'metadata' => ['bank_code' => $record->bank_code],
+                ]);
+                $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
+            }
             $approval = Crypt::encryptString(json_encode([
                 'provider' => $exception->provider(), 'reference_id' => $exception->requestId(),
                 'metadata' => $exception->toApprovalMetadata(),
             ], JSON_THROW_ON_ERROR));
-        } catch (Throwable) {
+            $status = 'approval_required';
+        } catch (Throwable $exception) {
+            Log::warning('Payout outbox delivery failed.', ['outbox_id' => $id, 'exception' => $exception::class]);
             $voucher = Voucher::query()->find($row->voucher_id);
             $status = ! $voucher instanceof Voucher || $this->hasExistingSubmission($voucher) ? 'review' : 'pending';
         } finally {
@@ -153,8 +184,12 @@ final readonly class DurableTreasuryPayout
             || DB::table('x_change_payout_submission_claims')->where('voucher_id', $voucher->getKey())->exists();
     }
 
-    private function submissionStatus(Voucher $voucher): string
+    private function submissionStatus(Voucher $voucher, string $payoutKind): string
     {
+        if ($payoutKind === 'legacy' && $this->hasExistingSubmission($voucher)
+            && ! filled(data_get($voucher->metadata, 'disbursement.cash_withdrawal_uuid'))) {
+            return 'review';
+        }
         $payout = DisbursementReconciliation::query()->where('voucher_id', $voucher->getKey())->latest('id')->first();
         if (! $payout instanceof DisbursementReconciliation || in_array($payout->status, ['intent', 'unknown'], true)) {
             return $this->hasExistingSubmission($voucher) ? 'review' : 'pending';

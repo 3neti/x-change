@@ -57,6 +57,7 @@ use LBHurtado\Voucher\Contracts\SettlementEnvelopeExecutionGateway;
 use LBHurtado\Voucher\Contracts\StoredValueExecutionGateway;
 use LBHurtado\Voucher\Events\VoucherDisbursementFailed;
 use LBHurtado\Voucher\Events\VoucherDisbursementSucceeded;
+use LBHurtado\Voucher\Pipelines\RedeemedVoucher\DisburseCash;
 use LBHurtado\Voucher\Services\ExecutionDriverRegistry;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\Wallet\Services\SystemUserResolverService;
@@ -517,6 +518,7 @@ use LBHurtado\XChange\Services\EventLifecycleService;
 use LBHurtado\XChange\Services\Execution\AuthenticatedStoredValueHolderAuthority;
 use LBHurtado\XChange\Services\Execution\CampaignCoverageCompletionExecutionDriver;
 use LBHurtado\XChange\Services\Execution\CollectionStoredValueDestinationAuthority;
+use LBHurtado\XChange\Services\Execution\DeferredLegacyDisbursement;
 use LBHurtado\XChange\Services\Execution\ExecutionAwarePostRedemptionGate;
 use LBHurtado\XChange\Services\Execution\ExecutionResultHandoffPipeline;
 use LBHurtado\XChange\Services\Execution\LifecycleExecutionCashDisbursementPoller;
@@ -2086,7 +2088,16 @@ class XChangeServiceProvider extends ServiceProvider
     {
         $pipeline = (array) config('voucher-pipeline.post-redemption', []);
 
+        $pipeline = array_map(
+            fn ($step) => $step === DisburseCash::class
+                ? DeferredLegacyDisbursement::class
+                : $step,
+            $pipeline,
+        );
+
         if (in_array(ExecutionAwarePostRedemptionGate::class, $pipeline, true)) {
+            config()->set('voucher-pipeline.post-redemption', $pipeline);
+
             return;
         }
 

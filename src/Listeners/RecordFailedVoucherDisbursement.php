@@ -22,6 +22,9 @@ class RecordFailedVoucherDisbursement
         $exception = $event->exception;
 
         $resolvedStatus = $this->statusResolver->resolveFromGatewayException($exception);
+        $errorMessage = $request->sender !== null || $request->recipient !== null
+            ? 'Provider submission failed; reconciliation may be required.'
+            : $exception->getMessage();
 
         $this->reconciliations->record([
             'voucher_id' => $voucher->id,
@@ -41,16 +44,16 @@ class RecordFailedVoucherDisbursement
             'attempt_count' => 1,
             'attempted_at' => now(),
             'completed_at' => null,
-            'raw_request' => $request->toArray(),
+            'raw_request' => $request->toAuditArray(),
             'raw_response' => [
                 'exception' => $exception::class,
-                'message' => $exception->getMessage(),
+                'message' => $errorMessage,
             ],
             'needs_review' => $resolvedStatus === 'unknown',
             'review_reason' => $resolvedStatus === 'unknown'
                 ? 'Gateway outcome uncertain'
                 : null,
-            'error_message' => $exception->getMessage(),
+            'error_message' => $errorMessage,
             'meta' => [
                 'flow' => 'redeem',
                 'voucher_code' => $voucher->code,
