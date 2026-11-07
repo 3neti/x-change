@@ -47,6 +47,12 @@ const baseProps = {
 };
 
 describe('claim Success destination route rendering', () => {
+    it('centers the brand for standard and configured success presentations', async () => {
+        const wrapper = mount(Success, { props: baseProps });
+        expect(wrapper.findComponent({ name: 'ClaimStepShell' }).props('brandPlacement')).toBe('center');
+        await wrapper.setProps({ success_presentation: { state: 'ready', title: 'Ready' } });
+        expect(wrapper.findComponent({ name: 'ClaimStepShell' }).props('brandPlacement')).toBe('center');
+    });
     it('checks prepaid processing then replaces it with the authorized ready action', async () => {
         vi.useFakeTimers();
         vi.mocked(router.reload).mockClear();

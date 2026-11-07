@@ -2,13 +2,48 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Http;
 use LBHurtado\EmiCore\Contracts\BankRegistryContract;
 use LBHurtado\EmiCore\Contracts\PhilippineLocalityDataset;
 use LBHurtado\EmiCore\Data\PayoutPartyData;
 use LBHurtado\EmiCore\Services\PayoutLocalityResolver;
 use LBHurtado\PaymentGateway\Omnipay\Netbank\Gateway;
 use LBHurtado\XChange\Services\ClaimPayoutLocalityEvidence;
+use LBHurtado\XChange\Services\CoordinateLocalityLookup;
 use LBHurtado\XChange\Services\FallbackPhilippineLocalityDataset;
+
+it('uses the existing location handler geocoder when payout-specific settings are absent', function (): void {
+    config()->set('x-change.payout_locality.coordinate_endpoint', '');
+    config()->set('x-change.payout_locality.coordinate_api_key', '');
+    config()->set('location-handler.opencage_endpoint', 'https://geocoder.test/reverse');
+    config()->set('location-handler.opencage_api_key', 'test-key');
+    Http::fake(['geocoder.test/*' => Http::response(['results' => [['components' => ['country_code' => 'ph', 'suburb' => 'Barangay Test', 'city' => 'Manila', 'postcode' => '1000']]]])]);
+
+    expect(app(CoordinateLocalityLookup::class)->find(14.5, 121.0)?->city)->toBe('Manila');
+    Http::assertSentCount(1);
+});
+
+it('does not mix a partial payout override with location handler credentials', function (): void {
+    config()->set('x-change.payout_locality.coordinate_endpoint', 'https://override.test/reverse');
+    config()->set('x-change.payout_locality.coordinate_api_key', '');
+    config()->set('location-handler.opencage_endpoint', 'https://geocoder.test/reverse');
+    config()->set('location-handler.opencage_api_key', 'test-key');
+    Http::fake();
+
+    expect(app(CoordinateLocalityLookup::class)->find(14.5, 121.0))->toBeNull();
+    Http::assertNothingSent();
+});
+
+it('prefers a complete payout geocoder override', function (): void {
+    config()->set('x-change.payout_locality.coordinate_endpoint', 'https://override.test/reverse');
+    config()->set('x-change.payout_locality.coordinate_api_key', 'override-key');
+    config()->set('location-handler.opencage_endpoint', 'https://geocoder.test/reverse');
+    config()->set('location-handler.opencage_api_key', 'other-key');
+    Http::fake(['override.test/*' => Http::response(['results' => [['components' => ['country_code' => 'ph', 'suburb' => 'Barangay Test', 'city' => 'Manila', 'postcode' => '1000']]]])]);
+
+    expect(app(CoordinateLocalityLookup::class)->find(14.5, 121.0)?->source)->toBe('location');
+    Http::assertSent(fn ($request) => str_starts_with($request->url(), 'https://override.test/') && $request['key'] === 'override-key');
+});
 
 it('resolves an injectable configured Philippine locality dataset', function (): void {
     $path = tempnam(sys_get_temp_dir(), 'locality-');

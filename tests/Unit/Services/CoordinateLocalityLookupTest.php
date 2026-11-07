@@ -21,3 +21,11 @@ it('returns no locality when the geocoder is unavailable, foreign, or incomplete
         ->and($lookup->find(14.5, 121.0))->toBeNull()
         ->and($lookup->find(14.5, 121.0))->toBeNull();
 });
+
+it('accepts a village locality and avoids storing the coordinate query at the provider', function (): void {
+    Http::fake(['*' => Http::response(['results' => [['components' => ['country_code' => 'ph', 'village' => 'Barangay Sample', 'municipality' => 'Sample City', 'postcode' => '1234']]]])]);
+    $lookup = new CoordinateLocalityLookup('https://example.test/reverse', 'test-key');
+
+    expect($lookup->find(14.5, 121.0)?->address1)->toBe('Barangay Sample');
+    Http::assertSent(fn ($request) => $request['no_record'] === 1);
+});
