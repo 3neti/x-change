@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, useForm } from "@inertiajs/vue3";
 import { computed, ref } from "vue";
+import { review as reviewTreasuryPayout, investigate as investigateTreasuryPayout } from "@/routes/x-change/operations/recovery/treasury-payout";
 
 type Payout = {
   id: number;
@@ -55,14 +56,17 @@ type Report = {
   };
 };
 defineOptions({ layout: [] });
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   transactionReviews: Case[];
   fundingCases: Case[];
   reports: Report[];
   failures: Case[];
   payouts: Payout[];
-}>();
+  treasuryPayoutReviews?: { id: number; code: string; created_at: string; updated_at: string; can_check?: boolean }[];
+}>(), { treasuryPayoutReviews: () => [] });
 const form = useForm({ reason: "", destination_ready: false });
+const treasuryForm = useForm({ reason: "" });
+const selectedTreasuryPayout = ref<number | null>(null);
 const selectedPayout = ref<number | null>(null);
 const selectedReport = ref<string | null>(null);
 const reportForm = useForm({ note: "" });
@@ -411,6 +415,21 @@ function markAccounted(url: string) {
               </form>
             </li>
           </ul>
+        </div>
+      </section>
+      <section class="rounded-2xl border border-slate-700 bg-slate-900 p-5">
+        <h2 class="text-lg font-semibold">Treasury payout review</h2>
+        <p class="mt-2 text-sm text-slate-300">Check provider and reconciliation evidence before resolving an uncertain payout.</p>
+        <p v-if="!treasuryPayoutReviews.length" class="mt-3 text-sm text-slate-400">No treasury payouts need review.</p>
+        <div v-for="review in treasuryPayoutReviews" :key="review.id" class="mt-4 rounded-xl border border-slate-700 p-4">
+          <p class="font-semibold">{{ review.code }} · Review {{ review.id }}</p>
+          <p class="mt-1 text-sm text-slate-300">Last updated: {{ review.updated_at }}</p>
+          <p v-if="!review.can_check" class="mt-2 text-sm text-slate-400">Provider transaction evidence is needed before status can be checked.</p>
+          <button v-if="selectedTreasuryPayout !== review.id" type="button" class="mt-3 rounded-lg bg-cyan-300 px-4 py-2 font-medium text-slate-950" @click="selectedTreasuryPayout = review.id">{{ review.can_check ? 'Check provider status' : 'Record investigation' }}</button>
+          <form v-else class="mt-3 flex flex-col gap-3" @submit.prevent="treasuryForm.post((review.can_check ? reviewTreasuryPayout : investigateTreasuryPayout)({ outbox: review.id }).url)">
+            <label>Reason for check<textarea v-model="treasuryForm.reason" required minlength="8" maxlength="2000" class="mt-1 block w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2" /></label>
+            <button type="submit" :disabled="treasuryForm.processing" class="w-fit rounded-lg bg-cyan-300 px-4 py-2 font-medium text-slate-950 disabled:opacity-50">{{ review.can_check ? 'Check status' : 'Record investigation' }}</button>
+          </form>
         </div>
       </section>
       <section class="rounded-2xl border border-slate-700 bg-slate-900 p-5">

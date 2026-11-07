@@ -10,9 +10,11 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Inertia\Inertia;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Actions\Disbursement\ReviewTreasuryPayoutOutbox;
 use LBHurtado\XChange\Actions\Payment\ApplyReviewedPayment;
 use LBHurtado\XChange\Actions\Payment\ApplyReviewedSplitPayment;
 use LBHurtado\XChange\Actions\Payment\CreditReviewedExcess;
@@ -26,6 +28,39 @@ use Throwable;
 
 final class PaymentRecoveryController extends Controller
 {
+    public function investigateTreasuryPayout(Request $request, int $outbox, ReviewTreasuryPayoutOutbox $action): RedirectResponse
+    {
+        $data = $request->validate(['reason' => ['required', 'string', 'min:8', 'max:2000']]);
+        $actor = $request->user();
+        abort_unless($actor instanceof Model, 403);
+        $action->recordInvestigation($actor, $outbox, $data['reason']);
+
+        return back()->with('status', 'Investigation recorded. The payout remains in review.');
+    }
+
+    public function reviewTreasuryPayout(Request $request, int $outbox, ReviewTreasuryPayoutOutbox $action): RedirectResponse
+    {
+        $data = $request->validate(['reason' => ['required', 'string', 'min:8', 'max:2000']]);
+        $actor = $request->user();
+        abort_unless($actor instanceof Model, 403);
+        $provider = DB::table('x_change_treasury_payout_outbox as o')
+            ->join('disbursement_reconciliations as d', 'd.voucher_id', '=', 'o.voucher_id')
+            ->where('o.id', $outbox)->where('o.status', 'review')->where('d.claim_type', 'withdraw')
+            ->orderByDesc('d.id')->value('d.provider');
+        if (is_string($provider) && trim($provider) !== '') {
+            $this->limitProviderStatusCheck($provider);
+        }
+        try {
+            $action->handle($actor, $outbox, $data['reason']);
+        } catch (Throwable $exception) {
+            Log::warning('Treasury payout review failed.', ['exception' => $exception::class]);
+
+            return back()->withErrors(['recovery' => 'The provider status could not be confirmed. The payout remains in review.']);
+        }
+
+        return back()->with('status', 'Provider status checked. Any uncertain outcome remains in review.');
+    }
+
     public function index(Request $request): Response
     {
         $transactionReviews = DB::table('x_change_payment_transaction_reviews as r')
@@ -104,10 +139,21 @@ final class PaymentRecoveryController extends Controller
                     && ! $payout->needs_review && filled($payout->provider_transaction_id)
                     ? route('x-change.operations.recovery.payout.retry', ['payout' => $payout->id], false) : null,
             ]);
+        $treasuryPayoutReviews = DB::table('x_change_treasury_payout_outbox as o')
+            ->join('vouchers as v', 'v.id', '=', 'o.voucher_id')
+            ->where('o.status', 'review')->orderByDesc('o.id')->limit(50)
+            ->get(['o.id', 'o.voucher_id', 'v.code', 'o.created_at', 'o.updated_at']);
+        $reviewPayouts = DisbursementReconciliation::query()->whereIn('voucher_id', $treasuryPayoutReviews->pluck('voucher_id'))
+            ->where('claim_type', 'withdraw')->latest('id')->get()->unique('voucher_id')->keyBy('voucher_id');
+        $treasuryPayoutReviews = $treasuryPayoutReviews->map(static fn (object $row): array => [
+            'id' => $row->id, 'code' => $row->code, 'created_at' => $row->created_at, 'updated_at' => $row->updated_at,
+            'can_check' => filled($reviewPayouts->get($row->voucher_id)?->provider_transaction_id),
+        ]);
 
         return Inertia::render('x-change/operations/PaymentRecovery', [
             'transactionReviews' => $transactionReviews, 'fundingCases' => $funding,
             'reports' => $reports, 'failures' => $failures, 'payouts' => $payouts,
+            'treasuryPayoutReviews' => $treasuryPayoutReviews,
         ])->toResponse($request)->withHeaders(['Cache-Control' => 'no-store, private']);
     }
 
@@ -168,6 +214,11 @@ final class PaymentRecoveryController extends Controller
             ->join('x_change_observed_payment_transactions as t', 't.id', '=', 'r.observed_payment_transaction_id')
             ->where('r.id', $review)->value('t.provider_code');
         abort_unless(is_string($provider), 404);
+        $this->limitProviderStatusCheck($provider);
+    }
+
+    private function limitProviderStatusCheck(string $provider): void
+    {
         $key = md5('x-change-provider-verification'.strtolower(trim($provider)));
         $limit = max(1, min((int) config('x-change.funding.verification_provider_rate_limit_per_minute', 30), (int) config('x-change.payment.attempts.verification_provider_rate_limit_per_minute', 30)));
         abort_if(RateLimiter::tooManyAttempts($key, $limit), 429, 'Provider checks are temporarily busy. Please try again shortly.');

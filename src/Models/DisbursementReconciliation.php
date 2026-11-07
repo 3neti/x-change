@@ -12,6 +12,8 @@ class DisbursementReconciliation extends Model
 
     protected $guarded = [];
 
+    protected $hidden = ['payout_identity_snapshot'];
+
     protected $casts = [
         'raw_request' => 'array',
         'raw_response' => 'array',
@@ -21,5 +23,6 @@ class DisbursementReconciliation extends Model
         'completed_at' => 'datetime',
         'last_checked_at' => 'datetime',
         'next_retry_at' => 'datetime',
+        'payout_identity_snapshot' => 'encrypted:array',
     ];
 }

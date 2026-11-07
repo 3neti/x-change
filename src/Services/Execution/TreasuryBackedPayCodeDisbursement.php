@@ -8,11 +8,13 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use LBHurtado\Contact\Classes\BankAccount;
 use LBHurtado\Contact\Models\Contact;
+use LBHurtado\EmiCore\Contracts\PendingPayoutApproval;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Events\DisbursementRejected;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\ClaimPayoutLocalityScope;
 use LBHurtado\XChange\Services\WithdrawalBankAccountResolver;
 use LBHurtado\XChange\Services\WithdrawalDisbursementExecutor;
 use LBHurtado\XChange\Services\WithdrawalExecutionContextResolver;
@@ -91,6 +93,7 @@ final readonly class TreasuryBackedPayCodeDisbursement
                 bankAccount: $bankAccount,
                 providerReference: $executionContext->providerReference,
                 amount: $amountMinor / 100,
+                payload: ['_meta' => ['idempotency_key' => app(ClaimPayoutLocalityScope::class)->get()]],
             );
 
             try {
@@ -99,8 +102,24 @@ final readonly class TreasuryBackedPayCodeDisbursement
                     input: $request,
                     sliceNumber: $executionContext->sliceNumber,
                 );
+            } catch (PendingPayoutApproval $exception) {
+                $metadata = (array) $voucher->metadata;
+                data_set($metadata, 'disbursement', [
+                    'gateway' => $exception->provider(),
+                    'reference_id' => $exception->requestId(),
+                    'status' => 'pending',
+                    'amount' => $request->amount,
+                    'currency' => $request->currency,
+                    'settlement_rail' => $request->settlement_rail,
+                    'recipient_identifier' => $request->account_number,
+                    'requires_reconciliation' => true,
+                    'error' => 'Payout approval OTP pending.',
+                    'metadata' => ['bank_code' => $request->bank_code],
+                ]);
+                $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
+                throw $exception;
             } catch (Throwable $exception) {
-                $this->markForReconciliation($voucher, $request->toArray(), $exception);
+                $this->markForReconciliation($voucher, $request->toAuditArray(), $exception);
 
                 return $voucher->refresh();
             }
@@ -123,7 +142,7 @@ final readonly class TreasuryBackedPayCodeDisbursement
                 $execution->response->provider,
                 $execution->response->transaction_id,
                 $execution->response->uuid,
-                $request->toArray(),
+                $request->toAuditArray(),
             );
 
             if ($execution->status === 'succeeded') {

@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Execution;
 
 use Closure;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Services\ClaimPayoutLocalityScope;
 use LBHurtado\XChange\Services\OnboardingVoucherInstructionPolicy;
 
 final class ExecutionAwarePostRedemptionGate
@@ -31,6 +33,23 @@ final class ExecutionAwarePostRedemptionGate
                 'instructions.claim.default_outcome',
                 'provider_disbursement',
             ) === 'provider_disbursement') {
+                if (config('x-change.payout_locality.submission_guard_enabled', false) && DB::transactionLevel() > 0) {
+                    $claimKey = app(ClaimPayoutLocalityScope::class)->get();
+                    $outboxId = app(DurableTreasuryPayout::class)->enqueue($voucher, $claimKey);
+                    DB::afterCommit(function () use ($outboxId): void {
+                        try {
+                            app(DurableTreasuryPayout::class)->deliver($outboxId);
+                        } catch (\Throwable $exception) {
+                            Log::warning('Treasury payout delivery will be retried from the outbox.', [
+                                'outbox_id' => $outboxId,
+                                'exception' => $exception::class,
+                            ]);
+                        }
+                    });
+
+                    return $voucher;
+                }
+
                 return $this->treasuryDisbursements->handle($voucher);
             }
 

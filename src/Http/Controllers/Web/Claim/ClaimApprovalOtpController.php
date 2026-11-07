@@ -11,6 +11,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Claim\SubmitClaimApprovalOtp;
 use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
 use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
+use LBHurtado\XChange\Services\Execution\DurableTreasuryPayout;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalOtpResultRedirector;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalPendingOtpStore;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalResumePayload;
@@ -32,6 +33,12 @@ final class ClaimApprovalOtpController
         $voucher = Voucher::query()
             ->where('code', strtoupper(trim($code)))
             ->firstOrFail();
+
+        $resume = $this->resumePayloadSession->get($voucher);
+        $claimKey = data_get($resume, '_meta.idempotency_key');
+        app(DurableTreasuryPayout::class)->assertApprovalSession(
+            $voucher, is_string($claimKey) ? $claimKey : null,
+        );
 
         $validated = $request->validate([
             'otp' => ['required', 'string'],

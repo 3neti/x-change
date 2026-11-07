@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1550794d3f3e1ec49ae2d56c8805a0c6",
+    "content-hash": "20b2f8819dbaa45b943b26f7e802990b",
     "packages": [
         {
             "name": "3neti/cash",
@@ -127,16 +127,16 @@
         },
         {
             "name": "3neti/emi-core",
-            "version": "v2.2.0",
+            "version": "v2.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/emi-core.git",
-                "reference": "e75d4b95264ef8ae9d2133d22259eb77a48e6a4c"
+                "reference": "97c7d3837b01406e2e9eaaa462da34a646afba63"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/emi-core/zipball/e75d4b95264ef8ae9d2133d22259eb77a48e6a4c",
-                "reference": "e75d4b95264ef8ae9d2133d22259eb77a48e6a4c",
+                "url": "https://api.github.com/repos/3neti/emi-core/zipball/97c7d3837b01406e2e9eaaa462da34a646afba63",
+                "reference": "97c7d3837b01406e2e9eaaa462da34a646afba63",
                 "shasum": ""
             },
             "require": {
@@ -176,26 +176,26 @@
             "description": "Provider-agnostic EMI domain: contracts, enums, models, DTOs, events",
             "support": {
                 "issues": "https://github.com/3neti/emi-core/issues",
-                "source": "https://github.com/3neti/emi-core/tree/v2.2.0"
+                "source": "https://github.com/3neti/emi-core/tree/v2.3.0"
             },
-            "time": "2026-11-06T02:26:01+00:00"
+            "time": "2026-11-07T05:17:52+00:00"
         },
         {
             "name": "3neti/emi-netbank",
-            "version": "v2.5.0",
+            "version": "v2.6.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/emi-netbank.git",
-                "reference": "6c889d9249aa3c036fd38cde6ee8a4c3cf7392cc"
+                "reference": "d72bfa7dd1652dc80ba94f25628072ec77656534"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/emi-netbank/zipball/6c889d9249aa3c036fd38cde6ee8a4c3cf7392cc",
-                "reference": "6c889d9249aa3c036fd38cde6ee8a4c3cf7392cc",
+                "url": "https://api.github.com/repos/3neti/emi-netbank/zipball/d72bfa7dd1652dc80ba94f25628072ec77656534",
+                "reference": "d72bfa7dd1652dc80ba94f25628072ec77656534",
                 "shasum": ""
             },
             "require": {
-                "3neti/emi-core": "^2.2.0",
+                "3neti/emi-core": "^2.3.0",
                 "3neti/laravel-model-channel": "^1.1",
                 "3neti/merchant": "^1.2",
                 "3neti/money-issuer": "^1.1",
@@ -244,26 +244,26 @@
             "description": "NetBank EMI provider adapter for emi-core",
             "support": {
                 "issues": "https://github.com/3neti/emi-netbank/issues",
-                "source": "https://github.com/3neti/emi-netbank/tree/v2.5.0"
+                "source": "https://github.com/3neti/emi-netbank/tree/v2.6.0"
             },
-            "time": "2026-11-06T02:34:15+00:00"
+            "time": "2026-11-07T05:23:59+00:00"
         },
         {
             "name": "3neti/emi-paynamics",
-            "version": "v2.1.0",
+            "version": "v2.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/emi-paynamics.git",
-                "reference": "a5072a2795641006e25bb85a90829060089bdbc5"
+                "reference": "80fde9822bf036cbdb1fc00b0101d36f2cc1f390"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/emi-paynamics/zipball/a5072a2795641006e25bb85a90829060089bdbc5",
-                "reference": "a5072a2795641006e25bb85a90829060089bdbc5",
+                "url": "https://api.github.com/repos/3neti/emi-paynamics/zipball/80fde9822bf036cbdb1fc00b0101d36f2cc1f390",
+                "reference": "80fde9822bf036cbdb1fc00b0101d36f2cc1f390",
                 "shasum": ""
             },
             "require": {
-                "3neti/emi-core": "^2.1.0",
+                "3neti/emi-core": "^2.3.0",
                 "illuminate/http": "^12.0 || ^13.0",
                 "illuminate/support": "^12.0 || ^13.0",
                 "lorisleiva/laravel-actions": "^2.9",
@@ -302,9 +302,9 @@
             "description": "Paynamics Constellation adapter for EMI core",
             "support": {
                 "issues": "https://github.com/3neti/emi-paynamics/issues",
-                "source": "https://github.com/3neti/emi-paynamics/tree/v2.1.0"
+                "source": "https://github.com/3neti/emi-paynamics/tree/v2.2.0"
             },
-            "time": "2026-11-04T04:07:31+00:00"
+            "time": "2026-11-07T05:24:01+00:00"
         },
         {
             "name": "3neti/form-flow",
@@ -1358,16 +1358,16 @@
         },
         {
             "name": "3neti/voucher",
-            "version": "v1.4.0",
+            "version": "v1.5.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/voucher.git",
-                "reference": "45cf4de878511b441c090cffe19349b4e25bf2ca"
+                "reference": "b13df84ce1dd1d05ff8cc1a42a71fc3f14f851c0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/voucher/zipball/45cf4de878511b441c090cffe19349b4e25bf2ca",
-                "reference": "45cf4de878511b441c090cffe19349b4e25bf2ca",
+                "url": "https://api.github.com/repos/3neti/voucher/zipball/b13df84ce1dd1d05ff8cc1a42a71fc3f14f851c0",
+                "reference": "b13df84ce1dd1d05ff8cc1a42a71fc3f14f851c0",
                 "shasum": ""
             },
             "require": {
@@ -1435,7 +1435,7 @@
                 "issues": "https://github.com/3neti/voucher/issues",
                 "source": "https://github.com/3neti/voucher"
             },
-            "time": "2026-11-02T02:25:08+00:00"
+            "time": "2026-11-07T05:19:10+00:00"
         },
         {
             "name": "3neti/wallet",
@@ -6338,6 +6338,71 @@
                 "source": "https://github.com/MarkBaker/PHPMatrix/tree/3.0.1"
             },
             "time": "2022-12-02T22:17:43+00:00"
+        },
+        {
+            "name": "maxmind-db/reader",
+            "version": "v1.14.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/maxmind/MaxMind-DB-Reader-php.git",
+                "reference": "f3c92f68b3bec42a9aa780368399e03dc6b91e89"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/maxmind/MaxMind-DB-Reader-php/zipball/f3c92f68b3bec42a9aa780368399e03dc6b91e89",
+                "reference": "f3c92f68b3bec42a9aa780368399e03dc6b91e89",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.2"
+            },
+            "conflict": {
+                "ext-maxminddb": "<1.14.0 || >=2.0.0"
+            },
+            "require-dev": {
+                "friendsofphp/php-cs-fixer": "3.*",
+                "phpstan/phpstan": "*",
+                "phpunit/phpunit": ">=8.0.0,<10.0.0",
+                "squizlabs/php_codesniffer": "4.*",
+                "symfony/polyfill-php80": "^1.33"
+            },
+            "suggest": {
+                "ext-bcmath": "bcmath or gmp is required for decoding larger integers with the pure PHP decoder",
+                "ext-gmp": "bcmath or gmp is required for decoding larger integers with the pure PHP decoder",
+                "ext-maxminddb": "A C-based database decoder that provides significantly faster lookups",
+                "maxmind-db/reader-ext": "C extension for significantly faster IP lookups (install via PIE: pie install maxmind-db/reader-ext)"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "MaxMind\\Db\\": "src/MaxMind/Db"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "Apache-2.0"
+            ],
+            "authors": [
+                {
+                    "name": "Gregory J. Oschwald",
+                    "email": "goschwald@maxmind.com",
+                    "homepage": "https://www.maxmind.com/en/home"
+                }
+            ],
+            "description": "MaxMind DB Reader API",
+            "homepage": "https://github.com/maxmind/MaxMind-DB-Reader-php",
+            "keywords": [
+                "database",
+                "geoip",
+                "geoip2",
+                "geolocation",
+                "maxmind"
+            ],
+            "support": {
+                "issues": "https://github.com/maxmind/MaxMind-DB-Reader-php/issues",
+                "source": "https://github.com/maxmind/MaxMind-DB-Reader-php/tree/v1.14.0"
+            },
+            "time": "2026-09-10T22:02:38+00:00"
         },
         {
             "name": "mews/purifier",

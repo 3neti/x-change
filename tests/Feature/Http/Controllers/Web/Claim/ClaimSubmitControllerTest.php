@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
@@ -11,6 +13,7 @@ use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\ClaimPayoutLocalityContext;
 use LBHurtado\XChange\Support\Claim\ClaimDestinationReceipt;
 use LBHurtado\XChange\Support\Claim\ClaimEvidenceSynchronizer;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
@@ -93,6 +96,48 @@ it('binds the submitted destination to the completed claim session', function ()
     $claim = VoucherClaim::query()->where('voucher_id', $voucher->getKey())->firstOrFail();
     expect(app(ClaimDestinationReceipt::class)->forClaim($voucher, $claim))
         ->toMatchArray(['account' => '09173011987', 'amount_minor' => 1_000]);
+});
+
+it('persists request locality against the claim key before starting the claim', function (): void {
+    config()->set('x-change.payout_locality.enabled', true);
+    $voucher = claimSubmitTestVoucher();
+    $state = ['flow_id' => 'locality-flow', 'collected_data' => ['wallet' => ['mobile' => '09173011987']]];
+    $this->formFlowService->shouldReceive('getFlowState')->once()->with('locality-flow')->andReturn($state);
+    $this->payloadNormalizer->shouldReceive('normalize')->once()->andReturn([
+        'mobile' => '09173011987', 'country' => 'PH', 'inputs' => [],
+    ]);
+    $this->evidenceSynchronizer->shouldReceive('sync')->once();
+    $this->submitAction->shouldReceive('handle')->once()->andReturnUsing(function (Voucher $voucher, array $payload): SubmitPayCodeClaimResultData {
+        expect(app(ClaimPayoutLocalityContext::class)->find($voucher, data_get($payload, '_meta.idempotency_key')))
+            ->toBe(['ip_locality' => null, 'captured' => null]);
+
+        return successfulClaimSubmitResult($voucher);
+    });
+    $this->formFlowService->shouldReceive('clearFlow')->once()->with('locality-flow');
+    $this->post(route('x-change.claim.submit', ['code' => $voucher->code]), ['flow_id' => 'locality-flow'])
+        ->assertRedirect(route('x-change.claim.success', ['code' => $voucher->code]));
+});
+
+it('retains the originating session while a durable treasury payout is waiting', function (): void {
+    config()->set('x-change.payout_locality.submission_guard_enabled', true);
+    $voucher = claimSubmitTestVoucher();
+    $state = ['flow_id' => 'waiting-treasury-flow', 'collected_data' => ['wallet' => ['mobile' => '09173011987']]];
+    $this->formFlowService->shouldReceive('getFlowState')->once()->andReturn($state);
+    $this->payloadNormalizer->shouldReceive('normalize')->once()->andReturn(['mobile' => '09173011987', 'country' => 'PH', 'inputs' => []]);
+    $this->evidenceSynchronizer->shouldReceive('sync')->once();
+    $this->submitAction->shouldReceive('handle')->once()->andReturnUsing(function (Voucher $voucher, array $payload): SubmitPayCodeClaimResultData {
+        DB::table('x_change_treasury_payout_outbox')->insert([
+            'voucher_id' => $voucher->id, 'status' => 'pending',
+            'claim_key_ciphertext' => Crypt::encryptString(data_get($payload, '_meta.idempotency_key')),
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        return successfulClaimSubmitResult($voucher);
+    });
+    $this->formFlowService->shouldReceive('clearFlow')->once()->with('waiting-treasury-flow');
+    $this->post(route('x-change.claim.submit', ['code' => $voucher->code]), ['flow_id' => 'waiting-treasury-flow'])
+        ->assertRedirect(route('x-change.claim.success', ['code' => $voucher->code]));
+    expect(session('claim_approval_resume_payload:'.$voucher->code.'._meta.idempotency_key'))->not->toBeEmpty();
 });
 
 it('redirects to claim start when neither flow id nor reference id is provided', function (): void {

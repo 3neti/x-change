@@ -15,6 +15,7 @@ use LBHurtado\XChange\Contracts\SettlementExecutionContract;
 use LBHurtado\XChange\Data\Claims\ClaimApprovalInitiationResultData;
 use LBHurtado\XChange\Data\Redemption\RedeemPayCodeResultData;
 use LBHurtado\XChange\Data\WithdrawalDisbursementExecutionData;
+use LBHurtado\XChange\Services\ClaimPayoutLocalityContext;
 use LBHurtado\XChange\Services\WithdrawalDisbursementExecutor;
 
 it('returns approval required when Paynamics payout OTP is pending during claim execution', function () {
@@ -243,6 +244,7 @@ it('returns approval required when deferred Paynamics OTP is only recorded on vo
 });
 
 it('replays only Paynamics payout when approval OTP resumes an already redeemed voucher', function () {
+    config()->set('x-change.payout_locality.enabled', true);
     $voucher = issueVoucher();
     $voucher->code = 'TEST-9UB7';
     $voucher->metadata = [
@@ -260,6 +262,10 @@ it('replays only Paynamics payout when approval OTP resumes an already redeemed 
         ],
     ];
     $voucher->save();
+    app(ClaimPayoutLocalityContext::class)->remember($voucher, 'otp-locality', [
+        'ip_locality' => null,
+        'captured' => ['address1' => 'OTP Barangay', 'city' => 'Manila', 'country' => 'PH', 'postal_code' => '1000', 'source' => 'location', 'dataset_version' => null],
+    ]);
 
     $executor = new class implements ClaimExecutorContract
     {
@@ -288,14 +294,16 @@ it('replays only Paynamics payout when approval OTP resumes an already redeemed 
     $disbursements
         ->shouldReceive('execute')
         ->once()
-        ->withArgs(function (Voucher $givenVoucher, PayoutRequestData $request, int $sliceNumber) use ($voucher): bool {
+        ->withArgs(function (Voucher $givenVoucher, PayoutRequestData $request, int $sliceNumber, bool $approvedContinuation) use ($voucher): bool {
             return $givenVoucher === $voucher
                 && $sliceNumber === 1
+                && $approvedContinuation
                 && $request->reference === 'TEST-9UB7-09171234567'
                 && $request->amount === 12.50
                 && $request->account_number === '09171234567'
                 && $request->bank_code === 'GXCHPHM2XXX'
-                && $request->settlement_rail === 'INSTAPAY';
+                && $request->settlement_rail === 'INSTAPAY'
+                && $request->recipient?->address?->address1 === 'OTP Barangay';
         })
         ->andReturn(new WithdrawalDisbursementExecutionData(
             input: PayoutRequestData::from([
@@ -322,6 +330,7 @@ it('replays only Paynamics payout when approval OTP resumes an already redeemed 
         'approvalReplayDisbursements' => $disbursements,
     ])->handle($voucher, [
         'mobile' => '639171234567',
+        '_meta' => ['idempotency_key' => 'otp-locality'],
         'approval' => [
             'resume' => true,
             'provider' => 'paynamics',

@@ -9,18 +9,22 @@ use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
+use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Data\Claim\ClaimWorkflowInterpretationData;
+use LBHurtado\XChange\Data\Claims\ClaimApprovalInitiationResultData;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Claim\ClaimWorkflowReadModelProjector;
 use LBHurtado\XChange\Services\Claim\OnboardingSuccessActionResolver;
 use LBHurtado\XChange\Services\Claim\VoucherRiderFallbackPolicy;
+use LBHurtado\XChange\Services\Execution\DurableTreasuryPayout;
 use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
 use LBHurtado\XChange\Services\Settlement\DemonstrationPolicySummary;
 use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LBHurtado\XChange\Services\XRay\VoucherXRayProjectionBuilder;
+use LBHurtado\XChange\Support\Claim\ClaimApprovalResumePayloadSession;
 use LBHurtado\XChange\Support\Claim\ClaimDestinationReceipt;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\ClaimRiderHandoff;
@@ -51,6 +55,28 @@ class ClaimSuccessPageController
         $voucher = Voucher::query()
             ->where('code', $code)
             ->firstOrFail();
+
+        if (! $request->wantsJson() && config('x-change.payout_locality.submission_guard_enabled', false)) {
+            $payload = app(ClaimApprovalResumePayloadSession::class)->get($voucher);
+            $claimKey = data_get($payload, '_meta.idempotency_key');
+            $approval = app(DurableTreasuryPayout::class)->approvalFor(
+                $voucher, is_string($claimKey) ? $claimKey : null,
+            );
+            if (is_array($approval) && is_array($payload)) {
+                $result = ClaimApprovalInitiationResultData::from([
+                    'status' => 'approval_required', 'voucher_code' => (string) $voucher->code,
+                    'requirements' => ['otp'], 'messages' => ['Payout OTP approval required.'],
+                    'meta' => $approval['metadata'],
+                ]);
+                app(CompiledClaimResultSession::class)->put($result);
+                app(ClaimApprovalWorkflowStoreContract::class)->put($voucher, [
+                    'status' => 'pending', 'voucher_code' => (string) $voucher->code,
+                    'payload' => $payload, 'approval' => $result->toArray(), 'created_at' => now()->toIso8601String(),
+                ]);
+
+                return redirect()->route('x-change.claim.approval', ['code' => $voucher->code]);
+            }
+        }
 
         $workflow = $workflowReadModel->project($voucher);
 

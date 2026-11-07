@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Listeners;
 use LBHurtado\Voucher\Events\VoucherDisbursementSucceeded;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
+use LBHurtado\XChange\Services\PayoutResultAudit;
 
 class RecordSuccessfulVoucherDisbursement
 {
@@ -41,16 +42,8 @@ class RecordSuccessfulVoucherDisbursement
             'attempt_count' => 1,
             'attempted_at' => now(),
             'completed_at' => $resolvedStatus === 'succeeded' ? now() : null,
-            'raw_request' => $request->toArray(),
-            'raw_response' => method_exists($result, 'toArray')
-                ? $result->toArray()
-                : [
-                    'transaction_id' => $result->transaction_id ?? null,
-                    'uuid' => $result->uuid ?? null,
-                    'status' => $result->status?->value ?? null,
-                    'provider' => $result->provider ?? null,
-                    'metadata' => $result->metadata ?? null,
-                ],
+            'raw_request' => $request->toAuditArray(),
+            'raw_response' => app(PayoutResultAudit::class)->summarize($result),
             'meta' => [
                 'flow' => 'redeem',
                 'voucher_code' => $voucher->code,

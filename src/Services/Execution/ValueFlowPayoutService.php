@@ -9,8 +9,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
+use LBHurtado\EmiCore\Data\PayoutPartyData;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
 use LBHurtado\EmiCore\Enums\PayoutStatus;
+use LBHurtado\EmiCore\Services\PayoutLocalityResolver;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
@@ -30,6 +32,7 @@ use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Jobs\SubmitValueFlowPayout;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Services\DisbursementRejectionTrustService;
+use LBHurtado\XChange\Services\PayoutProviderIdentityMatcher;
 use LBHurtado\XChange\Services\Settlement\V2EvidenceEventJournal;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use RuntimeException;
@@ -157,16 +160,26 @@ final readonly class ValueFlowPayoutService
             if ($row->provider !== $this->runtime->provider()) {
                 throw new RuntimeException('The configured payout provider differs from the reserved payout.');
             }
+            $snapshot = $row->payout_identity_snapshot;
+            if (config('x-change.payout_locality.enabled', false) && $snapshot === null) {
+                $resolver = app(PayoutLocalityResolver::class);
+                $snapshot = [
+                    'sender' => (new PayoutPartyData('sender', null, $resolver->resolve()))->toArray(),
+                    'recipient' => (new PayoutPartyData('recipient', null, $resolver->resolve()))->toArray(),
+                ];
+            }
             $request = new PayoutRequestData(
                 reference: $this->submissionReference($row->provider_reference), amount: (int) data_get($row->meta, 'amount_minor') / 100,
                 account_number: Crypt::decryptString(data_get($row->meta, 'account_ciphertext')),
                 bank_code: $row->bank_code, settlement_rail: $row->settlement_rail, currency: $row->currency,
                 external_id: (string) $row->voucher_id, external_code: $row->voucher_code,
+                sender: is_array(data_get($snapshot, 'sender')) ? PayoutPartyData::from($snapshot['sender']) : null,
+                recipient: is_array(data_get($snapshot, 'recipient')) ? PayoutPartyData::from($snapshot['recipient']) : null,
             );
             $this->rails->assertSupports($request);
             $meta = $row->meta;
             $meta['submission_reference'] = $request->reference;
-            $row->forceFill(['meta' => $meta, 'status' => 'unknown', 'attempt_count' => ((int) $row->attempt_count) + 1, 'attempted_at' => now(),
+            $row->forceFill(['meta' => $meta, 'payout_identity_snapshot' => $snapshot, 'status' => 'unknown', 'attempt_count' => ((int) $row->attempt_count) + 1, 'attempted_at' => now(),
                 'needs_review' => true, 'review_reason' => 'Provider submission outcome awaiting evidence.'])->save();
 
             return $request;
@@ -184,7 +197,10 @@ final readonly class ValueFlowPayoutService
         DB::transaction(function () use ($id, $response): void {
             $row = DisbursementReconciliation::query()->whereKey($id)->lockForUpdate()->firstOrFail();
             $status = $this->statuses->resolveFromGatewayResponse($response);
-            $providerMatches = $response->provider === $row->provider;
+            $providerMatches = app(PayoutProviderIdentityMatcher::class)->matches(
+                (string) $row->provider,
+                (string) $response->provider,
+            );
             if (! $providerMatches || ($status === 'succeeded' && blank($response->transaction_id))) {
                 $status = 'unknown';
             }
@@ -293,7 +309,7 @@ final readonly class ValueFlowPayoutService
             }
             $retryMeta = $retry->meta;
             $retryMeta['recovery'] = ['original_payout_id' => $original->id, 'evidence_reference' => $evidenceReference, 'operator_reference' => $operatorReference];
-            $retry->forceFill(['meta' => $retryMeta])->save();
+            $retry->forceFill(['meta' => $retryMeta, 'payout_identity_snapshot' => $original->payout_identity_snapshot])->save();
             $meta['recovery_retry'] = ['payout_id' => $retry->id, 'evidence_reference' => $evidenceReference, 'operator_reference' => $operatorReference];
             $original->forceFill(['internal_status' => 'recovery_retried', 'meta' => $meta])->save();
 

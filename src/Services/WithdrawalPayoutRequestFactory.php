@@ -25,8 +25,11 @@ class WithdrawalPayoutRequestFactory
         BankAccount $bankAccount,
         string $providerReference,
         float $amount,
+        array $payload = [],
     ): PayoutRequestData {
         $via = $this->settlementRails->forVoucher($voucher, $amount)->value;
+
+        $parties = app(ClaimPayoutParties::class)->resolve($voucher, $payload, $contact->name ?: $contact->mobile ?: 'Voucher Recipient');
 
         return PayoutRequestData::from([
             'reference' => $providerReference,
@@ -40,6 +43,7 @@ class WithdrawalPayoutRequestFactory
             'external_code' => $voucher->code,
             'user_id' => $voucher->owner_id !== null ? (int) $voucher->owner_id : null,
             'mobile' => $contact->mobile,
+            ...$parties,
         ]);
     }
 }

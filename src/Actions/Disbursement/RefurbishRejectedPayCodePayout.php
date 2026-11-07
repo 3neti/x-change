@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
+use LBHurtado\EmiCore\Data\PayoutPartyData;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
 use LBHurtado\EmiCore\Data\PayoutResultData;
 use LBHurtado\EmiCore\Enums\SettlementRail;
@@ -22,6 +23,7 @@ use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PayoutDestinationRevision;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\PayoutResultAudit;
 use LBHurtado\XChange\Services\Treasury\PayCodePayoutCorrectionJournal;
 use RuntimeException;
 use Throwable;
@@ -154,6 +156,7 @@ final readonly class RefurbishRejectedPayCodePayout
                         'attempt_count' => 1,
                         'attempted_at' => now(),
                         'needs_review' => false,
+                        'payout_identity_snapshot' => $rejection->payout_identity_snapshot,
                         'raw_request' => [
                             'reference' => $request->reference,
                             'amount' => $request->amount,
@@ -206,7 +209,7 @@ final readonly class RefurbishRejectedPayCodePayout
                     'error_message' => $submissionNotAccepted
                         ? $this->submissionFailureMessage($result)
                         : null,
-                    'raw_response' => $result->toArray(),
+                    'raw_response' => app(PayoutResultAudit::class)->summarize($result),
                     'meta' => array_merge((array) $reconciliation->meta, [
                         'provider_submission_accepted' => ! $submissionNotAccepted,
                         'failure_phase' => $submissionNotAccepted
@@ -315,6 +318,8 @@ final readonly class RefurbishRejectedPayCodePayout
         PayoutDestinationRevision $revision,
         string $providerReference,
     ): PayoutRequestData {
+        $snapshot = $rejection->payout_identity_snapshot;
+
         return new PayoutRequestData(
             reference: $providerReference,
             amount: (float) $rejection->amount,
@@ -331,6 +336,8 @@ final readonly class RefurbishRejectedPayCodePayout
                 'destination_revision_reference' => $revision->reference,
                 'rejected_reconciliation_id' => $rejection->getKey(),
             ],
+            sender: is_array(data_get($snapshot, 'sender')) ? PayoutPartyData::from($snapshot['sender']) : null,
+            recipient: is_array(data_get($snapshot, 'recipient')) ? PayoutPartyData::from($snapshot['recipient']) : null,
         );
     }
 

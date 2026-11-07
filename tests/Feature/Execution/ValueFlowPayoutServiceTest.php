@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
+use LBHurtado\EmiCore\Contracts\PayoutProviderIdentity;
 use LBHurtado\EmiCore\Enums\PayoutStatus;
 use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Enums\VoucherType;
@@ -88,6 +89,28 @@ it('reserves each collection independently and replays without a second reservat
         ->and($payout->fresh()->status)->toBe('pending');
 });
 
+it('accepts a provider-owned payout alias for a value-flow submission', function (): void {
+    [$service, $voucher, $source] = valueFlowPayoutFixture();
+    $identity = new class implements PayoutProviderIdentity
+    {
+        public function providerCode(): string
+        {
+            return 'netbank';
+        }
+
+        public function acceptsPayoutProvider(string $provider): bool
+        {
+            return $provider === 'legacy-netbank-test';
+        }
+    };
+    app()->instance('test.value-flow-payout-identity', $identity);
+    app()->tag('test.value-flow-payout-identity', 'emi.payout-provider-identities');
+    $payout = DB::transaction(fn () => $service->prepare($voucher, $source, 1_000, 'provider-alias'));
+    fakePayoutProvider()->willReturnPendingResult(transactionId: 'alias-transaction', provider: 'legacy-netbank-test');
+    $service->submit($payout->id);
+    expect($payout->fresh()->status)->toBe('pending')->and($payout->fresh()->provider_transaction_id)->toBe('alias-transaction');
+});
+
 it('reconciles a delayed payout once without submitting another transfer', function (): void {
     [$service, $voucher, $source] = valueFlowPayoutFixture();
     $payout = DB::transaction(fn () => $service->prepare($voucher, $source, 2_500, 'delayed-status'));
@@ -138,10 +161,14 @@ it('keeps rejected payouts payable without changing the voucher or later destina
 });
 
 it('retries a verified rejected payout once using its held recovery balance', function (): void {
+    config()->set('x-change.payout_locality.enabled', true);
     [$service, $voucher, $source] = valueFlowPayoutFixture();
     $original = DB::transaction(fn () => $service->prepare($voucher, $source, 2_000, 'rejected-installment'));
     $provider = fakePayoutProvider()->willReturnFailedResult(transactionId: 'rejected-transaction', provider: 'netbank');
     $service->submit($original->id);
+    $snapshot = $original->fresh()->payout_identity_snapshot;
+    expect(data_get($snapshot, 'recipient.address.source'))->toBe('synthetic')
+        ->and($provider->lastRequest->recipient?->address?->source)->toBe('synthetic');
     $provider->nextCheckStatus = PayoutStatus::FAILED;
     $retry = $service->retryRejectedPayout($original->id, 'recipient-confirmed-account-available', 'operator:123');
 
@@ -157,6 +184,8 @@ it('retries a verified rejected payout once using its held recovery balance', fu
     $service->submit($retry->id);
     $service->submit($retry->id);
     expect($retry->fresh()->internal_status)->toBe('finalized')
+        ->and($retry->fresh()->payout_identity_snapshot)->toBe($snapshot)
+        ->and($provider->lastRequest->recipient?->address?->source)->toBe('synthetic')
         ->and($provider->disburseCallCount)->toBe(2);
 });
 
@@ -254,11 +283,17 @@ it('denies the operator recovery workspace by default and allows a host-authoriz
     fakePayoutProvider()->willReturnFailedResult(transactionId: 'workspace-rejected', provider: 'netbank');
     $service->submit($original->id);
     $url = route('x-change.operations.recovery.index');
+    DB::table('x_change_treasury_payout_outbox')->insert([
+        'voucher_id' => $voucher->id, 'status' => 'review', 'claim_key_ciphertext' => Crypt::encryptString('private-claim-key'),
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
     $this->actingAs($operator)->withHeader('X-Inertia', 'true')->get($url)->assertForbidden();
     Gate::define('x-change.recovery.manage', fn ($user): bool => $user->is($operator));
     $this->get($url)->assertOk()->assertJsonPath('component', 'x-change/operations/PaymentRecovery')
         ->assertJsonPath('props.payouts.0.code', $voucher->code)
         ->assertJsonPath('props.payouts.0.status', 'failed')
+        ->assertJsonPath('props.treasuryPayoutReviews.0.code', $voucher->code)
+        ->assertDontSee('private-claim-key')
         ->assertJsonMissingPath('props.payouts.0.provider_transaction_id');
 });
 

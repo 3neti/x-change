@@ -13,6 +13,8 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Services\Execution\DurableTreasuryPayout;
+use LBHurtado\XChange\Support\Claim\ClaimApprovalResumePayloadSession;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 use LBHurtado\XChange\Support\Claim\PayoutDestinationRegistry;
 
@@ -23,6 +25,12 @@ final class ClaimApprovalPageController
         $voucher = Voucher::query()
             ->where('code', strtoupper(trim($code)))
             ->firstOrFail();
+
+        $resume = app(ClaimApprovalResumePayloadSession::class)->get($voucher);
+        $claimKey = data_get($resume, '_meta.idempotency_key');
+        app(DurableTreasuryPayout::class)->assertApprovalSession(
+            $voucher, is_string($claimKey) ? $claimKey : null,
+        );
 
         if (! $request->wantsJson()) {
             $providerPayout = $this->submittedProviderPayout($voucher);

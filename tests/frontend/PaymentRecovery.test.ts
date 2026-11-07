@@ -21,6 +21,45 @@ vi.mock("@inertiajs/vue3", () => ({
     }),
 }));
 
+it("shows treasury payouts held for review without offering a transfer retry", () => {
+  const wrapper = mount(PaymentRecovery, {
+    props: {
+      transactionReviews: [], fundingCases: [], reports: [], failures: [], payouts: [],
+      treasuryPayoutReviews: [{ id: 42, code: "ABCD", created_at: "2026-11-07", updated_at: "2026-11-07" }],
+    },
+  });
+  expect(wrapper.text()).toContain("ABCD · Review 42");
+  expect(wrapper.text()).toContain("Check provider and reconciliation evidence");
+  expect(wrapper.get("button").text()).toBe("Record investigation");
+  expect(wrapper.text()).not.toContain("Retry transfer");
+});
+
+it("records an investigation when provider transaction evidence is missing", async () => {
+  const wrapper = mount(PaymentRecovery, {
+    props: {
+      transactionReviews: [], fundingCases: [], reports: [], failures: [], payouts: [],
+      treasuryPayoutReviews: [{ id: 42, code: "ABCD", created_at: "2026-11-07", updated_at: "2026-11-07", can_check: false }],
+    },
+  });
+  await wrapper.get("button").trigger("click");
+  await wrapper.get("textarea").setValue("Provider investigation opened");
+  await wrapper.get("form").trigger("submit");
+  expect(post).toHaveBeenCalledWith("/x/operations/recovery/treasury-payouts/42/investigate");
+});
+
+it("checks a treasury payout with provider evidence and a reason", async () => {
+  const wrapper = mount(PaymentRecovery, {
+    props: {
+      transactionReviews: [], fundingCases: [], reports: [], failures: [], payouts: [],
+      treasuryPayoutReviews: [{ id: 42, code: "ABCD", created_at: "2026-11-07", updated_at: "2026-11-07", can_check: true }],
+    },
+  });
+  await wrapper.get("button").trigger("click");
+  await wrapper.get("textarea").setValue("Provider status checked");
+  await wrapper.get("form").trigger("submit");
+  expect(post).toHaveBeenCalledWith("/x/operations/recovery/treasury-payouts/42/review");
+});
+
 it("shows masked recovery cases and requires an explicit confirmation for a retry", async () => {
   const wrapper = mount(PaymentRecovery, {
     props: {

@@ -26,11 +26,18 @@ use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
 use LBHurtado\XChange\Data\Settlement\SettlementExecutionResultData;
 use LBHurtado\XChange\Enums\ProviderProvisioningMode;
 use LBHurtado\XChange\Enums\VoucherSliceExecutionStatus;
+use LBHurtado\XChange\Events\DisbursementConfirmed;
+use LBHurtado\XChange\Events\DisbursementRejected;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
+use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Models\VoucherSliceExecution;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
 use LBHurtado\XChange\Services\Claim\ClaimExecutionPreflight;
+use LBHurtado\XChange\Services\ClaimPayoutLocalityScope;
+use LBHurtado\XChange\Services\ClaimPayoutParties;
+use LBHurtado\XChange\Services\Execution\DurableTreasuryPayout;
+use LBHurtado\XChange\Services\Execution\FinalizeApprovedLegacyPayout;
 use LBHurtado\XChange\Services\Leads\CampaignDisplaySessions;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
 use LBHurtado\XChange\Services\Provisioning\ProviderProvisioningProfileResolver;
@@ -112,6 +119,10 @@ class SubmitPayCodeClaim
 
         $executor = $this->factory->make($voucher, $payload);
 
+        $localityScope = app(ClaimPayoutLocalityScope::class);
+        $previousLocalityKey = $localityScope->get();
+        $claimKey = data_get($payload, '_meta.idempotency_key');
+        $localityScope->set(is_string($claimKey) && $claimKey !== '' ? $claimKey : null);
         try {
             if ($executor instanceof SettlementExecutionContract) {
                 return $this->fromSettlementResult(
@@ -138,6 +149,20 @@ class SubmitPayCodeClaim
             }
 
             throw $e;
+        } finally {
+            $localityScope->set($previousLocalityKey);
+        }
+
+        $treasuryApproval = config('x-change.payout_locality.submission_guard_enabled', false)
+            ? app(DurableTreasuryPayout::class)->approvalFor($voucher, is_string($claimKey) ? $claimKey : null)
+            : null;
+        if (is_array($treasuryApproval)) {
+            return ClaimApprovalInitiationResultData::from([
+                'status' => 'approval_required', 'voucher_code' => (string) $voucher->code,
+                'requirements' => ['otp'], 'reference_id' => $treasuryApproval['reference_id'],
+                'provider' => $treasuryApproval['provider'], 'messages' => ['Payout OTP approval required.'],
+                'meta' => $treasuryApproval['metadata'], 'approval_metadata' => $treasuryApproval['metadata'],
+            ]);
         }
 
         if (
@@ -341,6 +366,7 @@ class SubmitPayCodeClaim
                     : 'Pay Code redeemed; provider settlement requires review.',
             ],
         );
+
     }
 
     protected function toFloatOrNull(mixed $value): ?float
@@ -679,15 +705,30 @@ class SubmitPayCodeClaim
         $request = $this->approvedPaynamicsPayoutRequest($voucher, $payload);
 
         $disbursement = $this->approvalReplayDisbursements()
-            ->execute($voucher, $request, 1);
+            ->execute($voucher, $request, 1, true);
 
-        return new SubmitPayCodeClaimResultData(
+        $claimKey = data_get($payload, '_meta.idempotency_key');
+        $outbox = app(DurableTreasuryPayout::class);
+        $treasuryApproval = config('x-change.payout_locality.submission_guard_enabled', false)
+            && is_string($claimKey) && $outbox->approvalFor($voucher, $claimKey) !== null;
+
+        if ($treasuryApproval && data_get($voucher->metadata, 'treasury.pay_code_reservation') === null
+            && in_array($disbursement->status, ['succeeded', 'pending'], true)) {
+            app(FinalizeApprovedLegacyPayout::class)
+                ->handle($voucher->fresh() ?? $voucher, $request, $disbursement->response);
+        }
+
+        $result = new SubmitPayCodeClaimResultData(
             voucher_code: (string) $voucher->code,
             claim_type: 'redeem',
             claimed: true,
-            status: 'redeemed',
+            status: $treasuryApproval ? match ($disbursement->status) {
+                'succeeded' => 'succeeded',
+                'failed' => 'failed',
+                default => 'pending_review',
+            } : 'redeemed',
             requested_amount: $request->amount,
-            disbursed_amount: $request->amount,
+            disbursed_amount: $treasuryApproval && $disbursement->status !== 'succeeded' ? 0.0 : $request->amount,
             currency: 'PHP',
             remaining_balance: null,
             fully_claimed: true,
@@ -703,6 +744,20 @@ class SubmitPayCodeClaim
                 'Voucher redemption payout resumed after approval OTP.',
             ],
         );
+
+        if ($treasuryApproval) {
+            $this->recordVoucherClaim->handle($voucher, $result, $payload);
+            $reconciliation = DisbursementReconciliation::query()->where('voucher_id', $voucher->getKey())
+                ->where('provider_reference', $request->reference)->where('claim_type', 'withdraw')->firstOrFail();
+            if ($disbursement->status === 'succeeded') {
+                DisbursementConfirmed::dispatch($reconciliation);
+            } elseif ($disbursement->status === 'failed') {
+                DisbursementRejected::dispatch($reconciliation);
+            }
+            $outbox->completeApproval($voucher, $claimKey, $disbursement->status);
+        }
+
+        return $result;
     }
 
     /**
@@ -746,6 +801,7 @@ class SubmitPayCodeClaim
             'recipient_mobile' => data_get($payload, 'mobile'),
             'settlement_rail' => data_get($metadata, 'disbursement.settlement_rail', 'INSTAPAY'),
             'currency' => 'PHP',
+            ...app(ClaimPayoutParties::class)->resolve($voucher, $payload, (string) data_get($payload, 'bank_account.account_name', 'Voucher Recipient')),
         ]);
     }
 
