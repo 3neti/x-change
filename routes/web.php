@@ -245,6 +245,10 @@ Route::middleware(['web', ShareXChangeBranding::class])->group(function (): void
 Route::prefix('x/operations')->middleware(['web', ShareXChangeBranding::class])->group(function (): void {
     Route::middleware(['auth', 'can:x-change.recovery.manage'])->group(function (): void {
         Route::get('recovery', [PaymentRecoveryController::class, 'index'])->name('x-change.operations.recovery.index');
+        Route::post('recovery/treasury-payouts/{outbox}/review', [PaymentRecoveryController::class, 'reviewTreasuryPayout'])
+            ->middleware('throttle:5,1')->name('x-change.operations.recovery.treasury-payout.review');
+        Route::post('recovery/treasury-payouts/{outbox}/investigate', [PaymentRecoveryController::class, 'investigateTreasuryPayout'])
+            ->middleware('throttle:5,1')->name('x-change.operations.recovery.treasury-payout.investigate');
         Route::post('recovery/payouts/{payout}/retry', [PaymentRecoveryController::class, 'retry'])
             ->middleware('throttle:5,1')->name('x-change.operations.recovery.payout.retry');
         Route::post('recovery/reports/{reference}/review', [PaymentRecoveryController::class, 'reviewReport'])

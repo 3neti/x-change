@@ -25,6 +25,7 @@ use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\DisbursementRejectionTrustService;
+use LBHurtado\XChange\Services\PayoutProviderIdentityMatcher;
 
 final readonly class TreasuryPayCodeAccountingService
 {
@@ -415,7 +416,10 @@ final readonly class TreasuryPayCodeAccountingService
             0,
         );
         $valid = (int) $reconciliation->voucher_id === (int) $voucher->getKey()
-            && $reconciliation->provider === $connection->provider
+            && app(PayoutProviderIdentityMatcher::class)->matches(
+                $connection->provider,
+                (string) $reconciliation->provider,
+            )
             && $reconciliation->status === 'succeeded'
             && filled($reconciliation->provider_transaction_id)
             && $beneficiaryAmountMinor > 0

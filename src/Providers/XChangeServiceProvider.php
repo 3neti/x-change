@@ -38,8 +38,10 @@ use LBHurtado\EmiCore\Contracts\DeploymentConnectionContributor;
 use LBHurtado\EmiCore\Contracts\DeploymentEnvironmentContributor;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiCore\Contracts\PendingPayoutOtpStore;
+use LBHurtado\EmiCore\Contracts\PhilippineLocalityDataset;
 use LBHurtado\EmiCore\Contracts\ProviderWalletResolver;
 use LBHurtado\EmiCore\Contracts\SettlementProviderRegistryContract;
+use LBHurtado\EmiCore\Services\JsonPhilippineLocalityDataset;
 use LBHurtado\FormHandlerOtp\Contracts\OtpChallengeGateway;
 use LBHurtado\FormHandlerOtp\Services\TxtcmdrOtpChallengeGateway;
 use LBHurtado\FormHandlerOtp\Services\UnavailableOtpChallengeGateway;
@@ -87,6 +89,7 @@ use LBHurtado\XChange\Console\Commands\Checkout\BackfillPublicCheckoutsCommand;
 use LBHurtado\XChange\Console\Commands\Checkout\ManageCheckoutViewerLinkCommand;
 use LBHurtado\XChange\Console\Commands\Claim\ClaimWalkthroughCommand;
 use LBHurtado\XChange\Console\Commands\Claim\DeliverClaimValidationJournalCommand;
+use LBHurtado\XChange\Console\Commands\Claim\DeliverTreasuryPayoutOutboxCommand;
 use LBHurtado\XChange\Console\Commands\Claim\DeliverV2EvidenceJournalCommand;
 use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionContextCommand;
 use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
@@ -421,6 +424,7 @@ use LBHurtado\XChange\Services\Claim\DefaultRiderStampRecipientResolver;
 use LBHurtado\XChange\Services\Claim\GdRiderStampClaimShareCardRenderer;
 use LBHurtado\XChange\Services\Claim\RiderStampClaimShareMetadataResolver;
 use LBHurtado\XChange\Services\Claim\StoredRiderStampClaimShareCardRenderer;
+use LBHurtado\XChange\Services\ClaimPayoutLocalityScope;
 use LBHurtado\XChange\Services\Cockpit\CampaignWorkflowDraftEditor;
 use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeDetailProjection;
 use LBHurtado\XChange\Services\Cockpit\ConfiguredCampaignWorkflowAccess;
@@ -474,6 +478,7 @@ use LBHurtado\XChange\Services\Configuration\DeploymentProfileCatalog;
 use LBHurtado\XChange\Services\Configuration\DeploymentTreasuryConnectionConfiguration;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegistry;
 use LBHurtado\XChange\Services\ConfigVendorRegistry;
+use LBHurtado\XChange\Services\CoordinateLocalityLookup;
 use LBHurtado\XChange\Services\DefaultApprovalWorkflowService;
 use LBHurtado\XChange\Services\DefaultClaimApprovalExecutionService;
 use LBHurtado\XChange\Services\DefaultClaimApprovalInitiationService;
@@ -525,6 +530,7 @@ use LBHurtado\XChange\Services\Execution\WalletPayableCollectionExecutionGateway
 use LBHurtado\XChange\Services\Execution\WalletStoredValueExecutionGateway;
 use LBHurtado\XChange\Services\Execution\XChangeLiveCashExecutionDriver;
 use LBHurtado\XChange\Services\Execution\XChangeSettlementEnvelopeExecutionGateway;
+use LBHurtado\XChange\Services\FallbackPhilippineLocalityDataset;
 use LBHurtado\XChange\Services\Feedback\QueuedEngageSparkSmsFeedbackChannelDriver;
 use LBHurtado\XChange\Services\Feedback\XJournalFeedbackDeliveryWriter;
 use LBHurtado\XChange\Services\Funding\BavixFundingAccountCredit;
@@ -536,6 +542,7 @@ use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\QrPhSimulatorFundingProviderAdapter;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressProviderRegistry;
 use LBHurtado\XChange\Services\Funding\StandingFundingRuntimeChannel;
+use LBHurtado\XChange\Services\GeoLiteLocalityLookup;
 use LBHurtado\XChange\Services\InstructionBackedPricingService;
 use LBHurtado\XChange\Services\Keepsake\Contributors\AccountSnapshotKeepsakeContributor;
 use LBHurtado\XChange\Services\Keepsake\Contributors\ClaimEvidenceKeepsakeContributor;
@@ -636,6 +643,29 @@ class XChangeServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->scoped(ClaimPayoutLocalityScope::class);
+        $this->app->bind(GeoLiteLocalityLookup::class, fn () => new GeoLiteLocalityLookup(
+            (string) config('x-change.payout_locality.geolite_database_path', ''),
+            (int) config('x-change.payout_locality.geolite_max_age_days', 30),
+        ));
+        $this->app->bind(CoordinateLocalityLookup::class, fn () => new CoordinateLocalityLookup(
+            (string) config('x-change.payout_locality.coordinate_endpoint', ''),
+            (string) config('x-change.payout_locality.coordinate_api_key', ''),
+        ));
+        $this->app->bind(PhilippineLocalityDataset::class, function () {
+            $path = config('x-change.payout_locality.dataset_path');
+            if (is_string($path) && $path !== '') {
+                try {
+                    $dataset = new JsonPhilippineLocalityDataset($path);
+                    if ($dataset->candidates() !== []) {
+                        return $dataset;
+                    }
+                } catch (\Throwable) {
+                }
+            }
+
+            return new FallbackPhilippineLocalityDataset;
+        });
         $this->app->singleton(CommercialProductRevenueReconciliation::class);
         $this->app->singleton(CommercialProductRevenueShadowReconciler::class);
         $this->app->singleton(CommercialProductRevenueBridgePlan::class);
@@ -1812,6 +1842,8 @@ class XChangeServiceProvider extends ServiceProvider
         $this->bootPartnerApiRateLimiter();
         $this->bootFundingVerificationSchedule();
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            $schedule->command('x-change:claim:deliver-treasury-payouts --limit=100')
+                ->name('x-change:claim:deliver-treasury-payouts')->everyMinute()->onOneServer()->withoutOverlapping(5);
             $schedule
                 ->command('xchange:funding:dispatch-issuance-retries --limit=100')
                 ->everyMinute()
@@ -1831,6 +1863,7 @@ class XChangeServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->commands([
+                DeliverTreasuryPayoutOutboxCommand::class,
                 DeliverPartnerPaymentEventsCommand::class,
                 CleanupLegacyEventIndexCommand::class,
                 PreviewCommissioningManifestCommand::class,

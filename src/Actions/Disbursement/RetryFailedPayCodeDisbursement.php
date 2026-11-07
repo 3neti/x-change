@@ -14,6 +14,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Services\PayoutResultAudit;
 use RuntimeException;
 
 final readonly class RetryFailedPayCodeDisbursement
@@ -50,7 +51,16 @@ final readonly class RetryFailedPayCodeDisbursement
                 ->firstOrFail();
 
             $this->assertRetryable($voucher, $reconciliation);
-            $request = PayoutRequestData::from((array) $reconciliation->raw_request);
+            $requestData = (array) $reconciliation->raw_request;
+            $snapshot = $reconciliation->payout_identity_snapshot;
+            if (is_array($snapshot)) {
+                foreach (['sender', 'recipient'] as $role) {
+                    if (is_array($snapshot[$role] ?? null)) {
+                        $requestData[$role] = $snapshot[$role];
+                    }
+                }
+            }
+            $request = PayoutRequestData::from($requestData);
             $result = $this->payouts->disburse($request);
             $status = $this->statuses->resolveFromGatewayResponse($result);
 
@@ -76,7 +86,7 @@ final readonly class RetryFailedPayCodeDisbursement
                     'error_message' => $status === 'failed'
                         ? 'Provider rejected guarded disbursement recovery.'
                         : null,
-                    'raw_response' => $result->toArray(),
+                    'raw_response' => app(PayoutResultAudit::class)->summarize($result),
                     'meta' => [
                         ...(array) $reconciliation->meta,
                         'recovery' => [

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
@@ -60,6 +62,28 @@ BLADE);
         ->name('x-change.cockpit.quick-generate');
     Route::get('/x/pay/{code}', fn (string $code) => response('pay '.$code))
         ->name('x-change.pay.show');
+});
+
+it('returns a delayed treasury approval only to the claim session that initiated it', function (): void {
+    config()->set('x-change.payout_locality.submission_guard_enabled', true);
+    $voucher = issueVoucher();
+    DB::table('x_change_treasury_payout_outbox')->insert([
+        'voucher_id' => $voucher->id, 'status' => 'approval_required',
+        'claim_key_ciphertext' => Crypt::encryptString('matching-claim'),
+        'approval_ciphertext' => Crypt::encryptString(json_encode([
+            'provider' => 'paynamics', 'reference_id' => 'challenge-ref',
+            'metadata' => ['provider' => 'paynamics', 'reference_id' => 'challenge-ref', 'otp_required' => true],
+        ], JSON_THROW_ON_ERROR)),
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+    $sessionKey = 'claim_approval_resume_payload:'.$voucher->code;
+    $this->get(route('x-change.claim.approval', ['code' => $voucher->code]))->assertForbidden();
+    $this->post(route('x-change.claim.approval.otp', ['code' => $voucher->code]), ['otp' => '123456'])->assertForbidden();
+    $this->withSession([$sessionKey => ['_meta' => ['idempotency_key' => 'another-claim']]])
+        ->get(route('x-change.claim.success', ['code' => $voucher->code]))->assertOk();
+    $this->withSession([$sessionKey => ['_meta' => ['idempotency_key' => 'matching-claim']]])
+        ->get(route('x-change.claim.success', ['code' => $voucher->code]))
+        ->assertRedirect(route('x-change.claim.approval', ['code' => $voucher->code]));
 });
 
 it('does not present an unfulfilled settlement as a successful disbursement', function (): void {

@@ -59,6 +59,7 @@ class BuildWithdrawalPayoutRequestStep implements WithdrawalPipelineStepContract
                 $context->bankAccount,
                 $executionContext->providerReference,
                 $context->withdrawAmount,
+                $context->payload,
             ),
         );
 

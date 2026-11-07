@@ -125,6 +125,9 @@ it('retries a proven pre-provider failure and settles treasury exactly once', fu
             'mobile' => '09173011987',
         ],
         'raw_response' => ['message' => 'Pre-provider compatibility failure'],
+        'payout_identity_snapshot' => [
+            'recipient' => ['role' => 'recipient', 'name' => 'Recipient', 'address' => ['address1' => 'Snapshot locality', 'city' => 'Manila', 'country' => 'PH', 'postal_code' => '1000', 'source' => 'synthetic']],
+        ],
         'meta' => ['flow' => 'redeem', 'slice_number' => 1],
     ]);
     $provider = fakePayoutProvider()->willReturnSuccessfulResult(
@@ -152,6 +155,7 @@ it('retries a proven pre-provider failure and settles treasury exactly once', fu
         'attempt_count' => 2,
     ])
         ->and($provider->lastRequest?->reference)->toBe($reference)
+        ->and($provider->lastRequest?->recipient?->address?->address1)->toBe('Snapshot locality')
         ->and(recoveryPositionBalance(
             $issuer,
             TreasuryPositionPurpose::PayCodeReserve,

@@ -15,6 +15,9 @@ use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
 use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Services\BuildProvisioningRequirementViewData;
+use LBHurtado\XChange\Services\ClaimPayoutLocalityContext;
+use LBHurtado\XChange\Services\ClaimPayoutLocalityEvidence;
+use LBHurtado\XChange\Services\Execution\DurableTreasuryPayout;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalResumePayloadSession;
 use LBHurtado\XChange\Support\Claim\ClaimDestinationReceipt;
 use LBHurtado\XChange\Support\Claim\ClaimEvidenceSynchronizer;
@@ -134,6 +137,16 @@ class ClaimSubmitController extends Controller
         ]);
 
         try {
+            if (config('x-change.payout_locality.enabled', false)) {
+                $location = data_get($payload, 'inputs.location', []);
+                $locationEnabled = in_array('location', (array) data_get($voucher->metadata, 'instructions.inputs.fields', []), true);
+                $evidence = app(ClaimPayoutLocalityEvidence::class)->capture(
+                    $request,
+                    is_array($location) ? $location : [],
+                    $locationEnabled,
+                );
+                app(ClaimPayoutLocalityContext::class)->remember($voucher, $idempotencyKey, $evidence);
+            }
             $this->evidenceSynchronizer->sync($payload);
 
             $receipt = app(CompletionClaimReceipt::class);
@@ -163,6 +176,11 @@ class ClaimSubmitController extends Controller
                 ]);
 
                 return redirect()->route('x-change.claim.approval', ['code' => $code]);
+            }
+
+            if (config('x-change.payout_locality.submission_guard_enabled', false)
+                && app(DurableTreasuryPayout::class)->isPendingFor($voucher, $idempotencyKey)) {
+                $this->resumePayloadSession->put($voucher, $payload);
             }
 
             if ($result->claim_type === 'settlement') {

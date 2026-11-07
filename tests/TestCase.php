@@ -345,6 +345,14 @@ abstract class TestCase extends Orchestra
 
     protected function defineDatabaseMigrations(): void
     {
+        if (getenv('XCHANGE_RESET_ISOLATED_TEST_DATABASE') === '1') {
+            $database = (string) config('database.connections.testing.database');
+            if (! in_array(config('database.connections.testing.driver'), ['mysql', 'pgsql'], true)
+                || preg_match('/\Axchange_boundary_test_[a-z0-9_]+\z/', $database) !== 1) {
+                throw new \RuntimeException('Only explicitly named isolated boundary test databases may be reset.');
+            }
+            Schema::connection('testing')->dropAllTables();
+        }
         // Laravel default tables, including users. Loaded once only.
         $this->loadLaravelMigrations();
 

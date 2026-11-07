@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use LBHurtado\Contact\Classes\BankAccount;
+use LBHurtado\XChange\Services\ClaimPayoutLocalityContext;
 use LBHurtado\XChange\Services\WithdrawalPayoutRequestFactory;
 
 // TODO: Strengthen this once PayoutRequestData exposes recipient identity fields
@@ -107,4 +108,24 @@ it('allows contact name to be missing when mobile is present', function () {
     );
 
     expect($request->reference)->toBe($voucher->code.'-09173011987-S1');
+});
+
+it('resolves separate sender and recipient localities from the matching claim context', function (): void {
+    config()->set('x-change.payout_locality.enabled', true);
+    $voucher = issueVoucher(validVoucherInstructions(amount: 100));
+    app(ClaimPayoutLocalityContext::class)->remember($voucher, 'claim-locality-test', [
+        'ip_locality' => null,
+        'captured' => ['address1' => 'Claimant Barangay', 'city' => 'Manila', 'country' => 'PH', 'postal_code' => '1000', 'source' => 'location', 'dataset_version' => null],
+    ]);
+    $request = payoutRequestFactory()->make(
+        $voucher,
+        fakePayoutContact(),
+        BankAccount::fromBankAccount('GXCHPHM2XXX:09173011987'),
+        'claim-locality-ref',
+        100,
+        ['_meta' => ['idempotency_key' => 'claim-locality-test']],
+    );
+    expect($request->recipient?->address?->address1)->toBe('Claimant Barangay')
+        ->and($request->recipient?->address?->source)->toBe('location')
+        ->and($request->sender?->address?->source)->toBe('synthetic');
 });

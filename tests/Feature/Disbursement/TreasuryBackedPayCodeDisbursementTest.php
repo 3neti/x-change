@@ -3,10 +3,12 @@
 declare(strict_types=1);
 
 use Bavix\Wallet\Models\Wallet;
+use Illuminate\Database\DatabaseTransactionsManager;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
+use LBHurtado\EmiPaynamicsConstellation\Exceptions\PendingConstellationOtpException;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
@@ -19,6 +21,7 @@ use LBHurtado\XChange\Actions\Disbursement\RefurbishRejectedPayCodePayout;
 use LBHurtado\XChange\Actions\Disbursement\RestoreUnsubmittedPayoutCorrection;
 use LBHurtado\XChange\Actions\Funding\IssueTreasuryBackedPayCode;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
+use LBHurtado\XChange\Contracts\Claim\ClaimApprovalOtpAuthorizer;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
@@ -27,8 +30,12 @@ use LBHurtado\XChange\Jobs\Redemption\DispatchVoucherRedemptionFeedbackJob;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PayoutDestinationRevision;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\ClaimPayoutLocalityContext;
+use LBHurtado\XChange\Services\Execution\DurableTreasuryPayout;
+use LBHurtado\XChange\Services\Execution\ExecutionAwarePostRedemptionGate;
 use LBHurtado\XChange\Services\Execution\TreasuryBackedPayCodeDisbursement;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
+use LBHurtado\XChange\Support\Claim\ClaimApprovalResumePayloadSession;
 use LBHurtado\XJournal\Data\ExecutionJournalEntryData;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
@@ -48,6 +55,202 @@ beforeEach(function (): void {
         'max_amount' => 100_000_000,
         'fee' => 2_500,
     ]);
+});
+
+it('uses the claim locality in the treasury-backed payout', function (): void {
+    config()->set('x-change.payout_locality.enabled', true);
+    config()->set('x-change.payout_locality.submission_guard_enabled', true);
+    Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
+    ['voucher' => $voucher] = treasuryBackedVoucherForPayout();
+    app(ClaimPayoutLocalityContext::class)->remember($voucher, 'treasury-locality-claim', [
+        'ip_locality' => null,
+        'captured' => ['address1' => 'Claimant Barangay', 'city' => 'Manila', 'country' => 'PH', 'postal_code' => '1000', 'source' => 'location', 'dataset_version' => null],
+    ]);
+    $provider = fakePayoutProvider()->willReturnSuccessfulResult(transactionId: 'LOCALITY-1', provider: 'netbank');
+    $result = app(SubmitPayCodeClaim::class)->handle($voucher, [
+        'mobile' => '09173011987', 'recipient_country' => 'PH',
+        'bank_account' => ['bank_code' => 'GXCHPHM2XXX', 'account_number' => '09173011987'],
+        '_meta' => ['idempotency_key' => 'treasury-locality-claim'],
+    ]);
+    expect($provider->lastRequest?->recipient?->address?->address1)->toBe('Claimant Barangay')
+        ->and($result->status)->toBe('succeeded');
+    expect(DB::table('x_change_payout_submission_claims')->where('voucher_id', $voucher->getKey())->count())->toBe(1);
+    expect(DB::table('x_change_treasury_payout_outbox')->where('voucher_id', $voucher->getKey())->value('status'))->toBe('completed');
+    DB::table('x_change_treasury_payout_outbox')->where('voucher_id', $voucher->getKey())->update([
+        'status' => 'processing', 'lease_token' => 'abandoned', 'lease_until' => now()->subMinute(),
+    ]);
+    $this->artisan('x-change:claim:deliver-treasury-payouts', ['--limit' => 10])->assertSuccessful();
+    $provider->assertDisburseCalledTimes(1);
+    expect(DB::table('x_change_treasury_payout_outbox')->where('voucher_id', $voucher->getKey())->value('status'))->toBe('completed');
+});
+
+it('surfaces a treasury provider approval challenge after the redemption commits', function (): void {
+    config()->set('x-change.payout_locality.submission_guard_enabled', true);
+    Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
+    ['voucher' => $voucher] = treasuryBackedVoucherForPayout();
+    $provider = fakePayoutProvider();
+    $reference = $voucher->code.'-09173011987-S1';
+    $provider->nextException = PendingConstellationOtpException::fromPayload([
+        'request_id' => $reference, 'account_number' => 'private-account',
+    ]);
+    $result = app(SubmitPayCodeClaim::class)->handle($voucher, [
+        'mobile' => '09173011987', 'recipient_country' => 'PH',
+        'bank_account' => ['bank_code' => 'GXCHPHM2XXX', 'account_number' => '09173011987'],
+        '_meta' => ['idempotency_key' => 'treasury-approval-claim'],
+    ]);
+    expect($result->status)->toBe('approval_required')
+        ->and(data_get($result->meta, 'reference_id'))->toBe($reference)
+        ->and(DB::table('x_change_treasury_payout_outbox')->where('voucher_id', $voucher->id)->value('status'))->toBe('approval_required')
+        ->and(DB::table('x_change_treasury_payout_outbox')->where('voucher_id', $voucher->id)->value('approval_ciphertext'))->not->toContain('private-account');
+    expect(app(DurableTreasuryPayout::class)->approvalFor($voucher, 'another-claim'))->toBeNull();
+    $provider->willReturnSuccessfulResult(transactionId: 'APPROVED-PAYOUT', provider: 'netbank');
+    $continued = app(SubmitPayCodeClaim::class)->handle($voucher->refresh(), [
+        'mobile' => '09173011987', 'recipient_country' => 'PH',
+        'bank_account' => ['bank_code' => 'GXCHPHM2XXX', 'account_number' => '09173011987'],
+        '_meta' => ['idempotency_key' => 'treasury-approval-claim'],
+        'approval' => ['resume' => true, 'provider' => 'paynamics', 'reference_id' => $reference],
+        'otp' => ['verified' => true],
+    ]);
+    expect($continued->disbursement['transaction_id'])->toBe('APPROVED-PAYOUT')
+        ->and(DB::table('x_change_treasury_payout_outbox')->where('voucher_id', $voucher->id)->value('status'))->toBe('completed')
+        ->and(data_get($voucher->refresh()->metadata, 'treasury.pay_code_reservation.status'))->toBe('settled')
+        ->and(VoucherClaim::query()->where('voucher_id', $voucher->id)->exists())->toBeTrue();
+    $provider->assertDisburseCalledTimes(1);
+});
+
+it('completes a treasury approval through the session-bound OTP endpoint', function (): void {
+    config()->set('x-change.payout_locality.submission_guard_enabled', true);
+    $this->withoutMiddleware();
+    Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
+    ['voucher' => $voucher] = treasuryBackedVoucherForPayout();
+    $provider = fakePayoutProvider();
+    $reference = $voucher->code.'-09173011987-S1';
+    $provider->nextException = PendingConstellationOtpException::fromPayload(['request_id' => $reference]);
+    $payload = [
+        'mobile' => '09173011987', 'recipient_country' => 'PH',
+        'bank_account' => ['bank_code' => 'GXCHPHM2XXX', 'account_number' => '09173011987'],
+        '_meta' => ['idempotency_key' => 'treasury-otp-session'],
+    ];
+    expect(app(SubmitPayCodeClaim::class)->handle($voucher, $payload)->status)->toBe('approval_required');
+    app(ClaimApprovalResumePayloadSession::class)->put($voucher, $payload);
+    $this->app->bind(ClaimApprovalOtpAuthorizer::class, fn () => new class implements ClaimApprovalOtpAuthorizer
+    {
+        public function authorize(Voucher $voucher, array $payload): array
+        {
+            return ['status' => 'completed', 'voucher_code' => $voucher->code, 'reference_id' => $payload['reference_id'], 'provider' => $payload['provider']];
+        }
+    });
+    $provider->willReturnSuccessfulResult(transactionId: 'OTP-APPROVED', provider: 'netbank');
+    $this->post(route('x-change.claim.approval.otp', ['code' => $voucher->code]), [
+        'otp' => '123456', 'reference_id' => $reference, 'provider' => 'paynamics',
+    ])->assertRedirect(route('x-change.claim.success', ['code' => $voucher->code]));
+    expect(data_get($voucher->refresh()->metadata, 'treasury.pay_code_reservation.status'))->toBe('settled')
+        ->and(DB::table('x_change_treasury_payout_outbox')->where('voucher_id', $voucher->id)->value('status'))->toBe('completed');
+    $provider->assertDisburseCalledTimes(1);
+    $this->post(route('x-change.claim.approval.otp', ['code' => $voucher->code]), [
+        'otp' => '123456', 'reference_id' => $reference, 'provider' => 'paynamics',
+    ]);
+    $provider->assertDisburseCalledTimes(1);
+});
+
+it('does not present an approval continuation with pending payout as paid', function (): void {
+    config()->set('x-change.payout_locality.submission_guard_enabled', true);
+    Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
+    ['voucher' => $voucher] = treasuryBackedVoucherForPayout();
+    $provider = fakePayoutProvider();
+    $reference = $voucher->code.'-09173011987-S1';
+    $provider->nextException = PendingConstellationOtpException::fromPayload(['request_id' => $reference]);
+    $payload = [
+        'mobile' => '09173011987', 'recipient_country' => 'PH',
+        'bank_account' => ['bank_code' => 'GXCHPHM2XXX', 'account_number' => '09173011987'],
+        '_meta' => ['idempotency_key' => 'pending-approval-claim'],
+    ];
+    expect(app(SubmitPayCodeClaim::class)->handle($voucher, $payload)->status)->toBe('approval_required');
+    $provider->willReturnPendingResult(transactionId: 'PENDING-APPROVED', provider: 'netbank');
+    $payload['approval'] = ['resume' => true, 'provider' => 'paynamics', 'reference_id' => $reference];
+    $payload['otp'] = ['verified' => true];
+    $result = app(SubmitPayCodeClaim::class)->handle($voucher->refresh(), $payload);
+    expect($result->status)->toBe('pending_review')->and($result->disbursed_amount)->toBe(0.0)
+        ->and(data_get($voucher->refresh()->metadata, 'treasury.pay_code_reservation.status'))->toBe('reserved');
+});
+
+it('does not submit a treasury payout when redemption is rolled back', function (): void {
+    config()->set('x-change.payout_locality.submission_guard_enabled', true);
+    ['voucher' => $voucher] = treasuryBackedVoucherForPayout();
+    $provider = fakePayoutProvider();
+    DB::beginTransaction();
+    try {
+        app(ExecutionAwarePostRedemptionGate::class)->handle($voucher, fn (Voucher $voucher): Voucher => $voucher);
+        $provider->assertNoDisbursementAttempted();
+    } finally {
+        DB::rollBack();
+    }
+    $provider->assertNoDisbursementAttempted();
+    expect(DB::table('x_change_payout_submission_claims')->where('voucher_id', $voucher->getKey())->count())->toBe(0);
+    expect(DB::table('x_change_treasury_payout_outbox')->where('voucher_id', $voucher->getKey())->count())->toBe(0);
+});
+
+it('recovers a committed treasury payout when the immediate post-commit callback is lost', function (): void {
+    config()->set('x-change.payout_locality.submission_guard_enabled', true);
+    Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
+    ['voucher' => $voucher] = treasuryBackedVoucherForPayout();
+    $provider = fakePayoutProvider()->willReturnSuccessfulResult(transactionId: 'OUTBOX-RECOVERED', provider: 'netbank');
+    $connection = DB::connection();
+    $originalManager = app('db.transactions');
+    $connection->setTransactionManager(new class extends DatabaseTransactionsManager
+    {
+        public function commit($connection, $levelBeingCommitted, $newTransactionLevel)
+        {
+            return [];
+        }
+    });
+    try {
+        DB::transaction(fn () => app(SubmitPayCodeClaim::class)->handle($voucher, [
+            'mobile' => '09173011987', 'recipient_country' => 'PH',
+            'bank_account' => ['bank_code' => 'GXCHPHM2XXX', 'account_number' => '09173011987'],
+            '_meta' => ['idempotency_key' => 'outbox-crash-test'],
+        ]));
+    } finally {
+        $connection->setTransactionManager($originalManager);
+    }
+    $provider->assertNoDisbursementAttempted();
+    expect(DB::table('x_change_treasury_payout_outbox')->where('voucher_id', $voucher->getKey())->value('status'))->toBe('pending');
+    $this->artisan('x-change:claim:deliver-treasury-payouts', ['--limit' => 10])->assertSuccessful();
+    $provider->assertDisburseCalledTimes(1);
+    expect(DB::table('x_change_treasury_payout_outbox')->where('voucher_id', $voucher->getKey())->value('status'))->toBe('completed');
+    $this->artisan('x-change:claim:deliver-treasury-payouts', ['--limit' => 10])->assertSuccessful();
+    $provider->assertDisburseCalledTimes(1);
+});
+
+it('holds an interrupted submission for review rather than sending it again', function (): void {
+    ['voucher' => $voucher] = treasuryBackedVoucherForPayout();
+    $provider = fakePayoutProvider();
+    DB::table('x_change_treasury_payout_outbox')->insert([
+        'voucher_id' => $voucher->getKey(), 'status' => 'processing', 'lease_token' => 'abandoned',
+        'lease_until' => now()->subMinute(), 'created_at' => now(), 'updated_at' => now(),
+    ]);
+    DB::table('x_change_payout_submission_claims')->insert([
+        'voucher_id' => $voucher->getKey(), 'reference_hash' => hash('sha256', 'uncertain-reference'),
+        'claim_type' => 'withdraw', 'created_at' => now(),
+    ]);
+    $this->artisan('x-change:claim:deliver-treasury-payouts')->assertSuccessful();
+    $provider->assertNoDisbursementAttempted();
+    expect(DB::table('x_change_treasury_payout_outbox')->where('voucher_id', $voucher->getKey())->value('status'))->toBe('review');
+});
+
+it('moves an interrupted approval continuation to review without resubmitting', function (): void {
+    ['voucher' => $voucher] = treasuryBackedVoucherForPayout();
+    $provider = fakePayoutProvider();
+    DB::table('x_change_treasury_payout_outbox')->insert([
+        'voucher_id' => $voucher->id, 'status' => 'approval_required', 'created_at' => now()->subMinutes(10), 'updated_at' => now(),
+    ]);
+    DB::table('x_change_payout_submission_claims')->insert([
+        'voucher_id' => $voucher->id, 'reference_hash' => hash('sha256', 'approval-reference'),
+        'claim_type' => 'approval', 'created_at' => now()->subMinutes(10),
+    ]);
+    $this->artisan('x-change:claim:deliver-treasury-payouts')->assertSuccessful();
+    $provider->assertNoDisbursementAttempted();
+    expect(DB::table('x_change_treasury_payout_outbox')->where('voucher_id', $voucher->id)->value('status'))->toBe('review');
 });
 
 it('pays a treasury-backed pay code without a legacy cash entity', function (): void {
@@ -444,6 +647,9 @@ it('refurbishes the same pay code with an immutable corrected destination and se
         'needs_review' => false,
         'error_message' => 'AC01 (Incorrect account number)',
         'completed_at' => now(),
+        'payout_identity_snapshot' => [
+            'recipient' => ['role' => 'recipient', 'name' => 'Recipient', 'address' => ['address1' => 'Recovery locality', 'city' => 'Manila', 'country' => 'PH', 'postal_code' => '1000', 'source' => 'synthetic']],
+        ],
     ])->save();
     DisbursementRejected::dispatch($originalReconciliation->fresh());
     $payableBefore = treasuryBackedPayoutPositionBalance(
@@ -498,7 +704,9 @@ it('refurbishes the same pay code with an immutable corrected destination and se
         ->where('voucher_id', $voucher->getKey())
         ->sole();
 
-    expect($revision->account_number_ciphertext)->toBe('09173011987')
+    expect($provider->lastRequest?->recipient?->address?->address1)->toBe('Recovery locality')
+        ->and(data_get($settledReconciliation->payout_identity_snapshot, 'recipient.address.address1'))->toBe('Recovery locality')
+        ->and($revision->account_number_ciphertext)->toBe('09173011987')
         ->and($revision->mobile_ciphertext)->toBe('09173011987')
         ->and($revision->account_number_masked)->toBe('*******1987')
         ->and(data_get($revision->validation_metadata, 'institution_key'))->toBe('gcash')

@@ -175,6 +175,15 @@ $defaultDeploymentRuntimeTier = match ((string) env('APP_ENV', 'production')) {
 };
 
 return [
+    'payout_locality' => [
+        'enabled' => (bool) env('XCHANGE_PAYOUT_LOCALITY_ENABLED', false),
+        'submission_guard_enabled' => (bool) env('XCHANGE_PAYOUT_SUBMISSION_GUARD_ENABLED', false),
+        'dataset_path' => env('XCHANGE_PAYOUT_LOCALITY_DATASET_PATH'),
+        'geolite_database_path' => env('XCHANGE_PAYOUT_GEOIP_DATABASE_PATH', ''),
+        'geolite_max_age_days' => (int) env('XCHANGE_PAYOUT_GEOIP_MAX_AGE_DAYS', 30),
+        'coordinate_endpoint' => env('XCHANGE_PAYOUT_LOCALITY_GEOCODER_ENDPOINT', ''),
+        'coordinate_api_key' => env('XCHANGE_PAYOUT_LOCALITY_GEOCODER_KEY', ''),
+    ],
     'recovery_simulation' => [
         'enabled' => (bool) env('XCHANGE_RECOVERY_SIMULATION_ENABLED', false),
         'database' => env('XCHANGE_RECOVERY_SIMULATION_DATABASE'),

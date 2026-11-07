@@ -13,7 +13,7 @@ final class ClaimApprovalOtpResultRedirector
     {
         $status = (string) ($result['status'] ?? '');
 
-        if (in_array($status, ['success', 'completed', 'withdrawn', 'redeemed', 'settled'], true)) {
+        if (in_array($status, ['success', 'succeeded', 'completed', 'withdrawn', 'redeemed', 'settled', 'pending_review'], true)) {
             return redirect()->route('x-change.claim.success', [
                 'code' => $voucher->code,
             ]);
