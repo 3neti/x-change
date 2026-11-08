@@ -2726,6 +2726,7 @@ const canSubmit = computed<boolean>(() => {
     props.mutationContract?.runtime_enabled === true &&
     !invoiceUploading.value && invoiceError.value === "" &&
     claimDocumentsValid.value &&
+    (!selectedInputFields.value.includes("documents") || livePricingEstimate.value?.charges?.some((charge) => charge.catalog_item_reference === "inputs.fields.documents") === true) &&
     !publicIssuancePaused.value &&
     routeUrl.value !== null &&
     (!props.turnstile?.enabled || props.turnstileToken !== "") &&
@@ -7769,6 +7770,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                 @preset="applyClaimRequirementPreset"
               />
               <button v-if="selectedInputFields.includes('documents')" type="button" class="mt-2 text-xs font-medium text-sky-700 underline dark:text-sky-300" data-testid="configure-claim-documents" @click="showClaimDocumentSetup">Configure documents</button>
+              <p v-if="selectedInputFields.includes('documents') && claimDocumentsValid && !livePricingEstimate?.charges?.some((charge) => charge.catalog_item_reference === 'inputs.fields.documents')" class="mt-2 text-xs text-amber-700 dark:text-amber-300">Document pricing is unavailable. Ask an operator to update the active pricing catalog before issuing.</p>
             </div>
 
             <div

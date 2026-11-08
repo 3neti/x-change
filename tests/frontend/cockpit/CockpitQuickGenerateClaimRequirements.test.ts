@@ -58,6 +58,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
         await wrapper.get('[data-testid="configure-claim-documents"]').trigger('click');
         expect((wrapper.get('#quick-generate-contract-inputs').element as HTMLDetailsElement).open).toBe(true);
         await wrapper.get('[data-testid="claim-document-label-0"]').setValue('Proof of identity');
+        expect(wrapper.text()).toContain('Document pricing is unavailable.');
         const instruction = quickGenerateEngineeringPreview(wrapper);
         expect(instruction.inputs.fields).toContain('documents');
         expect(instruction.inputs.documents).toMatchObject([
