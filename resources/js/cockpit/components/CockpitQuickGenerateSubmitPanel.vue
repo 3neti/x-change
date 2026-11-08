@@ -777,7 +777,11 @@ function addClaimDocument(): void {
 }
 function showClaimDocumentSetup(): void {
   const section = window.document.getElementById('quick-generate-contract-inputs');
-  if (section instanceof HTMLDetailsElement) section.open = true;
+  let parent: HTMLElement | null = section;
+  while (parent) {
+    if (parent instanceof HTMLDetailsElement) parent.open = true;
+    parent = parent.parentElement;
+  }
   section?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
 }
 function toggleClaimDocumentFormat(document: ClaimDocument, types: string[], enabled: boolean): void {

@@ -49,8 +49,14 @@ async function openClaimRequirementsPopover(
 
 describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
     it('includes configured claimant documents in the engineering instruction', async () => {
-        const wrapper = mountClaimRequirements({ props: { templates: cockpitQuickGenerateTemplates } });
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: { templates: cockpitQuickGenerateTemplates }, attachTo: document.body,
+            global: { stubs: { Teleport: true, CockpitPayCodeCanvas: true } },
+        });
         await wrapper.get('input[value="documents"]').setValue(true);
+        await openClaimRequirementsPopover(wrapper);
+        await wrapper.get('[data-testid="configure-claim-documents"]').trigger('click');
+        expect((wrapper.get('#quick-generate-contract-inputs').element as HTMLDetailsElement).open).toBe(true);
         await wrapper.get('[data-testid="claim-document-label-0"]').setValue('Proof of identity');
         const instruction = quickGenerateEngineeringPreview(wrapper);
         expect(instruction.inputs.fields).toContain('documents');
