@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 use LBHurtado\EmiCore\Enums\SettlementRail;
+use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Enums\RiderContentFormat;
 use LBHurtado\Voucher\Enums\RiderStampArtworkSource;
 use LBHurtado\Voucher\Enums\RiderStampArtworkTreatment;
@@ -162,6 +163,7 @@ class GeneratePayCodeRequest extends FormRequest
             'inputs' => ['required', 'array'],
             'inputs.fields' => ['present', 'array'],
             'inputs.fields.*' => ['string', 'max:120', 'distinct:strict'],
+            ...array_filter(VoucherInstructionsData::rules(), static fn (string $key): bool => str_starts_with($key, 'inputs.documents'), ARRAY_FILTER_USE_KEY),
             'inputs.requirements' => ['nullable', 'array'],
             'inputs.requirements.*' => ['string', 'max:120'],
 
