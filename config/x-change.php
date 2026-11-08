@@ -2317,6 +2317,12 @@ return [
             'description' => 'Camera capture for selfie verification',
             'category' => 'input_fields',
         ],
+        'inputs.fields.documents' => [
+            'price' => 200,
+            'label' => 'Document Upload',
+            'description' => 'Document collection per Pay Code',
+            'category' => 'input_fields',
+        ],
         'inputs.fields.signature' => [
             'price' => 150, // ₱1.50 (medium image storage)
             'label' => 'Digital Signature',

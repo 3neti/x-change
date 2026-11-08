@@ -23,6 +23,7 @@ use LBHurtado\XChange\Data\PreparedCompiledClaimData;
 use LBHurtado\XChange\Enums\ClaimAuthenticationMode;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Services\BuildProvisioningRequirementViewData;
+use LBHurtado\XChange\Services\Claim\ClaimDocumentAccess;
 use LBHurtado\XChange\Services\Claim\VoucherClaimFlowCompiler;
 use LBHurtado\XChange\Services\NamedVoucherSliceService;
 use LBHurtado\XChange\Services\SettlementRepaymentPolicy;
@@ -322,6 +323,10 @@ class ClaimStartController extends Controller
 
         $state = $this->formFlowService->startFlow($instructions);
 
+        if (data_get($state, 'instructions.metadata.voucher_code') === (string) $voucher->code) {
+            app(ClaimDocumentAccess::class)->grant(request(), $voucher, $state['flow_id']);
+        }
+
         return redirect("/form-flow/{$state['flow_id']}");
     }
 
@@ -385,6 +390,10 @@ class ClaimStartController extends Controller
         $state = $this->formFlowService->startFlow(
             FormFlowInstructionsData::from($instructionPayload),
         );
+
+        if (data_get($state, 'instructions.metadata.voucher_code') === (string) $voucher->code) {
+            app(ClaimDocumentAccess::class)->grant(request(), $voucher, $state['flow_id']);
+        }
 
         session()->forget(CompiledClaimSessionKeys::SUBMISSION);
         session()->forget(CompiledClaimSessionKeys::PREPARED);

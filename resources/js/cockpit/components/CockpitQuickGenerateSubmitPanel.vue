@@ -240,7 +240,7 @@ function inputFieldCapability(field: string): string | null {
 function claimRequirementCategory(
   field: string,
 ): CockpitClaimRequirementCategory {
-  if (["selfie", "signature", "location"].includes(field)) {
+  if (["selfie", "signature", "location", "documents"].includes(field)) {
     return "evidence";
   }
 
@@ -369,6 +369,11 @@ type QuickGenerateTemplateDefaults = {
 
 const voucherInputFieldOptions: VoucherInputFieldOption[] = [
   {
+    value: "documents",
+    label: "Documents",
+    helper: "Ask the recipient to upload documents.",
+  },
+  {
     value: "signature",
     label: "Signature",
     helper: "Require the recipient to provide a signature.",
@@ -443,6 +448,7 @@ const voucherInputFieldPayloadOrder = [
   "location",
   "otp",
   "selfie",
+  "documents",
 ];
 
 const cashTypeOptions: CashTypeOption[] = [
@@ -755,6 +761,30 @@ const purpose = ref(
 const riderMessageFormat = ref<RiderContentFormat>("plain");
 const count = ref("1");
 const selectedInputFieldValues = ref<string[]>(["mobile"]);
+type ClaimDocument = { key: string; label: string; accept: string[]; required: boolean };
+const claimDocuments = ref<ClaimDocument[]>([]);
+const claimDocumentFormats = [
+  { label: "PDF", types: ["application/pdf"] },
+  { label: "Images", types: ["image/jpeg", "image/png"] },
+  { label: "Word", types: ["application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"] },
+  { label: "Excel", types: ["application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"] },
+  { label: "CSV", types: ["text/csv"] },
+];
+function addClaimDocument(): void {
+  let sequence = 1;
+  while (claimDocuments.value.some((document) => document.key === `document_${sequence}`)) sequence++;
+  claimDocuments.value.push({ key: `document_${sequence}`, label: "", accept: ["application/pdf"], required: true });
+}
+function showClaimDocumentSetup(): void {
+  const section = window.document.getElementById('quick-generate-contract-inputs');
+  if (section instanceof HTMLDetailsElement) section.open = true;
+  section?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+}
+function toggleClaimDocumentFormat(document: ClaimDocument, types: string[], enabled: boolean): void {
+  document.accept = [...new Set(enabled ? [...document.accept, ...types] : document.accept.filter((type) => !types.includes(type)))];
+}
+const claimDocumentsValid = computed(() => !selectedInputFields.value.includes("documents") ||
+  (claimDocuments.value.length > 0 && claimDocuments.value.length <= 5 && claimDocuments.value.every((document) => document.label.trim().length > 0 && document.label.trim().length <= 100 && document.accept.length > 0)));
 const onboardingEnabled = ref(props.onboardingPreset);
 const validationSecret = ref("");
 const requireMobileValidation = ref(true);
@@ -1874,6 +1904,10 @@ function applyInstructionBlueprint(
     "inputs",
     "fields",
   ]);
+  const savedDocuments = dataGet(instructions, ["inputs", "documents"]);
+  claimDocuments.value = Array.isArray(savedDocuments) ? savedDocuments.filter((entry): entry is ClaimDocument =>
+    entry !== null && typeof entry === "object" && typeof entry.key === "string" && typeof entry.label === "string" && Array.isArray(entry.accept) && typeof entry.required === "boolean",
+  ).map((entry) => ({ ...entry, accept: [...entry.accept] })) : [];
   // Invitation mode is durable: a template or saved/last design may turn
   // it on, but never turns it off. Only the explicit issue-action menu (see
   // setOnboardingMode) may disable it.
@@ -2687,6 +2721,7 @@ const canSubmit = computed<boolean>(() => {
   return (
     props.mutationContract?.runtime_enabled === true &&
     !invoiceUploading.value && invoiceError.value === "" &&
+    claimDocumentsValid.value &&
     !publicIssuancePaused.value &&
     routeUrl.value !== null &&
     (!props.turnstile?.enabled || props.turnstileToken !== "") &&
@@ -2721,6 +2756,7 @@ const canGenerateClaimPreview = computed<boolean>(() => {
 
   return (
     claimPreviewRouteUrl.value !== null &&
+    claimDocumentsValid.value &&
     !previewProcessing.value &&
     Number.isFinite(normalizedAmount) &&
     (normalizedAmount > 0 || (philhealthSettlement.value && Number(targetAmount.value) > 0)) &&
@@ -3451,6 +3487,7 @@ function toggleInputField(field: string, selected: boolean): void {
 
   if (selected) {
     fields.add(field);
+    if (field === "documents" && claimDocuments.value.length === 0) addClaimDocument();
   } else {
     fields.delete(field);
   }
@@ -5857,6 +5894,7 @@ function buildPayloadShape(
     inputs: {
       fields: selectedInputFields.value,
       requirements: verificationSummary.value,
+      ...(selectedInputFields.value.includes("documents") ? { documents: claimDocuments.value.map((document) => ({ ...document, label: document.label.trim() })) } : {}),
     },
     count:
       Number.isFinite(normalizedCount) && normalizedCount > 0
@@ -7726,6 +7764,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                 @toggle="toggleInputField"
                 @preset="applyClaimRequirementPreset"
               />
+              <button v-if="selectedInputFields.includes('documents')" type="button" class="mt-2 text-xs font-medium text-sky-700 underline dark:text-sky-300" data-testid="configure-claim-documents" @click="showClaimDocumentSetup">Configure documents</button>
             </div>
 
             <div
@@ -8932,6 +8971,24 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                   </span>
                 </span>
               </label>
+            </div>
+            <div v-if="selectedInputFields.includes('documents')" class="grid gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700" data-testid="claim-document-configuration">
+              <p class="text-sm font-semibold">Documents from the recipient</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Choose up to five documents and the file formats you accept. The current charge is shown in the Order estimate.</p>
+              <div v-for="(document, index) in claimDocuments" :key="document.key" class="grid gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
+                <label class="grid gap-1 text-xs font-medium">Document name
+                  <input v-model="document.label" :data-testid="`claim-document-label-${index}`" maxlength="100" placeholder="e.g. Proof of identity" class="rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" />
+                </label>
+                <fieldset class="flex flex-wrap gap-3 text-xs"><legend class="mb-1 font-medium">Accepted formats</legend>
+                  <label v-for="format in claimDocumentFormats" :key="format.label" class="flex items-center gap-1">
+                    <input type="checkbox" :checked="format.types.every((type) => document.accept.includes(type))" @change="toggleClaimDocumentFormat(document, format.types, ($event.target as HTMLInputElement).checked)" /> {{ format.label }}
+                  </label>
+                </fieldset>
+                <label class="flex items-center gap-2 text-xs"><input v-model="document.required" type="checkbox" /> Required before completing the claim</label>
+                <button type="button" class="justify-self-start text-xs font-medium text-rose-600" @click="claimDocuments.splice(index, 1)">Remove document</button>
+              </div>
+              <button type="button" class="justify-self-start rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold dark:border-slate-700" :disabled="claimDocuments.length >= 5" @click="addClaimDocument">Add document</button>
+              <p v-if="!claimDocumentsValid" class="text-xs text-rose-600">Add a name and at least one accepted format for each document.</p>
             </div>
           </div>
         </details>

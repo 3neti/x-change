@@ -58,6 +58,7 @@
         "3neti/emi-netbank": "^2.6.0",
         "3neti/emi-paynamics": "^2.2.0",
         "3neti/form-flow": "^1.11.0",
+        "3neti/form-handler-document": "^1.0",
         "3neti/form-handler-kyc": "^1.1.4",
         "3neti/form-handler-location": "^1.2.4",
         "3neti/form-handler-otp": "^1.2.2",

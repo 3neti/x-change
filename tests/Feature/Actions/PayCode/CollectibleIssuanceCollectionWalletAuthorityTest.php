@@ -108,6 +108,22 @@ it('attaches an envelope to every voucher generated in a batch', function (): vo
     }
 });
 
+it('creates a document envelope for a disbursable Pay Code requesting claimant documents', function (): void {
+    $issuer = actingAsTestUser();
+    $payload = collectionWalletAuthorityPayload(null, null, null);
+    $payload['cash']['amount'] = 100;
+    unset($payload['target_amount']);
+    $payload['inputs'] = ['fields' => ['documents'], 'documents' => [[
+        'key' => 'id', 'label' => 'Identity', 'accept' => ['image/jpeg'], 'required' => true,
+    ]]];
+    $result = app(PayCodeIssuanceContract::class)->issue($issuer, $payload);
+    $voucher = Voucher::query()->findOrFail($result['voucher_id']);
+
+    expect($voucher->envelopes()->count())->toBe(1)
+        ->and($voucher->envelope()->firstOrFail()->driver_id)->toBe('x-change.documents')
+        ->and(data_get($voucher->metadata, 'instructions.inputs.documents.0.key'))->toBe('id');
+});
+
 it('issues v2 payment documents with stable identity and separate audit references', function (): void {
     config()->set('settlement-envelope.driver_disk', 'test-envelope-drivers');
     config()->set('filesystems.disks.test-envelope-drivers', [

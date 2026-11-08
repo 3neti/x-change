@@ -10,5 +10,6 @@
   { "requirement": "gross_monthly_income", "step": "bio_fields", "field": "gross_monthly_income" },
   { "requirement": "location", "step": "location_capture" },
   { "requirement": "otp", "step": "otp_verification" },
-  { "requirement": "selfie", "step": "selfie_capture" }
+  { "requirement": "selfie", "step": "selfie_capture" },
+  { "requirement": "documents", "step": "documents" }
 ]

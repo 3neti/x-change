@@ -42,12 +42,15 @@ use LBHurtado\EmiCore\Contracts\PhilippineLocalityDataset;
 use LBHurtado\EmiCore\Contracts\ProviderWalletResolver;
 use LBHurtado\EmiCore\Contracts\SettlementProviderRegistryContract;
 use LBHurtado\EmiCore\Services\JsonPhilippineLocalityDataset;
+use LBHurtado\FormHandlerDocument\Contracts\DocumentAccess;
+use LBHurtado\FormHandlerDocument\Events\DocumentSubmitted;
 use LBHurtado\FormHandlerOtp\Contracts\OtpChallengeGateway;
 use LBHurtado\FormHandlerOtp\Services\TxtcmdrOtpChallengeGateway;
 use LBHurtado\FormHandlerOtp\Services\UnavailableOtpChallengeGateway;
 use LBHurtado\Onboarding\Contracts\ContactUserProvisionerContract;
 use LBHurtado\Onboarding\Support\OnboardingGuard;
 use LBHurtado\SettlementEnvelope\Contracts\WorkflowCatalog;
+use LBHurtado\SettlementEnvelope\Events\AttachmentReviewed;
 use LBHurtado\SettlementEnvelope\Services\DriverService;
 use LBHurtado\SettlementEnvelope\Services\DriverSourceRegistry;
 use LBHurtado\SettlementEnvelope\Services\WorkflowConnectionReadiness;
@@ -414,6 +417,10 @@ use LBHurtado\XChange\Services\Campaigns\NetbankCampaignBankTransferDispatcher;
 use LBHurtado\XChange\Services\Campaigns\NetbankCampaignBankTransferStatusChecker;
 use LBHurtado\XChange\Services\Campaigns\NullCampaignBankTransferDispatcher;
 use LBHurtado\XChange\Services\Campaigns\NullCampaignBankTransferStatusChecker;
+use LBHurtado\XChange\Services\Claim\ClaimDocumentAccess;
+use LBHurtado\XChange\Services\Claim\ClaimDocumentEnvelopeBridge;
+use LBHurtado\XChange\Services\Claim\ClaimDocumentEvidence;
+use LBHurtado\XChange\Services\Claim\ClaimDocumentReviewSync;
 use LBHurtado\XChange\Services\Claim\ClaimViewerResolver;
 use LBHurtado\XChange\Services\Claim\DefaultClaimShareCardUrlResolver;
 use LBHurtado\XChange\Services\Claim\DefaultClaimSurfaceResolver;
@@ -645,6 +652,8 @@ class XChangeServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->bind(DocumentAccess::class, ClaimDocumentAccess::class);
+        $this->app->scoped(ClaimDocumentEvidence::class);
         $this->app->scoped(ClaimPayoutLocalityScope::class);
         $this->app->bind(GeoLiteLocalityLookup::class, fn () => new GeoLiteLocalityLookup(
             (string) config('x-change.payout_locality.geolite_database_path', ''),
@@ -1812,6 +1821,14 @@ class XChangeServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Event::listen(
+            DocumentSubmitted::class,
+            [ClaimDocumentEnvelopeBridge::class, 'handle'],
+        );
+        Event::listen(
+            AttachmentReviewed::class,
+            [ClaimDocumentReviewSync::class, 'handle'],
+        );
         if ($this->app->bound(DriverSourceRegistry::class)) {
             $this->app->make(DriverSourceRegistry::class)
                 ->register('x-change-documents', dirname(__DIR__, 2).'/resources/envelope-drivers');

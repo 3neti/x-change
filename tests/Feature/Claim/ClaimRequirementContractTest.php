@@ -11,7 +11,12 @@ use Symfony\Component\Yaml\Yaml;
 function claimRequirementContractVoucher(array $fields): Voucher
 {
     $instructions = validVoucherInstructions(overrides: [
-        'inputs' => ['fields' => $fields],
+        'inputs' => [
+            'fields' => $fields,
+            ...(in_array('documents', $fields, true) ? ['documents' => [[
+                'key' => 'id', 'label' => 'Identity', 'accept' => ['application/pdf'], 'required' => true,
+            ]]] : []),
+        ],
     ])->toArray();
 
     return (new Voucher)->forceFill([
@@ -28,6 +33,24 @@ beforeEach(function (): void {
             $this->config = Yaml::parseFile(__DIR__.'/../../../config/form-flow-drivers/voucher-redemption.yaml');
         }
     });
+});
+
+it('compiles the issued document instructions into a scoped claim step', function (): void {
+    $documents = [
+        ['key' => 'identity', 'label' => 'Proof of identity', 'accept' => ['image/jpeg', 'application/pdf'], 'required' => true],
+        ['key' => 'invoice', 'label' => 'Invoice', 'accept' => ['application/pdf'], 'required' => false],
+    ];
+    $instructions = validVoucherInstructions(overrides: [
+        'inputs' => ['fields' => ['documents'], 'documents' => $documents],
+    ])->toArray();
+    $voucher = (new Voucher)->forceFill(['code' => 'AA317', 'metadata' => ['instructions' => $instructions]]);
+
+    $flow = app(VoucherClaimFlowCompiler::class)->compile($voucher)->instructions->toArray();
+    $step = collect($flow['steps'])->firstWhere('handler', 'documents');
+
+    expect(data_get($flow, 'metadata.voucher_code'))->toBe('AA317')
+        ->and(data_get($step, 'config.documents'))->toEqual($documents)
+        ->and(data_get($step, 'config.step_name'))->toBe('documents');
 });
 
 it('compiles every authored requirement into the actual claim-flow DTO', function (): void {

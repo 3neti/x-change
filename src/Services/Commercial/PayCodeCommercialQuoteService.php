@@ -300,6 +300,10 @@ final class PayCodeCommercialQuoteService
             );
         }
 
+        if (in_array('documents', $fields, true) && ! in_array('inputs.fields.documents', $available, true)) {
+            throw new PayCodeIssuanceFailed('The active commercial catalog does not price document collection.');
+        }
+
         return collect($selected)
             ->unique()
             ->filter(static fn (string $reference): bool => in_array($reference, $available, true))

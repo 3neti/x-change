@@ -43,11 +43,13 @@ final class ClaimEvidenceRequirements
         $inputs = (array) data_get($payload, 'inputs', []);
         $missing = array_values(array_filter(
             $requirements,
-            fn (string $requirement): bool => ! $this->isSatisfied(
-                $requirement,
-                $inputs[$requirement] ?? data_get($payload, $requirement),
-                $inputs,
-            ),
+            fn (string $requirement): bool => $requirement === 'documents'
+                ? ! app(ClaimDocumentEvidence::class)->isComplete($voucher, $inputs['documents'] ?? [])
+                : ! $this->isSatisfied(
+                    $requirement,
+                    $inputs[$requirement] ?? data_get($payload, $requirement),
+                    $inputs,
+                ),
         ));
 
         if ($missing !== []) {
@@ -80,6 +82,7 @@ final class ClaimEvidenceRequirements
 
         return array_values(array_unique([
             ...$requirements,
+            ...(in_array('documents', $this->normalizeRequirements(data_get($instructions, 'inputs.fields', [])), true) ? ['documents'] : []),
             ...$this->blockingValidationRequirements($instructions),
         ]));
     }

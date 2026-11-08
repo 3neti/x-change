@@ -7,6 +7,35 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Exceptions\IncompleteClaimEvidence;
 use LBHurtado\XChange\Services\Claim\ClaimEvidenceRequirements;
 
+it('does not accept forged document references as claim evidence', function (): void {
+    $voucher = Voucher::query()->create([
+        'code' => 'DOC-FORGED',
+        'metadata' => ['instructions' => ['inputs' => [
+            'fields' => ['documents'],
+            'documents' => [['key' => 'id', 'label' => 'ID', 'accept' => ['image/jpeg'], 'required' => true]],
+        ]]],
+        'state' => 'active',
+    ]);
+
+    expect(fn () => app(ClaimEvidenceRequirements::class)->assertComplete($voucher, [
+        'inputs' => ['documents' => [['key' => 'id', 'reference' => 'forged']]],
+    ]))->toThrow(IncompleteClaimEvidence::class, 'documents');
+});
+
+it('allows a claim when all requested documents are optional and none were uploaded', function (): void {
+    $voucher = Voucher::query()->create([
+        'code' => 'DOC-OPTIONAL',
+        'metadata' => ['instructions' => ['inputs' => [
+            'fields' => ['documents'],
+            'documents' => [['key' => 'id', 'label' => 'ID', 'accept' => ['image/jpeg'], 'required' => false]],
+        ]]],
+        'state' => 'active',
+    ]);
+
+    app(ClaimEvidenceRequirements::class)->assertComplete($voucher, ['inputs' => ['documents' => []]]);
+    expect(true)->toBeTrue();
+});
+
 it('snapshots typed issuance requirements as stable scalar values', function (): void {
     $issuance = app(ClaimEvidenceRequirements::class)->snapshot([
         'inputs' => [

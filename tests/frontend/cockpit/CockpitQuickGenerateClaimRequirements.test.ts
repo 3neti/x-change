@@ -48,6 +48,16 @@ async function openClaimRequirementsPopover(
 }
 
 describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
+    it('includes configured claimant documents in the engineering instruction', async () => {
+        const wrapper = mountClaimRequirements({ props: { templates: cockpitQuickGenerateTemplates } });
+        await wrapper.get('input[value="documents"]').setValue(true);
+        await wrapper.get('[data-testid="claim-document-label-0"]').setValue('Proof of identity');
+        const instruction = quickGenerateEngineeringPreview(wrapper);
+        expect(instruction.inputs.fields).toContain('documents');
+        expect(instruction.inputs.documents).toMatchObject([
+            { key: 'document_1', label: 'Proof of identity', accept: ['application/pdf'], required: true },
+        ]);
+    });
     it('renders the compact control inside the Order card', () => {
         const wrapper = mountClaimRequirements({
             props: { templates: cockpitQuickGenerateTemplates },
@@ -90,6 +100,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
             'cockpit-claim-requirement-option-selfie',
             'cockpit-claim-requirement-option-signature',
             'cockpit-claim-requirement-option-location',
+            'cockpit-claim-requirement-option-documents',
         ]);
         expect(
             wrapper

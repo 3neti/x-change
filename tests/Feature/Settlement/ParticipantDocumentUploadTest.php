@@ -10,6 +10,27 @@ use LBHurtado\SettlementEnvelope\Models\Envelope;
 use LBHurtado\SettlementEnvelope\Services\EnvelopeService;
 use LBHurtado\XChange\Services\Settlement\IssuerInvoiceDrafts;
 
+it('links an existing private document into an envelope without copying it', function (): void {
+    Storage::fake('local');
+    config()->set('filesystems.disks.local.visibility', 'private');
+    Storage::disk('local')->put('uploads/evidence.pdf', '%PDF evidence', 'private');
+    $voucher = issueVoucher(validVoucherInstructions());
+    $service = app(EnvelopeService::class);
+    $envelope = $service->create($voucher->code, 'x-change.documents', '1.0.0', $voucher);
+    $document = [
+        'document_id' => '01ARZ3NDEKTSV4RRFFQ69G5FAV', 'doc_type' => 'SUPPORTING_DOCUMENT',
+        'original_filename' => 'evidence.pdf', 'disk' => 'local', 'file_path' => 'uploads/evidence.pdf',
+        'mime_type' => 'application/pdf', 'size' => strlen('%PDF evidence'), 'hash' => hash('sha256', '%PDF evidence'),
+    ];
+    $first = $service->attachStoredAttachment($envelope, $document);
+    $retry = $service->attachStoredAttachment($envelope, $document);
+    expect($retry->id)->toBe($first->id)
+        ->and($envelope->attachments()->count())->toBe(1)
+        ->and(Storage::disk('local')->allFiles())->toBe(['uploads/evidence.pdf']);
+    Storage::disk('local')->put('uploads/evidence.pdf', 'altered data');
+    expect(fn () => $service->attachStoredAttachment($envelope, $document))->toThrow(InvalidArgumentException::class);
+});
+
 it('keeps issuer invoice drafts private and bound to one issuer and order', function (): void {
     Storage::fake('local');
     config()->set('filesystems.disks.local.visibility', 'private');
