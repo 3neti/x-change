@@ -18,6 +18,7 @@ use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\FormHandlerDocument\Events\DocumentSubmitted;
 use LBHurtado\FormHandlerDocument\Services\StoreDocumentSubmission;
 use LBHurtado\SettlementEnvelope\Services\EnvelopeService;
+use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
@@ -31,6 +32,7 @@ use LBHurtado\XChange\Actions\Disbursement\RestoreUnsubmittedPayoutCorrection;
 use LBHurtado\XChange\Actions\Funding\IssueTreasuryBackedPayCode;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalOtpAuthorizer;
+use LBHurtado\XChange\Contracts\PricingServiceContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
@@ -45,6 +47,8 @@ use LBHurtado\XChange\Services\Claim\ClaimDocumentAccess;
 use LBHurtado\XChange\Services\Claim\ClaimDocumentEvidence;
 use LBHurtado\XChange\Services\ClaimPayoutLocalityContext;
 use LBHurtado\XChange\Services\ClaimPayoutLocalityEvidence;
+use LBHurtado\XChange\Services\Commercial\LocalDocumentPricingActivation;
+use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Execution\DurableTreasuryPayout;
 use LBHurtado\XChange\Services\Execution\ExecutionAwarePostRedemptionGate;
 use LBHurtado\XChange\Services\Execution\TreasuryBackedPayCodeDisbursement;
@@ -74,6 +78,14 @@ beforeEach(function (): void {
 });
 
 it('disburses through a simulated provider only after the required claim document is uploaded', function (): void {
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+    $catalog = config('x-commerce.catalogs.pay_code');
+    unset($catalog['items']['inputs.fields.documents']);
+    $catalog['version'] = 3;
+    config()->set('x-commerce.catalogs.pay_code', $catalog);
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:document-lifecycle');
+    app(LocalDocumentPricingActivation::class)->activate('sandbox-owner:document-lifecycle');
     Bus::fake([DispatchVoucherRedemptionFeedbackJob::class, DeliverQueuedFeedbackSmsJob::class]);
     $this->app->register(MediaLibraryServiceProvider::class);
     (require __DIR__.'/../../../vendor/spatie/laravel-medialibrary/database/migrations/create_media_table.php.stub')->up();
@@ -83,6 +95,10 @@ it('disburses through a simulated provider only after the required claim documen
     config()->set('document-handler.disk', 'local');
     $documents = [['key' => 'id', 'label' => 'Identity', 'accept' => ['application/pdf'], 'required' => true]];
     ['voucher' => $voucher] = treasuryBackedVoucherForPayout(additionalInputs: ['fields' => ['documents'], 'documents' => $documents]);
+    $persistedInstructions = VoucherInstructionsData::createFromAttribs($voucher->metadata['instructions']);
+    $estimate = app(PricingServiceContract::class)->estimate($persistedInstructions);
+    expect(data_get($voucher->metadata, 'instructions.inputs.documents.0.label'))->toBe('Identity')
+        ->and(collect($estimate['charges'])->firstWhere('catalog_item_reference', 'inputs.fields.documents')['price_minor'])->toBe(200);
     app(EnvelopeService::class)->create($voucher->code, 'x-change.documents', '1.1.0', $voucher);
     $flow = app(FormFlowService::class)->startFlow(FormFlowInstructionsData::from([
         'reference_id' => 'claim-'.$voucher->code.'-test', 'steps' => [], 'metadata' => ['voucher_code' => $voucher->code],
