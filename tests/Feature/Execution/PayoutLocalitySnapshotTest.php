@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiCore\Contracts\PendingPayoutApproval;
 use LBHurtado\EmiCore\Data\PayoutAddressData;
@@ -12,10 +14,46 @@ use LBHurtado\EmiCore\Data\PayoutResultData;
 use LBHurtado\EmiCore\Enums\PayoutStatus;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Services\ClaimPayoutLocalityContext;
+use LBHurtado\XChange\Services\ClaimPayoutLocalityEvidence;
+use LBHurtado\XChange\Services\ClaimPayoutParties;
 use LBHurtado\XChange\Services\ClaimPayoutSubmission;
 use LBHurtado\XChange\Services\DefaultDisbursementReconciliationStore;
 use LBHurtado\XChange\Services\PayoutLocalitySnapshot;
 use LBHurtado\XChange\Services\WithdrawalDisbursementExecutor;
+use LBHurtado\XChange\Support\Claim\FormFlowClaimPayloadNormalizer;
+
+it('carries permitted form-flow coordinates through the resolved snapshot to the payout provider', function (): void {
+    config()->set('x-change.payout_locality.enabled', true);
+    config()->set('x-change.payout_locality.coordinate_endpoint', '');
+    config()->set('x-change.payout_locality.coordinate_api_key', '');
+    config()->set('location-handler.opencage_endpoint', 'https://geocoder.test/reverse');
+    config()->set('location-handler.opencage_api_key', 'test-key');
+    Http::fake(['geocoder.test/*' => Http::response(['results' => [['components' => ['country_code' => 'ph', 'village' => 'Barangay Sample', 'city' => 'Manila', 'postcode' => '1000']]]])]);
+
+    $voucher = issueVoucher();
+    $payload = app(FormFlowClaimPayloadNormalizer::class)->normalize(['location_capture' => ['latitude' => 14.5, 'longitude' => 121.0]]);
+    $evidence = app(ClaimPayoutLocalityEvidence::class)->capture(Request::create('/', 'POST'), $payload['inputs']['location'], true);
+    app(ClaimPayoutLocalityContext::class)->remember($voucher, 'claim-test', $evidence);
+    $payload['_meta']['idempotency_key'] = 'claim-test';
+    $parties = app(ClaimPayoutParties::class)->resolve($voucher, $payload, 'Recipient');
+
+    $provider = Mockery::mock(PayoutProvider::class);
+    $provider->shouldReceive('disburse')->once()->andReturnUsing(function (PayoutRequestData $request): PayoutResultData {
+        expect($request->recipient?->address?->address1)->toBe('Barangay Sample')
+            ->and($request->recipient?->address?->source)->toBe('location');
+
+        return new PayoutResultData('test-transaction', 'test-uuid', PayoutStatus::PENDING, 'netbank');
+    });
+    $status = Mockery::mock(DisbursementStatusResolverContract::class);
+    $status->shouldReceive('resolveFromGatewayResponse')->once()->andReturn('pending');
+    $request = new PayoutRequestData('locality-flow-test', 100, '09170000000', 'GXCHPHM2XXX', 'INSTAPAY', recipient: PayoutPartyData::from($parties['recipient']));
+    (new WithdrawalDisbursementExecutor($provider, app(DefaultDisbursementReconciliationStore::class), $status))->execute($voucher, $request, 1);
+
+    $row = DisbursementReconciliation::query()->where('voucher_id', $voucher->id)->sole();
+    expect($row->payout_identity_snapshot['recipient']['address']['source'])->toBe('location');
+    Http::assertSentCount(1);
+});
 
 it('encrypts a payout locality once and returns the same snapshot on replay', function (): void {
     $payout = DisbursementReconciliation::query()->create(['voucher_code' => 'LOCALITY-TEST', 'status' => 'intent']);

@@ -650,10 +650,17 @@ class XChangeServiceProvider extends ServiceProvider
             (string) config('x-change.payout_locality.geolite_database_path', ''),
             (int) config('x-change.payout_locality.geolite_max_age_days', 30),
         ));
-        $this->app->bind(CoordinateLocalityLookup::class, fn () => new CoordinateLocalityLookup(
-            (string) config('x-change.payout_locality.coordinate_endpoint', ''),
-            (string) config('x-change.payout_locality.coordinate_api_key', ''),
-        ));
+        $this->app->bind(CoordinateLocalityLookup::class, function () {
+            $endpoint = (string) config('x-change.payout_locality.coordinate_endpoint', '');
+            $key = (string) config('x-change.payout_locality.coordinate_api_key', '');
+
+            if ($endpoint === '' && $key === '') {
+                $endpoint = (string) config('location-handler.opencage_endpoint', '');
+                $key = (string) config('location-handler.opencage_api_key', '');
+            }
+
+            return new CoordinateLocalityLookup($endpoint, $key);
+        });
         $this->app->bind(PhilippineLocalityDataset::class, function () {
             $path = config('x-change.payout_locality.dataset_path');
             if (is_string($path) && $path !== '') {

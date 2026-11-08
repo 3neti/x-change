@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 use Bavix\Wallet\Models\Wallet;
 use Illuminate\Database\DatabaseTransactionsManager;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
 use LBHurtado\EmiPaynamicsConstellation\Exceptions\PendingConstellationOtpException;
+use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
@@ -31,11 +34,13 @@ use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PayoutDestinationRevision;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\ClaimPayoutLocalityContext;
+use LBHurtado\XChange\Services\ClaimPayoutLocalityEvidence;
 use LBHurtado\XChange\Services\Execution\DurableTreasuryPayout;
 use LBHurtado\XChange\Services\Execution\ExecutionAwarePostRedemptionGate;
 use LBHurtado\XChange\Services\Execution\TreasuryBackedPayCodeDisbursement;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalResumePayloadSession;
+use LBHurtado\XChange\Support\Claim\FormFlowClaimPayloadNormalizer;
 use LBHurtado\XJournal\Data\ExecutionJournalEntryData;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
@@ -60,12 +65,16 @@ beforeEach(function (): void {
 it('uses the claim locality in the treasury-backed payout', function (): void {
     config()->set('x-change.payout_locality.enabled', true);
     config()->set('x-change.payout_locality.submission_guard_enabled', true);
+    config()->set('x-change.payout_locality.coordinate_endpoint', '');
+    config()->set('x-change.payout_locality.coordinate_api_key', '');
+    config()->set('location-handler.opencage_endpoint', 'https://geocoder.test/reverse');
+    config()->set('location-handler.opencage_api_key', 'test-key');
+    Http::fake(['geocoder.test/*' => Http::response(['results' => [['components' => ['country_code' => 'ph', 'village' => 'Claimant Barangay', 'city' => 'Manila', 'postcode' => '1000']]]])]);
     Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
     ['voucher' => $voucher] = treasuryBackedVoucherForPayout();
-    app(ClaimPayoutLocalityContext::class)->remember($voucher, 'treasury-locality-claim', [
-        'ip_locality' => null,
-        'captured' => ['address1' => 'Claimant Barangay', 'city' => 'Manila', 'country' => 'PH', 'postal_code' => '1000', 'source' => 'location', 'dataset_version' => null],
-    ]);
+    $payload = app(FormFlowClaimPayloadNormalizer::class)->normalize(['location_capture' => ['latitude' => 14.5, 'longitude' => 121.0]]);
+    $evidence = app(ClaimPayoutLocalityEvidence::class)->capture(Request::create('/', 'POST'), $payload['inputs']['location'], true);
+    app(ClaimPayoutLocalityContext::class)->remember($voucher, 'treasury-locality-claim', $evidence);
     $provider = fakePayoutProvider()->willReturnSuccessfulResult(transactionId: 'LOCALITY-1', provider: 'netbank');
     $result = app(SubmitPayCodeClaim::class)->handle($voucher, [
         'mobile' => '09173011987', 'recipient_country' => 'PH',
@@ -82,6 +91,36 @@ it('uses the claim locality in the treasury-backed payout', function (): void {
     $this->artisan('x-change:claim:deliver-treasury-payouts', ['--limit' => 10])->assertSuccessful();
     $provider->assertDisburseCalledTimes(1);
     expect(DB::table('x_change_treasury_payout_outbox')->where('voucher_id', $voucher->getKey())->value('status'))->toBe('completed');
+});
+
+it('submits a location-enabled claim through the web endpoint to a simulated treasury payout', function (): void {
+    config()->set('x-change.payout_locality.enabled', true);
+    config()->set('x-change.payout_locality.submission_guard_enabled', true);
+    config()->set('x-change.payout_locality.coordinate_endpoint', '');
+    config()->set('x-change.payout_locality.coordinate_api_key', '');
+    config()->set('location-handler.opencage_endpoint', 'https://geocoder.test/reverse');
+    config()->set('location-handler.opencage_api_key', 'test-key');
+    Http::fake(['geocoder.test/*' => Http::response(['results' => [['components' => ['country_code' => 'ph', 'village' => 'Claimant Barangay', 'city' => 'Manila', 'postcode' => '1000']]]])]);
+    Bus::fake([DispatchVoucherRedemptionFeedbackJob::class]);
+    ['voucher' => $voucher] = treasuryBackedVoucherForPayout(true);
+    $provider = fakePayoutProvider()->willReturnSuccessfulResult(transactionId: 'LOCALITY-WEB', provider: 'netbank');
+    $flow = Mockery::mock(FormFlowService::class);
+    $flow->shouldReceive('getFlowState')->once()->andReturn([
+        'flow_id' => 'locality-web',
+        'collected_data' => [
+            'wallet' => ['mobile' => '09173011987', 'bank_code' => 'GXCHPHM2XXX', 'account_number' => '09173011987'],
+            'location_capture' => ['latitude' => 14.5, 'longitude' => 121.0],
+        ],
+    ]);
+    $flow->shouldReceive('clearFlow')->once()->with('locality-web');
+    app()->instance(FormFlowService::class, $flow);
+
+    $this->post(route('x-change.claim.submit', ['code' => $voucher->code]), ['flow_id' => 'locality-web'])
+        ->assertRedirect(route('x-change.claim.success', ['code' => $voucher->code]));
+    expect($provider->lastRequest?->recipient?->address?->address1)->toBe('Claimant Barangay')
+        ->and($provider->lastRequest?->recipient?->address?->source)->toBe('location');
+    $provider->assertDisburseCalledTimes(1);
+    Http::assertSentCount(1);
 });
 
 it('surfaces a treasury provider approval challenge after the redemption commits', function (): void {
@@ -1252,7 +1291,7 @@ it('resumes the known pre-provider reference persistence failure exactly once', 
 /**
  * @return array{issuer: object, voucher: Voucher}
  */
-function treasuryBackedVoucherForPayout(): array
+function treasuryBackedVoucherForPayout(bool $withLocation = false): array
 {
     $issuer = actingAsTestUser();
     enableNetbankTreasuryForTests();
@@ -1287,17 +1326,21 @@ function treasuryBackedVoucherForPayout(): array
         currency: 'PHP',
         evidenceReference: 'netbank:treasury-backed-payout',
     );
+    $instructions = validVoucherInstructions(
+        amount: 20,
+        overrides: [
+            'metadata' => [
+                'flow_type' => 'disbursable',
+                'issuer_id' => (string) $issuer->getKey(),
+            ],
+        ],
+    )->toArray();
+    if ($withLocation) {
+        data_set($instructions, 'inputs.fields', ['location']);
+    }
     $voucher = app(IssueTreasuryBackedPayCode::class)->handle(
         issuer: $issuer,
-        instructions: validVoucherInstructions(
-            amount: 20,
-            overrides: [
-                'metadata' => [
-                    'flow_type' => 'disbursable',
-                    'issuer_id' => (string) $issuer->getKey(),
-                ],
-            ],
-        )->toArray(),
+        instructions: $instructions,
         expiresAt: now()->addWeek(),
     );
     app(TreasuryPayCodeAccountingService::class)->reserve(

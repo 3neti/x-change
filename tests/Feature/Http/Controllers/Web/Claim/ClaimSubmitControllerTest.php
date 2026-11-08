@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
@@ -18,6 +19,7 @@ use LBHurtado\XChange\Support\Claim\ClaimDestinationReceipt;
 use LBHurtado\XChange\Support\Claim\ClaimEvidenceSynchronizer;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
 use LBHurtado\XChange\Support\Claim\FormFlowClaimPayloadNormalizer;
+use LBHurtado\XChange\Support\Claim\PayoutDestinationRegistry;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
 
@@ -116,6 +118,37 @@ it('persists request locality against the claim key before starting the claim', 
     $this->formFlowService->shouldReceive('clearFlow')->once()->with('locality-flow');
     $this->post(route('x-change.claim.submit', ['code' => $voucher->code]), ['flow_id' => 'locality-flow'])
         ->assertRedirect(route('x-change.claim.success', ['code' => $voucher->code]));
+});
+
+it('resolves permitted form-flow location before submitting the claim', function (): void {
+    config()->set('x-change.payout_locality.enabled', true);
+    config()->set('x-change.payout_locality.coordinate_endpoint', '');
+    config()->set('x-change.payout_locality.coordinate_api_key', '');
+    config()->set('location-handler.opencage_endpoint', 'https://geocoder.test/reverse');
+    config()->set('location-handler.opencage_api_key', 'test-key');
+    Http::fake(['geocoder.test/*' => Http::response(['results' => [['components' => ['country_code' => 'ph', 'village' => 'Barangay Sample', 'city' => 'Manila', 'postcode' => '1000']]]])]);
+    $voucher = issueVoucher(validVoucherInstructions(amount: 10.00, settlementRail: 'INSTAPAY', overrides: ['inputs' => ['fields' => ['location']]]));
+    $state = ['flow_id' => 'location-flow', 'collected_data' => [
+        'wallet' => ['mobile' => '09173011987'],
+        'location_capture' => ['latitude' => 14.5, 'longitude' => 121.0],
+    ]];
+    $this->formFlowService->shouldReceive('getFlowState')->once()->andReturn($state);
+    $this->payloadNormalizer->shouldReceive('normalize')->once()->andReturnUsing(
+        fn (array $data): array => (new FormFlowClaimPayloadNormalizer(app(PayoutDestinationRegistry::class)))->normalize($data),
+    );
+    $this->evidenceSynchronizer->shouldReceive('sync')->once();
+    $this->submitAction->shouldReceive('handle')->once()->andReturnUsing(function (Voucher $voucher, array $payload): SubmitPayCodeClaimResultData {
+        $evidence = app(ClaimPayoutLocalityContext::class)->find($voucher, data_get($payload, '_meta.idempotency_key'));
+        expect(data_get($evidence, 'captured.address1'))->toBe('Barangay Sample')
+            ->and(data_get($evidence, 'captured.source'))->toBe('location');
+
+        return successfulClaimSubmitResult($voucher);
+    });
+    $this->formFlowService->shouldReceive('clearFlow')->once()->with('location-flow');
+
+    $this->post(route('x-change.claim.submit', ['code' => $voucher->code]), ['flow_id' => 'location-flow'])
+        ->assertRedirect(route('x-change.claim.success', ['code' => $voucher->code]));
+    Http::assertSentCount(1);
 });
 
 it('retains the originating session while a durable treasury payout is waiting', function (): void {

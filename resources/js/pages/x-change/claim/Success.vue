@@ -295,7 +295,7 @@ const successAction = computed(() => {
 
     <ClaimStepShell
         :tone="pageTone.isWarning ? 'warning' : 'success'"
-        :brand-placement="successPresentation ? 'center' : 'top_left'"
+        brand-placement="center"
         brand-size="display"
         :show-theme-picker="false"
         :width="successPresentation ? 'lg' : 'md'"
