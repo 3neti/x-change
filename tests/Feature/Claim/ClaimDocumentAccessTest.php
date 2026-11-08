@@ -16,6 +16,11 @@ use LBHurtado\FormHandlerDocument\Services\StoreDocumentSubmission;
 use LBHurtado\SettlementEnvelope\Services\DriverService;
 use LBHurtado\SettlementEnvelope\Services\EnvelopeService;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Actions\Redemption\RecordVoucherClaim;
+use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
+use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
+use LBHurtado\XChange\Contracts\ClaimExecutorContract;
+use LBHurtado\XChange\Data\Redemption\RedeemPayCodeResultData;
 use LBHurtado\XChange\Exceptions\IncompleteClaimEvidence;
 use LBHurtado\XChange\Services\Claim\ClaimDocumentAccess;
 use LBHurtado\XChange\Services\Claim\ClaimDocumentEvidence;
@@ -74,10 +79,10 @@ it('accepts a claimant upload through the protected HTTP endpoint', function ():
     config()->set('document-handler.disk', 'local');
     $voucher = Voucher::query()->create([
         'code' => 'DOC-HTTP',
-        'metadata' => ['instructions' => ['inputs' => [
+        'metadata' => ['instructions' => validVoucherInstructions(20, overrides: ['inputs' => [
             'fields' => ['documents'],
             'documents' => [['key' => 'id', 'label' => 'Identity', 'accept' => ['application/pdf'], 'required' => true]],
-        ]]],
+        ]])->toArray()],
         'state' => 'active',
     ]);
     $envelope = app(EnvelopeService::class)->create($voucher->code, 'x-change.documents', '1.1.0', $voucher);
@@ -107,10 +112,10 @@ it('links a scoped upload into its voucher envelope and verifies it for claim su
     config()->set('document-handler.disk', 'local');
     $voucher = Voucher::query()->create([
         'code' => 'DOC-BRIDGE',
-        'metadata' => ['instructions' => ['inputs' => [
+        'metadata' => ['instructions' => validVoucherInstructions(20, overrides: ['inputs' => [
             'fields' => ['documents'],
             'documents' => [['key' => 'id', 'label' => 'Identity', 'accept' => ['application/pdf'], 'required' => true]],
-        ]]],
+        ]])->toArray()],
         'state' => 'active',
     ]);
     $envelope = app(EnvelopeService::class)->create($voucher->code, 'x-change.documents', '1.1.0', $voucher);
@@ -210,6 +215,22 @@ it('links a scoped upload into its voucher envelope and verifies it for claim su
     app(ClaimEvidenceRequirements::class)->assertComplete($voucher, ['inputs' => ['documents' => [
         ['key' => 'id', 'reference' => $submission->reference],
     ]]]);
+
+    $executor = Mockery::mock(ClaimExecutorContract::class);
+    $executor->shouldReceive('handle')->once()->andReturn(new RedeemPayCodeResultData(
+        voucher_code: $voucher->code, redeemed: true, status: 'redeemed',
+        redeemer: ['mobile' => '09173011987', 'country' => 'PH'], bank_account: [], inputs: [],
+        disbursement: ['status' => 'requested'], messages: ['Claim completed.'],
+    ));
+    $factory = Mockery::mock(ClaimExecutionFactoryContract::class);
+    $factory->shouldReceive('make')->once()->andReturn($executor);
+    $claim = (new SubmitPayCodeClaim(
+        $factory, app(RecordVoucherClaim::class),
+    ))->handle($voucher, [
+        'mobile' => '09173011987', 'inputs' => ['documents' => [['key' => 'id', 'reference' => $submission->reference]]],
+        '_meta' => ['idempotency_key' => 'claim-document-lifecycle'],
+    ]);
+    expect($claim->claimed)->toBeTrue();
 
     $attachment = $envelope->attachments()->sole();
     expect($submission->fresh()->status)->toBe('linked')
