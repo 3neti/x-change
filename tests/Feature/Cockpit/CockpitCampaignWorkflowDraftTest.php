@@ -122,7 +122,7 @@ it('enables the editor by default without account grants or changing the global 
     app()->bind(WorkflowAccessPolicy::class, DenyWorkflowAccess::class);
     $identity = $this->operator->getMorphClass().':'.$this->operator->getKey();
     expect(config('x-change-workflows.enabled'))->toBeTrue()
-        ->and(app(CampaignWorkflowDraftEditor::class)->for($this->operator)['workflows'])->toHaveCount(2)
+        ->and(app(CampaignWorkflowDraftEditor::class)->for($this->operator)['workflows'])->toHaveCount(3)
         ->and(app(WorkflowCatalog::class)->available(new WorkflowContext($identity, $identity)))->toBe([]);
     $policy = new ConfiguredCampaignWorkflowAccess;
     expect($policy->allows(new WorkflowContext($identity, $identity), $this->payload['workflow_id'], '1.0.0'))->toBeTrue()
@@ -203,7 +203,7 @@ it('shares workflow discovery but isolates templates and drafts between accounts
     $other = actingAsTestUser();
     $this->post(route('x-change.cockpit.campaigns.workflow-drafts.store'), $this->payload)->assertNotFound();
     $this->withHeader('X-Inertia', 'true')->get(route('x-change.cockpit.campaigns.index'))
-        ->assertOk()->assertJsonCount(2, 'props.workflow_drafts.workflows')
+        ->assertOk()->assertJsonCount(3, 'props.workflow_drafts.workflows')
         ->assertJsonPath('props.workflow_drafts.drafts', []);
     $source = $this->source->replicate();
     $source->reference = null;
@@ -218,13 +218,13 @@ it('shares workflow discovery but isolates templates and drafts between accounts
 it('does not expose connection references or credentials in the editor props', function (): void {
     config()->set('settlement-envelope.connections.aui-demo.auth.token', 'test-secret');
     $props = app(CampaignWorkflowDraftEditor::class)->for($this->operator);
-    expect($props['workflows'])->toHaveCount(2)
+    expect($props['workflows'])->toHaveCount(3)
         ->and(json_encode($props))->not->toContain('test-secret')
         ->and($props['workflows'][0])->not->toHaveKey('connection');
 });
 
 it('fails closed when the host disables workflows between preview and save', function (): void {
-    expect(app(CampaignWorkflowDraftEditor::class)->for($this->operator)['workflows'])->toHaveCount(2);
+    expect(app(CampaignWorkflowDraftEditor::class)->for($this->operator)['workflows'])->toHaveCount(3);
     config()->set('x-change-workflows.enabled', false);
     $this->post(route('x-change.cockpit.campaigns.workflow-drafts.store'), $this->payload)->assertSessionHasErrors('workflow_id');
     expect(app(CampaignWorkflowDraftEditor::class)->for($this->operator)['workflows'])->toBe([])

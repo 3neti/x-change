@@ -171,6 +171,7 @@ abstract class TestCase extends Orchestra
             $this->optionalProvider('LBHurtado\\SettlementEnvelope\\SettlementEnvelopeServiceProvider'),
             $this->optionalProvider('ThreeNeti\\SettlementEnvelopeAui\\SettlementEnvelopeAuiServiceProvider'),
             $this->optionalProvider('ThreeNeti\\SettlementEnvelopePhilhealth\\SettlementEnvelopePhilhealthServiceProvider'),
+            $this->optionalProvider('LBHurtado\\FormHandlerDocument\\DocumentHandlerServiceProvider'),
             XCommerceServiceProvider::class,
             XProvisioningServiceProvider::class,
             XAffiliationServiceProvider::class,

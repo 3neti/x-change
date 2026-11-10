@@ -323,7 +323,11 @@ class ClaimStartController extends Controller
 
         $state = $this->formFlowService->startFlow($instructions);
 
-        if (data_get($state, 'instructions.metadata.voucher_code') === (string) $voucher->code) {
+        $claimFields = (array) data_get($voucher->metadata, 'instructions.inputs.fields', []);
+        $claimFields = array_map(static fn (mixed $field): mixed => $field instanceof \BackedEnum ? $field->value : $field, $claimFields);
+
+        if (in_array('documents', $claimFields, true)
+            && data_get($state, 'instructions.metadata.voucher_code') === (string) $voucher->code) {
             app(ClaimDocumentAccess::class)->grant(request(), $voucher, $state['flow_id']);
         }
 
