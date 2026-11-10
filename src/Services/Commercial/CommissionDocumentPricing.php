@@ -56,6 +56,8 @@ final readonly class CommissionDocumentPricing
         }
 
         return DB::transaction(function () use ($operator, $authorizationReference): CommercialOfferingActivation {
+            $head = CommercialComponentEconomicsHead::query()->with('currentActivation.economics')
+                ->whereKey('pay_code')->lockForUpdate()->firstOrFail();
             $active = CommercialOfferingActivation::query()->where('profile', 'pay_code')->whereNull('deactivated_at')
                 ->lockForUpdate()->firstOrFail();
             if ($active->authority === CommercialActivationAuthority::SingleOperator
@@ -67,8 +69,6 @@ final readonly class CommissionDocumentPricing
             if (collect($original->catalog->items)->contains(fn ($item): bool => $item->reference === 'inputs.fields.documents')) {
                 throw new \DomainException('The active offering already contains document pricing.');
             }
-            $head = CommercialComponentEconomicsHead::query()->with('currentActivation.economics')
-                ->whereKey('pay_code')->lockForUpdate()->firstOrFail();
             $current = $head->currentActivation?->economics;
             if ($current === null || $current->commercial_offering_id !== $previous->getKey()) {
                 throw new \DomainException('Active accounting does not match the current offering.');
