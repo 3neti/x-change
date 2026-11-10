@@ -67,13 +67,14 @@ class EstimatePayCodeRequest extends FormRequest
     {
         return [
             'cash' => ['required', 'array'],
-            'cash.amount' => ['required', 'numeric', $this->input('voucher_type') === 'settlement'
+            'cash.amount' => ['required', 'numeric', ($this->input('voucher_type') === 'payable'
+                && (float) $this->input('target_amount', 0) > 0) || ($this->input('voucher_type') === 'settlement'
                 && $this->input('execution.schema') === 'voucher.execution.v2'
                 && $this->input('execution.driver') === 'settlement_envelope'
                 && $this->input('execution.settlement.driver') === 'philhealth-bst'
                 && is_array($this->input('execution.events.attest'))
                 && is_array($this->input('execution.events.settle'))
-                && (float) $this->input('target_amount', 0) > 0
+                && (float) $this->input('target_amount', 0) > 0)
                 ? 'min:0' : 'min:0.01'],
             'cash.currency' => ['required', 'string', 'max:10'],
             'cash.settlement_rail' => ['nullable', Rule::enum(SettlementRail::class)],

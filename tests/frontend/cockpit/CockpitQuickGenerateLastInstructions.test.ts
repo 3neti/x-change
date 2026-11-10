@@ -66,7 +66,7 @@ describe('Quick Generate last instructions', () => {
         expect(preview.execution.value_flow.destination).toBe('instapay.gcash.mobile:09179999999');
         expect(preview).not.toHaveProperty('value_flow');
     });
-    it('ignores legacy wallet ids and presents the authoritative collection destination', () => {
+    it('ignores legacy wallet ids and presents the authoritative collection destination', async () => {
         const instructions = (collectionWalletId?: string) => ({
             schema: 'x-change.cockpit.quick-generate-last-instructions.v1',
             saved_at: '2026-08-25T09:00:00Z',
@@ -96,6 +96,8 @@ describe('Quick Generate last instructions', () => {
             },
         });
 
+        await remembered.get('[data-testid="cockpit-pay-code-canvas-flow-button"]').trigger('click');
+        await defaulted.get('[data-testid="cockpit-pay-code-canvas-flow-button"]').trigger('click');
         expect(
             remembered
                 .get(
@@ -301,7 +303,8 @@ describe('Quick Generate last instructions', () => {
         const amountInput = wrapper.get<HTMLInputElement>(
             '[data-testid="cockpit-quick-generate-primary-amount"]',
         );
-        const repeatLastButton = wrapper.get(
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
+        let repeatLastButton = wrapper.get(
             '[data-testid="cockpit-quick-generate-repeat-last"]',
         );
 
@@ -341,6 +344,8 @@ describe('Quick Generate last instructions', () => {
                 .get('[data-testid="cockpit-quick-generate-current-template"]')
                 .text(),
         ).toContain('Current ·');
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
+        repeatLastButton = wrapper.get('[data-testid="cockpit-quick-generate-repeat-last"]');
         expect(repeatLastButton.attributes('aria-pressed')).toBe('true');
         expect(repeatLastButton.classes()).toContain('bg-emerald-50');
         expect(repeatLastButton.classes()).not.toContain('bg-emerald-600');
@@ -351,6 +356,8 @@ describe('Quick Generate last instructions', () => {
                 )
                 .exists(),
         ).toBe(true);
+
+        await wrapper.get('[data-testid="templates-editor-done"]').trigger('click');
 
         const preview = JSON.parse(
             wrapper
@@ -426,6 +433,7 @@ describe('Quick Generate last instructions', () => {
             ).value,
         ).toBe('contain');
 
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-start-blank"]')
             .trigger('click');
@@ -447,6 +455,7 @@ describe('Quick Generate last instructions', () => {
             wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]')
                 .element,
         );
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         expect(
             wrapper
                 .get('[data-testid="cockpit-quick-generate-start-blank"]')
@@ -482,6 +491,7 @@ describe('Quick Generate last instructions', () => {
             wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]')
                 .element,
         );
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         expect(
             wrapper
                 .get('[data-testid="cockpit-quick-generate-repeat-last"]')
@@ -523,6 +533,7 @@ describe('Quick Generate last instructions', () => {
 
         expect(amountInput.element.value).toBe('42.50');
         expect(amountInput.element).toBe(document.activeElement);
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         expect(
             wrapper
                 .get('[data-testid="cockpit-quick-generate-repeat-last"]')
@@ -553,6 +564,7 @@ describe('Quick Generate last instructions', () => {
 
         expect(amountInput.element.value).toBe('');
         expect(amountInput.element).toBe(document.activeElement);
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         expect(
             wrapper
                 .get('[data-testid="cockpit-quick-generate-start-blank"]')

@@ -75,6 +75,7 @@ describe('Quick Generate saved templates', () => {
             },
         });
 
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-choose-template"]')
             .trigger('click');
@@ -138,6 +139,7 @@ describe('Quick Generate saved templates', () => {
         await wrapper
             .get('[data-testid="cockpit-quick-generate-primary-recipient"]')
             .setValue('09173011987');
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-save-template"]')
             .trigger('click');
@@ -214,12 +216,14 @@ describe('Quick Generate saved templates', () => {
             },
         });
 
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-choose-template"]')
             .trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-saved-template-option"]')
             .trigger('click');
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-save-template"]')
             .trigger('click');
@@ -330,12 +334,14 @@ describe('Quick Generate saved templates', () => {
             },
         });
 
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-choose-template"]')
             .trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-saved-template-option"]')
             .trigger('click');
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-save-template"]')
             .trigger('click');

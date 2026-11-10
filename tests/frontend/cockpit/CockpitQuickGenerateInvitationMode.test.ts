@@ -52,13 +52,7 @@ describe('Cockpit Quick Generate Invitation mode', () => {
                 )
                 .attributes('aria-expanded'),
         ).toBe('false');
-        expect(
-            orderCard
-                .get(
-                    '[data-testid="cockpit-quick-generate-order-options-panel"]',
-                )
-                .attributes('style'),
-        ).toContain('display: none');
+        expect(orderCard.find('[data-testid="cockpit-quick-generate-order-options-panel"]').exists()).toBe(false);
         expect(
             orderCard
                 .findAll(':scope > details')
@@ -253,6 +247,7 @@ describe('Cockpit Quick Generate Invitation mode', () => {
             .get('[data-testid="cockpit-quick-generate-mode-invitation"]')
             .trigger('click');
 
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-start-blank"]')
             .trigger('click');
@@ -263,6 +258,7 @@ describe('Cockpit Quick Generate Invitation mode', () => {
                 .attributes('aria-pressed'),
         ).toBe('true');
 
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-repeat-last"]')
             .trigger('click');
@@ -273,6 +269,7 @@ describe('Cockpit Quick Generate Invitation mode', () => {
                 .attributes('aria-pressed'),
         ).toBe('true');
 
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-choose-template"]')
             .trigger('click');
@@ -316,6 +313,7 @@ describe('Cockpit Quick Generate Invitation mode', () => {
                 .attributes('aria-pressed'),
         ).toBe('true');
 
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-choose-template"]')
             .trigger('click');
@@ -346,12 +344,14 @@ describe('Cockpit Quick Generate Invitation mode', () => {
         await wrapper
             .get('[data-testid="cockpit-quick-generate-mode-invitation"]')
             .trigger('click');
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-start-blank"]')
             .trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-mode-paycode"]')
             .trigger('click');
+        await wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]').trigger('click');
 
         // omits onboarding from the payload.
         const preview = quickGenerateEngineeringPreview(wrapper);
@@ -390,12 +390,14 @@ describe('Cockpit Quick Generate Invitation mode', () => {
         await wrapper
             .get('[data-testid="cockpit-quick-generate-mode-invitation"]')
             .trigger('click');
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-start-blank"]')
             .trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-mode-paycode"]')
             .trigger('click');
+        await wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]').trigger('click');
 
         for (const field of ['name', 'email', 'mobile', 'otp']) {
             await wrapper
@@ -429,6 +431,7 @@ describe('Cockpit Quick Generate Invitation mode', () => {
         await wrapper
             .get('[data-testid="cockpit-quick-generate-mode-invitation"]')
             .trigger('click');
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-start-blank"]')
             .trigger('click');

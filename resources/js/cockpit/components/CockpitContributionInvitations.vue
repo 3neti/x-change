@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import CockpitDocumentEditor from './CockpitDocumentEditor.vue';
 
 type Invitation = { id: number; expires_at: string; revoked: boolean; types: string[]; revoke_url: string };
 const props = defineProps<{ createUrl: string; pageUrl: string; types: string[]; invitations: Invitation[] }>();
@@ -45,7 +46,7 @@ async function revoke(invitation: Invitation): Promise<void> {
     <h4 class="text-sm font-semibold">Document invitations</h4>
     <p class="mt-1 text-xs text-slate-500">Choose what the recipient may submit and when the invitation expires.</p>
     <form class="mt-3 space-y-3" @submit.prevent="create">
-      <label v-for="type in types" :key="type" class="flex gap-2 text-sm"><input v-model="selected" type="checkbox" :value="type">{{ type }}</label>
+      <CockpitDocumentEditor title="Allowed document types" mode="types" :types="types" :selected-types="selected" :disabled="working" @update:selected-types="selected = $event" />
       <label class="block text-sm">Expires in days <input v-model.number="days" type="number" min="1" max="90" required class="w-20 rounded border p-2"></label>
       <label class="block text-sm">Password (optional) <input v-model="password" type="password" minlength="8" class="w-full rounded border p-2"></label>
       <button type="submit" :disabled="working || !selected.length" class="rounded-lg bg-slate-900 px-3 py-2 text-sm text-white disabled:opacity-50">Create invitation</button>

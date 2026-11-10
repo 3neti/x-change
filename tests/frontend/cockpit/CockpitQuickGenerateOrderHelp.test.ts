@@ -73,8 +73,9 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         ).toBe(false);
     });
 
-    it('exposes no visible documentation placeholders on Amount, Pay To, Purpose, or Status Updates', () => {
+    it('exposes no visible documentation placeholders on Amount, Pay To, Purpose, or Status Updates', async () => {
         const wrapper = mountPanel({ templates: cockpitQuickGenerateTemplates });
+        await wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]').trigger('click');
 
         expect(
             wrapper
@@ -111,14 +112,14 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         ).toBeTruthy();
     });
 
-    it('places purpose before amount and the final action after the flow summary', () => {
+    it('places purpose before amount and keeps the flow in the Pay Code card', async () => {
         const wrapper = mountPanel({ templates: cockpitQuickGenerateTemplates });
         const purpose = wrapper.get('[data-testid="cockpit-quick-generate-voucher-kind"]');
         const amount = wrapper.get('[data-testid="cockpit-quick-generate-amount-field"]');
-        const summary = wrapper.get('[data-testid="cockpit-order-flow-summary"]');
         const action = wrapper.get('[data-testid="cockpit-quick-generate-final-action"]');
         expect(purpose.element.compareDocumentPosition(amount.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-        expect(summary.element.compareDocumentPosition(action.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        await wrapper.get('[data-testid="cockpit-pay-code-canvas-flow-button"]').trigger('click');
+        expect(wrapper.get('[data-testid="cockpit-pay-code-canvas-flow"]').text()).toContain('What will happen');
         expect(purpose.get('[role="radiogroup"]').classes()).toContain('grid-cols-1');
         expect(purpose.get('[role="radiogroup"]').classes()).toContain('sm:grid-cols-3');
         expect(action.get('[data-testid="cockpit-quick-generate-submit-button"]').classes()).toContain('min-h-12');
@@ -135,6 +136,7 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
 
     it('gives each Order-card help glyph a keyboard-focusable trigger with an accessible name and a focus-reachable tooltip', async () => {
         const wrapper = mountPanel({ templates: cockpitQuickGenerateTemplates });
+        await wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]').trigger('click');
         const orderCard = wrapper.get(
             '[data-testid="cockpit-quick-generate-order-card"]',
         );
@@ -142,8 +144,7 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
             '[data-testid="cockpit-field-help"]',
         );
 
-        // Mode, Amount, Pay To, Purpose, Status Updates, Claim
-        // Requirements, Value Use, Transfer Network.
+        // Check every help glyph in the Order and its open Options dialog.
         expect(glyphs.length).toBe(7);
 
         for (const glyph of glyphs) {
@@ -213,6 +214,7 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
                     live_provider_call: false,
                 },
         });
+        await wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]').trigger('click');
         const railControl = wrapper.get(
             '[data-testid="cockpit-quick-generate-primary-settlement-rail"]',
         );
@@ -270,6 +272,7 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
         await wrapper
             .get('[data-testid="cockpit-quick-generate-primary-recipient"]')
             .setValue('09173011987');
+        await wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]').trigger('click');
 
         expect(
             wrapper
@@ -295,6 +298,7 @@ describe('Cockpit Quick Generate Order card help glyphs and resting-state cleanu
                 webhook: null,
             },
         });
+        await wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]').trigger('click');
 
         await wrapper
             .get('[data-testid="cockpit-feedback-destination-editor"]')

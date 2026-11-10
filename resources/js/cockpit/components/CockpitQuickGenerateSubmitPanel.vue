@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { PayCodeStampPreviewState } from "../payCodeStampPreview";
 import CockpitStampDesigner from './CockpitStampDesigner.vue';
+import CockpitDocumentEditor from './CockpitDocumentEditor.vue';
+import CockpitRiderEditor from './CockpitRiderEditor.vue';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { defaultStampPresentation, changeStampPresentation } from '../stampQrPresentation';
 import type { StampDesignOption, StampPresentation, StampOptions } from '../stampQrPresentation';
 import CockpitPayCodeTemplateStoreController from "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitPayCodeTemplateStoreController";
@@ -23,6 +26,7 @@ import {
   LoaderCircle,
   MessageSquareText,
   Palette,
+  Pencil,
   RotateCcw,
   Save,
   Sparkles,
@@ -122,6 +126,8 @@ import CockpitQuickGenerateSurfaceSwitch from "./CockpitQuickGenerateSurfaceSwit
 import type { CockpitQuickGenerateSurface } from "./CockpitQuickGenerateSurfaceSwitch.vue";
 import type { CockpitScheduledPortion } from "./CockpitScheduledPortionsEditor.vue";
 import ValueFlowDestination from "@/components/financial/ValueFlowDestination.vue";
+import { BANKS } from "@/data/banks";
+import { isValidValueFlowDestination } from "../valueFlowValidation";
 import CockpitOrderFlowSummary from "./CockpitOrderFlowSummary.vue";
 import CockpitValueUseControl from "./CockpitValueUseControl.vue";
 import type { CockpitValueUseMode } from "./CockpitValueUseControl.vue";
@@ -763,6 +769,7 @@ const count = ref("1");
 const selectedInputFieldValues = ref<string[]>(["mobile"]);
 type ClaimDocument = { key: string; label: string; accept: string[]; required: boolean };
 const claimDocuments = ref<ClaimDocument[]>([]);
+const documentEditorOpen = ref(false);
 const claimDocumentFormats = [
   { label: "PDF", types: ["application/pdf"] },
   { label: "Images", types: ["image/jpeg", "image/png"] },
@@ -773,19 +780,15 @@ const claimDocumentFormats = [
 function addClaimDocument(): void {
   let sequence = 1;
   while (claimDocuments.value.some((document) => document.key === `document_${sequence}`)) sequence++;
-  claimDocuments.value.push({ key: `document_${sequence}`, label: "", accept: ["application/pdf"], required: true });
+  claimDocuments.value.push({
+    key: `document_${sequence}`,
+    label: sequence === 1 ? 'Document' : `Document ${sequence}`,
+    accept: claimDocumentFormats.flatMap((format) => format.types),
+    required: true,
+  });
 }
 function showClaimDocumentSetup(): void {
-  const section = window.document.getElementById('quick-generate-contract-inputs');
-  let parent: HTMLElement | null = section;
-  while (parent) {
-    if (parent instanceof HTMLDetailsElement) parent.open = true;
-    parent = parent.parentElement;
-  }
-  section?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
-}
-function toggleClaimDocumentFormat(document: ClaimDocument, types: string[], enabled: boolean): void {
-  document.accept = [...new Set(enabled ? [...document.accept, ...types] : document.accept.filter((type) => !types.includes(type)))];
+  documentEditorOpen.value = true;
 }
 const claimDocumentsValid = computed(() => !selectedInputFields.value.includes("documents") ||
   (claimDocuments.value.length > 0 && claimDocuments.value.length <= 5 && claimDocuments.value.every((document) => document.label.trim().length > 0 && document.label.trim().length <= 100 && document.accept.length > 0)));
@@ -819,6 +822,7 @@ const timeTestValue = ref("");
 const timeLimitMinutes = ref("10");
 const timeTrackDuration = ref(false);
 const riderUrl = ref("");
+const riderEditorOpen = ref(false);
 const riderUrlPreset = ref("");
 const riderRedirectTimeout = ref("");
 const riderSplashHeadline = ref("");
@@ -930,6 +934,10 @@ const namedClaimSlices = ref<NamedClaimSlice[]>(defaultWholeNamedClaimSlices());
 const rememberedScheduledClaimSlices = ref<NamedClaimSlice[] | null>(null);
 const reusableBalance = ref(false);
 const valueFlowDestination = ref("");
+const valueFlowEditorOpen = ref(false);
+const feeBearerEditorOpen = ref(false);
+const payerDocumentsEditorOpen = ref(false);
+const requestedDocumentsEditorOpen = ref(false);
 const feeBearer = ref<"issuer" | "payer">("issuer");
 const invoiceUploads = ref<{ reference: string; documentId: string; name: string }[]>([]);
 const invoiceDraft = computed(() => invoiceUploads.value[0]?.reference ?? null);
@@ -987,13 +995,25 @@ const valueFlowVisible = computed(
   () => reusableBalance.value || ["payable", "settlement"].includes(voucherType.value),
 );
 const valueFlowValid = computed(
-  () => !valueFlowVisible.value || valueFlowDestination.value === "" ||
-    /^(?:instapay\.[a-z0-9_-]+\.(?:mobile|account):[0-9]{6,34}|account\.mobile:09[0-9]{9}\.client_funds)$/.test(valueFlowDestination.value),
+  () => !valueFlowVisible.value || isValidValueFlowDestination(valueFlowDestination.value),
 );
+const valueFlowSummary = computed(() => {
+  const destination = valueFlowDestination.value;
+  if (!destination || destination.startsWith('account.mobile:')) {
+    return philhealthSettlement.value ? 'Choose a bank or wallet' : 'Client Funds';
+  }
+  const match = /^instapay\.([a-z0-9_-]+)\.(?:mobile|account):([0-9]{6,34})$/i.exec(destination);
+  if (!match) return 'Complete destination details';
+  const name = BANKS.find(bank => bank.code.toLowerCase() === match[1].toLowerCase())?.name ?? match[1].toUpperCase();
+  return `${name} · ${match[2]}`;
+});
 const storedValueReplenishable = ref(false);
 const storedValueMaximumBalance = ref("");
 const storedValueOtpAbove = ref("");
 const voucherType = ref<"redeemable" | "payable" | "settlement">("redeemable");
+watch(valueFlowVisible, (visible) => {
+  if (!visible) valueFlowEditorOpen.value = false;
+});
 const destinationDrafts: Record<"redeemable" | "payable" | "settlement", string> = {
   redeemable: "",
   payable: "",
@@ -1120,7 +1140,7 @@ function reviewClaimExperience(): void {
   canvasSectionElement.value?.scrollIntoView?.({ behavior: "smooth", block: "start" });
 }
 const canvasSectionElement = ref<HTMLElement | null>(null);
-const canvasView = ref<"stamp" | "design" | "claim" | "cost">("stamp");
+const canvasView = ref<"stamp" | "design" | "claim" | "cost" | "flow">("stamp");
 const costPreviewOpen = ref(false);
 const amountInputElement = ref<InstanceType<typeof CockpitAmountPicker> | null>(
   null,
@@ -1131,6 +1151,7 @@ const riderDesignEditor = ref<RiderDesignEditor>("appearance");
 const riderDesignTeleportReady = ref(false);
 const startingPoint = ref<"blank" | "last" | "template">("blank");
 const templatePickerOpen = ref(false);
+const templatesEditorOpen = ref(false);
 const saveTemplateOpen = ref(false);
 const orderOptionsOpen = ref(false);
 const saveTemplateName = ref("");
@@ -2726,7 +2747,7 @@ const canSubmit = computed<boolean>(() => {
     props.mutationContract?.runtime_enabled === true &&
     !invoiceUploading.value && invoiceError.value === "" &&
     claimDocumentsValid.value &&
-    (!selectedInputFields.value.includes("documents") || livePricingEstimate.value?.charges?.some((charge) => charge.catalog_item_reference === "inputs.fields.documents") === true) &&
+    (!selectedInputFields.value.includes("documents") || (documentPricingCurrent.value && livePricingEstimate.value?.charges?.some((charge) => charge.catalog_item_reference === "inputs.fields.documents") === true)) &&
     !publicIssuancePaused.value &&
     routeUrl.value !== null &&
     (!props.turnstile?.enabled || props.turnstileToken !== "") &&
@@ -5249,6 +5270,24 @@ const {
   estimateError: livePricingEstimateError,
   refreshEstimate: refreshLivePricingEstimate,
 } = usePayCodeCostEstimate(livePricingPayload, canEstimateLivePricing);
+const documentPricingCurrent = computed(() => !livePricingEstimating.value && livePricingEstimateError.value === null && livePricingEstimate.value !== null && livePricingEstimatePayload.value === JSON.stringify(livePricingPayload.value));
+const serviceFeeAmount = computed(() => documentPricingCurrent.value ? optionalMoney(livePricingEstimate.value?.total) : null);
+const serviceFeeStatus = computed(() => {
+  if (serviceFeeAmount.value !== null) return null;
+  if (livePricingEstimateError.value) return 'Fee estimate unavailable';
+  if (!canEstimateLivePricing.value) return 'Complete the order details to calculate the fee';
+  return 'Calculating fee…';
+});
+const issuerFeeLabel = computed(() => `Issuer pays${serviceFeeAmount.value === null ? '' : ` ${formatAccountMoney(serviceFeeAmount.value)}`} at issuance`);
+const payerFeeLabel = computed(() => `Customer pays${serviceFeeAmount.value === null ? '' : ` ${formatAccountMoney(serviceFeeAmount.value)}`} with the payment`);
+const documentPricingMessage = computed(() => {
+  if (!selectedInputFields.value.includes('documents') || !claimDocumentsValid.value) return null;
+  if (!canEstimateLivePricing.value) return 'Enter the required order details to calculate the document charge.';
+  if (livePricingEstimateError.value !== null) return 'Could not calculate the document charge. Please try again.';
+  if (!documentPricingCurrent.value) return 'Calculating the document charge…';
+  if (!livePricingEstimate.value?.charges?.some(charge => charge.catalog_item_reference === 'inputs.fields.documents')) return 'Document pricing is unavailable. Ask an operator to update the active pricing catalog before issuing.';
+  return null;
+});
 const liveFundingPreflightPayload = computed<Record<string, unknown>>(() =>
   buildPayloadShape(false, amountCalculatorPreview.value),
 );
@@ -7426,7 +7465,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
               {{ targetAmountError }}
             </span>
           </div>
-          <div v-if="isPayableVoucher || isSettlementVoucher || reusableBalance" class="grid min-w-0 gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:col-span-2 dark:border-slate-700 dark:bg-slate-900/50" data-testid="cockpit-quick-generate-money-flow-controls">
+          <div v-if="isSettlementVoucher && settlementRepayment && !philhealthSettlement" class="grid min-w-0 gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:col-span-2 dark:border-slate-700 dark:bg-slate-900/50" data-testid="cockpit-quick-generate-installment-controls">
             <fieldset v-if="isSettlementVoucher && settlementRepayment && !philhealthSettlement" class="grid gap-2" data-testid="settlement-repayment-control">
               <label for="settlement-repayment-amount" class="text-sm">{{ selectedTemplate === 'loan' ? 'Fixed repayment amount' : 'Fixed collection amount' }}</label>
               <CockpitAmountPicker
@@ -7444,81 +7483,11 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
               <p v-if="settlementInstallmentRemainder > 0" role="alert" class="text-xs text-rose-600 dark:text-rose-300">The total to collect must be a multiple of the fixed collection amount. Adjust either amount to continue.</p>
             </fieldset>
 
-            <ValueFlowDestination
-              v-if="valueFlowVisible"
-              v-model="valueFlowDestination"
-              :stored-value="reusableBalance"
-              :disabled="processing"
-            />
 
-            <fieldset v-if="isPayableVoucher || isSettlementVoucher" class="grid gap-3" data-testid="issuer-payment-details">
-              <legend class="text-xs font-semibold">Payment details for the payer</legend>
-              <label class="grid gap-1 text-sm">What is this payment for?<textarea v-model="paymentDescription" maxlength="2000" class="min-h-20 rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900" /></label>
-              <label class="grid gap-1 text-sm">Reference (optional)<input v-model="paymentReference" maxlength="255" class="min-h-12 rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900" /></label>
-              <div v-for="(field, index) in paymentFields" :key="index" class="grid gap-2 sm:grid-cols-2">
-                <input v-model="field.label" placeholder="Label" aria-label="Detail label" maxlength="100" class="min-h-12 rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900" />
-                <input v-model="field.value" placeholder="Value" aria-label="Detail value" maxlength="1000" class="min-h-12 rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900" />
-                <button type="button" class="w-fit text-xs underline" @click="paymentFields.splice(index, 1)">Remove detail</button>
-              </div>
-              <button v-if="paymentFields.length < 20" type="button" class="w-fit text-xs underline" @click="paymentFields.push({ label: '', value: '' })">Add detail</button>
-            </fieldset>
-            <div v-if="!publicMode && invoiceDraftUrl && (isPayableVoucher || isSettlementVoucher)" class="grid gap-2 text-sm" data-testid="issuer-invoice-upload">
-              <span class="font-medium">Documents for the payer <span class="font-normal text-slate-500 dark:text-slate-400">(optional)</span></span>
-              <label class="inline-flex min-h-11 w-fit cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-emerald-500 hover:text-emerald-700 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-emerald-600 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-emerald-400">
-                <FilePlus2 class="size-4" aria-hidden="true" />
-                <span>{{ invoiceUploading ? 'Uploading…' : 'Upload document' }}</span>
-                <input type="file" multiple class="sr-only" :accept="philhealthSettlement ? '.pdf,.jpg,.jpeg,.png' : '.pdf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png'" :disabled="processing || invoiceUploading || invoiceUploads.length >= 5" @change="stageInvoice" />
-              </label>
-              <span class="text-xs">{{ philhealthSettlement ? 'PDF, JPEG, or PNG up to 5 MB each.' : 'Up to five files, 10 MB each.' }}</span>
-              <span v-for="(item, index) in invoiceUploads" :key="item.documentId" class="flex gap-2 text-xs">{{ item.name }} <button type="button" class="underline" @click.prevent="invoiceUploads.splice(index, 1)">Remove</button></span>
-              <span v-if="invoiceError" role="alert" class="text-xs text-rose-600">{{ invoiceError }}</span>
-            </div>
-
-            <fieldset v-if="isPayableVoucher || isSettlementVoucher" class="grid gap-2" data-testid="fee-bearer-control">
-              <legend class="text-xs font-semibold">Who pays the service fee?</legend>
-              <label class="flex items-center gap-2 text-sm">
-                <input v-model="feeBearer" type="radio" value="issuer" :disabled="processing" data-testid="fee-bearer-issuer" />
-                Issuer pays at issuance
-              </label>
-              <label class="flex items-center gap-2 text-sm">
-                <input v-model="feeBearer" type="radio" value="payer" :disabled="processing" data-testid="fee-bearer-payer" />
-                Customer pays with the payment
-              </label>
-            </fieldset>
-
-            <fieldset v-if="documentRequestsEnabled && (isPayableVoucher || isSettlementVoucher) && (philhealthSettlement || !includeExecutionInstruction || executionSchema !== 'voucher.execution.v1')" class="grid gap-3" data-testid="document-requirement-control">
-              <legend class="text-xs font-semibold">Request a document from the payer or claimant</legend>
-              <div v-for="(document, index) in requestedDocuments" :key="index" class="grid gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-                <p v-if="philhealthSettlement && invoiceDraft && document.type === 'HOSPITAL_BILL'" class="text-xs text-slate-600 dark:text-slate-400">The uploaded invoice supplies the hospital bill.</p>
-                <label class="grid gap-1 text-sm">Document type
-                  <select v-model="document.type" :disabled="processing || philhealthSettlement" class="min-h-12 rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900">
-                    <option v-for="type in documentTypes" :key="type" :value="type" :disabled="requestedDocuments.some((item, i) => i !== index && item.type === type)">{{ type.replaceAll('_', ' ') }}</option>
-                  </select>
-                </label>
-                <label class="grid gap-1 text-sm">When is it needed?
-                  <select v-model="document.timing" :disabled="processing || philhealthSettlement" class="min-h-12 rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900">
-                    <option value="optional">Optional</option>
-                    <option value="before_payment">Before payment</option>
-                    <option value="later_review">For later review</option>
-                  </select>
-                </label>
-                <label class="grid gap-1 text-sm">Who provides it?
-                  <select v-model="document.contributor" :disabled="processing || (philhealthSettlement && !!invoiceDraft && document.type === 'HOSPITAL_BILL')" class="min-h-12 rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900">
-                    <option value="payer">Payer</option><option v-if="isSettlementVoucher" value="claimant">Claimant</option><option value="invited">Invited contributor</option>
-                  </select>
-                </label>
-                <label class="flex items-center gap-2 text-sm"><input v-model="document.requires_acceptance" type="checkbox" :disabled="processing || (philhealthSettlement && !!invoiceDraft && document.type === 'HOSPITAL_BILL')" /> Reviewer acceptance required</label>
-                <button v-if="!philhealthSettlement" type="button" :disabled="processing" class="w-fit text-xs font-semibold underline" @click="requestedDocuments.splice(index, 1)">Remove document</button>
-              </div>
-              <button v-if="requestedDocuments.length < documentTypes.length" type="button" :disabled="processing" class="w-fit rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold dark:border-slate-700" data-testid="add-document-requirement" @click="addRequestedDocument">Add document</button>
-            </fieldset>
-
-
-            <p v-if="collectionDestinationError" class="text-xs font-medium text-rose-600 dark:text-rose-300" data-testid="cockpit-quick-generate-collection-destination-error">{{ collectionDestinationError }}</p>
 
           </div>
           <label
-            class="grid w-full min-w-0 max-w-72 gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
+            class="grid w-full min-w-0 max-w-72 content-start gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
             data-testid="cockpit-quick-generate-recipient-field"
           >
             <span class="flex items-center gap-1">
@@ -7557,25 +7526,29 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
               {{ payeeHelpText }}
             </span>
           </label>
-          <label
-            class="grid w-full min-w-0 max-w-72 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+          <div
+            class="grid w-full min-w-0 max-w-72 content-start gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
             data-testid="cockpit-quick-generate-purpose-field"
           >
-            <span class="flex items-center gap-1">
+            <label for="cockpit-primary-purpose" class="flex items-center gap-1">
               Purpose
               <CockpitFieldHelp
                 label="About Purpose"
                 tooltip="Shown to the recipient as the Rider Message."
               />
-            </span>
-            <input
-              v-model="purpose"
-              type="text"
-              class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-              data-testid="cockpit-quick-generate-primary-purpose"
-              :disabled="processing"
-            />
-          </label>
+            </label>
+            <div class="relative">
+              <input
+                id="cockpit-primary-purpose"
+                v-model="purpose"
+                type="text"
+                class="h-12 w-full rounded-xl border border-slate-200 bg-white pl-3 pr-12 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                data-testid="cockpit-quick-generate-primary-purpose"
+                :disabled="processing"
+              />
+              <button type="button" class="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-xl text-sky-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 disabled:opacity-50 dark:text-sky-300" aria-label="Edit rider" :disabled="processing" data-testid="open-rider-editor" @click="riderEditorOpen = true"><Pencil class="size-4" aria-hidden="true" /></button>
+            </div>
+          </div>
           <section
             v-if="metadataFlowType.trim() === 'collectible' && !isPayableVoucher && !isSettlementVoucher"
             class="grid min-w-0 gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 sm:col-span-2 dark:border-emerald-900 dark:bg-emerald-950/30"
@@ -7619,7 +7592,6 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
               {{ collectionDestinationError }}
             </span>
           </section>
-          <CockpitOrderFlowSummary v-if="!publicMode" class="sm:col-span-2" :voucher-type="voucherType" :amount="amount" :target-amount="targetAmount" :destination="valueFlowVisible ? valueFlowDestination : ''" :default-destination="collectionDestination?.label ?? 'Client Funds'" :fee-bearer="feeBearer" :repayment="settlementRepayment" :repayment-amount="rulesMinPayment" :philhealth="philhealthSettlement" />
           <div class="grid gap-2 sm:col-span-2" data-testid="cockpit-quick-generate-final-action">
               <p v-if="valueUseModeError" class="text-xs font-medium text-rose-700 dark:text-rose-300" role="alert">{{ valueUseModeError }} Open Options to change Value Use.</p>
               <div
@@ -7721,6 +7693,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
           <button
             type="button"
             class="flex min-h-11 w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left text-sm font-semibold text-slate-800 transition hover:border-slate-300 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-slate-700 dark:hover:bg-slate-900"
+            aria-haspopup="dialog"
             :aria-expanded="orderOptionsOpen"
             :aria-label="orderOptionsAccessibleLabel"
             aria-controls="cockpit-quick-generate-order-options-panel"
@@ -7745,17 +7718,16 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                 {{ summary.label }}
               </span>
             </span>
-            <ChevronDown
-              class="size-4 shrink-0 transition-transform"
-              :class="{ 'rotate-180': orderOptionsOpen }"
-              aria-hidden="true"
-            />
+            <Pencil class="size-4 shrink-0" aria-hidden="true" />
           </button>
 
+          <Dialog v-model:open="orderOptionsOpen">
+          <DialogContent class="flex h-[100dvh] max-h-[100dvh] w-full max-w-none flex-col overflow-hidden rounded-none sm:h-[min(42rem,90dvh)] sm:max-h-[90dvh] sm:max-w-xl sm:rounded-lg" :show-close-button="false">
+            <DialogTitle>Options</DialogTitle>
+            <DialogDescription>Configure the claim, updates, value use and transfer network.</DialogDescription>
           <div
-            v-show="orderOptionsOpen"
             id="cockpit-quick-generate-order-options-panel"
-            class="mt-3 grid min-w-0 gap-4 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950"
+            class="grid min-h-0 min-w-0 flex-1 content-start gap-4 overflow-y-auto"
             role="region"
             aria-label="Options"
             data-testid="cockpit-quick-generate-order-options-panel"
@@ -7765,12 +7737,16 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                 :options="claimRequirementOptions"
                 :presets="claimRequirementPresets"
                 :disabled="processing"
+                :editable-values="['documents']"
                 help-tooltip="Information or evidence the recipient must provide before claiming."
                 @toggle="toggleInputField"
                 @preset="applyClaimRequirementPreset"
+                @edit="showClaimDocumentSetup"
               />
-              <button v-if="selectedInputFields.includes('documents')" type="button" class="mt-2 text-xs font-medium text-sky-700 underline dark:text-sky-300" data-testid="configure-claim-documents" @click="showClaimDocumentSetup">Configure documents</button>
-              <p v-if="selectedInputFields.includes('documents') && claimDocumentsValid && !livePricingEstimate?.charges?.some((charge) => charge.catalog_item_reference === 'inputs.fields.documents')" class="mt-2 text-xs text-amber-700 dark:text-amber-300">Document pricing is unavailable. Ask an operator to update the active pricing catalog before issuing.</p>
+              <div v-if="documentPricingMessage" class="mt-2 text-xs text-amber-700 dark:text-amber-300" role="status" data-testid="document-pricing-status">
+                {{ documentPricingMessage }}
+                <button v-if="livePricingEstimateError && canEstimateLivePricing" type="button" class="ml-1 underline" @click="refreshLivePricingEstimate">Retry</button>
+              </div>
             </div>
 
             <div
@@ -7986,28 +7962,90 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
               </p>
             </fieldset>
           </div>
+          <button type="button" class="shrink-0 rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-900" @click="orderOptionsOpen = false">Done</button>
+          </DialogContent>
+          </Dialog>
         </section>
+        <div v-if="isPayableVoucher || isSettlementVoucher || reusableBalance" class="mt-4 grid min-w-0 gap-3" data-testid="cockpit-quick-generate-money-flow-controls">
+            <button v-if="valueFlowVisible" type="button" class="flex min-h-11 w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-semibold text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" aria-haspopup="dialog" :disabled="processing" data-testid="open-value-flow-editor" @click="valueFlowEditorOpen = true">
+              <span class="flex min-w-0 flex-wrap items-center gap-2"><span>Value Flow</span><span class="min-w-0 break-all rounded-xl bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200" data-testid="value-flow-summary">{{ valueFlowSummary }}</span></span>
+              <Pencil class="size-4 shrink-0" aria-hidden="true" />
+            </button>
+
+            <button v-if="isPayableVoucher || isSettlementVoucher" type="button" class="flex min-h-11 w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-semibold text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" aria-haspopup="dialog" :disabled="processing" data-testid="open-payer-documents-editor" @click="payerDocumentsEditorOpen = true">
+              <span class="flex min-w-0 flex-wrap items-center gap-2"><span>Payment Details</span><span class="min-w-0 rounded-xl bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200" data-testid="payer-documents-summary">{{ invoiceUploading ? 'Uploading…' : invoiceUploads.length ? `${invoiceUploads.length} ${invoiceUploads.length === 1 ? 'document' : 'documents'} added` : (paymentDescription.trim() || paymentReference.trim() || paymentFields.length) ? 'Details added' : 'Optional · None added' }}</span><span v-if="invoiceError" class="text-xs text-rose-600 dark:text-rose-300">Upload needs attention</span></span>
+              <Pencil class="size-4 shrink-0" aria-hidden="true" />
+            </button>
+
+            <button v-if="isPayableVoucher || isSettlementVoucher" type="button" class="flex min-h-11 w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-semibold text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" aria-haspopup="dialog" :disabled="processing" data-testid="fee-bearer-control" @click="feeBearerEditorOpen = true">
+              <span class="flex min-w-0 flex-wrap items-center gap-2"><span>Service Fee</span><span class="min-w-0 rounded-xl bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200" data-testid="fee-bearer-summary">{{ feeBearer === 'issuer' ? issuerFeeLabel : payerFeeLabel }}</span><span v-if="serviceFeeStatus" class="text-xs font-normal text-slate-500 dark:text-slate-400" data-testid="fee-bearer-estimate-status">{{ serviceFeeStatus }}</span></span>
+              <Pencil class="size-4 shrink-0" aria-hidden="true" />
+            </button>
+
+            <div v-if="documentRequestsEnabled && (isPayableVoucher || isSettlementVoucher) && (philhealthSettlement || !includeExecutionInstruction || executionSchema !== 'voucher.execution.v1')">
+              <button type="button" class="flex min-h-11 w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-semibold text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" aria-haspopup="dialog" :disabled="processing" data-testid="open-document-requests-editor" @click="requestedDocumentsEditorOpen = true">
+                <span class="flex min-w-0 flex-wrap items-center gap-2"><span>Document Requests</span><span class="rounded-xl bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200" data-testid="document-requests-summary">{{ requestedDocuments.length === 0 ? 'None requested' : `${requestedDocuments.length} ${requestedDocuments.length === 1 ? 'document' : 'documents'} requested` }}</span></span>
+                <Pencil class="size-4 shrink-0" aria-hidden="true" />
+              </button>
+              <Dialog v-model:open="requestedDocumentsEditorOpen">
+              <DialogContent class="flex h-[100dvh] max-h-[100dvh] w-full max-w-none flex-col overflow-hidden rounded-none sm:h-[min(42rem,90dvh)] sm:max-h-[90dvh] sm:max-w-xl sm:rounded-lg" :show-close-button="false">
+                <DialogTitle>Document Requests</DialogTitle>
+                <DialogDescription>Choose documents to request from the payer or claimant.</DialogDescription>
+            <fieldset class="grid min-h-0 content-start gap-3 overflow-y-auto" data-testid="document-requirement-control">
+              <legend class="sr-only">Request a document from the payer or claimant</legend>
+              <div v-for="(document, index) in requestedDocuments" :key="index" class="grid gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                <p v-if="philhealthSettlement && invoiceDraft && document.type === 'HOSPITAL_BILL'" class="text-xs text-slate-600 dark:text-slate-400">The uploaded invoice supplies the hospital bill.</p>
+                <label class="grid gap-1 text-sm">Document type
+                  <select v-model="document.type" :disabled="processing || philhealthSettlement" class="min-h-12 rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900">
+                    <option v-for="type in documentTypes" :key="type" :value="type" :disabled="requestedDocuments.some((item, i) => i !== index && item.type === type)">{{ type.replaceAll('_', ' ') }}</option>
+                  </select>
+                </label>
+                <label class="grid gap-1 text-sm">When is it needed?
+                  <select v-model="document.timing" :disabled="processing || philhealthSettlement" class="min-h-12 rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900">
+                    <option value="optional">Optional</option>
+                    <option value="before_payment">Before payment</option>
+                    <option value="later_review">For later review</option>
+                  </select>
+                </label>
+                <label class="grid gap-1 text-sm">Who provides it?
+                  <select v-model="document.contributor" :disabled="processing || (philhealthSettlement && !!invoiceDraft && document.type === 'HOSPITAL_BILL')" class="min-h-12 rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900">
+                    <option value="payer">Payer</option><option v-if="isSettlementVoucher" value="claimant">Claimant</option><option value="invited">Invited contributor</option>
+                  </select>
+                </label>
+                <label class="flex items-center gap-2 text-sm"><input v-model="document.requires_acceptance" type="checkbox" :disabled="processing || (philhealthSettlement && !!invoiceDraft && document.type === 'HOSPITAL_BILL')" /> Reviewer acceptance required</label>
+                <button v-if="!philhealthSettlement" type="button" :disabled="processing" class="w-fit text-xs font-semibold underline" @click="requestedDocuments.splice(index, 1)">Remove document</button>
+              </div>
+              <button v-if="requestedDocuments.length < documentTypes.length" type="button" :disabled="processing" class="w-fit rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold dark:border-slate-700" data-testid="add-document-requirement" @click="addRequestedDocument">Add document</button>
+            </fieldset>
+                <button type="button" class="shrink-0 rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-900" data-testid="document-requests-editor-done" @click="requestedDocumentsEditorOpen = false">Done</button>
+              </DialogContent>
+              </Dialog>
+            </div>
+
+
+            <p v-if="collectionDestinationError" class="text-xs font-medium text-rose-600 dark:text-rose-300" data-testid="cockpit-quick-generate-collection-destination-error">{{ collectionDestinationError }}</p>
+        </div>
         <section
           v-if="!publicMode"
-          class="mt-4 border-t border-emerald-100 pt-4 dark:border-emerald-900/70"
+          class="mt-4"
           data-testid="cockpit-quick-generate-starting-point"
         >
-          <div class="flex items-center justify-between gap-2">
-            <p
-              class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300"
-            >
-              Templates
-            </p>
+          <button type="button" class="flex min-h-11 w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-semibold text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" aria-haspopup="dialog" data-testid="open-templates-editor" @click="templatesEditorOpen = true">
+            <span class="flex min-w-0 flex-wrap items-center gap-2"><span>Templates</span>
             <span
-              class="min-w-0 truncate rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[0.68rem] font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+              class="min-w-0 break-words rounded-xl bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
               data-testid="cockpit-quick-generate-current-template"
             >
               Current · {{ currentTemplateName }}
             </span>
-          </div>
-
+            </span><Pencil class="size-4 shrink-0" aria-hidden="true" />
+          </button>
+          <Dialog v-model:open="templatesEditorOpen">
+          <DialogContent class="flex max-h-[90dvh] w-full max-w-xl flex-col overflow-hidden" :show-close-button="false">
+          <DialogTitle>Templates</DialogTitle>
+          <DialogDescription>Choose a starting point or save this Pay Code as a template.</DialogDescription>
           <div
-            class="mt-2 grid grid-cols-2 gap-1.5 sm:flex sm:flex-nowrap sm:items-center sm:overflow-x-auto sm:pb-1"
+            class="grid grid-cols-2 gap-2 overflow-y-auto"
             data-testid="cockpit-quick-generate-template-toolbar"
           >
             <button
@@ -8020,7 +8058,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                   : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900',
               ]"
               data-testid="cockpit-quick-generate-start-blank"
-              @click="startBlank"
+              @click="templatesEditorOpen = false; startBlank()"
             >
               <Check
                 v-if="startingPoint === 'blank'"
@@ -8043,7 +8081,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                   : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900',
               ]"
               data-testid="cockpit-quick-generate-repeat-last"
-              @click="repeatLastDesign"
+              @click="templatesEditorOpen = false; repeatLastDesign()"
             >
               <Check
                 v-if="startingPoint === 'last'"
@@ -8058,7 +8096,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
               type="button"
               class="inline-flex h-9 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 sm:w-auto sm:shrink-0 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
               data-testid="cockpit-quick-generate-choose-template"
-              @click="templatePickerOpen = true"
+              @click="templatesEditorOpen = false; templatePickerOpen = true"
             >
               <LayoutTemplate class="size-3.5" aria-hidden="true" />
               Choose Template
@@ -8068,12 +8106,15 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
               type="button"
               class="inline-flex h-9 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 sm:w-auto sm:shrink-0 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900"
               data-testid="cockpit-quick-generate-save-template"
-              @click="openSaveTemplateDialog"
+              @click="templatesEditorOpen = false; openSaveTemplateDialog()"
             >
               <Save class="size-3.5" aria-hidden="true" />
               Save Template
             </button>
           </div>
+          <button type="button" class="shrink-0 rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-900" data-testid="templates-editor-done" @click="templatesEditorOpen = false">Done</button>
+          </DialogContent>
+          </Dialog>
         </section>
       </div>
 
@@ -8139,6 +8180,9 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
               @refresh="generateClaimPreview(true)"
               @simulation-state-change="selectClaimPreviewSimulationState"
             />
+          </template>
+          <template v-if="!publicMode" #flow>
+            <CockpitOrderFlowSummary :voucher-type="voucherType" :amount="amount" :target-amount="targetAmount" :destination="valueFlowVisible ? valueFlowDestination : ''" :default-destination="collectionDestination?.label ?? 'Client Funds'" :fee-bearer="feeBearer" :repayment="settlementRepayment" :repayment-amount="rulesMinPayment" :philhealth="philhealthSettlement" />
           </template>
         </CockpitPayCodeCanvas>
         <div v-if="costPreviewOpen" class="sticky bottom-0 z-10 mt-4 flex flex-wrap justify-end gap-3 border-t bg-white py-4 dark:bg-slate-950" data-testid="pay-code-review-actions">
@@ -8978,23 +9022,10 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                 </span>
               </label>
             </div>
-            <div v-if="selectedInputFields.includes('documents')" class="grid gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700" data-testid="claim-document-configuration">
-              <p class="text-sm font-semibold">Documents from the recipient</p>
-              <p class="text-xs text-slate-500 dark:text-slate-400">Choose up to five documents and the file formats you accept. The current charge is shown in the Order estimate.</p>
-              <div v-for="(document, index) in claimDocuments" :key="document.key" class="grid gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
-                <label class="grid gap-1 text-xs font-medium">Document name
-                  <input v-model="document.label" :data-testid="`claim-document-label-${index}`" maxlength="100" placeholder="e.g. Proof of identity" class="rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" />
-                </label>
-                <fieldset class="flex flex-wrap gap-3 text-xs"><legend class="mb-1 font-medium">Accepted formats</legend>
-                  <label v-for="format in claimDocumentFormats" :key="format.label" class="flex items-center gap-1">
-                    <input type="checkbox" :checked="format.types.every((type) => document.accept.includes(type))" @change="toggleClaimDocumentFormat(document, format.types, ($event.target as HTMLInputElement).checked)" /> {{ format.label }}
-                  </label>
-                </fieldset>
-                <label class="flex items-center gap-2 text-xs"><input v-model="document.required" type="checkbox" /> Required before completing the claim</label>
-                <button type="button" class="justify-self-start text-xs font-medium text-rose-600" @click="claimDocuments.splice(index, 1)">Remove document</button>
-              </div>
-              <button type="button" class="justify-self-start rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold dark:border-slate-700" :disabled="claimDocuments.length >= 5" @click="addClaimDocument">Add document</button>
-              <p v-if="!claimDocumentsValid" class="text-xs text-rose-600">Add a name and at least one accepted format for each document.</p>
+            <div v-if="selectedInputFields.includes('documents')" class="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-700" data-testid="claim-document-configuration">
+              <p class="font-semibold">Documents from the recipient</p>
+              <p v-for="document in claimDocuments" :key="document.key" class="mt-1 text-xs text-slate-500">{{ document.label || 'Unnamed document' }} · {{ document.required ? 'Required' : 'Optional' }}</p>
+              <button type="button" class="mt-2 text-xs font-medium text-sky-700 underline dark:text-sky-300" @click="showClaimDocumentSetup">Edit documents</button>
             </div>
           </div>
         </details>
@@ -12252,6 +12283,77 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
         </div>
       </details>
     </div>
+    <Dialog v-model:open="riderEditorOpen">
+      <DialogContent class="flex h-[100dvh] max-h-[100dvh] w-full max-w-none flex-col overflow-hidden rounded-none sm:h-[min(42rem,90dvh)] sm:max-h-[90dvh] sm:max-w-3xl sm:rounded-lg" :show-close-button="false">
+        <DialogTitle>Rider</DialogTitle>
+        <DialogDescription>Customize the message, destination and introduction for this Pay Code.</DialogDescription>
+        <div class="min-h-0 flex-1 overflow-y-auto">
+          <CockpitRiderEditor v-model:message="purpose" v-model:message-format="riderMessageFormat" v-model:url="riderUrl" v-model:redirect-timeout="riderRedirectTimeout" v-model:splash="riderSplash" v-model:splash-format="riderSplashFormat" v-model:splash-timeout="riderSplashTimeout" v-model:splash-headline="riderSplashHeadline" v-model:splash-cta-text="riderSplashCtaText" :disabled="processing" :url-preview-document="riderUrlPreviewDocument" :splash-preview-document="riderSplashPreviewDocument" :url-preview-message="riderUrlArtworkMessage" :url-preview-loading="riderUrlArtworkResolving" />
+        </div>
+        <button type="button" class="shrink-0 rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-900" @click="riderEditorOpen = false">Done</button>
+      </DialogContent>
+    </Dialog>
+    <Dialog v-model:open="valueFlowEditorOpen">
+      <DialogContent class="flex max-h-[90dvh] w-full max-w-xl flex-col overflow-hidden" :show-close-button="false">
+        <DialogTitle>Value Flow</DialogTitle>
+        <DialogDescription>Choose where collected value should go.</DialogDescription>
+        <div class="min-h-0 overflow-y-auto">
+          <ValueFlowDestination v-model="valueFlowDestination" :stored-value="reusableBalance" :disabled="processing" />
+        </div>
+        <button type="button" class="shrink-0 rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900" :disabled="!valueFlowValid" data-testid="value-flow-editor-done" @click="valueFlowEditorOpen = false">Done</button>
+      </DialogContent>
+    </Dialog>
+    <Dialog v-model:open="feeBearerEditorOpen">
+      <DialogContent class="flex max-h-[90dvh] w-full max-w-xl flex-col overflow-hidden" :show-close-button="false">
+        <DialogTitle>Service Fee</DialogTitle>
+        <DialogDescription>Choose who pays the service fee.</DialogDescription>
+        <fieldset class="grid gap-3 py-2">
+          <legend class="sr-only">Who pays the service fee?</legend>
+          <label class="flex min-h-11 items-center gap-3 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-700"><input v-model="feeBearer" type="radio" value="issuer" :disabled="processing" data-testid="fee-bearer-issuer" />{{ issuerFeeLabel }}</label>
+          <label class="flex min-h-11 items-center gap-3 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-700"><input v-model="feeBearer" type="radio" value="payer" :disabled="processing" data-testid="fee-bearer-payer" />{{ payerFeeLabel }}</label>
+        </fieldset>
+        <button type="button" class="shrink-0 rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-900" data-testid="fee-bearer-editor-done" @click="feeBearerEditorOpen = false">Done</button>
+      </DialogContent>
+    </Dialog>
+    <Dialog v-model:open="payerDocumentsEditorOpen">
+      <DialogContent class="flex max-h-[90dvh] w-full max-w-xl flex-col overflow-hidden" :show-close-button="false">
+        <DialogTitle>Payment Details</DialogTitle>
+        <DialogDescription>Describe the payment and optionally share documents with the payer.</DialogDescription>
+        <div class="grid min-h-0 content-start gap-4 overflow-y-auto">
+        <fieldset class="grid gap-3" data-testid="issuer-payment-details">
+          <legend class="sr-only">Payment details for the payer</legend>
+          <label class="grid gap-1 text-sm">What is this payment for?<textarea v-model="paymentDescription" maxlength="2000" class="min-h-20 rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900" /></label>
+          <label class="grid gap-1 text-sm">Reference (optional)<input v-model="paymentReference" maxlength="255" class="min-h-12 rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900" /></label>
+          <div v-for="(field, index) in paymentFields" :key="index" class="grid gap-2 sm:grid-cols-2">
+            <input v-model="field.label" placeholder="Label" aria-label="Detail label" maxlength="100" class="min-h-12 rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900" />
+            <input v-model="field.value" placeholder="Value" aria-label="Detail value" maxlength="1000" class="min-h-12 rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900" />
+            <button type="button" class="w-fit text-xs underline" @click="paymentFields.splice(index, 1)">Remove detail</button>
+          </div>
+          <button v-if="paymentFields.length < 20" type="button" class="w-fit text-xs underline" @click="paymentFields.push({ label: '', value: '' })">Add detail</button>
+        </fieldset>
+        <div v-if="!publicMode && invoiceDraftUrl" class="grid gap-3 text-sm" data-testid="issuer-invoice-upload">
+          <span class="font-medium">Documents for the payer <span class="font-normal text-slate-500 dark:text-slate-400">(optional)</span></span>
+          <label class="inline-flex min-h-11 w-fit cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-emerald-500 hover:text-emerald-700 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-emerald-600 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-emerald-400">
+            <FilePlus2 class="size-4" aria-hidden="true" />
+            <span>{{ invoiceUploading ? 'Uploading…' : 'Upload document' }}</span>
+            <input type="file" multiple class="sr-only" :accept="philhealthSettlement ? '.pdf,.jpg,.jpeg,.png' : '.pdf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png'" :disabled="processing || invoiceUploading || invoiceUploads.length >= 5" @change="stageInvoice" />
+          </label>
+          <span class="text-xs">{{ philhealthSettlement ? 'PDF, JPEG, or PNG up to 5 MB each.' : 'Up to five files, 10 MB each.' }}</span>
+          <span v-for="(item, index) in invoiceUploads" :key="item.documentId" class="flex gap-2 text-xs">{{ item.name }} <button type="button" class="underline" @click.prevent="invoiceUploads.splice(index, 1)">Remove</button></span>
+          <span v-if="invoiceError" role="alert" class="text-xs text-rose-600">{{ invoiceError }}</span>
+        </div>
+        </div>
+        <button type="button" class="shrink-0 rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-900" data-testid="payer-documents-editor-done" @click="payerDocumentsEditorOpen = false">Done</button>
+      </DialogContent>
+    </Dialog>
+    <Dialog v-model:open="documentEditorOpen">
+      <DialogContent class="h-[100dvh] max-h-[100dvh] w-full max-w-none overflow-y-auto rounded-none sm:h-auto sm:max-h-[90dvh] sm:max-w-xl sm:rounded-lg" :show-close-button="false">
+        <DialogTitle>Documents from the recipient</DialogTitle>
+        <DialogDescription>Choose the documents and formats the recipient can provide.</DialogDescription>
+        <CockpitDocumentEditor title="Document requirements" mode="requirements" :documents="claimDocuments" :formats="claimDocumentFormats" :valid="claimDocumentsValid" :disabled="processing" @update:documents="claimDocuments = $event" @add="addClaimDocument" />
+        <button type="button" class="rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-900" @click="documentEditorOpen = false">Done</button>
+      </DialogContent>
+    </Dialog>
   </form>
 </template>
 if (instructionBuilder !== null) { instructionBuilder.open = true; }

@@ -1,6 +1,7 @@
-import { config, mount } from "@vue/test-utils";
+import { config, flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 import CockpitQuickGenerateSubmitPanel from "../../../resources/js/cockpit/components/CockpitQuickGenerateSubmitPanel.vue";
+import BankEMISelect from "../../../resources/js/components/x-change-shared-financial/BankEMISelect.vue";
 import PublicIssuanceLayout from "../../../resources/js/cockpit/layouts/PublicIssuanceLayout.vue";
 import { cockpitQuickGenerateTemplates } from "../../../resources/js/cockpit/quickGenerateDefaults";
 
@@ -26,7 +27,184 @@ config.global.stubs = {
 };
 
 describe("Public Auto Generate surface", () => {
-  it("starts blank while removing every template control", () => {
+  it('opens template actions from the compact current-template control', async () => {
+    const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates }, attachTo: document.body });
+    expect(wrapper.get('[data-testid="cockpit-quick-generate-current-template"]').text()).toContain('Blank Pay Code');
+    await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
+    expect(wrapper.get('[data-testid="cockpit-quick-generate-template-toolbar"]').text()).toContain('Choose Template');
+    await wrapper.get('[data-testid="cockpit-quick-generate-choose-template"]').trigger('click');
+    expect(wrapper.find('[data-testid="cockpit-quick-generate-template-picker"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="cockpit-quick-generate-template-toolbar"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+  it('places collection controls after Options', async () => {
+    const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates, invoiceDraftUrl: '/invoice-drafts' }, attachTo: document.body });
+    await wrapper.get('input[name="cockpit-quick-generate-voucher-type"][value="payable"]').setValue();
+    const options = wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]').element;
+    for (const selector of ['open-value-flow-editor', 'open-payer-documents-editor', 'fee-bearer-control', 'open-document-requests-editor']) {
+      expect(options.compareDocumentPosition(wrapper.get(`[data-testid="${selector}"]`).element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+    wrapper.unmount();
+  });
+  it('edits document requests in a compact control', async () => {
+    const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates }, attachTo: document.body });
+    await wrapper.get('input[name="cockpit-quick-generate-voucher-type"][value="payable"]').setValue();
+    expect(wrapper.get('[data-testid="document-requests-summary"]').text()).toBe('None requested');
+    await wrapper.get('[data-testid="open-document-requests-editor"]').trigger('click');
+    await wrapper.get('[data-testid="add-document-requirement"]').trigger('click');
+    const fields = wrapper.get('[data-testid="document-requirement-control"]').findAll('select');
+    await fields[1].setValue('before_payment');
+    await fields[2].setValue('invited');
+    await wrapper.get('[data-testid="document-requests-editor-done"]').trigger('click');
+    expect(wrapper.get('[data-testid="document-requests-summary"]').text()).toBe('1 document requested');
+    expect(JSON.parse(wrapper.get('[data-testid="cockpit-quick-generate-engineering-preview-json"]').text()).execution.document_requirements).toEqual([{ type: 'INVOICE', timing: 'before_payment', requires_acceptance: false, contributor: 'invited' }]);
+    wrapper.unmount();
+  });
+  it('edits payer documents in a compact control', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ reference: '00000000-0000-4000-8000-000000000001', document_id: '01ARZ3NDEKTSV4RRFFQ69G5FAV' }) }));
+    const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates, invoiceDraftUrl: '/invoice-drafts' }, attachTo: document.body });
+    try {
+      await wrapper.get('input[name="cockpit-quick-generate-voucher-type"][value="payable"]').setValue();
+      expect(wrapper.get('[data-testid="payer-documents-summary"]').text()).toBe('Optional · None added');
+      await wrapper.get('[data-testid="open-payer-documents-editor"]').trigger('click');
+      await wrapper.get('[data-testid="issuer-payment-details"] textarea').setValue('Laptop repair');
+      await wrapper.get('[data-testid="issuer-payment-details"] input').setValue('INV-1');
+      const input = wrapper.get('[data-testid="issuer-invoice-upload"] input');
+      Object.defineProperty(input.element, 'files', { configurable: true, value: [new File(['invoice'], 'invoice.pdf', { type: 'application/pdf' })] });
+      await input.trigger('change');
+      await flushPromises();
+      expect(wrapper.get('[data-testid="issuer-invoice-upload"]').text()).toContain('invoice.pdf');
+      await wrapper.get('[data-testid="payer-documents-editor-done"]').trigger('click');
+      expect(wrapper.get('[data-testid="payer-documents-summary"]').text()).toBe('1 document added');
+      expect(JSON.parse(wrapper.get('[data-testid="cockpit-quick-generate-engineering-preview-json"]').text()).payment_details.documents[0].label).toBe('invoice.pdf');
+      expect(JSON.parse(wrapper.get('[data-testid="cockpit-quick-generate-engineering-preview-json"]').text()).payment_details).toMatchObject({ description: 'Laptop repair', reference: 'INV-1' });
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
+  it('shows the current estimated service fee for either payer', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true, data: { total: 10, currency: 'PHP' } }) }));
+    const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates }, attachTo: document.body });
+    try {
+      await wrapper.get('input[name="cockpit-quick-generate-voucher-type"][value="payable"]').setValue();
+      await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('100');
+      await vi.advanceTimersByTimeAsync(600);
+      await flushPromises();
+      expect(wrapper.get('[data-testid="fee-bearer-summary"]').text()).toBe('Issuer pays ₱10.00 at issuance');
+      await wrapper.get('[data-testid="fee-bearer-control"]').trigger('click');
+      await wrapper.get('[data-testid="fee-bearer-payer"]').setValue();
+      await vi.advanceTimersByTimeAsync(600);
+      await flushPromises();
+      expect(wrapper.get('[data-testid="fee-bearer-summary"]').text()).toBe('Customer pays ₱10.00 with the payment');
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true, data: { total: 0, currency: 'PHP' } }) }));
+      await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('101');
+      await vi.advanceTimersByTimeAsync(600);
+      await flushPromises();
+      expect(wrapper.get('[data-testid="fee-bearer-summary"]').text()).toBe('Customer pays ₱0.00 with the payment');
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+  it('edits and summarizes who pays the service fee', async () => {
+    const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates }, attachTo: document.body });
+    await wrapper.get('input[name="cockpit-quick-generate-voucher-type"][value="payable"]').setValue();
+    expect(wrapper.get('[data-testid="fee-bearer-summary"]').text()).toBe('Issuer pays at issuance');
+    expect(wrapper.get('[data-testid="fee-bearer-estimate-status"]').text()).toBe('Complete the order details to calculate the fee');
+    await wrapper.get('[data-testid="fee-bearer-control"]').trigger('click');
+    await wrapper.get('[data-testid="fee-bearer-payer"]').setValue();
+    await wrapper.get('[data-testid="fee-bearer-editor-done"]').trigger('click');
+    expect(wrapper.get('[data-testid="fee-bearer-summary"]').text()).toBe('Customer pays with the payment');
+    expect(JSON.parse(wrapper.get('[data-testid="cockpit-quick-generate-engineering-preview-json"]').text()).fee_bearer).toBe('payer');
+    wrapper.unmount();
+  });
+  it('summarizes and edits the collection destination in a dialog', async () => {
+    const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates }, attachTo: document.body });
+    await wrapper.get('input[name="cockpit-quick-generate-voucher-type"][value="payable"]').setValue();
+    expect(wrapper.get('[data-testid="value-flow-summary"]').text()).toBe('Client Funds');
+    await wrapper.get('[data-testid="open-value-flow-editor"]').trigger('click');
+    expect(wrapper.get('[data-testid="value-flow-destination"]').exists()).toBe(true);
+    const done = wrapper.get<HTMLButtonElement>('[data-testid="value-flow-editor-done"]');
+    expect(done.element.disabled).toBe(false);
+    await wrapper.get('[data-testid="value-flow-destination"] select').setValue(true);
+    expect(done.element.disabled).toBe(true);
+    wrapper.getComponent(BankEMISelect).vm.$emit('update:modelValue', 'GXCHPHM2XXX');
+    await wrapper.get('[data-testid="value-flow-destination"] input[inputmode="numeric"]').setValue('09');
+    expect(done.element.disabled).toBe(true);
+    await wrapper.get('[data-testid="value-flow-destination"] input[inputmode="numeric"]').setValue('09179999999');
+    expect(done.element.disabled).toBe(false);
+    expect(wrapper.get('[data-testid="value-flow-summary"]').text()).toContain('09179999999');
+    await done.trigger('click');
+    await wrapper.get('[data-testid="cockpit-pay-code-canvas-flow-button"]').trigger('click');
+    expect(wrapper.get('[data-testid="cockpit-pay-code-canvas-flow"]').text()).toContain('09179999999');
+    wrapper.unmount();
+  });
+  it('shows the live flow in the Pay Code card', async () => {
+    const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates }, attachTo: document.body });
+    expect(wrapper.find('[data-testid="cockpit-pay-code-canvas-flow"]').exists()).toBe(false);
+    await wrapper.get('[data-testid="cockpit-pay-code-canvas-flow-button"]').trigger('click');
+    const panel = wrapper.get('[data-testid="cockpit-pay-code-canvas-flow"]');
+    expect(panel.text()).toContain('What will happen');
+    expect(wrapper.get('[data-testid="cockpit-pay-code-canvas-flow-button"]').attributes('aria-selected')).toBe('true');
+    wrapper.unmount();
+  });
+  it('opens and closes the Options dialog with the existing controls', async () => {
+    const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates }, attachTo: document.body });
+    const toggle = wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]');
+    expect(toggle.attributes('aria-haspopup')).toBe('dialog');
+    expect(wrapper.find('[data-testid="cockpit-quick-generate-order-options-panel"]').exists()).toBe(false);
+    await toggle.trigger('click');
+    const panel = wrapper.get('[data-testid="cockpit-quick-generate-order-options-panel"]');
+    expect(panel.find('[data-testid="cockpit-claim-requirements-control"]').exists()).toBe(true);
+    expect(panel.find('[data-testid="cockpit-quick-generate-primary-feedback"]').exists()).toBe(true);
+    expect(panel.find('[data-testid="cockpit-value-use-control"]').exists()).toBe(true);
+    expect(panel.find('[data-testid="cockpit-quick-generate-primary-settlement-rail"]').exists()).toBe(true);
+    const done = wrapper.findAll('button').find(button => button.text() === 'Done' && button.element.closest('[role="dialog"]'));
+    expect(done).toBeDefined();
+    await done!.trigger('click');
+    expect(wrapper.find('[data-testid="cockpit-quick-generate-order-options-panel"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+  it.each([true, false])('keeps purpose and rider instruction synchronized through the rider editor in public mode %s', async (publicMode) => {
+    const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates, publicMode }, attachTo: document.body });
+    expect(wrapper.get('[data-testid="open-rider-editor"]').attributes('aria-label')).toBe('Edit rider');
+    expect(wrapper.get('[data-testid="open-rider-editor"]').element.parentElement).toBe(wrapper.get('[data-testid="cockpit-quick-generate-primary-purpose"]').element.parentElement);
+    await wrapper.get('[data-testid="open-rider-editor"]').trigger('click');
+    await wrapper.get('[data-testid="cockpit-quick-generate-submit-purpose"]').setValue('Thank you for your purchase');
+    await wrapper.get('[data-testid="rider-editor"]').findAll('[role="tab"]').find(tab => tab.text().includes('Link'))!.trigger('mousedown', { button: 0 });
+    expect(wrapper.text()).toContain('Add a URL to see its preview.');
+    await wrapper.get('[data-testid="rider-editor-url"]').setValue('https://example.test/thanks');
+    expect(wrapper.get('[data-testid="rider-editor-url-preview"]').attributes('sandbox')).toBe('');
+    await wrapper.get('[data-testid="rider-editor"]').findAll('[role="tab"]').find(tab => tab.text().includes('Splash'))!.trigger('mousedown', { button: 0 });
+    expect(wrapper.text()).toContain('Add splash content to see its preview.');
+    await wrapper.get('[data-testid="rider-editor-splash"]').setValue('Welcome');
+    expect(wrapper.get('[data-testid="rider-editor-splash-preview"]').attributes('srcdoc')).toContain('Welcome');
+    expect((wrapper.get('[data-testid="cockpit-quick-generate-primary-purpose"]').element as HTMLInputElement).value).toBe('Thank you for your purchase');
+    const instruction = JSON.parse(wrapper.get('[data-testid="cockpit-quick-generate-engineering-preview-json"]').text());
+    expect(instruction.rider).toMatchObject({ message: 'Thank you for your purchase', url: 'https://example.test/thanks', splash: 'Welcome' });
+    wrapper.unmount();
+  });
+  it("keeps the after-claim destination control on Auto Generate", async () => {
+    const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+      props: { templates: cockpitQuickGenerateTemplates, publicMode: true },
+    });
+    await wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]').trigger('click');
+    const input = wrapper.get('[data-testid="public-auto-generate-rider-url"]');
+    await input.setValue('https://example.test/thank-you');
+    const instruction = JSON.parse(wrapper.get('[data-testid="cockpit-quick-generate-engineering-preview-json"]').text());
+    expect(instruction.rider.url).toBe('https://example.test/thank-you');
+  });
+  it("does not show the separate destination control on Quick Generate", async () => {
+    const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+      props: { templates: cockpitQuickGenerateTemplates, publicMode: false },
+    });
+    await wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]').trigger('click');
+    expect(wrapper.find('[data-testid="public-auto-generate-after-claim-destination"]').exists()).toBe(false);
+  });
+  it("starts blank while removing every template control", async () => {
     const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
       props: {
         templates: cockpitQuickGenerateTemplates,
@@ -112,6 +290,7 @@ describe("Public Auto Generate surface", () => {
         .find('[data-testid="cockpit-quick-generate-primary-settlement-rail"]')
         .exists(),
     ).toBe(false);
+    await wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]').trigger('click');
     expect(
       wrapper
         .find('[data-testid="public-auto-generate-after-claim-destination"]')
@@ -225,7 +404,7 @@ describe("Public Auto Generate surface", () => {
 
     expect(reusableBalance.element.disabled).toBe(false);
     await reusableBalance.setValue(true);
-    expect(wrapper.find('[data-testid="value-flow-destination"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="value-flow-summary"]').exists()).toBe(true);
     await wrapper.get('[data-testid="cockpit-value-use-trigger"]').trigger("click");
 
     expect(

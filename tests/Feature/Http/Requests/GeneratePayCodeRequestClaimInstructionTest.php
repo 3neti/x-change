@@ -82,6 +82,18 @@ it('retains v2 PhilHealth execution during pricing and accepts its zero disburse
     expect(validateClaimInstructionRequest(EstimatePayCodeRequest::class, $payload)->errors()->has('cash.amount'))->toBeTrue();
 });
 
+it('accepts a zero cash amount when estimating a payable with a positive collection target', function (): void {
+    $payload = validClaimInstructionPayload([]);
+    unset($payload['claim']);
+    $payload['cash']['amount'] = 0;
+    $payload['voucher_type'] = 'payable';
+    $payload['target_amount'] = 100;
+    $validator = validateClaimInstructionRequest(EstimatePayCodeRequest::class, $payload);
+    expect($validator->errors()->all())->toBeEmpty();
+    $payload['target_amount'] = 0;
+    expect(validateClaimInstructionRequest(EstimatePayCodeRequest::class, $payload)->errors()->has('cash.amount'))->toBeTrue();
+});
+
 it('preserves v2 execution and webhook subscriptions through issuance validation', function (): void {
     $payload = validClaimInstructionPayload([]);
     unset($payload['claim']);

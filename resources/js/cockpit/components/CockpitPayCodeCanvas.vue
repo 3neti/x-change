@@ -105,7 +105,7 @@ function openStampQr(): void {
     }
 }
 
-type PayCodeCanvasView = 'stamp' | 'design' | 'claim' | 'cost';
+type PayCodeCanvasView = 'stamp' | 'design' | 'claim' | 'cost' | 'flow';
 
 const visibleView = defineModel<PayCodeCanvasView>('view', {
     default: 'stamp',
@@ -118,6 +118,9 @@ const hasDesignView = computed<boolean>(() => {
 const hasClaimView = computed<boolean>(() => {
     return props.presentation === 'live' && slots.claim !== undefined;
 });
+const hasFlowView = computed<boolean>(() => {
+    return props.presentation === 'live' && slots.flow !== undefined;
+});
 const payCodeMarkUrl = '/vendor/x-change/images/pay-code/pay-code-mark.svg';
 
 watchEffect(() => {
@@ -126,6 +129,9 @@ watchEffect(() => {
     }
 
     if (visibleView.value === 'claim' && !hasClaimView.value) {
+        visibleView.value = 'stamp';
+    }
+    if (visibleView.value === 'flow' && !hasFlowView.value) {
         visibleView.value = 'stamp';
     }
 });
@@ -694,6 +700,18 @@ function stringValue(value: unknown): string | null {
                 >
                     Cost
                 </button>
+                <button
+                    v-if="hasFlowView"
+                    :id="tabId('flow')"
+                    type="button"
+                    role="tab"
+                    class="@md:flex-none @md:px-3 min-w-0 rounded-full px-1.5 py-1 text-[0.7rem] font-semibold transition"
+                    :class="visibleView === 'flow' ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950' : 'text-slate-500 dark:text-slate-400'"
+                    :aria-selected="visibleView === 'flow'"
+                    :aria-controls="panelId('flow')"
+                    data-testid="cockpit-pay-code-canvas-flow-button"
+                    @click="visibleView = 'flow'"
+                >Flow</button>
             </div>
         </div>
 
@@ -1102,6 +1120,10 @@ function stringValue(value: unknown): string | null {
             data-testid="cockpit-pay-code-canvas-claim"
         >
             <slot name="claim" />
+        </section>
+
+        <section v-if="visibleView === 'flow' && hasFlowView" :id="panelId('flow')" role="tabpanel" :aria-labelledby="tabId('flow')" class="min-w-0" data-testid="cockpit-pay-code-canvas-flow">
+            <slot name="flow" />
         </section>
 
         <article
