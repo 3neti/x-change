@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Enums;
 enum CommercialOperatorCapability: string
 {
     case ManageOfferings = 'commercial.offerings.manage';
+    case CommissionDocumentPricing = 'commercial.documents.commission_pricing';
     case ApproveOfferings = 'commercial.offerings.approve';
     case ViewCommercialControls = 'commercial.controls.view';
     case ManagePartners = 'commercial.partners.manage';

@@ -9,4 +9,5 @@ enum CommercialActivationAuthority: string
     case CommissioningManifest = 'commissioning_manifest';
     case IndependentApproval = 'independent_approval';
     case LocalSandbox = 'local_sandbox';
+    case SingleOperator = 'single_operator';
 }

@@ -107,6 +107,7 @@ use LBHurtado\XChange\Console\Commands\Cockpit\ValidateLinkPreviewDriversCommand
 use LBHurtado\XChange\Console\Commands\Commercial\ApprovePartnerCommissionPayoutBatchCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\AuthorizeCommercialOperatorCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\CommercialGovernanceStatusCommand;
+use LBHurtado\XChange\Console\Commands\Commercial\CommissionDocumentPricingCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ProvisionCommercialBaselinesCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ProvisionCommercialPrincipalCommand;
 use LBHurtado\XChange\Console\Commands\Commercial\ProvisionPublicIssuanceEscrowPrincipalCommand;
@@ -1982,6 +1983,7 @@ class XChangeServiceProvider extends ServiceProvider
                 AttestCommercialAccountingCommand::class,
                 AuthorizeTreasuryOperatorCommand::class,
                 AuthorizeCommercialOperatorCommand::class,
+                CommissionDocumentPricingCommand::class,
                 ApprovePartnerCommissionPayoutBatchCommand::class,
                 CommercialGovernanceStatusCommand::class,
                 ProvisionCommercialBaselinesCommand::class,
