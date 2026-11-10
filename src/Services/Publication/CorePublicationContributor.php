@@ -84,6 +84,7 @@ final class CorePublicationContributor implements XChangePublicationContributor
     {
         $handlers = [
             ['kyc', '3neti/form-handler-kyc', 'kyc-handler-stubs', 'LBHurtado\\FormHandlerKYC\\KYCHandlerServiceProvider'],
+            ['documents', '3neti/form-handler-document', 'document-handler-stubs', 'LBHurtado\\FormHandlerDocument\\DocumentHandlerServiceProvider'],
             ['location', '3neti/form-handler-location', 'location-handler-stubs', 'LBHurtado\\FormHandlerLocation\\LocationHandlerServiceProvider'],
             ['otp', '3neti/form-handler-otp', 'otp-handler-stubs', 'LBHurtado\\FormHandlerOtp\\OtpHandlerServiceProvider'],
             ['selfie', '3neti/form-handler-selfie', 'selfie-handler-stubs', 'LBHurtado\\FormHandlerSelfie\\SelfieHandlerServiceProvider'],

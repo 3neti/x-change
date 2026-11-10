@@ -95,13 +95,14 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
                         app(EnvelopeService::class)->create(
                             referenceCode: (string) $voucher->code,
                             driverId: 'philhealth.bst.demo',
-                            driverVersion: '1.0.0',
+                            driverVersion: (array) data_get($input, 'inputs.documents', []) !== [] ? '1.1.0' : '1.0.0',
                             reference: $voucher,
                             actor: $issuer instanceof Model ? $issuer : null,
                         );
                     }
                 } elseif (in_array(data_get($input, 'voucher_type'), ['payable', 'settlement'], true)
-                    || $requirements !== [] || is_string($invoiceDraft) || $invoiceDrafts !== []) {
+                    || $requirements !== [] || (array) data_get($input, 'inputs.documents', []) !== []
+                    || is_string($invoiceDraft) || $invoiceDrafts !== []) {
                     $driver = app(DriverService::class)->load('x-change.documents', '1.0.0');
                     foreach ($requirements as $requirement) {
                         if ($driver->getDocumentType($requirement['type']) === null) {
@@ -112,7 +113,7 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
                         app(EnvelopeService::class)->create(
                             referenceCode: (string) $voucher->code,
                             driverId: 'x-change.documents',
-                            driverVersion: '1.0.0',
+                            driverVersion: (array) data_get($input, 'inputs.documents', []) !== [] ? '1.1.0' : '1.0.0',
                             reference: $voucher,
                             actor: $issuer instanceof Model ? $issuer : null,
                         );

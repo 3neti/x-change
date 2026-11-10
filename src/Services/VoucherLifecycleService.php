@@ -1259,7 +1259,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             ])->values()->all(),
             'attachments' => $envelope->attachments->map(fn (Model $attachment): array => [
                 'id' => (int) $attachment->getKey(),
-                'label' => (string) $attachment->getAttribute('original_filename'),
+                'label' => (string) (data_get($attachment->getAttribute('metadata'), 'label') ?: $attachment->getAttribute('original_filename')),
                 'document_type' => (string) $attachment->getAttribute('doc_type'),
                 'mime_type' => (string) $attachment->getAttribute('mime_type'),
                 'size' => (int) $attachment->getAttribute('size'),

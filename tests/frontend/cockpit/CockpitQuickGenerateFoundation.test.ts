@@ -189,6 +189,7 @@ describe('Cockpit Quick Generate foundation', () => {
             },
         });
 
+        await wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]').trigger('click');
         const editor = wrapper.get(
             '[data-testid="cockpit-feedback-destination-editor"]',
         );
@@ -242,11 +243,7 @@ describe('Cockpit Quick Generate foundation', () => {
 
         expect(amountInput.element).toBe(document.activeElement);
         expect(amountInput.element.value).toBe('');
-        expect(
-            wrapper
-                .get('[data-testid="cockpit-quick-generate-start-blank"]')
-                .attributes('aria-pressed'),
-        ).toBe('true');
+        expect(wrapper.get('[data-testid="cockpit-quick-generate-current-template"]').text()).toContain('Blank Pay Code');
         expect(amountInput.classes()).toContain('h-12');
         expect(recipientInput.classes()).toContain('h-12');
         expect(
@@ -278,9 +275,6 @@ describe('Cockpit Quick Generate foundation', () => {
         const toggle = wrapper.get(
             '[data-testid="cockpit-quick-generate-order-options-toggle"]',
         );
-        const panel = wrapper.get(
-            '[data-testid="cockpit-quick-generate-order-options-panel"]',
-        );
         const orderFields = wrapper.get(
             '[data-testid="cockpit-quick-generate-order-fields"]',
         );
@@ -294,7 +288,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(toggle.attributes('aria-label')).toBe(
             'Options. Default configuration.',
         );
-        expect(panel.attributes('style')).toContain('display: none');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-order-options-panel"]').exists()).toBe(false);
         expect(
             orderFields
                 .find('[data-testid="cockpit-claim-requirements-control"]')
@@ -302,6 +296,7 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toBe(false);
 
         await toggle.trigger('click');
+        const panel = wrapper.get('[data-testid="cockpit-quick-generate-order-options-panel"]');
 
         expect(toggle.attributes('aria-expanded')).toBe('true');
         expect(panel.attributes('style') ?? '').not.toContain('display: none');
@@ -585,6 +580,7 @@ describe('Cockpit Quick Generate foundation', () => {
             trigger: () => Promise<unknown>,
             key: string,
         ): Promise<void> => {
+            await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
             await trigger();
             await flushPromises();
 
@@ -670,15 +666,13 @@ describe('Cockpit Quick Generate foundation', () => {
                 .text(),
         ).toContain('Current ·');
 
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         const toolbar = wrapper.get(
             '[data-testid="cockpit-quick-generate-template-toolbar"]',
         );
 
         expect(toolbar.classes()).toContain('grid');
         expect(toolbar.classes()).toContain('grid-cols-2');
-        expect(toolbar.classes()).toContain('sm:flex');
-        expect(toolbar.classes()).toContain('sm:flex-nowrap');
-        expect(toolbar.classes()).toContain('sm:overflow-x-auto');
 
         const actionTestIds = [
             'cockpit-quick-generate-start-blank',
@@ -708,6 +702,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 },
             },
         });
+        await wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]').trigger('click');
         const feedbackBand = wrapper.get(
             '[data-testid="cockpit-quick-generate-primary-feedback"]',
         );
@@ -1396,8 +1391,9 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toBe(
             'Amount to be collected from the payer. Not funded upfront.',
         );
-        const collectionDestination = wrapper.get('[data-testid="value-flow-destination"]');
+        const collectionDestination = wrapper.get('[data-testid="open-value-flow-editor"]');
         expect(collectionDestination.text()).toContain('Client Funds');
+        await wrapper.get('[data-testid="cockpit-pay-code-canvas-flow-button"]').trigger('click');
         expect(wrapper.get('[data-testid="cockpit-order-flow-summary"]').text()).toContain('Client Funds');
 
         await wrapper
@@ -1439,7 +1435,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 '[data-testid="cockpit-quick-generate-voucher-type-settlement"] input',
             )
             .setValue(true);
-        expect(wrapper.get('[data-testid="value-flow-destination"]').text()).toContain('Client Funds');
+        expect(wrapper.get('[data-testid="value-flow-summary"]').text()).toContain('Client Funds');
         expect(
             wrapper
                 .get('[data-testid="cockpit-quick-generate-amount-field"]')
@@ -2256,6 +2252,7 @@ describe('Cockpit Quick Generate foundation', () => {
             },
         });
 
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-start-blank"]')
             .trigger('click');
@@ -2298,6 +2295,7 @@ describe('Cockpit Quick Generate foundation', () => {
             },
         });
 
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-start-blank"]')
             .trigger('click');
@@ -3431,6 +3429,7 @@ describe('Cockpit Quick Generate foundation', () => {
             },
         });
 
+        await wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]').trigger('click');
         const orderCard = wrapper.get(
             '[data-testid="cockpit-quick-generate-order-card"]',
         );
@@ -3554,6 +3553,7 @@ describe('Cockpit Quick Generate foundation', () => {
                 },
             },
         });
+        await wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]').trigger('click');
         const cycleButton = wrapper.get(
             '[data-testid="cockpit-quick-generate-settlement-rail-cycle"]',
         );
@@ -3866,6 +3866,7 @@ describe('Cockpit Quick Generate foundation', () => {
             },
         });
 
+        await wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]').trigger('click');
         const expiration = wrapper.get<HTMLInputElement>(
             '[data-testid="public-auto-generate-expiration-input"]',
         );
@@ -5175,8 +5176,9 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toBe(true);
         expect(reuseDesign.text()).toContain('Templates');
         expect(reuseDesign.text()).toContain('Blank Pay Code');
-        expect(reuseDesign.classes()).toContain('border-t');
+        expect(reuseDesign.classes()).toContain('mt-4');
         expect(reuseDesign.classes()).not.toContain('rounded-2xl');
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         expect(wrapper.text()).toContain('Repeat Last');
         expect(wrapper.text()).toContain('Save Template');
         expect(wrapper.text()).not.toContain('Editable Pay Code Preview');
@@ -5207,7 +5209,7 @@ describe('Cockpit Quick Generate foundation', () => {
             canvasHeader
                 .get('[data-testid="cockpit-pay-code-canvas-view-switch"]')
                 .findAll('[role="tab"]'),
-        ).toHaveLength(4);
+        ).toHaveLength(5);
         expect(quickGenerateHeader.classes()).toContain('justify-between');
         expect(quickGenerateHeader.text()).toContain('Pay Code Issuance');
         expect(fundingLink.attributes('href')).toBe('/x/cockpit/funding');

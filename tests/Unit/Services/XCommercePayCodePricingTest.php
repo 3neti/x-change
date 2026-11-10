@@ -115,7 +115,7 @@ it('uses the immutable x-commerce catalog for Pay Code pricing and projections',
             'rider.message',
         ])
         ->and($first['catalog_reference'])->toBe('pay-code')
-        ->and($first['catalog_version'])->toBe(4)
+        ->and($first['catalog_version'])->toBe(5)
         ->and($first['commercial_offering_reference'])->toBe('commercial-offering:pay_code')
         ->and($first['commercial_offering_version'])->toBe(1)
         ->and($first['commercial_offering_snapshot_hash'])->toHaveLength(64)
@@ -134,6 +134,47 @@ it('includes the existing webhook pricing component for v2 event subscriptions',
 
     expect($charges->where('catalog_item_reference', 'feedback.webhook')->count())->toBe(1);
 });
+
+it('charges document collection once per Pay Code regardless of the number of requested documents', function (): void {
+    $catalog = config('x-commerce.catalogs.pay_code');
+    $catalog['items']['inputs.fields.documents'] = [
+        'unit_price_minor' => 200,
+        'label' => 'Document Upload',
+        'category' => 'input_fields',
+    ];
+    config()->set('x-commerce.catalogs.pay_code', $catalog);
+
+    $instructions = validVoucherInstructions(100, 'INSTAPAY', [
+        'count' => 3,
+        'inputs' => [
+            'fields' => ['documents'],
+            'documents' => [
+                ['key' => 'id', 'label' => 'ID', 'accept' => ['image/jpeg'], 'required' => true],
+                ['key' => 'invoice', 'label' => 'Invoice', 'accept' => ['application/pdf'], 'required' => false],
+            ],
+        ],
+    ]);
+
+    $charges = collect(app(PricingServiceContract::class)->estimate($instructions)['charges']);
+    $documents = $charges->where('catalog_item_reference', 'inputs.fields.documents');
+
+    expect($documents)->toHaveCount(1)
+        ->and($documents->first()['price_minor'])->toBe(600);
+});
+
+it('fails closed when document collection is absent from the active catalog', function (): void {
+    $catalog = config('x-commerce.catalogs.pay_code');
+    unset($catalog['items']['inputs.fields.documents']);
+    config()->set('x-commerce.catalogs.pay_code', $catalog);
+
+    $instructions = validVoucherInstructions(100, 'INSTAPAY', [
+        'inputs' => ['fields' => ['documents'], 'documents' => [
+            ['key' => 'id', 'label' => 'ID', 'accept' => ['image/jpeg'], 'required' => true],
+        ]],
+    ]);
+
+    app(PricingServiceContract::class)->estimate($instructions);
+})->throws(PayCodeIssuanceFailed::class);
 
 it('prices KYC only when it is explicitly selected in the Voucher Instructions', function () {
     $selfieOnly = validVoucherInstructions(100, 'INSTAPAY', [
@@ -180,7 +221,7 @@ it('prices onboarding as an explicit versioned commercial instruction', function
 
     $charges = collect($estimate['charges'])->keyBy('catalog_item_reference');
 
-    expect($estimate['catalog_version'])->toBe(4)
+    expect($estimate['catalog_version'])->toBe(5)
         ->and($estimate['total_minor'])->toBe(2_500)
         ->and($estimate['charges'])->toHaveCount(2)
         ->and($charges->get('onboarding.enabled')['label'])->toBe('Account Onboarding')

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Event;
 use LBHurtado\FormFlowManager\Handlers\SplashHandler;
+use LBHurtado\FormHandlerDocument\DocumentHandler;
 use LBHurtado\FormHandlerKYC\KYCHandler;
 use LBHurtado\FormHandlerLocation\LocationHandler;
 use LBHurtado\FormHandlerOtp\OtpHandler;
@@ -32,7 +33,21 @@ beforeEach(function (): void {
         'otp' => OtpHandler::class,
         'selfie' => SelfieHandler::class,
         'signature' => SignatureHandler::class,
+        'documents' => DocumentHandler::class,
     ]);
+});
+
+it('renders the claimant document step from the issued instruction in the walkthrough', function (): void {
+    $documents = [['key' => 'id', 'label' => 'Proof of identity', 'accept' => ['application/pdf'], 'required' => true]];
+    $instructions = validVoucherInstructions(42, overrides: ['inputs' => ['fields' => ['documents'], 'documents' => $documents]]);
+    $result = app(ClaimExperiencePreviewService::class)->renderFromInstructions($instructions, new ClaimExperiencePreviewOptions(
+        issuer: actingAsTestUser(), baseUrl: 'http://x-change-sandbox.test', dryRun: true, refresh: true,
+    ));
+    $step = collect(data_get($result, 'journey.steps', []))->first(fn (array $step): bool => data_get($step, 'screen.component') === 'form-flow/documents/DocumentCapturePage');
+
+    expect($step)->not->toBeNull()
+        ->and(data_get($step, 'screen.props.documents'))->toEqual($documents)
+        ->and(data_get($step, 'screen.props.preview_mode'))->toBeTrue();
 });
 
 it('uses the payment page for payable instructions across schema versions', function (string $schema): void {

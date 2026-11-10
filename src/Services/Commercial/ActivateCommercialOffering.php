@@ -19,6 +19,9 @@ final readonly class ActivateCommercialOffering
         CommercialActivationAuthority $authority,
         string $activationReference,
     ): CommercialOfferingActivation {
+        if ($authority === CommercialActivationAuthority::LocalSandbox && ! app()->environment(['local', 'testing'])) {
+            throw new \DomainException('Local sandbox authority is unavailable outside local testing.');
+        }
         $activationReference = trim($activationReference);
 
         if ($activationReference === '') {

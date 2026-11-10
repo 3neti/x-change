@@ -444,12 +444,14 @@ describe("Cockpit Quick Generate value use", () => {
     });
   });
 
-  it("renders Reusable Balance disabled when no durable capability is commissioned", () => {
+  it("renders Reusable Balance disabled when no durable capability is commissioned", async () => {
     const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
       props: {
         templates: cockpitQuickGenerateTemplates,
       },
     });
+
+    await openOrderOptions(wrapper);
 
     expect(
       wrapper.get<HTMLInputElement>(
@@ -478,16 +480,17 @@ it('submits a voucher-owned destination and omits it when returning to ordinary 
   await openOrderOptions(wrapper);
   expect(wrapper.find('[data-testid="value-flow-destination"]').exists()).toBe(false);
   await wrapper.get('[data-testid="cockpit-value-use-reusable-balance"]').setValue(true);
+  await wrapper.get('[data-testid="open-value-flow-editor"]').trigger('click');
   const destination = wrapper.findComponent({ name: 'ValueFlowDestination' });
   expect(destination.exists()).toBe(true);
-  destination.vm.$emit('update:modelValue', 'instapay.gcash.mobile:09179999999');
+  destination.vm.$emit('update:modelValue', 'instapay.gxchphm2xxx.account:09179999999');
   await flushPromises();
-  expect(preview(wrapper).execution.value_flow.destination).toBe('instapay.gcash.mobile:09179999999');
+  expect(preview(wrapper).execution.value_flow.destination).toBe('instapay.gxchphm2xxx.account:09179999999');
   await wrapper.get('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
   await flushPromises();
   const request = fetchMock.mock.calls.find(([url, options]) => url === '/x/cockpit/quick-generate' && options.method === 'POST');
   expect(request).toBeDefined();
-  expect(JSON.parse(request![1].body).execution.value_flow).toEqual({ destination: 'instapay.gcash.mobile:09179999999' });
+  expect(JSON.parse(request![1].body).execution.value_flow).toEqual({ destination: 'instapay.gxchphm2xxx.account:09179999999' });
   await wrapper.get('[data-testid="cockpit-value-use-reusable-balance"]').setValue(false);
   expect(wrapper.find('[data-testid="value-flow-destination"]').exists()).toBe(false);
   expect(preview(wrapper).execution).not.toHaveProperty('value_flow');
@@ -498,9 +501,9 @@ it('shows the destination for payable and settlement vouchers', async () => {
   const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });
   await openOrderOptions(wrapper);
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
-  expect(wrapper.find('[data-testid="value-flow-destination"]').exists()).toBe(true);
+  expect(wrapper.find('[data-testid="open-value-flow-editor"]').exists()).toBe(true);
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
-  expect(wrapper.find('[data-testid="value-flow-destination"]').exists()).toBe(true);
+  expect(wrapper.find('[data-testid="open-value-flow-editor"]').exists()).toBe(true);
 });
 
 it('keeps issuer uploads separate from optional document requests', async () => {
@@ -508,9 +511,12 @@ it('keeps issuer uploads separate from optional document requests', async () => 
   await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('100');
   await openOrderOptions(wrapper);
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
-  expect(wrapper.find('[data-testid="document-requirement-control"]').exists()).toBe(true);
+  expect(wrapper.find('[data-testid="open-document-requests-editor"]').exists()).toBe(true);
+  await wrapper.get('[data-testid="open-payer-documents-editor"]').trigger('click');
   expect(wrapper.get('[data-testid="issuer-invoice-upload"]').text()).toContain('Upload document');
   expect(wrapper.get('[data-testid="issuer-invoice-upload"] input').attributes('type')).toBe('file');
+  await wrapper.get('[data-testid="payer-documents-editor-done"]').trigger('click');
+  await wrapper.get('[data-testid="open-document-requests-editor"]').trigger('click');
   await wrapper.get('[data-testid="add-document-requirement"]').trigger('click');
   const fields = wrapper.get('[data-testid="document-requirement-control"]').findAll('select');
   expect((fields[1].element as HTMLSelectElement).value).toBe('optional');
@@ -535,6 +541,7 @@ it('stages an issuer invoice and includes its reference in the order', async () 
   await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('100');
   await openOrderOptions(wrapper);
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
+  await wrapper.get('[data-testid="open-payer-documents-editor"]').trigger('click');
   await wrapper.get('[data-testid="issuer-payment-details"] textarea').setValue('Laptop repair');
   await wrapper.get('[data-testid="issuer-payment-details"] input').setValue('INV-1');
   const input = wrapper.get('[data-testid="issuer-invoice-upload"] input');
@@ -542,6 +549,7 @@ it('stages an issuer invoice and includes its reference in the order', async () 
   await input.trigger('change');
   await flushPromises();
   expect(wrapper.text()).toContain('invoice.pdf');
+  await wrapper.get('[data-testid="payer-documents-editor-done"]').trigger('click');
   await wrapper.get('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
   await flushPromises();
   const order = fetchMock.mock.calls.find(([url]) => url === '/issue');
@@ -566,14 +574,17 @@ it('keeps the loan repayment destination consistent when switching between a ban
   await wrapper.get('[data-testid="settlement-workflow"]').setValue('repayment');
   await wrapper.get('[data-testid="cockpit-quick-generate-target-amount"]').setValue('60');
   await wrapper.get('[data-testid="settlement-repayment-amount"]').setValue('30');
+  await wrapper.get('[data-testid="open-value-flow-editor"]').trigger('click');
   const destination = wrapper.findComponent({ name: 'ValueFlowDestination' });
   destination.vm.$emit('update:modelValue', 'instapay.gxchphm2xxx.account:09179999999');
   await flushPromises();
   expect(preview(wrapper).execution.value_flow.destination).toBe('instapay.gxchphm2xxx.account:09179999999');
+  if (!wrapper.find('[data-testid="cockpit-order-flow-summary"]').exists()) await wrapper.get('[data-testid="cockpit-pay-code-canvas-flow-button"]').trigger('click');
   expect(wrapper.get('[data-testid="cockpit-order-flow-summary"]').text()).toContain('9999');
   await wrapper.get('[aria-label="Value destination"]').setValue('false');
   await flushPromises();
   expect(preview(wrapper).execution).not.toHaveProperty('value_flow');
+  if (!wrapper.find('[data-testid="cockpit-order-flow-summary"]').exists()) await wrapper.get('[data-testid="cockpit-pay-code-canvas-flow-button"]').trigger('click');
   expect(wrapper.get('[data-testid="cockpit-order-flow-summary"]').text()).not.toContain('9999');
   await wrapper.get('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
   await flushPromises();
@@ -596,8 +607,10 @@ it('submits the bank destination shown for a loan repayment', async () => {
   await wrapper.get('[data-testid="settlement-workflow"]').setValue('repayment');
   await wrapper.get('[data-testid="cockpit-quick-generate-target-amount"]').setValue('60');
   await wrapper.get('[data-testid="settlement-repayment-amount"]').setValue('30');
+  if (!wrapper.findComponent({ name: 'ValueFlowDestination' }).exists()) await wrapper.get('[data-testid="open-value-flow-editor"]').trigger('click');
   wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', 'instapay.gxchphm2xxx.account:09179999999');
   await flushPromises();
+  if (!wrapper.find('[data-testid="cockpit-order-flow-summary"]').exists()) await wrapper.get('[data-testid="cockpit-pay-code-canvas-flow-button"]').trigger('click');
   expect(wrapper.get('[data-testid="cockpit-order-flow-summary"]').text()).toContain('9999');
   const expected = preview(wrapper).execution.value_flow;
   await wrapper.get('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
@@ -618,11 +631,12 @@ it('places a payable destination under v2 execution in the preview and submitted
   await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('100');
   await openOrderOptions(wrapper);
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
-  wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', 'instapay.gcash.mobile:09179999999');
+  if (!wrapper.findComponent({ name: 'ValueFlowDestination' }).exists()) await wrapper.get('[data-testid="open-value-flow-editor"]').trigger('click');
+  wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', 'instapay.gxchphm2xxx.account:09179999999');
   await flushPromises();
   expect(preview(wrapper).cash.amount).toBe(0);
   expect(preview(wrapper).target_amount).toBe(100);
-  expect(preview(wrapper).execution).toEqual({ schema: 'voucher.execution.v2', driver: 'default', value_flow: { destination: 'instapay.gcash.mobile:09179999999' } });
+  expect(preview(wrapper).execution).toEqual({ schema: 'voucher.execution.v2', driver: 'default', value_flow: { destination: 'instapay.gxchphm2xxx.account:09179999999' } });
   expect(preview(wrapper)).not.toHaveProperty('value_flow');
   await wrapper.get('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
   await flushPromises();
@@ -639,7 +653,8 @@ it('builds the zero-disbursement PhilHealth attestation, review and payment work
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
   await wrapper.get('[data-testid="settlement-workflow"]').setValue('philhealth');
   await openOrderOptions(wrapper);
-  wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', 'instapay.gcash.mobile:09179999999');
+  if (!wrapper.findComponent({ name: 'ValueFlowDestination' }).exists()) await wrapper.get('[data-testid="open-value-flow-editor"]').trigger('click');
+  wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', 'instapay.gxchphm2xxx.account:09179999999');
   await flushPromises();
   const instruction = preview(wrapper);
   expect(instruction.cash.amount).toBe(0);
@@ -653,7 +668,7 @@ it('builds the zero-disbursement PhilHealth attestation, review and payment work
       { type: 'CLAIM_FORM', timing: 'before_payment', requires_acceptance: false, contributor: 'claimant' },
       { type: 'HOSPITAL_BILL', timing: 'before_payment', requires_acceptance: false, contributor: 'claimant' },
     ],
-    value_flow: { destination: 'instapay.gcash.mobile:09179999999' },
+    value_flow: { destination: 'instapay.gxchphm2xxx.account:09179999999' },
     events: { attest: { actor: 'beneficiary' }, review: { actor: 'hospital_reviewer' }, settle: { actor: 'payer' } },
   });
 });
@@ -682,10 +697,12 @@ it('builds payable subscriptions from the supplied event catalog', async () => {
     { url: 'https://example.test/other', events: ['settlement.payment_collected'] },
   ]);
   expect(instruction.execution.events.settle).toMatchObject({ actor: 'payer', requires: ['confirmed_payment'] });
-  wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', 'instapay.gcash.mobile:09179999999');
+  if (!wrapper.findComponent({ name: 'ValueFlowDestination' }).exists()) await wrapper.get('[data-testid="open-value-flow-editor"]').trigger('click');
+  wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', 'instapay.gxchphm2xxx.account:09179999999');
   await flushPromises();
   await wrapper.get('[data-testid="v2-event-0-settlement.payout_failed"]').setValue(true);
   expect(preview(wrapper).feedback.webhooks[0].events).toEqual(['settlement.payment_collected', 'settlement.payout_failed']);
+  if (!wrapper.findComponent({ name: 'ValueFlowDestination' }).exists()) await wrapper.get('[data-testid="open-value-flow-editor"]').trigger('click');
   wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', '');
   await flushPromises();
   expect(wrapper.text()).toContain('Remove events that are unavailable for this workflow.');
@@ -698,6 +715,7 @@ it('includes the selected fee bearer on payable and settlement instructions', as
   expect(wrapper.find('[data-testid="fee-bearer-control"]').exists()).toBe(false);
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
   expect(preview(wrapper).fee_bearer).toBe('issuer');
+  await wrapper.get('[data-testid="fee-bearer-control"]').trigger('click');
   await wrapper.get('[data-testid="fee-bearer-payer"]').setValue(true);
   expect(preview(wrapper).fee_bearer).toBe('payer');
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
@@ -804,6 +822,7 @@ it('requests the claim preview using the selected settlement workflow', async ()
 
 it('applies the versioned loan template to a disburse-then-collect instruction', async () => {
   const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });
+  await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
   await wrapper.get('[data-testid="cockpit-quick-generate-choose-template"]').trigger('click');
   const loan = wrapper.findAll('[data-testid="cockpit-quick-generate-template-option"]').find((option) => option.text().includes('Loan'));
   expect(loan).toBeDefined();
@@ -828,6 +847,7 @@ it('defaults settlement to disburse then collect and allows another workflow', a
   await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('75');
   expect(wrapper.get('[data-testid="settlement-workflow"]').element.value).toBe('repayment');
   expect(preview(wrapper).rules).toMatchObject({ settlement_mode: 'disburse_then_repay', min_payment: 75, max_payment: 75 });
+  if (!wrapper.find('[data-testid="cockpit-order-flow-summary"]').exists()) await wrapper.get('[data-testid="cockpit-pay-code-canvas-flow-button"]').trigger('click');
   expect(wrapper.get('[data-testid="cockpit-order-flow-summary"]').text()).toContain('Recipient claims');
   await wrapper.get('[data-testid="settlement-workflow"]').setValue('other');
   expect(preview(wrapper).execution.metadata.settlement_workflow).toBe('collect_for_settlement');
@@ -837,17 +857,22 @@ it('keeps destinations separate by purpose and reflects the active instruction i
   const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });
   await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('100');
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
-  wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', 'instapay.gcash.mobile:09179999999');
+  if (!wrapper.findComponent({ name: 'ValueFlowDestination' }).exists()) await wrapper.get('[data-testid="open-value-flow-editor"]').trigger('click');
+  wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', 'instapay.gxchphm2xxx.account:09179999999');
   await flushPromises();
-  expect(wrapper.get('[data-testid="cockpit-order-flow-summary"]').text()).toContain('GCASH · •••• 9999');
-  expect(preview(wrapper).execution.value_flow.destination).toBe('instapay.gcash.mobile:09179999999');
+  if (!wrapper.find('[data-testid="cockpit-order-flow-summary"]').exists()) await wrapper.get('[data-testid="cockpit-pay-code-canvas-flow-button"]').trigger('click');
+  expect(wrapper.get('[data-testid="cockpit-order-flow-summary"]').text()).toContain('GXCHPHM2XXX · 09179999999');
+  expect(preview(wrapper).execution.value_flow.destination).toBe('instapay.gxchphm2xxx.account:09179999999');
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
   expect(preview(wrapper).execution).not.toHaveProperty('value_flow');
+  if (!wrapper.find('[data-testid="cockpit-order-flow-summary"]').exists()) await wrapper.get('[data-testid="cockpit-pay-code-canvas-flow-button"]').trigger('click');
   expect(wrapper.get('[data-testid="cockpit-order-flow-summary"]').text()).not.toContain('9999');
-  wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', 'instapay.maya.account:1234567890');
+  if (!wrapper.findComponent({ name: 'ValueFlowDestination' }).exists()) await wrapper.get('[data-testid="open-value-flow-editor"]').trigger('click');
+  wrapper.findComponent({ name: 'ValueFlowDestination' }).vm.$emit('update:modelValue', 'instapay.paphphm1xxx.account:09178888888');
   await flushPromises();
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-payable"] input').setValue(true);
-  expect(preview(wrapper).execution.value_flow.destination).toBe('instapay.gcash.mobile:09179999999');
+  expect(preview(wrapper).execution.value_flow.destination).toBe('instapay.gxchphm2xxx.account:09179999999');
+  if (!wrapper.find('[data-testid="cockpit-order-flow-summary"]').exists()) await wrapper.get('[data-testid="cockpit-pay-code-canvas-flow-button"]').trigger('click');
   expect(wrapper.get('[data-testid="cockpit-order-flow-summary"]').text()).toContain('9999');
 });
 
@@ -856,6 +881,7 @@ it('shows the PhilHealth review and wait before payment', async () => {
   await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('20000');
   await wrapper.get('[data-testid="cockpit-quick-generate-voucher-type-settlement"] input').setValue(true);
   await wrapper.get('[data-testid="settlement-workflow"]').setValue('philhealth');
+  if (!wrapper.find('[data-testid="cockpit-order-flow-summary"]').exists()) await wrapper.get('[data-testid="cockpit-pay-code-canvas-flow-button"]').trigger('click');
   const text = wrapper.get('[data-testid="cockpit-order-flow-summary"]').text();
   expect(text.indexOf('Patient provides')).toBeLessThan(text.indexOf('Hospital reviews'));
   expect(text.indexOf('Hospital reviews')).toBeLessThan(text.indexOf('Wait for review'));

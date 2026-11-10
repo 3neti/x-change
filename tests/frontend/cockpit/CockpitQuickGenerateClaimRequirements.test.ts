@@ -48,19 +48,92 @@ async function openClaimRequirementsPopover(
 }
 
 describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
-    it('renders the compact control inside the Order card', () => {
+    it('distinguishes a pending estimate, an error, a missing charge and a verified charge', async () => {
+        vi.useFakeTimers();
+        const fetchMock = vi.fn();
+        vi.stubGlobal('fetch', fetchMock);
+        try {
+            const wrapper = mountClaimRequirements({ props: { templates: cockpitQuickGenerateTemplates, clientFundsMinor: 100_000, mutationContract: { runtime_enabled: true, route: 'x-change.cockpit.quick-generate.store', route_url: '/x/cockpit/quick-generate', allowed_methods: ['POST'] } } });
+            await openClaimRequirementsPopover(wrapper);
+            await wrapper.get('[data-testid="cockpit-claim-requirement-option-documents"] input').setValue(true);
+            expect(wrapper.get('[data-testid="document-pricing-status"]').text()).toContain('Enter the required order details');
+            fetchMock.mockResolvedValueOnce({ ok: false, status: 422, json: async () => ({ message: 'Estimate failed' }) });
+            await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('50');
+            expect(wrapper.get('[data-testid="document-pricing-status"]').text()).toContain('Calculating');
+            await vi.advanceTimersByTimeAsync(600); await flushPromises();
+            expect(wrapper.get('[data-testid="document-pricing-status"]').text()).toContain('Could not calculate');
+            fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: { charges: [], total: 15 } }) });
+            await wrapper.get('[data-testid="document-pricing-status"] button').trigger('click'); await flushPromises();
+            expect(wrapper.get('[data-testid="document-pricing-status"]').text()).toContain('Document pricing is unavailable');
+            fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: { charges: [{ catalog_item_reference: 'inputs.fields.documents', price: 2 }], total: 17 } }) });
+            await wrapper.get('[data-testid="cockpit-quick-generate-primary-amount"]').setValue('51');
+            expect(wrapper.get('[data-testid="document-pricing-status"]').text()).toContain('Calculating');
+            await vi.advanceTimersByTimeAsync(600); await flushPromises();
+            expect(wrapper.find('[data-testid="document-pricing-status"]').exists()).toBe(false);
+        } finally { vi.unstubAllGlobals(); vi.useRealTimers(); }
+    });
+    it('includes configured claimant documents in the engineering instruction', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: { templates: cockpitQuickGenerateTemplates }, attachTo: document.body,
+            global: { stubs: { Teleport: true, CockpitPayCodeCanvas: true } },
+        });
+        await wrapper.get('input[value="documents"]').setValue(true);
+        expect(quickGenerateEngineeringPreview(wrapper).inputs.documents).toEqual([
+            {
+                key: 'document_1',
+                label: 'Document',
+                accept: [
+                    'application/pdf', 'image/jpeg', 'image/png', 'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'application/vnd.ms-excel',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv',
+                ],
+                required: true,
+            },
+        ]);
+        await openClaimRequirementsPopover(wrapper);
+        expect(wrapper.find('[data-testid="claim-document-summary"]').exists()).toBe(false);
+        await wrapper.get('[data-testid="cockpit-claim-requirement-chip-edit-documents"]').trigger('click');
+        await flushPromises();
+        await wrapper.get('[data-testid="claim-document-label-0"]').setValue('Proof of identity');
+        await wrapper.get('[data-testid="document-editor"]').findAll('button').find(button => button.text() === 'Add document')!.trigger('click');
+        expect(quickGenerateEngineeringPreview(wrapper).inputs.documents[1].label).toBe('Document 2');
+        await wrapper.get('[data-testid="document-editor"]').findAll('button').filter(button => button.text() === 'Remove document')[1].trigger('click');
+        expect(wrapper.text()).toContain('Enter the required order details to calculate the document charge.');
+        const instruction = quickGenerateEngineeringPreview(wrapper);
+        expect(instruction.inputs.fields).toContain('documents');
+        expect(instruction.inputs.documents).toMatchObject([
+            { key: 'document_1', label: 'Proof of identity', accept: expect.arrayContaining(['application/pdf', 'image/jpeg', 'text/csv']), required: true },
+        ]);
+    });
+    it('renders the compact control inside the Options dialog', async () => {
         const wrapper = mountClaimRequirements({
             props: { templates: cockpitQuickGenerateTemplates },
         });
-        const orderCard = wrapper.get(
-            '[data-testid="cockpit-quick-generate-order-card"]',
-        );
+        await wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]').trigger('click');
 
         expect(
-            orderCard
+            wrapper
                 .find('[data-testid="cockpit-claim-requirements-control"]')
                 .exists(),
         ).toBe(true);
+    });
+
+    it('opens the document editor from the pill while its remove button only removes the requirement', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: { templates: cockpitQuickGenerateTemplates }, attachTo: document.body,
+            global: { stubs: { Teleport: true, CockpitPayCodeCanvas: true } },
+        });
+        await openClaimRequirementsPopover(wrapper);
+        await wrapper.get('[data-testid="cockpit-claim-requirement-option-documents"] input').setValue(true);
+        const pill = wrapper.get('[data-testid="cockpit-claim-requirement-chip-documents"]');
+        expect(pill.get('[data-testid="cockpit-claim-requirement-chip-edit-documents"]').attributes('aria-label')).toBe('Edit Documents requirement');
+        await pill.get('[data-testid="cockpit-claim-requirement-chip-edit-documents"]').trigger('click');
+        expect(wrapper.find('[data-testid="document-editor"]').exists()).toBe(true);
+        await wrapper.findAll('button').find(button => button.text() === 'Done')!.trigger('click');
+        await pill.get('[data-testid="cockpit-claim-requirement-chip-remove"]').trigger('click');
+        expect(wrapper.find('[data-testid="cockpit-claim-requirement-chip-documents"]').exists()).toBe(false);
+        expect(quickGenerateEngineeringPreview(wrapper).inputs.fields).not.toContain('documents');
     });
 
     it('groups Evidence before Verification and Details without changing the requirement catalog', async () => {
@@ -90,6 +163,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
             'cockpit-claim-requirement-option-selfie',
             'cockpit-claim-requirement-option-signature',
             'cockpit-claim-requirement-option-location',
+            'cockpit-claim-requirement-option-documents',
         ]);
         expect(
             wrapper
@@ -179,6 +253,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
         ).toBe(false);
 
         await wrapper.get('input[value="signature"]').setValue(true);
+        await wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]').trigger('click');
 
         expect(
             wrapper
@@ -196,6 +271,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
             .get('[data-testid="cockpit-quick-generate-primary-recipient"]')
             .setValue('09173011987');
         await flushPromises();
+        await wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]').trigger('click');
 
         const mobileChip = wrapper.get(
             '[data-testid="cockpit-claim-requirement-chip-mobile"]',
@@ -253,6 +329,7 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
             .setValue(true);
         expect(quickGenerateEngineeringPreview(wrapper).inputs.fields).toContain('kyc');
 
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-start-blank"]')
             .trigger('click');
@@ -299,10 +376,12 @@ describe('Cockpit Quick Generate Claim Requirements synchronization', () => {
             },
         });
 
+        await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-repeat-last"]')
             .trigger('click');
         await flushPromises();
+        await wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]').trigger('click');
 
         expect(
             wrapper

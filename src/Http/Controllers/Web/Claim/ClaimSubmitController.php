@@ -15,6 +15,7 @@ use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
 use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Services\BuildProvisioningRequirementViewData;
+use LBHurtado\XChange\Services\Claim\ClaimDocumentEvidence;
 use LBHurtado\XChange\Services\ClaimPayoutLocalityContext;
 use LBHurtado\XChange\Services\ClaimPayoutLocalityEvidence;
 use LBHurtado\XChange\Services\Execution\DurableTreasuryPayout;
@@ -107,6 +108,7 @@ class ClaimSubmitController extends Controller
         Request $request,
     ): RedirectResponse|Response {
         $payload = $this->payloadNormalizer->normalize($state['collected_data'] ?? []);
+        app(ClaimDocumentEvidence::class)->establish($request, $voucher, (string) ($state['flow_id'] ?? ''));
         data_set($payload, '_meta.idempotency_key', $idempotencyKey);
         $onboardingReference = data_get($state, 'instructions.metadata.onboarding_reference');
 

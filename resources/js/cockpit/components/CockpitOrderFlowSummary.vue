@@ -23,7 +23,7 @@ const destinationLabel = computed(() => {
   if (props.philhealth && !props.destination) return 'Choose a hospital bank or wallet';
   if (!props.destination) return props.defaultDestination || 'Client Funds';
   const account = /^instapay\.([a-z0-9_-]+)\.(?:mobile|account):([0-9]{6,34})$/i.exec(props.destination);
-  if (account) return `${account[1].toUpperCase()} · •••• ${account[2].slice(-4)}`;
+  if (account) return `${account[1].toUpperCase()} · ${account[2]}`;
   if (props.destination.startsWith('account.mobile:')) return 'Client Funds';
   return 'Complete destination details';
 });

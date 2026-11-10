@@ -58,6 +58,7 @@ final class VoucherClaimFlowCompiler
         $instructionPayload = $this->prefillCampaignPayerName($voucher, $instructions->toArray());
         $instructionPayload = $this->prefillContactProfile($voucher, $authenticatedMobile, $instructionPayload);
         $instructionPayload = $this->prepareSettlementAttestation($voucher, $instructionPayload);
+        $instructionPayload = $this->prepareDocuments($voucher, $instructionPayload);
 
         return new CompiledVoucherClaimFlowData(
             experience: $experience,
@@ -66,6 +67,30 @@ final class VoucherClaimFlowCompiler
                 $this->splashPolicy->apply($instructionPayload),
             ),
         );
+    }
+
+    /** @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private function prepareDocuments(Voucher $voucher, array $payload): array
+    {
+        $fields = (array) data_get($voucher->metadata, 'instructions.inputs.fields', []);
+        $fields = array_map(static fn (mixed $field): mixed => $field instanceof \BackedEnum ? $field->value : $field, $fields);
+        $documents = data_get($voucher->metadata, 'instructions.inputs.documents');
+
+        if (! in_array('documents', $fields, true) || ! is_array($documents) || $documents === []) {
+            return $payload;
+        }
+
+        data_set($payload, 'metadata.voucher_code', strtoupper((string) $voucher->code));
+        $payload['steps'][] = [
+            'handler' => 'documents',
+            'config' => ['step_name' => 'documents', 'documents' => $documents],
+            'required' => true,
+            'priority' => 100,
+        ];
+
+        return $payload;
     }
 
     private function prepareSettlementAttestation(Voucher $voucher, array $payload): array

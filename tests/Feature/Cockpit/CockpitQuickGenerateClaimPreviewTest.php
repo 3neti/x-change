@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
 use LBHurtado\FormFlowManager\Handlers\SplashHandler;
+use LBHurtado\FormHandlerDocument\DocumentHandler;
 use LBHurtado\FormHandlerKYC\KYCHandler;
 use LBHurtado\FormHandlerLocation\LocationHandler;
 use LBHurtado\FormHandlerOtp\OtpHandler;
@@ -25,7 +26,20 @@ beforeEach(function (): void {
         'otp' => OtpHandler::class,
         'selfie' => SelfieHandler::class,
         'signature' => SignatureHandler::class,
+        'documents' => DocumentHandler::class,
     ]);
+});
+
+it('includes the configured document upload screen in the HTTP claim preview', function (): void {
+    actingAsTestUser();
+    $documents = [['key' => 'id', 'label' => 'Proof of identity', 'accept' => ['application/pdf'], 'required' => true]];
+    $response = $this->postJson(route('x-change.cockpit.quick-generate.claim-previews.store'), [
+        'cash' => ['amount' => 25, 'currency' => 'PHP'],
+        'inputs' => ['fields' => ['documents'], 'documents' => $documents],
+        'feedback' => ['mobile' => null], 'rider' => ['message' => null], 'dry_run' => true, 'refresh_preview' => true,
+    ])->assertSuccessful();
+    $step = collect($response->json('journey.steps'))->first(fn (array $item): bool => data_get($item, 'screen.component') === 'form-flow/documents/DocumentCapturePage');
+    expect($step)->not->toBeNull()->and(data_get($step, 'screen.props.documents'))->toBe($documents);
 });
 
 it('exposes the claim preview contract on the quick generate read model', function (): void {

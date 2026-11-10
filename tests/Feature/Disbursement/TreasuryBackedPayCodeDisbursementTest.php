@@ -5,13 +5,20 @@ declare(strict_types=1);
 use Bavix\Wallet\Models\Wallet;
 use Illuminate\Database\DatabaseTransactionsManager;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
 use LBHurtado\EmiPaynamicsConstellation\Exceptions\PendingConstellationOtpException;
+use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
+use LBHurtado\FormHandlerDocument\Events\DocumentSubmitted;
+use LBHurtado\FormHandlerDocument\Services\StoreDocumentSubmission;
+use LBHurtado\SettlementEnvelope\Services\EnvelopeService;
+use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
@@ -25,16 +32,23 @@ use LBHurtado\XChange\Actions\Disbursement\RestoreUnsubmittedPayoutCorrection;
 use LBHurtado\XChange\Actions\Funding\IssueTreasuryBackedPayCode;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalOtpAuthorizer;
+use LBHurtado\XChange\Contracts\PricingServiceContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Events\DisbursementRejected;
+use LBHurtado\XChange\Exceptions\IncompleteClaimEvidence;
+use LBHurtado\XChange\Jobs\Feedback\DeliverQueuedFeedbackSmsJob;
 use LBHurtado\XChange\Jobs\Redemption\DispatchVoucherRedemptionFeedbackJob;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PayoutDestinationRevision;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\Claim\ClaimDocumentAccess;
+use LBHurtado\XChange\Services\Claim\ClaimDocumentEvidence;
 use LBHurtado\XChange\Services\ClaimPayoutLocalityContext;
 use LBHurtado\XChange\Services\ClaimPayoutLocalityEvidence;
+use LBHurtado\XChange\Services\Commercial\LocalDocumentPricingActivation;
+use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Execution\DurableTreasuryPayout;
 use LBHurtado\XChange\Services\Execution\ExecutionAwarePostRedemptionGate;
 use LBHurtado\XChange\Services\Execution\TreasuryBackedPayCodeDisbursement;
@@ -44,6 +58,7 @@ use LBHurtado\XChange\Support\Claim\FormFlowClaimPayloadNormalizer;
 use LBHurtado\XJournal\Data\ExecutionJournalEntryData;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
+use Spatie\MediaLibrary\MediaLibraryServiceProvider;
 
 beforeEach(function (): void {
     config()->set('x-change.provider_runtime.default_provider', 'netbank');
@@ -60,6 +75,57 @@ beforeEach(function (): void {
         'max_amount' => 100_000_000,
         'fee' => 2_500,
     ]);
+});
+
+it('disburses through a simulated provider only after the required claim document is uploaded', function (): void {
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+    $catalog = config('x-commerce.catalogs.pay_code');
+    unset($catalog['items']['inputs.fields.documents']);
+    $catalog['version'] = 3;
+    config()->set('x-commerce.catalogs.pay_code', $catalog);
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:document-lifecycle');
+    app(LocalDocumentPricingActivation::class)->activate('sandbox-owner:document-lifecycle');
+    Bus::fake([DispatchVoucherRedemptionFeedbackJob::class, DeliverQueuedFeedbackSmsJob::class]);
+    $this->app->register(MediaLibraryServiceProvider::class);
+    (require __DIR__.'/../../../vendor/spatie/laravel-medialibrary/database/migrations/create_media_table.php.stub')->up();
+    (require __DIR__.'/../../../vendor/3neti/form-handler-document/database/migrations/2026_11_08_000001_create_form_flow_document_submissions.php')->up();
+    Storage::fake('local');
+    config()->set('filesystems.disks.local.visibility', 'private');
+    config()->set('document-handler.disk', 'local');
+    $documents = [['key' => 'id', 'label' => 'Identity', 'accept' => ['application/pdf'], 'required' => true]];
+    ['voucher' => $voucher] = treasuryBackedVoucherForPayout(additionalInputs: ['fields' => ['documents'], 'documents' => $documents]);
+    $persistedInstructions = VoucherInstructionsData::createFromAttribs($voucher->metadata['instructions']);
+    $estimate = app(PricingServiceContract::class)->estimate($persistedInstructions);
+    expect(data_get($voucher->metadata, 'instructions.inputs.documents.0.label'))->toBe('Identity')
+        ->and(collect($estimate['charges'])->firstWhere('catalog_item_reference', 'inputs.fields.documents')['price_minor'])->toBe(200);
+    app(EnvelopeService::class)->create($voucher->code, 'x-change.documents', '1.1.0', $voucher);
+    $flow = app(FormFlowService::class)->startFlow(FormFlowInstructionsData::from([
+        'reference_id' => 'claim-'.$voucher->code.'-test', 'steps' => [], 'metadata' => ['voucher_code' => $voucher->code],
+    ]));
+    $request = Request::create('/');
+    $request->setLaravelSession(app('session.store'));
+    $this->app->instance('request', $request);
+    $access = app(ClaimDocumentAccess::class);
+    $access->grant($request, $voucher, $flow['flow_id']);
+    app(ClaimDocumentEvidence::class)->establish($request, $voucher, $flow['flow_id']);
+    $payload = [
+        'mobile' => '09173011987', 'recipient_country' => 'PH',
+        'bank_account' => ['bank_code' => 'GXCHPHM2XXX', 'account_number' => '09173011987'],
+        'inputs' => ['documents' => []], '_meta' => ['idempotency_key' => 'document-payout-test'],
+    ];
+    $provider = fakePayoutProvider()->willReturnSuccessfulResult(transactionId: 'DOCUMENT-PAYOUT', provider: 'netbank');
+    expect(fn () => app(SubmitPayCodeClaim::class)->handle($voucher, $payload))
+        ->toThrow(IncompleteClaimEvidence::class);
+    expect($provider->lastRequest)->toBeNull();
+    $scope = $access->authorizeUpload($request, $flow['flow_id'], 'id');
+    $submission = app(StoreDocumentSubmission::class)->store(
+        UploadedFile::fake()->createWithContent('id.pdf', "%PDF-1.4\n% sample\n"), $scope,
+    );
+    event(new DocumentSubmitted($flow['flow_id'], $submission));
+    $payload['inputs']['documents'] = [['key' => 'id', 'reference' => $submission->reference]];
+    $result = app(SubmitPayCodeClaim::class)->handle($voucher->refresh(), $payload);
+    expect($result->status)->toBe('succeeded')->and($provider->lastRequest)->not->toBeNull();
 });
 
 it('uses the claim locality in the treasury-backed payout', function (): void {
@@ -1291,7 +1357,7 @@ it('resumes the known pre-provider reference persistence failure exactly once', 
 /**
  * @return array{issuer: object, voucher: Voucher}
  */
-function treasuryBackedVoucherForPayout(bool $withLocation = false): array
+function treasuryBackedVoucherForPayout(bool $withLocation = false, array $additionalInputs = []): array
 {
     $issuer = actingAsTestUser();
     enableNetbankTreasuryForTests();
@@ -1337,6 +1403,9 @@ function treasuryBackedVoucherForPayout(bool $withLocation = false): array
     )->toArray();
     if ($withLocation) {
         data_set($instructions, 'inputs.fields', ['location']);
+    }
+    if ($additionalInputs !== []) {
+        data_set($instructions, 'inputs', $additionalInputs);
     }
     $voucher = app(IssueTreasuryBackedPayCode::class)->handle(
         issuer: $issuer,

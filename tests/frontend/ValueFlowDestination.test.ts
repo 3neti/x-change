@@ -2,8 +2,17 @@ import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import ValueFlowDestination from '../../resources/js/components/x-change-shared-financial/ValueFlowDestination.vue';
 import BankEMISelect from '../../resources/js/components/x-change-shared-financial/BankEMISelect.vue';
+import { isValidValueFlowDestination } from '../../resources/js/cockpit/valueFlowValidation';
 
 describe('voucher value destination', () => {
+    it('rejects incomplete destinations and invalid wallet numbers before issuance', () => {
+        expect(isValidValueFlowDestination('')).toBe(true);
+        expect(isValidValueFlowDestination('instapay..account:')).toBe(false);
+        expect(isValidValueFlowDestination('instapay.gxchphm2xxx.account:')).toBe(false);
+        expect(isValidValueFlowDestination('instapay.gxchphm2xxx.account:639179999999')).toBe(false);
+        expect(isValidValueFlowDestination('instapay.paphphm1xxx.account:09179999999')).toBe(true);
+        expect(isValidValueFlowDestination('instapay.unknown.account:09179999999')).toBe(false);
+    });
     it('uses the shared institution picker and preserves leading account zeroes', async () => {
         const wrapper = mount(ValueFlowDestination, { props: { storedValue: true } });
         await wrapper.get('select').setValue(true);

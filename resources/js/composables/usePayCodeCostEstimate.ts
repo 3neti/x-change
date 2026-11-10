@@ -70,9 +70,12 @@ export function usePayCodeCostEstimate(
 
     function scheduleEstimate(): void {
         clearEstimateTimer();
+        estimateRequestId++;
+        estimateAbortController?.abort();
+        estimateError.value = null;
+        estimating.value = false;
 
         if (typeof window === 'undefined' || !canEstimate.value) {
-            estimateAbortController?.abort();
             estimate.value = null;
             estimatePayload.value = null;
             estimateError.value = null;

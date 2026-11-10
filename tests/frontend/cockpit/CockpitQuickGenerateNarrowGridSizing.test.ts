@@ -129,7 +129,7 @@ describe('Cockpit Quick Generate narrow essentials grid sizing', () => {
         ).toBe(true);
         expect(
             orderCard
-                .find('[data-testid="cockpit-claim-requirements-control"]')
+                .find('[data-testid="cockpit-quick-generate-order-options-toggle"]')
                 .exists(),
         ).toBe(true);
         expect(

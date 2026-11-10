@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "20b2f8819dbaa45b943b26f7e802990b",
+    "content-hash": "2771b2be4759ffd94a6aa6b0b61e543d",
     "packages": [
         {
             "name": "3neti/cash",
@@ -378,6 +378,57 @@
                 "source": "https://github.com/3neti/form-flow/tree/v1.11.0"
             },
             "time": "2026-10-19T15:22:42+00:00"
+        },
+        {
+            "name": "3neti/form-handler-document",
+            "version": "v1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/3neti/form-handler-document.git",
+                "reference": "7bc95be3c61d731627065dea3abd00a67ce1ff01"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/3neti/form-handler-document/zipball/7bc95be3c61d731627065dea3abd00a67ce1ff01",
+                "reference": "7bc95be3c61d731627065dea3abd00a67ce1ff01",
+                "shasum": ""
+            },
+            "require": {
+                "3neti/form-flow": "^1.11",
+                "ext-zip": "*",
+                "illuminate/support": "^12.0 || ^13.0",
+                "php": "^8.2",
+                "spatie/laravel-medialibrary": "^11.21"
+            },
+            "require-dev": {
+                "inertiajs/inertia-laravel": "^2.0 || ^3.0",
+                "orchestra/testbench": "^10.3 || ^11.0",
+                "pestphp/pest": "^3.8 || ^4.0",
+                "pestphp/pest-plugin-laravel": "^3.2 || ^4.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "LBHurtado\\FormHandlerDocument\\DocumentHandlerServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "LBHurtado\\FormHandlerDocument\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Private document upload handler for form-flow",
+            "support": {
+                "issues": "https://github.com/3neti/form-handler-document/issues",
+                "source": "https://github.com/3neti/form-handler-document/tree/v1.0.0"
+            },
+            "time": "2026-11-10T13:11:36+00:00"
         },
         {
             "name": "3neti/form-handler-kyc",
@@ -1201,16 +1252,16 @@
         },
         {
             "name": "3neti/settlement-envelope",
-            "version": "v1.5.0",
+            "version": "v1.6.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/settlement-envelope.git",
-                "reference": "f8af1fe2aa593b7b73a2318d36dec94b5bbd8b48"
+                "reference": "eefa23925c1f63300e90a8bebbf24fda30efd7b4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/settlement-envelope/zipball/f8af1fe2aa593b7b73a2318d36dec94b5bbd8b48",
-                "reference": "f8af1fe2aa593b7b73a2318d36dec94b5bbd8b48",
+                "url": "https://api.github.com/repos/3neti/settlement-envelope/zipball/eefa23925c1f63300e90a8bebbf24fda30efd7b4",
+                "reference": "eefa23925c1f63300e90a8bebbf24fda30efd7b4",
                 "shasum": ""
             },
             "require": {
@@ -1253,9 +1304,9 @@
             "description": "Driver-based evidence envelope system for settlement gating",
             "support": {
                 "issues": "https://github.com/3neti/settlement-envelope/issues",
-                "source": "https://github.com/3neti/settlement-envelope/tree/v1.5.0"
+                "source": "https://github.com/3neti/settlement-envelope/tree/v1.6.0"
             },
-            "time": "2026-11-02T02:25:08+00:00"
+            "time": "2026-11-10T12:25:30+00:00"
         },
         {
             "name": "3neti/settlement-envelope-aui",
@@ -1309,16 +1360,16 @@
         },
         {
             "name": "3neti/settlement-envelope-philhealth",
-            "version": "v1.1.0",
+            "version": "v1.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/settlement-envelope-philhealth.git",
-                "reference": "9fcf987c07b20294776b2eaedbd967a155b236fe"
+                "reference": "db9fdf7110e6b97994fc15dac9fca14ceb569869"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/settlement-envelope-philhealth/zipball/9fcf987c07b20294776b2eaedbd967a155b236fe",
-                "reference": "9fcf987c07b20294776b2eaedbd967a155b236fe",
+                "url": "https://api.github.com/repos/3neti/settlement-envelope-philhealth/zipball/db9fdf7110e6b97994fc15dac9fca14ceb569869",
+                "reference": "db9fdf7110e6b97994fc15dac9fca14ceb569869",
                 "shasum": ""
             },
             "require": {
@@ -1352,22 +1403,22 @@
             "description": "Synthetic PhilHealth BST demonstration integration for settlement envelopes",
             "support": {
                 "issues": "https://github.com/3neti/settlement-envelope-philhealth/issues",
-                "source": "https://github.com/3neti/settlement-envelope-philhealth/tree/v1.1.0"
+                "source": "https://github.com/3neti/settlement-envelope-philhealth/tree/v1.2.0"
             },
-            "time": "2026-09-25T12:09:08+00:00"
+            "time": "2026-11-10T13:23:37+00:00"
         },
         {
             "name": "3neti/voucher",
-            "version": "v1.5.0",
+            "version": "v1.6.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/voucher.git",
-                "reference": "b13df84ce1dd1d05ff8cc1a42a71fc3f14f851c0"
+                "reference": "80705b888a26e95f58c373dd1e837468a3ef7bf9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/voucher/zipball/b13df84ce1dd1d05ff8cc1a42a71fc3f14f851c0",
-                "reference": "b13df84ce1dd1d05ff8cc1a42a71fc3f14f851c0",
+                "url": "https://api.github.com/repos/3neti/voucher/zipball/80705b888a26e95f58c373dd1e837468a3ef7bf9",
+                "reference": "80705b888a26e95f58c373dd1e837468a3ef7bf9",
                 "shasum": ""
             },
             "require": {
@@ -1435,7 +1486,7 @@
                 "issues": "https://github.com/3neti/voucher/issues",
                 "source": "https://github.com/3neti/voucher"
             },
-            "time": "2026-11-07T05:19:10+00:00"
+            "time": "2026-11-10T12:25:20+00:00"
         },
         {
             "name": "3neti/wallet",
@@ -1681,11 +1732,11 @@
         },
         {
             "name": "3neti/x-commerce",
-            "version": "v1.4.6",
+            "version": "v1.5.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/x-commerce.git",
-                "reference": "9e652de8f83c959c6d9059b9c68cf2167eaceece"
+                "reference": "45d8feacf94d1955f5b0269cd7023d79717c23a9"
             },
             "require": {
                 "illuminate/http": "^11.0|^12.0|^13.0",
@@ -1739,7 +1790,7 @@
                 "pricing",
                 "x-change"
             ],
-            "time": "2026-10-20T22:21:48+00:00"
+            "time": "2026-11-10T12:25:40+00:00"
         },
         {
             "name": "3neti/x-feedback",

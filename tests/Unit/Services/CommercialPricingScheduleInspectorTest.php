@@ -5,22 +5,40 @@ declare(strict_types=1);
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Services\Commercial\CommercialCustomerChargingGuard;
 use LBHurtado\XChange\Services\Commercial\CommercialPricingScheduleInspector;
+use LBHurtado\XCommerce\Data\CommercialCatalogData;
+
+it('adds only the authorized document fee to the previously approved catalog', function (): void {
+    $catalog = config('x-commerce.catalogs.pay_code');
+    expect($catalog['items']['inputs.fields.documents'])->toMatchArray([
+        'unit_price_minor' => 200,
+        'category' => 'input_fields',
+    ]);
+
+    unset($catalog['items']['inputs.fields.documents']);
+    $catalog['version'] = 4;
+    $previous = CommercialCatalogData::fromArray($catalog);
+    $hash = hash('sha256', json_encode($previous->toArray(), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
+
+    expect($hash)->toBe('6a712efc68dd14664fe8dd33e236aaf003376aeb8ac9ec1437634200e7d16fef')
+        ->and(config('x-change.commercial.pricing_schedule.prior_approval_reference'))
+        ->toBe('management-approval:2026-10-23:lester-hurtado');
+});
 
 it('reconciles the approved beta schedule while withholding customer charging', function (): void {
     $status = app(CommercialPricingScheduleInspector::class)->inspect();
 
     expect($status)->toMatchArray([
         'reference' => 'beta-pricing-schedule-v1',
-        'version' => 2,
+        'version' => 3,
         'status' => 'approved',
-        'effective_at' => '2026-09-27T00:00:00+08:00',
+        'effective_at' => '2026-11-10T00:00:00+08:00',
         'currency' => 'PHP',
         'schedule_ready' => true,
         'customer_charging_ready' => false,
         'customer_charging_authorized' => false,
     ])->and($status['catalog'])->toMatchArray([
         'reference' => 'pay-code',
-        'version' => 4,
+        'version' => 5,
         'matches_approved_schedule' => true,
     ])->and($status['principal'])->toMatchArray([
         'treatment' => 'excluded',

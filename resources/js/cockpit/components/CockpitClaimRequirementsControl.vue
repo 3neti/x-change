@@ -33,17 +33,20 @@ const props = withDefaults(
         presets?: CockpitClaimRequirementPreset[];
         disabled?: boolean;
         helpTooltip?: string;
+        editableValues?: string[];
     }>(),
     {
         presets: () => [],
         disabled: false,
         helpTooltip: '',
+        editableValues: () => [],
     },
 );
 
 const emit = defineEmits<{
     toggle: [value: string, selected: boolean];
     preset: [key: string];
+    edit: [value: string];
 }>();
 
 const open = ref(false);
@@ -264,7 +267,8 @@ function applyPreset(key: string): void {
                         class="size-3"
                         aria-hidden="true"
                     />
-                    {{ chip.label }}
+                    <button v-if="editableValues.includes(chip.value)" type="button" :disabled="disabled" :aria-label="`Edit ${chip.label} requirement`" :data-testid="`cockpit-claim-requirement-chip-edit-${chip.value}`" class="rounded underline decoration-dotted underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600" @click="emit('edit', chip.value)">{{ chip.label }}</button>
+                    <template v-else>{{ chip.label }}</template>
                     <Lock
                         v-if="chip.locked"
                         class="size-3"

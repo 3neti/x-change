@@ -52,6 +52,17 @@ function validateClaimInstructionRequest(string $requestClass, array $payload): 
     return $validator;
 }
 
+it('preserves document definitions through pricing and issuance request validation', function (string $requestClass): void {
+    $payload = validClaimInstructionPayload([]);
+    unset($payload['claim']);
+    $payload['inputs'] = ['fields' => ['documents'], 'documents' => [[
+        'key' => 'id', 'label' => 'Proof of identity', 'accept' => ['application/pdf'], 'required' => true,
+    ]]];
+    $validator = validateClaimInstructionRequest($requestClass, $payload);
+    expect($validator->errors()->all())->toBeEmpty()
+        ->and(data_get($validator->validated(), 'inputs.documents'))->toBe($payload['inputs']['documents']);
+})->with([[GeneratePayCodeRequest::class], [EstimatePayCodeRequest::class]]);
+
 it('retains v2 PhilHealth execution during pricing and accepts its zero disbursement', function (): void {
     $payload = validClaimInstructionPayload([]);
     unset($payload['claim']);
@@ -68,6 +79,18 @@ it('retains v2 PhilHealth execution during pricing and accepts its zero disburse
     expect($validator->errors()->all())->toBeEmpty()
         ->and(data_get($validator->validated(), 'execution'))->toBe($payload['execution']);
     unset($payload['execution']);
+    expect(validateClaimInstructionRequest(EstimatePayCodeRequest::class, $payload)->errors()->has('cash.amount'))->toBeTrue();
+});
+
+it('accepts a zero cash amount when estimating a payable with a positive collection target', function (): void {
+    $payload = validClaimInstructionPayload([]);
+    unset($payload['claim']);
+    $payload['cash']['amount'] = 0;
+    $payload['voucher_type'] = 'payable';
+    $payload['target_amount'] = 100;
+    $validator = validateClaimInstructionRequest(EstimatePayCodeRequest::class, $payload);
+    expect($validator->errors()->all())->toBeEmpty();
+    $payload['target_amount'] = 0;
     expect(validateClaimInstructionRequest(EstimatePayCodeRequest::class, $payload)->errors()->has('cash.amount'))->toBeTrue();
 });
 

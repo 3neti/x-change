@@ -74,7 +74,7 @@ describe('Claim Experience editor', () => {
     it('explains Collect and Settle without changing the Order or Pay Code cards', async () => {
         const wrapper = editor();
         const orderCard = wrapper.get('[data-testid="cockpit-quick-generate-order-card"]');
-        expect(orderCard.find('[data-testid="cockpit-value-use-control"]').exists()).toBe(true);
+        expect(orderCard.find('[data-testid="cockpit-quick-generate-order-options-toggle"]').exists()).toBe(true);
         expect(orderCard.find('[data-testid="cockpit-claim-experience-navigation"]').exists()).toBe(false);
         await wrapper.get('[data-testid="cockpit-claim-experience-nav-quick-generate-contract-validation"]').trigger('click');
         expect((wrapper.get('#quick-generate-contract-validation').element as HTMLDetailsElement).open).toBe(true);
@@ -88,7 +88,7 @@ describe('Claim Experience editor', () => {
         await wrapper.get('[data-testid="cockpit-quick-generate-target-amount"]').setValue('75');
         expect(wrapper.get('[data-testid="cockpit-claim-experience-overview"]').text()).toContain('Settle journey');
         expect(payload(wrapper).target_amount).toBe(75);
-        expect(orderCard.find('[data-testid="cockpit-value-use-control"]').exists()).toBe(true);
+        expect(orderCard.find('[data-testid="cockpit-quick-generate-order-options-toggle"]').exists()).toBe(true);
     });
 
     it('blocks a collection target from retaining a release slice plan', async () => {

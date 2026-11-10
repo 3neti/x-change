@@ -26,6 +26,9 @@ final readonly class ActivateCommercialComponentEconomics
         ?Model $actor = null,
         ?string $authorizationReference = null,
     ): CommercialComponentEconomicsActivation {
+        if ($authority === CommercialActivationAuthority::LocalSandbox && ! app()->environment(['local', 'testing'])) {
+            throw new \DomainException('Local sandbox authority is unavailable outside local testing.');
+        }
         $activationReference = trim($activationReference);
         if ($activationReference === '') {
             throw new \DomainException('Commercial Component Economics activation requires a stable reference.');
