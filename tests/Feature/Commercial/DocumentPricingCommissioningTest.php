@@ -98,7 +98,9 @@ it('commissions the fee once while preserving existing prices and economics', fu
         ->and(collect($economics->components)->firstWhere('componentReference', 'cash.amount')->toArray())
         ->toBe(collect($oldEconomics->components)->firstWhere('componentReference', 'cash.amount')->toArray())
         ->and(app(CommissionDocumentPricing::class)->execute($operator, 'owner-request:test')->id)->toBe($activation->id)
-        ->and($activation->offering->authorization_reference)->toBe('owner-request:test');
+        ->and($activation->offering->authorization_reference)->toBe('owner-request:test')
+        ->and($after->legalTrace->invariantReferences)->not->toContain('x-legal:invariant:maker-checker-publication')
+        ->and($after->legalTrace->traceReferences)->toContain('prior-offering:'.$before->snapshotHash());
 
     $event = ExecutionJournalEntry::query()->where('event_type', 'commercial.offering.single_operator_authorized')->sole();
     expect(data_get($event->actor, 'id'))->toBe((string) $operator->getKey())

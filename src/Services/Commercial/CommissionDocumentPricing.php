@@ -23,6 +23,7 @@ use LBHurtado\XCommerce\Data\CommercialCatalogData;
 use LBHurtado\XCommerce\Data\CommercialCatalogItemData;
 use LBHurtado\XCommerce\Data\CommercialComponentEconomicsData;
 use LBHurtado\XCommerce\Data\CommercialComponentEconomicsSetData;
+use LBHurtado\XCommerce\Data\CommercialLegalTraceData;
 use LBHurtado\XCommerce\Data\CommercialOfferingData;
 
 final readonly class CommissionDocumentPricing
@@ -112,9 +113,20 @@ final readonly class CommissionDocumentPricing
                 [...$currentSet->components, $documentEconomics],
             );
             $version = (int) CommercialOffering::query()->where('reference', $original->reference)->max('version') + 1;
+            $priorTrace = $original->legalTrace;
+            $trace = new CommercialLegalTraceData(
+                jurisdiction: $priorTrace->jurisdiction,
+                legalEntityReference: $priorTrace->legalEntityReference,
+                profile: $priorTrace->profile,
+                profileVersion: $priorTrace->profileVersion,
+                decision: $priorTrace->decision,
+                decisionReferences: $priorTrace->decisionReferences,
+                invariantReferences: array_values(array_diff($priorTrace->invariantReferences, ['x-legal:invariant:maker-checker-publication'])),
+                traceReferences: [...$priorTrace->traceReferences, 'prior-offering:'.$previous->snapshot_hash, 'single-operator:'.$authorizationReference],
+            );
             $offering = $this->legalTrace->forPublication(new CommercialOfferingData(
                 $original->reference, $version, $catalog, $original->waterfallPolicy, $original->attributionPolicy,
-                $original->legalTrace, now()->toIso8601String(),
+                $trace, now()->toIso8601String(),
             ));
             $manifest = $this->offeringManifests->compile('pay_code', $offering);
             $record = CommercialOffering::query()->create([
