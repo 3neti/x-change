@@ -39,6 +39,20 @@ it('rejects an unauthorized operator through the commissioning command', functio
     ])->assertFailed();
 });
 
+it('commissions through the command with one authorized operator', function (): void {
+    $operator = actingAsTestUser();
+    CommercialOperatorAuthorization::query()->create([
+        'operator_type' => $operator->getMorphClass(), 'operator_id' => $operator->getKey(),
+        'capability' => CommercialOperatorCapability::CommissionDocumentPricing->value,
+        'authorization_reference' => 'owner-request:command', 'valid_from' => now()->subMinute(),
+    ]);
+    $this->artisan('x-change:commercial:commission-document-pricing', [
+        'operator' => $operator->getKey(), '--authorization-reference' => 'owner-request:command',
+    ])->assertSuccessful();
+    expect(collect(app(CommercialOfferingResolverContract::class)->resolve('pay_code')->catalog->items)
+        ->firstWhere('reference', 'inputs.fields.documents')->unitPriceMinor)->toBe(200);
+});
+
 it('rejects an authorization reference that does not belong to the operator', function (): void {
     $operator = actingAsTestUser();
     CommercialOperatorAuthorization::query()->create([
