@@ -78,7 +78,8 @@ it('keeps cockpit pages inside the single package-owned host shell', function ()
         )
         ->and($documentationPage)->toContain(
             "import Documentation from '../../../cockpit/pages/Documentation.vue';",
-            '<Documentation v-bind="$attrs" />',
+            'const props = useAttrs()',
+            '<Documentation v-bind="props" />',
         )
         ->and($documentationWorkspace)->toContain('defineOptions({ inheritAttrs: false });');
 
