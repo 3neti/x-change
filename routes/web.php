@@ -225,7 +225,8 @@ Route::get('x/claim/{code}/share-card.png', ClaimShareCardController::class)
     ->name('x-change.claim.share-card');
 
 Route::middleware(['web', ShareXChangeBranding::class])->group(function (): void {
-    Route::redirect('docs/api', '/x/developers')->name('x-change.developer-access.legacy');
+    Route::get('docs/api', [DeveloperAccessPageController::class, 'legacy'])
+        ->name('x-change.developer-access.legacy');
     Route::get('x/developers', DeveloperAccessPageController::class)
         ->middleware('throttle:60,1,developer-access:')
         ->name('x-change.developer-access.show');
