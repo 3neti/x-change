@@ -16,6 +16,7 @@ use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Models\PartnerApiClient;
 use LBHurtado\XChange\Models\PartnerApiOperation;
+use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 function partnerApiIssuer(array $scopes, array $mandate = []): array
@@ -274,4 +275,63 @@ it('requires an idempotency key and the exact OAuth scope', function () {
     $this->postJson('/api/partner/v1/pay-codes', partnerApiPayCodePayload())
         ->assertUnprocessable()
         ->assertJsonValidationErrors('_partner.idempotency_key');
+});
+
+it('issues and replays an actual pay code for a simulated partner account', function (): void {
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:partner-api-simulation');
+    [$issuer] = partnerApiIssuer(['pay-codes:estimate', 'pay-codes:issue', 'pay-codes:read', 'pay-codes:cancel']);
+    $payload = [
+        'external_reference' => 'documented-example-001',
+        'cash' => ['amount' => 100, 'currency' => 'PHP', 'validation' => ['mobile' => '09171234567']],
+        'inputs' => ['fields' => []],
+        'feedback' => ['mobile' => null],
+        'rider' => ['message' => null],
+        'count' => 1,
+    ];
+    $headers = ['Idempotency-Key' => 'simulated-real-issuance'];
+
+    $this->postJson('/api/partner/v1/pay-code-estimates', $payload)->assertSuccessful();
+    $issued = $this->postJson('/api/partner/v1/pay-codes', $payload, $headers)->assertCreated();
+    $code = $issued->json('data.code');
+    expect($code)->toBeString()->not->toBeEmpty();
+    $this->postJson('/api/partner/v1/pay-codes', $payload, $headers)
+        ->assertOk()->assertJsonPath('data.code', $code)->assertJsonPath('meta.idempotency.replayed', true);
+    $this->getJson('/api/partner/v1/pay-codes/'.$code)->assertOk();
+    $payload['cash']['amount'] = 101;
+    $this->postJson('/api/partner/v1/pay-codes', $payload, $headers)->assertStatus(409);
+    $this->postJson('/api/partner/v1/pay-codes/'.$code.'/cancellation', ['reason' => 'Simulation complete'], ['Idempotency-Key' => 'simulated-cancellation'])->assertOk();
+});
+
+it('obtains a real OAuth token and issues a pay code against simulated funds', function (): void {
+    $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+    expect($key)->not->toBeFalse();
+    openssl_pkey_export($key, $privateKey);
+    $details = openssl_pkey_get_details($key);
+    config()->set('passport.private_key', $privateKey);
+    config()->set('passport.public_key', $details['key']);
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:partner-oauth-simulation');
+    $issuer = User::query()->create(['name' => 'Test Issuer', 'email' => 'oauth-'.str()->uuid().'@example.test', 'password' => Hash::make('test-password')]);
+    fundTestUserWallet($issuer);
+    $credential = app(CreatePartnerApiClient::class)->handle(
+        name: 'OAuth Simulation', issuer: $issuer, scopes: ['capabilities:read', 'pay-codes:estimate', 'pay-codes:issue', 'pay-codes:read', 'pay-codes:cancel'],
+    );
+    $token = $this->postJson('/oauth/token', [
+        'grant_type' => 'client_credentials', 'client_id' => $credential->client_id,
+        'client_secret' => $credential->client_secret, 'scope' => implode(' ', $credential->scopes),
+    ])->assertOk()->json('access_token');
+    expect($token)->toBeString()->not->toBeEmpty();
+    $this->withToken($token)->getJson('/api/partner/v1/capabilities')->assertOk();
+    $payload = [
+        'external_reference' => 'oauth-simulation-001', 'cash' => ['amount' => 100, 'currency' => 'PHP', 'validation' => ['mobile' => '09171234567']],
+        'inputs' => ['fields' => []], 'feedback' => ['mobile' => null], 'rider' => ['message' => null], 'count' => 1,
+    ];
+    $this->withToken($token)->postJson('/api/partner/v1/pay-code-estimates', $payload)->assertOk();
+    $response = $this->withToken($token)->postJson('/api/partner/v1/pay-codes', $payload, ['Idempotency-Key' => 'oauth-simulation-001'])->assertCreated();
+    $code = $response->json('data.code');
+    $this->withToken($token)->getJson('/api/partner/v1/pay-codes/'.$code)->assertOk();
+    $this->withToken($token)->postJson('/api/partner/v1/pay-codes/'.$code.'/cancellation', ['reason' => 'Simulation complete'], ['Idempotency-Key' => 'oauth-cancel-001'])->assertOk();
 });
