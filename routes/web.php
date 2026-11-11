@@ -188,6 +188,7 @@ use LBHurtado\XChange\Http\Controllers\Web\PublicIssuanceRecoveryController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicOnboarding\AutoRegisterMutationController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicOnboarding\AutoRegisterPageController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicPricingPageController;
+use LBHurtado\XChange\Http\Controllers\Web\DeveloperAccessPageController;
 use LBHurtado\XChange\Http\Controllers\Web\StampPreviewController;
 use LBHurtado\XChange\Http\Controllers\Web\StampRenderingComparisonController;
 use LBHurtado\XChange\Http\Controllers\Web\StoredValueCollectionController;
@@ -224,6 +225,10 @@ Route::get('x/claim/{code}/share-card.png', ClaimShareCardController::class)
     ->name('x-change.claim.share-card');
 
 Route::middleware(['web', ShareXChangeBranding::class])->group(function (): void {
+    Route::redirect('docs/api', '/x/developers')->name('x-change.developer-access.legacy');
+    Route::get('x/developers', DeveloperAccessPageController::class)
+        ->middleware('throttle:60,1,developer-access:')
+        ->name('x-change.developer-access.show');
     Route::get('x/pricing', PublicPricingPageController::class)
         ->middleware('throttle:60,1,public-pricing-page:')
         ->name('x-change.pricing.show');

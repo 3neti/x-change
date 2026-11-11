@@ -51,6 +51,13 @@ export const cockpitNavigationItems: CockpitNavigationItem[] = [
         description: 'Deployment and runtime checks',
     },
     {
+        key: 'developer-access',
+        label: 'Developer Access',
+        href: '/x/developers',
+        group: 'secondary',
+        description: 'API and MCP integration',
+    },
+    {
         key: 'documentation',
         label: 'Guides',
         href: '/x/cockpit/documentation',

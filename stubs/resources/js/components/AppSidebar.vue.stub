@@ -41,6 +41,7 @@ import {
     quickGenerate,
 } from '@/routes/x-change/cockpit';
 import accounts from '@/routes/x-change/cockpit/accounts';
+import { show as developerAccess } from '@/routes/x-change/developer-access';
 import apiPartners from '@/routes/x-change/cockpit/api-partners';
 import campaigns from '@/routes/x-change/cockpit/campaigns';
 import commercial from '@/routes/x-change/cockpit/commercial';
@@ -146,6 +147,12 @@ const accountHelpItems: XChangeNavigationItem[] = [
         description: 'Workflows and terminology',
         href: documentation(),
         icon: BookOpen,
+    },
+    {
+        title: 'Developer Access',
+        description: 'API and MCP integration',
+        href: developerAccess(),
+        icon: PlugZap,
     },
 ];
 

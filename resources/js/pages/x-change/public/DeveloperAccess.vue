@@ -1,0 +1,53 @@
+<script setup lang="ts">
+import { Head } from '@inertiajs/vue3';
+import { computed, onMounted, ref } from 'vue';
+
+defineOptions({ layout: undefined });
+const props = withDefaults(defineProps<{ access_contact: string | null; spec_url: string; partner_enabled: boolean; mcp_enabled: boolean; public_mcp_enabled: boolean; partner_prefix?: string; mcp_endpoint?: string; public_mcp_endpoint?: string }>(), { partner_prefix: '/api/partner/v1', mcp_endpoint: '/mcp/x-change', public_mcp_endpoint: '/mcp/x-change/public' });
+type Operation = { method: string; path: string; summary: string; scopes: string[]; request: string | null; responses: string[] };
+const operations = ref<Operation[]>([]);
+const unavailable = ref(false);
+const copied = ref('');
+const origin = typeof window === 'undefined' ? 'https://your-host.example' : window.location.origin;
+const examples = computed(() => [
+  { title: '1. Obtain a token', code: `curl -X POST '${origin}/oauth/token' \\\n  -d 'grant_type=client_credentials' \\\n  -d 'client_id=YOUR_CLIENT_ID' \\\n  -d 'client_secret=YOUR_CLIENT_SECRET' \\\n  -d 'scope=capabilities:read pay-codes:estimate pay-codes:issue pay-codes:read'` },
+  { title: '2. Estimate', code: `curl -X POST '${origin}${props.partner_prefix}/pay-code-estimates' \\\n  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' -H 'Content-Type: application/json' \\\n  -d '{"cash":{"amount":100,"currency":"PHP","validation":{"mobile":"09171234567"}},"inputs":{"fields":[]},"feedback":{"mobile":null},"rider":{"message":null},"count":1}'` },
+  { title: '3. Issue once', code: `curl -X POST '${origin}${props.partner_prefix}/pay-codes' \\\n  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' -H 'Content-Type: application/json' \\\n  -H 'Idempotency-Key: YOUR_STABLE_UNIQUE_KEY' \\\n  -d '{"external_reference":"YOUR_UNIQUE_REFERENCE","cash":{"amount":100,"currency":"PHP","validation":{"mobile":"09171234567"}},"inputs":{"fields":[]},"feedback":{"mobile":null},"rider":{"message":null},"count":1}'` },
+  { title: '4. Check the Pay Code', code: `curl '${origin}${props.partner_prefix}/pay-codes/YOUR_PAY_CODE' \\\n  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'` },
+  { title: 'Public Auto Generate: estimate', code: `curl -X POST '${origin}/api/x/v1/public-issuance/estimate' -H 'Content-Type: application/json' -d '{"amount_minor":2500,"currency":"PHP"}'` },
+  { title: 'Public Auto Generate: prepare handoff', code: `curl -X POST '${origin}/api/x/v1/public-issuance/handoff' -H 'Content-Type: application/json' -d '{"amount_minor":2500,"currency":"PHP"}'` },
+]);
+async function copy(text: string, title: string) {
+  try { await navigator.clipboard.writeText(text); copied.value = title; } catch { copied.value = 'Copy unavailable'; }
+}
+onMounted(async () => {
+  try {
+    const response = await fetch(props.spec_url, { headers: { Accept: 'application/json' } });
+    if (!response.ok) throw new Error('Specification unavailable');
+    const spec = await response.json();
+    const paths = ['/capabilities', '/pay-code-estimates', '/pay-codes', '/pay-codes/{code}', '/pay-codes/{code}/cancellation'];
+    operations.value = paths.flatMap((path) => Object.entries(spec.paths?.[path] ?? {}).map(([method, value]) => {
+      const operation = value as { summary?: string; security?: Record<string, string[]>[]; requestBody?: { content?: Record<string, { schema?: Record<string, unknown> }> }; responses?: Record<string, { description?: string }> };
+      const schema = operation.requestBody?.content?.['application/json']?.schema;
+      const reference = typeof schema?.$ref === 'string' ? schema.$ref.split('/').at(-1) : null;
+      const request = reference && spec.components?.schemas?.[reference] ? spec.components.schemas[reference] : schema;
+      return { method: method.toUpperCase(), path, summary: operation.summary ?? '', scopes: operation.security?.flatMap((item) => item.partnerOAuth ?? []) ?? [], request: request ? JSON.stringify(request, null, 2) : null, responses: Object.entries(operation.responses ?? {}).map(([status, response]) => `${status} · ${response.description ?? ''}`) };
+    }));
+    if (!operations.value.length) unavailable.value = true;
+  } catch { unavailable.value = true; }
+});
+</script>
+<template>
+  <div class="min-h-screen bg-slate-950 text-slate-100">
+    <Head title="Developer Access" />
+    <header class="border-b border-white/10 px-5 py-5"><div class="mx-auto flex max-w-6xl items-center justify-between"><a href="/" class="font-semibold tracking-wide">X-Change</a><a href="/x/auto-generate" class="text-sm text-slate-300 hover:text-white">Create a Pay Code →</a></div></header>
+    <main class="mx-auto max-w-6xl space-y-12 px-5 py-12 sm:py-20">
+      <section class="max-w-3xl space-y-5"><p class="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">Developer access</p><h1 class="text-4xl font-semibold tracking-tight sm:text-5xl">Build with Pay Codes.</h1><p class="text-lg leading-relaxed text-slate-300">Integrate Pay Code issuance through the Partner API, or connect an AI application using MCP.</p><a v-if="access_contact" :href="`mailto:${access_contact}`" class="inline-flex rounded-full bg-cyan-300 px-5 py-3 font-semibold text-slate-950">Request access</a><p v-else class="text-sm text-slate-400">Contact your X-Change operator to request access.</p></section>
+      <section class="grid gap-4 md:grid-cols-2"><article class="rounded-2xl border border-white/10 bg-white/5 p-6"><h2 class="text-xl font-semibold">HTTP Partner API</h2><p class="mt-3 text-slate-300">Use OAuth client credentials to estimate, issue, and inspect Pay Codes for your authorized account.</p><p class="mt-4 text-sm text-slate-400">{{ partner_enabled ? 'Partner API enabled on this instance.' : 'Partner API access is not enabled on this instance.' }}</p></article><article class="rounded-2xl border border-white/10 bg-white/5 p-6"><h2 class="text-xl font-semibold">MCP for AI applications</h2><p class="mt-3 text-slate-300">Connect to <code>{{ mcp_endpoint }}</code> with a Partner API bearer token and the required scopes. Issuance requires confirmation and a stable idempotency key.</p><p class="mt-4 text-sm text-amber-300">For issue_pay_code, supply a unique external_reference and confirm the issuance after reviewing its estimate.</p><p class="mt-4 text-sm text-slate-400">{{ mcp_enabled ? 'Authenticated MCP enabled.' : 'Authenticated MCP not enabled.' }} {{ public_mcp_enabled ? `The public MCP at ${public_mcp_endpoint} supports read-only discovery, estimates and browser handoff.` : 'Public MCP is not enabled.' }}</p></article></section>
+      <section class="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6"><p class="text-xs uppercase tracking-widest text-cyan-300">Public integration</p><h2 class="text-2xl font-semibold">Auto Generate</h2><p class="text-slate-300">Discover availability, estimate a price, and prepare a browser handoff without an account. These calls do not create an order or issue a Pay Code. The person reviews and authorizes the order in the browser.</p><div class="space-y-2 text-sm"><p><strong class="text-cyan-300">GET</strong> <a class="break-all underline" href="/api/x/v1/public-issuance">/api/x/v1/public-issuance</a> · Discover availability and limits</p><p><strong class="text-cyan-300">POST</strong> <code class="break-all">/api/x/v1/public-issuance/estimate</code> · Estimate without an order</p><p><strong class="text-cyan-300">POST</strong> <code class="break-all">/api/x/v1/public-issuance/handoff</code> · Prepare a browser URL</p></div><p class="text-sm text-slate-400">Estimate and handoff accept amount_minor as an integer and currency; 2500 represents ₱25. The public MCP exposes discover_on_demand_issuance, estimate_on_demand_pay_code, and prepare_on_demand_handoff.</p></section>
+      <section class="space-y-5"><div><p class="text-xs uppercase tracking-widest text-cyan-300">Reference</p><h2 class="mt-2 text-2xl font-semibold">Pay Code operations</h2></div><p class="text-slate-300">Scopes and operations are drawn from the published <a :href="spec_url" class="text-cyan-300 underline">OpenAPI specification</a>.</p><p v-if="unavailable" role="status" class="text-amber-300">The API specification is unavailable. Please try again later.</p><div v-else-if="!operations.length" class="text-slate-400">Loading API reference…</div><div v-else class="divide-y divide-white/10 rounded-2xl border border-white/10"><details v-for="op in operations" :key="op.method + op.path" class="p-4"><summary class="flex cursor-pointer flex-wrap items-center gap-x-4 gap-y-2"><span class="w-14 text-xs font-semibold text-cyan-300">{{ op.method }}</span><code class="break-all text-sm">{{ partner_prefix }}{{ op.path }}</code><span class="text-sm text-slate-300">{{ op.summary }}</span><span class="ml-auto text-xs text-slate-400">{{ op.scopes.join(', ') }}</span></summary><div class="mt-4 space-y-3 text-sm text-slate-300"><div v-if="op.request"><h3 class="font-semibold">Request schema</h3><pre class="mt-2 overflow-x-auto rounded-lg bg-black/30 p-4 text-xs"><code>{{ op.request }}</code></pre></div><div v-if="op.responses.length"><h3 class="font-semibold">Responses</h3><p v-for="response in op.responses" :key="response" class="mt-1">{{ response }}</p></div></div></details></div></section>
+      <section class="space-y-5"><h2 class="text-2xl font-semibold">Get started</h2><p class="text-slate-300">An operator provisions an OAuth client for one issuer account. Request only the scopes you need. Issuance uses available Client Funds and applicable fees; estimate before issuing.</p><div v-for="example in examples" :key="example.title" class="overflow-hidden rounded-2xl border border-white/10"><div class="flex items-center justify-between gap-4 bg-white/5 px-5 py-3"><h3 class="font-medium">{{ example.title }}</h3><button type="button" class="rounded-lg border border-white/20 px-3 py-1 text-sm hover:bg-white/10" @click="copy(example.code, example.title)">{{ copied === example.title ? 'Copied' : 'Copy' }}</button></div><pre class="overflow-x-auto p-5 text-xs leading-6 text-slate-300"><code>{{ example.code }}</code></pre></div><p v-if="copied === 'Copy unavailable'" role="status" class="text-sm text-amber-300">Copy unavailable. Select the example text to copy it.</p><p class="text-sm text-slate-400">Use a unique external reference for each business transaction. Reuse the same idempotency key only when retrying the same request. Never share credentials or tokens.</p></section>
+      <section class="rounded-2xl border border-white/10 p-6"><h2 class="text-xl font-semibold">What’s next</h2><p class="mt-3 text-slate-300">Campaign integration is planned for a future milestone.</p></section>
+    </main>
+  </div>
+</template>
