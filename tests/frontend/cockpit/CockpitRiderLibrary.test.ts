@@ -174,6 +174,22 @@ describe('Cockpit Rider Library', () => {
         });
     });
 
+    it('reports an invalid Rider payload without submitting it', async () => {
+        const payload: Record<string, unknown> = { url: 'https://example.test/new' };
+        payload.self = payload;
+        const wrapper = mount(CockpitRiderLibrary, {
+            attachTo: document.body,
+            props: { kind: 'url', entries: [], currentPayload: payload },
+        });
+
+        await wrapper.get('[data-testid="cockpit-rider-library-save-open"]').trigger('click');
+        document.querySelector<HTMLButtonElement>('[data-testid="cockpit-rider-library-save"]')?.click();
+        await nextTick();
+
+        expect(post).not.toHaveBeenCalled();
+        expect(document.querySelector('[role="status"]')?.textContent).toContain('could not be saved');
+    });
+
     it('pins and forgets only the selected library entry', async () => {
         const wrapper = mount(CockpitRiderLibrary, {
             attachTo: document.body,

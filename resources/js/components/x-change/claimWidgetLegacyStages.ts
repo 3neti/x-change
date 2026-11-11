@@ -66,7 +66,7 @@ export function hydrateInstructionSplashMeta(
     return {
         ...stage,
         presentation: stage.presentation ?? 'fullscreen',
-        content_type: stage.content_type ?? stage.payload?.content_type ?? 'html',
+        content_type: stage.content_type ?? (typeof stage.payload?.content_type === 'string' ? stage.payload.content_type : 'html'),
         payload: {
             ...(stage.payload ?? {}),
             content_type: stage.payload?.content_type ?? stage.content_type ?? 'html',

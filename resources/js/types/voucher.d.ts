@@ -4,6 +4,11 @@ export interface RequiredInput {
     value: string;
     label: string;
 }
+export interface OgMeta {
+    og_title?: string | null;
+    og_description?: string | null;
+    og_image?: string | null;
+}
 export interface InspectInstructions {
     voucher_type?: 'redeemable' | 'payable' | 'settlement';
     amount?: number;
@@ -12,8 +17,12 @@ export interface InspectInstructions {
     target_amount?: number | null;
     formatted_target_amount?: string | null;
     required_inputs?: RequiredInput[];
+    requirements?: unknown[];
     expires_at?: string | null;
     starts_at?: string | null;
+    location_validation?: { description?: string; on_failure?: string } | null;
+    time_validation?: { description?: string } | null;
+    payable_validation?: { description?: string; vendor_alias?: string } | null;
     validation?: {
         has_secret?: boolean;
         is_assigned?: boolean;

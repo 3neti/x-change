@@ -1696,8 +1696,6 @@ describe('Cockpit Funding foundation', () => {
                 'funding_requests',
                 'funding_activity',
             ],
-            preserveScroll: true,
-            preserveState: true,
         }));
         vi.useRealTimers();
     });
@@ -1914,8 +1912,6 @@ describe('Cockpit Funding foundation', () => {
                 'funding_requests',
                 'funding_activity',
             ],
-            preserveScroll: true,
-            preserveState: true,
         }));
 
         expect(
@@ -2194,8 +2190,6 @@ describe('Cockpit Funding foundation', () => {
                 'funding_requests',
                 'funding_activity',
             ],
-            preserveScroll: true,
-            preserveState: true,
         }));
 
         await wrapper

@@ -17,7 +17,7 @@ import { submitApprovalOtp } from '@/components/x-change/approvalOtpSubmitAdapte
 import PayoutRouteDisplay from '@/components/x-change/PayoutRouteDisplay.vue';
 import type { PayoutDestinationSnapshot } from '@/components/x-change/support/payoutDestinations';
 
-defineOptions({ layout: null });
+defineOptions({ layout: undefined });
 
 type VoucherProps = {
     code: string;

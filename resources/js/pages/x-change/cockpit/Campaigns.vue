@@ -3,6 +3,8 @@ import Campaigns from '../../../cockpit/pages/Campaigns.vue';
 import type { CampaignWorkflowDraftCatalog } from '../../../cockpit/components/CockpitCampaignWorkflowDraftEditor.vue';
 import type { CockpitHeaderPageProps } from '../../../cockpit/types';
 
+type CampaignsChildProps = InstanceType<typeof Campaigns>['$props'];
+
 type CampaignWorksheet = {
     reference: string;
     profile: 'payroll' | 'assistance';
@@ -19,11 +21,11 @@ type CampaignWorksheet = {
 type CampaignsPageProps = CockpitHeaderPageProps & {
     worksheets: CampaignWorksheet[];
     active_intake?: Record<string, unknown>;
-    campaign_usage_profiles?: Record<string, unknown>[];
-    endpoint_capabilities?: Record<string, unknown>[];
-    pay_code_templates?: Record<string, unknown>[];
-    endpoint_campaigns?: Record<string, unknown>[];
-    endpoint_campaign_form?: Record<string, unknown>;
+    campaign_usage_profiles?: CampaignsChildProps['campaign_usage_profiles'];
+    endpoint_capabilities?: CampaignsChildProps['endpoint_capabilities'];
+    pay_code_templates?: CampaignsChildProps['pay_code_templates'];
+    endpoint_campaigns?: CampaignsChildProps['endpoint_campaigns'];
+    endpoint_campaign_form?: CampaignsChildProps['endpoint_campaign_form'];
     workflow_drafts?: CampaignWorkflowDraftCatalog;
     commercial_pay_code_scenario_runner_enabled?: boolean;
 };

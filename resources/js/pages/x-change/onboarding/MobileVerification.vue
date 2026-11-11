@@ -74,13 +74,13 @@ const verifiedDescription = computed(() =>
 );
 
 function requestCode(): void {
-  challengeForm.post(challenge(), {
+  challengeForm.post(challenge.url(), {
     preserveScroll: true,
   });
 }
 
 function submitCode(): void {
-  verifyForm.post(verify(), {
+  verifyForm.post(verify.url(), {
     preserveScroll: true,
   });
 }
@@ -147,7 +147,7 @@ function submitCode(): void {
             {{
               challengeForm.processing
                 ? "Requesting code…"
-                : challenge?.status === "pending"
+                : props.challenge?.status === "pending"
                   ? "Request a new code"
                   : "Send verification code"
             }}

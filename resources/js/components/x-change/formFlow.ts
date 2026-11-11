@@ -4,8 +4,9 @@ export type FormFlowField = {
     label?: string;
     description?: string;
     required?: boolean;
+    value?: unknown;
     autocomplete?: string;
-    inputmode?: string;
+    inputmode?: 'none' | 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url';
     options?: unknown[];
     selection?: string;
     min?: number;

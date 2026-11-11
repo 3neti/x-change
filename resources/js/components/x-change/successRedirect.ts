@@ -21,6 +21,7 @@ export type RiderRedirectPayload = {
     enabled?: boolean | null;
     url?: string | null;
     delay_seconds?: number | null;
+    timeout?: number | null;
 };
 
 export type ResolvedSuccessRedirect = {

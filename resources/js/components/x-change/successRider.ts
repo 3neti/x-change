@@ -61,7 +61,7 @@ export function resolveLegacySuccessVisualStages(
 export function resolveCompiledSuccessVisualStages(
     claimExperience: ClaimExperiencePayload,
 ): RawRiderStage[] {
-    return claimExperiencePhaseStages(claimExperience, 'success_rider')
+    return claimExperiencePhaseStages<RawRiderStage>(claimExperience, 'success_rider')
         .filter((stage) =>
                 stage.enabled !== false
                 && !isRedirectStage(stage)
@@ -84,7 +84,7 @@ export function resolveSuccessVisualStages(
         : resolveLegacySuccessVisualStages(rider);
 
     return stages.map((stage) =>
-        resolveSuccessRiderStage(stage, payload) as RawRiderStage,
+        resolveSuccessRiderStage(stage, payload),
     );
 }
 

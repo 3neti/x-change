@@ -3,7 +3,7 @@ import { Head } from '@inertiajs/vue3';
 import CockpitClaimLiveScreen from '../../../cockpit/components/CockpitClaimLiveScreen.vue';
 import type { CockpitClaimExperiencePreviewStep } from '../../../cockpit/types';
 
-defineOptions({ layout: null });
+defineOptions({ layout: undefined });
 
 defineProps<{
     step: CockpitClaimExperiencePreviewStep;

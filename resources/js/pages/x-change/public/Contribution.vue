@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 
-defineOptions({ layout: null });
+defineOptions({ layout: undefined });
 
 const props = defineProps<{ contextUrl: string; passwordUrl: string; uploadUrl: string }>();
 const token = typeof window === 'undefined' ? '' : window.location.hash.slice(1);

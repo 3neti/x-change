@@ -11,7 +11,8 @@ export function resolveCompiledRiderIntroStages(
     return stages.filter((stage) =>
             stage.enabled !== false
             && (
-                stageIsInPhase(stage, 'rider_intro')
+                stage.phase === 'rider_intro'
+                || stage.payload?.phase === 'rider_intro'
                 || stageIsInPhase(stage, 'pre_claim')
             )
     );

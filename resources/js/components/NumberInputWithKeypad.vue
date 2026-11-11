@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { NumberInput } from '@/components/ui/number-input';
 import NumericKeypad from '@/components/NumericKeypad.vue';
 import { Pencil } from 'lucide-vue-next';
 
@@ -38,7 +37,7 @@ const showKeypad = ref(false);
 
 // Format value for display - showing 2 decimals for decimal inputs
 const displayValue = computed(() => {
-  if (props.modelValue === null || props.modelValue === undefined || props.modelValue === '') return '';
+  if (props.modelValue === null || props.modelValue === undefined) return '';
   const num = typeof props.modelValue === 'number' ? props.modelValue : parseFloat(String(props.modelValue));
   if (isNaN(num)) return '';
   return props.allowDecimal ? num.toFixed(2) : num.toString();
@@ -46,7 +45,7 @@ const displayValue = computed(() => {
 
 // Hero mode: formatted with currency prefix and locale grouping
 const heroDisplay = computed(() => {
-  if (props.modelValue === null || props.modelValue === undefined || props.modelValue === '') {
+  if (props.modelValue === null || props.modelValue === undefined) {
     return `${props.prefix ?? ''}0.00`;
   }
   const num = typeof props.modelValue === 'number' ? props.modelValue : parseFloat(String(props.modelValue));

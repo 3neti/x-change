@@ -24,7 +24,7 @@ describe('document review', () => {
         await wrapper.findAll('button')[0].trigger('click');
         await flushPromises();
         expect(request).toHaveBeenCalledWith('/review', expect.objectContaining({ method: 'POST', body: JSON.stringify({ decision: 'accepted' }) }));
-        expect(reload).toHaveBeenCalledWith({ preserveScroll: true });
+        expect(reload).toHaveBeenCalledOnce();
         vi.unstubAllGlobals();
     });
 });

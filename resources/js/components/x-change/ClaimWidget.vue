@@ -68,12 +68,11 @@ if (props.initialCode) {
 
 onMounted(() => {
     if (props.initialCode && submitButton.value) {
-        const buttonEl = submitButton.value.$el as HTMLElement;
-        buttonEl?.focus();
+        submitButton.value.$el?.focus();
     }
 });
 
-const submitButton = ref<HTMLButtonElement | null>(null);
+const submitButton = ref<{ $el: HTMLElement } | null>(null);
 const reactiveClaimExperience = ref<Record<string, unknown> | null>(
     props.claimExperience ?? null,
 );
@@ -286,7 +285,9 @@ const compiledForm = useCompiledClaimForm({
     claimExperience: currentClaimExperience,
     submitted: computed(() => props.compiledFormSubmitted),
     submitError: computed(() => props.compiledFormSubmitError),
-    emitSubmit: (payload) => emit('submit:compiled-form', payload),
+    emitSubmit: (payload) => {
+        if (payload.code) emit('submit:compiled-form', { ...payload, code: payload.code });
+    },
     emitUpdateValues: (values) => emit('update:compiled-form-values', values),
 });
 
@@ -630,14 +631,14 @@ watch(
             <Alert v-else-if="previewMode === 'preview-disabled'">
                 <AlertDescription>
                     {{
-                        voucherData.preview.message ||
+                        voucherData?.preview?.message ||
                         'Preview disabled by issuer.'
                     }}
                 </AlertDescription>
             </Alert>
 
             <!-- Non-Active State: Stamp + Rider Content -->
-            <div v-else-if="previewMode === 'non-active'" class="space-y-2.5">
+            <div v-else-if="previewMode === 'non-active' && voucherData" class="space-y-2.5">
                 <VoucherStatusStamp
                     :status="voucherData.status as 'redeemed' | 'expired' | 'cancelled'"
                     :status-date="previewViewModel.statusDate"
@@ -663,7 +664,7 @@ watch(
             </div>
 
             <!-- Active State: Tabbed preview -->
-            <div v-else-if="previewMode === 'active'">
+            <div v-else-if="previewMode === 'active' && voucherData">
                 <!-- Rider pre-claim content from compiled/legacy rider intro -->
                 <Card
                     v-if="previewViewModel.hasPreClaimContent"
@@ -710,7 +711,7 @@ watch(
             :class="formFlowSection.className"
         >
             <Card
-                v-if="formFlowSection.compiledVisible"
+                v-if="formFlowSection.compiledVisible && compiledForm.normalizedFlow.value"
                 data-testid="compiled-form-flow-visible-region"
                 class="border-primary/10 bg-background"
             >

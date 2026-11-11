@@ -36,7 +36,7 @@ import ClaimPendingReceipt from '@/components/x-change/ClaimPendingReceipt.vue';
 import type { PayoutDestinationSnapshot } from '@/components/x-change/support/payoutDestinations';
 import { settlementRailLabel } from '@/components/x-change/support/payoutDestinations';
 
-defineOptions({ layout: null });
+defineOptions({ layout: undefined });
 
 interface VoucherProps {
     code: string;
@@ -509,7 +509,7 @@ const successAction = computed(() => {
             <RiderRuntimeSequencer
                 v-if="hasRedirectRuntimeStages"
                 :stages="redirectRuntimeStages"
-                :redirect-endpoint="effectiveRedirectEndpoint"
+                :redirect-endpoint="effectiveRedirectEndpoint ?? undefined"
             />
 
             <a

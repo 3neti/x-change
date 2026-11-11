@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2771b2be4759ffd94a6aa6b0b61e543d",
+    "content-hash": "b61a1a1b697da8a1d72a8e25dd167cb2",
     "packages": [
         {
             "name": "3neti/cash",
@@ -381,16 +381,16 @@
         },
         {
             "name": "3neti/form-handler-document",
-            "version": "v1.0.0",
+            "version": "v1.0.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/form-handler-document.git",
-                "reference": "7bc95be3c61d731627065dea3abd00a67ce1ff01"
+                "reference": "1807c1a67c3f60073018818ec3a4d3de94bf3f10"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/form-handler-document/zipball/7bc95be3c61d731627065dea3abd00a67ce1ff01",
-                "reference": "7bc95be3c61d731627065dea3abd00a67ce1ff01",
+                "url": "https://api.github.com/repos/3neti/form-handler-document/zipball/1807c1a67c3f60073018818ec3a4d3de94bf3f10",
+                "reference": "1807c1a67c3f60073018818ec3a4d3de94bf3f10",
                 "shasum": ""
             },
             "require": {
@@ -426,9 +426,9 @@
             "description": "Private document upload handler for form-flow",
             "support": {
                 "issues": "https://github.com/3neti/form-handler-document/issues",
-                "source": "https://github.com/3neti/form-handler-document/tree/v1.0.0"
+                "source": "https://github.com/3neti/form-handler-document/tree/v1.0.1"
             },
-            "time": "2026-11-10T13:11:36+00:00"
+            "time": "2026-11-11T08:04:03+00:00"
         },
         {
             "name": "3neti/form-handler-kyc",
@@ -548,20 +548,20 @@
         },
         {
             "name": "3neti/form-handler-otp",
-            "version": "v1.2.2",
+            "version": "v1.4.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/form-handler-otp.git",
-                "reference": "b370f491f704a4bc33172efca616780e0132101d"
+                "reference": "886903a36f70836e5ff60a18ba9267eaa57e1ef3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/form-handler-otp/zipball/b370f491f704a4bc33172efca616780e0132101d",
-                "reference": "b370f491f704a4bc33172efca616780e0132101d",
+                "url": "https://api.github.com/repos/3neti/form-handler-otp/zipball/886903a36f70836e5ff60a18ba9267eaa57e1ef3",
+                "reference": "886903a36f70836e5ff60a18ba9267eaa57e1ef3",
                 "shasum": ""
             },
             "require": {
-                "3neti/form-flow": "^1.8",
+                "3neti/form-flow": "^1.11",
                 "illuminate/support": "^12.0 || ^13.0",
                 "php": "^8.2",
                 "spatie/laravel-data": "^4.0"
@@ -599,9 +599,9 @@
             "description": "OTP verification handler for form flow system",
             "support": {
                 "issues": "https://github.com/3neti/form-handler-otp/issues",
-                "source": "https://github.com/3neti/form-handler-otp/tree/v1.2.2"
+                "source": "https://github.com/3neti/form-handler-otp/tree/v1.4.2"
             },
-            "time": "2026-08-09T13:49:09+00:00"
+            "time": "2026-11-11T08:10:18+00:00"
         },
         {
             "name": "3neti/form-handler-selfie",
@@ -2045,11 +2045,11 @@
         },
         {
             "name": "3neti/x-rider",
-            "version": "v1.0.0",
+            "version": "v1.1.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/x-rider.git",
-                "reference": "bc18c6bb2fa866639d475a5b90ece0e0fa40e37e"
+                "reference": "79198464fbf52009ac3758ea105470ddf330ad59"
             },
             "require": {
                 "illuminate/http": "^12.0 || ^13.0",
@@ -2105,7 +2105,7 @@
                 }
             ],
             "description": "Programmable claimant experience layer for post-claim rider messages, redirects, splash, analytics seams, and future campaign runtimes.",
-            "time": "2026-07-31T09:37:29+00:00"
+            "time": "2026-11-11T08:05:05+00:00"
         },
         {
             "name": "3neti/x-stamp",

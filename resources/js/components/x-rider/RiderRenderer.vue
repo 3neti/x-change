@@ -3,9 +3,9 @@ import { computed } from 'vue';
 import { marked } from 'marked';
 
 interface RiderContent {
-    enabled: boolean;
-    type: string;
-    content?: string | null;
+    enabled?: boolean | null;
+    type?: string | null;
+    content?: unknown;
     meta?: Record<string, unknown>;
 }
 
@@ -20,7 +20,7 @@ const hasContent = computed(() =>
 const renderedContent = computed(() => {
     const raw = props.content?.content;
 
-    if (!hasContent.value || !raw) {
+    if (!hasContent.value || typeof raw !== 'string') {
         return null;
     }
 

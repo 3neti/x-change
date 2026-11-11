@@ -23,7 +23,7 @@ async function review(decision: 'accepted' | 'rejected'): Promise<void> {
             body: JSON.stringify({ decision, ...(decision === 'rejected' ? { reason: reason.value.trim() } : {}) }),
         });
         if (!response.ok) throw new Error('Review failed');
-        router.reload({ preserveScroll: true });
+        router.reload();
     } catch {
         error.value = 'Could not save this review. Refresh and try again.';
     } finally {

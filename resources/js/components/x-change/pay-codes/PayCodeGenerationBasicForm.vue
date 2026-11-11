@@ -14,6 +14,12 @@ interface PayCodeGenerationForm {
 
     require_mobile?: boolean;
     require_bank_account?: boolean;
+    require_name?: boolean;
+    require_email?: boolean;
+    require_birth_date?: boolean;
+    require_address?: boolean;
+    require_reference_code?: boolean;
+    require_gross_monthly_income?: boolean;
     require_kyc?: boolean;
     require_otp?: boolean;
     require_location?: boolean;
@@ -22,6 +28,7 @@ interface PayCodeGenerationForm {
 
     rider_message?: string | null;
     rider_url?: string | null;
+    validation_mobile?: string | null;
 }
 
 interface Props {

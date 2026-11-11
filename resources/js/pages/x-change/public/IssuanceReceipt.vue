@@ -9,7 +9,7 @@ import {
 } from "lucide-vue-next";
 import { ref } from "vue";
 
-defineOptions({ layout: null });
+defineOptions({ layout: undefined });
 
 type Receipt = {
   schema: "x-change.public-issuance-receipt.v1";

@@ -30,7 +30,7 @@ import { store as checkPaymentAttempt } from '@/routes/x-change/pay/attempts/che
 import { download as downloadPaymentQr } from '@/routes/x-change/pay/attempts/qr';
 import { store as submitPaymentRecoveryReport } from '@/routes/x-change/pay/recovery-reports';
 
-defineOptions({ layout: null });
+defineOptions({ layout: undefined });
 
 type PaymentAttempt = {
     reference: string;

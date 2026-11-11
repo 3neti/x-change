@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
 import { ShieldCheck } from 'lucide-vue-next';
 
-defineOptions({ layout: null });
+defineOptions({ layout: undefined });
 
 type AuthIntent = {
     type: 'campaign_authorization' | 'onboarding_claimant_handoff';

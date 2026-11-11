@@ -42,7 +42,7 @@ function dateLabel(value?: string | null): string {
             <div v-if="claims?.length" class="space-y-3">
                 <div
                     v-for="claim in claims"
-                    :key="claim.id ?? claim.transaction_id ?? claim.created_at"
+                    :key="claim.id ?? claim.transaction_id ?? claim.created_at ?? undefined"
                     class="rounded-lg border p-3"
                 >
                     <div class="flex items-center justify-between gap-3">
