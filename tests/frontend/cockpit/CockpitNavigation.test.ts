@@ -18,10 +18,11 @@ describe('Cockpit navigation baseline', () => {
         expect(cockpitSecondaryNavigation.map((item) => item.label)).toEqual([
             'Account',
             'System Readiness',
+            'Developer Access',
             'Guides',
         ]);
 
-        expect(cockpitNavigationItems).toHaveLength(8);
+        expect(cockpitNavigationItems).toHaveLength(9);
     });
 
     it('marks only implemented Cockpit routes as enabled navigation links', () => {
@@ -40,6 +41,7 @@ describe('Cockpit navigation baseline', () => {
             'dashboard',
             'accounts',
             'runtime-profile',
+            'developer-access',
             'documentation',
         ]);
 
@@ -55,7 +57,7 @@ describe('Cockpit navigation baseline', () => {
 
     it('keeps navigation as shell descriptors without domain behavior', () => {
         for (const item of cockpitNavigationItems) {
-            expect(item.href).toMatch(/^\/x\/cockpit/);
+            expect(item.href).toMatch(item.key === 'developer-access' ? /^\/x\/developers$/ : /^\/x\/cockpit/);
             expect(item).not.toHaveProperty('action');
             expect(item).not.toHaveProperty('driver');
             expect(item).not.toHaveProperty('journalEvent');

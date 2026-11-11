@@ -180,6 +180,7 @@ describe('Cockpit shell layout baseline', () => {
             'Overview',
             'Account',
             'System Readiness',
+            'Developer Access',
             'Guides',
         ]);
         expect(cockpitNavigationItems.map((item) => item.href)).toEqual([
@@ -190,6 +191,7 @@ describe('Cockpit shell layout baseline', () => {
             '/x/cockpit/overview',
             '/x/cockpit/accounts',
             '/x/cockpit/diagnostics/runtime-profile',
+            '/x/developers',
             '/x/cockpit/documentation',
         ]);
         expect(cockpitNavigationItems.map((item) => item.description)).toEqual([
@@ -200,6 +202,7 @@ describe('Cockpit shell layout baseline', () => {
             'Funds, capacity, and activity',
             'Position and connected services',
             'Deployment and runtime checks',
+            'API and MCP integration',
             'Workflows and terminology',
         ]);
     });
