@@ -12288,7 +12288,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
         <DialogTitle>Rider</DialogTitle>
         <DialogDescription>Customize the message, destination and introduction for this Pay Code.</DialogDescription>
         <div class="min-h-0 flex-1 overflow-y-auto">
-          <CockpitRiderEditor v-model:message="purpose" v-model:message-format="riderMessageFormat" v-model:url="riderUrl" v-model:redirect-timeout="riderRedirectTimeout" v-model:splash="riderSplash" v-model:splash-format="riderSplashFormat" v-model:splash-timeout="riderSplashTimeout" v-model:splash-headline="riderSplashHeadline" v-model:splash-cta-text="riderSplashCtaText" :disabled="processing" :url-preview-document="riderUrlPreviewDocument" :splash-preview-document="riderSplashPreviewDocument" :url-preview-message="riderUrlArtworkMessage" :url-preview-loading="riderUrlArtworkResolving" />
+          <CockpitRiderEditor v-model:message="purpose" v-model:message-format="riderMessageFormat" v-model:url="riderUrl" v-model:redirect-timeout="riderRedirectTimeout" v-model:splash="riderSplash" v-model:splash-format="riderSplashFormat" v-model:splash-timeout="riderSplashTimeout" v-model:splash-headline="riderSplashHeadline" v-model:splash-cta-text="riderSplashCtaText" :disabled="processing" :url-preview-document="riderUrlPreviewDocument" :splash-preview-document="riderSplashPreviewDocument" :url-preview-message="riderUrlArtworkMessage ?? undefined" :url-preview-loading="riderUrlArtworkResolving" />
         </div>
         <button type="button" class="shrink-0 rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-900" @click="riderEditorOpen = false">Done</button>
       </DialogContent>
