@@ -12,7 +12,7 @@ export type ClaimWidgetPreviewViewModelInput = {
 
 export type ClaimWidgetPreviewViewModel = {
     isNonActive: boolean;
-    statusDate: unknown;
+    statusDate: string | null;
     hasPreClaimContent: boolean;
 };
 

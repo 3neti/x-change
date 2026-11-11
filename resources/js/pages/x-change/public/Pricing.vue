@@ -12,7 +12,7 @@ import {
 } from "lucide-vue-next";
 import PublicNavigation from "../../../cockpit/components/PublicNavigation.vue";
 
-defineOptions({ layout: null });
+defineOptions({ layout: undefined });
 
 type Navigation = {
   pricing_url: string | null;

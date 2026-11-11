@@ -2,7 +2,7 @@
 import { Head } from '@inertiajs/vue3';
 import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
 
-defineOptions({ layout: null });
+defineOptions({ layout: undefined });
 
 defineProps<{
     summary: {

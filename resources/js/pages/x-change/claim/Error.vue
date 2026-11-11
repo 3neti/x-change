@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
 import { AlertCircle } from 'lucide-vue-next';
 
-defineOptions({ layout: null });
+defineOptions({ layout: undefined });
 
 defineProps<{
     message: string;

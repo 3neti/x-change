@@ -238,7 +238,7 @@ const riderHostname = computed(() => {
                     >
                         <img
                             :src="riderFaviconUrl"
-                            :alt="riderHostname"
+                            :alt="riderHostname ?? undefined"
                             class="h-4 w-4 animate-pulse"
                         />
                     </a>

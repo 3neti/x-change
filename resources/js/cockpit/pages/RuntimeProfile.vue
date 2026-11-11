@@ -74,7 +74,6 @@ const sectionIcons = {
 function refresh(): void {
     router.reload({
         only: ['runtime_profile_read_model'],
-        preserveScroll: true,
         onStart: () => {
             refreshing.value = true;
         },

@@ -313,7 +313,7 @@ function setParam(
             </dt>
             <dd
               class="mt-1 truncate font-semibold text-slate-950 dark:text-slate-50"
-              :title="fact.value"
+              :title="fact.value ?? undefined"
             >
               {{ fact.value }}
             </dd>

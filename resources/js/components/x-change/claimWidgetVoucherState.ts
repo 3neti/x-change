@@ -18,17 +18,17 @@ export function isNonActiveVoucher(
 
 export function resolveVoucherStatusDate(
     voucher: ClaimWidgetVoucherLike,
-): unknown {
+): string | null {
     if (!voucher) {
         return null;
     }
 
     if (voucher.status === 'redeemed') {
-        return voucher.redeemed_at ?? null;
+        return typeof voucher.redeemed_at === 'string' ? voucher.redeemed_at : null;
     }
 
     if (voucher.status === 'expired') {
-        return voucher.expired_at ?? null;
+        return typeof voucher.expired_at === 'string' ? voucher.expired_at : null;
     }
 
     return null;

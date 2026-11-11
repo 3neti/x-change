@@ -5,6 +5,7 @@ import type { CockpitHeaderPageProps } from "../../../cockpit/types";
 type ScenarioRun = {
   schema: string;
   reference: string;
+  campaign_reference: string;
   scenario: string;
   title: string;
   mode: string;
@@ -12,6 +13,7 @@ type ScenarioRun = {
   started_at: string | null;
   updated_at: string | null;
   declarations: Record<string, string>;
+  actions: { record_demonstration_policy: boolean };
   steps: Array<{
     sequence: number;
     label: string;

@@ -12,11 +12,8 @@ export type SuccessFallbackStatePayload = {
 };
 
 export type SuccessRiderStagePayload = {
-    content?: string | null;
-    payload?: (Record<string, unknown> & {
-        content?: string | null;
-    }) | null;
-    [key: string]: unknown;
+    content?: unknown;
+    payload?: Record<string, unknown> | null;
 };
 
 export function numericVoucherAmount(voucher: SuccessVoucherPayload): number {
@@ -109,10 +106,10 @@ export function resolveSuccessRiderMessage(
     return riderContent;
 }
 
-export function resolveSuccessRiderStage(
-    stage: SuccessRiderStagePayload,
+export function resolveSuccessRiderStage<T extends SuccessRiderStagePayload>(
+    stage: T,
     payload: SuccessFallbackStatePayload,
-): SuccessRiderStagePayload {
+): T {
     if (!isPendingClaimOutcome(payload)) {
         return stage;
     }
@@ -137,7 +134,7 @@ export function resolveSuccessRiderStage(
                 },
             }
             : {}),
-    };
+    } as T;
 }
 
 export function shouldRenderSuccessRiderMessage(

@@ -226,7 +226,7 @@ function selectedRowLabel(): string {
                         <input v-model="conversionForm.exclude_invalid_rows" type="checkbox" class="mt-0.5 size-4 rounded" />
                         <span>Leave {{ intake.invalid_count }} invalid {{ intake.invalid_count === 1 ? 'row' : 'rows' }} out of this Campaign. The review remains auditable.</span>
                     </label>
-                    <p v-if="conversionForm.errors.exclude_invalid_rows || conversionForm.errors.intake" class="mt-2 text-sm text-rose-600">{{ conversionForm.errors.exclude_invalid_rows || conversionForm.errors.intake }}</p>
+                    <p v-if="conversionForm.errors.exclude_invalid_rows || (conversionForm.errors as Record<string, string | undefined>).intake" class="mt-2 text-sm text-rose-600">{{ conversionForm.errors.exclude_invalid_rows || (conversionForm.errors as Record<string, string | undefined>).intake }}</p>
 
                     <div class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                         <button type="button" class="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 px-4 py-2.5 text-sm font-semibold text-rose-600 dark:border-rose-900 dark:text-rose-300" @click="discardReview">

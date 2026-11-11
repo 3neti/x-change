@@ -65,6 +65,7 @@ type CockpitLogItem = {
     label: string;
     detail: string;
     meta: string;
+    status?: string;
     code?: string;
     amount?: string;
     target?: string;
@@ -518,16 +519,16 @@ const pinnedCampaign = computed(() => {
             ? facts.cards
             : undefined;
     const campaign =
-        cards && typeof cards === 'object' && !Array.isArray(cards)
+        cards && typeof cards === 'object' && !Array.isArray(cards) && 'campaign' in cards
             ? cards.campaign
             : undefined;
     const name =
         campaign && typeof campaign === 'object' && !Array.isArray(campaign)
-            ? stringValue(campaign.name)
+            ? stringValue((campaign as Record<string, unknown>).name)
             : undefined;
     const count =
         campaign && typeof campaign === 'object' && !Array.isArray(campaign)
-            ? numericValue(campaign.recipient_count)
+            ? numericValue((campaign as Record<string, unknown>).recipient_count)
             : 0;
 
     return {

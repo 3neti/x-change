@@ -25,11 +25,7 @@ type XRayPreviewResponse = {
 };
 
 function disclosureValue(
-    disclosures: XRayPreviewResponse['data'] extends { xray?: infer XRay }
-        ? XRay extends { disclosures?: infer Disclosures }
-            ? Disclosures
-            : never
-        : never,
+    disclosures: Array<{ key?: string | null; value?: unknown }> | undefined,
     key: string,
 ): unknown {
     if (!Array.isArray(disclosures)) {
@@ -75,7 +71,7 @@ function normalizeXRayPreview(
         status,
         metadata: {},
         info: xray,
-        preview: { enabled: true },
+        preview: { enabled: true, scope: 'requirements_only' },
         instructions: {
             formatted_amount: typeof amount === 'string' ? amount : undefined,
             requirements: xray.requirements ?? [],

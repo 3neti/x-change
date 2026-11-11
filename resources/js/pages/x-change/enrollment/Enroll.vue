@@ -2,7 +2,7 @@
 import { Head, useForm } from '@inertiajs/vue3';
 import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
 
-defineOptions({ layout: null });
+defineOptions({ layout: undefined });
 
 const props = defineProps<{
     offer: { title: string; consent_statement: string; consent_version: string };

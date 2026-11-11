@@ -4,7 +4,7 @@ import { computed } from "vue";
 import QuickGenerate from "../../../cockpit/pages/QuickGenerate.vue";
 import type { CockpitQuickGeneratePageProps } from "../../../cockpit/types";
 
-defineOptions({ layout: null });
+defineOptions({ layout: undefined });
 
 const props = defineProps<CockpitQuickGeneratePageProps>();
 const structuredData = computed(() =>

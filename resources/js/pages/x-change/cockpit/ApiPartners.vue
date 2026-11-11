@@ -7,6 +7,7 @@ defineProps<{
   cockpit_header_read_model?: Record<string, unknown>;
   partner_api: ApiPartnersProps["partnerApi"];
   partner_api_store_url: string;
+  partner_api_production_store_url: string;
   csrf_token: string;
 }>();
 </script>
@@ -16,6 +17,7 @@ defineProps<{
     :cockpit-header-read-model="cockpit_header_read_model"
     :partner-api="partner_api"
     :partner-api-store-url="partner_api_store_url"
+    :partner-api-production-store-url="partner_api_production_store_url"
     :csrf-token="csrf_token"
   />
 </template>

@@ -8,7 +8,7 @@ import { Loader2, ReceiptText } from 'lucide-vue-next';
 import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
 import PayoutRouteDisplay from '@/components/x-change/PayoutRouteDisplay.vue';
 
-defineOptions({ layout: null });
+defineOptions({ layout: undefined });
 
 const routes = useXChangeRoutes();
 

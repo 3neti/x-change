@@ -115,7 +115,8 @@ const showOutcomeOnly = computed(
 
         <ClaimWorkflowAttention
             v-if="workflowAttention"
-            v-bind="workflowAttention"
+            :label="workflowAttention.label"
+            :message="workflowAttention.message"
         />
 
         <ClaimExperienceSummary

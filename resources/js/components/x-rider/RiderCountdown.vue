@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { ExternalLink } from 'lucide-vue-next';
 
 interface RiderRedirect {
-    enabled: boolean;
+    enabled?: boolean | null;
     url?: string | null;
-    timeout: number;
+    timeout?: number | null;
     fallbackUrl?: string | null;
     meta?: Record<string, unknown>;
 }

@@ -71,7 +71,8 @@ function actionButtonClass(variant?: string): string {
         <CardContent class="space-y-4">
             <ClaimWorkflowAttention
                 v-if="workflowAttention"
-                v-bind="workflowAttention"
+                :label="workflowAttention.label"
+                :message="workflowAttention.message"
             />
 
             <PayCodeOutcomePanel

@@ -3,7 +3,7 @@ import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
 import { Form, Head } from '@inertiajs/vue3';
 import { ArrowRight, ShieldCheck } from 'lucide-vue-next';
 
-defineOptions({ layout: null });
+defineOptions({ layout: undefined });
 
 defineProps<{
     campaign: {

@@ -9624,7 +9624,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                     label: 'Scheduled Portions',
                     helper: 'Set each portion’s value, label, and dates.',
                   },
-                ]"
+                ] as const"
                 :key="option.value"
                 type="button"
                 class="rounded-xl border p-3 text-left text-xs transition"
@@ -10423,7 +10423,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                         :position="riderStampPosition"
                         :preview-document="riderCanvasArtworkDocument"
                         :url-artwork-resolving="riderUrlArtworkResolving"
-                        :url-artwork-message="riderUrlArtworkMessage"
+                        :url-artwork-message="riderUrlArtworkMessage ?? undefined"
                       />
                     </div>
                     <fieldset

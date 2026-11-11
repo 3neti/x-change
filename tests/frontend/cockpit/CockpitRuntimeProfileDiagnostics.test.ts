@@ -230,7 +230,6 @@ describe('Cockpit runtime profile diagnostics', () => {
         expect(routerReloadMock).toHaveBeenCalledWith(
             expect.objectContaining({
                 only: ['runtime_profile_read_model'],
-                preserveScroll: true,
             }),
         );
     });

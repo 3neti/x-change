@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ClaimWidget from '@/components/x-change/ClaimWidget.vue';
+import type { ClaimSurfaceLike } from '@/components/x-change/ClaimSurfaceRenderer.vue';
 import ClaimStepShell from '@/components/x-change/ClaimStepShell.vue';
 import ParticipantDocuments from '@/components/x-change/ParticipantDocuments.vue';
 import ProvisioningSetup from '../../../components/x-change/ProvisioningSetup.vue';
@@ -17,13 +18,13 @@ import {
 import type { RawCompiledClaimFormPayload } from '@/components/x-change/compiledClaimFormSubmission';
 import { store as startClaimFlow } from '@/routes/x-change/claim/flows';
 
-defineOptions({ layout: null });
+defineOptions({ layout: undefined });
 
 const props = defineProps<{
     initial_code?: string | null;
     claim_experience?: Record<string, unknown> | null;
     provisioning_requirement?: ProvisioningRequirement | null;
-    claim_surface?: Record<string, unknown> | null;
+    claim_surface?: ClaimSurfaceLike | null;
     claim_documents?: { requirements: { type: string; timing: string; requires_acceptance: boolean; status?: string | null }[]; upload_url: string } | null;
 }>();
 

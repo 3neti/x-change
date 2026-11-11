@@ -4,7 +4,7 @@ import { Head, Link } from "@inertiajs/vue3";
 import { Activity, ArrowRight, BarChart3, CheckCircle2, Clock3, Layers3, Sparkles, TicketCheck } from "lucide-vue-next";
 import PublicNavigation from "../../../cockpit/components/PublicNavigation.vue";
 
-defineOptions({ layout: null });
+defineOptions({ layout: undefined });
 
 type Navigation = { pricing_url: string | null; analytics_url: string | null; claim_url: string | null; create_url: string | null; login_url: string | null; register_url: string | null };
 type Analytics = {

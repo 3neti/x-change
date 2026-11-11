@@ -7,7 +7,7 @@ import type {
     CockpitPayCodeRowAction,
 } from '../../../cockpit/types';
 
-defineOptions({ layout: null });
+defineOptions({ layout: undefined });
 
 const props = defineProps<{
     batch_reference: string;
