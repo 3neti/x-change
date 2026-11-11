@@ -9,4 +9,5 @@ enum CommercialOfferingOrigin: string
     case InstallationBaseline = 'installation_baseline';
     case MakerCheckerRevision = 'maker_checker_revision';
     case LocalSandbox = 'local_sandbox';
+    case SingleOperator = 'single_operator';
 }
