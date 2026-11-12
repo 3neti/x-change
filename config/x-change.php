@@ -903,6 +903,9 @@ return [
             'enabled' => (bool) env('XCHANGE_PARTNER_FUNDED_ORDERS_ENABLED', false),
             'maximum_open_per_client' => max(1, (int) env('XCHANGE_PARTNER_FUNDED_ORDERS_MAXIMUM_OPEN', 3)),
         ],
+        'account_funded_orders' => [
+            'enabled' => (bool) env('XCHANGE_PARTNER_ACCOUNT_FUNDED_ORDERS_ENABLED', false),
+        ],
         'stored_value_otp_challenge_rate_limit_per_minute' => (int) env(
             'XCHANGE_PARTNER_API_STORED_VALUE_OTP_CHALLENGE_RATE_LIMIT_PER_MINUTE',
             3,

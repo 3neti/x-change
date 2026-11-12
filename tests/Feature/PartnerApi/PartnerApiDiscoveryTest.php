@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 use Dedoc\Scramble\ScrambleServiceProvider;
+use Illuminate\Support\Facades\Artisan;
 
 it('publishes safe standards-based discovery even before runtime activation', function () {
     config()->set('x-change.partner_api.enabled', false);
@@ -53,10 +54,13 @@ it('serves a valid curated OpenAPI contract without unsafe lifecycle operations'
             '/stored-value-collections/{reference}/verification',
             '/stored-value-collections/{reference}/commit',
             '/funded-orders',
+            '/account-funded-orders',
             '/funded-orders/{reference}',
         )
         ->and(data_get($document, 'paths./funded-orders.post.security.0.partnerOAuth'))
         ->toBe(['funded-orders:create'])
+        ->and(data_get($document, 'paths./account-funded-orders.post.security.0.partnerOAuth'))
+        ->toBe(['funded-orders:create', 'pay-codes:issue'])
         ->and(data_get($document, 'paths./funded-orders/{reference}.get.security.0.partnerOAuth'))
         ->toBe(['funded-orders:read'])
         ->and(data_get($document, 'paths./stored-value-collections.post.security.0.partnerOAuth'))
@@ -83,6 +87,6 @@ it('serves a valid curated OpenAPI contract without unsafe lifecycle operations'
 it('keeps the generated Partner OpenAPI artifact current', function (): void {
     $this->app->register(ScrambleServiceProvider::class);
 
-    $this->artisan('x-change:partner-api:export-openapi', ['--check' => true])
-        ->assertSuccessful();
+    $exit = Artisan::call('x-change:partner-api:export-openapi', ['--check' => true]);
+    expect($exit)->toBe(0, Artisan::output());
 });

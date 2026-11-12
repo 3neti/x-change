@@ -34,6 +34,19 @@ it("shows treasury payouts held for review without offering a transfer retry", (
   expect(wrapper.text()).not.toContain("Retry transfer");
 });
 
+it("collects a reason and provider evidence before requesting a reservation release", async () => {
+  const wrapper = mount(PaymentRecovery, { props: {
+    transactionReviews: [], fundingCases: [], reports: [], failures: [], payouts: [],
+    partnerReservations: [{ id: 9, external_reference: 'INV-1', order_reference: 'ORDER-1', order_status: 'expired', expires_at: '2026-11-01', last_checked_at: '2026-11-09', last_outcome: 'not_observed', release_url: '/x/operations/recovery/partner-reservations/9/release', verify_url: '/x/operations/recovery/partner-reservations/9/verify' }],
+  } });
+  expect(wrapper.text()).toContain('INV-1');
+  await wrapper.findAll('button').find((button) => button.text() === 'Review release')!.trigger('click');
+  await wrapper.get('input').setValue('provider-case-123');
+  await wrapper.get('textarea').setValue('Provider confirmed no payment');
+  await wrapper.get('form').trigger('submit');
+  expect(post).toHaveBeenCalledWith('/x/operations/recovery/partner-reservations/9/release', expect.objectContaining({ preserveScroll: true }));
+});
+
 it("records an investigation when provider transaction evidence is missing", async () => {
   const wrapper = mount(PaymentRecovery, {
     props: {

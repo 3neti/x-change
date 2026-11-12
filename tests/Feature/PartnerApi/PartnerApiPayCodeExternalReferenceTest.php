@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Passport\Client;
 use Laravel\Passport\Passport;
@@ -220,6 +221,49 @@ it('rejects changed business terms for an existing external reference', function
 
     expect(Voucher::query()->count())->toBe(1)
         ->and(PartnerApiPayCodeReference::query()->count())->toBe(1);
+});
+
+it('rejects a changed destination under the same external reference and a new idempotency key', function (): void {
+    [$issuer] = bplsAuthenticatePartner(['pay-codes:issue']);
+    $reference = 'BPLS-DESTINATION-CONFLICT';
+    $action = Mockery::mock(GeneratePayCode::class);
+    $action->shouldReceive('handle')->once()->andReturn(bplsIssuanceResult($issuer, $reference, 'BPLS-DEST'));
+    $this->app->instance(GeneratePayCode::class, $action);
+    $payload = bplsIssuancePayload($reference);
+
+    $this->postJson('/api/partner/v1/pay-codes', $payload, ['Idempotency-Key' => 'destination-first'])
+        ->assertCreated();
+    data_set($payload, 'rider.url', 'https://example.test/changed');
+    $this->postJson('/api/partner/v1/pay-codes', $payload, ['Idempotency-Key' => 'destination-second'])
+        ->assertConflict()->assertJsonPath('code', 'EXTERNAL_REFERENCE_CONFLICT');
+    expect(Voucher::query()->count())->toBe(1);
+});
+
+it('rejects changing the external reference when reusing an idempotency key', function (): void {
+    [$issuer] = bplsAuthenticatePartner(['pay-codes:issue']);
+    $action = Mockery::mock(GeneratePayCode::class);
+    $action->shouldReceive('handle')->once()->andReturn(bplsIssuanceResult($issuer, 'BPLS-REF-FIRST', 'BPLS-REF'));
+    $this->app->instance(GeneratePayCode::class, $action);
+    $headers = ['Idempotency-Key' => 'external-reference-same-key'];
+    $this->postJson('/api/partner/v1/pay-codes', bplsIssuancePayload('BPLS-REF-FIRST'), $headers)->assertCreated();
+    $this->postJson('/api/partner/v1/pay-codes', bplsIssuancePayload('BPLS-REF-SECOND'), $headers)->assertConflict();
+    expect(Voucher::query()->count())->toBe(1);
+});
+
+it('does not replay legacy issuance when its original request cannot be verified', function (): void {
+    [$issuer] = bplsAuthenticatePartner(['pay-codes:issue']);
+    $reference = 'BPLS-LEGACY-UNVERIFIABLE';
+    $action = Mockery::mock(GeneratePayCode::class);
+    $action->shouldReceive('handle')->once()->andReturn(bplsIssuanceResult($issuer, $reference, 'BPLS-OLD'));
+    $this->app->instance(GeneratePayCode::class, $action);
+    $payload = bplsIssuancePayload($reference);
+
+    $this->postJson('/api/partner/v1/pay-codes', $payload, ['Idempotency-Key' => 'legacy-first'])->assertCreated();
+    DB::table('x_change_partner_api_operations')
+        ->where('subject_reference', 'BPLS-OLD')->update(['request_hash' => null]);
+    $this->postJson('/api/partner/v1/pay-codes', $payload, ['Idempotency-Key' => 'legacy-second'])
+        ->assertConflict()->assertJsonPath('code', 'EXTERNAL_REFERENCE_CONFLICT');
+    expect(Voucher::query()->count())->toBe(1);
 });
 
 it('scopes identical external references independently to each Partner API client', function (): void {

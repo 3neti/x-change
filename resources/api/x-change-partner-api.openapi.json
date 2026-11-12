@@ -2,8 +2,8 @@
     "openapi": "3.1.0",
     "info": {
         "title": "X-Change Partner API",
-        "version": "1.5.0",
-        "description": "Approved Partner API for prefunded issuance and customer-funded Pay Code orders. Funded orders use the commissioned Commercial Principal and require provider-verified payment before issuance."
+        "version": "1.6.0",
+        "description": "Partner API for account-backed direct or funded issuance and separate shared-principal funded orders."
     },
     "servers": [
         {
@@ -58,6 +58,88 @@
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/PayCodeInstructions"
+                            },
+                            "examples": {
+                                "disbursable": {
+                                    "summary": "Disbursable",
+                                    "value": {
+                                        "cash": {
+                                            "amount": 50,
+                                            "currency": "PHP",
+                                            "settlement_rail": "INSTAPAY",
+                                            "validation": {
+                                                "mobile": "09171234567"
+                                            }
+                                        },
+                                        "inputs": {
+                                            "fields": []
+                                        },
+                                        "feedback": {
+                                            "mobile": null
+                                        },
+                                        "rider": {
+                                            "message": null
+                                        },
+                                        "count": 1
+                                    }
+                                },
+                                "payable": {
+                                    "summary": "Payable",
+                                    "value": {
+                                        "cash": {
+                                            "amount": 0,
+                                            "currency": "PHP",
+                                            "settlement_rail": "INSTAPAY",
+                                            "validation": {
+                                                "mobile": "09171234567"
+                                            }
+                                        },
+                                        "inputs": {
+                                            "fields": []
+                                        },
+                                        "feedback": {
+                                            "mobile": null
+                                        },
+                                        "rider": {
+                                            "message": null
+                                        },
+                                        "count": 1,
+                                        "voucher_type": "payable",
+                                        "target_amount": 100
+                                    }
+                                },
+                                "settlement": {
+                                    "summary": "Settlement",
+                                    "value": {
+                                        "cash": {
+                                            "amount": 0,
+                                            "currency": "PHP",
+                                            "settlement_rail": "INSTAPAY",
+                                            "validation": {
+                                                "mobile": "09171234567"
+                                            }
+                                        },
+                                        "inputs": {
+                                            "fields": []
+                                        },
+                                        "feedback": {
+                                            "mobile": null
+                                        },
+                                        "rider": {
+                                            "message": null
+                                        },
+                                        "count": 1,
+                                        "voucher_type": "settlement",
+                                        "target_amount": 100,
+                                        "execution": {
+                                            "schema": "voucher.execution.v2",
+                                            "driver": "default",
+                                            "metadata": {
+                                                "settlement_workflow": "collect_for_settlement"
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -122,6 +204,91 @@
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/PayCodeIssuanceRequest"
+                            },
+                            "examples": {
+                                "disbursable": {
+                                    "summary": "Disbursable",
+                                    "value": {
+                                        "cash": {
+                                            "amount": 50,
+                                            "currency": "PHP",
+                                            "settlement_rail": "INSTAPAY",
+                                            "validation": {
+                                                "mobile": "09171234567"
+                                            }
+                                        },
+                                        "inputs": {
+                                            "fields": []
+                                        },
+                                        "feedback": {
+                                            "mobile": null
+                                        },
+                                        "rider": {
+                                            "message": null
+                                        },
+                                        "count": 1,
+                                        "external_reference": "example-disbursable-001"
+                                    }
+                                },
+                                "payable": {
+                                    "summary": "Payable",
+                                    "value": {
+                                        "cash": {
+                                            "amount": 0,
+                                            "currency": "PHP",
+                                            "settlement_rail": "INSTAPAY",
+                                            "validation": {
+                                                "mobile": "09171234567"
+                                            }
+                                        },
+                                        "inputs": {
+                                            "fields": []
+                                        },
+                                        "feedback": {
+                                            "mobile": null
+                                        },
+                                        "rider": {
+                                            "message": null
+                                        },
+                                        "count": 1,
+                                        "voucher_type": "payable",
+                                        "target_amount": 100,
+                                        "external_reference": "example-payable-001"
+                                    }
+                                },
+                                "settlement": {
+                                    "summary": "Settlement",
+                                    "value": {
+                                        "cash": {
+                                            "amount": 0,
+                                            "currency": "PHP",
+                                            "settlement_rail": "INSTAPAY",
+                                            "validation": {
+                                                "mobile": "09171234567"
+                                            }
+                                        },
+                                        "inputs": {
+                                            "fields": []
+                                        },
+                                        "feedback": {
+                                            "mobile": null
+                                        },
+                                        "rider": {
+                                            "message": null
+                                        },
+                                        "count": 1,
+                                        "voucher_type": "settlement",
+                                        "target_amount": 100,
+                                        "execution": {
+                                            "schema": "voucher.execution.v2",
+                                            "driver": "default",
+                                            "metadata": {
+                                                "settlement_workflow": "collect_for_settlement"
+                                            }
+                                        },
+                                        "external_reference": "example-settlement-001"
+                                    }
+                                }
                             }
                         }
                     }
@@ -824,10 +991,10 @@
                                                 },
                                                 "receipt": {
                                                     "type": [
-                                                        "array",
+                                                        "object",
                                                         "null"
                                                     ],
-                                                    "items": {}
+                                                    "additionalProperties": true
                                                 }
                                             },
                                             "required": [
@@ -980,10 +1147,10 @@
                                                 },
                                                 "receipt": {
                                                     "type": [
-                                                        "array",
+                                                        "object",
                                                         "null"
                                                     ],
-                                                    "items": {}
+                                                    "additionalProperties": true
                                                 }
                                             },
                                             "required": [
@@ -1020,7 +1187,7 @@
             "post": {
                 "operationId": "createPartnerFundedOrder",
                 "summary": "Create a customer-funded Pay Code order",
-                "description": "A single Pay Code is issued after exact provider-verified payment. Public issuance policy applies; Pay Code funding is unavailable.",
+                "description": "Creates an order under the shared Commercial Principal. Payable and settlement vouchers require an authenticated account-backed order instead.",
                 "security": [
                     {
                         "partnerOAuth": [
@@ -1135,6 +1302,190 @@
                     }
                 }
             }
+        },
+        "/account-funded-orders": {
+            "post": {
+                "operationId": "createPartnerAccountFundedOrder",
+                "summary": "Create an account-backed Pay Code funding order",
+                "description": "Uses the authenticated issuer Account and reserves the external reference before funding. Disabled by default.",
+                "security": [
+                    {
+                        "partnerOAuth": [
+                            "funded-orders:create",
+                            "pay-codes:issue"
+                        ]
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "Idempotency-Key",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 160
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "allOf": [
+                                    {
+                                        "$ref": "#/components/schemas/FundedOrderRequest"
+                                    },
+                                    {
+                                        "type": "object",
+                                        "required": [
+                                            "external_reference"
+                                        ],
+                                        "properties": {
+                                            "external_reference": {
+                                                "type": "string",
+                                                "maxLength": 190,
+                                                "pattern": "^[A-Za-z0-9_.:-]+$"
+                                            }
+                                        }
+                                    }
+                                ]
+                            },
+                            "examples": {
+                                "disbursable": {
+                                    "summary": "Disbursable",
+                                    "value": {
+                                        "cash": {
+                                            "amount": 50,
+                                            "currency": "PHP",
+                                            "settlement_rail": "INSTAPAY",
+                                            "validation": {
+                                                "mobile": "09171234567"
+                                            }
+                                        },
+                                        "inputs": {
+                                            "fields": []
+                                        },
+                                        "feedback": {
+                                            "mobile": null
+                                        },
+                                        "rider": {
+                                            "message": null
+                                        },
+                                        "count": 1,
+                                        "external_reference": "example-disbursable-001",
+                                        "funding_method": "qr_ph"
+                                    }
+                                },
+                                "payable": {
+                                    "summary": "Payable",
+                                    "value": {
+                                        "cash": {
+                                            "amount": 0,
+                                            "currency": "PHP",
+                                            "settlement_rail": "INSTAPAY",
+                                            "validation": {
+                                                "mobile": "09171234567"
+                                            }
+                                        },
+                                        "inputs": {
+                                            "fields": []
+                                        },
+                                        "feedback": {
+                                            "mobile": null
+                                        },
+                                        "rider": {
+                                            "message": null
+                                        },
+                                        "count": 1,
+                                        "voucher_type": "payable",
+                                        "target_amount": 100,
+                                        "external_reference": "example-payable-001",
+                                        "funding_method": "qr_ph"
+                                    }
+                                },
+                                "settlement": {
+                                    "summary": "Settlement",
+                                    "value": {
+                                        "cash": {
+                                            "amount": 0,
+                                            "currency": "PHP",
+                                            "settlement_rail": "INSTAPAY",
+                                            "validation": {
+                                                "mobile": "09171234567"
+                                            }
+                                        },
+                                        "inputs": {
+                                            "fields": []
+                                        },
+                                        "feedback": {
+                                            "mobile": null
+                                        },
+                                        "rider": {
+                                            "message": null
+                                        },
+                                        "count": 1,
+                                        "voucher_type": "settlement",
+                                        "target_amount": 100,
+                                        "execution": {
+                                            "schema": "voucher.execution.v2",
+                                            "driver": "default",
+                                            "metadata": {
+                                                "settlement_workflow": "collect_for_settlement"
+                                            }
+                                        },
+                                        "external_reference": "example-settlement-001",
+                                        "funding_method": "qr_ph"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Account-backed funding order created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FundedOrderSuccessEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "Idempotent replay of the existing order",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FundedOrderSuccessEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "description": "Account-backed funding is disabled"
+                    },
+                    "409": {
+                        "description": "Idempotency key or external reference conflicts"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "description": "Rate limit or outstanding account-funded order limit reached; retry an existing order with the same key."
+                    },
+                    "503": {
+                        "description": "On-demand issuance is unavailable"
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -1221,8 +1572,9 @@
                         "properties": {
                             "amount": {
                                 "type": "number",
-                                "exclusiveMinimum": 0,
-                                "example": 100
+                                "example": 100,
+                                "minimum": 0,
+                                "description": "Outgoing principal in major units. Payable and explicitly supported zero-principal settlement instructions permit zero; disbursable instructions require a positive amount."
                             },
                             "currency": {
                                 "type": "string",
@@ -1341,6 +1693,29 @@
                             "string",
                             "null"
                         ]
+                    },
+                    "voucher_type": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Voucher type, including payable or settlement. Omit for an ordinary disbursable Pay Code."
+                    },
+                    "target_amount": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "minimum": 0,
+                        "description": "Collection target in major units; subject to the Partner mandate."
+                    },
+                    "execution": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "description": "Versioned execution instructions. A zero-principal collect-for-settlement instruction declares voucher.execution.v2 and execution.metadata.settlement_workflow=collect_for_settlement.",
+                        "additionalProperties": true
                     }
                 },
                 "additionalProperties": true
@@ -1769,6 +2144,7 @@
                     "reference",
                     "checkout_reference",
                     "status",
+                    "phase",
                     "funding_method",
                     "amount_minor",
                     "currency",
@@ -1784,8 +2160,28 @@
                     "checkout_reference": {
                         "type": "string"
                     },
+                    "external_reference": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
                     "status": {
                         "type": "string"
+                    },
+                    "phase": {
+                        "type": "string",
+                        "enum": [
+                            "payment_pending",
+                            "payment_verified",
+                            "funded_from_client_funds",
+                            "issuance_pending",
+                            "issued",
+                            "review_required",
+                            "cancelled",
+                            "expired"
+                        ],
+                        "description": "Coarse order progress. An expired or review-required order must not be paid again; contact support for recovery."
                     },
                     "funding_method": {
                         "type": "string",
@@ -1823,7 +2219,7 @@
                             "object",
                             "null"
                         ],
-                        "description": "Code and claim_url are present only after issuance."
+                        "description": "Code and claim_url are present only after issuance; pay_url is available for collectible vouchers."
                     },
                     "needs_review": {
                         "type": "boolean"

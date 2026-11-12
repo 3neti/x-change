@@ -45,12 +45,18 @@ class IssuePartnerPayCodeController extends Controller
         data_set($payload, '_meta.correlation_id', data_get($headers, 'correlation_id'));
         $transportPayload = $payload;
         data_forget($transportPayload, 'metadata.custom.external_reference');
+        $transportPayload['external_reference'] = $externalReference;
+        $businessPayload = $transportPayload;
+        data_forget($businessPayload, '_meta.idempotency_key');
+        data_forget($businessPayload, '_meta.correlation_id');
+        $requestHash = $idempotency->fingerprint($businessPayload);
 
         $outcome = DB::transaction(function () use (
             $context,
             $mandates,
             $payload,
             $transportPayload,
+            $requestHash,
             $externalReference,
             $key,
             $idempotency,
@@ -62,6 +68,10 @@ class IssuePartnerPayCodeController extends Controller
             $client = PartnerApiClient::query()->lockForUpdate()->findOrFail($context->client()->getKey());
             $context->setClient($client);
             $mandates->assertAllows($payload, $context);
+            if (DB::table('x_change_partner_issuance_reservations')->where('partner_api_client_id', $client->getKey())
+                ->where('external_reference', $externalReference)->exists()) {
+                throw new ExternalReferenceConflict('The external reference is reserved by a funded order.');
+            }
             $namespace = sprintf('partner-api:%s:pay-codes:issue', $client->reference);
             $termsHash = $references->termsHash($payload);
             $businessReference = PartnerApiPayCodeReference::query()
@@ -87,6 +97,18 @@ class IssuePartnerPayCodeController extends Controller
 
             if ($businessReference instanceof PartnerApiPayCodeReference) {
                 $voucher = $businessReference->voucher()->firstOrFail();
+                $originalRequestHash = PartnerApiOperation::query()
+                    ->whereBelongsTo($client, 'client')
+                    ->where('operation', 'pay_code_issued')
+                    ->where('subject_reference', (string) $voucher->code)
+                    ->orderByDesc('occurred_at')
+                    ->orderByDesc('id')
+                    ->value('request_hash');
+
+                if (! is_string($originalRequestHash) || ! hash_equals($originalRequestHash, $requestHash)) {
+                    throw new ExternalReferenceConflict('The external reference cannot be replayed with different or unverifiable instructions.');
+                }
+
                 $data = $this->replayedIssuanceData($client, $voucher);
                 $data['external_reference'] = $references->externalReference($voucher);
                 $data['consumer_status'] = $consumerStatuses->resolve($voucher);
@@ -129,6 +151,7 @@ class IssuePartnerPayCodeController extends Controller
                 'subject_reference' => data_get($data, 'code'),
                 'principal_minor' => $principalMinor,
                 'currency' => $currency,
+                'request_hash' => $requestHash,
                 'response_snapshot' => $data,
                 'occurred_at' => now(),
             ]);

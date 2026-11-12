@@ -33,6 +33,7 @@ final readonly class PartnerOpenApiDocumentTransformer
             'POST /pay-codes/{code}/payment-attempts' => 'pay-codes:pay',
             'POST /pay-codes/{code}/cancellation' => 'pay-codes:cancel',
             'POST /funded-orders' => 'funded-orders:create',
+            'POST /account-funded-orders' => ['funded-orders:create', 'pay-codes:issue'],
             'GET /funded-orders/{reference}' => 'funded-orders:read',
             'POST /stored-value-collections' => 'stored-value:spend',
             'GET /stored-value-collections/{reference}' => 'stored-value:spend',
@@ -50,7 +51,7 @@ final readonly class PartnerOpenApiDocumentTransformer
                 $scope = $scopes[$key] ?? null;
 
                 if ($scope !== null) {
-                    $operation->security = [new SecurityRequirement(['partnerOAuth' => [$scope]])];
+                    $operation->security = [new SecurityRequirement(['partnerOAuth' => (array) $scope])];
                 }
             }
         }

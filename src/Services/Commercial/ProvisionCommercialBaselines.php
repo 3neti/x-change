@@ -137,7 +137,7 @@ final readonly class ProvisionCommercialBaselines
                 'source_package' => '3neti/x-change',
                 'source_package_version' => $packageVersion,
                 'commissioning_manifest_reference' => $manifestReference,
-                'effective_at' => $snapshot->effectiveAt,
+                'effective_at' => CommercialBaselineStorageTime::from($snapshot->effectiveAt),
             ]);
         }, attempts: 5);
     }

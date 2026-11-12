@@ -111,7 +111,8 @@ class VerifyFundingIntent
         if (in_array($intent->status, [FundingIntentStatus::Expired, FundingIntentStatus::Cancelled], true)
             && $intent->purpose === FundingIntentPurpose::OnDemandIssuance
             && $intent->instructions_created_at !== null
-            && $intent->expires_at?->greaterThanOrEqualTo(now()->subDays(max(0, (int) config('x-change.funding.issuance_late_reconciliation_days', 7))))) {
+            && ($verification->trigger === FundingVerificationTrigger::Operator
+                || $intent->expires_at?->greaterThanOrEqualTo(now()->subDays(max(0, (int) config('x-change.funding.issuance_late_reconciliation_days', 7)))))) {
             return $this->verifyExpiredIssuance($intent, $verification, $receipt);
         }
 
@@ -303,7 +304,11 @@ class VerifyFundingIntent
                 return $locked;
             }
 
-            return $this->reviewAndRecoverLateObservation($locked, $observation, $verification, $receipt);
+            $withinReconciliationWindow = $locked->expires_at?->greaterThanOrEqualTo(
+                now()->subDays(max(0, (int) config('x-change.funding.issuance_late_reconciliation_days', 7))),
+            ) === true;
+
+            return $this->reviewAndRecoverLateObservation($locked, $observation, $verification, $receipt, $withinReconciliationWindow);
         }, attempts: 5);
     }
 

@@ -94,7 +94,9 @@ final readonly class ActivateCommercialRecipientDesignation
                     : null,
                 'activated_by_type' => $activatedBy?->getMorphClass(),
                 'activated_by_id' => $activatedBy?->getKey(),
-                'effective_from' => UtcInstant::parseOffsetRequired($designation->effectiveFrom),
+                'effective_from' => $origin === 'commissioning_manifest'
+                    ? CommercialBaselineStorageTime::from($designation->effectiveFrom)
+                    : UtcInstant::parseOffsetRequired($designation->effectiveFrom),
                 'effective_until' => $designation->effectiveUntil !== null
                     ? UtcInstant::parseOffsetRequired($designation->effectiveUntil)
                     : null,

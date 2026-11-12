@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Funding;
 
+use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
@@ -49,6 +50,7 @@ final class AssessPaidOnDemandIssuanceRecovery
         PayCodeIssuanceFundingOrder $order,
     ): bool {
         return in_array($case->status, ['open', 'monitoring'], true)
+            && ! DB::table('x_change_partner_issuance_reservations')->where('funding_order_id', $order->getKey())->where('status', 'released')->exists()
             && $case->reason_code === 'on_demand_issuance_provider_evidence_mismatch'
             && (int) $case->funding_intent_id === (int) $intent->getKey()
             && (int) $case->provider_funding_observation_id === (int) $observation->getKey()

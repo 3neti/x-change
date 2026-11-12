@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Http\Controllers\Web\Operations;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -15,11 +17,16 @@ use Illuminate\Support\Facades\RateLimiter;
 use Inertia\Inertia;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Disbursement\ReviewTreasuryPayoutOutbox;
+use LBHurtado\XChange\Actions\Funding\VerifyFundingIntent;
+use LBHurtado\XChange\Actions\PartnerApi\ReleasePartnerIssuanceReservation;
 use LBHurtado\XChange\Actions\Payment\ApplyReviewedPayment;
 use LBHurtado\XChange\Actions\Payment\ApplyReviewedSplitPayment;
 use LBHurtado\XChange\Actions\Payment\CreditReviewedExcess;
+use LBHurtado\XChange\Data\Funding\FundingIntentVerificationData;
+use LBHurtado\XChange\Enums\FundingVerificationTrigger;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\ObservedPaymentTransaction;
+use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\Execution\ValueFlowPayoutService;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
@@ -28,6 +35,54 @@ use Throwable;
 
 final class PaymentRecoveryController extends Controller
 {
+    public function partnerReservations(): JsonResponse
+    {
+        return response()->json(['data' => $this->partnerReservationRows()])->header('Cache-Control', 'no-store, private');
+    }
+
+    private function partnerReservationRows(): Collection
+    {
+        return DB::table('x_change_partner_issuance_reservations as r')
+            ->join('x_change_pay_code_issuance_funding_orders as o', 'o.id', '=', 'r.funding_order_id')
+            ->leftJoin('x_change_funding_reconciliation_checks as c', 'c.funding_intent_id', '=', 'o.funding_intent_id')
+            ->where('r.status', 'pending')->whereIn('o.status', ['expired', 'cancelled'])
+            ->orderBy('o.expires_at')->limit(100)
+            ->get(['r.id', 'r.external_reference', 'r.principal_minor', 'r.currency', 'o.reference as order_reference', 'o.status as order_status', 'o.expires_at', 'c.last_checked_at', 'c.last_outcome'])
+            ->map(static function (object $row): array {
+                return [...(array) $row, 'release_url' => route('x-change.operations.recovery.partner-reservation.release', ['reservation' => $row->id], false), 'verify_url' => route('x-change.operations.recovery.partner-reservation.verify', ['reservation' => $row->id], false)];
+            });
+    }
+
+    public function verifyPartnerReservation(Request $request, int $reservation, VerifyFundingIntent $verify): RedirectResponse
+    {
+        $actor = $request->user();
+        abort_unless($actor instanceof Model, 403);
+        $orderId = DB::table('x_change_partner_issuance_reservations')->where('id', $reservation)->where('status', 'pending')->value('funding_order_id');
+        $order = PayCodeIssuanceFundingOrder::query()->with('fundingIntent')->findOrFail($orderId);
+        abort_unless(in_array($order->status->value, ['expired', 'cancelled'], true) && $order->fundingIntent !== null
+            && in_array($order->fundingIntent->status->value, ['expired', 'cancelled'], true), 422);
+        $this->limitProviderStatusCheck($order->fundingIntent->provider_code);
+        try {
+            $verify->handle($order->fundingIntent, new FundingIntentVerificationData(trigger: FundingVerificationTrigger::Operator, actorId: (string) $actor->getKey()));
+        } catch (Throwable $exception) {
+            Log::warning('Partner reservation verification failed.', ['exception' => $exception::class]);
+
+            return back()->withErrors(['recovery' => 'The provider check could not be completed. The reservation remains held.']);
+        }
+
+        return back()->with('status', 'Provider status checked. Review the result before releasing the reservation.');
+    }
+
+    public function releasePartnerReservation(Request $request, int $reservation, ReleasePartnerIssuanceReservation $action): RedirectResponse
+    {
+        $data = $request->validate(['reason' => ['required', 'string', 'min:8', 'max:2000'], 'evidence_reference' => ['required', 'string', 'min:3', 'max:190']]);
+        $actor = $request->user();
+        abort_unless($actor instanceof Model, 403);
+        $action->handle($reservation, $actor, $data['reason'], $data['evidence_reference']);
+
+        return back()->with('status', 'Reservation released. The reference remains reserved and later payments require review.');
+    }
+
     public function investigateTreasuryPayout(Request $request, int $outbox, ReviewTreasuryPayoutOutbox $action): RedirectResponse
     {
         $data = $request->validate(['reason' => ['required', 'string', 'min:8', 'max:2000']]);
@@ -154,6 +209,7 @@ final class PaymentRecoveryController extends Controller
             'transactionReviews' => $transactionReviews, 'fundingCases' => $funding,
             'reports' => $reports, 'failures' => $failures, 'payouts' => $payouts,
             'treasuryPayoutReviews' => $treasuryPayoutReviews,
+            'partnerReservations' => $this->partnerReservationRows(),
         ])->toResponse($request)->withHeaders(['Cache-Control' => 'no-store, private']);
     }
 

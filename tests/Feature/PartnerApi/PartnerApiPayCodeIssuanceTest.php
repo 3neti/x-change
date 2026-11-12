@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Laravel\Passport\Client;
 use Laravel\Passport\Passport;
 use LBHurtado\Voucher\Models\Voucher;
@@ -97,6 +98,112 @@ function partnerApiIssueResult(int|string $issuerId, string $externalReference):
         ),
     );
 }
+
+it('enforces the per-issuance mandate on collection targets without replacing principal accounting', function (string $type, float $principal): void {
+    partnerApiIssuer(['pay-codes:estimate', 'pay-codes:issue'], ['maximum_amount_minor' => 5000]);
+    $action = Mockery::mock(EstimatePayCodeCost::class);
+    $action->shouldNotReceive('handle');
+    $this->app->instance(EstimatePayCodeCost::class, $action);
+
+    $payload = partnerApiPayCodePayload($principal);
+    $payload['voucher_type'] = $type;
+    $payload['target_amount'] = 50.01;
+
+    $this->postJson('/api/partner/v1/pay-code-estimates', $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('target_amount');
+
+    $issue = Mockery::mock(GeneratePayCode::class);
+    $issue->shouldNotReceive('handle');
+    $this->app->instance(GeneratePayCode::class, $issue);
+    $this->postJson('/api/partner/v1/pay-codes', $payload, ['Idempotency-Key' => 'limit-test'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('target_amount');
+})->with([
+    'payable' => ['payable', 0.0],
+    'settlement' => ['settlement', 25.0],
+]);
+
+it('rejects collection targets with fractional centavos before mandate evaluation', function (): void {
+    partnerApiIssuer(['pay-codes:estimate']);
+    $payload = partnerApiPayCodePayload(0.0);
+    $payload['voucher_type'] = 'payable';
+    $payload['target_amount'] = 50.001;
+
+    $this->postJson('/api/partner/v1/pay-code-estimates', $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('target_amount');
+});
+
+it('accepts a zero principal for the v2 collect-for-settlement estimate and rejects contradictory amounts', function (): void {
+    partnerApiIssuer(['pay-codes:estimate']);
+    $action = Mockery::mock(EstimatePayCodeCost::class);
+    $action->shouldReceive('handle')->once()->with(Mockery::on(fn (array $payload): bool => (float) data_get($payload, 'cash.amount') === 0.0
+        && data_get($payload, 'execution.metadata.settlement_workflow') === 'collect_for_settlement'
+    ))->andReturn(new PricingEstimateData(currency: 'PHP', total: 5.0));
+    $this->app->instance(EstimatePayCodeCost::class, $action);
+    $payload = partnerApiPayCodePayload(0.0);
+    $payload['voucher_type'] = 'settlement';
+    $payload['target_amount'] = 100;
+    $payload['execution'] = [
+        'schema' => 'voucher.execution.v2',
+        'driver' => 'default',
+        'metadata' => ['settlement_workflow' => 'collect_for_settlement'],
+    ];
+
+    $this->postJson('/api/partner/v1/pay-code-estimates', $payload)->assertOk();
+    data_set($payload, 'cash.amount', 1);
+    $this->postJson('/api/partner/v1/pay-code-estimates', $payload)
+        ->assertUnprocessable()->assertJsonValidationErrors('cash.amount');
+});
+
+it('issues and replays an account-bound zero principal settlement instruction', function (): void {
+    [$issuer] = partnerApiIssuer(['pay-codes:issue']);
+    $payload = partnerApiPayCodePayload(0.0);
+    $payload['voucher_type'] = 'settlement';
+    $payload['target_amount'] = 100;
+    $payload['execution'] = [
+        'schema' => 'voucher.execution.v2',
+        'driver' => 'default',
+        'metadata' => ['settlement_workflow' => 'collect_for_settlement'],
+    ];
+    $result = partnerApiIssueResult($issuer->getKey(), $payload['external_reference']);
+    $action = Mockery::mock(GeneratePayCode::class);
+    $action->shouldReceive('handle')->once()->with(Mockery::on(fn (array $instructions): bool => (float) data_get($instructions, 'cash.amount') === 0.0
+        && data_get($instructions, 'metadata.issuer_id') === (string) $issuer->getKey()
+        && data_get($instructions, 'execution.metadata.settlement_workflow') === 'collect_for_settlement'
+    ))->andReturn($result);
+    $this->app->instance(GeneratePayCode::class, $action);
+
+    $headers = ['Idempotency-Key' => 'settlement-zero-principal'];
+    $this->postJson('/api/partner/v1/pay-codes', $payload, $headers)->assertCreated();
+    $this->postJson('/api/partner/v1/pay-codes', $payload, $headers)
+        ->assertOk()->assertJsonPath('meta.idempotency.replayed', true);
+    expect(PartnerApiOperation::query()->sole()->principal_minor)->toBe(0);
+});
+
+it('persists a zero principal settlement through the real account-backed issuance action', function (): void {
+    Http::preventStrayRequests();
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:partner-settlement-test');
+    partnerApiIssuer(['pay-codes:issue', 'pay-codes:read']);
+    $payload = partnerApiPayCodePayload(0.0);
+    $payload['voucher_type'] = 'settlement';
+    $payload['target_amount'] = 100;
+    $payload['execution'] = [
+        'schema' => 'voucher.execution.v2',
+        'driver' => 'default',
+        'metadata' => ['settlement_workflow' => 'collect_for_settlement'],
+    ];
+
+    $response = $this->postJson('/api/partner/v1/pay-codes', $payload, ['Idempotency-Key' => 'real-zero-settlement'])
+        ->assertCreated();
+    $voucher = Voucher::query()->where('code', $response->json('data.code'))->sole();
+    expect((float) data_get($voucher->metadata, 'instructions.cash.amount'))->toBe(0.0)
+        ->and((float) data_get($voucher->metadata, 'instructions.target_amount'))->toBe(100.0)
+        ->and(data_get($voucher->metadata, 'instructions.execution.metadata.settlement_workflow'))->toBe('collect_for_settlement');
+});
 
 it('estimates through the production pricing action with token-bound issuer identity', function () {
     [$issuer] = partnerApiIssuer(['pay-codes:estimate']);

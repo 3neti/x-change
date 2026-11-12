@@ -28,6 +28,7 @@ use LBHurtado\XChange\Models\IssuanceBatch;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
 use LBHurtado\XChange\Services\Funding\SettlementIssuanceRecoveryAssessment;
+use LBHurtado\XChange\Services\PartnerApi\PartnerIssuanceReservationService;
 use RuntimeException;
 use Throwable;
 
@@ -71,8 +72,9 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
         GeneratePayCode $generatePayCode,
         IssueIssuanceBatchPayCodes $issueBatch,
         SettlementIssuanceRecoveryAssessment $settlementFunding,
+        PartnerIssuanceReservationService $partnerReservations,
     ): void {
-        DB::transaction(function () use ($holds, $portfolios, $accountBalances, $transition, $generatePayCode, $issueBatch, $settlementFunding): void {
+        DB::transaction(function () use ($holds, $portfolios, $accountBalances, $transition, $generatePayCode, $issueBatch, $settlementFunding, $partnerReservations): void {
             $order = PayCodeIssuanceFundingOrder::query()
                 ->lockForUpdate()
                 ->findOrFail($this->fundingOrderId);
@@ -200,6 +202,10 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
             data_set($instructions, '_meta.issuer_type', $issuer::class);
             data_set($instructions, '_meta.on_demand_funding_order', $order->reference);
             $result = $generatePayCode->handle($instructions);
+            $reservationId = data_get($instructions, '_meta.partner_issuance_reservation_id');
+            if ($reservationId !== null) {
+                $partnerReservations->complete((int) $reservationId, $order, $result);
+            }
 
             $transition->handle(
                 order: $order,
