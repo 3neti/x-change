@@ -31,10 +31,15 @@ class PartnerApiMandateGuard
         }
 
         if (in_array(data_get($payload, 'voucher_type'), ['payable', 'settlement'], true)
-            && is_numeric(data_get($payload, 'target_amount'))
-            && Money::of((string) data_get($payload, 'target_amount'), $currency)->getMinorAmount()->toInt()
-                * max(1, (int) data_get($payload, 'count', 1)) > (int) data_get($mandate, 'maximum_amount_minor', 0)) {
-            $errors['target_amount'][] = 'The collection target exceeds the Partner API per-issuance limit.';
+            && is_numeric(data_get($payload, 'target_amount'))) {
+            try {
+                $targetMinor = Money::of((string) data_get($payload, 'target_amount'), $currency)->getMinorAmount()->toInt();
+            } catch (Throwable) {
+                throw ValidationException::withMessages(['target_amount' => ['The collection target must be a valid monetary value.']]);
+            }
+            if ($targetMinor * max(1, (int) data_get($payload, 'count', 1)) > (int) data_get($mandate, 'maximum_amount_minor', 0)) {
+                $errors['target_amount'][] = 'The collection target exceeds the Partner API per-issuance limit.';
+            }
         }
 
         $profile = $this->voucherProfile($payload);
@@ -74,9 +79,15 @@ class PartnerApiMandateGuard
     public function principalMinor(array $payload): int
     {
         $currency = strtoupper((string) data_get($payload, 'cash.currency'));
-        $amountMinor = Money::of((string) data_get($payload, 'cash.amount'), $currency)
-            ->getMinorAmount()
-            ->toInt();
+        try {
+            $amountMinor = Money::of((string) data_get($payload, 'cash.amount'), $currency)
+                ->getMinorAmount()
+                ->toInt();
+        } catch (Throwable) {
+            throw ValidationException::withMessages([
+                'cash.amount' => ['The amount and currency must represent a valid monetary value.'],
+            ]);
+        }
 
         return $amountMinor * max(1, (int) data_get($payload, 'count', 1));
     }

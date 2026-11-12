@@ -59,6 +59,21 @@ function partnerApiPayCodePayload(float $amount = 100.00): array
     return $payload;
 }
 
+it('rejects invalid monetary values without an internal error', function (string $path): void {
+    partnerApiIssuer(['pay-codes:estimate', 'pay-codes:issue']);
+    $payload = partnerApiPayCodePayload();
+    data_set($payload, 'cash.amount', 1.001);
+    $this->postJson($path, $payload, ['Idempotency-Key' => 'invalid-amount'])->assertUnprocessable();
+    data_set($payload, 'cash.amount', 1);
+    data_set($payload, 'cash.currency', 'INVALID');
+    $this->postJson($path, $payload, ['Idempotency-Key' => 'invalid-currency'])->assertUnprocessable();
+    data_set($payload, 'cash.currency', 'PHP');
+    data_set($payload, 'cash.amount', 0);
+    $payload['voucher_type'] = 'payable';
+    $payload['target_amount'] = '999999999999999999999999999';
+    $this->postJson($path, $payload, ['Idempotency-Key' => 'invalid-target'])->assertUnprocessable();
+})->with(['/api/partner/v1/pay-code-estimates', '/api/partner/v1/pay-codes']);
+
 function partnerApiIssueResult(int|string $issuerId, string $externalReference): GeneratePayCodeResultData
 {
     $issuer = User::query()->findOrFail($issuerId);
