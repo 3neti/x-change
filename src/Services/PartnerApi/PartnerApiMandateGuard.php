@@ -37,7 +37,9 @@ class PartnerApiMandateGuard
             } catch (Throwable) {
                 throw ValidationException::withMessages(['target_amount' => ['The collection target must be a valid monetary value.']]);
             }
-            if ($targetMinor * max(1, (int) data_get($payload, 'count', 1)) > (int) data_get($mandate, 'maximum_amount_minor', 0)) {
+            $count = max(1, (int) data_get($payload, 'count', 1));
+            if ($targetMinor > intdiv(PHP_INT_MAX, $count)
+                || $targetMinor * $count > (int) data_get($mandate, 'maximum_amount_minor', 0)) {
                 $errors['target_amount'][] = 'The collection target exceeds the Partner API per-issuance limit.';
             }
         }
@@ -89,7 +91,12 @@ class PartnerApiMandateGuard
             ]);
         }
 
-        return $amountMinor * max(1, (int) data_get($payload, 'count', 1));
+        $count = max(1, (int) data_get($payload, 'count', 1));
+        if ($amountMinor > intdiv(PHP_INT_MAX, $count)) {
+            throw ValidationException::withMessages(['cash.amount' => ['The total principal is too large.']]);
+        }
+
+        return $amountMinor * $count;
     }
 
     public function assertDailyPrincipalAvailable(

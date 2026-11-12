@@ -72,6 +72,10 @@ it('rejects invalid monetary values without an internal error', function (string
     $payload['voucher_type'] = 'payable';
     $payload['target_amount'] = '999999999999999999999999999';
     $this->postJson($path, $payload, ['Idempotency-Key' => 'invalid-target'])->assertUnprocessable();
+    unset($payload['voucher_type'], $payload['target_amount']);
+    data_set($payload, 'cash.amount', 1);
+    $payload['count'] = PHP_INT_MAX;
+    $this->postJson($path, $payload, ['Idempotency-Key' => 'invalid-total'])->assertUnprocessable();
 })->with(['/api/partner/v1/pay-code-estimates', '/api/partner/v1/pay-codes']);
 
 function partnerApiIssueResult(int|string $issuerId, string $externalReference): GeneratePayCodeResultData
