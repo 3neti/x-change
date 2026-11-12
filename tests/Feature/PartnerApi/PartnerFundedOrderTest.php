@@ -11,6 +11,7 @@ use Illuminate\Validation\ValidationException;
 use Laravel\Passport\Client;
 use Laravel\Passport\Passport;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
+use LBHurtado\EmiCore\Exceptions\ProviderFundingNotObserved;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Funding\RequestOnDemandPayCodeIssuanceRetry;
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
@@ -172,12 +173,28 @@ it('releases an expired partner reservation only after reviewed evidence and ret
     DB::table('x_change_partner_issuance_reservations')->where('id', $reservation['id'])->update(['funding_order_id' => $order->getKey()]);
     $action = app(ReleasePartnerIssuanceReservation::class);
     expect(fn () => $action->handle($reservation['id'], $client->issuer, 'No payment found', 'bank-history-1'))->toThrow(ValidationException::class);
-    DB::table('x_change_funding_reconciliation_checks')->insert(['funding_intent_id' => $intent->getKey(), 'last_checked_at' => now()->subHours(12), 'last_outcome' => 'unavailable']);
+    $adapter = new FakeFundingProviderAdapter;
+    $adapter->fundingVerificationResolver = static function (): never {
+        throw new ProviderFundingNotObserved('No payment was observed.');
+    };
+    $this->app->instance(FakeFundingProviderAdapter::class, $adapter);
+    $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
+    $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
+    Gate::define('x-change.recovery.manage', fn () => true);
+    $this->actingAs($client->issuer)->post(route('x-change.operations.recovery.partner-reservation.verify', ['reservation' => $reservation['id']]))
+        ->assertRedirect()->assertSessionHas('status');
+    expect(DB::table('x_change_funding_reconciliation_checks')->where('funding_intent_id', $intent->getKey())->value('last_outcome'))->toBe('not_observed');
+    DB::table('x_change_funding_reconciliation_checks')->where('funding_intent_id', $intent->getKey())->update(['last_checked_at' => now()->subHours(12), 'last_outcome' => 'unavailable']);
     expect(fn () => $action->handle($reservation['id'], $client->issuer, 'No payment found', 'bank-history-1'))->toThrow(ValidationException::class);
     DB::table('x_change_funding_reconciliation_checks')->where('funding_intent_id', $intent->getKey())->update(['last_outcome' => 'not_observed', 'last_checked_at' => now()->subDays(2)]);
     expect(fn () => $action->handle($reservation['id'], $client->issuer, 'No payment found', 'bank-history-1'))->toThrow(ValidationException::class);
     DB::table('x_change_funding_reconciliation_checks')->where('funding_intent_id', $intent->getKey())->update(['last_checked_at' => now()->subHours(12)]);
-    $action->handle($reservation['id'], $client->issuer, 'No payment found', 'bank-history-1');
+    $this->actingAs($client->issuer)->getJson(route('x-change.operations.recovery.partner-reservation.index'))
+        ->assertOk()->assertJsonPath('data.0.id', $reservation['id']);
+    $this->post(route('x-change.operations.recovery.partner-reservation.release', ['reservation' => $reservation['id']]), [
+        'reason' => 'No payment found', 'evidence_reference' => 'bank-history-1',
+    ])->assertRedirect()->assertSessionHas('status');
+    $this->getJson(route('x-change.operations.recovery.partner-reservation.index'))->assertOk()->assertJsonPath('data', []);
     $released = DB::table('x_change_partner_issuance_reservations')->where('id', $reservation['id'])->first();
     expect($released->status)->toBe('released')->and($released->release_evidence_reference)->toBe('bank-history-1')
         ->and($released->released_by_id)->toBe((string) $client->issuer_id);
