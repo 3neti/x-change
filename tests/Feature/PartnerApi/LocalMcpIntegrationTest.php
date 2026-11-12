@@ -22,7 +22,7 @@ it('issues through MCP and the real Partner API with simulated funds', function 
     $loader->addPsr4('LBHurtado\\XMcp\\', $mcpSource.'/src');
     config()->set('x-mcp.enabled', true);
     config()->set('x-mcp.api_base_url', 'https://partner-simulation.invalid/api/partner/v1');
-    config()->set('x-mcp.expected_partner_contract_version', '1.5.0');
+    config()->set('x-mcp.expected_partner_contract_version', '1.6.0');
     config()->set('x-mcp.public_issuance.enabled', true);
     $this->app->register(McpServiceProvider::class);
     $this->app->register(XMcpServiceProvider::class);
