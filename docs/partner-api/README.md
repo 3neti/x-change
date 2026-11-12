@@ -81,6 +81,8 @@ php artisan x-change:partner-api:client "Saras AI Sandbox" \
   --scope=pay-codes:issue \
   --scope=pay-codes:read \
   --scope=pay-codes:cancel \
+  --scope=funded-orders:create \
+  --scope=funded-orders:read \
   --currency=PHP \
   --rail=INSTAPAY \
   --maximum-amount-minor=500000 \
@@ -99,7 +101,7 @@ curl -X POST https://your-host.example/oauth/token \
   --data-urlencode 'grant_type=client_credentials' \
   --data-urlencode 'client_id=YOUR_CLIENT_ID' \
   --data-urlencode 'client_secret=YOUR_CLIENT_SECRET' \
-  --data-urlencode 'scope=capabilities:read pay-codes:estimate pay-codes:issue pay-codes:read pay-codes:cancel'
+  --data-urlencode 'scope=capabilities:read pay-codes:estimate pay-codes:issue pay-codes:read pay-codes:cancel funded-orders:create funded-orders:read'
 ```
 
 Cache the returned token only until `expires_in`; request a new token after expiry. Never put bearer tokens in URLs or logs.
