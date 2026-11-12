@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services\PartnerApi;
 
 use Brick\Money\Money;
 use Carbon\CarbonInterval;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\XChange\Models\PartnerApiOperation;
 use Throwable;
@@ -27,6 +28,20 @@ class PartnerApiMandateGuard
 
         if ($principalMinor > (int) data_get($mandate, 'maximum_amount_minor', 0)) {
             $errors['cash.amount'][] = 'The amount exceeds the Partner API per-issuance limit.';
+        }
+
+        if (in_array(data_get($payload, 'voucher_type'), ['payable', 'settlement'], true)
+            && is_numeric(data_get($payload, 'target_amount'))) {
+            try {
+                $targetMinor = Money::of((string) data_get($payload, 'target_amount'), $currency)->getMinorAmount()->toInt();
+            } catch (Throwable) {
+                throw ValidationException::withMessages(['target_amount' => ['The collection target must be a valid monetary value.']]);
+            }
+            $count = max(1, (int) data_get($payload, 'count', 1));
+            if ($targetMinor > intdiv(PHP_INT_MAX, $count)
+                || $targetMinor * $count > (int) data_get($mandate, 'maximum_amount_minor', 0)) {
+                $errors['target_amount'][] = 'The collection target exceeds the Partner API per-issuance limit.';
+            }
         }
 
         $profile = $this->voucherProfile($payload);
@@ -66,11 +81,22 @@ class PartnerApiMandateGuard
     public function principalMinor(array $payload): int
     {
         $currency = strtoupper((string) data_get($payload, 'cash.currency'));
-        $amountMinor = Money::of((string) data_get($payload, 'cash.amount'), $currency)
-            ->getMinorAmount()
-            ->toInt();
+        try {
+            $amountMinor = Money::of((string) data_get($payload, 'cash.amount'), $currency)
+                ->getMinorAmount()
+                ->toInt();
+        } catch (Throwable) {
+            throw ValidationException::withMessages([
+                'cash.amount' => ['The amount and currency must represent a valid monetary value.'],
+            ]);
+        }
 
-        return $amountMinor * max(1, (int) data_get($payload, 'count', 1));
+        $count = max(1, (int) data_get($payload, 'count', 1));
+        if ($amountMinor > intdiv(PHP_INT_MAX, $count)) {
+            throw ValidationException::withMessages(['cash.amount' => ['The total principal is too large.']]);
+        }
+
+        return $amountMinor * $count;
     }
 
     public function assertDailyPrincipalAvailable(
@@ -91,7 +117,12 @@ class PartnerApiMandateGuard
             ->whereBetween('occurred_at', [now()->startOfDay(), now()->endOfDay()])
             ->sum('principal_minor');
 
-        if ($used + $principalMinor > $limit) {
+        $reserved = (int) DB::table('x_change_partner_issuance_reservations')
+            ->where('partner_api_client_id', $context->client()->getKey())
+            ->where('status', 'pending')
+            ->sum('principal_minor');
+
+        if ($used + $reserved + $principalMinor > $limit) {
             throw ValidationException::withMessages([
                 'cash.amount' => ['The amount exceeds the Partner API daily principal limit.'],
             ]);

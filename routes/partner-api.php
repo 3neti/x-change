@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\CancelPartnerPayCodeController;
+use LBHurtado\XChange\Http\Controllers\PartnerApi\CreatePartnerAccountFundedOrderController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\CreatePartnerFundedOrderController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\CreatePartnerPayCodePaymentAttemptController;
 use LBHurtado\XChange\Http\Controllers\PartnerApi\CreateStoredValueSpendChallengeController;
@@ -38,6 +39,10 @@ Route::prefix($prefix)
             ->post('/funded-orders', CreatePartnerFundedOrderController::class)
             ->middleware(EnsurePartnerFundedOrderCreationEnabled::class)
             ->name('funded-orders.store');
+
+        Route::middleware(EnsurePartnerApiClient::using('funded-orders:create', 'pay-codes:issue'))
+            ->post('/account-funded-orders', CreatePartnerAccountFundedOrderController::class)
+            ->name('account-funded-orders.store');
 
         Route::middleware(EnsurePartnerApiClient::using('funded-orders:read'))
             ->get('/funded-orders/{reference}', ShowPartnerFundedOrderController::class)

@@ -24,6 +24,7 @@ use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Services\Commercial\CommercialCustomerChargingGuard;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingRequirement;
+use LBHurtado\XChange\Services\PartnerApi\PartnerIssuanceReservationService;
 use RuntimeException;
 use Throwable;
 
@@ -40,6 +41,7 @@ final readonly class PrepareOnDemandPayCodeIssuance
         private TransitionPayCodeIssuanceFundingOrder $transition,
         private ReserveOnDemandIssuanceAmountLease $amountLeases,
         private CommercialCustomerChargingGuard $customerCharging,
+        private PartnerIssuanceReservationService $partnerReservations,
     ) {}
 
     /**
@@ -156,6 +158,10 @@ final readonly class PrepareOnDemandPayCodeIssuance
                     'bank_transfer_primary' => true,
                 ],
             ]);
+            $reservationId = data_get($instructions, '_meta.partner_issuance_reservation_id');
+            if ($reservationId !== null) {
+                $this->partnerReservations->bindToOrder((int) $reservationId, $order);
+            }
             $order->events()->create([
                 'sequence' => 1,
                 'event_type' => 'prepared',

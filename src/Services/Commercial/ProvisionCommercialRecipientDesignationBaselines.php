@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Commercial;
 
-use Carbon\CarbonImmutable;
 use LBHurtado\XChange\Contracts\CommercialComponentEconomicsResolverContract;
 use LBHurtado\XChange\Models\CommercialRecipientDesignation;
 use LBHurtado\XCommerce\Enums\CommercialAllocationDestinationKind;
@@ -65,7 +64,7 @@ final readonly class ProvisionCommercialRecipientDesignationBaselines
                 authorityReference: 'commercial-recipient-designation-baseline:'.$rule->designationReference.':'.$snapshotHash,
                 sourceReference: $commissioningManifestReference,
                 acceptedSnapshotHash: $snapshotHash,
-                activatedAt: CarbonImmutable::parse('1970-01-01T00:00:00+00:00'),
+                activatedAt: CommercialBaselineStorageTime::from('1970-01-01T00:00:00+00:00'),
             );
         }
 

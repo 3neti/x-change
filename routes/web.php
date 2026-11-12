@@ -151,6 +151,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Contribution\UploadParticipantDocumen
 use LBHurtado\XChange\Http\Controllers\Web\Contribution\VerifyContributionPasswordController;
 use LBHurtado\XChange\Http\Controllers\Web\Contribution\ViewContributionDocumentController;
 use LBHurtado\XChange\Http\Controllers\Web\DashboardPageController;
+use LBHurtado\XChange\Http\Controllers\Web\DeveloperAccessPageController;
 use LBHurtado\XChange\Http\Controllers\Web\EnrollmentController;
 use LBHurtado\XChange\Http\Controllers\Web\Leads\LeadCampaignEndpointController;
 use LBHurtado\XChange\Http\Controllers\Web\Legal\AcceptAgreementController;
@@ -188,7 +189,6 @@ use LBHurtado\XChange\Http\Controllers\Web\PublicIssuanceRecoveryController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicOnboarding\AutoRegisterMutationController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicOnboarding\AutoRegisterPageController;
 use LBHurtado\XChange\Http\Controllers\Web\PublicPricingPageController;
-use LBHurtado\XChange\Http\Controllers\Web\DeveloperAccessPageController;
 use LBHurtado\XChange\Http\Controllers\Web\StampPreviewController;
 use LBHurtado\XChange\Http\Controllers\Web\StampRenderingComparisonController;
 use LBHurtado\XChange\Http\Controllers\Web\StoredValueCollectionController;
@@ -251,6 +251,12 @@ Route::middleware(['web', ShareXChangeBranding::class])->group(function (): void
 Route::prefix('x/operations')->middleware(['web', ShareXChangeBranding::class])->group(function (): void {
     Route::middleware(['auth', 'can:x-change.recovery.manage'])->group(function (): void {
         Route::get('recovery', [PaymentRecoveryController::class, 'index'])->name('x-change.operations.recovery.index');
+        Route::get('recovery/partner-reservations', [PaymentRecoveryController::class, 'partnerReservations'])
+            ->middleware('throttle:30,1')->name('x-change.operations.recovery.partner-reservation.index');
+        Route::post('recovery/partner-reservations/{reservation}/release', [PaymentRecoveryController::class, 'releasePartnerReservation'])
+            ->middleware('throttle:5,1')->name('x-change.operations.recovery.partner-reservation.release');
+        Route::post('recovery/partner-reservations/{reservation}/verify', [PaymentRecoveryController::class, 'verifyPartnerReservation'])
+            ->middleware('throttle:5,1')->name('x-change.operations.recovery.partner-reservation.verify');
         Route::post('recovery/treasury-payouts/{outbox}/review', [PaymentRecoveryController::class, 'reviewTreasuryPayout'])
             ->middleware('throttle:5,1')->name('x-change.operations.recovery.treasury-payout.review');
         Route::post('recovery/treasury-payouts/{outbox}/investigate', [PaymentRecoveryController::class, 'investigateTreasuryPayout'])

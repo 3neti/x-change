@@ -6,6 +6,7 @@ use Bavix\Wallet\Models\Wallet;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -38,6 +39,7 @@ use LBHurtado\XChange\Actions\Funding\ReverseSettledFundingIntent;
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Actions\Funding\TransitionPayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Actions\Funding\VerifyFundingIntent;
+use LBHurtado\XChange\Actions\PartnerApi\CreatePartnerApiClient;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
@@ -63,6 +65,8 @@ use LBHurtado\XChange\Models\FundingEvidenceClaimSupersession;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\FundingSuspenseCase;
+use LBHurtado\XChange\Models\PartnerApiClient;
+use LBHurtado\XChange\Models\PartnerApiPayCodeReference;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrderEvent;
 use LBHurtado\XChange\Models\VoucherCollection;
@@ -73,6 +77,7 @@ use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingPolicy;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingRequirement;
+use LBHurtado\XChange\Services\PartnerApi\PartnerIssuanceReservationService;
 use LBHurtado\XChange\Services\Payment\ProviderEvidenceLock;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
@@ -1250,6 +1255,15 @@ it('recovers a paid on-demand order after expiry through independent approval ex
     app(ExpireOnDemandIssuanceFundingOrder::class)->handle($order);
 
     expect(app(AssessPaidOnDemandIssuanceRecovery::class)->eligible($case->refresh()))->toBeTrue();
+    $credential = app(CreatePartnerApiClient::class)->handle(name: 'Released reservation test', issuer: $owner, scopes: ['funded-orders:create']);
+    $partner = PartnerApiClient::query()->where('reference', $credential->reference)->sole();
+    $reservation = app(PartnerIssuanceReservationService::class)->reserve($partner, 'late-release', 'late-release-key', [
+        'cash' => ['amount' => 50, 'currency' => 'PHP', 'validation' => ['mobile' => '09171234567']],
+    ], 5000, 'PHP');
+    DB::table('x_change_partner_issuance_reservations')->where('id', $reservation['id'])->update(['funding_order_id' => $order->getKey(), 'status' => 'released']);
+    expect(app(AssessPaidOnDemandIssuanceRecovery::class)->eligible($case->refresh()))->toBeFalse();
+    DB::table('x_change_partner_issuance_reservations')->where('id', $reservation['id'])->update(['status' => 'pending']);
+    expect(app(AssessPaidOnDemandIssuanceRecovery::class)->eligible($case->refresh()))->toBeTrue();
     $readModel = app(FundingCockpitReadModelProvider::class)->forOperator($owner);
     expect(collect($readModel->suspense_cases)->firstWhere('reference', $case->reference))
         ->toMatchArray([
@@ -1554,6 +1568,52 @@ it('keeps a closed issuance intent eligible for another check when no payment is
         ->and(FundingSuspenseCase::query()->count())->toBe(0)
         ->and(DB::table('x_change_funding_reconciliation_checks')->where('funding_intent_id', $intent->getKey())->value('last_outcome'))->toBe('not_observed');
 })->with([FundingIntentStatus::Expired, FundingIntentStatus::Cancelled]);
+
+it('allows an operator to recheck a closed issuance after the automatic reconciliation window', function (): void {
+    $intent = fundingIntentAwaitingOnDemandBankTransfer();
+    $intent->forceFill(['status' => FundingIntentStatus::Expired, 'expires_at' => now()->subDays(9)])->saveQuietly();
+    $adapter = new FakeFundingProviderAdapter;
+    $adapter->fundingVerificationResolver = static function (): never {
+        throw new ProviderFundingNotObserved('No payment was observed.');
+    };
+    $this->app->instance(FakeFundingProviderAdapter::class, $adapter);
+    $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
+    $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
+
+    app(VerifyFundingIntent::class)->handle($intent, new FundingIntentVerificationData(trigger: FundingVerificationTrigger::Schedule, actorId: 'scheduler'));
+    expect(DB::table('x_change_funding_reconciliation_checks')->where('funding_intent_id', $intent->getKey())->exists())->toBeFalse();
+    app(VerifyFundingIntent::class)->handle($intent, new FundingIntentVerificationData(trigger: FundingVerificationTrigger::Operator, actorId: 'reviewer'));
+    expect(DB::table('x_change_funding_reconciliation_checks')->where('funding_intent_id', $intent->getKey())->value('last_outcome'))->toBe('not_observed');
+});
+
+it('sends late evidence found by an operator outside the automatic window to review', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    $owner = actingAsTestUser(0);
+    $wallet = $owner->wallet()->where('slug', 'platform')->sole();
+    $order = issuanceFundingOrder($owner, 'operator-late-review');
+    $this->travel(1)->minute();
+    $occurredAt = now()->toDateTimeImmutable();
+    $observation = onDemandFundingObservation(5000);
+    $intent = onDemandFundingIntent($wallet->uuid, $observation, 5000);
+    $intent->forceFill(['status' => FundingIntentStatus::Expired, 'created_by_type' => $owner::class, 'created_by_id' => (string) $owner->getKey(), 'instructions_created_at' => $order->created_at, 'expires_at' => $order->expires_at])->saveQuietly();
+    $order->forceFill(['funding_intent_id' => $intent->getKey(), 'status' => PayCodeIssuanceFundingOrderStatus::Expired])->saveQuietly();
+    $this->travel(9)->days();
+    $adapter = new FakeFundingProviderAdapter;
+    $adapter->fundingVerificationResolver = static fn (): ProviderFundingObservationData => new ProviderFundingObservationData(
+        provider: 'netbank', providerTransactionId: 'OPERATOR-LATE-TEST', grossAmountMinor: 5000, feeAmountMinor: 0,
+        netAmountMinor: 5000, currency: 'PHP', providerStatus: 'settled', verificationSource: 'test',
+        payloadHash: hash('sha256', 'operator-late-test'), occurredAt: $occurredAt, settledAt: $occurredAt,
+        metadata: ['destination_verified' => true],
+    );
+    $this->app->instance(FakeFundingProviderAdapter::class, $adapter);
+    $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
+    $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
+    $result = app(VerifyFundingIntent::class)->handle($intent, new FundingIntentVerificationData(trigger: FundingVerificationTrigger::Operator, actorId: 'reviewer'));
+    expect($result->status)->toBe(FundingIntentStatus::Suspense)
+        ->and(FundingSettlement::query()->where('funding_intent_id', $intent->getKey())->count())->toBe(0)
+        ->and(DB::table('x_change_funding_reconciliation_checks')->where('funding_intent_id', $intent->getKey())->value('last_outcome'))->toBe('review');
+});
 
 it('rechecks reused-amount attribution before settling a previously verified intent', function (): void {
     $owner = actingAsTestUser(0);
@@ -2010,6 +2070,58 @@ it('cancels a paid cockpit order and releases its hold to the issuing Account ex
         ->and(FundingSettlement::query()->where('funding_intent_id', $intent->getKey())->count())->toBe(1);
     expect(fn () => app()->call([new ResumeOnDemandPayCodeIssuanceJob($order->getKey()), 'handle']))
         ->toThrow(RuntimeException::class, 'not ready');
+});
+
+it('settles simulated partner funding and completes the reserved issuance once', function (): void {
+    Queue::fake();
+    Http::preventStrayRequests();
+    enableNetbankTreasuryForTests();
+    $user = actingAsTestUser(0);
+    $credential = app(CreatePartnerApiClient::class)->handle(
+        name: 'Funded lifecycle', issuer: $user, scopes: ['funded-orders:create', 'pay-codes:issue'],
+    );
+    $client = PartnerApiClient::query()->where('reference', $credential->reference)->sole();
+    $instructions = [
+        'cash' => ['amount' => 50, 'currency' => 'PHP', 'validation' => ['mobile' => '09171234567']],
+        'metadata' => ['custom' => ['external_reference' => 'funded-worker-1']],
+        '_meta' => [],
+    ];
+    $reservations = app(PartnerIssuanceReservationService::class);
+    $reservation = $reservations->reserve($client, 'funded-worker-1', 'funded-worker-key', $instructions, 5000, 'PHP');
+    data_set($instructions, '_meta.partner_issuance_reservation_id', $reservation['id']);
+    $wallet = $user->wallet()->where('slug', 'platform')->sole();
+    $observation = onDemandFundingObservation(5000);
+    $intent = onDemandFundingIntent($wallet->uuid, $observation, 5000);
+    $order = issuanceFundingOrder($user);
+    $order->forceFill(['instructions_ciphertext' => $instructions])->saveQuietly();
+    $reservations->bindToOrder($reservation['id'], $order->refresh());
+    $order = app(ReserveOnDemandIssuanceAmountLease::class)->handle($order);
+    $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();
+    app(SettleVerifiedFundingIntent::class)->handle($intent);
+
+    $voucher = new Voucher(['code' => 'PARTNER-WORKER', 'metadata' => ['instructions' => $instructions]]);
+    $voucher->owner()->associate($user);
+    $voucher->save();
+    $result = new GeneratePayCodeResultData(
+        voucher_id: $voucher->getKey(), code: $voucher->code, amount: 50, currency: 'PHP',
+        issuer: new IssuerData(id: $user->getKey()),
+        cost: new PricingEstimateData(currency: 'PHP', pay_code_value: 50, account_debit: 50),
+        wallet: [], debit: new DebitData(id: 99, amount: 50),
+        links: new PayCodeLinksData(redeem: 'https://example.test/x/claim/PARTNER-WORKER', redeem_path: '/x/claim/PARTNER-WORKER'),
+    );
+    $generate = Mockery::mock(GeneratePayCode::class);
+    $generate->shouldReceive('handle')->once()->andReturn($result);
+    app()->instance(GeneratePayCode::class, $generate);
+    $balances = Mockery::mock(AccountBalanceReadModelContract::class);
+    $balances->shouldReceive('providerBalanceMinor')->andReturn(5000);
+    app()->instance(AccountBalanceReadModelContract::class, $balances);
+    $job = new ResumeOnDemandPayCodeIssuanceJob($order->getKey());
+    app()->call([$job, 'handle']);
+    app()->call([$job, 'handle']);
+    expect($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::Issued)
+        ->and(DB::table('x_change_partner_issuance_reservations')->where('id', $reservation['id'])->value('status'))->toBe('completed')
+        ->and(PartnerApiPayCodeReference::query()->where('external_reference', 'funded-worker-1')->count())->toBe(1)
+        ->and(FundingSettlement::query()->where('funding_intent_id', $intent->getKey())->count())->toBe(1);
 });
 
 it('recovers an underquoted paid settlement only after the missing principal is available', function (): void {
