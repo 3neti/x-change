@@ -37,10 +37,25 @@ final readonly class ChangePartnerApiClientStatus
         return $this->change($client, PartnerApiClientStatus::Revoked, $operator);
     }
 
-    private function change(PartnerApiClient $client, PartnerApiClientStatus $status, Model $operator): PartnerApiClient
+    public function suspendOwned(PartnerApiClient $client, Model $owner): PartnerApiClient
     {
-        return DB::transaction(function () use ($client, $status, $operator): PartnerApiClient {
+        return $this->change($client, PartnerApiClientStatus::Suspended, $owner, true);
+    }
+
+    public function revokeOwned(PartnerApiClient $client, Model $owner): PartnerApiClient
+    {
+        return $this->change($client, PartnerApiClientStatus::Revoked, $owner, true);
+    }
+
+    private function change(PartnerApiClient $client, PartnerApiClientStatus $status, Model $operator, bool $requireOwner = false): PartnerApiClient
+    {
+        return DB::transaction(function () use ($client, $status, $operator, $requireOwner): PartnerApiClient {
             $locked = PartnerApiClient::query()->lockForUpdate()->findOrFail($client->getKey());
+
+            if ($requireOwner && ($locked->issuer_type !== $operator->getMorphClass()
+                || (string) $locked->issuer_id !== (string) $operator->getKey())) {
+                throw new AuthorizationException('This API client belongs to another account.');
+            }
 
             if ($locked->status === PartnerApiClientStatus::Revoked) {
                 if ($status === PartnerApiClientStatus::Revoked) {

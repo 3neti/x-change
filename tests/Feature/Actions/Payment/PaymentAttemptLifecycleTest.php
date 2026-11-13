@@ -72,6 +72,7 @@ use LBHurtado\XChange\Models\PartnerPaymentEvent;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Models\V2EvidenceOutbox;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Services\Accounts\AccountLifecycle;
 use LBHurtado\XChange\Services\Claim\VoucherClaimFlowCompiler;
 use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
@@ -1606,6 +1607,8 @@ it('recovers a rejected routed installment after two payments against one QR', f
         'execution' => ['schema' => 'voucher.execution.v2', 'driver' => 'default', 'metadata' => ['settlement_workflow' => 'collect_for_settlement'], 'settlement' => ['driver' => 'x-change.documents', 'version' => '1.0.0', 'readiness_gate' => 'settleable'], 'value_flow' => ['destination' => 'instapay.gcash.mobile:09179999999']],
         'metadata' => ['flow_type' => 'settlement', 'issuer_id' => (string) $user->id, 'collection_wallet_id' => $user->wallet->id],
     ]));
+    Gate::define('x-change.manage-account-lifecycle', fn () => true);
+    app(AccountLifecycle::class)->transition($user, $user, 'suspended', 'Test suspension');
     $attempt = issuedPaymentAttempt($voucher);
     PaymentAttempt::query()->whereKey($attempt->getKey())->update(['expected_amount_minor' => 2000]);
     $attempt = $attempt->fresh();

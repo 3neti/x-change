@@ -21,9 +21,11 @@ use LBHurtado\XChange\Data\IssuerData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
+use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
+use LBHurtado\XChange\Services\Accounts\AccountLifecycle;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
 use LBHurtado\XChange\Services\Claim\ClaimEvidenceRequirements;
 use LBHurtado\XChange\Services\Commercial\CommercialBillingPolicy;
@@ -42,6 +44,8 @@ use RuntimeException;
 
 class GeneratePayCode
 {
+    private ?PayCodeIssuanceFundingOrder $continuationOrder = null;
+
     public function __construct(
         protected UserResolverContract $users,
         protected WalletAccessContract $wallets,
@@ -67,6 +71,18 @@ class GeneratePayCode
     /**
      * @param  array<string, mixed>  $input
      */
+    public function handleFunded(array $input, PayCodeIssuanceFundingOrder $order): GeneratePayCodeResultData
+    {
+        $previous = $this->continuationOrder;
+        $this->continuationOrder = $order;
+
+        try {
+            return $this->handle($input);
+        } finally {
+            $this->continuationOrder = $previous;
+        }
+    }
+
     public function handle(array $input): GeneratePayCodeResultData
     {
         $input = app(VoucherIssuancePayloadNormalizer::class)->normalize($input);
@@ -93,6 +109,24 @@ class GeneratePayCode
 
         if (! $issuer) {
             throw new PayCodeIssuerNotResolved('Unable to resolve Pay Code issuer.');
+        }
+
+        if (! app(AccountLifecycle::class)->isActive($issuer)) {
+            $continuationOrder = $this->continuationOrder;
+            $fundedContinuation = $continuationOrder !== null
+                && $continuationOrder->exists
+                && $continuationOrder->issuer_type === $issuer::class
+                && (string) $continuationOrder->issuer_id === (string) $issuer->getKey()
+                && $continuationOrder->funded_at !== null
+                && $continuationOrder->status === PayCodeIssuanceFundingOrderStatus::Issuing
+                && PayCodeIssuanceFundingOrder::query()
+                    ->whereKey($continuationOrder->getKey())
+                    ->where('issuer_type', $issuer::class)
+                    ->where('issuer_id', (string) $issuer->getKey())
+                    ->where('status', PayCodeIssuanceFundingOrderStatus::Issuing->value)
+                    ->whereNotNull('funded_at')
+                    ->exists();
+            abort_unless($fundedContinuation, 403, 'The account is suspended.');
         }
 
         if ($this->shouldGuardProviderReadiness()) {
@@ -158,6 +192,16 @@ class GeneratePayCode
         };
         try {
             return app(PayCodeIssuanceTransaction::class)->run(function () use ($issuer, $wallet, $input, $estimate, $funding, &$createdFiles, $cleanupFiles): GeneratePayCodeResultData {
+                if (! app(AccountLifecycle::class)->lockAndIsActive($issuer)) {
+                    $order = $this->continuationOrder;
+                    $allowed = $order !== null && PayCodeIssuanceFundingOrder::query()
+                        ->whereKey($order->getKey())
+                        ->where('issuer_type', $issuer::class)
+                        ->where('issuer_id', (string) $issuer->getKey())
+                        ->where('status', PayCodeIssuanceFundingOrderStatus::Issuing->value)
+                        ->whereNotNull('funded_at')->exists();
+                    abort_unless($allowed, 403, 'The account is suspended.');
+                }
                 $cleanupFiles();
                 $this->synchronizeCompatibilityLedger($issuer, $wallet, $funding);
                 $balanceBefore = $this->wallets->getBalance($wallet);

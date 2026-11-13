@@ -9,12 +9,13 @@ use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Enums\IssuanceBatchStatus;
 use LBHurtado\XChange\Models\IssuanceBatch;
+use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 
 final readonly class IssueIssuanceBatchPayCodes
 {
     public function __construct(private GeneratePayCode $generate) {}
 
-    public function handle(IssuanceBatch $batch, Model $issuer, string $fundingReference): void
+    public function handle(IssuanceBatch $batch, Model $issuer, string $fundingReference, ?PayCodeIssuanceFundingOrder $order = null): void
     {
         $batch->forceFill(['status' => IssuanceBatchStatus::Issuing])->save();
         foreach ($batch->items()->where('status', 'pending')->lockForUpdate()->get() as $item) {
@@ -40,7 +41,9 @@ final readonly class IssueIssuanceBatchPayCodes
                     'issuance_batch_reference' => $batch->reference,
                     'on_demand_funding_order' => $fundingReference,
                 ];
-                $result = $this->generate->handle($payload);
+                $result = $order === null
+                    ? $this->generate->handle($payload)
+                    : $this->generate->handleFunded($payload, $order);
                 $item->forceFill([
                     'status' => 'issued',
                     'pay_code' => $result->code,

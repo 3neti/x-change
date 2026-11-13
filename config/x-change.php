@@ -175,6 +175,12 @@ $defaultDeploymentRuntimeTier = match ((string) env('APP_ENV', 'production')) {
 };
 
 return [
+    'account_lifecycle' => [
+        'operator_ids' => array_values(array_filter(array_map(
+            static fn (string $id): string => trim($id),
+            explode(',', (string) env('XCHANGE_ACCOUNT_LIFECYCLE_OPERATOR_IDS', '')),
+        ), static fn (string $id): bool => $id !== '')),
+    ],
     'payout_locality' => [
         'enabled' => (bool) env('XCHANGE_PAYOUT_LOCALITY_ENABLED', false),
         'submission_guard_enabled' => (bool) env('XCHANGE_PAYOUT_SUBMISSION_GUARD_ENABLED', false),

@@ -180,6 +180,7 @@ describe('Cockpit shell layout baseline', () => {
             'Overview',
             'Account',
             'System Readiness',
+            'API Clients',
             'Developer Access',
             'Guides',
         ]);
@@ -191,6 +192,7 @@ describe('Cockpit shell layout baseline', () => {
             '/x/cockpit/overview',
             '/x/cockpit/accounts',
             '/x/cockpit/diagnostics/runtime-profile',
+            '/x/cockpit/api-clients',
             '/x/developers',
             '/x/cockpit/documentation',
         ]);
@@ -202,6 +204,7 @@ describe('Cockpit shell layout baseline', () => {
             'Funds, capacity, and activity',
             'Position and connected services',
             'Deployment and runtime checks',
+            'Manage your API credentials',
             'API and MCP integration',
             'Workflows and terminology',
         ]);

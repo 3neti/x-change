@@ -51,6 +51,13 @@ export const cockpitNavigationItems: CockpitNavigationItem[] = [
         description: 'Deployment and runtime checks',
     },
     {
+        key: 'api-clients',
+        label: 'API Clients',
+        href: '/x/cockpit/api-clients',
+        group: 'secondary',
+        description: 'Manage your API credentials',
+    },
+    {
         key: 'developer-access',
         label: 'Developer Access',
         href: '/x/developers',

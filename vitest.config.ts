@@ -6,6 +6,10 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
+      "@/routes/x-change/cockpit/account-lifecycle": path.resolve(
+        import.meta.dirname,
+        "tests/frontend/stubs/account-lifecycle-routes.ts",
+      ),
       "@/routes/x-change/operations/recovery/treasury-payout": path.resolve(
         import.meta.dirname,
         "tests/frontend/stubs/treasury-payout-review-route.ts",

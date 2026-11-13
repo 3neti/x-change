@@ -22,6 +22,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimStartController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSubmitController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\DemonstrationPolicySummaryController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountLifecycleController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountScenarioController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAuiDemonstrationPolicyOutcomeController;
@@ -144,6 +145,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliation
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitTreasuryReconciliationRunExecutionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitValueFlowPayoutRecoveryController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitVoucherDetailPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\OwnerPartnerApiClientController;
 use LBHurtado\XChange\Http\Controllers\Web\Contribution\ContributionContextController;
 use LBHurtado\XChange\Http\Controllers\Web\Contribution\ContributionPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Contribution\UploadInvitedDocumentController;
@@ -527,6 +529,12 @@ Route::prefix('x')->middleware([
             ->name('x-change.cockpit.commercial.index');
         Route::get('api-partners', CockpitPartnerApiPageController::class)
             ->name('x-change.cockpit.api-partners.index');
+        Route::get('account-lifecycle', [CockpitAccountLifecycleController::class, 'index'])->name('x-change.cockpit.account-lifecycle.index');
+        Route::post('account-lifecycle/{accountId}', [CockpitAccountLifecycleController::class, 'update'])->middleware('throttle:6,1')->name('x-change.cockpit.account-lifecycle.update');
+        Route::get('api-clients', [OwnerPartnerApiClientController::class, 'index'])->name('x-change.cockpit.owner-api-clients.index');
+        Route::post('api-clients', [OwnerPartnerApiClientController::class, 'store'])->middleware('throttle:6,1')->name('x-change.cockpit.owner-api-clients.store');
+        Route::post('api-clients/{client}/suspend', [OwnerPartnerApiClientController::class, 'suspend'])->middleware('throttle:6,1')->name('x-change.cockpit.owner-api-clients.suspend');
+        Route::post('api-clients/{client}/revoke', [OwnerPartnerApiClientController::class, 'revoke'])->middleware('throttle:6,1')->name('x-change.cockpit.owner-api-clients.revoke');
         Route::get('provisioning', CockpitProvisioningPageController::class)
             ->name('x-change.cockpit.provisioning.index');
         Route::post('provisioning/requests', [CockpitProvisioningRequestController::class, 'store'])

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Bavix\Wallet\Models\Wallet;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\Voucher\Data\VoucherOperationalSummaryData;
@@ -49,6 +50,8 @@ use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PartnerCommissionPayout;
+use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
+use LBHurtado\XChange\Services\Accounts\AccountLifecycle;
 use LBHurtado\XChange\Services\Commercial\ActivateCommercialComponentEconomics;
 use LBHurtado\XChange\Services\Commercial\ActivateCommercialRecipientDesignation;
 use LBHurtado\XChange\Services\Commercial\CommercialComponentEconomicsManifestCompiler;
@@ -63,6 +66,7 @@ use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XCommerce\Data\CommercialComponentEconomicsSetData;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 use LBHurtado\XProvisioning\Data\CommercialRecipientDesignationData;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 beforeEach(function (): void {
     config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
@@ -1309,3 +1313,34 @@ it('funds a settlement principal and routes fixed repayments with one accepted s
     'v2 failed repayment payout' => ['issuer', true, true, 100, 120, 30],
     'v2 UXZB amounts' => ['issuer', false, true, 50, 75, 25],
 ]);
+
+it('blocks suspended issuers even if browser instructions claim an on-demand order', function (): void {
+    $owner = actingAsTestUser();
+    Gate::define('x-change.manage-account-lifecycle', fn () => true);
+    app(AccountLifecycle::class)->transition($owner, $owner, 'suspended', 'Test suspension');
+    $payload = array_merge(validPayCodePayload(), ['issuer_id' => $owner->id]);
+    data_set($payload, '_meta.on_demand_funding_order', 'untrusted-order-reference');
+
+    expect(fn () => app(GeneratePayCode::class)->handle($payload))
+        ->toThrow(HttpException::class, 'The account is suspended.');
+});
+
+it('continues a recorded funded order for a suspended issuer', function (): void {
+    $owner = actingAsTestUser(1_000_000);
+    $order = PayCodeIssuanceFundingOrder::query()->create([
+        'account_reference' => 'wallet:test', 'issuer_type' => $owner::class, 'issuer_id' => (string) $owner->getKey(),
+        'provider' => 'netbank', 'connection_reference' => 'netbank-primary', 'funding_basis' => 'full_amount',
+        'instructions_ciphertext' => ['cash' => ['amount' => 100, 'currency' => 'PHP']],
+        'instructions_fingerprint' => str_repeat('a', 64), 'pricing_snapshot_ciphertext' => ['account_debit' => 100],
+        'pricing_fingerprint' => str_repeat('b', 64), 'required_amount_minor' => 10000,
+        'reserved_client_funds_minor' => 0, 'on_demand_amount_minor' => 10000, 'reconciliation_adjustment_minor' => 0,
+        'expected_payment_minor' => 10000, 'currency' => 'PHP', 'status' => 'issuing', 'version' => 1,
+        'idempotency_key_hash' => hash('sha256', 'suspended-funded-order'),
+        'idempotency_fingerprint' => hash('sha256', 'suspended-funded-terms'), 'expires_at' => now()->addHour(), 'funded_at' => now(),
+    ]);
+    Gate::define('x-change.manage-account-lifecycle', fn () => true);
+    app(AccountLifecycle::class)->transition($owner, $owner, 'suspended', 'Test suspension');
+    $payload = array_merge(validPayCodePayload(), ['issuer_id' => $owner->id]);
+    $result = app(GeneratePayCode::class)->handleFunded($payload, $order);
+    expect($result->voucher_id)->not->toBeNull();
+});

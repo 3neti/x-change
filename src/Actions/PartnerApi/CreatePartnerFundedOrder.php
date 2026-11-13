@@ -36,6 +36,8 @@ final readonly class CreatePartnerFundedOrder
      */
     public function handle(PartnerApiClient $client, array $validated, string $key): array
     {
+        abort_if(data_get($client->mandate, 'credential_origin') === 'owner_self_service', 403, 'Owner self-service clients cannot create shared-principal funded orders.');
+
         $method = (string) Arr::pull($validated, 'funding_method');
         $mobile = Arr::pull($validated, 'payer_mobile');
         $normalizedMobile = $method === 'bank_transfer'

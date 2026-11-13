@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Http;
 use Laravel\Passport\Client;
 use Laravel\Passport\Passport;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Actions\PartnerApi\CreateOwnerPartnerApiClient;
 use LBHurtado\XChange\Actions\PartnerApi\CreatePartnerApiClient;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
@@ -460,4 +461,26 @@ it('obtains a real OAuth token and issues a pay code against simulated funds', f
     $code = $response->json('data.code');
     $this->withToken($token)->getJson('/api/partner/v1/pay-codes/'.$code)->assertOk();
     $this->withToken($token)->postJson('/api/partner/v1/pay-codes/'.$code.'/cancellation', ['reason' => 'Simulation complete'], ['Idempotency-Key' => 'oauth-cancel-001'])->assertOk();
+});
+
+it('uses owner-created credentials to estimate and issue with simulated funds', function (): void {
+    $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+    openssl_pkey_export($key, $privateKey);
+    $details = openssl_pkey_get_details($key);
+    config()->set('passport.private_key', $privateKey);
+    config()->set('passport.public_key', $details['key']);
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:owner-oauth-simulation');
+    $system = User::query()->create(['name' => 'System', 'email' => 'owner-oauth-system@example.test', 'password' => 'password']);
+    config()->set('account.system_user.candidates', ['x-change' => ['model' => User::class, 'identifier' => $system->email, 'identifier_column' => 'email']]);
+    $owner = User::query()->create(['name' => 'Owner', 'email' => 'owner-oauth@example.test', 'password' => 'password']);
+    fundTestUserWallet($owner);
+    $credential = app(CreateOwnerPartnerApiClient::class)->handle($owner, 'Owner simulation', ['capabilities:read', 'pay-codes:estimate', 'pay-codes:issue', 'pay-codes:read'], []);
+    $token = $this->postJson('/oauth/token', ['grant_type' => 'client_credentials', 'client_id' => $credential->client_id, 'client_secret' => $credential->client_secret, 'scope' => implode(' ', $credential->scopes)])->assertOk()->json('access_token');
+    $payload = ['external_reference' => 'owner-oauth-simulation', 'cash' => ['amount' => 100, 'currency' => 'PHP', 'validation' => ['mobile' => '09171234567']], 'inputs' => ['fields' => []], 'feedback' => ['mobile' => null], 'rider' => ['message' => null], 'count' => 1];
+    $this->withToken($token)->getJson('/api/partner/v1/capabilities')->assertOk();
+    $this->withToken($token)->postJson('/api/partner/v1/pay-code-estimates', $payload)->assertOk();
+    $response = $this->withToken($token)->postJson('/api/partner/v1/pay-codes', $payload, ['Idempotency-Key' => 'owner-oauth-simulation'])->assertCreated();
+    $this->withToken($token)->getJson('/api/partner/v1/pay-codes/'.$response->json('data.code'))->assertOk();
 });
