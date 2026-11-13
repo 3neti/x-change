@@ -97,6 +97,12 @@ const decisionError = computed(
 const recoveryError = computed(
   () => (form.errors as Record<string, string>).recovery,
 );
+const reservationVerificationError = computed(
+  () => (reservationVerifyForm.errors as Record<string, string>).recovery,
+);
+const reservationReleaseError = computed(
+  () => (reservationForm.errors as Record<string, string>).reservation,
+);
 function selectPayout(id: number) {
   form.reset();
   form.clearErrors();
@@ -430,12 +436,12 @@ function markAccounted(url: string) {
           <p class="mt-1 break-all text-slate-400">Order {{ reservation.order_reference }} · Expires {{ reservation.expires_at }}</p>
           <p class="mt-1 text-slate-400">Last check: {{ reservation.last_checked_at ?? 'None' }} · {{ reservation.last_outcome ?? 'Unavailable' }}</p>
           <button type="button" :disabled="reservationVerifyForm.processing" class="mt-3 mr-4 text-cyan-300 disabled:opacity-50" @click="reservationVerifyForm.post(reservation.verify_url, { preserveScroll: true })">Check provider</button>
-          <p v-if="reservationVerifyForm.errors.recovery" role="alert" class="mt-2 text-amber-300">{{ reservationVerifyForm.errors.recovery }}</p>
+          <p v-if="reservationVerificationError" role="alert" class="mt-2 text-amber-300">{{ reservationVerificationError }}</p>
           <button v-if="selectedReservation !== reservation.id" type="button" class="mt-3 text-cyan-300" @click="reservationForm.reset(); reservationForm.clearErrors(); selectedReservation = reservation.id">Review release</button>
           <form v-else class="mt-3 flex flex-col gap-3" @submit.prevent="reservationForm.post(reservation.release_url, { preserveScroll: true, onSuccess: () => { reservationForm.reset(); selectedReservation = null; } })">
             <label>Provider evidence reference<input v-model="reservationForm.evidence_reference" required minlength="3" maxlength="190" class="mt-1 block w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2" /></label>
             <label>Reason<textarea v-model="reservationForm.reason" required minlength="8" maxlength="2000" class="mt-1 block w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2" /></label>
-            <p v-if="reservationForm.errors.reservation" role="alert" class="text-amber-300">{{ reservationForm.errors.reservation }}</p>
+            <p v-if="reservationReleaseError" role="alert" class="text-amber-300">{{ reservationReleaseError }}</p>
             <div class="flex gap-3"><button type="submit" :disabled="reservationForm.processing" class="rounded-lg bg-cyan-300 px-4 py-2 font-medium text-slate-950 disabled:opacity-50">Release reservation</button><button type="button" class="text-slate-300" @click="selectedReservation = null">Cancel</button></div>
           </form>
         </div>
