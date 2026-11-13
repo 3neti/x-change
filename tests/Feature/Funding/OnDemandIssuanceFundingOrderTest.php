@@ -6,6 +6,7 @@ use Bavix\Wallet\Models\Wallet;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Route;
@@ -70,10 +71,12 @@ use LBHurtado\XChange\Models\PartnerApiPayCodeReference;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrderEvent;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Services\Accounts\AccountLifecycle;
 use LBHurtado\XChange\Services\Cockpit\FundingCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\FundingInstructionPresenter;
 use LBHurtado\XChange\Services\Cockpit\FundingMethodSelectorCockpitReadModel;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
+use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingPolicy;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingRequirement;
@@ -83,6 +86,7 @@ use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 use LBHurtado\XChange\Tests\Fakes\User;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 beforeEach(function (): void {
     config()->set('x-change.legal.eula.enabled', false);
@@ -128,6 +132,15 @@ it('does not require the issuer mobile for an externally paid on-demand order', 
     $intent = $order->fundingIntent;
 
     expect(data_get($intent->metadata, 'payer_identity_match_required'))->toBeFalse();
+
+    Gate::define('x-change.manage-account-lifecycle', fn () => true);
+    app(AccountLifecycle::class)->transition($issuer, $issuer, 'suspended', 'Test suspension');
+    $pricing = new PricingEstimateData(currency: 'PHP', pay_code_value: 50, account_debit: 50);
+    $instructions = ['cash' => ['amount' => 50, 'currency' => 'PHP']];
+    $replay = app(PrepareOnDemandPayCodeIssuance::class)->handle($issuer, $instructions, $pricing, 'external-payer-without-mobile');
+    expect($replay->is($order))->toBeTrue();
+    expect(fn () => app(PrepareOnDemandPayCodeIssuance::class)->handle($issuer, $instructions, $pricing, 'suspended-new-order'))
+        ->toThrow(HttpException::class, 'The account is suspended.');
 
     $adapter->fundingObservation = new ProviderFundingObservationData(
         provider: 'netbank',
@@ -2110,11 +2123,13 @@ it('settles simulated partner funding and completes the reserved issuance once',
         links: new PayCodeLinksData(redeem: 'https://example.test/x/claim/PARTNER-WORKER', redeem_path: '/x/claim/PARTNER-WORKER'),
     );
     $generate = Mockery::mock(GeneratePayCode::class);
-    $generate->shouldReceive('handle')->once()->andReturn($result);
+    $generate->shouldReceive('handleFunded')->once()->andReturn($result);
     app()->instance(GeneratePayCode::class, $generate);
     $balances = Mockery::mock(AccountBalanceReadModelContract::class);
     $balances->shouldReceive('providerBalanceMinor')->andReturn(5000);
     app()->instance(AccountBalanceReadModelContract::class, $balances);
+    Gate::define('x-change.manage-account-lifecycle', fn () => true);
+    app(AccountLifecycle::class)->transition($user, $user, 'suspended', 'Test suspension after funding');
     $job = new ResumeOnDemandPayCodeIssuanceJob($order->getKey());
     app()->call([$job, 'handle']);
     app()->call([$job, 'handle']);
@@ -2192,7 +2207,7 @@ it('recovers an underquoted paid settlement only after the missing principal is 
         links: new PayCodeLinksData(redeem: 'https://example.test/x/claim/RECOVERY-TEST', redeem_path: '/x/claim/RECOVERY-TEST'),
     );
     $generate = Mockery::mock(GeneratePayCode::class);
-    $generate->shouldReceive('handle')->once()->andReturn($result);
+    $generate->shouldReceive('handleFunded')->once()->andReturn($result);
     app()->instance(GeneratePayCode::class, $generate);
     $available = 5800;
     app()->call([$job, 'handle']);
@@ -2341,7 +2356,7 @@ it('resumes an expired issuance-attention order whose provider payment was alrea
         ),
     );
     $generate = Mockery::mock(GeneratePayCode::class);
-    $generate->shouldReceive('handle')
+    $generate->shouldReceive('handleFunded')
         ->once()
         ->with(Mockery::on(
             fn (array $instructions): bool => data_get($instructions, '_meta.on_demand_funding_order') === $order->reference
@@ -2350,7 +2365,7 @@ it('resumes an expired issuance-attention order whose provider payment was alrea
                 && data_get($instructions, 'issuer_invoice_drafts') === ['test-draft-1', 'test-draft-2']
                 && data_get($instructions, 'payment_details.documents.1.id') === 'doc-2'
                 && data_get($instructions, '_meta.idempotency_key') === 'test-invoice-order',
-        ))
+        ), Mockery::type(PayCodeIssuanceFundingOrder::class))
         ->andReturn($result);
     app()->instance(GeneratePayCode::class, $generate);
 
@@ -2478,7 +2493,7 @@ it('contains a leased transfer amount adjustment outside spendable client funds'
         ),
     );
     $generate = Mockery::mock(GeneratePayCode::class);
-    $generate->shouldReceive('handle')->once()->andReturn($result);
+    $generate->shouldReceive('handleFunded')->once()->andReturn($result);
     app()->instance(GeneratePayCode::class, $generate);
     $job = new ResumeOnDemandPayCodeIssuanceJob($order->getKey());
 
@@ -2766,3 +2781,32 @@ function onDemandFundingIntent(
         'metadata' => ['source' => 'on_demand_issuance_test'],
     ]);
 }
+
+it('continues real issuance once after verified funding and account suspension', function (): void {
+    Queue::fake();
+    Http::preventStrayRequests();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:suspension-funded-acceptance');
+    $user = actingAsTestUser(100_000);
+    $wallet = $user->wallet()->where('slug', 'platform')->sole();
+    $observation = onDemandFundingObservation(5000);
+    $intent = onDemandFundingIntent($wallet->uuid, $observation, 5000);
+    $order = app(ReserveOnDemandIssuanceAmountLease::class)->handle(issuanceFundingOrder($user));
+    $instructions = validPayCodePayload();
+    data_set($instructions, 'cash.amount', 50);
+    data_set($instructions, 'metadata.issuer_id', (string) $user->getKey());
+    $order->forceFill(['funding_intent_id' => $intent->getKey(), 'instructions_ciphertext' => $instructions])->saveQuietly();
+    app(SettleVerifiedFundingIntent::class)->handle($intent);
+    Gate::define('x-change.manage-account-lifecycle', fn () => true);
+    app(AccountLifecycle::class)->transition($user, $user, 'suspended', 'Acceptance test');
+    $before = Voucher::query()->count();
+    $job = new ResumeOnDemandPayCodeIssuanceJob($order->getKey());
+    app()->call([$job, 'handle']);
+    app()->call([$job, 'handle']);
+    expect($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::Issued)
+        ->and($order->voucher_id)->not->toBeNull()
+        ->and(Voucher::query()->count())->toBe($before + 1)
+        ->and(FundingSettlement::query()->where('funding_intent_id', $intent->getKey())->count())->toBe(1);
+});

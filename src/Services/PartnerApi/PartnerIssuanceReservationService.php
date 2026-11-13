@@ -14,6 +14,7 @@ use LBHurtado\XChange\Models\PartnerApiClient;
 use LBHurtado\XChange\Models\PartnerApiOperation;
 use LBHurtado\XChange\Models\PartnerApiPayCodeReference;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
+use LBHurtado\XChange\Services\Accounts\AccountLifecycle;
 use LBHurtado\XChange\Services\IdempotencyService;
 use RuntimeException;
 
@@ -60,6 +61,9 @@ final readonly class PartnerIssuanceReservationService
 
                 return ['id' => (int) $byKey->id, 'replayed' => true];
             }
+
+            $issuer = $client->issuer;
+            abort_unless($issuer !== null && app(AccountLifecycle::class)->lockAndIsActive($issuer), 403, 'The account is suspended.');
 
             if (DB::table('x_change_partner_issuance_reservations')->where('partner_api_client_id', $client->getKey())
                 ->where('external_reference', $externalReference)->exists()

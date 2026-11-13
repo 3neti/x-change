@@ -15,6 +15,7 @@ use LBHurtado\XChange\Data\PartnerApi\PartnerApiCredentialData;
 use LBHurtado\XChange\Enums\PartnerApiClientStatus;
 use LBHurtado\XChange\Exceptions\PayCodeWalletNotResolved;
 use LBHurtado\XChange\Models\PartnerApiClient;
+use LBHurtado\XChange\Services\Accounts\AccountLifecycle;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiGovernanceJournal;
 use LBHurtado\XChange\Services\PartnerApi\PartnerApiMandateValidator;
 
@@ -33,6 +34,7 @@ final readonly class CreateOwnerPartnerApiClient
      */
     public function handle(Model $owner, string $name, array $scopes, array $mandate): PartnerApiCredentialData
     {
+        abort_unless(app(AccountLifecycle::class)->isActive($owner), 403, 'The account is suspended.');
         $allowedScopes = array_keys((array) config('x-change.partner_api.scopes', []));
         if ($owner->is($this->systemPrincipal->resolve()) || trim($name) === '' || $scopes === [] || array_diff($scopes, $allowedScopes) !== []) {
             throw new InvalidArgumentException('A client name and valid scopes are required.');
@@ -56,6 +58,7 @@ final readonly class CreateOwnerPartnerApiClient
         $this->mandates->validate($resolvedScopes, $resolvedMandate);
 
         return DB::transaction(function () use ($owner, $name, $resolvedScopes, $resolvedMandate): PartnerApiCredentialData {
+            abort_unless(app(AccountLifecycle::class)->lockAndIsActive($owner), 403, 'The account is suspended.');
             $oauth = $this->clients->createClientCredentialsGrantClient(trim($name));
             $partner = PartnerApiClient::query()->create([
                 'reference' => (string) Str::ulid(),

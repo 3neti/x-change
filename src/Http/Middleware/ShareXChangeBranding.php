@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Http\Middleware;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use LBHurtado\XChange\Contracts\CommercialOperatorAuthorityContract;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
@@ -47,6 +48,8 @@ class ShareXChangeBranding
                 'themes' => (array) config('x-change.experience.themes', []),
             ],
             'navigation' => [
+                'account_lifecycle_visible' => $request->user() instanceof Model
+                    && Gate::forUser($request->user())->allows('x-change.view-account-lifecycle'),
                 'system_readiness_visible' => $this->systemReadinessAccess->isVisible(),
                 'commercial_controls_visible' => $request->user() instanceof Model
                     && $this->mayViewCommercialControls($request->user()),

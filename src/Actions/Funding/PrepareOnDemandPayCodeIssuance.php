@@ -22,6 +22,7 @@ use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Exceptions\FundingIntentConflict;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
+use LBHurtado\XChange\Services\Accounts\AccountLifecycle;
 use LBHurtado\XChange\Services\Commercial\CommercialCustomerChargingGuard;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingRequirement;
 use LBHurtado\XChange\Services\PartnerApi\PartnerIssuanceReservationService;
@@ -108,6 +109,8 @@ final readonly class PrepareOnDemandPayCodeIssuance
             return $existing->load(['fundingIntent', 'events']);
         }
 
+        abort_unless(app(AccountLifecycle::class)->isActive($issuer), 403, 'The account is suspended.');
+
         $this->customerCharging->ensureAuthorized($pricing->customer_charge_minor);
 
         $order = DB::transaction(function () use (
@@ -128,6 +131,7 @@ final readonly class PrepareOnDemandPayCodeIssuance
             $idempotencyFingerprint,
             $expiresAt,
         ): PayCodeIssuanceFundingOrder {
+            abort_unless(app(AccountLifecycle::class)->lockAndIsActive($issuer), 403, 'The account is suspended.');
             $order = PayCodeIssuanceFundingOrder::query()->create([
                 'account_reference' => $accountReference,
                 'issuer_type' => $issuer::class,

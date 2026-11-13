@@ -175,7 +175,7 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
                 ?? data_get($instructions, 'metadata.issuance_batch_reference');
             if (is_string($batchReference) && $batchReference !== '') {
                 $batch = IssuanceBatch::query()->where('reference', $batchReference)->lockForUpdate()->firstOrFail();
-                $issueBatch->handle($batch, $issuer, $order->reference);
+                $issueBatch->handle($batch, $issuer, $order->reference, $order);
                 $batch->refresh();
                 $batchIssued = $batch->status === IssuanceBatchStatus::Issued;
                 $transition->handle(
@@ -201,7 +201,7 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
             data_set($instructions, 'metadata.issuer_id', (string) $issuer->getKey());
             data_set($instructions, '_meta.issuer_type', $issuer::class);
             data_set($instructions, '_meta.on_demand_funding_order', $order->reference);
-            $result = $generatePayCode->handle($instructions);
+            $result = $generatePayCode->handleFunded($instructions, $order);
             $reservationId = data_get($instructions, '_meta.partner_issuance_reservation_id');
             if ($reservationId !== null) {
                 $partnerReservations->complete((int) $reservationId, $order, $result);

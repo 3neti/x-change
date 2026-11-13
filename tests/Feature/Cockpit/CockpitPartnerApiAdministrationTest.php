@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Gate;
 use Laravel\Passport\Client;
 use Laravel\Passport\Token;
 use LBHurtado\XChange\Actions\PartnerApi\CreateOwnerPartnerApiClient;
@@ -14,6 +15,7 @@ use LBHurtado\XChange\Models\CommercialPrincipal;
 use LBHurtado\XChange\Models\PartnerApiClient;
 use LBHurtado\XChange\Models\PartnerApiOperatorAuthorization;
 use LBHurtado\XChange\Models\PartnerApiProductionMandate;
+use LBHurtado\XChange\Services\Accounts\AccountLifecycle;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
@@ -569,4 +571,22 @@ it('binds a governed production client to the commissioned Commercial Principal'
     expect($client->issuer_type)->toBe($principal->getMorphClass())
         ->and((string) $client->issuer_id)->toBe((string) $principal->getKey())
         ->and($client->scopes)->toBe(['capabilities:read', 'pay-codes:estimate', 'pay-codes:read']);
+});
+
+it('blocks new self-service credentials while an account is suspended', function (): void {
+    Gate::define('x-change.manage-account-lifecycle', fn () => true);
+    $owner = actingAsTestUser();
+    app(AccountLifecycle::class)->transition($owner, $owner, 'suspended', 'Test suspension');
+
+    $this->postJson(route('x-change.cockpit.owner-api-clients.store'), [
+        'name' => 'Blocked client',
+        'scopes' => ['capabilities:read'],
+        'currencies' => ['PHP'],
+        'settlement_rails' => ['INSTAPAY'],
+        'maximum_amount_minor' => 10000,
+        'daily_principal_limit_minor' => 10000,
+        'unbound_pay_codes' => false,
+        'acknowledge_secret_once' => true,
+    ])->assertForbidden();
+    expect(PartnerApiClient::query()->count())->toBe(0);
 });
