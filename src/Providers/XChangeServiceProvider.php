@@ -1835,6 +1835,7 @@ class XChangeServiceProvider extends ServiceProvider
                 ->register('x-change-documents', dirname(__DIR__, 2).'/resources/envelope-drivers');
         }
         $this->bootStoredValueCollectorGate();
+        $this->bootAccountLifecycleGates();
         $this->bootSettlementReviewSentinel();
         $stampCollection = InstalledVersions::getInstallPath('3neti/x-stamp-designs');
         if ($stampCollection !== null) {
@@ -2082,6 +2083,22 @@ class XChangeServiceProvider extends ServiceProvider
                 && is_string($model) && $user instanceof $model && $user->exists
                 && in_array((string) $user->getKey(), array_map('strval', (array) ($policy['user_ids'] ?? [])), true);
         });
+    }
+
+    protected function bootAccountLifecycleGates(): void
+    {
+        $allowed = static function (Model $user): bool {
+            $model = config('auth.providers.users.model');
+
+            return is_string($model) && $user instanceof $model && $user->exists
+                && in_array((string) $user->getKey(), array_map('strval', (array) config('x-change.account_lifecycle.operator_ids', [])), true);
+        };
+
+        foreach (['x-change.view-account-lifecycle', 'x-change.manage-account-lifecycle'] as $ability) {
+            if (! Gate::has($ability)) {
+                Gate::define($ability, $allowed);
+            }
+        }
     }
 
     protected function bootSettlementReviewSentinel(): void

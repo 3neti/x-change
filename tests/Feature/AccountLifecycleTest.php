@@ -6,6 +6,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use LBHurtado\XChange\Services\Accounts\AccountLifecycle;
+use LBHurtado\XChange\Tests\Fakes\User;
 
 it('defaults existing accounts to active and records audited suspension and reactivation', function (): void {
     Gate::define('x-change.manage-account-lifecycle', fn () => true);
@@ -42,6 +43,18 @@ it('denies lifecycle changes without operator authorization', function (): void 
     expect(fn () => app(AccountLifecycle::class)->transition($owner, $owner, 'suspended', 'test'))
         ->toThrow(AuthorizationException::class);
     expect(app(AccountLifecycle::class)->isActive($owner))->toBeTrue();
+});
+
+it('grants lifecycle authority only to configured account operators', function (): void {
+    $operator = actingAsTestUser();
+    $other = User::query()->create([
+        'name' => 'Other account', 'email' => 'unprivileged@example.test', 'password' => 'password',
+    ]);
+    config()->set('x-change.account_lifecycle.operator_ids', [(string) $operator->getKey()]);
+    expect(Gate::forUser($operator)->allows('x-change.view-account-lifecycle'))->toBeTrue()
+        ->and(Gate::forUser($operator)->allows('x-change.manage-account-lifecycle', $other))->toBeTrue()
+        ->and(Gate::forUser($other)->allows('x-change.view-account-lifecycle'))->toBeFalse()
+        ->and(Gate::forUser($other)->allows('x-change.manage-account-lifecycle', $operator))->toBeFalse();
 });
 
 it('protects the operator controls and records authorized changes', function (): void {
