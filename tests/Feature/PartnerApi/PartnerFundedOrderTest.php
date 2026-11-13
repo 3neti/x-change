@@ -18,6 +18,7 @@ use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Actions\Funding\VerifyFundingIntent;
 use LBHurtado\XChange\Actions\PartnerApi\CreatePartnerAccountFundedOrder;
 use LBHurtado\XChange\Actions\PartnerApi\CreatePartnerApiClient;
+use LBHurtado\XChange\Actions\PartnerApi\CreatePartnerFundedOrder;
 use LBHurtado\XChange\Actions\PartnerApi\ReleasePartnerIssuanceReservation;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
@@ -47,6 +48,17 @@ use LBHurtado\XChange\Services\PartnerApi\PartnerIssuanceReservationService;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 use LBHurtado\XChange\Tests\Fakes\User;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+
+it('rejects owner self-service clients before shared-principal funded-order processing', function (): void {
+    $client = new PartnerApiClient(['mandate' => ['credential_origin' => 'owner_self_service']]);
+
+    try {
+        app(CreatePartnerFundedOrder::class)->handle($client, [], 'test-key');
+        $this->fail('The shared-principal order must not be processed.');
+    } catch (HttpException $exception) {
+        expect($exception->getStatusCode())->toBe(403);
+    }
+});
 
 function fundedOrderClient(array $scopes): PartnerApiClient
 {
@@ -382,6 +394,7 @@ it('creates and replays an account-backed funding order with a bound reservation
     enableNetbankTreasuryForTests();
     config()->set('x-change.funding.providers.netbank.enabled', true);
     $client = fundedOrderClient(['funded-orders:create']);
+    $client->forceFill(['mandate' => array_merge($client->mandate, ['credential_origin' => 'owner_self_service'])])->save();
     fundTestUserWallet($client->issuer);
     $adapter = new FakeFundingProviderAdapter;
     $this->app->instance(FakeFundingProviderAdapter::class, $adapter);

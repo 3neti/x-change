@@ -18,11 +18,12 @@ describe('Cockpit navigation baseline', () => {
         expect(cockpitSecondaryNavigation.map((item) => item.label)).toEqual([
             'Account',
             'System Readiness',
+            'API Clients',
             'Developer Access',
             'Guides',
         ]);
 
-        expect(cockpitNavigationItems).toHaveLength(9);
+        expect(cockpitNavigationItems).toHaveLength(10);
     });
 
     it('marks only implemented Cockpit routes as enabled navigation links', () => {
@@ -41,6 +42,7 @@ describe('Cockpit navigation baseline', () => {
             'dashboard',
             'accounts',
             'runtime-profile',
+            'api-clients',
             'developer-access',
             'documentation',
         ]);

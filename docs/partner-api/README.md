@@ -4,7 +4,9 @@ The Partner API is the supported server-to-server boundary for Saras AI and othe
 
 ## Security model
 
-X-Change uses OAuth 2.0 Client Credentials through Laravel Passport. An operator creates a client and binds it to exactly one issuer Account. The client receives a short-lived bearer token programmatically from `/oauth/token`; no human login or refresh token is involved.
+X-Change uses OAuth 2.0 Client Credentials through Laravel Passport. Account owners can create and manage clients bound to their own Account in Cockpit → API Clients. Choose scopes and limits carefully and save the client secret securely when displayed; it cannot be retrieved later. The client receives a short-lived bearer token programmatically from `/oauth/token`; no human login or refresh token is involved. Operator-managed clients for other issuers retain the governed production approval workflow.
+
+Owner-created clients may use account-backed funded orders but cannot create shared-principal funded orders, even when they have the `funded-orders:create` scope. Suspending or revoking a client invalidates its existing tokens.
 
 A valid token is necessary but not sufficient. Every request is also constrained by:
 

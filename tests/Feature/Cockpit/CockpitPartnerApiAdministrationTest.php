@@ -4,16 +4,19 @@ declare(strict_types=1);
 
 use Laravel\Passport\Client;
 use Laravel\Passport\Token;
+use LBHurtado\XChange\Actions\PartnerApi\CreateOwnerPartnerApiClient;
 use LBHurtado\XChange\Actions\PartnerApi\CreatePartnerApiClient;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Enums\PartnerApiClientStatus;
 use LBHurtado\XChange\Enums\PartnerApiOperatorCapability;
+use LBHurtado\XChange\Exceptions\PayCodeWalletNotResolved;
 use LBHurtado\XChange\Models\CommercialPrincipal;
 use LBHurtado\XChange\Models\PartnerApiClient;
 use LBHurtado\XChange\Models\PartnerApiOperatorAuthorization;
 use LBHurtado\XChange\Models\PartnerApiProductionMandate;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
+use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
 
 beforeEach(function (): void {
     config()->set('x-change.legal.eula.enabled', false);
@@ -30,6 +33,116 @@ beforeEach(function (): void {
             'identifier_column' => 'email',
         ],
     ]);
+});
+
+it('binds a self-service client to its owner and audits activation without exposing its secret', function (): void {
+    $owner = actingAsTestUser();
+    allowPartnerApiIssuerWallet();
+    $owner->wallet()->firstOrCreate(['slug' => 'platform'], ['name' => 'Platform']);
+
+    $credential = app(CreateOwnerPartnerApiClient::class)->handle(
+        $owner,
+        'Owner API',
+        ['capabilities:read', 'pay-codes:issue'],
+        ['maximum_amount_minor' => 10000, 'daily_principal_limit_minor' => 10000],
+    );
+
+    $client = PartnerApiClient::query()->where('reference', $credential->reference)->sole();
+    expect($client->issuer->is($owner))->toBeTrue()
+        ->and($client->mandate['credential_origin'])->toBe('owner_self_service')
+        ->and($credential->client_secret)->not->toBeEmpty()
+        ->and(ExecutionJournalEntry::query()->where('event_type', 'partner_api.client.activated')->count())->toBe(1)
+        ->and(ExecutionJournalEntry::query()->get()->toJson())->not->toContain($credential->client_secret);
+});
+
+it('creates and lists only the signed-in owner client without accepting an issuer override', function (): void {
+    $owner = actingAsTestUser();
+    allowPartnerApiIssuerWallet();
+    $owner->wallet()->firstOrCreate(['slug' => 'platform'], ['name' => 'Platform']);
+    $payload = [
+        'name' => 'Owner client',
+        'scopes' => ['capabilities:read', 'pay-codes:issue'],
+        'currencies' => ['PHP'],
+        'settlement_rails' => ['INSTAPAY'],
+        'maximum_amount_minor' => 10000,
+        'daily_principal_limit_minor' => 10000,
+        'unbound_pay_codes' => false,
+        'acknowledge_secret_once' => true,
+    ];
+
+    $this->postJson(route('x-change.cockpit.owner-api-clients.store'), $payload + ['issuer_id' => '999'])
+        ->assertUnprocessable()->assertJsonValidationErrors('issuer_id');
+    $response = $this->postJson(route('x-change.cockpit.owner-api-clients.store'), $payload)
+        ->assertCreated()->assertHeader('Cache-Control', 'no-store, private')
+        ->assertJsonPath('secret_display', 'one_time_only');
+    $secret = $response->json('client_secret');
+    expect(PartnerApiClient::query()->sole()->issuer->is($owner))->toBeTrue();
+    $this->withHeader('X-Inertia', 'true')->get(route('x-change.cockpit.owner-api-clients.index'))
+        ->assertOk()->assertJsonMissing([$secret])->assertJsonMissing(['client_secret']);
+});
+
+it('does not allow an owner to suspend another account client', function (): void {
+    $owner = actingAsTestUser();
+    $other = User::query()->create(['name' => 'Other', 'email' => 'other-api@example.test', 'password' => 'password']);
+    $credential = app(CreatePartnerApiClient::class)->handle('Other client', $other, scopes: ['capabilities:read']);
+    $client = PartnerApiClient::query()->where('reference', $credential->reference)->sole();
+
+    $this->withHeader('X-Inertia', 'true')->get(route('x-change.cockpit.owner-api-clients.index'))
+        ->assertOk()->assertJsonMissing(['name' => 'Other client']);
+    $this->post(route('x-change.cockpit.owner-api-clients.suspend', $client))->assertForbidden();
+    $this->post(route('x-change.cockpit.owner-api-clients.revoke', $client))->assertForbidden();
+    expect($client->fresh()->status)->toBe(PartnerApiClientStatus::Active);
+});
+
+it('lets an owner suspend and revoke their client and invalidates its tokens', function (): void {
+    $owner = actingAsTestUser();
+    allowPartnerApiIssuerWallet();
+    $owner->wallet()->firstOrCreate(['slug' => 'platform'], ['name' => 'Platform']);
+    $credential = app(CreateOwnerPartnerApiClient::class)->handle($owner, 'Owner client', ['capabilities:read'], []);
+    $client = PartnerApiClient::query()->where('reference', $credential->reference)->sole();
+    Token::query()->create(['id' => 'owner-api-token', 'client_id' => $credential->client_id, 'scopes' => [], 'revoked' => false, 'expires_at' => now()->addHour()]);
+
+    $this->post(route('x-change.cockpit.owner-api-clients.suspend', $client))->assertRedirect();
+    expect($client->fresh()->status)->toBe(PartnerApiClientStatus::Suspended)
+        ->and(Token::query()->sole()->revoked)->toBeTrue();
+    $this->post(route('x-change.cockpit.owner-api-clients.revoke', $client))->assertRedirect();
+    expect($client->fresh()->status)->toBe(PartnerApiClientStatus::Revoked)
+        ->and(Client::query()->findOrFail($credential->client_id)->revoked)->toBeTrue();
+});
+
+it('does not create owner credentials for invalid scopes or unresolved wallets', function (): void {
+    $owner = actingAsTestUser();
+    $owner->wallet()->firstOrCreate(['slug' => 'platform'], ['name' => 'Platform']);
+    $wallets = Mockery::mock(WalletAccessContract::class);
+    $wallets->shouldReceive('resolveForUser')->andThrow(new RuntimeException('Wallet unavailable'));
+    app()->instance(WalletAccessContract::class, $wallets);
+
+    expect(fn () => app(CreateOwnerPartnerApiClient::class)->handle($owner, 'Client', ['unknown:scope'], []))
+        ->toThrow(InvalidArgumentException::class);
+    expect(fn () => app(CreateOwnerPartnerApiClient::class)->handle($owner, 'Client', ['capabilities:read'], []))
+        ->toThrow(RuntimeException::class, 'Wallet unavailable');
+    expect(PartnerApiClient::query()->count())->toBe(0)->and(Client::query()->count())->toBe(0);
+});
+
+it('does not provision an account while creating owner credentials', function (): void {
+    $owner = User::query()->create(['name' => 'Unprovisioned', 'email' => 'no-wallet@example.test', 'password' => 'password']);
+    allowPartnerApiIssuerWallet();
+    expect(fn () => app(CreateOwnerPartnerApiClient::class)->handle($owner, 'Client', ['capabilities:read'], []))
+        ->toThrow(PayCodeWalletNotResolved::class);
+    expect($owner->wallet()->where('slug', 'platform')->exists())->toBeFalse()
+        ->and(PartnerApiClient::query()->count())->toBe(0);
+});
+
+it('rolls back both client records if the audit event fails', function (): void {
+    $owner = actingAsTestUser();
+    allowPartnerApiIssuerWallet();
+    $recorder = Mockery::mock(ExecutionJournalRecorder::class);
+    $recorder->shouldReceive('record')->once()->andThrow(new RuntimeException('Audit unavailable'));
+    app()->instance(ExecutionJournalRecorder::class, $recorder);
+
+    expect(fn () => app(CreateOwnerPartnerApiClient::class)->handle($owner, 'Client', ['capabilities:read'], []))
+        ->toThrow(RuntimeException::class, 'Audit unavailable');
+    expect(PartnerApiClient::query()->count())->toBe(0)->and(Client::query()->count())->toBe(0);
 });
 
 function authorizePartnerApiOperator(User $operator, PartnerApiOperatorCapability ...$capabilities): void
