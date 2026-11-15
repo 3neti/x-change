@@ -10,6 +10,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Exceptions\ExternalReferenceConflict;
 use LBHurtado\XChange\Http\Requests\PartnerApi\IssuePartnerPayCodeRequest;
 use LBHurtado\XChange\Models\PartnerApiClient;
@@ -33,6 +34,7 @@ class IssuePartnerPayCodeController extends Controller
         IdempotencyService $idempotency,
         PartnerPayCodeReferenceService $references,
         VoucherConsumerStatusResolver $consumerStatuses,
+        VoucherFlowCapabilityResolverContract $capabilities,
         ApiResponseFactory $responses,
     ): JsonResponse {
         $payload = $request->validated();
@@ -64,6 +66,7 @@ class IssuePartnerPayCodeController extends Controller
             $headers,
             $references,
             $consumerStatuses,
+            $capabilities,
         ): array {
             $client = PartnerApiClient::query()->lockForUpdate()->findOrFail($context->client()->getKey());
             $context->setClient($client);
@@ -111,7 +114,7 @@ class IssuePartnerPayCodeController extends Controller
 
                 $data = $this->replayedIssuanceData($client, $voucher);
                 $data['external_reference'] = $references->externalReference($voucher);
-                $data['consumer_status'] = $consumerStatuses->resolve($voucher);
+                $data['consumer_status'] = $capabilities->resolve($voucher)->can_collect ? $consumerStatuses->resolve($voucher) : null;
                 $idempotency->remember($key, $transportPayload, $data, $namespace);
 
                 return ['data' => $data, 'replayed' => true];
@@ -134,7 +137,7 @@ class IssuePartnerPayCodeController extends Controller
             }
 
             $data['external_reference'] = $persistedReference;
-            $data['consumer_status'] = $consumerStatuses->resolve($voucher);
+            $data['consumer_status'] = $capabilities->resolve($voucher)->can_collect ? $consumerStatuses->resolve($voucher) : null;
 
             PartnerApiPayCodeReference::query()->create([
                 'partner_api_client_id' => $client->getKey(),

@@ -309,7 +309,7 @@
           {"type": "object", "properties": {"data": {"type": "object", "required": ["schema", "code", "external_reference", "consumer_status", "pay_url", "attempt"], "properties": {"schema": {"const": "x-change.partner-payment-attempt.v1"}, "code": {"type": "string"}, "external_reference": {"type": ["string", "null"]}, "consumer_status": {"$ref": "#/components/schemas/ConsumerStatus"}, "pay_url": {"type": ["string", "null"], "format": "uri"}, "attempt": {"$ref": "#/components/schemas/PaymentAttempt"}}}}}
         ]
       },
-      "ConsumerStatus": {"type": "string", "enum": ["pending", "payable", "processing", "paid", "expired", "cancelled", "failed"]},
+      "ConsumerStatus": {"type": ["string", "null"], "enum": ["pending", "payable", "processing", "paid", "expired", "cancelled", "failed", null], "description": "Collection status; null for non-collectible vouchers. A disburse-then-collect voucher is pending until its principal disbursement is accepted."},
       "SuccessEnvelope": {"type": "object", "required": ["success", "data", "meta"], "properties": {"success": {"const": true}, "data": {}, "meta": {"type": "object"}}},
       "ErrorEnvelope": {"type": "object", "required": ["success", "message", "code", "errors"], "properties": {"success": {"const": false}, "message": {"type": "string"}, "code": {"type": "string"}, "errors": {"type": ["object", "array"]}}}
     },

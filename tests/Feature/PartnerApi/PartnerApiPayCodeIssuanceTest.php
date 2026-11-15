@@ -16,8 +16,10 @@ use LBHurtado\XChange\Data\IssuerData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
+use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PartnerApiClient;
 use LBHurtado\XChange\Models\PartnerApiOperation;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Tests\Fakes\User;
 
@@ -272,7 +274,7 @@ it('issues idempotently and never accepts caller-controlled issuer identity', fu
         ->assertJsonPath('data.links.pay', 'https://example.test/x/pay/SARS-1234')
         ->assertJsonPath('data.links.pay_path', '/x/pay/SARS-1234')
         ->assertJsonPath('data.external_reference', $payload['external_reference'])
-        ->assertJsonPath('data.consumer_status', 'payable')
+        ->assertJsonPath('data.consumer_status', null)
         ->assertJsonPath('meta.correlation_id', 'saras-run-001')
         ->assertJsonPath('meta.idempotency.replayed', false);
 
@@ -290,6 +292,65 @@ it('issues idempotently and never accepts caller-controlled issuer identity', fu
     $this->postJson('/api/partner/v1/pay-codes', $impersonation, ['Idempotency-Key' => 'saras-issue-002'])
         ->assertUnprocessable()
         ->assertJsonValidationErrors('metadata.issuer_id');
+});
+
+it('reports a disburse-then-collect voucher as pending until its principal is disbursed', function (): void {
+    [$issuer] = partnerApiIssuer(['pay-codes:issue', 'pay-codes:read']);
+    $payload = partnerApiPayCodePayload(50);
+    $payload['voucher_type'] = 'settlement';
+    $payload['target_amount'] = 60;
+    $payload['rules'] = ['settlement_mode' => 'disburse_then_repay', 'min_payment' => 30, 'max_payment' => 30];
+    $payload['execution'] = ['schema' => 'voucher.execution.v2', 'driver' => 'default'];
+    $result = partnerApiIssueResult($issuer->getKey(), (string) $payload['external_reference']);
+    $voucher = Voucher::query()->findOrFail($result->voucher_id);
+    $voucher->voucher_type = 'settlement';
+    $voucher->target_amount = 60;
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.voucher_type', 'settlement');
+    data_set($metadata, 'instructions.target_amount', 60);
+    data_set($metadata, 'instructions.rules', $payload['rules']);
+    $voucher->metadata = $metadata;
+    $voucher->save();
+    $action = Mockery::mock(GeneratePayCode::class);
+    $action->shouldReceive('handle')->once()->andReturn($result);
+    $this->app->instance(GeneratePayCode::class, $action);
+
+    $this->postJson('/api/partner/v1/pay-codes', $payload, ['Idempotency-Key' => 'settlement-stage'])
+        ->assertCreated()->assertJsonPath('data.consumer_status', 'pending');
+    $this->getJson('/api/partner/v1/pay-codes/'.$voucher->code)
+        ->assertOk()->assertJsonPath('data.consumer_status', 'pending')
+        ->assertJsonPath('data.collection_state.next_action', 'claim');
+
+    VoucherClaim::query()->create([
+        'voucher_id' => $voucher->id, 'claim_number' => 1, 'claim_type' => 'withdraw',
+        'status' => 'pending', 'requested_amount_minor' => 5000, 'currency' => 'PHP',
+        'idempotency_key' => 'settlement-stage-claim',
+    ]);
+    $this->getJson('/api/partner/v1/pay-codes/'.$voucher->code)
+        ->assertOk()->assertJsonPath('data.consumer_status', 'pending')
+        ->assertJsonPath('data.collection_state.next_action', 'none');
+
+    $voucher->forceFill(['redeemed_at' => now()])->save();
+    $payout = DisbursementReconciliation::query()->create([
+        'voucher_id' => $voucher->id, 'voucher_code' => $voucher->code, 'claim_type' => 'withdraw',
+        'provider' => 'netbank', 'provider_reference' => 'settlement-principal',
+        'status' => 'pending', 'internal_status' => 'recorded', 'amount' => 50, 'currency' => 'PHP',
+        'provider_transaction_id' => 'bank-123',
+        'meta' => ['provider_response' => ['received' => true, 'status' => 'pending']],
+    ]);
+    $this->getJson('/api/partner/v1/pay-codes/'.$voucher->code)
+        ->assertOk()->assertJsonPath('data.consumer_status', 'payable')
+        ->assertJsonPath('data.collection_state.next_action', 'pay');
+
+    $payout->update(['status' => 'failed']);
+    $this->getJson('/api/partner/v1/pay-codes/'.$voucher->code)
+        ->assertOk()->assertJsonPath('data.consumer_status', 'pending')
+        ->assertJsonPath('data.collection_state.next_action', 'none');
+
+    $voucher->update(['expires_at' => now()->subMinute()]);
+    $this->getJson('/api/partner/v1/pay-codes/'.$voucher->code)
+        ->assertOk()->assertJsonPath('data.consumer_status', 'expired')
+        ->assertJsonPath('data.collection_state.next_action', 'none');
 });
 
 it('enforces the append-only daily principal ceiling before issuance', function () {

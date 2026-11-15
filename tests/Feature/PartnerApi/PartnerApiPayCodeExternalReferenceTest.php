@@ -110,7 +110,7 @@ function bplsLifecycleDetail(Voucher $voucher, float $amount = 100.00): array
         'fully_claimed' => false,
         'attention' => null,
         'external_reference' => $externalReference,
-        'consumer_status' => 'payable',
+        'consumer_status' => null,
         'collection' => null,
     ];
 }
@@ -159,7 +159,7 @@ it('persists and echoes an external reference through issuance and both lookup r
         'Idempotency-Key' => 'bpls-issue-0002',
     ])->assertCreated()
         ->assertJsonPath('data.external_reference', $externalReference)
-        ->assertJsonPath('data.consumer_status', 'payable');
+        ->assertJsonPath('data.consumer_status', null);
 
     $reference = PartnerApiPayCodeReference::query()->sole();
     expect($reference->external_reference)->toBe($externalReference)
@@ -178,7 +178,7 @@ it('persists and echoes an external reference through issuance and both lookup r
         $this->getJson($url)->assertOk()
             ->assertJsonPath('data.code', 'BPLS-0002')
             ->assertJsonPath('data.external_reference', $externalReference)
-            ->assertJsonPath('data.consumer_status', 'payable');
+            ->assertJsonPath('data.consumer_status', null);
     }
 });
 
