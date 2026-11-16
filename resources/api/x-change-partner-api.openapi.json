@@ -2055,7 +2055,10 @@
                 ]
             },
             "ConsumerStatus": {
-                "type": "string",
+                "type": [
+                    "string",
+                    "null"
+                ],
                 "enum": [
                     "pending",
                     "payable",
@@ -2063,8 +2066,10 @@
                     "paid",
                     "expired",
                     "cancelled",
-                    "failed"
-                ]
+                    "failed",
+                    null
+                ],
+                "description": "Collection status; null for non-collectible vouchers. A disburse-then-collect voucher is pending until its principal disbursement is accepted."
             },
             "SuccessEnvelope": {
                 "type": "object",

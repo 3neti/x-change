@@ -151,6 +151,8 @@ For each type:
 
 The payment that funds **issuance** is separate from a later customer's payment of a **payable collection voucher**. Public `/x/auto-generate` screens and their session/CSRF-protected browser routes are not standalone Partner APIs. The shared-principal `/funded-orders` route retains its restriction on payable and settlement instructions; use the Account-backed route for those types.
 
+For a disbursement-only Pay Code, `consumer_status` is `null` because there is no collection. For disburse-then-collect settlement, it is `pending` until the principal payout is accepted under the existing provider policy. Before a claim starts, `collection_state.next_action` is `claim`; once a claim or payout has started and payout is not accepted, it is `none`. After acceptance, the next action becomes `pay`. The payment gate remains authoritative.
+
 `401` indicates invalid or inactive credentials, `403` missing authority, `404` an unavailable or non-owned resource, `409` a reference or idempotency conflict, `422` invalid instructions or mandate failure, and `429` throttling. A transport timeout does not establish failure: retry the same request with the same key and body, then poll the returned order or look up its reference. Provider-unavailable or review-required outcomes need reconciliation; do not create a new order just because a response is delayed.
 
 Issuance requires `Idempotency-Key`; `X-Correlation-ID` is recommended. Repeating the same key and payload returns the original result. Reusing the key with changed input is rejected.

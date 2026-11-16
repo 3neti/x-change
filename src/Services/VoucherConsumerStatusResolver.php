@@ -36,6 +36,10 @@ class VoucherConsumerStatusResolver
             return 'expired';
         }
 
+        if (SettlementRepaymentPolicy::forVoucher($voucher) && ! SettlementRepaymentPolicy::disbursed($voucher)) {
+            return 'pending';
+        }
+
         $latestAttempt = PaymentAttempt::query()
             ->whereBelongsTo($voucher)
             ->orderByDesc('created_at')
