@@ -112,6 +112,7 @@ describe('Cockpit Quick Generate Invitation mode', () => {
                 .get('[data-testid="cockpit-quick-generate-submit-button"]')
                 .text(),
         ).toContain('Issue Invitation');
+        expect(quickGenerateEngineeringPreview(invitation).claim.default_outcome).toBe('account_funding');
     });
 
     it('keeps the ordinary Issuance entry in Pay Code mode when the last instructions were an invitation', () => {
@@ -174,6 +175,7 @@ describe('Cockpit Quick Generate Invitation mode', () => {
                 .text(),
         ).toContain('Issue Invitation');
         expect(quickGenerateEngineeringPreview(wrapper).onboarding).toBe(true);
+        expect(quickGenerateEngineeringPreview(wrapper).claim.default_outcome).toBe('account_funding');
     });
 
     it('emits onboarding:true and locks name/email/mobile/otp only when Invitation mode is selected', async () => {
@@ -190,6 +192,8 @@ describe('Cockpit Quick Generate Invitation mode', () => {
 
         preview = quickGenerateEngineeringPreview(wrapper);
         expect(preview.onboarding).toBe(true);
+        expect(preview.claim.default_outcome).toBe('account_funding');
+        expect(preview.claim.outcomes).toEqual([{ key: 'account_funding', pricing_profile: 'account-funding-v1' }]);
         expect(preview.inputs.fields).toEqual(
             expect.arrayContaining(['mobile', 'email', 'name', 'otp']),
         );

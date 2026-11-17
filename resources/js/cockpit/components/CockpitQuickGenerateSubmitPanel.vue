@@ -1019,7 +1019,7 @@ const destinationDrafts: Record<"redeemable" | "payable" | "settlement", string>
   payable: "",
   settlement: "",
 };
-const claimOutcome = ref<ClaimOutcomeMode>("provider_disbursement");
+const claimOutcome = ref<ClaimOutcomeMode>(props.onboardingPreset ? "account_funding" : "provider_disbursement");
 const targetAmount = ref("");
 const rulesMinPayment = ref("");
 const rulesMaxPayment = ref("");
@@ -1450,7 +1450,7 @@ function applyTemplateDefaults(templateKey: string): void {
     ? "voucher.execution.v1"
     : "voucher.execution.v2";
   executionDriver.value = defaults.executionDriver;
-  claimOutcome.value = defaults.claimOutcome;
+  claimOutcome.value = onboardingEnabled.value ? "account_funding" : defaults.claimOutcome;
   executionPipeline.value =
     defaults.executionDriver === "settlement_envelope"
       ? "readiness, authorize, execute"
@@ -2219,7 +2219,7 @@ function applyInstructionBlueprint(
     rememberedClaimOutcome === "provider_disbursement" ||
     rememberedClaimOutcome === "account_funding"
   ) {
-    claimOutcome.value = rememberedClaimOutcome;
+    claimOutcome.value = onboardingEnabled.value ? "account_funding" : rememberedClaimOutcome;
   }
 
   targetAmount.value = rememberedTargetAmount;
@@ -3446,6 +3446,9 @@ function setOnboardingMode(enabled: boolean): void {
 
 function selectIssueAction(enabled: boolean): void {
   setOnboardingMode(enabled);
+  if (enabled) {
+    claimOutcome.value = "account_funding";
+  }
 }
 
 function applyOnboardingDependencies(): void {
@@ -8529,7 +8532,7 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                     class="mt-0.5 rounded-full border-slate-300 text-emerald-600"
                     data-testid="cockpit-quick-generate-claim-outcome-provider"
                     :disabled="
-                      capabilitySelectionDisabled(
+                      onboardingEnabled || capabilitySelectionDisabled(
                         'feedback.email',
                         feedbackEmailEnabled,
                       )

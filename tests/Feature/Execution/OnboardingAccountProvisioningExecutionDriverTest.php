@@ -70,6 +70,21 @@ it('registers the onboarding account provisioning execution driver', function ()
         ->toBeInstanceOf(OnboardingAccountProvisioningExecutionDriver::class);
 });
 
+it('refuses to redeem a treasury funded onboarding voucher with a payout outcome', function (): void {
+    $context = onboardingExecutionContext([], false);
+    $metadata = $context->voucher->metadata;
+    data_set($metadata, 'instructions.cash.amount', 5);
+    data_set($metadata, 'instructions.claim.default_outcome', 'provider_disbursement');
+    data_set($metadata, 'treasury.pay_code_reservation.status', 'reserved');
+    $context->voucher->forceFill(['metadata' => $metadata])->save();
+
+    $result = app(OnboardingAccountProvisioningExecutionDriver::class)->execute($context);
+
+    expect($result->successful)->toBeFalse()
+        ->and($result->failure)->toBe('unsupported_funded_invitation_outcome')
+        ->and($context->voucher->fresh()->redeemed_at)->toBeNull();
+});
+
 it('persists an execution-only post-redemption policy for onboarding Vouchers', function (): void {
     $normalized = app(OnboardingVoucherInstructionPolicy::class)->normalize([
         'onboarding' => true,

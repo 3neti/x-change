@@ -56,6 +56,15 @@ final readonly class OnboardingAccountProvisioningExecutionDriver implements Exe
             );
         }
 
+        if (data_get($context->voucher->metadata, 'treasury.pay_code_reservation.status') === 'reserved'
+            && (float) data_get($context->voucher->metadata, 'instructions.cash.amount', 0) > 0
+            && data_get($context->voucher->metadata, 'instructions.claim.default_outcome') !== 'account_funding') {
+            return ExecutionResultData::failed(
+                driver: $this->key(),
+                failure: 'unsupported_funded_invitation_outcome',
+            );
+        }
+
         $inputs = (array) data_get($context->meta, 'inputs', []);
         $verificationRequired = (bool) data_get(
             $context->instruction?->metadata,
