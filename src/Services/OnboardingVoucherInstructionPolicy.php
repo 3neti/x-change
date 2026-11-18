@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services;
 
 use Illuminate\Support\Arr;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use LBHurtado\Voucher\Data\ExecutionInstructionData;
 
@@ -30,6 +31,15 @@ final class OnboardingVoucherInstructionPolicy
         }
 
         $this->assertCompatibleExecutionDriver($input);
+
+        if ((float) data_get($input, 'cash.amount', 0) > 0
+            && is_array(data_get($input, 'claim'))
+            && array_key_exists('default_outcome', $input['claim'])
+            && data_get($input, 'claim.default_outcome') !== 'account_funding') {
+            throw ValidationException::withMessages([
+                'claim.default_outcome' => 'Funded invitations must use the Account Funds outcome.',
+            ]);
+        }
 
         $requiresOtp = $this->requiresOtp($input);
         $requiredFields = ['name', 'email', 'mobile'];

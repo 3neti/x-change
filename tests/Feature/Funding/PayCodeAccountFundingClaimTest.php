@@ -23,6 +23,60 @@ use LBHurtado\XChange\Services\Funding\PayCodeFundingInspectionStore;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
+it('issues and claims a funded invitation into the new account once', function (): void {
+    $issuer = actingAsTestUser();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.onboarding.voucher.require_otp', false);
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:invitation-test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'invitation-test-v1');
+    config()->set('x-change.commercial.enabled', true);
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:invitation-test');
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision($issuer, ['netbank-primary']);
+    app(VerifiedTreasuryFundingAllocationContract::class)->allocate(
+        accountReference: 'wallet:'.$issuer->wallet->uuid,
+        provider: 'netbank',
+        amountMinor: 50_000,
+        currency: 'PHP',
+        evidenceReference: 'netbank:invitation-test:issuance',
+    );
+    $funding = Mockery::mock(ProviderFundingPolicyContract::class);
+    $funding->shouldReceive('assertCanIssue')->once()->andReturn(FundingDecisionData::allowed(
+        authority: 'local_ledger', availableMinor: 50_000, requiredMinor: 5_000, meta: ['provider' => 'netbank'],
+    ));
+    app()->instance(ProviderFundingPolicyContract::class, $funding);
+
+    $issued = app(GeneratePayCode::class)->handle(validPayCodePayload(5, 'INSTAPAY', [
+        'onboarding' => true,
+        'provider' => 'netbank',
+        'inputs' => ['fields' => ['name', 'email', 'mobile'], 'requirements' => []],
+        'validation' => [],
+        'claim' => [
+            'outcomes' => [['key' => 'account_funding', 'pricing_profile' => 'account-funding-v1']],
+            'selection' => 'server', 'consumption' => 'one_of', 'default_outcome' => 'account_funding',
+            'onboarding' => ['mode' => 'if_required'], 'claimant' => ['mode' => 'unbound'],
+        ],
+        'metadata' => ['issuer_id' => (string) $issuer->getKey()],
+    ]));
+    $voucher = Voucher::query()->findOrFail($issued->voucher_id);
+    auth()->logout();
+    $result = app(SubmitWebPayCodeClaim::class)->handle($voucher, [
+        'mobile' => '639177001234', 'recipient_country' => 'PH',
+        'inputs' => ['name' => 'Invitation Recipient', 'full_name' => 'Invitation Recipient', 'email' => 'invitation@example.test', 'mobile' => '639177001234'],
+    ]);
+
+    expect($result->claimed)->toBeTrue()
+        ->and(data_get($voucher->fresh()->metadata, 'instructions.claim.default_outcome'))->toBe('account_funding')
+        ->and(VoucherClaim::query()->where('voucher_id', $voucher->id)->where('settlement_mode', 'account_funding')->count())->toBe(1);
+    $claimant = User::query()->where('email', 'invitation@example.test')->sole();
+    expect(treasuryClientFundsLedger($claimant)->getBalanceIntAttribute())->toBe(500);
+    $token = app(PayCodeFundingInspectionStore::class)->issue($voucher->fresh(), $claimant);
+    $this->actingAs($claimant)->post(route('x-change.cockpit.funding.pay-code-claims.store'), [
+        'inspection_token' => $token,
+    ])->assertRedirect(route('x-change.cockpit.funding.index'));
+    expect(treasuryClientFundsLedger($claimant)->getBalanceIntAttribute())->toBe(500)
+        ->and(VoucherClaim::query()->where('voucher_id', $voucher->id)->where('settlement_mode', 'account_funding')->count())->toBe(1);
+});
+
 it('issues an Account Funding Pay Code with a no-payout commercial profile and Treasury reserve', function () {
     $issuer = actingAsTestUser();
     enableNetbankTreasuryForTests();

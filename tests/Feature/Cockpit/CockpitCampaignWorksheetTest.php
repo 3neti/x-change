@@ -25,6 +25,7 @@ use LBHurtado\XChange\Actions\Campaigns\DispatchCampaignFeedback;
 use LBHurtado\XChange\Actions\Campaigns\DispatchCampaignPayCodeDeliveries;
 use LBHurtado\XChange\Actions\Campaigns\IssueCampaignWorksheetApprovalPayCode;
 use LBHurtado\XChange\Actions\Campaigns\RecordCampaignDeliveryAttempt;
+use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Jobs\Campaigns\ConvergeCampaignFeedbackDeliveryJob;
@@ -36,6 +37,7 @@ use LBHurtado\XChange\Models\PayCodeTemplate;
 use LBHurtado\XChange\Services\Campaigns\CampaignLifecycleJournal;
 use LBHurtado\XChange\Services\Campaigns\CampaignWorksheetAuthorizationExecutionService;
 use LBHurtado\XChange\Services\Leads\LeadCampaignTemplateVersionId;
+use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XFeedback\Contracts\FeedbackChannelRegistryContract;
 use LBHurtado\XFeedback\Drivers\SmsFeedbackChannelDriver;
 use LBHurtado\XFeedback\Mail\FeedbackEmailMessage;
@@ -1328,6 +1330,9 @@ it('issues a planned campaign batch once through the owner Cockpit control', fun
         ->and(data_get($issuedVouchers[0]->instructions, 'rider.url'))->toBe('https://example.test/payroll')
         ->and(data_get($issuedVouchers[0]->instructions, 'onboarding'))->toBeTrue()
         ->and(data_get($issuedVouchers[0]->instructions, 'execution.driver'))->toBe('onboarding_account_provisioning')
+        ->and(data_get($issuedVouchers[0]->metadata, 'instructions.claim.default_outcome'))->toBe('account_funding')
+        ->and(data_get($issuedVouchers[0]->metadata, 'treasury.account_funding.status'))->toBe('ready')
+        ->and(data_get($issuedVouchers[0]->metadata, 'treasury.account_funding.provider_calls'))->toBeFalse()
         ->and(data_get($issuedVouchers[1]->instructions, 'onboarding'))->toBeTrue()
         ->and(data_get($issuedVouchers[0]->instructions, 'inputs.fields.0')->value)->toBe('name')
         ->and(data_get($issuedVouchers[0]->instructions, 'feedback.mobile'))->not->toBeNull()
@@ -1351,6 +1356,25 @@ it('issues a planned campaign batch once through the owner Cockpit control', fun
         ->assertJsonPath('props.fulfillment_summary.planned_count', 0)
         ->assertJsonPath('props.fulfillment_summary.issued_count', 0)
         ->assertJsonPath('props.fulfillment_summary.completed_count', 2);
+
+    $voucher = $issuedVouchers->first(fn (Voucher $item): bool => data_get($item->metadata, 'instructions.cash.validation.mobile') === '09178889999');
+    expect($voucher)->toBeInstanceOf(Voucher::class);
+    auth()->logout();
+    $verifiedAt = now()->toIso8601String();
+    $claim = app(SubmitWebPayCodeClaim::class)->handle($voucher, [
+        'mobile' => '09178889999',
+        'recipient_country' => 'PH',
+        'inputs' => [
+            'name' => 'Campaign Recipient', 'full_name' => 'Campaign Recipient',
+            'email' => 'campaign-recipient@example.test', 'mobile' => '09178889999',
+            'otp' => ['mobile' => '09178889999', 'verified' => true, 'value' => 'verified', 'verified_at' => $verifiedAt, 'verification_reference' => 'simulation:campaign', 'verification_purpose' => 'onboarding.account'],
+            'otp_verified' => true,
+        ],
+    ]);
+    $recipient = User::query()->where('email', 'campaign-recipient@example.test')->sole();
+    expect($claim->claimed)->toBeTrue()
+        ->and(treasuryClientFundsLedger($recipient)->getBalanceIntAttribute())->toBe(12_500)
+        ->and(Wallet::query()->findOrFail($payCodeReserve->internal_ledger_id)->getBalanceIntAttribute())->toBe(7_500);
 });
 
 it('rolls back campaign Pay Code issuance when Client Funds are insufficient', function () {
@@ -1484,6 +1508,9 @@ it('records an explicit export as an immutable append-only delivery attempt', fu
         ->assertHeader('cache-control', 'no-store, private');
 
     $issuedPayCode = (string) $authorization->fulfillments()->value('pay_code');
+    $ordinaryVoucher = Voucher::query()->where('code', $issuedPayCode)->sole();
+    expect(data_get($ordinaryVoucher->metadata, 'instructions.claim.default_outcome'))->toBe('provider_disbursement')
+        ->and(data_get($ordinaryVoucher->metadata, 'treasury.account_funding'))->toBeNull();
 
     expect($response->streamedContent())
         ->toContain('Maria Santos')

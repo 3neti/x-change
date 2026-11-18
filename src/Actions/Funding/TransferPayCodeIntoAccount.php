@@ -16,6 +16,7 @@ use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Funding\PayCodeFundingEligibility;
+use LBHurtado\XChange\Services\Treasury\PayCodeFundingPrincipalResolver;
 use RuntimeException;
 
 final readonly class TransferPayCodeIntoAccount
@@ -24,6 +25,7 @@ final readonly class TransferPayCodeIntoAccount
         private PayCodeFundingEligibility $eligibility,
         private TreasuryAccountPortfolioProvisioningContract $portfolios,
         private TreasuryPositionOperationContract $operations,
+        private PayCodeFundingPrincipalResolver $fundingPrincipals,
     ) {}
 
     public function handle(
@@ -61,7 +63,7 @@ final readonly class TransferPayCodeIntoAccount
                 throw new RuntimeException($decision->message);
             }
 
-            $issuer = $locked->owner;
+            $issuer = $this->fundingPrincipals->forVoucher($locked);
 
             if (! $issuer instanceof Model) {
                 throw new RuntimeException('The Pay Code issuer is unavailable.');

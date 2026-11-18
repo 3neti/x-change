@@ -94,10 +94,12 @@ final readonly class CampaignVoucherInstructionCompiler
                     : [],
             ),
             'claim' => [
-                'outcomes' => [['key' => 'provider_disbursement']],
+                'outcomes' => $onboarding
+                    ? [['key' => 'account_funding', 'pricing_profile' => 'account-funding-v1']]
+                    : [['key' => 'provider_disbursement']],
                 'selection' => 'server',
                 'consumption' => 'one_of',
-                'default_outcome' => 'provider_disbursement',
+                'default_outcome' => $onboarding ? 'account_funding' : 'provider_disbursement',
                 'onboarding' => array_replace(
                     ['mode' => 'if_required'],
                     data_get($blueprint, 'claim.onboarding', []),

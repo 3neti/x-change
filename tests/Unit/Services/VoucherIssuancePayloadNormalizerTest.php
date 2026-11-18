@@ -167,6 +167,15 @@ it('compiles onboarding into explicit execution and required claim capabilities'
         ->toBeTrue();
 });
 
+it('rejects a funded onboarding instruction that selects provider disbursement', function (): void {
+    expect(fn () => app(VoucherIssuancePayloadNormalizer::class)->normalize([
+        'onboarding' => true,
+        'cash' => ['amount' => 5, 'currency' => 'PHP'],
+        'inputs' => ['fields' => []],
+        'claim' => ['outcomes' => [['key' => 'provider_disbursement']], 'default_outcome' => 'provider_disbursement'],
+    ]))->toThrow(ValidationException::class);
+});
+
 it('allows the local onboarding OTP policy to omit OTP capabilities', function () {
     config()->set('x-change.onboarding.voucher.require_otp', false);
 
