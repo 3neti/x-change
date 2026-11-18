@@ -99,6 +99,19 @@ final readonly class IssueCampaignWorksheetPayCodes
                     ),
                 );
 
+                if (data_get($compiledInstructions, 'claim.default_outcome') === 'account_funding') {
+                    $metadata = (array) $voucher->fresh()->metadata;
+                    data_set($metadata, 'treasury.account_funding', [
+                        'status' => 'ready',
+                        'destinations' => ['account_funding'],
+                        'pricing_profile' => 'account-funding-v1',
+                        'provider_cost_minor' => 0,
+                        'provider_calls' => false,
+                        'campaign_authorization_reference' => (string) $authorization->reference,
+                    ]);
+                    $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
+                }
+
                 $locked->forceFill([
                     'pay_code' => $voucher->code,
                     'status' => 'issued',

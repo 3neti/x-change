@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Console\Command;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
+use LBHurtado\XChange\Actions\Funding\TransferPayCodeIntoAccount;
 use LBHurtado\XChange\Actions\Treasury\ReleasePayCodeTerminalReserve;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Enums\CommercialOperatorCapability;
@@ -47,6 +48,40 @@ function authorizeCommercialPayCodeActors(User $maker, User $checker): void
         'valid_from' => now()->subMinute(),
     ]);
 }
+
+it('credits the claimant from the authorized sponsor reserve exactly once', function (): void {
+    config()->set('x-change.lifecycle.defaults.user_model', User::class);
+    enableNetbankTreasuryForTests();
+    $maker = actingAsTestUser();
+    $checker = User::query()->create(['name' => 'Checker', 'email' => 'sponsor-checker@example.test', 'password' => 'password']);
+    app(CommercialPrincipalProvisioningService::class)->provision();
+    $principal = CommercialPrincipal::query()->sole();
+    authorizeCommercialPayCodeActors($maker, $checker);
+    foreach (['prepare', 'approve'] as $phase) {
+        $result = app(LifecycleScenarioEngine::class)->run(commercialPayCodeCommand(), 'commercial_pay_code_issuance', new LifecycleScenarioRunOptions(
+            maker: (string) $maker->getKey(), checker: (string) $checker->getKey(), runReference: 'SPONSORED-ACCOUNT-001', phase: $phase, confirmCheckerApproval: $phase === 'approve', json: true,
+        ));
+        expect($result->exitCode)->toBe(Command::SUCCESS, json_encode($result->payload));
+    }
+    $voucher = Voucher::query()->where('code', $result->payload['pay_code'])->sole();
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'treasury.account_funding', ['status' => 'ready', 'destinations' => ['account_funding'], 'pricing_profile' => 'account-funding-v1', 'provider_cost_minor' => 0, 'provider_calls' => false]);
+    $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
+    $recipient = User::query()->create(['name' => 'Recipient', 'email' => 'sponsor-recipient@example.test', 'password' => 'password']);
+    $action = app(TransferPayCodeIntoAccount::class);
+    $tampered = $metadata;
+    data_set($tampered, 'treasury.pay_code_reservation.funding_principal.evidence_hash', str_repeat('0', 64));
+    $voucher->forceFill(['metadata' => $tampered])->saveQuietly();
+    expect(fn () => $action->handle($voucher, $recipient))->toThrow(RuntimeException::class, 'funding principal evidence is invalid');
+    $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
+    $first = $action->handle($voucher, $recipient);
+    $replay = $action->handle($voucher, $recipient);
+    $positions = collect(app(TreasuryAccountPortfolioProvisioningContract::class)->provision($principal, ['netbank-primary'])->positions)->keyBy('purpose');
+    expect($first->is($replay))->toBeTrue()
+        ->and(treasuryClientFundsLedger($recipient)->getBalanceIntAttribute())->toBe(5_000)
+        ->and($positions->get(TreasuryPositionPurpose::PayCodeReserve->value)->balanceMinor)->toBe(0)
+        ->and($positions->get(TreasuryPositionPurpose::ClientFunds->value)->balanceMinor)->toBe(5_000);
+});
 
 it('credits the Commercial Principal then independently approves and reserves its fifty peso Pay Code', function (): void {
     config()->set('x-change.lifecycle.defaults.user_model', User::class);
