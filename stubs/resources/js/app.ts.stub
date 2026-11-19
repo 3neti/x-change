@@ -22,6 +22,7 @@ void createInertiaApp({
             case name.startsWith('form-flow/'):
                 return null;
             case name.startsWith('auth/'):
+            case name.startsWith('x-change/auth/'):
                 return AuthLayout;
             case name.startsWith('settings/'):
                 return [AppLayout, SettingsLayout];
