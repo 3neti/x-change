@@ -3764,9 +3764,9 @@ describe('Cockpit Quick Generate foundation', () => {
 
         expect(errors.exists()).toBe(true);
         expect(errors.text()).toContain('Fix these fields before issuing');
-        expect(errors.text()).toContain('Cash Amount');
+        expect(errors.text()).toContain('Amount');
         expect(errors.text()).toContain('The amount must be at least 1.');
-        expect(errors.text()).toContain('Feedback Email');
+        expect(errors.text()).toContain('Status Updates → Email');
         expect(errors.text()).toContain('Enter a valid email address.');
         expect(wrapper.text()).toContain(
             'Your Pay Code needs a few corrections before it can be issued.',
@@ -5603,7 +5603,8 @@ describe('quick generate retry safety', () => {
         await flushPromises();
         await wrapper.find('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
         await flushPromises();
-        expect(fetchMock).toHaveBeenCalledTimes(2);
-        expect(fetchMock.mock.calls[0][1].headers['Idempotency-Key']).toBe(fetchMock.mock.calls[1][1].headers['Idempotency-Key']);
+        const issuanceCalls = fetchMock.mock.calls.filter(([url]) => url === '/x/cockpit/quick-generate');
+        expect(issuanceCalls).toHaveLength(2);
+        expect(issuanceCalls[0][1].headers['Idempotency-Key']).toBe(issuanceCalls[1][1].headers['Idempotency-Key']);
     });
 });

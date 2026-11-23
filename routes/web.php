@@ -79,6 +79,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestTransfer
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingVerificationCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitInstanceKeepsakeDownloadController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitInstanceKeepsakeDownloadShowController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitIssuanceDiagnosticController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitIssuerInvoiceDraftController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitLeadCampaignScenarioRunnerController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitNetbankStandingFundingAddressController;
@@ -201,6 +202,7 @@ use LBHurtado\XChange\Http\Controllers\Web\StoredValueCollectionController;
 use LBHurtado\XChange\Http\Controllers\Web\StoredValueInstrumentPageController;
 use LBHurtado\XChange\Http\Middleware\AuthorizePublicIssuanceOrderAccess;
 use LBHurtado\XChange\Http\Middleware\GuardPairedCampaignClaim;
+use LBHurtado\XChange\Http\Middleware\JournalIssuanceAttempt;
 use LBHurtado\XChange\Http\Middleware\RequireCurrentAgreementAcceptance;
 use LBHurtado\XChange\Http\Middleware\RequireVerifiedMobile;
 use LBHurtado\XChange\Http\Middleware\ShareCockpitHeaderReadModel;
@@ -961,6 +963,7 @@ Route::prefix('x')->middleware([
             'funding/reconciliations/{reconciliationRequest:reference}/approve',
             CockpitFundingReconciliationApprovalController::class,
         )->name('x-change.cockpit.funding.reconciliations.approve');
+        Route::post('quick-generate/diagnostics', CockpitIssuanceDiagnosticController::class)->middleware('throttle:12,1,issuance-diagnostics:')->name('x-change.cockpit.quick-generate.diagnostics');
         Route::get('quick-generate', CockpitQuickGeneratePageController::class)->name('x-change.cockpit.quick-generate');
         Route::post('quick-generate/interpret', CockpitQuickGenerateInterpretController::class)
             ->middleware('throttle:30,1,quick-generate-interpret:')
@@ -988,7 +991,7 @@ Route::prefix('x')->middleware([
         )->where('reference', '[A-Za-z0-9][A-Za-z0-9._-]{5,95}')
             ->middleware('throttle:3,1')
             ->name('x-change.cockpit.instance-keepsakes.download');
-        Route::post('quick-generate', CockpitQuickGenerateMutationRouteShellController::class)->name('x-change.cockpit.quick-generate.store');
+        Route::post('quick-generate', CockpitQuickGenerateMutationRouteShellController::class)->middleware(JournalIssuanceAttempt::class)->name('x-change.cockpit.quick-generate.store');
         Route::get('quick-generate/reserve-issuances', CockpitReserveIssuanceIndexController::class)
             ->middleware('throttle:60,1,quick-generate-reserve-index:')
             ->name('x-change.cockpit.quick-generate.reserve-issuances.index');
