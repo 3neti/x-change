@@ -21,12 +21,14 @@ use LBHurtado\XChange\Contracts\ClaimShareCardUrlResolverContract;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftCompilerContract;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftValidatorContract;
 use LBHurtado\XChange\Contracts\CockpitQuickGenerateDraftFactoryContract;
+use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitIssuanceDraftValidationResultData;
 use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityItemData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
 use LBHurtado\XChange\Http\Requests\GeneratePayCodeRequest;
+use LBHurtado\XChange\Models\FundingDestinationPreference;
 use LBHurtado\XChange\Models\IssuanceBatch;
 use LBHurtado\XChange\Services\BuildBalanceOverview;
 use LBHurtado\XChange\Services\Checkout\CheckoutLifecycle;
@@ -45,6 +47,8 @@ use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceInstructionPolicy;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceOrderAccess;
 use LBHurtado\XChange\Services\PublicIssuance\PublicIssuanceTurnstileVerifier;
 use LBHurtado\XChange\Services\QrArtifactFactory;
+use LBHurtado\XChange\Services\Reserve\PrepareReserveBackedIssuance;
+use LBHurtado\XChange\Services\Reserve\ReserveIssuanceStatusPresenter;
 use LBHurtado\XChange\Services\Settlement\IssuerInvoiceDrafts;
 use Throwable;
 
@@ -209,6 +213,13 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 : $onDemandFundingRequirement->for($operator, $pricing);
 
             if ($requirement->externalAmountMinor > 0) {
+                if (! $publicAutoGenerate && (bool) config('x-change.reserve_transfer.enabled', false)
+                    && app(ProviderRuntimeSettingsResolverContract::class)->provider() === 'netbank'
+                    && in_array(data_get($payload, 'voucher_type'), [null, 'redeemable'], true)
+                    && FundingDestinationPreference::query()->whereMorphedTo('owner', $operator)
+                        ->where('provider_code', 'netbank')->where('mode', 'dedicated')->exists()) {
+                    throw ValidationException::withMessages(['submission' => ['Add Client Funds to the selected account before issuing this Pay Code.']]);
+                }
                 $batch = null;
                 $order = $publicAutoGenerate
                     ? $prepareIssuanceBatchFunding->handle(
@@ -259,6 +270,37 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 }
 
                 return response()->json($onDemandFundingPresenter->present($order), 202);
+            }
+        }
+
+        if (! $publicAutoGenerate && (bool) config('x-change.reserve_transfer.enabled', false)
+            && $request->user() instanceof Model
+            && app(ProviderRuntimeSettingsResolverContract::class)->provider() === 'netbank'
+            && in_array(data_get($payload, 'voucher_type'), [null, 'redeemable'], true)) {
+            $preference = FundingDestinationPreference::query()->whereMorphedTo('owner', $request->user())
+                ->where('provider_code', 'netbank')->first();
+            if ($preference !== null && $preference->mode === 'dedicated') {
+                if ((int) data_get($payload, 'count', 1) !== 1) {
+                    throw ValidationException::withMessages(['count' => ['Issue one Pay Code at a time from this account.']]);
+                }
+                if (! is_string($key) || trim($key) === '') {
+                    throw ValidationException::withMessages(['submission' => ['A stable issuance key is required.']]);
+                }
+                $amount = data_get($payload, 'cash.amount');
+                if (! is_numeric($amount) || (float) $amount <= 0 || abs((float) $amount * 100 - round((float) $amount * 100)) > 0.000001) {
+                    throw ValidationException::withMessages(['cash.amount' => ['Enter a valid amount.']]);
+                }
+                $transfer = app(PrepareReserveBackedIssuance::class)->prepareSelected(
+                    $request->user(), null, (int) round((float) $amount * 100),
+                    (string) data_get($payload, 'cash.currency', 'PHP'), $key, $payload,
+                );
+                $status = app(ReserveIssuanceStatusPresenter::class)->present($transfer);
+
+                return response()->json([
+                    'schema' => 'x-change.cockpit.reserve-issuance.v1',
+                    ...$status,
+                    'status_url' => route('x-change.cockpit.quick-generate.reserve-issuances.show', ['reference' => $transfer->reference], false),
+                ], 202)->header('Cache-Control', 'no-store');
             }
         }
 

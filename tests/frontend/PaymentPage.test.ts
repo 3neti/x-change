@@ -64,6 +64,17 @@ describe('PaymentPage', () => {
         wrapper.unmount();
         vi.unstubAllGlobals();
     });
+    it('explains that a fallback credit did not pay the Pay Code', () => {
+        const payment = { ...pendingPayment, can_create_attempt: false, attempt: { reference: 'FALLBACK', status: 'credited_to_client_funds',
+            provider: 'netbank', amount_minor: 7500, currency: 'PHP', expires_at: null,
+            last_checked_at: null, can_check: false, qr_code: null } };
+        const wrapper = mount(PaymentPage, { props: { payment } });
+        expect(wrapper.get('[data-testid="payer-fallback-credit"]').text()).toContain('not applied to this Pay Code');
+        expect(wrapper.get('[data-testid="payer-fallback-credit"]').text()).toContain('do not pay again');
+        expect(wrapper.find('[data-testid="payer-qr-ph-artifact"]').exists()).toBe(false);
+        wrapper.unmount();
+    });
+
     it('warns an already-paying customer when a QR expires and continues reconciliation updates', () => {
         const payment = { ...pendingPayment, attempt: { reference: 'EXPIRED', status: 'expired',
             provider: 'netbank', amount_minor: 7500, currency: 'PHP', expires_at: null,

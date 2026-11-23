@@ -57,6 +57,7 @@ use LBHurtado\XChange\Enums\FundingVerificationTrigger;
 use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Exceptions\FundingEvidenceAlreadyClaimed;
+use LBHurtado\XChange\Exceptions\FundingIntentConflict;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
@@ -137,8 +138,12 @@ it('does not require the issuer mobile for an externally paid on-demand order', 
     app(AccountLifecycle::class)->transition($issuer, $issuer, 'suspended', 'Test suspension');
     $pricing = new PricingEstimateData(currency: 'PHP', pay_code_value: 50, account_debit: 50);
     $instructions = ['cash' => ['amount' => 50, 'currency' => 'PHP']];
+    config()->set('x-change.issuance_funding.on_demand.basis', 'shortfall');
     $replay = app(PrepareOnDemandPayCodeIssuance::class)->handle($issuer, $instructions, $pricing, 'external-payer-without-mobile');
     expect($replay->is($order))->toBeTrue();
+    expect(fn () => app(PrepareOnDemandPayCodeIssuance::class)->handle($issuer, $instructions, $pricing, 'external-payer-without-mobile', OnDemandIssuanceFundingBasis::Shortfall))
+        ->toThrow(FundingIntentConflict::class);
+    config()->set('x-change.issuance_funding.on_demand.basis', 'full_amount');
     expect(fn () => app(PrepareOnDemandPayCodeIssuance::class)->handle($issuer, $instructions, $pricing, 'suspended-new-order'))
         ->toThrow(HttpException::class, 'The account is suspended.');
 

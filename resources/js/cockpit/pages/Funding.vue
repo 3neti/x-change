@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { router, useForm, usePoll } from '@inertiajs/vue3';
+import { index as accountsIndex } from '@/routes/x-change/cockpit/accounts';
 import { useEcho } from '@laravel/echo-vue';
 import {
     CirclePlus,
@@ -306,6 +307,9 @@ const availableFundingProviders = computed(() =>
         (provider) => provider.status === 'available',
     ),
 );
+const selectedNetbankAccount = computed(() =>
+    props.funding_read_model.providers.find((provider) => provider.code === 'netbank'),
+);
 const operationalFundingIntents = computed(() =>
     props.funding_read_model.intents.filter(
         (intent) => intent.provider !== 'qrph_simulator',
@@ -377,6 +381,7 @@ const { start: startFundingPoll, stop: stopFundingPoll } = usePoll(
     {
         only: [
             'cockpit_header_read_model',
+            'selected_account_funds',
             'funding_read_model',
             'funding_requests',
             'funding_activity',
@@ -591,9 +596,11 @@ const summaryCards = computed(() => {
     return [
         {
             key: 'client-funds',
-            label: 'Client Funds',
-            value: balanceValue('internal'),
-            helper: 'Recognized funds available to this Account.',
+            label: 'This bank account',
+            value: typeof props.selected_account_funds?.amount_minor === 'number'
+                ? new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(props.selected_account_funds.amount_minor / 100)
+                : 'Not available',
+            helper: 'Client Funds for this bank account. The top bar shows all accounts combined.',
             tone: 'text-emerald-700 dark:text-emerald-300',
             primary: true,
         },
@@ -617,7 +624,7 @@ const summaryCards = computed(() => {
             key: 'settled',
             label: 'Settled Funding',
             value: props.funding_read_model.summary.settled_funding,
-            helper: 'Verified net funding posted to this Account.',
+            helper: 'Verified funding across all your accounts.',
             tone: 'text-emerald-700 dark:text-emerald-300',
             primary: false,
         },
@@ -1351,6 +1358,7 @@ function refreshFundingProjections(): void {
     router.reload({
         only: [
             'cockpit_header_read_model',
+            'selected_account_funds',
             'funding_read_model',
             'funding_requests',
             'funding_activity',
@@ -1443,6 +1451,12 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         Add funds using QR Ph, bank transfer, or Pay Code.
                     </p>
                 </div>
+
+                <p v-if="selectedNetbankAccount?.destination_reference" class="mt-2 text-sm text-slate-600 dark:text-slate-300" data-testid="funding-selected-account">
+                    {{ selectedNetbankAccount.destination_mode === 'dedicated' ? 'Your NetBank account' : 'Platform shared NetBank account' }}
+                    · {{ selectedNetbankAccount.destination_reference }}
+                    <a :href="accountsIndex().url" class="ml-2 font-medium text-sky-700 underline dark:text-sky-300">Manage accounts</a>
+                </p>
 
                 <section
                     class="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 md:mt-3 lg:mx-0 lg:grid lg:grid-cols-6 lg:overflow-visible lg:px-0 lg:pb-0 lg:snap-none"

@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Services\Cockpit;
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Exceptions\FundingDestinationUnavailable;
+use LBHurtado\XChange\Models\BankAccountAssignment;
 use LBHurtado\XChange\Models\FundingDestinationPreference;
 use LBHurtado\XChange\Models\ProviderAccountLink;
 
@@ -43,7 +44,7 @@ class CockpitAccountReadModelProvider
                 'provider_webhook_settlement_required' => true,
             ],
             'redactions' => [
-                'account_numbers' => 'masked',
+                'account_numbers' => 'owner-visible',
                 'wallet_ids' => 'masked',
                 'routing_tokens' => 'ephemeral-per-vca',
                 'credentials_exposed' => false,
@@ -116,11 +117,20 @@ class CockpitAccountReadModelProvider
         try {
             $shared = $this->destinations->shared($provider, $accountReference);
             $sharedStatus = 'ready';
-            $sharedReference = $shared->displayReference;
+            $sharedReference = $provider === 'netbank' && filled($shared->bankAccountNumber)
+                ? implode(' · ', array_filter([$shared->bankAccountName, $shared->bankAccountNumber]))
+                : $shared->displayReference;
         } catch (FundingDestinationUnavailable) {
             $sharedStatus = 'not_configured';
             $sharedReference = null;
         }
+
+        $assignment = $link === null ? null : BankAccountAssignment::query()
+            ->whereMorphedTo('owner', $owner)->where('provider_account_link_id', $link->getKey())->first();
+        $details = $assignment?->details_ciphertext;
+        $dedicatedReference = is_array($details) && filled($details['account_number'] ?? null)
+            ? implode(' · ', array_filter([$details['account_name'] ?? null, $details['provider_account_number'] ?? $details['account_number']]))
+            : $link?->display_reference;
 
         return [
             'code' => $provider,
@@ -133,7 +143,7 @@ class CockpitAccountReadModelProvider
             ],
             'dedicated' => [
                 'configured' => $link instanceof ProviderAccountLink,
-                'display_reference' => $link?->display_reference,
+                'display_reference' => $dedicatedReference,
                 'status' => $link?->status ?? 'not_configured',
                 'verification_status' => $link?->verification_status ?? 'not_configured',
                 'verified_at' => $link?->verified_at?->toIso8601String(),

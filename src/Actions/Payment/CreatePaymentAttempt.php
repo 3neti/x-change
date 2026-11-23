@@ -81,6 +81,12 @@ class CreatePaymentAttempt
 
         $sessionKeyHash = $this->sessions->hash($browserKey);
         $idempotencyKeyHash = $this->sessions->hash($browserKey."\0".$idempotencyKey);
+        if (PaymentAttempt::query()->where('voucher_id', $voucher->getKey())
+            ->where('session_key_hash', $sessionKeyHash)
+            ->where('idempotency_key_hash', '!=', $idempotencyKeyHash)
+            ->where('status', PaymentAttemptStatus::CreditedToClientFunds->value)->exists()) {
+            throw new UnresolvedPaymentReview('A payment in this session was credited to the issuer. Do not pay again.');
+        }
         $fingerprint = hash('sha256', json_encode([
             'voucher_id' => $voucher->getKey(),
             'provider' => $provider,

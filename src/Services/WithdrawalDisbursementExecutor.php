@@ -8,11 +8,17 @@ use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiCore\Contracts\PendingPayoutApproval;
 use LBHurtado\EmiCore\Data\PayoutPartyData;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
+use LBHurtado\EmiCore\Data\PayoutSourceAccountData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Data\WithdrawalDisbursementExecutionData;
+use LBHurtado\XChange\Models\BankAccountAssignment;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Services\Banking\AuthorizedPayoutBankSource;
+use LBHurtado\XChange\Services\Banking\PayoutBankSourceSnapshot;
+use LBHurtado\XChange\Services\Banking\VoucherBankSourceSnapshot;
+use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use RuntimeException;
 use Throwable;
 
@@ -58,6 +64,51 @@ class WithdrawalDisbursementExecutor
 
         // Record settlement intent BEFORE calling the provider
         $recorded = $this->reconciliations->record($intentAttributes);
+        $existingSource = isset($recorded->id)
+            ? DisbursementReconciliation::query()->find($recorded->id)?->bank_source_snapshot
+            : null;
+        $voucherSource = app(VoucherBankSourceSnapshot::class)->forVoucher($voucher);
+        $reservedConnection = data_get($voucher->metadata, 'treasury.pay_code_reservation.connection_reference');
+        if ($voucherSource === null && is_string($reservedConnection) && BankAccountAssignment::query()
+            ->where('treasury_connection_reference', $reservedConnection)->exists()) {
+            throw new RuntimeException('The Pay Code has no frozen source for its assigned bank account.');
+        }
+        if (is_array($voucherSource) && is_string($reservedConnection)
+            && ($voucherSource['treasury_connection_reference'] ?? null) !== $reservedConnection) {
+            throw new RuntimeException('The Pay Code Treasury reservation does not match its frozen source.');
+        }
+        if (is_array($voucherSource) && is_string($reservedConnection)) {
+            $connections = app(TreasuryProviderConnectionCatalog::class)->active([$reservedConnection]);
+            $connection = count($connections) === 1 ? $connections[0] : null;
+            if ($connection === null || $connection->provider !== ($voucherSource['provider'] ?? null)
+                || $connection->inventoryReference !== ($voucherSource['treasury_inventory_reference'] ?? null)
+                || $connection->settlementResourceReference !== ($voucherSource['treasury_resource_reference'] ?? null)) {
+                throw new RuntimeException('The Pay Code Treasury connection no longer matches its frozen source.');
+            }
+        }
+        if (is_array($voucherSource)) {
+            if (is_array($existingSource) && $existingSource !== $voucherSource) {
+                throw new RuntimeException('The payout source does not match the Pay Code source.');
+            }
+            if ($input->source_account !== null && (
+                $input->source_account->provider !== $voucherSource['provider']
+                || $input->source_account->account_number !== $voucherSource['account_number']
+                || $input->source_account->customer_id !== $voucherSource['customer_id']
+            )) {
+                throw new RuntimeException('The payout source does not match the Pay Code source.');
+            }
+        }
+        if ($input->source_account !== null || is_array($existingSource) || is_array($voucherSource)) {
+            if (! isset($recorded->id)) {
+                throw new RuntimeException('Payout source snapshot requires a durable reconciliation.');
+            }
+            $source = $input->source_account;
+            $snapshot = app(PayoutBankSourceSnapshot::class)->remember(
+                (int) $recorded->id,
+                fn (): array => $voucherSource ?? app(AuthorizedPayoutBankSource::class)->resolve($voucher->owner, $source),
+            );
+            $input->source_account = PayoutSourceAccountData::from($snapshot);
+        }
         $existingSnapshot = isset($recorded->id)
             ? DisbursementReconciliation::query()->find($recorded->id)?->payout_identity_snapshot
             : null;
@@ -124,8 +175,8 @@ class WithdrawalDisbursementExecutor
             throw $e;
         } catch (Throwable $e) {
             $status = $this->statusResolver->resolveFromGatewayException($e);
-            $containsPartyData = $input->sender !== null || $input->recipient !== null;
-            $errorMessage = $containsPartyData ? 'Provider submission failed; reconciliation may be required.' : $e->getMessage();
+            $containsSensitiveAccountData = $input->sender !== null || $input->recipient !== null || $input->source_account !== null;
+            $errorMessage = $containsSensitiveAccountData ? 'Provider submission failed; reconciliation may be required.' : $e->getMessage();
 
             // Update intent with failure
             $this->reconciliations->record(array_merge($intentAttributes, [
@@ -142,7 +193,7 @@ class WithdrawalDisbursementExecutor
                 'error_message' => $errorMessage,
             ]));
 
-            throw new RuntimeException('Disbursement failed: '.$errorMessage, previous: $containsPartyData ? null : $e);
+            throw new RuntimeException('Disbursement failed: '.$errorMessage, previous: $containsSensitiveAccountData ? null : $e);
         }
     }
 

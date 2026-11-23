@@ -12,6 +12,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use LBHurtado\XChange\Services\Banking\SelectedAccountClientFunds;
 use LBHurtado\XChange\Services\Cockpit\FundingActivityCockpitReadModel;
 use LBHurtado\XChange\Services\Cockpit\FundingCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\FundingMethodSelectorCockpitReadModel;
@@ -56,6 +57,7 @@ class CockpitFundingPageController extends Controller
         return Inertia::render('x-change/cockpit/Funding', [
             ...$this->props->toArray(includeReadModel: false),
             'funding_read_model' => $this->funding->forOperator($operator)->toArray(),
+            'selected_account_funds' => app(SelectedAccountClientFunds::class)->forOwner($operator),
             'funding_requests' => $fundingRequests,
             'funding_method_selector' => $this->fundingMethods
                 ->forAccountFunding(

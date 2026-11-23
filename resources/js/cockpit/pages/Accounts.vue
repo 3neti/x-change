@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link } from "@inertiajs/vue3";
+import { Link, useForm } from "@inertiajs/vue3";
 import {
   ArrowRight,
   Building2,
@@ -10,11 +10,79 @@ import {
 } from "lucide-vue-next";
 import { index as fundingIndex } from "@/routes/x-change/cockpit/funding";
 import { quickGenerate } from "@/routes/x-change/cockpit";
-import { computed } from "vue";
+import { store as storeBankAccount, update as updateBankAccount } from "@/routes/x-change/cockpit/accounts/bank-accounts";
+import { computed, ref } from "vue";
 import CockpitLayout from "../layouts/CockpitLayout.vue";
 import type { CockpitAccountsPageProps } from "../types";
 
 const props = defineProps<CockpitAccountsPageProps>();
+const showAddAccount = ref(false);
+const accountForm = useForm({ owner_id: "", nickname: "", account_name: "", account_number: "", customer_id: "", vca_alias: "" });
+const defaultForm = useForm<{ account?: string }>({});
+const nicknameForm = useForm({ action: "rename", nickname: "" });
+const editingAccount = ref<number | null>(null);
+const configuringAccount = ref<number | null>(null);
+const configureForm = useForm({ action: "configure", treasury_connection: "", disbursement_confirmed: false });
+const fundingSetupAccount = ref<number | null>(null);
+const fundingSetupForm = useForm({ action: "configure_funding", history_reviewed: false });
+const freshFundingForm = useForm({ action: "configure_fresh_funding", sole_writer_confirmed: false, known_vcas: "" });
+
+function configureFreshFunding(id: number): void {
+  freshFundingForm.transform((data) => ({
+    ...data,
+    known_vcas: data.known_vcas.split(/[\s,]+/).filter(Boolean),
+  })).patch(updateBankAccount(id).url, {
+    preserveScroll: true,
+    onSuccess: () => { freshFundingForm.reset(); fundingSetupAccount.value = null; },
+  });
+}
+
+
+function toggleFundingSetup(id: number): void {
+  const opening = fundingSetupAccount.value !== id;
+  fundingSetupForm.reset();
+  fundingSetupForm.clearErrors();
+  freshFundingForm.reset();
+  freshFundingForm.clearErrors();
+  fundingSetupAccount.value = opening ? id : null;
+}
+
+function configureFunding(id: number): void {
+  fundingSetupForm.patch(updateBankAccount(id).url, {
+    preserveScroll: true,
+    onSuccess: () => { fundingSetupForm.reset(); fundingSetupAccount.value = null; },
+  });
+}
+
+function configureAccount(id: number): void {
+  configureForm.patch(updateBankAccount(id).url, {
+    preserveScroll: true,
+    onSuccess: () => { configureForm.reset(); configuringAccount.value = null; },
+  });
+}
+
+function addBankAccount(): void {
+  accountForm.post(storeBankAccount().url, {
+    preserveScroll: true,
+    onSuccess: () => { accountForm.reset(); showAddAccount.value = false; },
+  });
+}
+
+function selectDefaultAccount(id: number): void {
+  defaultForm.patch(updateBankAccount(id).url, { preserveScroll: true });
+}
+
+function editNickname(id: number, nickname: string | null): void {
+  editingAccount.value = id;
+  nicknameForm.nickname = nickname || "";
+}
+
+function saveNickname(id: number): void {
+  nicknameForm.patch(updateBankAccount(id).url, {
+    preserveScroll: true,
+    onSuccess: () => { editingAccount.value = null; },
+  });
+}
 
 const readyDestinationCount = computed(
   () =>
@@ -110,6 +178,82 @@ function displayLabel(value: string): string {
             </dd>
           </div>
         </dl>
+      </section>
+
+      <section
+        class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950"
+        data-testid="connected-bank-accounts"
+      >
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="text-base font-semibold text-slate-950 dark:text-white">Connected bank accounts</h2>
+          <button v-if="can_assign_bank_accounts" type="button" class="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white dark:bg-white dark:text-slate-900" @click="showAddAccount = !showAddAccount">{{ showAddAccount ? 'Cancel' : 'Add account' }}</button>
+        </div>
+        <p v-if="!bank_accounts.length && !can_assign_bank_accounts" class="mt-3 text-sm text-slate-600 dark:text-slate-400">No personal bank accounts connected. Contact your administrator to add one.</p>
+        <form v-if="showAddAccount" class="mt-4 grid gap-3 sm:grid-cols-2" @submit.prevent="addBankAccount">
+          <label class="text-sm">User ID (leave blank for your account)<input v-model="accountForm.owner_id" inputmode="numeric" class="mt-1 block w-full rounded-lg border border-slate-300 p-2 dark:bg-slate-900" /></label>
+          <label class="text-sm">Nickname (optional)<input v-model="accountForm.nickname" class="mt-1 block w-full rounded-lg border border-slate-300 p-2 dark:bg-slate-900" /></label>
+          <label class="text-sm">Registered account name<input v-model="accountForm.account_name" required class="mt-1 block w-full rounded-lg border border-slate-300 p-2 dark:bg-slate-900" /></label>
+          <label class="text-sm">Account number<input v-model="accountForm.account_number" required class="mt-1 block w-full rounded-lg border border-slate-300 p-2 dark:bg-slate-900" /></label>
+          <label class="text-sm">Customer ID<input v-model="accountForm.customer_id" required inputmode="numeric" class="mt-1 block w-full rounded-lg border border-slate-300 p-2 dark:bg-slate-900" /></label>
+          <label class="text-sm">VCA alias<input v-model="accountForm.vca_alias" required inputmode="numeric" maxlength="5" class="mt-1 block w-full rounded-lg border border-slate-300 p-2 dark:bg-slate-900" /></label>
+          <p v-if="Object.keys(accountForm.errors).length" class="text-sm text-red-700" role="alert">{{ Object.values(accountForm.errors)[0] }}</p>
+          <button type="submit" :disabled="accountForm.processing" class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Add account</button>
+        </form>
+        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+          <article v-for="account in bank_accounts" :key="account.id" class="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+            <div class="flex items-center justify-between gap-3">
+              <h3 class="font-semibold text-slate-950 dark:text-white">{{ account.nickname || account.account_name }}</h3>
+              <span v-if="account.is_default" class="text-xs font-semibold text-sky-700 dark:text-sky-300">Default</span>
+            </div>
+            <p v-if="account.owner_id" class="mt-1 text-xs text-slate-500">User {{ account.owner_id }}</p>
+            <p v-if="account.nickname" class="mt-1 text-sm text-slate-600 dark:text-slate-400">{{ account.account_name }}</p>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">{{ account.account_number }}</p>
+            <p class="mt-3 text-xs text-slate-500">
+              Funding: {{ account.funding_ready ? 'Ready' : 'Not ready' }} · Issuance: {{ account.disbursement_ready ? 'Ready' : 'Not ready' }}
+            </p>
+            <p v-if="!can_assign_bank_accounts && !account.funding_ready" class="mt-2 text-xs text-slate-600 dark:text-slate-400">Ask your administrator to finish setting up funding for this account.</p>
+            <p v-if="!can_assign_bank_accounts && !account.disbursement_ready" class="mt-2 text-xs text-slate-600 dark:text-slate-400">Ask your administrator to finish setting up issuance for this account.</p>
+            <button v-if="account.is_owner !== false && (account.funding_ready || account.disbursement_ready) && !account.is_default" type="button" :disabled="defaultForm.processing" class="mt-3 text-sm font-semibold text-sky-700 dark:text-sky-300" @click="selectDefaultAccount(account.id)">Set as default</button>
+            <button v-if="account.is_owner !== false" type="button" class="mt-3 ml-3 text-sm font-semibold text-sky-700 dark:text-sky-300" @click="editNickname(account.id, account.nickname)">Edit nickname</button>
+            <button v-if="can_assign_bank_accounts && !account.disbursement_ready" type="button" class="mt-3 ml-3 text-sm font-semibold text-sky-700 dark:text-sky-300" @click="configuringAccount = configuringAccount === account.id ? null : account.id">Set up issuance</button>
+            <button v-if="can_assign_bank_accounts && personal_netbank_funding_enabled && !account.funding_ready" type="button" class="mt-3 ml-3 text-sm font-semibold text-sky-700 dark:text-sky-300" @click="toggleFundingSetup(account.id)">Set up funding</button>
+            <form v-if="can_assign_bank_accounts && personal_netbank_funding_enabled && fundingSetupAccount === account.id" class="mt-3 space-y-3" @submit.prevent="configureFunding(account.id)">
+              <label class="flex gap-2 text-sm"><input v-model="fundingSetupForm.history_reviewed" type="checkbox" required /> I have reviewed and recorded previously used VCA references for this account.</label>
+              <button type="submit" :disabled="fundingSetupForm.processing" class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Enable funding</button>
+              <p v-if="Object.keys(fundingSetupForm.errors).length" role="alert" class="text-sm text-red-700">{{ Object.values(fundingSetupForm.errors)[0] }}</p>
+            </form>
+            <form v-if="personal_netbank_fresh_commissioning_available && fundingSetupAccount === account.id" class="mt-4 space-y-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700" @submit.prevent="configureFreshFunding(account.id)">
+              <p class="text-sm font-semibold">Local test: new funding requests only</p>
+              <p class="text-sm text-slate-600 dark:text-slate-400">Previously received payments and standing addresses remain separate and are not reconciled by this setup.</p>
+              <label class="block text-sm">Previously generated 12-digit VCAs, separated by spaces or commas
+                <textarea v-model="freshFundingForm.known_vcas" required class="mt-1 block w-full rounded-lg border border-slate-300 p-2 dark:bg-slate-900" />
+              </label>
+              <label class="flex gap-2 text-sm"><input v-model="freshFundingForm.sole_writer_confirmed" type="checkbox" required /> This sandbox is the only system generating new seven-digit references for this alias.</label>
+              <button type="submit" :disabled="freshFundingForm.processing" class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Enable new test funding</button>
+              <p v-if="Object.keys(freshFundingForm.errors).length" role="alert" class="text-sm text-red-700">{{ Object.values(freshFundingForm.errors)[0] }}</p>
+            </form>
+            <form v-if="configuringAccount === account.id" class="mt-3 space-y-3" @submit.prevent="configureAccount(account.id)">
+              <p v-if="!props.treasury_connections?.length" class="text-sm text-amber-700">A separate treasury connection must be configured before this account can be set up.</p>
+              <template v-else>
+                <label class="block text-sm">Treasury connection
+                  <select v-model="configureForm.treasury_connection" required class="mt-1 block w-full rounded-lg border border-slate-300 p-2 dark:bg-slate-900">
+                    <option value="" disabled>Select a connection</option>
+                    <option v-for="connection in props.treasury_connections" :key="connection" :value="connection">{{ connection }}</option>
+                  </select>
+                </label>
+                <label class="flex gap-2 text-sm"><input v-model="configureForm.disbursement_confirmed" type="checkbox" required /> I confirm this bank account is permitted to send payouts using these provider credentials.</label>
+                <button type="submit" :disabled="configureForm.processing" class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Check and set up</button>
+              </template>
+              <p v-if="Object.keys(configureForm.errors).length" role="alert" class="text-sm text-red-700">{{ Object.values(configureForm.errors)[0] }}</p>
+            </form>
+            <form v-if="editingAccount === account.id" class="mt-3 flex gap-2" @submit.prevent="saveNickname(account.id)">
+              <label class="sr-only" :for="`nickname-${account.id}`">Account nickname</label>
+              <input :id="`nickname-${account.id}`" v-model="nicknameForm.nickname" maxlength="191" class="min-w-0 flex-1 rounded-lg border border-slate-300 p-2 text-sm dark:bg-slate-900" />
+              <button type="submit" :disabled="nicknameForm.processing" class="rounded-lg bg-slate-900 px-3 py-2 text-sm text-white dark:bg-white dark:text-slate-900">Save</button>
+            </form>
+            <p v-if="defaultForm.errors.account" role="alert" class="mt-2 text-sm text-red-700">{{ defaultForm.errors.account }}</p>
+          </article>
+        </div>
       </section>
 
       <section

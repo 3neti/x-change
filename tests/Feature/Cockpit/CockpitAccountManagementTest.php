@@ -5,18 +5,104 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use LBHurtado\Merchant\Contracts\MerchantProfileRepositoryContract;
+use LBHurtado\XChange\Actions\Banking\AssignNetbankAccount;
 use LBHurtado\XChange\Actions\Funding\UpdateFundingDestination;
+use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
 use LBHurtado\XChange\Exceptions\FundingDestinationUnavailable;
+use LBHurtado\XChange\Models\BankAccountAssignment;
 use LBHurtado\XChange\Models\FundingDestinationPreference;
 use LBHurtado\XChange\Models\ProviderAccountLink;
+use LBHurtado\XChange\Services\Banking\AssignedBankTreasuryConnection;
+use LBHurtado\XChange\Services\CheckProviderSourceAccountReadiness;
 use LBHurtado\XChange\Services\Funding\DefaultFundingDestinationResolver;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
+use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 
 beforeEach(function (): void {
     $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([
         new FakeFundingProviderAdapter('netbank'),
     ]));
+});
+
+it('shows only the signed-in owner assigned accounts with separate capability readiness', function () {
+    $owner = actingAsTestUser();
+    $owner->forceFill(['email_verified_at' => now()])->save();
+    $other = actingAsTestUser();
+    $other->forceFill(['email_verified_at' => now()])->save();
+    $assign = app(AssignNetbankAccount::class);
+    $assign->handle($owner, [
+        'account_number' => '991100001234', 'account_name' => 'Owner Example',
+        'customer_id' => '1234', 'vca_alias' => '54321', 'nickname' => 'Payroll',
+    ]);
+    $assign->handle($other, [
+        'account_number' => '991100009999', 'account_name' => 'Other Example',
+        'customer_id' => '9876', 'vca_alias' => '54322',
+    ]);
+
+    $this->actingAs($owner)->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.accounts.index'))
+        ->assertOk()
+        ->assertJsonCount(1, 'props.bank_accounts')
+        ->assertJsonPath('props.bank_accounts.0.account_number', '991100001234')
+        ->assertJsonPath('props.bank_accounts.0.funding_ready', false)
+        ->assertJsonPath('props.bank_accounts.0.disbursement_ready', false)
+        ->assertJsonMissing(['991100009999', '9876']);
+});
+
+it('allows only an authorized administrator to assign a NetBank account', function () {
+    $actor = actingAsTestUser();
+    $actor->forceFill(['email_verified_at' => now()])->save();
+    $owner = actingAsTestUser();
+    $owner->forceFill(['email_verified_at' => now()])->save();
+    $access = Mockery::mock(CockpitTreasuryAccessContract::class);
+    $access->shouldReceive('canManageTreasuryReconciliation')->twice()->andReturn(false, true);
+    $this->app->instance(CockpitTreasuryAccessContract::class, $access);
+    $data = [
+        'owner_id' => $owner->id, 'account_number' => '991100001234', 'account_name' => 'Example',
+        'customer_id' => '1234', 'vca_alias' => '54321',
+    ];
+
+    $this->actingAs($actor)->withSession(['auth.password_confirmed_at' => time()])
+        ->post(route('x-change.cockpit.accounts.bank-accounts.store'), $data)->assertForbidden();
+    expect(BankAccountAssignment::query()->count())->toBe(0);
+    $this->actingAs($actor)->withSession(['auth.password_confirmed_at' => time()])
+        ->post(route('x-change.cockpit.accounts.bank-accounts.store'), $data)->assertRedirect();
+    expect(BankAccountAssignment::query()->sole()->owner->is($owner))->toBeTrue();
+});
+
+it('does not let a user select another user’s account as default', function () {
+    $owner = actingAsTestUser();
+    $owner->forceFill(['email_verified_at' => now()])->save();
+    $other = actingAsTestUser();
+    $other->forceFill(['email_verified_at' => now()])->save();
+    $assignment = app(AssignNetbankAccount::class)->handle($owner, [
+        'account_number' => '991100001234', 'account_name' => 'Example',
+        'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $this->actingAs($other)->withSession(['auth.password_confirmed_at' => time()])
+        ->patchJson(route('x-change.cockpit.accounts.bank-accounts.update', $assignment->id))
+        ->assertUnprocessable();
+});
+
+it('lets the owner rename an account without changing its routing details', function () {
+    $owner = actingAsTestUser();
+    $owner->forceFill(['email_verified_at' => now()])->save();
+    $other = actingAsTestUser();
+    $other->forceFill(['email_verified_at' => now()])->save();
+    $assignment = app(AssignNetbankAccount::class)->handle($owner, [
+        'account_number' => '991100001234', 'account_name' => 'Example',
+        'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $url = route('x-change.cockpit.accounts.bank-accounts.update', $assignment->id);
+
+    $this->actingAs($other)->withSession(['auth.password_confirmed_at' => time()])
+        ->patch($url, ['action' => 'rename', 'nickname' => 'Other'])->assertNotFound();
+    $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+        ->patch($url, ['action' => 'rename', 'nickname' => 'Payroll'])->assertRedirect();
+
+    expect($assignment->fresh()->details_ciphertext)
+        ->toMatchArray(['nickname' => 'Payroll', 'account_number' => '991100001234', 'customer_id' => '1234']);
 });
 
 it('publishes package-owned Accounts routes with verified and PIN-confirmed mutations', function () {
@@ -60,13 +146,12 @@ it('renders a minimal owner-scoped depositor Account projection with encrypted I
         ->assertJsonPath('props.account_overview.status', 'available')
         ->assertJsonPath('props.account_overview.funding_destinations.0.code', 'netbank')
         ->assertJsonPath('props.account_overview.funding_destinations.0.mode', 'shared')
-        ->assertJsonPath('props.account_overview.funding_destinations.0.display_reference', '•••• 0019 · VCA 91500')
+        ->assertJsonPath('props.account_overview.funding_destinations.0.display_reference', 'X Change Treasury · 113001000019')
         ->assertJsonMissingPath('props.account_read_model')
         ->assertJsonMissingPath('props.account_scenario')
         ->assertJsonMissingPath('props.funding_qr_merchant_profile')
         ->assertJsonMissingPath('props.read_model')
         ->assertJsonMissing([
-            '113001000019',
             'test-vca-alias-token',
             'ledger_authority',
             'funding_credit_policy',
@@ -241,4 +326,174 @@ it('returns a destination to shared mode without deleting its connection history
     expect($preference->mode)->toBe('shared')
         ->and($preference->provider_account_link_id)->toBeNull()
         ->and(ProviderAccountLink::query()->count())->toBe(0);
+});
+
+it('allows only an authorized administrator to configure a checked personal account', function () {
+    $owner = actingAsTestUser();
+    $owner->forceFill(['email_verified_at' => now()])->save();
+    $assignment = app(AssignNetbankAccount::class)->handle($owner, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $access = Mockery::mock(CockpitTreasuryAccessContract::class);
+    $access->shouldReceive('canManageTreasuryReconciliation')->twice()->andReturn(false, true);
+    app()->instance(CockpitTreasuryAccessContract::class, $access);
+    $catalog = new TreasuryProviderConnectionCatalog(['personal' => [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ]]);
+    app()->instance(TreasuryProviderConnectionCatalog::class, $catalog);
+    $readiness = Mockery::mock(CheckProviderSourceAccountReadiness::class);
+    $readiness->shouldReceive('handle')->once()->with(0, 'netbank', '991100001234')
+        ->andReturn(['ready' => true, 'checked' => true, 'currency' => 'PHP', 'available_balance_minor' => 0]);
+    app()->instance(CheckProviderSourceAccountReadiness::class, $readiness);
+    $url = route('x-change.cockpit.accounts.bank-accounts.update', $assignment->id);
+    $data = ['action' => 'configure', 'treasury_connection' => 'personal', 'disbursement_confirmed' => true];
+    $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+        ->patchJson($url, ['action' => 'configure', 'treasury_connection' => 'personal', 'disbursement_confirmed' => false])
+        ->assertUnprocessable();
+    $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])->patch($url, $data)->assertForbidden();
+    expect($assignment->fresh()->treasury_connection_reference)->toBeNull();
+    $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])->patch($url, $data)->assertRedirect();
+    expect($assignment->fresh()->treasury_connection_reference)->toBe('personal')
+        ->and($assignment->fresh()->providerAccountLink->capabilities)->toContain('disbursement')->not->toContain('funding');
+});
+
+it('does not display account operations as ready without a separate Treasury binding', function () {
+    $owner = actingAsTestUser();
+    $owner->forceFill(['email_verified_at' => now()])->save();
+    $assignment = app(AssignNetbankAccount::class)->handle($owner, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $assignment->providerAccountLink->forceFill([
+        'status' => 'ready', 'ready_at' => now(), 'capabilities' => ['funding', 'disbursement'],
+    ])->save();
+    $this->actingAs($owner)->withHeader('X-Inertia', 'true')->get(route('x-change.cockpit.accounts.index'))
+        ->assertOk()->assertJsonPath('props.bank_accounts.0.funding_ready', false)
+        ->assertJsonPath('props.bank_accounts.0.disbursement_ready', false);
+});
+
+it('shows the selected assigned bank account on issuance only to its owner', function () {
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $owner = actingAsTestUser();
+    $owner->forceFill(['email_verified_at' => now()])->save();
+    $assignment = app(AssignNetbankAccount::class)->handle($owner, [
+        'account_number' => '991-100-00123-4', 'account_name' => 'Example Corp', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    FundingDestinationPreference::query()->create([
+        'owner_type' => $owner->getMorphClass(), 'owner_id' => $owner->getKey(), 'provider_code' => 'netbank',
+        'mode' => 'dedicated', 'provider_account_link_id' => $assignment->provider_account_link_id,
+    ]);
+    $this->actingAs($owner)->withHeader('X-Inertia', 'true')->get(route('x-change.cockpit.quick-generate'))
+        ->assertOk()->assertJsonPath('props.issuance_bank_account.name', 'Example Corp')
+        ->assertJsonPath('props.issuance_bank_account.number', '991-100-00123-4')
+        ->assertJsonPath('props.issuance_bank_account.mode', 'dedicated');
+    $other = actingAsTestUser();
+    $other->forceFill(['email_verified_at' => now()])->save();
+    $this->actingAs($other)->withHeader('X-Inertia', 'true')->get(route('x-change.cockpit.quick-generate'))
+        ->assertOk()->assertJsonMissing(['991-100-00123-4', 'Example Corp']);
+});
+
+it('limits funding setup to administrators who reviewed VCA history', function () {
+    $owner = actingAsTestUser();
+    $owner->forceFill(['email_verified_at' => now()])->save();
+    $assignment = app(AssignNetbankAccount::class)->handle($owner, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    config()->set('x-change.funding.dedicated_netbank_vca_enabled', true);
+    $catalog = new TreasuryProviderConnectionCatalog(['personal' => [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ]]);
+    app()->instance(TreasuryProviderConnectionCatalog::class, $catalog);
+    app(AssignedBankTreasuryConnection::class)->bind($owner, $assignment->id, 'personal');
+    $access = Mockery::mock(CockpitTreasuryAccessContract::class);
+    $access->shouldReceive('canManageTreasuryReconciliation')->twice()->andReturn(false, true);
+    app()->instance(CockpitTreasuryAccessContract::class, $access);
+    $url = route('x-change.cockpit.accounts.bank-accounts.update', $assignment->id);
+    $session = ['auth.password_confirmed_at' => time()];
+
+    $this->actingAs($owner)->withSession($session)->patchJson($url, ['action' => 'configure_funding', 'history_reviewed' => false])->assertUnprocessable();
+    $this->actingAs($owner)->withSession($session)->patch($url, ['action' => 'configure_funding', 'history_reviewed' => true])->assertForbidden();
+    $this->actingAs($owner)->withSession($session)->patch($url, ['action' => 'configure_funding', 'history_reviewed' => true])->assertRedirect();
+
+    expect($assignment->fresh()->providerAccountLink->capabilities)->toContain('funding')->not->toContain('disbursement');
+});
+
+it('shows personal funding as ready only while the funding capability is enabled', function () {
+    $owner = actingAsTestUser();
+    $owner->forceFill(['email_verified_at' => now()])->save();
+    $assignment = app(AssignNetbankAccount::class)->handle($owner, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $catalog = new TreasuryProviderConnectionCatalog(['personal' => [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ]]);
+    app()->instance(TreasuryProviderConnectionCatalog::class, $catalog);
+    app(AssignedBankTreasuryConnection::class)->bind($owner, $assignment->id, 'personal');
+    $assignment->providerAccountLink->forceFill(['status' => 'ready', 'ready_at' => now(), 'capabilities' => ['funding']])->save();
+    $url = route('x-change.cockpit.accounts.index');
+
+    config()->set('x-change.funding.dedicated_netbank_vca_enabled', true);
+    $this->actingAs($owner)->withHeader('X-Inertia', 'true')->get($url)->assertOk()->assertJsonPath('props.bank_accounts.0.funding_ready', true);
+    config()->set('x-change.funding.dedicated_netbank_vca_enabled', false);
+    $this->actingAs($owner)->withHeader('X-Inertia', 'true')->get($url)->assertOk()->assertJsonPath('props.bank_accounts.0.funding_ready', false);
+});
+
+it('lets a treasury administrator see accounts assigned to other users without exposing them to account holders', function () {
+    $admin = actingAsTestUser();
+    $owner = actingAsTestUser();
+    foreach ([$admin, $owner] as $user) {
+        $user->forceFill(['email_verified_at' => now()])->save();
+    }
+    $assignment = app(AssignNetbankAccount::class)->handle($owner, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $access = Mockery::mock(CockpitTreasuryAccessContract::class);
+    $access->shouldReceive('canManageTreasuryReconciliation')->andReturnUsing(fn ($user) => $user->is($admin));
+    $access->shouldReceive('canViewTreasuryControls')->andReturn(false);
+    $access->shouldReceive('canRefreshProviderLiquidity')->andReturn(false);
+    app()->instance(CockpitTreasuryAccessContract::class, $access);
+    $url = route('x-change.cockpit.accounts.index');
+
+    $this->actingAs($admin)->withHeader('X-Inertia', 'true')->get($url)->assertOk()
+        ->assertJsonPath('props.bank_accounts.0.id', $assignment->id)
+        ->assertJsonPath('props.bank_accounts.0.owner_id', (string) $owner->id)
+        ->assertJsonPath('props.bank_accounts.0.is_owner', false);
+    $this->actingAs($owner)->withHeader('X-Inertia', 'true')->get($url)->assertOk()
+        ->assertJsonPath('props.bank_accounts.0.is_owner', true)
+        ->assertJsonPath('props.bank_accounts.0.owner_id', null);
+    $other = actingAsTestUser();
+    $other->forceFill(['email_verified_at' => now()])->save();
+    $this->actingAs($other)->withHeader('X-Inertia', 'true')->get($url)->assertOk()
+        ->assertJsonCount(0, 'props.bank_accounts');
+});
+
+it('restricts fresh funding commissioning to treasury administrators', function () {
+    $owner = actingAsTestUser();
+    $owner->forceFill(['email_verified_at' => now()])->save();
+    $assignment = app(AssignNetbankAccount::class)->handle($owner, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    config()->set('x-change.funding.dedicated_netbank_vca_enabled', true);
+    $catalog = new TreasuryProviderConnectionCatalog(['personal' => [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ]]);
+    app()->instance(TreasuryProviderConnectionCatalog::class, $catalog);
+    app(AssignedBankTreasuryConnection::class)->bind($owner, $assignment->id, 'personal');
+    $access = Mockery::mock(CockpitTreasuryAccessContract::class);
+    $access->shouldReceive('canManageTreasuryReconciliation')->twice()->andReturn(false, true);
+    app()->instance(CockpitTreasuryAccessContract::class, $access);
+    $url = route('x-change.cockpit.accounts.bank-accounts.update', $assignment->id);
+    $session = ['auth.password_confirmed_at' => time()];
+    $data = ['action' => 'configure_fresh_funding', 'sole_writer_confirmed' => true, 'known_vcas' => ['543210000001']];
+
+    $this->actingAs($owner)->withSession($session)->patch($url, $data)->assertForbidden();
+    $this->actingAs($owner)->withSession($session)->patch($url, $data)->assertRedirect();
+    expect(data_get($assignment->fresh()->providerAccountLink->metadata, 'funding_assignment.scope'))->toBe('fresh_intents_only');
 });

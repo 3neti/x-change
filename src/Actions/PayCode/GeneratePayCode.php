@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Actions\PayCode;
 use Bavix\Wallet\Interfaces\Wallet;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
 use LBHurtado\XChange\Contracts\ProviderReadinessGuardContract;
@@ -26,6 +27,8 @@ use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Services\Accounts\AccountLifecycle;
+use LBHurtado\XChange\Services\Banking\AssignedBankTreasuryConnection;
+use LBHurtado\XChange\Services\Banking\VoucherBankSourceSnapshot;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
 use LBHurtado\XChange\Services\Claim\ClaimEvidenceRequirements;
 use LBHurtado\XChange\Services\Commercial\CommercialBillingPolicy;
@@ -170,6 +173,7 @@ class GeneratePayCode
             amount: $this->requiredIssuanceAmount($input, $estimate),
             context: [
                 'provider' => data_get($input, 'provider'),
+                'funded_order' => $this->continuationOrder,
                 'currency' => $estimate->currency,
                 'cash_amount' => data_get($input, 'cash.amount'),
                 'lifecycle_funding_boundary' => data_get(
@@ -216,6 +220,12 @@ class GeneratePayCode
                     $issuanceInput['provider'] = $effectiveProvider;
                 }
                 $issued = $this->issuance->issue($issuer, $issuanceInput);
+                $selectedBankLink = data_get($funding->meta, 'assigned_bank_account_link_id');
+                if ($selectedBankLink !== null) {
+                    $voucher = Voucher::query()->findOrFail($issued['voucher_id']);
+                    app(VoucherBankSourceSnapshot::class)
+                        ->freeze($voucher, (int) $selectedBankLink, requireTreasury: true);
+                }
                 $allocation = $this->shouldAllocateLocalRevenue($funding->authority)
                     ? $this->allocateCommercialRevenue($issuer, $input, $issued, $estimate, $funding)
                     : $this->providerWalletAllocationPlaceholder($funding);
@@ -450,6 +460,22 @@ class GeneratePayCode
 
         if ((bool) config('x-change.commercial.enabled', true)
             && $issuer instanceof Model) {
+            $connectionReference = data_get($funding->meta, 'treasury_connection_reference');
+            $selectedBankLink = data_get($funding->meta, 'assigned_bank_account_link_id');
+            if ($selectedBankLink !== null) {
+                $voucher = Voucher::query()->findOrFail($issued['voucher_id']);
+                $frozen = app(VoucherBankSourceSnapshot::class)->forVoucher($voucher);
+                $connection = app(AssignedBankTreasuryConnection::class)
+                    ->resolve($issuer, (int) $selectedBankLink);
+                if (! is_array($frozen) || ($frozen['account_link_id'] ?? null) !== (int) $selectedBankLink
+                    || ($frozen['treasury_connection_reference'] ?? null) !== $connection->reference
+                    || ($frozen['treasury_inventory_reference'] ?? null) !== $connection->inventoryReference
+                    || ($frozen['treasury_resource_reference'] ?? null) !== $connection->settlementResourceReference) {
+                    throw new RuntimeException('The Pay Code Treasury connection does not match the selected bank account.');
+                }
+                $connectionReference = $connection->reference;
+            }
+
             return $this->commercialSales()->post(
                 issuer: $issuer,
                 input: $input,
@@ -460,6 +486,7 @@ class GeneratePayCode
                     data_get($input, 'provider', 'manual'),
                 ),
                 acceptedEstimate: $estimate,
+                connectionReference: $connectionReference,
             );
         }
 

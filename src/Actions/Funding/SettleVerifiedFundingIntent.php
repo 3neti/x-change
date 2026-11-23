@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Funding;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
@@ -22,7 +23,10 @@ use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingSettlement;
+use LBHurtado\XChange\Services\Banking\AssignedFundingTreasuryConnection;
 use LBHurtado\XChange\Services\Checkout\CheckoutLifecycle;
+use LBHurtado\XChange\Services\Funding\AssignedAccountFundingPolicy;
+use LBHurtado\XChange\Services\Funding\FreshFundingBoundary;
 use LBHurtado\XChange\Services\Treasury\TreasuryInventoryRegistrationService;
 
 class SettleVerifiedFundingIntent
@@ -63,16 +67,45 @@ class SettleVerifiedFundingIntent
                 return $existing;
             }
 
+            app(FreshFundingBoundary::class)->assertEligible($locked);
+
             if ($locked->status !== FundingIntentStatus::Verified) {
                 throw FundingSettlementDenied::because('the Funding Intent is not verified');
             }
 
             $observation = $this->verifiedObservation($locked);
 
+            $destinationSnapshot = $locked->destination_snapshot_ciphertext;
+            $dedicatedConnection = null;
+            if ($locked->provider_code === 'netbank' && data_get($destinationSnapshot, 'mode') === 'shared') {
+                $snapshotNumber = preg_replace('/\D+/', '', (string) data_get($destinationSnapshot, 'bankAccountNumber', ''));
+                $sharedNumber = preg_replace('/\D+/', '', (string) config('payment-gateway.netbank.funding.corporate_account_number'));
+                if ($snapshotNumber === '' || $sharedNumber === '' || ! hash_equals($sharedNumber, $snapshotNumber)) {
+                    throw FundingSettlementDenied::because('the shared funding order does not match the current shared bank account');
+                }
+            }
+            if ($locked->provider_code === 'netbank' && data_get($destinationSnapshot, 'mode') === 'dedicated') {
+                $holder = data_get($this->accounts->resolve($locked->account_reference), 'holder');
+                if (! $holder instanceof Model || ! is_array($destinationSnapshot)) {
+                    throw FundingSettlementDenied::because('the dedicated funding account owner is unavailable');
+                }
+                $dedicatedConnection = app(AssignedFundingTreasuryConnection::class)->resolve(
+                    $holder, $locked->provider_code, $locked->currency, $destinationSnapshot,
+                );
+            }
+
             if ($locked->purpose === FundingIntentPurpose::OnDemandIssuance) {
                 $order = $locked->issuanceFundingOrder()->lockForUpdate()->first();
                 if ($order === null) {
                     throw FundingSettlementDenied::because('the issuance funding order is missing and requires review');
+                }
+                if ($dedicatedConnection !== null && $order->connection_reference !== $dedicatedConnection->reference) {
+                    throw FundingSettlementDenied::because('the funding order Treasury connection does not match the selected bank account');
+                }
+                if ($dedicatedConnection !== null
+                    && (data_get($destinationSnapshot, 'metadata.require_exact_vca') !== true
+                        || data_get($observation->metadata, 'exact_vca_verified') !== true)) {
+                    throw FundingSettlementDenied::because('the exact dedicated funding VCA has not been verified');
                 }
                 if (! $reviewedClosedOrder && $order !== null && in_array($order->status, [PayCodeIssuanceFundingOrderStatus::Expired, PayCodeIssuanceFundingOrderStatus::Cancelled], true)) {
                     throw FundingSettlementDenied::because('the closed funding order requires payment review');
@@ -90,7 +123,13 @@ class SettleVerifiedFundingIntent
                 );
             }
 
-            $treasury = $this->treasuryConfiguration($locked->provider_code);
+            $treasury = $dedicatedConnection === null
+                ? $this->treasuryConfiguration($locked->provider_code)
+                : [
+                    'inventory_reference' => $dedicatedConnection->inventoryReference,
+                    'settlement_resource_reference' => $dedicatedConnection->settlementResourceReference,
+                    'resource_type' => $dedicatedConnection->settlementResourceType,
+                ];
             $evidenceScope = hash('sha256', implode('|', [
                 $locked->provider_code,
                 $observation->provider_transaction_id,
@@ -140,6 +179,7 @@ class SettleVerifiedFundingIntent
                     'provider' => $locked->provider_code,
                     'provider_transaction_id' => $observation->provider_transaction_id,
                     'funding_intent_purpose' => $locked->purpose->value,
+                    ...($dedicatedConnection === null ? [] : ['funding_destination_snapshot' => $destinationSnapshot]),
                 ],
             );
 
@@ -160,6 +200,11 @@ class SettleVerifiedFundingIntent
                 'metadata' => [
                     'settlement_resource_reference' => $treasury['settlement_resource_reference'],
                     'provider_verification_source' => $observation->verification_source,
+                    ...($dedicatedConnection !== null && $locked->purpose === FundingIntentPurpose::AccountFunding ? [
+                        'attribution_policy' => 'assigned_account_client_funds',
+                        'requested_amount_matches' => $observation->gross_amount_minor === $locked->expected_amount_minor,
+                        'payer_identity_matched' => data_get($observation->metadata, 'payer_identity_matched'),
+                    ] : []),
                     'treasury_source_position_reference' => $allocation->sourcePositionReference,
                     'treasury_destination_position_reference' => $allocation->destinationPositionReference,
                     'treasury_position_recognition_reference' => $allocation->recognitionOperationReference,
@@ -241,7 +286,9 @@ class SettleVerifiedFundingIntent
             && $observation->provider_code === $intent->provider_code
             && $observation->provider_transaction_id === $intent->provider_transaction_id
             && $observation->provider_status === 'settled'
-            && $observation->gross_amount_minor === $intent->expected_amount_minor
+            && $observation->gross_amount_minor > 0
+            && ($observation->gross_amount_minor === $intent->expected_amount_minor
+                || app(AssignedAccountFundingPolicy::class)->creditsOwner($intent))
             && $observation->currency === $intent->currency
             && $observation->net_amount_minor > 0
             && $observation->settled_at !== null

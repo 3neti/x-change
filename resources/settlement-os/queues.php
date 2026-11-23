@@ -26,6 +26,7 @@ use LBHurtado\XChange\Jobs\Payment\VerifyAdditionalQrPaymentJob;
 use LBHurtado\XChange\Jobs\Payment\VerifyPaymentAttemptJob;
 use LBHurtado\XChange\Jobs\Provisioning\DeliverProvisioningOfferJob;
 use LBHurtado\XChange\Jobs\Redemption\DispatchVoucherRedemptionFeedbackJob;
+use LBHurtado\XChange\Jobs\Reserve\AdvanceReserveIssuanceJob;
 use LBHurtado\XChange\Jobs\SubmitValueFlowPayout;
 
 return [
@@ -135,6 +136,9 @@ return [
             ],
             'tags' => ['package:x-change', 'lane:issuance'],
             'jobs' => [
+                AdvanceReserveIssuanceJob::class => [
+                    'configuration_key' => 'x-change.reserve_transfer.queue',
+                ],
                 LinkSettledCheckoutContactJob::class => [
                     'configuration_key' => 'x-change.issuance_funding.on_demand.queue',
                 ],

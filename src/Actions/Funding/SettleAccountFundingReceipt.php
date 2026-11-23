@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Funding;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
@@ -12,6 +13,7 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
 use LBHurtado\XChange\Actions\Payment\RecordSettledPayment;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
+use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Enums\AccountFundingReceiptStatus;
 use LBHurtado\XChange\Enums\FundingAddressStatus;
@@ -20,6 +22,7 @@ use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Models\StandingFundingAddressBindingRevision;
+use LBHurtado\XChange\Services\Banking\AssignedFundingTreasuryConnection;
 use LBHurtado\XChange\Services\Funding\StandingFundingRecognitionPolicy;
 use LBHurtado\XChange\Services\Treasury\TreasuryInventoryRegistrationService;
 use Throwable;
@@ -56,8 +59,35 @@ final class SettleAccountFundingReceipt
                 ->first();
 
             $this->assertSettlementEvidence($address, $locked, $observation);
+            $destination = $locked->standing_funding_address_binding_revision_id === null
+                ? $address->destination_snapshot_ciphertext
+                : StandingFundingAddressBindingRevision::query()
+                    ->whereKey($locked->standing_funding_address_binding_revision_id)
+                    ->where('standing_funding_address_id', $address->getKey())
+                    ->first()?->destination_snapshot_ciphertext;
+            $dedicatedConnection = null;
+            if ($locked->provider_code === 'netbank' && data_get($destination, 'mode') === 'shared') {
+                $snapshotNumber = preg_replace('/\D+/', '', (string) data_get($destination, 'bankAccountNumber', ''));
+                $sharedNumber = preg_replace('/\D+/', '', (string) config('payment-gateway.netbank.funding.corporate_account_number'));
+                if ($snapshotNumber === '' || $sharedNumber === '' || ! hash_equals($sharedNumber, $snapshotNumber)) {
+                    throw FundingSettlementDenied::because('the shared funding address does not match the current shared bank account');
+                }
+            }
+            if ($locked->provider_code === 'netbank' && data_get($destination, 'mode') === 'dedicated') {
+                $holder = data_get(app(FundingAccountCreditContract::class)->resolve($locked->account_reference), 'holder');
+                if (! $holder instanceof Model || ! is_array($destination)) {
+                    throw FundingSettlementDenied::because('the dedicated funding account owner is unavailable');
+                }
+                $dedicatedConnection = app(AssignedFundingTreasuryConnection::class)->resolve(
+                    $holder, $locked->provider_code, $locked->currency, $destination,
+                );
+            }
             $this->assertDailyLimit($address, $locked);
-            $treasury = $this->treasuryConfiguration($locked->provider_code);
+            $treasury = $dedicatedConnection === null ? $this->treasuryConfiguration($locked->provider_code) : [
+                'inventory_reference' => $dedicatedConnection->inventoryReference,
+                'settlement_resource_reference' => $dedicatedConnection->settlementResourceReference,
+                'resource_type' => $dedicatedConnection->settlementResourceType,
+            ];
             $evidenceScope = hash('sha256', implode('|', [
                 $locked->provider_code,
                 $observation->provider_transaction_id,
@@ -89,6 +119,7 @@ final class SettleAccountFundingReceipt
                 externalReference: $locked->provider_code.':'.$observation->provider_transaction_id,
                 metadata: [
                     'provider_transaction_id' => $observation->provider_transaction_id,
+                    ...($dedicatedConnection === null ? [] : ['funding_destination_snapshot' => $destination]),
                     'gross_amount_minor' => $locked->gross_amount_minor,
                     'fee_amount_minor' => $locked->fee_amount_minor,
                 ],
@@ -104,6 +135,7 @@ final class SettleAccountFundingReceipt
                     'source' => 'verified_provider_funding',
                     'provider' => $locked->provider_code,
                     'provider_transaction_id' => $observation->provider_transaction_id,
+                    ...($dedicatedConnection === null ? [] : ['funding_destination_snapshot' => $destination]),
                 ],
             );
 

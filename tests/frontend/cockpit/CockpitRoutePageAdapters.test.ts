@@ -22,6 +22,8 @@ describe('Cockpit route page adapters', () => {
     it('mounts the Accounts route adapter', () => {
         const wrapper = mount(Accounts, {
             props: {
+                bank_accounts: [],
+                can_assign_bank_accounts: false,
                 account_overview: {
                     schema: 'x-change.cockpit.depositor-account.v1',
                     status: 'available',

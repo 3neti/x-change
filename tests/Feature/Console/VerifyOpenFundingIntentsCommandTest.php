@@ -11,6 +11,7 @@ use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\FundingVerificationTrigger;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingIntentJob;
 use LBHurtado\XChange\Models\FundingIntent;
+use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 
 beforeEach(function () {
     Queue::fake();
@@ -144,6 +145,23 @@ it('keeps checking after provider outages and recovers verified settlement work'
     );
 });
 
+it('continues monitoring issued direct QR requests after closure without a time cutoff', function () {
+    $expired = scheduledFundingIntent(status: FundingIntentStatus::Expired, expiresAt: now()->subYear());
+    $settled = scheduledFundingIntent(status: FundingIntentStatus::Settled, expiresAt: now()->subDay());
+    $suspense = scheduledFundingIntent(status: FundingIntentStatus::Suspense, expiresAt: now()->subDay());
+    $legacy = scheduledFundingIntent(status: FundingIntentStatus::Settled, expiresAt: now()->subDay());
+    foreach ([$expired, $settled, $suspense] as $intent) {
+        $intent->forceFill(['metadata' => ['direct_qr_monitor' => true], 'instructions_created_at' => now()->subYear()])->saveQuietly();
+    }
+
+    $this->artisan('xchange:funding:verify-open')->assertSuccessful();
+
+    foreach ([$expired, $settled, $suspense] as $intent) {
+        Queue::assertPushed(VerifyFundingIntentJob::class, fn (VerifyFundingIntentJob $job): bool => $job->fundingIntentId === $intent->getKey());
+    }
+    Queue::assertNotPushed(VerifyFundingIntentJob::class, fn (VerifyFundingIntentJob $job): bool => $job->fundingIntentId === $legacy->getKey());
+});
+
 it('queues expired issuance funding for seven days after expiry', function () {
     $withinWindow = scheduledFundingIntent(status: FundingIntentStatus::Expired, expiresAt: now()->subDays(6));
     $beyondWindow = scheduledFundingIntent(status: FundingIntentStatus::Expired, expiresAt: now()->subDays(8));
@@ -249,3 +267,39 @@ function scheduledFundingEvent(
     ]);
     $intent->forceFill(['version' => $nextVersion])->saveQuietly();
 }
+
+it('limits a commissioned monitor to new assigned-account on-demand orders', function () {
+    $newAssigned = scheduledFundingIntent();
+    $oldAssigned = scheduledFundingIntent();
+    $newShared = scheduledFundingIntent();
+    $unrelated = scheduledFundingIntent();
+    $cutoff = now()->subMinutes(5)->utc()->format('Y-m-d\TH:i:s\Z');
+    foreach ([$newAssigned, $oldAssigned, $newShared] as $intent) {
+        $intent->forceFill(['purpose' => FundingIntentPurpose::OnDemandIssuance])->saveQuietly();
+        $mode = $intent->is($newShared) ? 'shared' : 'dedicated';
+        PayCodeIssuanceFundingOrder::query()->create([
+            'account_reference' => $intent->account_reference, 'issuer_type' => 'App\\Models\\User', 'issuer_id' => '42',
+            'provider' => 'netbank', 'connection_reference' => 'test', 'funding_basis' => 'full_amount',
+            'instructions_ciphertext' => [], 'instructions_fingerprint' => str_repeat('a', 64),
+            'pricing_snapshot_ciphertext' => [], 'pricing_fingerprint' => str_repeat('b', 64),
+            'required_amount_minor' => 25000, 'reserved_client_funds_minor' => 0, 'on_demand_amount_minor' => 25000,
+            'expected_payment_minor' => 25000, 'currency' => 'PHP', 'status' => 'awaiting_payment', 'version' => 1,
+            'idempotency_key_hash' => hash('sha256', 'order-'.$intent->id),
+            'idempotency_fingerprint' => hash('sha256', 'order-input-'.$intent->id),
+            'funding_intent_id' => $intent->id, 'expires_at' => now()->addHour(),
+            'metadata' => ['funding_source' => ['mode' => $mode]],
+        ]);
+    }
+    $oldAssigned->forceFill(['created_at' => now()->subHour()])->saveQuietly();
+    $this->artisan('xchange:funding:verify-open', ['--assigned-on-demand-since' => $cutoff])->assertSuccessful();
+    Queue::assertPushed(VerifyFundingIntentJob::class, fn ($job) => $job->fundingIntentId === $newAssigned->getKey());
+    foreach ([$oldAssigned, $newShared, $unrelated] as $intent) {
+        Queue::assertNotPushed(VerifyFundingIntentJob::class, fn ($job) => $job->fundingIntentId === $intent->getKey());
+    }
+});
+
+it('rejects an invalid commissioning cutoff without dispatching checks', function () {
+    scheduledFundingIntent();
+    $this->artisan('xchange:funding:verify-open', ['--assigned-on-demand-since' => 'not-a-time'])->assertExitCode(2);
+    Queue::assertNotPushed(VerifyFundingIntentJob::class);
+});

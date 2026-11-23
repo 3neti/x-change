@@ -195,6 +195,7 @@ use LBHurtado\XChange\Console\Commands\Provisioning\ProvisionCommissioningSeatsC
 use LBHurtado\XChange\Console\Commands\PublishXChangeCommand;
 use LBHurtado\XChange\Console\Commands\ReconcilePendingDisbursementsCommand;
 use LBHurtado\XChange\Console\Commands\RefreshCommissioningReleaseCommand;
+use LBHurtado\XChange\Console\Commands\Reserve\DispatchReserveIssuancesCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\CollectRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\ShowPendingRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Settlement\EvaluateSettlementEnvelopeCommand;
@@ -231,6 +232,7 @@ use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\AccountProvisioningContract;
 use LBHurtado\XChange\Contracts\AppendableEventStoreContract;
 use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
+use LBHurtado\XChange\Contracts\BankingAccountSelectorContract;
 use LBHurtado\XChange\Contracts\CampaignAutomaticDemonstrationResponderContract;
 use LBHurtado\XChange\Contracts\CampaignBankTransferDispatcherContract;
 use LBHurtado\XChange\Contracts\CampaignBankTransferStatusCheckerContract;
@@ -412,6 +414,7 @@ use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Models\LeadCampaign;
 use LBHurtado\XChange\Services\Affiliation\XJournalAffiliationEventSink;
 use LBHurtado\XChange\Services\ApiResponseFactory;
+use LBHurtado\XChange\Services\Banking\DefaultBankingAccountSelector;
 use LBHurtado\XChange\Services\Base64PngClaimUrlQrRenderer;
 use LBHurtado\XChange\Services\CacheClaimApprovalWorkflowStore;
 use LBHurtado\XChange\Services\Campaigns\NetbankCampaignBankTransferDispatcher;
@@ -1891,6 +1894,7 @@ class XChangeServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->commands([
+                DispatchReserveIssuancesCommand::class,
                 DeliverTreasuryPayoutOutboxCommand::class,
                 DeliverPartnerPaymentEventsCommand::class,
                 CleanupLegacyEventIndexCommand::class,
@@ -2265,6 +2269,13 @@ class XChangeServiceProvider extends ServiceProvider
 
     protected function bootFundingVerificationSchedule(): void
     {
+        if ((bool) config('x-change.reserve_transfer.enabled', false)) {
+            $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+                $schedule->command('xchange:reserve:dispatch-issuances --limit=100')
+                    ->name('xchange:reserve:dispatch-issuances')->everyMinute()->onOneServer()->withoutOverlapping(5);
+            });
+        }
+
         if ((bool) config('x-change.issuance_funding.on_demand.expiry.scheduled_enabled', true)) {
             $batchSize = max(
                 1,
@@ -2708,6 +2719,13 @@ class XChangeServiceProvider extends ServiceProvider
 
     protected function registerFundingDestinationResolver(): void
     {
+        if (! $this->app->bound(BankingAccountSelectorContract::class)) {
+            $this->app->singleton(
+                BankingAccountSelectorContract::class,
+                DefaultBankingAccountSelector::class,
+            );
+        }
+
         if (! $this->app->bound('x-change.services.funding_destination_resolver')) {
             $this->app->singleton('x-change.services.funding_destination_resolver', function ($app) {
                 return $app->make(DefaultFundingDestinationResolver::class);

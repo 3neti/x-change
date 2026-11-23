@@ -15,8 +15,16 @@ use LBHurtado\XChange\Contracts\ProviderProvisioningGatewayContract;
 use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\FundingDecisionData;
+use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
+use LBHurtado\XChange\Models\BankAccountAssignment;
 use LBHurtado\XChange\Models\FundingAccountHold;
+use LBHurtado\XChange\Models\FundingDestinationPreference;
+use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
+use LBHurtado\XChange\Services\Banking\AssignedBankIssuanceReadiness;
+use LBHurtado\XChange\Services\Banking\AssignedFundingTreasuryConnection;
+use LBHurtado\XChange\Services\Banking\SharedBankTreasuryConnection;
+use LBHurtado\XChange\Services\Treasury\TreasuryAccountBalanceReadModel;
 use Throwable;
 
 class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
@@ -38,14 +46,60 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
     {
         $this->assertAccountIsNotOnFundingHold($localWallet);
 
-        if (data_get($context, 'lifecycle_funding_boundary') === 'isolated_compatibility_wallet') {
+        if (! $owner instanceof Model && data_get($context, 'lifecycle_funding_boundary') === 'isolated_compatibility_wallet') {
             return $this->isolatedLifecycleDecision($localWallet, $amount, $context);
         }
 
-        $provider = $this->effectiveProviderForOwner($owner, data_get($context, 'provider'));
+        $fundedOrder = data_get($context, 'funded_order');
+        if ($fundedOrder !== null) {
+            if (! $owner instanceof Model || ! $fundedOrder instanceof PayCodeIssuanceFundingOrder) {
+                throw new InsufficientWalletBalance('The funded issuance order is unavailable.');
+            }
+            $fundedOrder = PayCodeIssuanceFundingOrder::query()->whereKey($fundedOrder->getKey())
+                ->where('issuer_type', $owner::class)->where('issuer_id', (string) $owner->getKey())
+                ->where('status', PayCodeIssuanceFundingOrderStatus::Issuing->value)
+                ->whereNotNull('funded_at')->first();
+            if ($fundedOrder === null) {
+                throw new InsufficientWalletBalance('The funded issuance order is unavailable.');
+            }
+            $connection = app(AssignedFundingTreasuryConnection::class)->resolveForOrder($owner, $fundedOrder);
+            if ($connection === null
+                && data_get($fundedOrder->fundingIntent?->destination_snapshot_ciphertext, 'mode') === 'shared'
+                && in_array(data_get($context, 'provider'), [null, $fundedOrder->provider], true)) {
+                $provider = $fundedOrder->provider;
+                $assignedAccount = null;
+            } elseif ($connection === null) {
+                $provider = $this->effectiveProviderForOwner($owner, data_get($context, 'provider'));
+                $assignedAccount = $this->selectedAssignedAccount($owner, $provider);
+            } else {
+                $provider = $fundedOrder->provider;
+                $assignedAccount = (int) data_get(
+                    $fundedOrder->fundingIntent->destination_snapshot_ciphertext,
+                    'metadata.assigned_bank_account_link_id',
+                );
+            }
+        } else {
+            $provider = $this->effectiveProviderForOwner($owner, data_get($context, 'provider'));
+            $assignedAccount = $this->selectedAssignedAccount($owner, $provider);
+        }
+        if ($assignedAccount !== null) {
+            if (! (bool) config('x-change.commercial.enabled', true)
+                || mb_strtoupper((string) data_get($context, 'currency', 'PHP')) !== 'PHP'
+                || data_get($context, 'lifecycle_funding_boundary') === 'isolated_compatibility_wallet') {
+                throw new InsufficientWalletBalance('Issuance from the selected bank account is not available in this context.');
+            }
+
+            return app(AssignedBankIssuanceReadiness::class)->assess(
+                $owner, $assignedAccount, $this->normalizeAmountForWallet($amount),
+            );
+        }
+
+        if (data_get($context, 'lifecycle_funding_boundary') === 'isolated_compatibility_wallet') {
+            return $this->isolatedLifecycleDecision($localWallet, $amount, $context);
+        }
         $topology = $this->settings->topology($provider);
         $requiredMinor = $this->normalizeAmountForWallet($amount);
-        $currency = (string) data_get($context, 'currency', config('x-change.pricing.currency', 'PHP'));
+        $currency = mb_strtoupper(trim((string) data_get($context, 'currency', config('x-change.pricing.currency', 'PHP'))));
 
         if ($topology === 'provider_customer_wallet') {
             $decision = $this->providerWalletDecision($owner, $provider, $requiredMinor, $currency);
@@ -65,11 +119,22 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
             $accountBalances->forget($owner, $currency, $provider);
         }
 
-        $positionBalanceMinor = $accountBalances->providerBalanceMinor(
-            $owner,
-            $provider,
-            $currency,
-        );
+        try {
+            $sharedConnection = app(SharedBankTreasuryConnection::class)
+                ->resolveIfAccountsAssigned($provider, $currency);
+        } catch (\RuntimeException $exception) {
+            throw new InsufficientWalletBalance($exception->getMessage());
+        }
+        if ($fundedOrder instanceof PayCodeIssuanceFundingOrder
+            && data_get($fundedOrder->fundingIntent?->destination_snapshot_ciphertext, 'mode') === 'shared'
+            && $sharedConnection !== null && $provider === $fundedOrder->provider
+            && $sharedConnection->reference !== $fundedOrder->connection_reference) {
+            throw new InsufficientWalletBalance('The shared account Treasury connection changed after funding.');
+        }
+        $positionBalanceMinor = $sharedConnection !== null && $owner instanceof Model
+            ? (app(TreasuryAccountBalanceReadModel::class)
+                ->connectionBalanceMinor($owner, $provider, $sharedConnection->reference, $currency) ?? 0)
+            : $accountBalances->providerBalanceMinor($owner, $provider, $currency);
         $availableMinor = $positionBalanceMinor
             ?? $this->normalizeBalanceForComparison($this->wallets->getBalance($localWallet));
 
@@ -100,9 +165,31 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
             meta: [
                 'provider' => $provider,
                 'topology' => $topology,
+                'treasury_connection_reference' => $sharedConnection?->reference,
                 'source_account' => ($sourceAccount['applicable'] ?? true) ? $sourceAccount : null,
             ],
         );
+    }
+
+    private function selectedAssignedAccount(mixed $owner, string $provider): ?int
+    {
+        if (! $owner instanceof Model || $provider !== 'netbank') {
+            return null;
+        }
+
+        $preference = FundingDestinationPreference::query()->whereMorphedTo('owner', $owner)
+            ->where('provider_code', $provider)->first();
+        if ($preference === null || $preference->mode === 'shared') {
+            return null;
+        }
+        $selected = $preference->provider_account_link_id;
+        if ($preference->mode !== 'dedicated' || $selected === null
+            || ! BankAccountAssignment::query()->whereMorphedTo('owner', $owner)
+                ->where('provider_account_link_id', $selected)->exists()) {
+            throw new InsufficientWalletBalance('The selected bank account is unavailable for issuance.');
+        }
+
+        return (int) $selected;
     }
 
     /**

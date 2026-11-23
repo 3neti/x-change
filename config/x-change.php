@@ -175,6 +175,14 @@ $defaultDeploymentRuntimeTier = match ((string) env('APP_ENV', 'production')) {
 };
 
 return [
+
+    'reserve_transfer' => [
+        'enabled' => (bool) env('XCHANGE_RESERVE_TRANSFER_ENABLED', false),
+        'live_submission_enabled' => (bool) env('XCHANGE_RESERVE_LIVE_SUBMISSION_ENABLED', false),
+        'queue' => env('XCHANGE_RESERVE_TRANSFER_QUEUE', 'x-change-issuance'),
+        'provider_class' => env('XCHANGE_RESERVE_TRANSFER_PROVIDER_CLASS'),
+        'destination_bank_code' => env('XCHANGE_RESERVE_DESTINATION_BANK_CODE'),
+    ],
     'account_lifecycle' => [
         'operator_ids' => array_values(array_filter(array_map(
             static fn (string $id): string => trim($id),
@@ -1239,6 +1247,7 @@ return [
     'issuance_funding' => [
         'on_demand' => [
             'enabled' => (bool) env('XCHANGE_ON_DEMAND_ISSUANCE_ENABLED', false),
+            'assigned_netbank_enabled' => (bool) env('XCHANGE_ON_DEMAND_ASSIGNED_NETBANK_ENABLED', false),
             'queue' => env('XCHANGE_ON_DEMAND_ISSUANCE_QUEUE', 'x-change-issuance'),
             'basis' => env('XCHANGE_ON_DEMAND_FUNDING_BASIS', 'full_amount'),
             'ttl_seconds' => max(300, (int) env('XCHANGE_ON_DEMAND_FUNDING_TTL_SECONDS', 1800)),
@@ -1301,6 +1310,11 @@ return [
     ],
 
     'funding' => [
+        // Remains disabled until the account's historical VCA namespace is reconciled.
+        'dedicated_netbank_vca_enabled' => (bool) env('XCHANGE_DEDICATED_NETBANK_VCA_ENABLED', false),
+        'dedicated_netbank_standing_enabled' => (bool) env('XCHANGE_DEDICATED_NETBANK_STANDING_ENABLED', false),
+        // Disabled until direct-QR exception monitoring is commissioned.
+        'dedicated_netbank_direct_qr_enabled' => (bool) env('XCHANGE_DEDICATED_NETBANK_DIRECT_QR_ENABLED', false),
         'provider_balance_max_age_seconds' => (int) env('XCHANGE_PROVIDER_BALANCE_MAX_AGE_SECONDS', 300),
         'api_middleware' => ['auth'],
         'system_pay_codes' => [
@@ -1569,6 +1583,7 @@ return [
             env('APP_KEY'),
         ),
         'reference_hash_key' => env('XCHANGE_FUNDING_REFERENCE_HASH_KEY', env('APP_KEY')),
+        'previous_reference_hash_keys' => array_values(array_filter(array_map('trim', explode(',', (string) env('XCHANGE_FUNDING_PREVIOUS_REFERENCE_HASH_KEYS', ''))))),
         'payer_identity_hash_key' => env('XCHANGE_FUNDING_PAYER_IDENTITY_HASH_KEY', env('APP_KEY')),
         'webhook_max_body_bytes' => (int) env('XCHANGE_FUNDING_WEBHOOK_MAX_BODY_BYTES', 262_144),
         'webhook_middleware' => ['throttle:120,1'],
@@ -3031,6 +3046,7 @@ return [
         'allow_manual_provider_in_production' => env('X_CHANGE_PAYMENT_ALLOW_MANUAL_PROVIDER_IN_PRODUCTION', false),
 
         'attempts' => [
+            'assigned_netbank_payables_enabled' => (bool) env('XCHANGE_ASSIGNED_NETBANK_PAYABLES_ENABLED', false),
             'enabled' => env('X_CHANGE_PAYMENT_ATTEMPTS_ENABLED', true),
             'provider' => env('X_CHANGE_PAYMENT_ATTEMPT_PROVIDER', 'netbank'),
             'expires_after_minutes' => (int) env('X_CHANGE_PAYMENT_ATTEMPT_EXPIRES_AFTER_MINUTES', 15),

@@ -27,8 +27,10 @@ use LBHurtado\XChange\Models\Checkout;
 use LBHurtado\XChange\Models\IssuanceBatch;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
+use LBHurtado\XChange\Services\Banking\AssignedFundingTreasuryConnection;
 use LBHurtado\XChange\Services\Funding\SettlementIssuanceRecoveryAssessment;
 use LBHurtado\XChange\Services\PartnerApi\PartnerIssuanceReservationService;
+use LBHurtado\XChange\Services\Treasury\TreasuryAccountBalanceReadModel;
 use RuntimeException;
 use Throwable;
 
@@ -104,6 +106,7 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
             }
 
             $issuer = $this->issuer($order);
+            $assignedConnection = app(AssignedFundingTreasuryConnection::class)->resolveForOrder($issuer, $order);
             $positions = $portfolios->provision(
                 $issuer,
                 [$order->connection_reference],
@@ -155,11 +158,14 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
             }
 
             $issuanceProvider = (string) data_get($instructions, 'provider', $order->provider);
-            $availableMinor = $accountBalances->providerBalanceMinor(
-                $issuer,
-                $issuanceProvider,
-                $order->currency,
-            );
+            if ($assignedConnection !== null && $issuanceProvider !== $order->provider) {
+                throw new RuntimeException('The issuance provider does not match the frozen funding account.');
+            }
+            $availableMinor = $assignedConnection === null
+                ? $accountBalances->providerBalanceMinor($issuer, $issuanceProvider, $order->currency)
+                : app(TreasuryAccountBalanceReadModel::class)->connectionBalanceMinor(
+                    $issuer, $issuanceProvider, $assignedConnection->reference, $order->currency,
+                );
 
             $requiredMinor = $order->required_amount_minor + $settlementFunding->assess($order)['required_minor'];
             if ($availableMinor === null || $availableMinor < $requiredMinor) {

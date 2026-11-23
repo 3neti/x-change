@@ -16,9 +16,12 @@ use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Exceptions\LatePaymentRequiresReview;
 use LBHurtado\XChange\Exceptions\ProviderPaymentAlreadyApplied;
+use LBHurtado\XChange\Exceptions\VoucherRecipientUnavailable;
 use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
 use LBHurtado\XChange\Models\ObservedPaymentTransaction;
 use LBHurtado\XChange\Models\PaymentAttempt;
+use LBHurtado\XChange\Services\Execution\VoucherCollectionWalletSelector;
+use LBHurtado\XChange\Services\Execution\VoucherValueFlowPolicy;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Payment\LatePaymentEligibility;
 use LBHurtado\XChange\Services\Payment\SpecificPaymentAttribution;
@@ -64,6 +67,16 @@ class VerifyPaymentAttempt
                     || ! $this->lateEligibility->canApply($locked, $locked->voucher, $observation)) {
                     throw new LatePaymentRequiresReview('The payment cannot be uniquely attributed or is no longer eligible.');
                 }
+                if ($reviewId === null && data_get($locked->destination_snapshot_ciphertext, 'mode') === 'dedicated'
+                    && ($locked->expires_at?->isPast() ?? true)) {
+                    throw new LatePaymentRequiresReview('A payment discovered after expiry requires review.');
+                }
+                $fallback = $reviewId === null
+                    ? $this->fallbackForUnavailableRecipient($locked, $observation, PaymentVerificationTrigger::Schedule)
+                    : null;
+                if ($fallback !== null) {
+                    return $fallback;
+                }
                 $verified = $this->transition->handle($locked, PaymentAttemptStatus::Verified, 'provider_payment_verified', PaymentVerificationTrigger::Schedule, [
                     'matched_observation_id' => $observation->getKey(),
                     'provider_transaction_id' => $observation->provider_transaction_id,
@@ -95,7 +108,7 @@ class VerifyPaymentAttempt
         PaymentAttempt $attempt,
         PaymentVerificationTrigger $trigger,
     ): PaymentAttempt {
-        if ($attempt->status === PaymentAttemptStatus::Settled) {
+        if (in_array($attempt->status, [PaymentAttemptStatus::Settled, PaymentAttemptStatus::CreditedToClientFunds], true)) {
             return $attempt->load('events');
         }
 
@@ -180,6 +193,29 @@ class VerifyPaymentAttempt
         }
 
         if (! $this->matches($attempt, $observation)) {
+            if (data_get($attempt->destination_snapshot_ciphertext, 'mode') === 'dedicated'
+                && $observation->provider_status === 'settled'
+                && $observation->currency === $attempt->currency
+                && $observation->settled_at !== null
+                && $observation->gross_amount_minor > 0 && $observation->net_amount_minor > 0
+                && $observation->net_amount_minor <= $observation->gross_amount_minor
+                && $attempt->funding_address_ciphertext !== null
+                && hash_equals('sha256:'.hash('sha256', $attempt->funding_address_ciphertext), (string) $observation->funding_address)
+                && data_get($observation->metadata, 'destination_verified') === true
+                && $this->onTime($attempt, $observation)
+                && ! ($attempt->expires_at?->isPast() ?? true)) {
+                return DB::transaction(function () use ($attempt, $observation, $trigger): PaymentAttempt {
+                    $intent = app(CreditAssignedPaymentFallback::class)->handle($attempt, $observation);
+
+                    return $this->transition->handle($attempt, PaymentAttemptStatus::CreditedToClientFunds,
+                        'payment_credited_to_client_funds', $trigger, [
+                            'matched_observation_id' => $observation->getKey(),
+                            'provider_transaction_id' => $observation->provider_transaction_id,
+                            'last_checked_at' => now(),
+                        ], ['funding_intent_reference' => $intent->reference]);
+                }, 5);
+            }
+
             return $this->suspense(
                 $attempt,
                 $trigger,
@@ -189,9 +225,15 @@ class VerifyPaymentAttempt
         }
 
         $discoveredAfterExpiry = $attempt->expires_at?->isPast() ?? false;
-        if ($discoveredAfterExpiry && (! $this->onTime($attempt, $observation)
+        if ($discoveredAfterExpiry && (data_get($attempt->destination_snapshot_ciphertext, 'mode') === 'dedicated'
+            || ! $this->onTime($attempt, $observation)
             || ! $this->lateEligibility->canApply($attempt, $attempt->voucher, $observation))) {
             return $this->suspense($attempt, $trigger, 'late_payment_requires_review', $observation);
+        }
+
+        $fallback = $this->fallbackForUnavailableRecipient($attempt, $observation, $trigger);
+        if ($fallback !== null) {
+            return $fallback;
         }
 
         $verified = $this->transition->handle(
@@ -209,6 +251,35 @@ class VerifyPaymentAttempt
         );
 
         return $this->settleVerified($verified, $trigger, true);
+    }
+
+    private function fallbackForUnavailableRecipient(PaymentAttempt $attempt, ProviderFundingObservation $observation, PaymentVerificationTrigger $trigger): ?PaymentAttempt
+    {
+        if ($attempt->provider_code !== 'netbank' || data_get($attempt->destination_snapshot_ciphertext, 'mode') !== 'dedicated'
+            || $attempt->expires_at === null || $attempt->expires_at->isPast() || ! $this->onTime($attempt, $observation)) {
+            return null;
+        }
+        $destination = app(VoucherValueFlowPolicy::class)->destination($attempt->voucher);
+        if (! is_string($destination) || ! str_starts_with($destination, 'account.')) {
+            return null;
+        }
+        try {
+            app(VoucherCollectionWalletSelector::class)->resolve($attempt->voucher, $attempt->provider_code, $attempt->currency,
+                data_get($attempt->destination_snapshot_ciphertext, 'metadata.treasury_connection_reference'));
+
+            return null;
+        } catch (VoucherRecipientUnavailable) {
+            return DB::transaction(function () use ($attempt, $observation, $trigger): PaymentAttempt {
+                $intent = app(CreditAssignedPaymentFallback::class)->handle($attempt, $observation, 'recipient_unavailable');
+
+                return $this->transition->handle($attempt, PaymentAttemptStatus::CreditedToClientFunds,
+                    'payment_credited_to_client_funds', $trigger, [
+                        'matched_observation_id' => $observation->getKey(),
+                        'provider_transaction_id' => $observation->provider_transaction_id,
+                        'last_checked_at' => now(),
+                    ], ['funding_intent_reference' => $intent->reference, 'fallback_reason' => 'recipient_unavailable']);
+            }, 5);
+        }
     }
 
     private function settleVerified(
@@ -270,7 +341,11 @@ class VerifyPaymentAttempt
             && $observation->net_amount_minor === $attempt->expected_amount_minor
             && $observation->currency === $attempt->currency
             && $observation->settled_at !== null
-            && data_get($observation->metadata, 'destination_verified') === true;
+            && data_get($observation->metadata, 'destination_verified') === true
+            && (data_get($attempt->destination_snapshot_ciphertext, 'mode') !== 'dedicated'
+                || ($attempt->funding_address_ciphertext !== null
+                    && hash_equals('sha256:'.hash('sha256', $attempt->funding_address_ciphertext), (string) $observation->funding_address)
+                    && $this->onTime($attempt, $observation)));
     }
 
     private function onTime(PaymentAttempt $attempt, ProviderFundingObservation $observation): bool

@@ -85,6 +85,18 @@ final readonly class TreasuryCompatibilityLedgerSynchronizer
         ], true);
     }
 
+    public function projectReservedPrincipal(Model $wallet, int $amountMinor, string $reference): void
+    {
+        if ($amountMinor <= 0 || trim($reference) === '' || ! method_exists($wallet, 'deposit')) {
+            throw new PayCodeIssuanceFailed('The reserved principal projection is invalid.');
+        }
+
+        $wallet->deposit($amountMinor, [
+            'source' => 'reserve_transfer_issuance_projection',
+            'reserve_transfer_reference' => $reference,
+        ], true);
+    }
+
     public function reconcileAfterIssuance(
         Model $owner,
         mixed $wallet,

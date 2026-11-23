@@ -15,14 +15,17 @@ use LBHurtado\EmiCore\Data\Funding\StandingFundingAddressData;
 use LBHurtado\EmiCore\Data\Funding\StandingFundingAddressRequestData;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
+use LBHurtado\XChange\Contracts\BankingAccountSelectorContract;
 use LBHurtado\XChange\Data\Funding\StandingFundingAddressBindingData;
 use LBHurtado\XChange\Data\Funding\StandingFundingAddressProvisionData;
 use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
+use LBHurtado\XChange\Exceptions\FundingDestinationUnavailable;
 use LBHurtado\XChange\Exceptions\StandingFundingAddressConflict;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Models\StandingFundingAddressBindingHead;
 use LBHurtado\XChange\Models\StandingFundingAddressBindingRevision;
+use LBHurtado\XChange\Services\Banking\AssignedFundingTreasuryConnection;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressBindingResolver;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressProviderRegistry;
 use LBHurtado\XChange\Services\Funding\StandingFundingQrArtifactStore;
@@ -56,24 +59,56 @@ final class ProvisionStandingFundingAddress
         $accountReference = trim($accountReference);
         $currency = strtoupper(trim($currency));
 
+        $dedicatedNetbank = $provider === 'netbank' && $destination?->mode === 'dedicated';
+        if ($dedicatedNetbank && ! (bool) config('x-change.funding.dedicated_netbank_standing_enabled', false)) {
+            throw new FundingDestinationUnavailable(
+                'Funding to this NetBank account is not available yet.',
+            );
+        }
+
         if ($accountReference === '' || $provider === '' || strlen($currency) !== 3) {
             throw new InvalidArgumentException('Standing Funding Address binding details are invalid.');
         }
 
+        if ($dedicatedNetbank) {
+            $snapshot = FundingDestinationSnapshot::fromData($destination);
+            $linkId = data_get($snapshot, 'metadata.assigned_bank_account_link_id');
+            if (! is_int($linkId) || trim($destination->fingerprint) === '') {
+                throw new FundingDestinationUnavailable('The selected funding account details are unavailable.');
+            }
+            app(BankingAccountSelectorContract::class)->select($owner, $provider, 'funding', $linkId);
+            app(AssignedFundingTreasuryConnection::class)->resolve($owner, $provider, $currency, $snapshot);
+        }
+
         $ownerReference = $owner::class.':'.$owner->getKey();
-        $bindingKey = hash('sha256', implode("\0", [
+        $bindingParts = [
             $ownerReference,
             $accountReference,
             $provider,
             $purpose->value,
             $currency,
-        ]));
+        ];
+        if ($dedicatedNetbank) {
+            $bindingParts[] = 'dedicated:'.$destination->fingerprint;
+        }
+        $bindingKey = hash('sha256', implode("\0", $bindingParts));
 
         $existing = StandingFundingAddress::query()
             ->where('binding_key', $bindingKey)
             ->first() ?? $this->bindings->findCurrentByBindingKey($bindingKey);
 
         if ($existing instanceof StandingFundingAddress) {
+            $snapshot = $this->bindings->current($existing)->destinationSnapshot;
+            if ($provider === 'netbank' && $destination?->mode === 'shared' && is_array($snapshot)
+                && data_get($snapshot, 'mode') === 'shared') {
+                $oldNumber = preg_replace('/\D+/', '', (string) data_get($snapshot, 'bankAccountNumber'));
+                $newNumber = preg_replace('/\D+/', '', (string) $destination->bankAccountNumber);
+                if ($oldNumber === '' || $newNumber === '' || ! hash_equals($oldNumber, $newNumber)
+                    || data_get($snapshot, 'routingAlias') !== $destination->routingAlias) {
+                    throw StandingFundingAddressConflict::destinationMismatch($existing->reference);
+                }
+            }
+
             return $this->reopen(
                 address: $existing,
                 ownerReference: $ownerReference,
@@ -99,6 +134,12 @@ final class ProvisionStandingFundingAddress
                     qrAmountMinor: $qrAmountMinor,
                 ),
             );
+            if ($dedicatedNetbank && (! is_string($destination->routingAlias)
+                || ! preg_match('/\A[0-9]{5}\z/', $destination->routingAlias)
+                || ! preg_match('/\A[0-9]{16}\z/', $providerAddress->fundingAddress)
+                || ! str_starts_with($providerAddress->fundingAddress, $destination->routingAlias))) {
+                throw new FundingDestinationUnavailable('The bank returned an address for a different funding account.');
+            }
             $fundingAddressHash = hash('sha256', $providerAddress->fundingAddress);
 
             try {

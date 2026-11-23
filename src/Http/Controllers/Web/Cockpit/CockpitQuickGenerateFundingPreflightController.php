@@ -10,7 +10,7 @@ use Illuminate\Validation\ValidationException;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
 use LBHurtado\XChange\Http\Requests\GeneratePayCodeRequest;
-use LBHurtado\XChange\Services\BuildBalanceOverview;
+use LBHurtado\XChange\Services\Banking\SelectedAccountClientFunds;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingPolicy;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingRequirement;
 
@@ -21,7 +21,6 @@ final class CockpitQuickGenerateFundingPreflightController extends Controller
         EstimatePayCodeCost $estimator,
         OnDemandIssuanceFundingPolicy $policy,
         OnDemandIssuanceFundingRequirement $requirements,
-        BuildBalanceOverview $balances,
     ): JsonResponse {
         $issuer = $request->user();
 
@@ -33,15 +32,13 @@ final class CockpitQuickGenerateFundingPreflightController extends Controller
 
         $payload = $request->validated();
         $pricing = $estimator->handle($payload);
-        $overview = $balances->handle($issuer, syncIfStale: false);
-        $localBalance = collect((array) data_get($overview, 'balances', []))->firstWhere('key', 'local_ledger');
-        $availableClientFundsMinor = is_array($localBalance) && is_numeric($localBalance['balance_minor'] ?? null)
-            ? (int) $localBalance['balance_minor']
-            : null;
         $basis = $policy->enabled()
             ? $policy->basis()
             : OnDemandIssuanceFundingBasis::Shortfall;
         $requirement = $requirements->forBasis($issuer, $pricing, $basis);
+        $selectedFunds = app(SelectedAccountClientFunds::class)->forOwner($issuer);
+        $selectedBalance = $selectedFunds['amount_minor'];
+        $selectedShortfall = $selectedBalance === null ? null : max(0, $requirement->requiredAmountMinor - max(0, $selectedBalance));
         $externalAmountMinor = $policy->enabled() ? $requirement->externalAmountMinor : 0;
 
         return response()->json([
@@ -63,7 +60,8 @@ final class CockpitQuickGenerateFundingPreflightController extends Controller
             'funding' => [
                 'policy_enabled' => $policy->enabled(),
                 'basis' => $basis->value,
-                'available_client_funds_minor' => $availableClientFundsMinor,
+                'available_client_funds_minor' => $selectedBalance,
+                'account_shortfall_minor' => $selectedShortfall,
                 'required_amount_minor' => $requirement->requiredAmountMinor,
                 'reserved_client_funds_minor' => $requirement->reservedClientFundsMinor,
                 'external_amount_minor' => $externalAmountMinor,
@@ -72,7 +70,9 @@ final class CockpitQuickGenerateFundingPreflightController extends Controller
                     : 'direct',
                 'reason' => $externalAmountMinor > 0
                     ? 'external_funding_required'
-                    : 'client_funds_cover_required_debit',
+                    : ($selectedBalance === null
+                        ? 'selected_account_balance_unavailable'
+                        : ($selectedShortfall > 0 ? 'selected_account_shortfall' : 'client_funds_cover_required_debit')),
             ],
             'expires_at' => now()->addSeconds(30)->toIso8601String(),
         ]);

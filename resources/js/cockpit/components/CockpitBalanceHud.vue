@@ -36,6 +36,10 @@ function displayedValue(balance: CockpitBalanceMetric): string {
     return balance.value.startsWith('Stale · ') ? 'Stale · ••••••' : '••••••';
 }
 
+function metricLabel(balance: CockpitBalanceMetric): string {
+    return balance.key === 'internal' ? `${balance.label} (all accounts)` : balance.label;
+}
+
 function accessibleLabel(balance: CockpitBalanceMetric): string {
     const value = valueIsHidden(balance)
         ? balance.value.startsWith('Stale · ')
@@ -44,8 +48,8 @@ function accessibleLabel(balance: CockpitBalanceMetric): string {
         : balance.value;
 
     return balance.helper
-        ? `${balance.label}: ${value}. ${balance.helper}`
-        : `${balance.label}: ${value}`;
+        ? `${metricLabel(balance)}: ${value}. ${balance.helper}`
+        : `${metricLabel(balance)}: ${value}`;
 }
 
 function valueClass(balance: CockpitBalanceMetric): string {
@@ -86,7 +90,7 @@ function valueClass(balance: CockpitBalanceMetric): string {
                         class="font-normal text-muted-foreground"
                         data-testid="cockpit-balance-label"
                     >
-                        {{ balance.label }}
+                        {{ metricLabel(balance) }}
                     </span>
                     <span
                         :class="[

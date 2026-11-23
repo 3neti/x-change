@@ -12,6 +12,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
+use LBHurtado\XChange\Actions\Funding\MonitorDirectFundingExceptions;
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Actions\Funding\VerifyFundingIntent;
 use LBHurtado\XChange\Actions\Operations\RecordExternalJobFailure;
@@ -83,6 +84,18 @@ class VerifyFundingIntentJob implements ShouldBeUnique, ShouldQueue
         $intent = FundingIntent::query()->findOrFail($this->fundingIntentId);
 
         if ($intent->provider_code !== $this->providerCode) {
+            return;
+        }
+
+        if (data_get($intent->metadata, 'direct_qr_monitor') === true
+            && in_array($intent->status, [FundingIntentStatus::Expired, FundingIntentStatus::Cancelled, FundingIntentStatus::Settled, FundingIntentStatus::Suspense, FundingIntentStatus::Reversed], true)) {
+            if ($intent->status === FundingIntentStatus::Settled) {
+                $intent = $verify->handle($intent, new FundingIntentVerificationData(
+                    trigger: $this->trigger, actorId: $this->actorId, webhookReceiptId: $this->webhookReceiptId,
+                ));
+            }
+            app(MonitorDirectFundingExceptions::class)->handle($intent);
+
             return;
         }
 

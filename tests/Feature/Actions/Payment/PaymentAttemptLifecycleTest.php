@@ -14,8 +14,10 @@ use Illuminate\Support\Facades\Storage;
 use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
 use LBHurtado\EmiCore\Contracts\DirectQrFundingInstructionIssuer;
 use LBHurtado\EmiCore\Contracts\SpecificIncomingPaymentVerifier;
+use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionRequestData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
+use LBHurtado\EmiCore\Data\Funding\FundingQrCodeData;
 use LBHurtado\EmiCore\Data\Funding\FundingQrMerchantData;
 use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
@@ -26,6 +28,7 @@ use LBHurtado\Merchant\Contracts\MerchantProfileRepositoryContract;
 use LBHurtado\PaymentGateway\Funding\NetbankFundingApiClient;
 use LBHurtado\PaymentGateway\Funding\NetbankFundingProviderAdapter;
 use LBHurtado\SettlementEnvelope\Services\EnvelopeService;
+use LBHurtado\Voucher\Enums\VoucherType;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\Services\ExecutionEngine;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
@@ -33,10 +36,14 @@ use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
+use LBHurtado\XChange\Actions\Banking\AssignNetbankAccount;
+use LBHurtado\XChange\Actions\Funding\CreateFundingIntent;
+use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Actions\Payment\ApplyReviewedPayment;
 use LBHurtado\XChange\Actions\Payment\ApplyReviewedSplitPayment;
 use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
+use LBHurtado\XChange\Actions\Payment\CreditAssignedPaymentFallback;
 use LBHurtado\XChange\Actions\Payment\CreditReviewedExcess;
 use LBHurtado\XChange\Actions\Payment\IssuePaymentInstructions;
 use LBHurtado\XChange\Actions\Payment\MonitorPaymentAttempt;
@@ -49,10 +56,15 @@ use LBHurtado\XChange\Actions\Payment\VerifyPaymentAttempt;
 use LBHurtado\XChange\Actions\Redemption\PrepareVoucherClaimEvidence;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Actions\Settlement\VerifyPhilhealthSettlementAmount;
+use LBHurtado\XChange\Contracts\BankingAccountSelectorContract;
+use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
 use LBHurtado\XChange\Contracts\SettlementReadinessGateContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
+use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
+use LBHurtado\XChange\Data\Banking\SelectedBankingAccount;
+use LBHurtado\XChange\Data\Funding\CreateFundingIntentData;
 use LBHurtado\XChange\Data\FundingDecisionData;
 use LBHurtado\XChange\Data\Payment\ObservedPaymentTransactionData;
 use LBHurtado\XChange\Data\Payment\PaymentObservationNoticeData;
@@ -60,10 +72,14 @@ use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Events\PaymentTransactionObserved;
+use LBHurtado\XChange\Exceptions\FundingDestinationUnavailable;
+use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Exceptions\LatePaymentRequiresReview;
+use LBHurtado\XChange\Exceptions\UnresolvedPaymentReview;
 use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
 use LBHurtado\XChange\Jobs\Payment\VerifyAdditionalQrPaymentJob;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Models\FundingDestinationPreference;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\ObservedPaymentTransaction;
 use LBHurtado\XChange\Models\PartnerApiClient;
@@ -73,19 +89,27 @@ use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Models\V2EvidenceOutbox;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Accounts\AccountLifecycle;
+use LBHurtado\XChange\Services\Banking\AssignedBankTreasuryConnection;
 use LBHurtado\XChange\Services\Claim\VoucherClaimFlowCompiler;
 use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Execution\ValueFlowPayoutService;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\FundingQrMerchantProfileResolver;
+use LBHurtado\XChange\Services\Funding\ReserveNetbankVca;
 use LBHurtado\XChange\Services\Payment\SessionPaymentReview;
+use LBHurtado\XChange\Services\Payment\SpecificPaymentAttribution;
 use LBHurtado\XChange\Services\Settlement\IssuerInvoiceDrafts;
 use LBHurtado\XChange\Services\Settlement\V2EventWebhookDelivery;
 use LBHurtado\XChange\Services\Settlement\V2EvidenceEventJournal;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\SettlementEnvelopeMetadataSyncService;
+use LBHurtado\XChange\Services\Treasury\TreasuryAccountBalanceReadModel;
+use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
+use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
+use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
+use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use LBHurtado\XChange\Support\Funding\FundingMerchantSnapshot;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 use LBHurtado\XChange\Tests\Fakes\User;
@@ -123,6 +147,152 @@ beforeEach(function (): void {
     $this->app->instance(FakeFundingProviderAdapter::class, $this->paymentAdapter);
     $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
     $this->app->forgetInstance(FundingProviderAdapterRegistry::class);
+});
+
+it('reserves unique NetBank addresses across funding and payment attempts and reuses them on retry', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $first = app(CreatePaymentAttempt::class)->handle($voucher, 'netbank', 'payer-session-1', 'first-reservation');
+    $funding = app(CreateFundingIntent::class)->handle(new CreateFundingIntentData(
+        accountReference: 'wallet:account-1001', provider: 'netbank', expectedAmountMinor: 1000,
+        currency: 'PHP', idempotencyKey: 'cross-purpose-vca-test', actorType: 'test', actorId: '1',
+    ));
+    $allocator = new class extends ReserveNetbankVca
+    {
+        private array $references = ['0000001', '0000002', '0000001', '0000002', '0000003'];
+
+        protected function nextReference(): string
+        {
+            return array_shift($this->references);
+        }
+    };
+    $allocator->recordHistoricalAddress('896280000001');
+    expect($allocator->reserve($funding, '89628'))->toBe('896280000002')
+        ->and($allocator->reservePaymentAttempt($first, '89628'))->toBe('896280000003')
+        ->and($allocator->reservePaymentAttempt($first, '89628'))->toBe('896280000003');
+    expect(fn () => $allocator->recordHistoricalAddress('896280000003'))->toThrow(LogicException::class);
+    expect(fn () => $allocator->reservePaymentAttempt($first, '91500'))->toThrow(LogicException::class);
+});
+
+it('freezes the assigned payable destination and reuses its reserved address after a provider failure', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 20,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $issuer->id, 'collection_wallet_id' => $issuer->wallet->id],
+    ]));
+    $attempt = app(CreatePaymentAttempt::class)->handle($voucher, 'netbank', 'payer-session', 'issue-assigned-qr');
+    $assignment = app(AssignNetbankAccount::class)->handle($issuer, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ];
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+        SettleVerifiedFundingIntent::class] as $service) {
+        app()->forgetInstance($service);
+    }
+    app(AssignedBankTreasuryConnection::class)->bind($issuer, $assignment->id, 'netbank-personal');
+    $snapshot = [
+        'provider' => 'netbank', 'mode' => 'dedicated', 'destinationType' => 'bank_account',
+        'accountReference' => 'voucher:'.$voucher->id, 'displayReference' => 'Example',
+        'fingerprint' => str_repeat('a', 64), 'verificationStatus' => 'routing_configured',
+        'bankAccountNumber' => '991100001234', 'routingAlias' => '54321', 'metadata' => [
+            'netbank_instruction_mode' => 'direct_qr',
+            'assigned_bank_account_link_id' => $assignment->provider_account_link_id,
+            'treasury_connection_reference' => 'netbank-personal', 'treasury_inventory_reference' => 'inventory:personal',
+            'treasury_resource_reference' => 'resource:personal',
+        ]];
+    config()->set('x-change.payment.attempts.assigned_netbank_payables_enabled', true);
+    config()->set('x-change.funding.dedicated_netbank_direct_qr_enabled', true);
+    $destination = FundingDestinationSnapshot::toData($snapshot);
+    $resolver = Mockery::mock(FundingDestinationResolverContract::class);
+    $resolver->shouldReceive('resolve')->once()->andReturn($destination);
+    app()->instance(FundingDestinationResolverContract::class, $resolver);
+    $selector = Mockery::mock(BankingAccountSelectorContract::class);
+    $selector->shouldReceive('select')->twice()->andReturn(new SelectedBankingAccount('netbank', 'dedicated', $assignment->provider_account_link_id));
+    app()->instance(BankingAccountSelectorContract::class, $selector);
+    $adapter = new class extends FakeFundingProviderAdapter implements DirectQrFundingInstructionIssuer
+    {
+        public array $addresses = [];
+
+        public function createDirectQrFundingInstructions(FundingInstructionRequestData $request): FundingInstructionsData
+        {
+            $address = $request->destination->routingAlias.$request->metadata['reserved_vca_reference'];
+            $this->addresses[] = $address;
+            if (count($this->addresses) === 1) {
+                throw new RuntimeException('Provider unavailable');
+            }
+
+            return new FundingInstructionsData(provider: 'netbank', providerReference: $address,
+                amountMinor: $request->amountMinor, currency: $request->currency, fundingAddress: $address,
+                qrCode: new FundingQrCodeData('image/png', 'eA==', 'dynamic', 'credit', true, true));
+        }
+    };
+    app()->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    app()->forgetInstance(IssuePaymentInstructions::class);
+    expect(fn () => app(IssuePaymentInstructions::class)->handle($attempt))->toThrow(RuntimeException::class);
+    expect(data_get($attempt->fresh()->destination_snapshot_ciphertext, 'bankAccountNumber'))->toBe('991100001234');
+    $issued = app(IssuePaymentInstructions::class)->handle($attempt);
+    expect($issued->status)->toBe(PaymentAttemptStatus::AwaitingPayment)
+        ->and($adapter->addresses)->toHaveCount(2)
+        ->and($adapter->addresses[0])->toBe($adapter->addresses[1])
+        ->and($issued->funding_address_ciphertext)->toBe($adapter->addresses[0]);
+    $data = exactPaymentObservation($issued, amountMinor: 1100);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $adapter->fundingObservation = $data;
+    $result = app(VerifyPaymentAttempt::class)->handle($issued, PaymentVerificationTrigger::Payer);
+    expect($result->status)->toBe(PaymentAttemptStatus::CreditedToClientFunds)
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(0)
+        ->and(app(TreasuryAccountBalanceReadModel::class)->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP'))->toBe(1100);
+    expect(fn () => app(CreatePaymentAttempt::class)->handle($voucher, 'netbank', 'payer-session', 'new-request'))
+        ->toThrow(UnresolvedPaymentReview::class);
+});
+
+it('does not issue a shared payable QR when the selected NetBank destination is dedicated', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $attempt = app(CreatePaymentAttempt::class)->handle($voucher, 'netbank', 'payer-session', 'assigned-account');
+    $resolver = Mockery::mock(FundingDestinationResolverContract::class);
+    $resolver->shouldReceive('resolve')->once()->andReturn(new FundingDestinationData(
+        provider: 'netbank', mode: 'dedicated', destinationType: 'bank_account',
+        accountReference: 'voucher:'.$voucher->id, displayReference: 'Personal account',
+        fingerprint: str_repeat('a', 64), verificationStatus: 'ready',
+    ));
+    $resolver->shouldNotReceive('shared');
+    $this->app->instance(FundingDestinationResolverContract::class, $resolver);
+    $this->app->forgetInstance(IssuePaymentInstructions::class);
+
+    expect(fn () => app(IssuePaymentInstructions::class)->handle($attempt))
+        ->toThrow(RuntimeException::class, 'Payment instructions are temporarily unavailable.');
+    expect($this->paymentAdapter->instructionCalls)->toBe(0)
+        ->and($attempt->fresh()->status)->toBe(PaymentAttemptStatus::PendingInstructions)
+        ->and($attempt->fresh()->funding_address_ciphertext)->toBeNull();
+});
+
+it('does not fall back to a shared payable QR when the chosen NetBank account is unavailable', function (): void {
+    $voucher = paymentAttemptCollectibleVoucher();
+    $owner = $voucher->owner;
+    expect($owner)->not->toBeNull();
+    FundingDestinationPreference::query()->create([
+        'owner_type' => $owner->getMorphClass(), 'owner_id' => $owner->getKey(),
+        'provider_code' => 'netbank', 'mode' => 'dedicated', 'provider_account_link_id' => null,
+    ]);
+    $attempt = app(CreatePaymentAttempt::class)->handle($voucher, 'netbank', 'payer-session', 'unavailable-account');
+
+    expect(fn () => app(IssuePaymentInstructions::class)->handle($attempt))
+        ->toThrow(RuntimeException::class, 'Payment instructions are temporarily unavailable.');
+    expect($this->paymentAdapter->instructionCalls)->toBe(0)
+        ->and($attempt->fresh()->status)->toBe(PaymentAttemptStatus::PendingInstructions);
 });
 
 it('allows a persisted local reviewer through the temporary settlement review sentinel', function (): void {
@@ -816,6 +986,1080 @@ it('credits a verified excess payment to the issuer once with an audited operato
     expect($intent->is($replay))->toBeTrue()
         ->and($adapter->specificCalls)->toBe(2)
         ->and($clientFunds())->toBe($balance + 2000)
+        ->and($review->resolution_code)->toBe('credited_client_funds')
+        ->and(Crypt::decryptString($review->resolution_note_ciphertext))->toBe('Verified extra payment')
+        ->and(DB::table('x_change_funding_settlements')->where('funding_intent_id', $intent->id)->count())->toBe(1);
+});
+
+it('credits a verified assigned-account payment once to its own treasury fallback', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 20,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $issuer->id, 'collection_wallet_id' => $issuer->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    $assignment = app(AssignNetbankAccount::class)->handle($issuer, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ];
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+        SettleVerifiedFundingIntent::class] as $service) {
+        app()->forgetInstance($service);
+    }
+    app(AssignedBankTreasuryConnection::class)->bind($issuer, $assignment->id, 'netbank-personal');
+    $snapshot = $attempt->destination_snapshot_ciphertext;
+    $snapshot['mode'] = 'dedicated';
+    $snapshot['bankAccountNumber'] = '991100001234';
+    $snapshot['routingAlias'] = '54321';
+    $snapshot['metadata'] = [
+        'assigned_bank_account_link_id' => $assignment->provider_account_link_id,
+        'treasury_connection_reference' => 'netbank-personal', 'treasury_inventory_reference' => 'inventory:personal',
+        'treasury_resource_reference' => 'resource:personal',
+    ];
+    $attempt->forceFill(['destination_snapshot_ciphertext' => $snapshot])->saveQuietly();
+    $allocator = app(ReserveNetbankVca::class);
+    $address = $allocator->reservePaymentAttempt($attempt, '54321');
+    $attempt->forceFill(['funding_address_ciphertext' => $address])->saveQuietly();
+    $data = exactPaymentObservation($attempt, amountMinor: 1100);
+    $data->fundingAddress = 'sha256:'.hash('sha256', $address);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $observation = app(RecordProviderFundingObservation::class)->handle($data);
+    $balances = app(TreasuryAccountBalanceReadModel::class);
+    $before = $balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP') ?? 0;
+    $action = app(CreditAssignedPaymentFallback::class);
+    $attempt->forceFill(['funding_address_ciphertext' => '543210000000'])->saveQuietly();
+    expect(fn () => $action->handle($attempt, $observation))->toThrow(LogicException::class, 'not eligible');
+    $attempt->forceFill(['funding_address_ciphertext' => $address])->saveQuietly();
+    $wrongSnapshot = $snapshot;
+    $wrongSnapshot['metadata']['treasury_inventory_reference'] = 'inventory:wrong';
+    $attempt->forceFill(['destination_snapshot_ciphertext' => $wrongSnapshot])->saveQuietly();
+    expect(fn () => $action->handle($attempt, $observation))->toThrow(FundingSettlementDenied::class);
+    $attempt->forceFill(['destination_snapshot_ciphertext' => $snapshot])->saveQuietly();
+    $link = $assignment->providerAccountLink;
+    $originalMetadata = $link->metadata;
+    $link->forceFill(['metadata' => ['funding_assignment' => [
+        'scope' => 'fresh_intents_only', 'fresh_since' => now()->addMinute()->toIso8601String(),
+    ]]])->save();
+    expect(fn () => $action->handle($attempt, $observation))->toThrow(FundingDestinationUnavailable::class);
+    $link->forceFill(['metadata' => $originalMetadata])->save();
+    expect($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP') ?? 0)->toBe($before);
+    $intent = $action->handle($attempt, $observation);
+    $replay = $action->handle($attempt, $observation);
+    expect($intent->is($replay))->toBeTrue()
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP'))->toBe($before + 1100)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-primary', 'PHP'))->toBeNull()
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(0)
+        ->and(DB::table('x_change_funding_settlements')->where('funding_intent_id', $intent->id)->count())->toBe(1);
+});
+
+it('automatically credits a mismatched assigned payable payment without marking the voucher paid', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 20,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $issuer->id, 'collection_wallet_id' => $issuer->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    $assignment = app(AssignNetbankAccount::class)->handle($issuer, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ];
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+        SettleVerifiedFundingIntent::class] as $service) {
+        app()->forgetInstance($service);
+    }
+    app(AssignedBankTreasuryConnection::class)->bind($issuer, $assignment->id, 'netbank-personal');
+    $snapshot = $attempt->destination_snapshot_ciphertext;
+    $snapshot['mode'] = 'dedicated';
+    $snapshot['bankAccountNumber'] = '991100001234';
+    $snapshot['routingAlias'] = '54321';
+    $snapshot['metadata'] = [
+        'assigned_bank_account_link_id' => $assignment->provider_account_link_id,
+        'treasury_connection_reference' => 'netbank-personal', 'treasury_inventory_reference' => 'inventory:personal',
+        'treasury_resource_reference' => 'resource:personal',
+    ];
+    $attempt->forceFill(['destination_snapshot_ciphertext' => $snapshot])->saveQuietly();
+    $allocator = app(ReserveNetbankVca::class);
+    $address = $allocator->reservePaymentAttempt($attempt, '54321');
+    $attempt->forceFill(['funding_address_ciphertext' => $address])->saveQuietly();
+    $data = exactPaymentObservation($attempt, amountMinor: 1100);
+    $data->fundingAddress = 'sha256:'.hash('sha256', $address);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $this->paymentAdapter->fundingObservation = $data;
+    $balances = app(TreasuryAccountBalanceReadModel::class);
+    $before = $balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP') ?? 0;
+    $result = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    $replay = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    expect($result->status)->toBe(PaymentAttemptStatus::CreditedToClientFunds)
+        ->and($replay->status)->toBe(PaymentAttemptStatus::CreditedToClientFunds)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP'))->toBe($before + 1100)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-primary', 'PHP'))->toBeNull()
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(0)
+        ->and(DB::table('x_change_funding_settlements')->count())->toBe(1);
+});
+
+it('settles an exact payable payment to the frozen assigned treasury once', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 20,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $issuer->id, 'collection_wallet_id' => $issuer->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    $assignment = app(AssignNetbankAccount::class)->handle($issuer, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ];
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+        SettleVerifiedFundingIntent::class] as $service) {
+        app()->forgetInstance($service);
+    }
+    app(AssignedBankTreasuryConnection::class)->bind($issuer, $assignment->id, 'netbank-personal');
+    $snapshot = $attempt->destination_snapshot_ciphertext;
+    $snapshot['mode'] = 'dedicated';
+    $snapshot['bankAccountNumber'] = '991100001234';
+    $snapshot['routingAlias'] = '54321';
+    $snapshot['metadata'] = [
+        'assigned_bank_account_link_id' => $assignment->provider_account_link_id,
+        'treasury_connection_reference' => 'netbank-personal', 'treasury_inventory_reference' => 'inventory:personal',
+        'treasury_resource_reference' => 'resource:personal',
+    ];
+    $attempt->forceFill(['destination_snapshot_ciphertext' => $snapshot])->saveQuietly();
+    $allocator = app(ReserveNetbankVca::class);
+    $address = $allocator->reservePaymentAttempt($attempt, '54321');
+    $attempt->forceFill(['funding_address_ciphertext' => $address])->saveQuietly();
+    $data = exactPaymentObservation($attempt, amountMinor: 2000);
+    $data->fundingAddress = 'sha256:'.hash('sha256', $address);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $this->paymentAdapter->fundingObservation = $data;
+    $balances = app(TreasuryAccountBalanceReadModel::class);
+    $before = $balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP') ?? 0;
+    $result = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    $replay = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    expect($result->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and($replay->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP'))->toBe($before + 2000)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-primary', 'PHP'))->toBeNull()
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(1)
+        ->and(DB::table('x_change_funding_settlements')->count())->toBe(0);
+});
+
+it('credits an additional payment once after an assigned payable is fully paid', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 20,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $issuer->id, 'collection_wallet_id' => $issuer->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    $assignment = app(AssignNetbankAccount::class)->handle($issuer, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ];
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+        SettleVerifiedFundingIntent::class] as $service) {
+        app()->forgetInstance($service);
+    }
+    app(AssignedBankTreasuryConnection::class)->bind($issuer, $assignment->id, 'netbank-personal');
+    $snapshot = $attempt->destination_snapshot_ciphertext;
+    $snapshot['mode'] = 'dedicated';
+    $snapshot['bankAccountNumber'] = '991100001234';
+    $snapshot['routingAlias'] = '54321';
+    $snapshot['metadata'] = [
+        'assigned_bank_account_link_id' => $assignment->provider_account_link_id,
+        'treasury_connection_reference' => 'netbank-personal', 'treasury_inventory_reference' => 'inventory:personal',
+        'treasury_resource_reference' => 'resource:personal',
+    ];
+    $attempt->forceFill(['destination_snapshot_ciphertext' => $snapshot])->saveQuietly();
+    $allocator = app(ReserveNetbankVca::class);
+    $address = $allocator->reservePaymentAttempt($attempt, '54321');
+    $attempt->forceFill(['funding_address_ciphertext' => $address])->saveQuietly();
+    $data = exactPaymentObservation($attempt, amountMinor: 2000);
+    $data->fundingAddress = 'sha256:'.hash('sha256', $address);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $this->paymentAdapter->fundingObservation = $data;
+    $balances = app(TreasuryAccountBalanceReadModel::class);
+    $before = $balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP') ?? 0;
+    $result = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    $extra = exactPaymentObservation($attempt, amountMinor: 1100);
+    $extra->fundingAddress = 'sha256:'.hash('sha256', $address);
+    $extra->occurredAt = now()->toDateTimeImmutable();
+    $extra->settledAt = now()->toDateTimeImmutable();
+    $transaction = app(RecordObservedPaymentTransaction::class)->handle($attempt, new ObservedPaymentTransactionData(
+        $extra->providerTransactionId, 1100, 'PHP', 'settled', occurredAt: $extra->occurredAt, settledAt: $extra->settledAt,
+    ));
+    $adapter = new SpecificPaymentTestAdapter;
+    $adapter->specificObservations[$extra->providerTransactionId] = $extra;
+    app()->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    app()->call([new VerifyAdditionalQrPaymentJob($transaction->id, 'netbank'), 'handle']);
+    app()->call([new VerifyAdditionalQrPaymentJob($transaction->id, 'netbank'), 'handle']);
+    expect($result->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP'))->toBe($before + 3100)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-primary', 'PHP'))->toBeNull()
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(1)
+        ->and(DB::table('x_change_funding_settlements')->count())->toBe(1)
+        ->and(DB::table('x_change_payment_transaction_reviews')->count())->toBe(0);
+});
+
+it('credits a mismatched additional payment when a payable balance remains', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 20,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $issuer->id, 'collection_wallet_id' => $issuer->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    $assignment = app(AssignNetbankAccount::class)->handle($issuer, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ];
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+        SettleVerifiedFundingIntent::class] as $service) {
+        app()->forgetInstance($service);
+    }
+    app(AssignedBankTreasuryConnection::class)->bind($issuer, $assignment->id, 'netbank-personal');
+    $snapshot = $attempt->destination_snapshot_ciphertext;
+    $snapshot['mode'] = 'dedicated';
+    $snapshot['bankAccountNumber'] = '991100001234';
+    $snapshot['routingAlias'] = '54321';
+    $snapshot['metadata'] = [
+        'assigned_bank_account_link_id' => $assignment->provider_account_link_id,
+        'treasury_connection_reference' => 'netbank-personal', 'treasury_inventory_reference' => 'inventory:personal',
+        'treasury_resource_reference' => 'resource:personal',
+    ];
+    $attempt->forceFill(['destination_snapshot_ciphertext' => $snapshot])->saveQuietly();
+    $allocator = app(ReserveNetbankVca::class);
+    $address = $allocator->reservePaymentAttempt($attempt, '54321');
+    $attempt->forceFill(['funding_address_ciphertext' => $address])->saveQuietly();
+    PaymentAttempt::query()->whereKey($attempt->id)->update(['expected_amount_minor' => 1000]);
+    $attempt = $attempt->fresh();
+    $data = exactPaymentObservation($attempt, amountMinor: 1000);
+    $data->fundingAddress = 'sha256:'.hash('sha256', $address);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $this->paymentAdapter->fundingObservation = $data;
+    $balances = app(TreasuryAccountBalanceReadModel::class);
+    $before = $balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP') ?? 0;
+    $result = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    $extra = exactPaymentObservation($attempt, amountMinor: 1100);
+    $extra->fundingAddress = 'sha256:'.hash('sha256', $address);
+    $extra->occurredAt = now()->toDateTimeImmutable();
+    $extra->settledAt = now()->toDateTimeImmutable();
+    $transaction = app(RecordObservedPaymentTransaction::class)->handle($attempt, new ObservedPaymentTransactionData(
+        $extra->providerTransactionId, 1100, 'PHP', 'settled', occurredAt: $extra->occurredAt, settledAt: $extra->settledAt,
+    ));
+    $adapter = new SpecificPaymentTestAdapter;
+    $adapter->specificObservations[$extra->providerTransactionId] = $extra;
+    app()->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    app()->call([new VerifyAdditionalQrPaymentJob($transaction->id, 'netbank'), 'handle']);
+    app()->call([new VerifyAdditionalQrPaymentJob($transaction->id, 'netbank'), 'handle']);
+    expect($result->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP'))->toBe($before + 2100)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-primary', 'PHP'))->toBeNull()
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(1)
+        ->and(DB::table('x_change_funding_settlements')->count())->toBe(1)
+        ->and(DB::table('x_change_payment_transaction_reviews')->count())->toBe(0);
+});
+
+it('applies an exact additional payment when an assigned payable balance remains', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 20,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $issuer->id, 'collection_wallet_id' => $issuer->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    $assignment = app(AssignNetbankAccount::class)->handle($issuer, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ];
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+        SettleVerifiedFundingIntent::class] as $service) {
+        app()->forgetInstance($service);
+    }
+    app(AssignedBankTreasuryConnection::class)->bind($issuer, $assignment->id, 'netbank-personal');
+    $snapshot = $attempt->destination_snapshot_ciphertext;
+    $snapshot['mode'] = 'dedicated';
+    $snapshot['bankAccountNumber'] = '991100001234';
+    $snapshot['routingAlias'] = '54321';
+    $snapshot['metadata'] = [
+        'assigned_bank_account_link_id' => $assignment->provider_account_link_id,
+        'treasury_connection_reference' => 'netbank-personal', 'treasury_inventory_reference' => 'inventory:personal',
+        'treasury_resource_reference' => 'resource:personal',
+    ];
+    $attempt->forceFill(['destination_snapshot_ciphertext' => $snapshot])->saveQuietly();
+    $allocator = app(ReserveNetbankVca::class);
+    $address = $allocator->reservePaymentAttempt($attempt, '54321');
+    $attempt->forceFill(['funding_address_ciphertext' => $address])->saveQuietly();
+    PaymentAttempt::query()->whereKey($attempt->id)->update(['expected_amount_minor' => 1000]);
+    $attempt = $attempt->fresh();
+    $data = exactPaymentObservation($attempt, amountMinor: 1000);
+    $data->fundingAddress = 'sha256:'.hash('sha256', $address);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $this->paymentAdapter->fundingObservation = $data;
+    $balances = app(TreasuryAccountBalanceReadModel::class);
+    $before = $balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP') ?? 0;
+    $result = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    $extra = exactPaymentObservation($attempt, amountMinor: 1000);
+    $extra->fundingAddress = 'sha256:'.hash('sha256', $address);
+    $extra->occurredAt = now()->toDateTimeImmutable();
+    $extra->settledAt = now()->toDateTimeImmutable();
+    $transaction = app(RecordObservedPaymentTransaction::class)->handle($attempt, new ObservedPaymentTransactionData(
+        $extra->providerTransactionId, 1000, 'PHP', 'settled', occurredAt: $extra->occurredAt, settledAt: $extra->settledAt,
+    ));
+    $adapter = new SpecificPaymentTestAdapter;
+    $adapter->specificObservations[$extra->providerTransactionId] = $extra;
+    app()->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    app()->call([new VerifyAdditionalQrPaymentJob($transaction->id, 'netbank'), 'handle']);
+    app()->call([new VerifyAdditionalQrPaymentJob($transaction->id, 'netbank'), 'handle']);
+    expect($result->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP'))->toBe($before + 2000)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-primary', 'PHP'))->toBeNull()
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(2)
+        ->and(DB::table('x_change_funding_settlements')->count())->toBe(0)
+        ->and(DB::table('x_change_payment_transaction_reviews')->count())->toBe(0);
+});
+
+it('routes both assigned payable payments to the named recipient', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 20,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $issuer->id, 'collection_wallet_id' => $issuer->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    $assignment = app(AssignNetbankAccount::class)->handle($issuer, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ];
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+        SettleVerifiedFundingIntent::class] as $service) {
+        app()->forgetInstance($service);
+    }
+    app(AssignedBankTreasuryConnection::class)->bind($issuer, $assignment->id, 'netbank-personal');
+    $snapshot = $attempt->destination_snapshot_ciphertext;
+    $snapshot['mode'] = 'dedicated';
+    $snapshot['bankAccountNumber'] = '991100001234';
+    $snapshot['routingAlias'] = '54321';
+    $snapshot['metadata'] = [
+        'assigned_bank_account_link_id' => $assignment->provider_account_link_id,
+        'treasury_connection_reference' => 'netbank-personal', 'treasury_inventory_reference' => 'inventory:personal',
+        'treasury_resource_reference' => 'resource:personal',
+    ];
+    $attempt->forceFill(['destination_snapshot_ciphertext' => $snapshot])->saveQuietly();
+    $allocator = app(ReserveNetbankVca::class);
+    $address = $allocator->reservePaymentAttempt($attempt, '54321');
+    $attempt->forceFill(['funding_address_ciphertext' => $address])->saveQuietly();
+    $recipient = actingAsTestUser(0);
+    $recipient->forceFill(['mobile' => '09171234567'])->save();
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision($recipient, ['netbank-personal']);
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.execution.schema', 'voucher.execution.v1');
+    data_set($metadata, 'instructions.execution.metadata.value_flow.destination', 'account.mobile:09171234567.client_funds');
+    $voucher->forceFill(['metadata' => $metadata, 'voucher_type' => VoucherType::PAYABLE])->save();
+    PaymentAttempt::query()->whereKey($attempt->id)->update(['expected_amount_minor' => 1000]);
+    $attempt = $attempt->fresh();
+    $data = exactPaymentObservation($attempt, amountMinor: 1000);
+    $data->fundingAddress = 'sha256:'.hash('sha256', $address);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $this->paymentAdapter->fundingObservation = $data;
+    $balances = app(TreasuryAccountBalanceReadModel::class);
+    $before = $balances->connectionBalanceMinor($recipient, 'netbank', 'netbank-personal', 'PHP') ?? 0;
+    $result = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    $extra = exactPaymentObservation($attempt, amountMinor: 1000);
+    $extra->fundingAddress = 'sha256:'.hash('sha256', $address);
+    $extra->occurredAt = now()->toDateTimeImmutable();
+    $extra->settledAt = now()->toDateTimeImmutable();
+    $transaction = app(RecordObservedPaymentTransaction::class)->handle($attempt, new ObservedPaymentTransactionData(
+        $extra->providerTransactionId, 1000, 'PHP', 'settled', occurredAt: $extra->occurredAt, settledAt: $extra->settledAt,
+    ));
+    $adapter = new SpecificPaymentTestAdapter;
+    $adapter->specificObservations[$extra->providerTransactionId] = $extra;
+    app()->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    app()->call([new VerifyAdditionalQrPaymentJob($transaction->id, 'netbank'), 'handle']);
+    app()->call([new VerifyAdditionalQrPaymentJob($transaction->id, 'netbank'), 'handle']);
+    expect($result->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and($balances->connectionBalanceMinor($recipient, 'netbank', 'netbank-personal', 'PHP'))->toBe($before + 2000)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP'))->toBeNull()
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-primary', 'PHP'))->toBeNull()
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(2)
+        ->and(DB::table('x_change_funding_settlements')->count())->toBe(0)
+        ->and(DB::table('x_change_payment_transaction_reviews')->count())->toBe(0);
+});
+
+it('reviews an additional payment with the wrong destination without crediting it', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 20,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $issuer->id, 'collection_wallet_id' => $issuer->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    $assignment = app(AssignNetbankAccount::class)->handle($issuer, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ];
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+        SettleVerifiedFundingIntent::class] as $service) {
+        app()->forgetInstance($service);
+    }
+    app(AssignedBankTreasuryConnection::class)->bind($issuer, $assignment->id, 'netbank-personal');
+    $snapshot = $attempt->destination_snapshot_ciphertext;
+    $snapshot['mode'] = 'dedicated';
+    $snapshot['bankAccountNumber'] = '991100001234';
+    $snapshot['routingAlias'] = '54321';
+    $snapshot['metadata'] = [
+        'assigned_bank_account_link_id' => $assignment->provider_account_link_id,
+        'treasury_connection_reference' => 'netbank-personal', 'treasury_inventory_reference' => 'inventory:personal',
+        'treasury_resource_reference' => 'resource:personal',
+    ];
+    $attempt->forceFill(['destination_snapshot_ciphertext' => $snapshot])->saveQuietly();
+    $allocator = app(ReserveNetbankVca::class);
+    $address = $allocator->reservePaymentAttempt($attempt, '54321');
+    $attempt->forceFill(['funding_address_ciphertext' => $address])->saveQuietly();
+    $data = exactPaymentObservation($attempt, amountMinor: 2000);
+    $data->fundingAddress = 'sha256:'.hash('sha256', $address);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $this->paymentAdapter->fundingObservation = $data;
+    $balances = app(TreasuryAccountBalanceReadModel::class);
+    $before = $balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP') ?? 0;
+    $result = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    $extra = exactPaymentObservation($attempt, amountMinor: 1100);
+    $extra->fundingAddress = 'sha256:'.hash('sha256', '543219999999');
+    $extra->occurredAt = now()->toDateTimeImmutable();
+    $extra->settledAt = now()->toDateTimeImmutable();
+    $transaction = app(RecordObservedPaymentTransaction::class)->handle($attempt, new ObservedPaymentTransactionData(
+        $extra->providerTransactionId, 1100, 'PHP', 'settled', occurredAt: $extra->occurredAt, settledAt: $extra->settledAt,
+    ));
+    $adapter = new SpecificPaymentTestAdapter;
+    $adapter->specificObservations[$extra->providerTransactionId] = $extra;
+    app()->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    app()->call([new VerifyAdditionalQrPaymentJob($transaction->id, 'netbank'), 'handle']);
+    app()->call([new VerifyAdditionalQrPaymentJob($transaction->id, 'netbank'), 'handle']);
+    expect($result->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP'))->toBe($before + 2000)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-primary', 'PHP'))->toBeNull()
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(1)
+        ->and(DB::table('x_change_funding_settlements')->count())->toBe(0)
+        ->and(DB::table('x_change_payment_transaction_reviews')->count())->toBe(1);
+});
+
+it('credits two different payments once when the first payable payment falls back', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 20,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $issuer->id, 'collection_wallet_id' => $issuer->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    $assignment = app(AssignNetbankAccount::class)->handle($issuer, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ];
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+        SettleVerifiedFundingIntent::class] as $service) {
+        app()->forgetInstance($service);
+    }
+    app(AssignedBankTreasuryConnection::class)->bind($issuer, $assignment->id, 'netbank-personal');
+    $snapshot = $attempt->destination_snapshot_ciphertext;
+    $snapshot['mode'] = 'dedicated';
+    $snapshot['bankAccountNumber'] = '991100001234';
+    $snapshot['routingAlias'] = '54321';
+    $snapshot['metadata'] = [
+        'assigned_bank_account_link_id' => $assignment->provider_account_link_id,
+        'treasury_connection_reference' => 'netbank-personal', 'treasury_inventory_reference' => 'inventory:personal',
+        'treasury_resource_reference' => 'resource:personal',
+    ];
+    $attempt->forceFill(['destination_snapshot_ciphertext' => $snapshot])->saveQuietly();
+    $allocator = app(ReserveNetbankVca::class);
+    $address = $allocator->reservePaymentAttempt($attempt, '54321');
+    $attempt->forceFill(['funding_address_ciphertext' => $address])->saveQuietly();
+    $balances = app(TreasuryAccountBalanceReadModel::class);
+    $before = $balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP') ?? 0;
+    $extra = exactPaymentObservation($attempt, amountMinor: 1100);
+    $extra->fundingAddress = 'sha256:'.hash('sha256', $address);
+    $extra->occurredAt = now()->toDateTimeImmutable();
+    $extra->settledAt = now()->toDateTimeImmutable();
+    $transaction = app(RecordObservedPaymentTransaction::class)->handle($attempt, new ObservedPaymentTransactionData(
+        $extra->providerTransactionId, 1100, 'PHP', 'settled', occurredAt: $extra->occurredAt, settledAt: $extra->settledAt,
+    ));
+    $adapter = new SpecificPaymentTestAdapter;
+    $adapter->specificObservations[$extra->providerTransactionId] = $extra;
+    app()->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    app()->call([new VerifyAdditionalQrPaymentJob($transaction->id, 'netbank'), 'handle']);
+    app()->call([new VerifyAdditionalQrPaymentJob($transaction->id, 'netbank'), 'handle']);
+    $next = exactPaymentObservation($attempt, amountMinor: 700);
+    $next->fundingAddress = 'sha256:'.hash('sha256', $address);
+    $next->occurredAt = now()->toDateTimeImmutable();
+    $next->settledAt = now()->toDateTimeImmutable();
+    $second = app(RecordObservedPaymentTransaction::class)->handle($attempt, new ObservedPaymentTransactionData(
+        $next->providerTransactionId, 700, 'PHP', 'settled', occurredAt: $next->occurredAt, settledAt: $next->settledAt,
+    ));
+    $adapter->specificObservations[$next->providerTransactionId] = $next;
+    app()->call([new VerifyAdditionalQrPaymentJob($second->id, 'netbank'), 'handle']);
+    app()->call([new VerifyAdditionalQrPaymentJob($second->id, 'netbank'), 'handle']);
+    expect($attempt->fresh()->status)->toBe(PaymentAttemptStatus::CreditedToClientFunds)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP'))->toBe($before + 1800)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-primary', 'PHP'))->toBeNull()
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(0)
+        ->and(DB::table('x_change_funding_settlements')->count())->toBe(2)
+        ->and(DB::table('x_change_payment_transaction_reviews')->count())->toBe(0);
+});
+
+it('attributes an assigned payment by its reserved VCA even with competing amounts', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 20,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $issuer->id, 'collection_wallet_id' => $issuer->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    $assignment = app(AssignNetbankAccount::class)->handle($issuer, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ];
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+        SettleVerifiedFundingIntent::class] as $service) {
+        app()->forgetInstance($service);
+    }
+    app(AssignedBankTreasuryConnection::class)->bind($issuer, $assignment->id, 'netbank-personal');
+    $snapshot = $attempt->destination_snapshot_ciphertext;
+    $snapshot['mode'] = 'dedicated';
+    $snapshot['bankAccountNumber'] = '991100001234';
+    $snapshot['routingAlias'] = '54321';
+    $snapshot['metadata'] = [
+        'assigned_bank_account_link_id' => $assignment->provider_account_link_id,
+        'treasury_connection_reference' => 'netbank-personal', 'treasury_inventory_reference' => 'inventory:personal',
+        'treasury_resource_reference' => 'resource:personal',
+    ];
+    $attempt->forceFill(['destination_snapshot_ciphertext' => $snapshot])->saveQuietly();
+    $allocator = app(ReserveNetbankVca::class);
+    $address = $allocator->reservePaymentAttempt($attempt, '54321');
+    $attempt->forceFill(['funding_address_ciphertext' => $address])->saveQuietly();
+    $competing = issuedPaymentAttempt($voucher);
+    $data = exactPaymentObservation($attempt, amountMinor: 2000);
+    $data->fundingAddress = 'sha256:'.hash('sha256', $address);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $observation = app(RecordProviderFundingObservation::class)->handle($data);
+    $transaction = app(RecordObservedPaymentTransaction::class)->handle($attempt, new ObservedPaymentTransactionData(
+        $data->providerTransactionId, 2000, 'PHP', 'settled', occurredAt: $data->occurredAt, settledAt: $data->settledAt,
+    ));
+    expect($competing->expected_amount_minor)->toBe($attempt->expected_amount_minor)
+        ->and(app(SpecificPaymentAttribution::class)->matches($attempt, $transaction, $observation))->toBeTrue();
+    $attempt->forceFill(['funding_address_ciphertext' => '543210000000'])->saveQuietly();
+    expect(app(SpecificPaymentAttribution::class)->matches($attempt, $transaction, $observation))->toBeFalse();
+});
+
+it('routes a payable instruction to another user against the assigned treasury', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 20,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $issuer->id, 'collection_wallet_id' => $issuer->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    $assignment = app(AssignNetbankAccount::class)->handle($issuer, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ];
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+        SettleVerifiedFundingIntent::class] as $service) {
+        app()->forgetInstance($service);
+    }
+    app(AssignedBankTreasuryConnection::class)->bind($issuer, $assignment->id, 'netbank-personal');
+    $snapshot = $attempt->destination_snapshot_ciphertext;
+    $snapshot['mode'] = 'dedicated';
+    $snapshot['bankAccountNumber'] = '991100001234';
+    $snapshot['routingAlias'] = '54321';
+    $snapshot['metadata'] = [
+        'assigned_bank_account_link_id' => $assignment->provider_account_link_id,
+        'treasury_connection_reference' => 'netbank-personal', 'treasury_inventory_reference' => 'inventory:personal',
+        'treasury_resource_reference' => 'resource:personal',
+    ];
+    $attempt->forceFill(['destination_snapshot_ciphertext' => $snapshot])->saveQuietly();
+    $allocator = app(ReserveNetbankVca::class);
+    $address = $allocator->reservePaymentAttempt($attempt, '54321');
+    $attempt->forceFill(['funding_address_ciphertext' => $address])->saveQuietly();
+    $recipient = actingAsTestUser(0);
+    $recipient->forceFill(['mobile' => '09171234567'])->save();
+    app(TreasuryAccountPortfolioProvisioningContract::class)->provision($recipient, ['netbank-personal']);
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.execution.schema', 'voucher.execution.v1');
+    data_set($metadata, 'instructions.execution.metadata.value_flow.destination', 'account.mobile:09171234567.client_funds');
+    $voucher->forceFill(['metadata' => $metadata, 'voucher_type' => VoucherType::PAYABLE])->save();
+    $data = exactPaymentObservation($attempt, amountMinor: 2000);
+    $data->fundingAddress = 'sha256:'.hash('sha256', $address);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $this->paymentAdapter->fundingObservation = $data;
+    $balances = app(TreasuryAccountBalanceReadModel::class);
+    $before = $balances->connectionBalanceMinor($recipient, 'netbank', 'netbank-personal', 'PHP') ?? 0;
+    $result = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    $replay = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    expect($result->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and($replay->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and($balances->connectionBalanceMinor($recipient, 'netbank', 'netbank-personal', 'PHP'))->toBe($before + 2000)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP'))->toBeNull()
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-primary', 'PHP'))->toBeNull()
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(1)
+        ->and(DB::table('x_change_funding_settlements')->count())->toBe(0);
+});
+
+it('credits the assigned account owner when the named recipient cannot be resolved', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 20,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $issuer->id, 'collection_wallet_id' => $issuer->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    $assignment = app(AssignNetbankAccount::class)->handle($issuer, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ];
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+        SettleVerifiedFundingIntent::class] as $service) {
+        app()->forgetInstance($service);
+    }
+    app(AssignedBankTreasuryConnection::class)->bind($issuer, $assignment->id, 'netbank-personal');
+    $snapshot = $attempt->destination_snapshot_ciphertext;
+    $snapshot['mode'] = 'dedicated';
+    $snapshot['bankAccountNumber'] = '991100001234';
+    $snapshot['routingAlias'] = '54321';
+    $snapshot['metadata'] = [
+        'assigned_bank_account_link_id' => $assignment->provider_account_link_id,
+        'treasury_connection_reference' => 'netbank-personal', 'treasury_inventory_reference' => 'inventory:personal',
+        'treasury_resource_reference' => 'resource:personal',
+    ];
+    $attempt->forceFill(['destination_snapshot_ciphertext' => $snapshot])->saveQuietly();
+    $allocator = app(ReserveNetbankVca::class);
+    $address = $allocator->reservePaymentAttempt($attempt, '54321');
+    $attempt->forceFill(['funding_address_ciphertext' => $address])->saveQuietly();
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.execution.schema', 'voucher.execution.v1');
+    data_set($metadata, 'instructions.execution.metadata.value_flow.destination', 'account.mobile:09171234567.client_funds');
+    $voucher->forceFill(['metadata' => $metadata, 'voucher_type' => VoucherType::PAYABLE])->save();
+    $data = exactPaymentObservation($attempt, amountMinor: 2000);
+    $data->fundingAddress = 'sha256:'.hash('sha256', $address);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $this->paymentAdapter->fundingObservation = $data;
+    $balances = app(TreasuryAccountBalanceReadModel::class);
+    $before = $balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP') ?? 0;
+    config()->set('x-change.onboarding.issuer_model', 'MissingPrincipalModel');
+    expect(fn () => app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer))
+        ->toThrow(RuntimeException::class, 'principal model is not configured');
+    expect($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP') ?? 0)->toBe($before)
+        ->and(DB::table('x_change_funding_settlements')->count())->toBe(0);
+    config()->set('x-change.onboarding.issuer_model', User::class);
+    $result = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    $replay = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    expect($result->status)->toBe(PaymentAttemptStatus::CreditedToClientFunds)
+        ->and($replay->status)->toBe(PaymentAttemptStatus::CreditedToClientFunds)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP'))->toBe($before + 2000)
+        ->and(data_get($result->events->last()->metadata, 'fallback_reason'))->toBe('recipient_unavailable')
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-primary', 'PHP'))->toBeNull()
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(0)
+        ->and(DB::table('x_change_funding_settlements')->count())->toBe(1);
+});
+
+it('does not credit an unresolved recipient for pending, indeterminate or late evidence', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 20,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $issuer->id, 'collection_wallet_id' => $issuer->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    $assignment = app(AssignNetbankAccount::class)->handle($issuer, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ];
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+        SettleVerifiedFundingIntent::class] as $service) {
+        app()->forgetInstance($service);
+    }
+    app(AssignedBankTreasuryConnection::class)->bind($issuer, $assignment->id, 'netbank-personal');
+    $snapshot = $attempt->destination_snapshot_ciphertext;
+    $snapshot['mode'] = 'dedicated';
+    $snapshot['bankAccountNumber'] = '991100001234';
+    $snapshot['routingAlias'] = '54321';
+    $snapshot['metadata'] = [
+        'assigned_bank_account_link_id' => $assignment->provider_account_link_id,
+        'treasury_connection_reference' => 'netbank-personal', 'treasury_inventory_reference' => 'inventory:personal',
+        'treasury_resource_reference' => 'resource:personal',
+    ];
+    $attempt->forceFill(['destination_snapshot_ciphertext' => $snapshot])->saveQuietly();
+    $allocator = app(ReserveNetbankVca::class);
+    $address = $allocator->reservePaymentAttempt($attempt, '54321');
+    $attempt->forceFill(['funding_address_ciphertext' => $address])->saveQuietly();
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.execution.schema', 'voucher.execution.v1');
+    data_set($metadata, 'instructions.execution.metadata.value_flow.destination', 'account.mobile:09171234567.client_funds');
+    $voucher->forceFill(['metadata' => $metadata, 'voucher_type' => VoucherType::PAYABLE])->save();
+    $data = exactPaymentObservation($attempt, amountMinor: 2000);
+    $data->fundingAddress = 'sha256:'.hash('sha256', $address);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $this->paymentAdapter->fundingObservation = $data;
+    $balances = app(TreasuryAccountBalanceReadModel::class);
+    $before = $balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP') ?? 0;
+    $data->providerStatus = 'pending';
+    $data->settledAt = null;
+    $this->paymentAdapter->fundingObservation = $data;
+    $pending = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    expect($pending->status)->toBe(PaymentAttemptStatus::AwaitingPayment);
+    $this->paymentAdapter->fundingVerificationResolver = static function (): never {
+        throw new ProviderFundingVerificationIndeterminate('ambiguous');
+    };
+    $uncertain = app(VerifyPaymentAttempt::class)->handle($pending, PaymentVerificationTrigger::Payer);
+    expect($uncertain->status)->toBe(PaymentAttemptStatus::Suspense)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP') ?? 0)->toBe($before)
+        ->and(DB::table('x_change_funding_settlements')->count())->toBe(0);
+    $late = issuedPaymentAttempt($voucher);
+    $late->forceFill(['destination_snapshot_ciphertext' => $snapshot])->saveQuietly();
+    $lateAddress = $allocator->reservePaymentAttempt($late, '54321');
+    $late->forceFill(['funding_address_ciphertext' => $lateAddress])->saveQuietly();
+    $this->travelTo($late->expires_at->addMinutes(6));
+    $this->paymentAdapter->fundingVerificationResolver = null;
+    $expired = app(VerifyPaymentAttempt::class)->handle($late, PaymentVerificationTrigger::Schedule);
+    $laterData = exactPaymentObservation($late, amountMinor: 2000);
+    $laterData->fundingAddress = 'sha256:'.hash('sha256', $lateAddress);
+    $laterData->occurredAt = $late->expires_at->subMinute()->toDateTimeImmutable();
+    $laterData->settledAt = $late->expires_at->subMinute()->toDateTimeImmutable();
+    $this->paymentAdapter->fundingObservation = $laterData;
+    $checked = app(VerifyPaymentAttempt::class)->handle($expired, PaymentVerificationTrigger::Schedule);
+    expect($checked->status)->toBe(PaymentAttemptStatus::Suspense)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP') ?? 0)->toBe($before)
+        ->and(DB::table('x_change_funding_settlements')->count())->toBe(0);
+});
+
+it('credits an unresolved recipient through the payment monitoring job without a review case', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 20,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $issuer->id, 'collection_wallet_id' => $issuer->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    $assignment = app(AssignNetbankAccount::class)->handle($issuer, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ];
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+        SettleVerifiedFundingIntent::class] as $service) {
+        app()->forgetInstance($service);
+    }
+    app(AssignedBankTreasuryConnection::class)->bind($issuer, $assignment->id, 'netbank-personal');
+    $snapshot = $attempt->destination_snapshot_ciphertext;
+    $snapshot['mode'] = 'dedicated';
+    $snapshot['bankAccountNumber'] = '991100001234';
+    $snapshot['routingAlias'] = '54321';
+    $snapshot['metadata'] = [
+        'assigned_bank_account_link_id' => $assignment->provider_account_link_id,
+        'treasury_connection_reference' => 'netbank-personal', 'treasury_inventory_reference' => 'inventory:personal',
+        'treasury_resource_reference' => 'resource:personal',
+    ];
+    $attempt->forceFill(['destination_snapshot_ciphertext' => $snapshot])->saveQuietly();
+    $allocator = app(ReserveNetbankVca::class);
+    $address = $allocator->reservePaymentAttempt($attempt, '54321');
+    $attempt->forceFill(['funding_address_ciphertext' => $address])->saveQuietly();
+    $metadata = $voucher->metadata;
+    data_set($metadata, 'instructions.execution.schema', 'voucher.execution.v1');
+    data_set($metadata, 'instructions.execution.metadata.value_flow.destination', 'account.mobile:09171234567.client_funds');
+    $voucher->forceFill(['metadata' => $metadata, 'voucher_type' => VoucherType::PAYABLE])->save();
+    $data = exactPaymentObservation($attempt, amountMinor: 2000);
+    $data->fundingAddress = 'sha256:'.hash('sha256', $address);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $this->paymentAdapter->fundingObservation = $data;
+    $balances = app(TreasuryAccountBalanceReadModel::class);
+    $before = $balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP') ?? 0;
+    $transaction = app(RecordObservedPaymentTransaction::class)->handle($attempt, new ObservedPaymentTransactionData(
+        $data->providerTransactionId, 2000, 'PHP', 'settled', occurredAt: $data->occurredAt, settledAt: $data->settledAt,
+    ));
+    $adapter = new SpecificPaymentTestAdapter;
+    $adapter->specificObservations[$data->providerTransactionId] = $data;
+    app()->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    app()->call([new VerifyAdditionalQrPaymentJob($transaction->id, 'netbank'), 'handle']);
+    app()->call([new VerifyAdditionalQrPaymentJob($transaction->id, 'netbank'), 'handle']);
+    $result = $attempt->fresh()->load('events');
+    $replay = $result;
+    expect($result->status)->toBe(PaymentAttemptStatus::CreditedToClientFunds)
+        ->and($replay->status)->toBe(PaymentAttemptStatus::CreditedToClientFunds)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP'))->toBe($before + 2000)
+        ->and(data_get($result->events->last()->metadata, 'fallback_reason'))->toBe('recipient_unavailable')
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-primary', 'PHP'))->toBeNull()
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(0)
+        ->and(DB::table('x_change_funding_settlements')->count())->toBe(1)
+        ->and(DB::table('x_change_payment_transaction_reviews')->count())->toBe(0);
+});
+
+it('credits a reviewed excess to the frozen assigned account treasury when both connections exist', function (): void {
+    Queue::fake();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $issuer = actingAsTestUser();
+    $voucher = issueVoucher(validVoucherInstructions(amount: 0, overrides: [
+        'target_amount' => 20,
+        'metadata' => ['flow_type' => 'collectible', 'issuer_id' => (string) $issuer->id, 'collection_wallet_id' => $issuer->wallet->id],
+    ]));
+    $attempt = issuedPaymentAttempt($voucher);
+    $assignment = app(AssignNetbankAccount::class)->handle($issuer, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ];
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+        SettleVerifiedFundingIntent::class] as $service) {
+        app()->forgetInstance($service);
+    }
+    app(AssignedBankTreasuryConnection::class)->bind($issuer, $assignment->id, 'netbank-personal');
+    $snapshot = $attempt->destination_snapshot_ciphertext;
+    $snapshot['mode'] = 'dedicated';
+    $snapshot['bankAccountNumber'] = '991100001234';
+    $snapshot['routingAlias'] = '54321';
+    $snapshot['metadata'] = [
+        'assigned_bank_account_link_id' => $assignment->provider_account_link_id,
+        'treasury_connection_reference' => 'netbank-personal', 'treasury_inventory_reference' => 'inventory:personal',
+        'treasury_resource_reference' => 'resource:personal',
+    ];
+    $attempt->forceFill(['destination_snapshot_ciphertext' => $snapshot])->saveQuietly();
+    recordPaymentAttemptCollection($voucher, 20);
+    $data = exactPaymentObservation($attempt);
+    $data->occurredAt = now()->toDateTimeImmutable();
+    $data->settledAt = now()->toDateTimeImmutable();
+    $transaction = app(RecordObservedPaymentTransaction::class)->handle($attempt, new ObservedPaymentTransactionData(
+        $data->providerTransactionId, 2000, 'PHP', 'settled', occurredAt: $data->occurredAt, settledAt: $data->settledAt,
+    ));
+    $reviewId = DB::table('x_change_payment_transaction_reviews')->insertGetId([
+        'observed_payment_transaction_id' => $transaction->id, 'reason_code' => 'excess_payment',
+        'status' => 'open', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+    $adapter = new SpecificPaymentTestAdapter;
+    $adapter->specificObservations[$data->providerTransactionId] = $data;
+    $this->app->instance(FundingProviderAdapterRegistry::class, new FundingProviderAdapterRegistry([$adapter]));
+    $balances = app(TreasuryAccountBalanceReadModel::class);
+    $clientFunds = fn (): int => $balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-personal', 'PHP') ?? 0;
+    $balance = $clientFunds();
+    $action = app(CreditReviewedExcess::class);
+    $incorrectEvidence = clone $data;
+    $incorrectEvidence->fundingAddress = 'sha256:'.hash('sha256', 'different-destination');
+    $incorrectEvidence->payloadHash = hash('sha256', 'incorrect-excess-evidence');
+    $adapter->specificObservations[$data->providerTransactionId] = $incorrectEvidence;
+    expect(fn () => $action->handle($reviewId, $issuer, 'Verified extra payment'))
+        ->toThrow(RuntimeException::class, 'not eligible');
+    expect($clientFunds())->toBe($balance)
+        ->and(DB::table('x_change_payment_transaction_reviews')->where('id', $reviewId)->value('status'))->toBe('open');
+    $adapter->specificObservations[$data->providerTransactionId] = $data;
+    $wrongSnapshot = $snapshot;
+    $wrongSnapshot['metadata']['treasury_inventory_reference'] = 'inventory:wrong';
+    $attempt->forceFill(['destination_snapshot_ciphertext' => $wrongSnapshot])->saveQuietly();
+    expect(fn () => $action->handle($reviewId, $issuer, 'Verified extra payment'))
+        ->toThrow(FundingSettlementDenied::class);
+    expect($clientFunds())->toBe($balance)
+        ->and(DB::table('x_change_payment_transaction_reviews')->where('id', $reviewId)->value('status'))->toBe('open');
+    $attempt->forceFill(['destination_snapshot_ciphertext' => $snapshot])->saveQuietly();
+    Gate::define('x-change.recovery.manage', fn ($actor): bool => $actor->is($issuer));
+    $this->actingAs($issuer)->post("/x/operations/recovery/payments/{$reviewId}/credit-excess", [
+        'reason' => 'Verified extra payment', 'confirmed' => true,
+    ])->assertRedirect()->assertSessionHasNoErrors();
+    $intent = FundingIntent::query()->findOrFail(
+        DB::table('x_change_payment_transaction_reviews')->where('id', $reviewId)->value('resolution_funding_intent_id'),
+    );
+    $replay = $action->handle($reviewId, $issuer, 'Verified extra payment');
+    $review = DB::table('x_change_payment_transaction_reviews')->where('id', $reviewId)->first();
+    expect($intent->is($replay))->toBeTrue()
+        ->and($adapter->specificCalls)->toBe(3)
+        ->and($clientFunds())->toBe($balance + 2000)
+        ->and($balances->connectionBalanceMinor($issuer, 'netbank', 'netbank-primary', 'PHP'))->toBeNull()
+        ->and(data_get($intent->destination_snapshot_ciphertext, 'metadata.treasury_connection_reference'))->toBe('netbank-personal')
         ->and($review->resolution_code)->toBe('credited_client_funds')
         ->and(Crypt::decryptString($review->resolution_note_ciphertext))->toBe('Verified extra payment')
         ->and(DB::table('x_change_funding_settlements')->where('funding_intent_id', $intent->id)->count())->toBe(1);
@@ -1938,6 +3182,65 @@ it('fails closed before provider instructions when the merchant profile is inact
             'failure_stage' => 'merchant_profile',
         ])
         ->and($this->paymentAdapter->instructionCalls)->toBe(0);
+});
+
+it('settles a shared payable payment to shared treasury when a personal connection also exists', function (): void {
+    enableNetbankTreasuryForTests();
+    $user = actingAsTestUser(0);
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ];
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class] as $service) {
+        app()->forgetInstance($service);
+    }
+    $voucher = paymentAttemptCollectibleVoucherForUser($user);
+    $attempt = issuedPaymentAttempt($voucher);
+    $this->paymentAdapter->fundingObservation = exactPaymentObservation($attempt);
+    $settled = app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer);
+    $balances = app(TreasuryAccountBalanceReadModel::class);
+    expect($settled->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and($balances->connectionBalanceMinor($user, 'netbank', 'netbank-primary', 'PHP'))->toBe(10000)
+        ->and($balances->connectionBalanceMinor($user, 'netbank', 'netbank-personal', 'PHP'))->toBeNull()
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(1);
+});
+
+it('rejects a payable payment when its frozen shared bank account does not match', function (): void {
+    enableNetbankTreasuryForTests();
+    $user = actingAsTestUser(0);
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ];
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class] as $service) {
+        app()->forgetInstance($service);
+    }
+    $voucher = paymentAttemptCollectibleVoucherForUser($user);
+    $attempt = issuedPaymentAttempt($voucher);
+    $snapshot = $attempt->destination_snapshot_ciphertext;
+    $snapshot['bankAccountNumber'] = '113-001-00006-8';
+    $attempt->forceFill(['destination_snapshot_ciphertext' => $snapshot])->saveQuietly();
+    $this->paymentAdapter->fundingObservation = exactPaymentObservation($attempt);
+    expect(fn () => app(VerifyPaymentAttempt::class)->handle($attempt, PaymentVerificationTrigger::Payer))
+        ->toThrow(FundingSettlementDenied::class);
+    $balances = app(TreasuryAccountBalanceReadModel::class);
+    expect($balances->connectionBalanceMinor($user, 'netbank', 'netbank-primary', 'PHP'))->toBeNull()
+        ->and($balances->connectionBalanceMinor($user, 'netbank', 'netbank-personal', 'PHP'))->toBeNull()
+        ->and(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(0);
 });
 
 it('settles one exact provider observation into one voucher collection', function (): void {

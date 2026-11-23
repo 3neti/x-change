@@ -11,6 +11,7 @@ enum PaymentAttemptStatus: string
     case Verifying = 'verifying';
     case Verified = 'verified';
     case Settled = 'settled';
+    case CreditedToClientFunds = 'credited_to_client_funds';
     case Suspense = 'suspense';
     case Expired = 'expired';
     case Cancelled = 'cancelled';

@@ -4,16 +4,21 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Http\Controllers\Web\Cockpit;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
+use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\SettlementRailCapabilityRegistryContract;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
+use LBHurtado\XChange\Models\BankAccountAssignment;
 use LBHurtado\XChange\Models\CampaignDisplaySession;
+use LBHurtado\XChange\Models\FundingDestinationPreference;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
+use LBHurtado\XChange\Services\Banking\SelectedAccountClientFunds;
 use LBHurtado\XChange\Services\Cockpit\CockpitPayCodeDetailAccess;
 use LBHurtado\XChange\Services\Cockpit\OnDemandIssuanceFundingOrderPresenter;
 use LBHurtado\XChange\Services\Cockpit\PayCodeTemplateReadModel;
@@ -82,8 +87,12 @@ class CockpitQuickGeneratePageController extends Controller
             'v2_event_catalog' => app(V2EventCatalog::class)->definitions(),
             'settlement_rail_capabilities' => $this->settlementRails->sanitized(),
             'collection_destination' => $this->collectionDestination($request),
+            'issuance_bank_account' => $this->issuanceBankAccount($request),
+            'selected_account_funds' => app(SelectedAccountClientFunds::class)->forOwner($request->user()),
             'pos_voucher' => $this->posVoucher($request),
             'active_on_demand_funding_order' => $this->activeOnDemandFundingOrder($request),
+            'reserve_issuance_index_url' => (bool) config('x-change.reserve_transfer.enabled', false)
+                ? route('x-change.cockpit.quick-generate.reserve-issuances.index', [], false) : null,
             'on_demand_issuance_policy' => [
                 'enabled' => $this->onDemandFundingPolicy->enabled(),
                 'basis' => $this->onDemandFundingPolicy->basis()->value,
@@ -92,6 +101,37 @@ class CockpitQuickGeneratePageController extends Controller
             'prompt_interpret_endpoint' => route('x-change.cockpit.quick-generate.interpret'),
             'invoice_draft_url' => route('x-change.cockpit.quick-generate.invoice-drafts.store'),
         ]);
+    }
+
+    /** @return array{name: string, number: string, mode: string}|null */
+    private function issuanceBankAccount(Request $request): ?array
+    {
+        $owner = $request->user();
+        if (! $owner instanceof Model || app(ProviderRuntimeSettingsResolverContract::class)->provider() !== 'netbank') {
+            return null;
+        }
+        $preference = FundingDestinationPreference::query()->whereMorphedTo('owner', $owner)
+            ->where('provider_code', 'netbank')->first();
+        if ($preference !== null && $preference->mode !== 'shared') {
+            if ($preference->mode !== 'dedicated' || $preference->provider_account_link_id === null) {
+                return ['name' => 'Selected account unavailable', 'number' => '', 'mode' => 'unavailable'];
+            }
+            $assignment = BankAccountAssignment::query()->whereMorphedTo('owner', $owner)
+                ->where('provider_account_link_id', $preference->provider_account_link_id)->first();
+            $details = $assignment?->details_ciphertext;
+            if (! is_array($details) || ! filled($details['account_number'] ?? null)) {
+                return ['name' => 'Selected account unavailable', 'number' => '', 'mode' => 'unavailable'];
+            }
+
+            return ['name' => (string) ($details['account_name'] ?? 'Bank account'),
+                'number' => (string) ($details['provider_account_number'] ?? $details['account_number']), 'mode' => 'dedicated'];
+        }
+        $number = config('disbursement.source.account_number') ?: config('omnipay.gateways.netbank.options.sourceAccountNumber');
+        if (! is_string($number) || trim($number) === '') {
+            return null;
+        }
+
+        return ['name' => 'Platform shared NetBank account', 'number' => trim($number), 'mode' => 'shared'];
     }
 
     /**

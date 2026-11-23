@@ -49,6 +49,14 @@ final class SpecificPaymentAttribution
             return true;
         }
 
+        if (data_get($attempt->destination_snapshot_ciphertext, 'mode') === 'dedicated'
+            && DB::table('xchange_funding_vca_reservations')
+                ->where('payment_attempt_id', $attempt->getKey())
+                ->where('address_hash', hash('sha256', $attempt->funding_address_ciphertext))
+                ->exists()) {
+            return true;
+        }
+
         return ! PaymentAttempt::query()->whereKeyNot($attempt->getKey())
             ->where('provider_code', $attempt->provider_code)->where('currency', $attempt->currency)
             ->where('expected_amount_minor', $attempt->expected_amount_minor)

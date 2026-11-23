@@ -23,6 +23,15 @@ final class StandingFundingAddressConflict extends InvalidArgumentException
         );
     }
 
+    public static function destinationMismatch(string $operatorReference): self
+    {
+        return new self(
+            'This QR Ph address points to a different bank account. Contact your administrator before funding this account.',
+            'standing_funding_destination_mismatch',
+            $operatorReference,
+        );
+    }
+
     public static function migrationRequired(string $operatorReference): self
     {
         return new self(

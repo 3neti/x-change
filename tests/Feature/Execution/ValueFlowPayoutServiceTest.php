@@ -32,6 +32,7 @@ use LBHurtado\XChange\Jobs\Payment\ReconcileValueFlowPayoutJob;
 use LBHurtado\XChange\Lifecycle\Runners\Support\RecoverySimulationPayoutProvider;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\StoredValueHolderBinding;
+use LBHurtado\XChange\Models\VoucherBankSource;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Execution\ValueFlowPayoutService;
 use LBHurtado\XChange\Services\Execution\WalletStoredValueExecutionGateway;
@@ -164,6 +165,7 @@ it('retries a verified rejected payout once using its held recovery balance', fu
     config()->set('x-change.payout_locality.enabled', true);
     [$service, $voucher, $source] = valueFlowPayoutFixture();
     $original = DB::transaction(fn () => $service->prepare($voucher, $source, 2_000, 'rejected-installment'));
+    $original->forceFill(['bank_source_snapshot' => ['provider' => 'netbank', 'account_number' => '991100001234', 'customer_id' => '1234']])->save();
     $provider = fakePayoutProvider()->willReturnFailedResult(transactionId: 'rejected-transaction', provider: 'netbank');
     $service->submit($original->id);
     $snapshot = $original->fresh()->payout_identity_snapshot;
@@ -184,6 +186,8 @@ it('retries a verified rejected payout once using its held recovery balance', fu
     $service->submit($retry->id);
     $service->submit($retry->id);
     expect($retry->fresh()->internal_status)->toBe('finalized')
+        ->and($retry->fresh()->bank_source_snapshot)->toBe($original->fresh()->bank_source_snapshot)
+        ->and($provider->lastRequest->source_account?->account_number)->toBe('991100001234')
         ->and($retry->fresh()->payout_identity_snapshot)->toBe($snapshot)
         ->and($provider->lastRequest->recipient?->address?->source)->toBe('synthetic')
         ->and($provider->disburseCallCount)->toBe(2);
@@ -536,4 +540,33 @@ it('inspects recovery safely and requires evidence and the exact voucher before 
         ->and($payout->fresh()->internal_status)->toBe('finalized');
     $this->artisan('xchange:value-flow:recovery', ['voucher' => $voucher->code, '--id' => $payout->id, '--retry-unaccepted' => true, '--confirm-no-transfer' => true, '--evidence' => 'provider-rejection-1'])->assertFailed();
     expect($provider->disburseCallCount)->toBe(1);
+});
+
+it('freezes the Pay Code source on value-flow payout and preserves it on replay', function (): void {
+    [$service, $voucher, $source] = valueFlowPayoutFixture();
+    $snapshot = [
+        'provider' => 'netbank', 'account_number' => '991100001234', 'customer_id' => '1234', 'mode' => 'dedicated',
+        'account_link_id' => 42, 'treasury_connection_reference' => 'netbank-primary',
+        'treasury_inventory_reference' => 'inventory:netbank:vca-cash', 'treasury_resource_reference' => 'resource:netbank:corporate-vca',
+    ];
+    VoucherBankSource::query()->create(['voucher_id' => $voucher->id, 'source_ciphertext' => $snapshot]);
+    $payout = DB::transaction(fn () => $service->prepare($voucher, $source, 2500, 'assigned-source'));
+    $replay = DB::transaction(fn () => $service->prepare($voucher, $source, 2500, 'assigned-source'));
+    $provider = fakePayoutProvider()->willReturnPendingResult(provider: 'netbank');
+    $service->submit($payout->id);
+    expect($replay->id)->toBe($payout->id)->and($payout->fresh()->bank_source_snapshot)->toBe($snapshot)
+        ->and($provider->lastRequest->source_account?->account_number)->toBe('991100001234')
+        ->and($provider->disburseCallCount)->toBe(1);
+});
+
+it('rejects value-flow payout when the frozen bank source has a different Treasury connection', function (): void {
+    [$service, $voucher, $source] = valueFlowPayoutFixture();
+    VoucherBankSource::query()->create(['voucher_id' => $voucher->id, 'source_ciphertext' => [
+        'provider' => 'netbank', 'account_number' => '991100001234', 'customer_id' => '1234',
+        'treasury_connection_reference' => 'other', 'treasury_inventory_reference' => 'inventory:other',
+        'treasury_resource_reference' => 'resource:other',
+    ]]);
+    expect(fn () => DB::transaction(fn () => $service->prepare($voucher, $source, 2500, 'mismatch')))
+        ->toThrow(RuntimeException::class, 'does not match the frozen Pay Code source');
+    expect(DisbursementReconciliation::query()->count())->toBe(0);
 });

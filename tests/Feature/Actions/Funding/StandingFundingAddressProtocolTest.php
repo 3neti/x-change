@@ -61,13 +61,22 @@ beforeEach(function () {
     config()->set('x-change.legal.eula.enabled', false);
 });
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Contracts\StandingFundingAddressProfileInspector;
+use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
 use LBHurtado\EmiCore\Data\Funding\StandingFundingAddressProfileData;
 use LBHurtado\EmiCore\Data\Funding\StandingFundingAddressProfileRequestData;
+use LBHurtado\XChange\Actions\Banking\AssignNetbankAccount;
+use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
+use LBHurtado\XChange\Exceptions\FundingDestinationUnavailable;
 use LBHurtado\XChange\Exceptions\StandingFundingAddressBindingTimeUnavailable;
 use LBHurtado\XChange\Exceptions\StandingFundingAddressConflict;
+use LBHurtado\XChange\Services\Banking\AssignedBankTreasuryConnection;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressProviderRegistry;
+use LBHurtado\XChange\Services\Treasury\TreasuryAccountBalanceReadModel;
+use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
+use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
 
@@ -1704,3 +1713,128 @@ final class StandingFundingAddressProviderFake implements StandingFundingAddress
         return $this->observations;
     }
 }
+
+it('suspends a shared standing address whose frozen bank account differs from the shared account', function () {
+    config()->set('payment-gateway.netbank.funding.corporate_account_number', '113-001-00001-9');
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    $address = provisionStandingAddress($user, 'wallet:'.$wallet->uuid, FundingAddressPurpose::AccountFunding, FundingRecognitionMode::Automatic);
+    $snapshot = ['provider' => 'netbank', 'mode' => 'shared', 'bankAccountNumber' => '113-001-00006-8'];
+    $address->forceFill(['destination_snapshot_ciphertext' => $snapshot])->saveQuietly();
+    DB::table('x_change_standing_funding_address_binding_revisions')
+        ->where('standing_funding_address_id', $address->id)
+        ->update(['destination_snapshot_ciphertext' => Crypt::encryptString(json_encode($snapshot))]);
+    $provider->observations = [standingFundingObservation($provider->fundingAddress)];
+
+    $result = app(SyncStandingFundingAddress::class)->handle($address->refresh());
+    expect($result->applied)->toBe(0)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(0)
+        ->and(AccountFundingReceipt::query()->sole()->status)->toBe(AccountFundingReceiptStatus::Suspense);
+});
+
+it('suspends dedicated NetBank standing deposits instead of crediting shared Treasury', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    $address = provisionStandingAddress(
+        $user,
+        'wallet:'.$wallet->uuid,
+        FundingAddressPurpose::AccountFunding,
+        FundingRecognitionMode::Automatic,
+    );
+    $snapshot = ['provider' => 'netbank', 'mode' => 'dedicated', 'bankAccountNumber' => '991100001234'];
+    $address->forceFill(['destination_snapshot_ciphertext' => $snapshot])->saveQuietly();
+    Illuminate\Support\Facades\DB::table('x_change_standing_funding_address_binding_revisions')
+        ->where('standing_funding_address_id', $address->id)
+        ->update(['destination_snapshot_ciphertext' => Crypt::encryptString(json_encode($snapshot))]);
+    $provider->observations = [standingFundingObservation($provider->fundingAddress)];
+
+    $result = app(SyncStandingFundingAddress::class)->handle($address->refresh());
+    expect($result->settled)->toBe(0)
+        ->and($result->applied)->toBe(0)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(0)
+        ->and(AccountFundingReceipt::query()->sole()->status)->toBe(AccountFundingReceiptStatus::Suspense);
+});
+
+it('does not provision a dedicated NetBank standing address without isolated Treasury', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    $accountReference = 'wallet:'.$wallet->uuid;
+    $destination = new FundingDestinationData(
+        provider: 'netbank', mode: 'dedicated', destinationType: 'bank_account',
+        accountReference: $accountReference, displayReference: 'Example', fingerprint: 'example',
+        verificationStatus: 'assigned', bankAccountNumber: '991100001234',
+    );
+
+    expect(fn () => app(ProvisionStandingFundingAddress::class)->handle(
+        owner: $user, accountReference: $accountReference, provider: 'netbank',
+        purpose: FundingAddressPurpose::AccountFunding, recognitionMode: FundingRecognitionMode::Automatic,
+        destination: $destination,
+    ))->toThrow(FundingDestinationUnavailable::class, 'not available yet');
+    expect(StandingFundingAddress::query()->count())->toBe(0);
+});
+
+it('keeps shared and dedicated standing addresses separate for the same wallet', function () {
+    config()->set('x-change.funding.dedicated_netbank_standing_enabled', true);
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    $action = app(ProvisionStandingFundingAddress::class);
+    $reference = 'wallet:'.$wallet->uuid;
+    $shared = $action->handle($user, $reference, 'netbank', FundingAddressPurpose::AccountFunding, FundingRecognitionMode::Automatic);
+
+    $assignment = app(AssignNetbankAccount::class)->handle($user, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $assignment->providerAccountLink->forceFill(['status' => 'ready', 'ready_at' => now(), 'capabilities' => ['funding']])->save();
+    app()->instance(TreasuryProviderConnectionCatalog::class,
+        new TreasuryProviderConnectionCatalog([
+            'netbank-primary' => ['provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+                'inventory_reference' => 'inventory:netbank:vca-cash', 'settlement_resource_reference' => 'resource:netbank:corporate-vca',
+                'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection'],
+            'personal' => ['provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+                'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+                'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection'],
+        ]));
+    app(AssignedBankTreasuryConnection::class)->bind($user, $assignment->id, 'personal');
+    $destination = new FundingDestinationData(
+        provider: 'netbank', mode: 'dedicated', destinationType: 'bank_account', accountReference: $reference,
+        displayReference: 'Example', fingerprint: hash('sha256', 'personal'), verificationStatus: 'routing_configured',
+        bankAccountNumber: '991100001234', bankAccountName: 'Example', routingAlias: '54321', metadata: [
+            'assigned_bank_account_link_id' => $assignment->provider_account_link_id, 'treasury_connection_reference' => 'personal',
+            'treasury_inventory_reference' => 'inventory:personal', 'treasury_resource_reference' => 'resource:personal',
+        ],
+    );
+    $provider->counterZeroAddress = '9150012345678901';
+    expect(fn () => $action->handle($user, $reference, 'netbank', FundingAddressPurpose::AccountFunding, FundingRecognitionMode::Automatic, destination: $destination))
+        ->toThrow(FundingDestinationUnavailable::class, 'different funding account');
+    expect(StandingFundingAddress::query()->count())->toBe(1);
+    $provider->counterZeroAddress = '5432112345678901';
+    $personal = $action->handle($user, $reference, 'netbank', FundingAddressPurpose::AccountFunding, FundingRecognitionMode::Automatic, destination: $destination);
+    $again = $action->handle($user, $reference, 'netbank', FundingAddressPurpose::AccountFunding, FundingRecognitionMode::Automatic, destination: $destination);
+    expect($personal->address->is($shared->address))->toBeFalse()
+        ->and($again->address->is($personal->address))->toBeTrue()
+        ->and($personal->providerAddress->fundingAddress)->toBe('5432112345678901')
+        ->and(data_get($personal->address->destination_snapshot_ciphertext, 'metadata.treasury_connection_reference'))->toBe('personal');
+
+    foreach ([TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class] as $service) {
+        app()->forgetInstance($service);
+    }
+    $provider->observations = [standingFundingObservation('5432112345678901', 'personal-standing-fixture')];
+    $first = app(SyncStandingFundingAddress::class)->handle($personal->address);
+    $second = app(SyncStandingFundingAddress::class)->handle($personal->address->refresh());
+    expect($first->applied)->toBe(1)->and($second->applied)->toBe(0)
+        ->and(AccountFundingReceipt::query()->sole()->treasury_inventory_reference)->toBe('inventory:personal')
+        ->and(TreasuryInventory::query()->where('inventory_reference', 'inventory:personal')->sole()->balance_minor)->toBe(24_950)
+        ->and(app(TreasuryAccountBalanceReadModel::class)->connectionBalanceMinor($user, 'netbank', 'personal', 'PHP'))->toBe(24_950)
+        ->and(app(TreasuryAccountBalanceReadModel::class)->connectionBalanceMinor($user, 'netbank', 'netbank-primary', 'PHP'))->toBeNull()
+        ->and(TreasuryInventory::query()->where('inventory_reference', 'inventory:netbank:vca-cash')->exists())->toBeFalse();
+});

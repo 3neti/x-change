@@ -169,3 +169,20 @@ it('does not treat a failed NetBank adapter balance response as a fresh zero bal
         ->and($readiness)->not->toHaveKey('available_balance_minor')
         ->and($readiness['message'])->toBe('NetBank source account balance check failed.');
 });
+
+it('passes the selected account to the provider readiness capability', function (): void {
+    $source = Mockery::mock(ProviderSourceAccountReadiness::class);
+    $source->shouldReceive('providerCode')->once()->andReturn('netbank');
+    $source->shouldReceive('inspectSourceAccount')->once()->with(Mockery::on(
+        fn (ProviderSourceAccountReadinessRequestData $request): bool => $request->sourceAccountNumber === '991100001234'
+            && $request->requiredAmountMinor === 2500,
+    ))->andReturn(['enabled' => true, 'checked' => true, 'ready' => true]);
+    expect((new CheckProviderSourceAccountReadiness($source))->handle(2500, 'netbank', '991100001234'))
+        ->toMatchArray(['ready' => true, 'checked' => true]);
+});
+
+it('fails closed for a selected account when the provider has no readiness capability', function (): void {
+    config()->set('x-change.provider_runtime.providers.missing_provider.source_account_readiness.enabled', false);
+    expect((new CheckProviderSourceAccountReadiness)->handle(2500, 'missing_provider', '991100001234'))
+        ->toMatchArray(['enabled' => true, 'ready' => false, 'checked' => false]);
+});

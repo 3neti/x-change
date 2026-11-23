@@ -10,6 +10,8 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Data\FundingDecisionData;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
+use LBHurtado\XChange\Services\Banking\AssignedBankTreasuryConnection;
+use LBHurtado\XChange\Services\Banking\VoucherBankSourceSnapshot;
 use LBHurtado\XChange\Services\Claim\VoucherClaimPolicyResolver;
 use LBHurtado\XChange\Services\Execution\ValueFlowAddressResolver;
 use LBHurtado\XChange\Services\Execution\VoucherValueFlowPolicy;
@@ -73,6 +75,26 @@ final readonly class PreparePayCodeTreasuryIssuance
 
         if ($amountMinor <= 0) {
             return;
+        }
+
+        $selectedBankLink = data_get($funding->meta, 'assigned_bank_account_link_id');
+        if ($selectedBankLink !== null) {
+            $frozen = app(VoucherBankSourceSnapshot::class)->forVoucher($voucher);
+            $connection = app(AssignedBankTreasuryConnection::class)->resolve($issuer, (int) $selectedBankLink);
+            if (! is_array($frozen)
+                || (int) ($frozen['account_link_id'] ?? 0) !== (int) $selectedBankLink
+                || ($frozen['treasury_connection_reference'] ?? null) !== $connection->reference
+                || ($frozen['treasury_inventory_reference'] ?? null) !== $connection->inventoryReference
+                || ($frozen['treasury_resource_reference'] ?? null) !== $connection->settlementResourceReference) {
+                throw new PayCodeIssuanceFailed('The selected bank account Treasury connection is not frozen on this Pay Code.');
+            }
+            $connections = $connections->filter(
+                static fn ($candidate): bool => $candidate->reference === $connection->reference,
+            )->values();
+        } elseif (is_string($sharedReference = data_get($funding->meta, 'treasury_connection_reference'))) {
+            $connections = $connections->filter(
+                static fn ($candidate): bool => $candidate->reference === $sharedReference,
+            )->values();
         }
 
         if ($connections->count() !== 1) {

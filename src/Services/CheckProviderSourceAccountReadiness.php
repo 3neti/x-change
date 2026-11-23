@@ -14,11 +14,17 @@ class CheckProviderSourceAccountReadiness
     public function __construct(private readonly ?ProviderSourceAccountReadiness $source = null) {}
 
     /** @return array<string, mixed> */
-    public function handle(?int $requiredMinor = null, string $provider = 'netbank'): array
+    public function handle(?int $requiredMinor = null, string $provider = 'netbank', ?string $sourceAccountNumber = null): array
     {
         $source = $this->source !== null && $this->source->providerCode() === $provider
             ? $this->source
             : app(SourceAccountReadinessResolver::class)->for($provider);
+        if ($source === null && $sourceAccountNumber !== null) {
+            return [
+                'enabled' => true, 'ready' => false, 'checked' => false, 'applicable' => true,
+                'message' => 'The selected source account readiness capability is unavailable.',
+            ];
+        }
         if ($source === null) {
             $enabled = (bool) config("x-change.provider_runtime.providers.{$provider}.source_account_readiness.enabled", false);
 
@@ -32,7 +38,7 @@ class CheckProviderSourceAccountReadiness
         }
 
         try {
-            return $source->inspectSourceAccount(new ProviderSourceAccountReadinessRequestData(requiredAmountMinor: $requiredMinor)) ?? [
+            return $source->inspectSourceAccount(new ProviderSourceAccountReadinessRequestData(requiredAmountMinor: $requiredMinor, sourceAccountNumber: $sourceAccountNumber)) ?? [
                 'enabled' => true, 'ready' => false, 'checked' => false,
                 'message' => 'Provider source-account readiness is unavailable.',
             ];

@@ -42,6 +42,7 @@ use LBHurtado\XChange\Jobs\Feedback\DeliverQueuedFeedbackSmsJob;
 use LBHurtado\XChange\Jobs\Redemption\DispatchVoucherRedemptionFeedbackJob;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PayoutDestinationRevision;
+use LBHurtado\XChange\Models\VoucherBankSource;
 use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\Claim\ClaimDocumentAccess;
 use LBHurtado\XChange\Services\Claim\ClaimDocumentEvidence;
@@ -752,11 +753,21 @@ it('refurbishes the same pay code with an immutable corrected destination and se
         'needs_review' => false,
         'error_message' => 'AC01 (Incorrect account number)',
         'completed_at' => now(),
+        'bank_source_snapshot' => ['provider' => 'netbank', 'account_number' => '991100001234', 'customer_id' => '1234'],
         'payout_identity_snapshot' => [
             'recipient' => ['role' => 'recipient', 'name' => 'Recipient', 'address' => ['address1' => 'Recovery locality', 'city' => 'Manila', 'country' => 'PH', 'postal_code' => '1000', 'source' => 'synthetic']],
         ],
     ])->save();
     DisbursementRejected::dispatch($originalReconciliation->fresh());
+    $corruptSource = VoucherBankSource::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'source_ciphertext' => ['provider' => 'netbank', 'account_number' => '991100009999', 'customer_id' => '1234'],
+    ]);
+    expect(fn () => app(RefurbishRejectedPayCodePayout::class)->handle(
+        voucher: $voucher, requestedBy: $issuer, bankCode: 'GXCHPHM2XXX', accountNumber: '09173011987',
+    ))->toThrow(RuntimeException::class, 'does not match');
+    $provider->assertDisburseCalledTimes(1);
+    $corruptSource->delete();
     $payableBefore = treasuryBackedPayoutPositionBalance(
         $issuer,
         TreasuryPositionPurpose::BeneficiaryPayoutPayable,
@@ -810,6 +821,8 @@ it('refurbishes the same pay code with an immutable corrected destination and se
         ->sole();
 
     expect($provider->lastRequest?->recipient?->address?->address1)->toBe('Recovery locality')
+        ->and($provider->lastRequest?->source_account?->account_number)->toBe('991100001234')
+        ->and($settledReconciliation->bank_source_snapshot['account_number'])->toBe('991100001234')
         ->and(data_get($settledReconciliation->payout_identity_snapshot, 'recipient.address.address1'))->toBe('Recovery locality')
         ->and($revision->account_number_ciphertext)->toBe('09173011987')
         ->and($revision->mobile_ciphertext)->toBe('09173011987')

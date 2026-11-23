@@ -134,7 +134,7 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
     $commercialSales = Mockery::mock(PayCodeCommercialSaleService::class);
     $commercialSales->shouldReceive('post')
         ->once()
-        ->with($issuer, $normalizedInput, $issued, $fundedProvider ?? 'manual', $estimate)
+        ->with($issuer, $normalizedInput, $issued, $fundedProvider ?? 'manual', $estimate, null)
         ->andReturn([
             'debit' => [
                 'id' => 501,

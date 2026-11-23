@@ -41,6 +41,7 @@ use LBHurtado\XChange\Models\PartnerApiOperation;
 use LBHurtado\XChange\Models\PartnerApiPayCodeReference;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Services\BuildBalanceOverview;
+use LBHurtado\XChange\Services\CheckProviderSourceAccountReadiness;
 use LBHurtado\XChange\Services\Commercial\BootstrapCommercialOfferingFactory;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
@@ -423,6 +424,9 @@ it('creates and replays an account-backed funding order with a bound reservation
 });
 
 it('issues an account-backed funded voucher and isolates its status', function (string $voucherType): void {
+    $readiness = Mockery::mock(CheckProviderSourceAccountReadiness::class);
+    $readiness->shouldReceive('handle')->withAnyArgs()->andReturn(['ready' => true, 'checked' => true]);
+    $this->app->instance(CheckProviderSourceAccountReadiness::class, $readiness);
     Queue::fake();
     Http::preventStrayRequests();
     config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');

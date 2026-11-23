@@ -368,7 +368,11 @@ final readonly class TreasuryPayCodeAccountingService
         );
 
         return new TreasuryPayCodeSettlementData(
-            reservationOperationReference: 'pay-code-position-reservation:'.$reservationScope,
+            reservationOperationReference: (string) data_get(
+                $voucher->metadata,
+                'treasury.pay_code_reservation.operation_reference',
+                'pay-code-position-reservation:'.$reservationScope,
+            ),
             derecognitionOperationReference: $derecognition->operationReference,
             inventoryAdjustmentOperationReference: $inventoryAdjustment->operationReference,
             beneficiaryAmountMinor: $beneficiaryAmountMinor,

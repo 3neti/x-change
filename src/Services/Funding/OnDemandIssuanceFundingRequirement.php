@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use LBHurtado\XChange\Data\Funding\OnDemandIssuanceFundingRequirementData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
+use LBHurtado\XChange\Services\Banking\SelectedAccountClientFunds;
 use LBHurtado\XChange\Services\BuildBalanceOverview;
 use RuntimeException;
 
@@ -18,15 +19,16 @@ final readonly class OnDemandIssuanceFundingRequirement
         private BuildBalanceOverview $balances,
     ) {}
 
-    public function for(Model $issuer, PricingEstimateData $pricing): OnDemandIssuanceFundingRequirementData
+    public function for(Model $issuer, PricingEstimateData $pricing, ?int $selectedBalanceMinor = null): OnDemandIssuanceFundingRequirementData
     {
-        return $this->forBasis($issuer, $pricing, $this->policy->basis());
+        return $this->forBasis($issuer, $pricing, $this->policy->basis(), $selectedBalanceMinor);
     }
 
     public function forBasis(
         Model $issuer,
         PricingEstimateData $pricing,
         OnDemandIssuanceFundingBasis $basis,
+        ?int $selectedBalanceMinor = null,
     ): OnDemandIssuanceFundingRequirementData {
         $requiredAmountMinor = (int) round(
             ($pricing->account_debit ?? ($pricing->pay_code_value ?? 0) + $pricing->total) * 100,
@@ -37,7 +39,7 @@ final readonly class OnDemandIssuanceFundingRequirement
         }
 
         $availableClientFundsMinor = $basis === OnDemandIssuanceFundingBasis::Shortfall
-            ? $this->availableClientFundsMinor($issuer)
+            ? ($selectedBalanceMinor ?? $this->availableClientFundsMinor($issuer))
             : 0;
         $reservedClientFundsMinor = min($requiredAmountMinor, max(0, $availableClientFundsMinor));
 
@@ -51,12 +53,11 @@ final readonly class OnDemandIssuanceFundingRequirement
 
     private function availableClientFundsMinor(Model $issuer): int
     {
-        $overview = $this->balances->handle($issuer, syncIfStale: false);
+        $selected = app(SelectedAccountClientFunds::class)->forOwner($issuer);
+        if ($selected['amount_minor'] === null) {
+            throw new RuntimeException('The selected account Client Funds balance is unavailable.');
+        }
 
-        return (int) data_get(
-            collect((array) data_get($overview, 'balances', []))->firstWhere('key', 'local_ledger'),
-            'balance_minor',
-            0,
-        );
+        return $selected['amount_minor'];
     }
 }

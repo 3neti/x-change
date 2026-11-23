@@ -115,6 +115,10 @@ final readonly class CreditReviewedExcess
                 'idempotency_key_hash' => $key, 'idempotency_fingerprint' => hash('sha256', $key.'|'.$observation->getKey()),
                 'created_by_type' => $operator->getMorphClass(), 'created_by_id' => (string) $operator->getKey(),
                 'matched_observation_id' => $observation->getKey(), 'provider_transaction_id' => $observation->provider_transaction_id,
+                'destination_snapshot_ciphertext' => data_get($lockedAttempt->destination_snapshot_ciphertext, 'mode') === 'dedicated'
+                    ? $lockedAttempt->destination_snapshot_ciphertext : null,
+                'destination_fingerprint' => data_get($lockedAttempt->destination_snapshot_ciphertext, 'mode') === 'dedicated'
+                    ? $lockedAttempt->destination_fingerprint : null,
                 'instructions_created_at' => $lockedAttempt->instructions_created_at, 'expires_at' => $lockedAttempt->expires_at,
                 'evidence_received_at' => now(), 'verified_at' => now(), 'metadata' => ['payment_review_id' => $reviewId],
             ]);

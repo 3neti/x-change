@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services\Treasury;
 
 use Bavix\Wallet\Models\Transaction;
 use Illuminate\Database\Eloquent\Model;
+use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionAllocationData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionData;
@@ -16,7 +17,14 @@ use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Data\Treasury\TreasuryProviderConnectionData;
 use LBHurtado\XChange\Data\Treasury\VerifiedTreasuryFundingAllocationData;
+use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
+use LBHurtado\XChange\Models\ObservedPaymentTransaction;
+use LBHurtado\XChange\Models\PaymentAttempt;
+use LBHurtado\XChange\Services\Banking\AssignedFundingTreasuryConnection;
+use LBHurtado\XChange\Services\Execution\VoucherCollectionWalletSelector;
+use LBHurtado\XChange\Services\Funding\SharedFundingTreasuryConnection;
+use LBHurtado\XChange\Services\Payment\SpecificPaymentAttribution;
 use LBHurtado\XChange\Support\Funding\QrPhFundingSimulatorGuard;
 
 final readonly class VerifiedTreasuryFundingAllocationService implements VerifiedTreasuryFundingAllocationContract
@@ -57,7 +65,6 @@ final readonly class VerifiedTreasuryFundingAllocationService implements Verifie
             );
         }
 
-        $connection = $this->connection($provider, $currency);
         $account = $this->accounts->resolve($accountReference);
         $owner = data_get($account, 'holder');
 
@@ -65,6 +72,55 @@ final readonly class VerifiedTreasuryFundingAllocationService implements Verifie
             throw FundingSettlementDenied::because(
                 'the Account owner could not be resolved for Treasury allocation',
             );
+        }
+
+        $destinationSnapshot = $metadata['funding_destination_snapshot'] ?? null;
+        unset($metadata['funding_destination_snapshot']);
+        if ($destinationSnapshot !== null) {
+            if (! is_array($destinationSnapshot)) {
+                throw FundingSettlementDenied::because('the funding destination snapshot is invalid');
+            }
+            if (data_get($destinationSnapshot, 'mode') === 'shared') {
+                $connection = app(SharedFundingTreasuryConnection::class)->resolve($provider, $currency, $destinationSnapshot);
+            } else {
+                $bankOwner = $owner;
+                if (($metadata['source'] ?? null) === 'verified_voucher_collection') {
+                    $attempt = PaymentAttempt::query()->with('voucher.owner')
+                        ->where('provider_code', $provider)
+                        ->where('provider_transaction_id', $metadata['provider_transaction_id'] ?? null)
+                        ->where('status', PaymentAttemptStatus::Verified->value)->first();
+                    if (! $attempt && is_string($metadata['payment_attempt_reference'] ?? null)
+                        && is_string($metadata['provider_transaction_id'] ?? null)) {
+                        $observed = ObservedPaymentTransaction::query()->with('paymentAttempt.voucher.owner')
+                            ->where('provider_code', $provider)
+                            ->where('provider_transaction_hash', hash('sha256', $metadata['provider_transaction_id']))->first();
+                        $candidate = $observed?->paymentAttempt;
+                        $observation = ProviderFundingObservation::query()->find($metadata['provider_observation_id'] ?? null);
+                        if ($candidate !== null && $observed !== null && $observation !== null
+                            && $candidate->status === PaymentAttemptStatus::Settled
+                            && $candidate->reference === $metadata['payment_attempt_reference']
+                            && app(SpecificPaymentAttribution::class)->matches($candidate, $observed, $observation)) {
+                            $attempt = $candidate;
+                        }
+                    }
+                    if (! $attempt || ! $attempt->voucher->owner instanceof Model
+                        || (string) $attempt->voucher->code !== (string) ($metadata['voucher_code'] ?? '')
+                        || $attempt->destination_snapshot_ciphertext !== $destinationSnapshot) {
+                        throw FundingSettlementDenied::because('the collection does not match its frozen bank account');
+                    }
+                    $bankOwner = $attempt->voucher->owner;
+                    $selected = app(VoucherCollectionWalletSelector::class)->resolve(
+                        $attempt->voucher, $provider, $currency, data_get($destinationSnapshot, 'metadata.treasury_connection_reference'),
+                    );
+                    if ((string) $selected->uuid !== substr($accountReference, 7)) {
+                        throw FundingSettlementDenied::because('the allocation does not match the voucher destination');
+                    }
+                }
+                $connection = app(AssignedFundingTreasuryConnection::class)->resolve($bankOwner, $provider, $currency, $destinationSnapshot);
+            }
+            $metadata['treasury_connection_reference'] = $connection->reference;
+        } else {
+            $connection = $this->connection($provider, $currency);
         }
 
         $system = $this->systemPositions->provision([$connection->reference]);

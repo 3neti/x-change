@@ -1,5 +1,10 @@
 # Remaining Activities Checklist
 
+## NetBank direct QR follow-up
+
+- [ ] Confirm NetBank transaction-history retention and pagination for direct QR funding. Until then, investigate late payments individually and reconcile verified evidence manually without duplicate credits.
+
+
 ## Shared Host Production Beta
 
 The immediate, fail-closed path toward an allowlisted shared-host real-money

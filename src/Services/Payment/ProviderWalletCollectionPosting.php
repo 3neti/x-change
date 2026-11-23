@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Payment;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
@@ -14,11 +16,15 @@ use LBHurtado\XChange\Contracts\VoucherCollectionPostingContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\Payment\ConfirmedVoucherCollectionData;
 use LBHurtado\XChange\Data\Payment\VoucherCollectionPostingData;
+use LBHurtado\XChange\Models\ObservedPaymentTransaction;
+use LBHurtado\XChange\Models\PaymentAttempt;
+use LBHurtado\XChange\Services\Banking\AssignedFundingTreasuryConnection;
 use LBHurtado\XChange\Services\Cockpit\CockpitPosSaleReferenceService;
 use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\Execution\ValueFlowPayoutService;
 use LBHurtado\XChange\Services\Execution\VoucherCollectionWalletSelector;
 use LBHurtado\XChange\Services\Execution\VoucherValueFlowPolicy;
+use LBHurtado\XChange\Services\Funding\SharedFundingTreasuryConnection;
 use LBHurtado\XChange\Services\Treasury\TreasuryInventoryRegistrationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use RuntimeException;
@@ -94,14 +100,44 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
             return $this->postToCompatibilityWallet($voucher, $collection);
         }
 
-        if ($connections->count() !== 1) {
-            throw new RuntimeException(
-                'Voucher collection requires exactly one active Treasury connection.',
-            );
+        $fundingSnapshot = null;
+        $attempt = PaymentAttempt::query()
+            ->where('reference', $collection->providerReference)
+            ->where('voucher_id', $voucher->getKey())
+            ->where('provider_code', $provider)
+            ->where('provider_transaction_id', $collection->providerTransactionId)
+            ->where('matched_observation_id', data_get($collection->metadata, 'provider_observation_id'))
+            ->first();
+        if ($attempt === null && is_string($collection->providerTransactionId)
+            && $collection->providerReference === 'provider-payment:'.hash('sha256', implode('|', [$provider, $collection->providerTransactionId]))) {
+            $observed = ObservedPaymentTransaction::query()->with('paymentAttempt')
+                ->where('provider_code', $provider)
+                ->where('provider_transaction_hash', hash('sha256', $collection->providerTransactionId))->first();
+            $candidate = $observed?->paymentAttempt;
+            $observation = ProviderFundingObservation::query()->find(data_get($collection->metadata, 'provider_observation_id'));
+            if ($candidate !== null && $observed !== null && $observation !== null
+                && (int) $candidate->voucher_id === (int) $voucher->getKey()
+                && app(SpecificPaymentAttribution::class)->matches($candidate, $observed, $observation)) {
+                $attempt = $candidate;
+            }
         }
-
-        $connection = $connections->sole();
-        $wallet = $this->wallets->resolve($voucher, $provider, $currency);
+        $snapshot = $attempt?->destination_snapshot_ciphertext;
+        if (is_array($snapshot) && data_get($snapshot, 'mode') === 'dedicated') {
+            if (! $voucher->owner instanceof Model) {
+                throw new RuntimeException('The assigned account owner is unavailable.');
+            }
+            $connection = app(AssignedFundingTreasuryConnection::class)->resolve($voucher->owner, $provider, $currency, $snapshot);
+            $fundingSnapshot = $snapshot;
+        } elseif ($connections->count() !== 1) {
+            if (! is_array($snapshot) || data_get($snapshot, 'mode') !== 'shared') {
+                throw new RuntimeException('Voucher collection requires an unambiguous shared Treasury connection.');
+            }
+            $connection = app(SharedFundingTreasuryConnection::class)->resolve($provider, $currency, $snapshot);
+            $fundingSnapshot = $snapshot;
+        } else {
+            $connection = $connections->sole();
+        }
+        $wallet = $this->wallets->resolve($voucher, $provider, $currency, $connection->reference);
         $walletUuid = data_get($wallet, 'uuid');
         $accountReference = is_string($walletUuid) && trim($walletUuid) !== ''
             ? 'wallet:'.trim($walletUuid)
@@ -169,8 +205,11 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
                 'voucher_code' => (string) $voucher->code,
                 'provider' => $provider,
                 'provider_transaction_id' => $providerTransactionId,
+                'provider_observation_id' => data_get($collection->metadata, 'provider_observation_id'),
+                'payment_attempt_reference' => $attempt?->reference,
                 'inventory_operation_reference' => $recognition->operationReference,
                 'sale_reference' => $saleReference,
+                ...($fundingSnapshot === null ? [] : ['funding_destination_snapshot' => $fundingSnapshot]),
             ],
         );
 
@@ -184,7 +223,8 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
                 currency: $currency,
                 evidenceReference: 'reviewed-split-excess:'.$provider.':'.$providerTransactionId,
                 metadata: ['source' => 'reviewed_split_excess', 'reviewed_split_id' => $splitId,
-                    'provider_transaction_id' => $providerTransactionId, 'inventory_operation_reference' => $recognition->operationReference],
+                    'provider_transaction_id' => $providerTransactionId, 'inventory_operation_reference' => $recognition->operationReference,
+                    ...($fundingSnapshot === null ? [] : ['funding_destination_snapshot' => $fundingSnapshot])],
             );
         }
 
@@ -200,6 +240,7 @@ final readonly class ProviderWalletCollectionPosting implements VoucherCollectio
                     'source' => 'verified_voucher_collection_fee',
                     'voucher_code' => (string) $voucher->code,
                     'inventory_operation_reference' => $recognition->operationReference,
+                    ...($fundingSnapshot === null ? [] : ['funding_destination_snapshot' => $fundingSnapshot]),
                 ],
             );
         }

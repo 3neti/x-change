@@ -175,6 +175,44 @@ it('generates an owner-stable Account Funding Address without creating or credit
     Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/pre-transaction/'));
 });
 
+it('blocks reopening a shared QR when its frozen bank destination changed', function () {
+    $this->withoutMiddleware(ShareXChangeBranding::class);
+    actingAsVerifiedFundingOperator();
+    Http::fake([
+        'https://auth.netbank.test/oauth2/token' => Http::response(['access_token' => 'fixture', 'expires_in' => 3600]),
+        'https://api.netbank.test/v1/qrph/generate' => Http::response(['qr_code' => reusableFundingTestPng()]),
+    ]);
+    config()->set('payment-gateway.netbank.funding.corporate_account_number', '113001000068');
+    config()->set('payment-gateway.netbank.funding.vca_alias', '89628');
+    $this->postJson(route('x-change.cockpit.funding.standing-addresses.netbank.store'), [
+        'confirm_account_funding_address' => true,
+    ])->assertOk();
+    $before = count(Http::recorded());
+    config()->set('payment-gateway.netbank.funding.corporate_account_number', '113001000019');
+    config()->set('payment-gateway.netbank.funding.vca_alias', '91500');
+
+    $this->postJson(route('x-change.cockpit.funding.standing-addresses.netbank.store'), [
+        'confirm_account_funding_address' => true,
+    ])->assertConflict()->assertJsonPath('code', 'standing_funding_destination_mismatch');
+    expect(Http::recorded())->toHaveCount($before);
+});
+
+it('reopens the same shared QR when only bank account formatting changes', function () {
+    $this->withoutMiddleware(ShareXChangeBranding::class);
+    actingAsVerifiedFundingOperator();
+    Http::fake([
+        'https://auth.netbank.test/oauth2/token' => Http::response(['access_token' => 'fixture', 'expires_in' => 3600]),
+        'https://api.netbank.test/v1/qrph/generate' => Http::response(['qr_code' => reusableFundingTestPng()]),
+    ]);
+    $request = ['confirm_account_funding_address' => true];
+    $this->postJson(route('x-change.cockpit.funding.standing-addresses.netbank.store'), $request)->assertOk();
+    $before = count(Http::recorded());
+    config()->set('payment-gateway.netbank.funding.corporate_account_number', '113-001-00001-9');
+
+    $this->postJson(route('x-change.cockpit.funding.standing-addresses.netbank.store'), $request)->assertOk();
+    expect(Http::recorded())->toHaveCount($before);
+});
+
 it('returns a migration-required conflict before calling NetBank for a receipt-bearing legacy binding', function () {
     $this->withoutMiddleware(ShareXChangeBranding::class);
     $operator = actingAsVerifiedFundingOperator();

@@ -132,6 +132,8 @@ import CockpitOrderFlowSummary from "./CockpitOrderFlowSummary.vue";
 import CockpitValueUseControl from "./CockpitValueUseControl.vue";
 import type { CockpitValueUseMode } from "./CockpitValueUseControl.vue";
 
+import { useReserveIssuanceProgress, type ReserveIssuance } from "../composables/useReserveIssuanceProgress";
+
 const props = withDefaults(
   defineProps<{
     clientFundsMinor?: number | null;
@@ -154,6 +156,7 @@ const props = withDefaults(
     instructionCapabilities?: CockpitInstructionCapabilityReadinessMap;
     settlementRailCapabilities?: CockpitSettlementRailCapabilities;
     activeOnDemandFundingOrder?: CockpitOnDemandIssuanceFundingProjection | null;
+    reserveIssuanceIndexUrl?: string | null;
     onDemandIssuancePolicy?: {
       enabled: boolean;
       basis: "full_amount" | "shortfall";
@@ -1106,6 +1109,8 @@ const processing = ref(false);
 const savingCheckoutDraft = ref(false);
 const checkoutDraftToken = ref<string | null>(props.checkoutDraft?.guest_token ?? null);
 const checkoutDraftMessage = ref<string | null>(props.checkoutDraft ? "A saved checkout draft is available in this browser." : null);
+const reserveProgress = useReserveIssuanceProgress(props.reserveIssuanceIndexUrl);
+let retryAttempt: { signature: string; key: string } | null = null;
 const lastStatus = ref("ready");
 const lastMessage = ref("Ready to issue when the design is complete.");
 const lastResponse = ref<Record<string, unknown> | null>(null);
@@ -1205,6 +1210,7 @@ onBeforeMount((): void => {
 
 onMounted((): void => {
   riderDesignTeleportReady.value = true;
+  void reserveProgress.restore();
   void focusAmountEditor();
 });
 
@@ -2773,6 +2779,7 @@ const canSubmit = computed<boolean>(() => {
     (voucherType.value !== 'settlement' || settlementWorkflowChosen.value) &&
     (!philhealthSettlement.value || (valueFlowDestination.value !== "" && selectedInputFields.value.length > 0)) &&
     onDemandFundingProjection.value === null &&
+    !reserveProgress.blocking.value &&
     (!isAccountFundingClaim.value || sliceMode.value === "whole")
   );
 });
@@ -5333,8 +5340,12 @@ const liveAccountDebitPending = computed<boolean>(
 const liveAccountDebitAffordability = computed<
   "unknown" | "affordable" | "insufficient-client-funds"
 >(() => {
-  const execution = liveFundingPreflight.value?.funding?.execution;
-
+  const funding = liveFundingPreflight.value?.funding;
+  if (funding && 'account_shortfall_minor' in funding) {
+    if (typeof funding.account_shortfall_minor !== 'number') return 'unknown';
+    return funding.account_shortfall_minor > 0 ? 'insufficient-client-funds' : 'affordable';
+  }
+  const execution = funding?.execution;
   if (execution === "direct") {
     return "affordable";
   }
@@ -5419,8 +5430,12 @@ async function submit(): Promise<void> {
   submissionErrors.value = [];
   submissionErrorHeading.value = "Fix these fields before issuing";
 
-  const idempotencyKey = invoiceOrderKey.value ?? generateIdempotencyKey();
   const payload = buildIssuancePayload();
+  const signature = JSON.stringify(payload);
+  if (retryAttempt === null || retryAttempt.signature !== signature) {
+    retryAttempt = { signature, key: generateIdempotencyKey() };
+  }
+  const idempotencyKey = invoiceOrderKey.value ?? retryAttempt.key;
 
   emit("submitStart", payload);
 
@@ -5488,6 +5503,17 @@ async function submit(): Promise<void> {
       return;
     }
 
+    if (body.schema === "x-change.cockpit.reserve-issuance.v1") {
+      reserveProgress.track(body as ReserveIssuance);
+      retryAttempt = null;
+      lastStatus.value = "processing";
+      lastMessage.value = "Preparing your Pay Code. Please do not submit it again.";
+      submissionErrors.value = [];
+      emit("submitSuccess", body);
+      return;
+    }
+
+    retryAttempt = null;
     invoiceUploads.value = [];
     invoiceOrderKey.value = null;
     if (body.schema === "x-change.cockpit.on-demand-issuance-funding.v1") {
@@ -7316,6 +7342,24 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
             </h4>
           </div>
         </div>
+        <div v-if="reserveProgress.checking.value || reserveProgress.error.value || reserveProgress.issuance.value" class="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-slate-900" role="status" data-testid="reserve-issuance-progress">
+          <p v-if="reserveProgress.checking.value">Checking your Pay Code request…</p>
+          <template v-else-if="reserveProgress.error.value">
+            <p>We could not check your existing request. Please check again before issuing another Pay Code.</p>
+            <button type="button" class="mt-2 underline" @click="reserveProgress.issuance.value ? reserveProgress.refresh() : reserveProgress.restore()">Check again</button>
+          </template>
+          <template v-else-if="reserveProgress.issuance.value?.status === 'processing'">
+            <p>Your Pay Code is being prepared. Please do not submit it again.</p>
+          </template>
+          <template v-else-if="reserveProgress.issuance.value?.status === 'needs_review'">
+            <p>Your request needs review. Please do not submit it again.</p>
+          </template>
+          <template v-else-if="reserveProgress.issuance.value?.status === 'issued'">
+            <p>Pay Code || {{ reserveProgress.issuance.value.pay_code }} || is ready.</p>
+            <a v-if="reserveProgress.issuance.value.detail_url" :href="reserveProgress.issuance.value.detail_url" class="mt-2 inline-block underline">View Pay Code</a>
+          </template>
+          <p v-else>The request could not be completed. Please review your account before trying again.</p>
+        </div>
         <CockpitIssuanceProgressCard
           v-if="onDemandFundingProjection && !onDemandFundingDialogOpen && !issuedPayCodeDialogOpen"
           :projection="onDemandFundingProjection"
@@ -7651,9 +7695,13 @@ watch(stampPreviewProjection, (value) => emit("stampPreview", value), { immediat
                 </span>
               </div>
               <div v-if="!publicMode && liveFundingPreflight?.funding" class="grid gap-1 text-xs text-slate-600 dark:text-slate-300" aria-live="polite" data-testid="cockpit-funding-summary">
-                <div v-if="typeof liveFundingPreflight.funding.external_amount_minor === 'number'" class="flex justify-between gap-3">
-                  <span>Additional funding required</span><span class="font-semibold tabular-nums">{{ formatAccountMoney(liveFundingPreflight.funding.external_amount_minor / 100) }}</span>
+                <div class="flex justify-between gap-3">
+                  <span>Selected account Client Funds</span><span class="font-semibold tabular-nums">{{ typeof liveFundingPreflight.funding.available_client_funds_minor === 'number' ? formatAccountMoney(liveFundingPreflight.funding.available_client_funds_minor / 100) : 'Not available' }}</span>
                 </div>
+                <div v-if="typeof liveFundingPreflight.funding.account_shortfall_minor === 'number'" class="flex justify-between gap-3">
+                  <span>Additional funding required</span><span class="font-semibold tabular-nums">{{ formatAccountMoney(liveFundingPreflight.funding.account_shortfall_minor / 100) }}</span>
+                </div>
+                <div v-else class="flex justify-between gap-3"><span>Additional funding required</span><span>Not available</span></div>
               </div>
               <p v-else-if="!publicMode && liveFundingPreflighting" class="text-xs text-slate-500 dark:text-slate-400" role="status">Checking funding…</p>
               <div

@@ -6,6 +6,8 @@ use Bavix\Wallet\Models\Wallet;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
+use LBHurtado\XChange\Actions\Banking\AssignNetbankAccount;
+use LBHurtado\XChange\Actions\Banking\SelectDefaultBankingAccount;
 use LBHurtado\XChange\Actions\Claim\DispatchVoucherClaimOutcome;
 use LBHurtado\XChange\Actions\Funding\IssueSystemAccountFundingPayCode;
 use LBHurtado\XChange\Actions\Funding\ReverseSettledFundingIntent;
@@ -350,6 +352,36 @@ it('blocks an unverified dedicated destination in the Funding read model', funct
         'destination_status' => 'reachable',
         'destination_reference' => '•••• LLET01',
     ]);
+});
+
+it('shows the assigned NetBank account while its dedicated funding is unavailable', function () {
+    config()->set('x-change.funding.providers.netbank.enabled', true);
+    $operator = actingAsTestUser(0);
+    $assignment = app(AssignNetbankAccount::class)->handle($operator, [
+        'account_number' => '991100001234', 'account_name' => 'Example Corp',
+        'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $assignment->providerAccountLink->forceFill([
+        'status' => 'ready', 'ready_at' => now(), 'capabilities' => ['funding'],
+    ])->save();
+    app(SelectDefaultBankingAccount::class)->handle($operator, $assignment->id);
+
+    $provider = collect(app(FundingCockpitReadModelProvider::class)->forOperator($operator)->toArray()['providers'])
+        ->firstWhere('code', 'netbank');
+
+    expect($provider)->toMatchArray([
+        'status' => 'blocked', 'destination_mode' => 'dedicated',
+        'destination_reference' => 'Example Corp · 991100001234',
+    ]);
+});
+
+it('shows the full shared NetBank account on the authorized funding page', function () {
+    config()->set('payment-gateway.netbank.funding.corporate_account_name', 'Shared Treasury');
+    config()->set('payment-gateway.netbank.funding.corporate_account_number', '113-001-00001-9');
+    $operator = actingAsTestUser(0);
+    $provider = collect(app(FundingCockpitReadModelProvider::class)->forOperator($operator)->toArray()['providers'])
+        ->firstWhere('code', 'netbank');
+    expect($provider['destination_reference'])->toBe('Shared Treasury · 113-001-00001-9');
 });
 
 it('offers the local simulator while live funding providers remain disabled', function () {

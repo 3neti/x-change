@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
+use LBHurtado\EmiCore\Contracts\SpecificIncomingPaymentVerifier;
 use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
 use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
@@ -24,8 +25,11 @@ use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Exceptions\FundingEvidenceAlreadyClaimed;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Models\FundingIntent;
+use LBHurtado\XChange\Services\Funding\AssignedAccountFundingPolicy;
+use LBHurtado\XChange\Services\Funding\FreshFundingBoundary;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\MatchFundingPayerIdentity;
+use LBHurtado\XChange\Services\Funding\SelectAssignedFundingObservation;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use LogicException;
 use Throwable;
@@ -51,6 +55,10 @@ class VerifyFundingIntent
         FundingIntent $intent,
         FundingIntentVerificationData $verification,
     ): FundingIntent {
+        if ($intent->status !== FundingIntentStatus::Settled) {
+            app(FreshFundingBoundary::class)->assertEligible($intent);
+        }
+
         return Cache::lock(
             'x-change:funding-intent-verification:'.$intent->getKey(),
             (int) config('x-change.funding.verification_lock_seconds', 120),
@@ -168,12 +176,18 @@ class VerifyFundingIntent
                 receipt: $receipt,
             ));
         } catch (ProviderFundingVerificationIndeterminate) {
-            return $this->moveToSuspense(
-                intent: $intent,
-                verification: $verification,
-                reasonCode: 'provider_verification_indeterminate',
-                receipt: $receipt,
-            );
+            try {
+                $observationData = app(SelectAssignedFundingObservation::class)->handle(
+                    $intent, $this->providerVerification($intent, $receipt),
+                );
+            } catch (Throwable) {
+                return $this->moveToSuspense(
+                    intent: $intent,
+                    verification: $verification,
+                    reasonCode: 'provider_verification_indeterminate',
+                    receipt: $receipt,
+                );
+            }
         } catch (Throwable $exception) {
             return $this->transition->handle($intent, $this->transitionData(
                 status: FundingIntentStatus::AwaitingFunds,
@@ -254,6 +268,12 @@ class VerifyFundingIntent
             intent: $intent,
             receipt: $receipt,
             observation: $observation,
+            metadata: $targetStatus === FundingIntentStatus::Verified && app(AssignedAccountFundingPolicy::class)->creditsOwner($intent)
+                ? [
+                    'attribution_policy' => 'assigned_account_client_funds',
+                    'requested_amount_matches' => $observation->gross_amount_minor === $intent->expected_amount_minor,
+                    'payer_identity_matched' => data_get($observation->metadata, 'payer_identity_matched'),
+                ] : [],
         ));
     }
 
@@ -552,14 +572,20 @@ class VerifyFundingIntent
                 : FundingIntentStatus::Suspense;
         }
 
-        $matches = $observation->gross_amount_minor === $intent->expected_amount_minor
+        $assignedAccount = app(AssignedAccountFundingPolicy::class)->creditsOwner($intent);
+        $matches = $observation->gross_amount_minor > 0
+            && $observation->net_amount_minor > 0
+            && ($assignedAccount || $observation->gross_amount_minor === $intent->expected_amount_minor)
             && $observation->currency === $intent->currency
             && $observation->settled_at !== null
             && data_get($observation->metadata, 'destination_verified') === true
-            && (
-                data_get($observation->metadata, 'payer_identity_required') !== true
-                || data_get($observation->metadata, 'payer_identity_matched') === true
-            );
+            && ($intent->purpose !== FundingIntentPurpose::OnDemandIssuance
+                || data_get($intent->destination_snapshot_ciphertext, 'mode') !== 'dedicated'
+                || (data_get($intent->destination_snapshot_ciphertext, 'metadata.require_exact_vca') === true
+                    && data_get($observation->metadata, 'exact_vca_verified') === true))
+            && ($assignedAccount
+                || data_get($observation->metadata, 'payer_identity_required') !== true
+                || data_get($observation->metadata, 'payer_identity_matched') === true);
 
         return $matches
             ? FundingIntentStatus::Verified
@@ -625,7 +651,8 @@ class VerifyFundingIntent
             observedBefore: now()
                 ->addSeconds($clockSkewSeconds)
                 ->toDateTimeImmutable(),
-            allowDestinationHistoryFallback: $intent->purpose === FundingIntentPurpose::OnDemandIssuance,
+            allowDestinationHistoryFallback: $intent->purpose === FundingIntentPurpose::OnDemandIssuance
+                && data_get($intent->destination_snapshot_ciphertext, 'mode') !== 'dedicated',
         );
     }
 
@@ -633,7 +660,16 @@ class VerifyFundingIntent
         FundingIntent $intent,
         ?WebhookReceipt $receipt,
     ): ProviderFundingObservationData {
-        return $this->providers->for($intent->provider_code)->verifyFunding($this->providerVerification($intent, $receipt));
+        $adapter = $this->providers->for($intent->provider_code);
+        $verification = $this->providerVerification($intent, $receipt);
+        if ($intent->status === FundingIntentStatus::Settled
+            && data_get($intent->destination_snapshot_ciphertext, 'metadata.netbank_instruction_mode') === 'direct_qr'
+            && $adapter instanceof SpecificIncomingPaymentVerifier
+            && is_string($intent->provider_transaction_id) && $intent->provider_transaction_id !== '') {
+            return $adapter->verifyIncomingPayment($verification, $intent->provider_transaction_id);
+        }
+
+        return $adapter->verifyFunding($verification);
     }
 
     private function receipt(

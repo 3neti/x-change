@@ -67,6 +67,7 @@ class PaymentVerificationCheckController extends Controller
 
         return match ($attempt->status) {
             PaymentAttemptStatus::Settled => 'Payment confirmed from NetBank history.',
+            PaymentAttemptStatus::CreditedToClientFunds => 'The payment was credited to the Pay Code issuer’s Client Funds. It was not applied to this Pay Code.',
             PaymentAttemptStatus::Verified => 'Your bank payment is verified. Collection completion is pending. Do not pay again.',
             PaymentAttemptStatus::AwaitingPayment => 'No settled matching payment is visible yet.',
             PaymentAttemptStatus::Suspense => 'NetBank returned payment evidence that needs review.',
