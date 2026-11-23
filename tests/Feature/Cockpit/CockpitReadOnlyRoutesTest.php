@@ -1446,6 +1446,7 @@ it('registers only the guarded issuance, funding, payout recovery, and Account C
         'x-change.cockpit.funding.scenarios.qrph.store',
         'x-change.cockpit.funding.suspense.reconciliation-requests.store',
         'x-change.cockpit.funding.reconciliations.approve',
+        'x-change.cockpit.quick-generate.diagnostics',
         'x-change.cockpit.quick-generate.interpret',
         'x-change.cockpit.quick-generate.funding-preflight',
         'x-change.cockpit.display-sessions.store',

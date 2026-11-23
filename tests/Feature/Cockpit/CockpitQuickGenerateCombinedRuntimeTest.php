@@ -58,7 +58,7 @@ it('records one quick generate activity through journal action and feedback hand
         ->assertJsonPath('result.code', 'PC-COMBINED-RUNTIME');
 
     $activity = CockpitOperatorIssuanceActivity::query()->sole();
-    $entry = ExecutionJournalEntry::query()->sole();
+    $entry = ExecutionJournalEntry::query()->where('event_type', 'cockpit.operator_issuance_activity.recorded')->sole();
 
     expect($activity->subject_reference)->toBe('PC-COMBINED-RUNTIME')
         ->and($activity->journal_handoff_status)->toBe('recorded')

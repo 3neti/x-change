@@ -35,7 +35,7 @@ it('records real quick generate durable activity into x-journal when runtime pro
         ->assertJsonPath('result.code', 'PC-XJOURNAL-RUNTIME');
 
     $activity = CockpitOperatorIssuanceActivity::query()->sole();
-    $entry = ExecutionJournalEntry::query()->sole();
+    $entry = ExecutionJournalEntry::query()->where('event_type', 'cockpit.operator_issuance_activity.recorded')->sole();
 
     expect($activity->subject_reference)->toBe('PC-XJOURNAL-RUNTIME')
         ->and($activity->journal_handoff_status)->toBe('recorded')
@@ -49,6 +49,13 @@ it('records real quick generate durable activity into x-journal when runtime pro
         ->and($entry->payload['amount'])->toBe('25')
         ->and($entry->payload['currency'])->toBe('PHP')
         ->and($entry->metadata['source'])->toBe('x-change.cockpit');
+
+    $received = ExecutionJournalEntry::query()->where('event_type', 'issuance.received')->sole();
+    $succeeded = ExecutionJournalEntry::query()->where('event_type', 'issuance.succeeded')->sole();
+    expect($succeeded->correlation_id)->toBe($received->correlation_id)
+        ->and($succeeded->payload['result_code'])->toBe('PC-XJOURNAL-RUNTIME')
+        ->and($succeeded->money)->toBeNull();
+
 });
 
 it('does not duplicate x-journal entries when quick generate replays idempotently', function () {
@@ -73,7 +80,7 @@ it('does not duplicate x-journal entries when quick generate replays idempotentl
         ->assertJsonPath('status', 'replayed');
 
     expect(CockpitOperatorIssuanceActivity::query()->count())->toBe(1)
-        ->and(ExecutionJournalEntry::query()->count())->toBe(1)
+        ->and(ExecutionJournalEntry::query()->where('event_type', 'cockpit.operator_issuance_activity.recorded')->count())->toBe(1)
         ->and(CockpitOperatorIssuanceActivity::query()->sole()->journal_handoff_status)->toBe('recorded');
 });
 
