@@ -25,7 +25,7 @@ final class QuickGenerateLastInstructionsStore
             [
                 'schema' => 'x-change.cockpit.quick-generate-last-instructions.v1',
                 'saved_at' => now()->toIso8601String(),
-                'instructions' => $this->sanitizer->sanitize($instructions),
+                'instructions' => $this->sanitizer->sanitize($instructions, includeFeedback: false),
             ],
             now()->addSeconds(max(
                 60,

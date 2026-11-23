@@ -34,7 +34,7 @@ it('hydrates dashboard operator activity presentation with recorded x-journal ha
         ->assertCreated();
 
     $activity = CockpitOperatorIssuanceActivity::query()->sole();
-    $entry = ExecutionJournalEntry::query()->sole();
+    $entry = ExecutionJournalEntry::query()->where('event_type', 'cockpit.operator_issuance_activity.recorded')->sole();
 
     $this->withHeader('X-Inertia', 'true')
         ->get(route('x-change.cockpit.dashboard'))

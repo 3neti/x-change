@@ -16,6 +16,7 @@ final class QuickGenerateTemplateBlueprintSanitizer
         array $instructions,
         bool $includeAmount = true,
         bool $includePurpose = true,
+        bool $includeFeedback = true,
     ): array {
         data_set(
             $instructions,
@@ -40,9 +41,6 @@ final class QuickGenerateTemplateBlueprintSanitizer
             'metadata.custom.cockpit.saved_template',
             'metadata.campaign',
             'campaign',
-            'feedback.email',
-            'feedback.mobile',
-            'feedback.webhook',
             'starts_at',
             'expires_at',
             'idempotency_key',
@@ -50,6 +48,10 @@ final class QuickGenerateTemplateBlueprintSanitizer
             'code',
             'voucher_code',
         ]);
+
+        if (! $includeFeedback) {
+            Arr::forget($instructions, ['feedback.email', 'feedback.mobile', 'feedback.webhook']);
+        }
 
         if (! $includeAmount) {
             Arr::forget($instructions, [

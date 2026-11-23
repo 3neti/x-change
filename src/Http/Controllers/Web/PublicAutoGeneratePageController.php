@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Http\Controllers\Web;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -75,6 +76,7 @@ final class PublicAutoGeneratePageController extends Controller
             : 'composer';
 
         return Inertia::render('x-change/public/AutoGenerate', [
+            'rider_url_policy' => Arr::only((array) config('x-rider.redirects', []), ['allowed_schemes', 'allowed_hosts', 'allow_any_host']),
             ...$props,
             'v2_event_catalog' => app(V2EventCatalog::class)->definitions(),
             'display_campaigns' => [],

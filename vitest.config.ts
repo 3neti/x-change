@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
+      "@/actions/LBHurtado/XChange/Http/Controllers/Web/Cockpit/CockpitIssuanceDiagnosticController": path.resolve(import.meta.dirname, "tests/frontend/stubs/issuance-diagnostic-route.ts"),
       "@/routes/x-change/cockpit/account-lifecycle": path.resolve(
         import.meta.dirname,
         "tests/frontend/stubs/account-lifecycle-routes.ts",

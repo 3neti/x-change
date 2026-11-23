@@ -1,11 +1,32 @@
 <script setup lang="ts">
+import { ref, nextTick, watch } from 'vue';
 import type { RiderContentFormat } from '../riderContent';
 import CockpitRiderMessageEditor from './CockpitRiderMessageEditor.vue';
 import CockpitRiderPreviewFrame from './CockpitRiderPreviewFrame.vue';
 import { TabsRoot, TabsList, TabsTrigger, TabsContent } from 'reka-ui';
 import { MessageSquareText, Link2, Sparkles } from 'lucide-vue-next';
 
-withDefaults(defineProps<{ title?: string; disabled?: boolean; urlPreviewDocument?: string; splashPreviewDocument?: string; urlPreviewMessage?: string; urlPreviewLoading?: boolean }>(), { title: 'Rider', disabled: false, urlPreviewDocument: '', splashPreviewDocument: '', urlPreviewMessage: '', urlPreviewLoading: false });
+withDefaults(defineProps<{ title?: string; disabled?: boolean; urlPreviewDocument?: string; splashPreviewDocument?: string; urlPreviewMessage?: string; urlPreviewLoading?: boolean; urlError?: string | null }>(), { title: 'Rider', disabled: false, urlPreviewDocument: '', splashPreviewDocument: '', urlPreviewMessage: '', urlPreviewLoading: false });
+const emit = defineEmits<{ 'urlObserved': [value: string] }>();
+const activeTab = ref('message');
+const urlInput = ref<HTMLInputElement | null>(null);
+const urlFocusRequested = ref(false);
+watch(urlInput, (input) => {
+  if (input && urlFocusRequested.value) {
+    input.focus();
+    urlFocusRequested.value = false;
+  }
+}, { flush: 'post' });
+async function focusUrl(): Promise<void> {
+  urlFocusRequested.value = true;
+  activeTab.value = 'link';
+  await nextTick();
+  if (urlInput.value) {
+    urlInput.value.focus();
+    urlFocusRequested.value = false;
+  }
+}
+defineExpose({ focusUrl });
 const message = defineModel<string>('message', { required: true });
 const messageFormat = defineModel<RiderContentFormat>('messageFormat', { required: true });
 const url = defineModel<string>('url', { required: true });
@@ -18,7 +39,7 @@ const splashCtaText = defineModel<string>('splashCtaText', { required: true });
 </script>
 
 <template>
-  <TabsRoot default-value="message" class="grid gap-4" data-testid="rider-editor">
+  <TabsRoot v-model="activeTab" class="grid gap-4" data-testid="rider-editor">
     <TabsList aria-label="Rider editor" class="sticky top-0 z-10 grid grid-cols-3 gap-1 rounded-xl border border-slate-200 bg-white/95 p-1 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
       <TabsTrigger v-for="item in [{ value: 'message', label: 'Message', icon: MessageSquareText }, { value: 'link', label: 'Link', icon: Link2 }, { value: 'splash', label: 'Splash', icon: Sparkles }]" :key="item.value" :value="item.value" class="inline-flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold text-slate-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 data-[state=active]:bg-slate-950 data-[state=active]:text-white dark:text-slate-400 dark:data-[state=active]:bg-white dark:data-[state=active]:text-slate-950"><component :is="item.icon" class="size-3.5" aria-hidden="true" />{{ item.label }}</TabsTrigger>
     </TabsList>
@@ -26,7 +47,8 @@ const splashCtaText = defineModel<string>('splashCtaText', { required: true });
     <TabsContent value="link">
     <section class="grid gap-4 rounded-2xl border border-slate-200 p-4 dark:border-slate-800"><div><h3 class="text-sm font-semibold">After-claim destination</h3><p class="mt-1 text-xs text-slate-500 dark:text-slate-400">An optional page to visit after the claim.</p></div>
       <div class="grid gap-4 md:grid-cols-2"><div class="grid content-start gap-3">
-      <label class="grid gap-1 text-xs font-medium">URL<input v-model="url" type="url" placeholder="https://your-page.example" :disabled="disabled" data-testid="rider-editor-url" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" /></label>
+      <label class="grid gap-1 text-xs font-medium">URL<input ref="urlInput" v-model="url" type="url" :aria-invalid="Boolean(urlError)" :aria-describedby="urlError ? 'rider-url-error' : undefined" @input="emit('urlObserved', ($event.target as HTMLInputElement).value)" placeholder="https://your-page.example" :disabled="disabled" data-testid="rider-editor-url" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" /></label>
+      <p v-if="urlError" id="rider-url-error" role="alert" class="text-xs text-rose-700 dark:text-rose-300" data-testid="rider-editor-url-error">{{ urlError }}</p>
       <label class="grid gap-1 text-xs font-medium">Redirect delay (seconds)<input v-model="redirectTimeout" type="number" min="0" max="300" :disabled="disabled" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" /></label>
       </div><div class="min-w-0 rounded-xl bg-slate-50 p-3 dark:bg-slate-900"><p class="text-xs font-semibold">Link preview</p><p v-if="!url.trim()" class="mt-2 text-xs text-slate-500 dark:text-slate-400">Add a URL to see its preview.</p><template v-else><p v-if="urlPreviewLoading || urlPreviewMessage" class="mt-1 text-xs text-slate-500 dark:text-slate-400" role="status">{{ urlPreviewLoading ? 'Loading artwork…' : urlPreviewMessage }}</p><CockpitRiderPreviewFrame v-if="urlPreviewDocument" class="mt-2" title="Rider URL Preview" surface="stamp" :document="urlPreviewDocument" data-testid="rider-editor-url-preview" /></template></div></div>
     </section>

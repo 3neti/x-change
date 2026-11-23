@@ -25,7 +25,8 @@ it('stores an encrypted owner-scoped reusable pay code blueprint', function () {
             ],
             'feedback' => [
                 'mobile' => '09173011987',
-                'email' => 'recipient@example.test',
+                'email' => 'issuer@example.test',
+                'webhook' => 'https://issuer.example.test/events',
             ],
             'rider' => [
                 'message' => 'School allowance',
@@ -60,12 +61,16 @@ it('stores an encrypted owner-scoped reusable pay code blueprint', function () {
         ->and(data_get($instructions, 'cash.amount'))->toBeNull()
         ->and(data_get($instructions, 'cash.validation.mobile'))->toBeNull()
         ->and(data_get($instructions, 'cash.validation.secret'))->toBeNull()
-        ->and(data_get($instructions, 'feedback.mobile'))->toBeNull()
+        ->and(data_get($instructions, 'feedback.mobile'))->toBe('09173011987')
+        ->and(data_get($instructions, 'feedback.email'))->toBe('issuer@example.test')
+        ->and(data_get($instructions, 'feedback.webhook'))->toBe('https://issuer.example.test/events')
         ->and(data_get($instructions, 'metadata.issuer_id'))->toBeNull()
         ->and(data_get($instructions, 'metadata.collection_wallet_id'))->toBeNull()
         ->and(data_get($instructions, 'metadata.custom.cockpit.recipient_reference'))->toBeNull()
         ->and(data_get($instructions, 'starts_at'))->toBeNull()
         ->and($raw)->not->toContain('09173011987')
+        ->and($raw)->not->toContain('issuer@example.test')
+        ->and($raw)->not->toContain('https://issuer.example.test/events')
         ->and($raw)->not->toContain('shared-wallet-17')
         ->and($raw)->not->toContain('never-store-this');
 });
@@ -131,6 +136,11 @@ it('updates an owner template in place through the shared sanitizer', function (
                         'secret' => 'never-store-this',
                     ],
                 ],
+                'feedback' => [
+                    'mobile' => '09175550123',
+                    'email' => 'owner@example.test',
+                    'webhook' => 'https://owner.example.test/events',
+                ],
                 'rider' => [
                     'message' => 'Monthly allowance',
                 ],
@@ -147,7 +157,35 @@ it('updates an owner template in place through the shared sanitizer', function (
         ->and(data_get($template->instructions_ciphertext, 'cash.amount'))->toBeNull()
         ->and(data_get($template->instructions_ciphertext, 'cash.validation.mobile'))->toBeNull()
         ->and(data_get($template->instructions_ciphertext, 'cash.validation.secret'))->toBeNull()
-        ->and(data_get($template->instructions_ciphertext, 'rider.message'))->toBe('Monthly allowance');
+        ->and(data_get($template->instructions_ciphertext, 'rider.message'))->toBe('Monthly allowance')
+        ->and(data_get($template->instructions_ciphertext, 'feedback'))->toBe([
+            'mobile' => '09175550123',
+            'email' => 'owner@example.test',
+            'webhook' => 'https://owner.example.test/events',
+        ]);
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.quick-generate'))
+        ->assertOk()
+        ->assertJsonPath('props.saved_templates.0.instructions.feedback.email', 'owner@example.test');
+
+    $template->refresh();
+    $this->patch(route('x-change.cockpit.pay-code-templates.update', $template), [
+        'name' => 'Monthly Allowance',
+        'base_template_key' => 'money-changer',
+        'include_amount' => false,
+        'include_purpose' => true,
+        'expected_updated_at' => $template->updated_at?->toIso8601String(),
+        'instructions' => [
+            'cash' => ['currency' => 'PHP'],
+            'feedback' => ['mobile' => null, 'email' => null, 'webhook' => null],
+        ],
+    ])->assertRedirect();
+
+    expect($template->fresh()->instructions_ciphertext['feedback'])->toBe([
+        'mobile' => null, 'email' => null, 'webhook' => null,
+    ]);
+
 });
 
 it('forbids updating another owners pay code template', function () {

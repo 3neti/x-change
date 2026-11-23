@@ -3754,9 +3754,9 @@ describe('Cockpit Quick Generate foundation', () => {
 
         expect(errors.exists()).toBe(true);
         expect(errors.text()).toContain('Fix these fields before issuing');
-        expect(errors.text()).toContain('Cash Amount');
+        expect(errors.text()).toContain('Amount');
         expect(errors.text()).toContain('The amount must be at least 1.');
-        expect(errors.text()).toContain('Feedback Email');
+        expect(errors.text()).toContain('Status Updates → Email');
         expect(errors.text()).toContain('Enter a valid email address.');
         expect(wrapper.text()).toContain(
             'Your Pay Code needs a few corrections before it can be issued.',

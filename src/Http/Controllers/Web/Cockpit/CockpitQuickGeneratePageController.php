@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Http\Controllers\Web\Cockpit;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Arr;
 use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\XChange\Contracts\SettlementRailCapabilityRegistryContract;
@@ -67,6 +68,7 @@ class CockpitQuickGeneratePageController extends Controller
                 campaignPurpose: $this->optionalString($request->query('campaign_purpose')),
             ),
             'feedback_defaults' => $this->feedbackDefaults($request),
+            'rider_url_policy' => Arr::only((array) config('x-rider.redirects', []), ['allowed_schemes', 'allowed_hosts', 'allow_any_host']),
             'onboarding_policy' => [
                 'otp_required' => (bool) config('x-change.onboarding.voucher.require_otp', false),
             ],

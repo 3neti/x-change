@@ -59,7 +59,9 @@ describe('Quick Generate saved templates', () => {
                                 message: 'Weekly allowance',
                             },
                             feedback: {
-                                mobile: '09173011987',
+                                mobile: '09175550123',
+                                email: 'issuer@example.test',
+                                webhook: 'https://issuer.example.test/events',
                             },
                             metadata: {
                                 custom: {
@@ -122,6 +124,11 @@ describe('Quick Generate saved templates', () => {
                 .text(),
         );
 
+        expect(preview.feedback).toMatchObject({
+            mobile: '+639175550123',
+            email: 'issuer@example.test',
+            webhook: 'https://issuer.example.test/events',
+        });
         expect(preview.metadata.custom.cockpit.saved_template).toEqual({
             reference: '01TEMPLATE',
             name: 'Weekly Allowance',
@@ -139,6 +146,10 @@ describe('Quick Generate saved templates', () => {
         await wrapper
             .get('[data-testid="cockpit-quick-generate-primary-recipient"]')
             .setValue('09173011987');
+        await wrapper.get('[data-testid="cockpit-quick-generate-order-options-toggle"]').trigger('click');
+        const feedbackInput = wrapper.get('[data-testid="cockpit-quick-generate-primary-feedback"] input');
+        await feedbackInput.setValue('09175550123');
+        await feedbackInput.trigger('keydown', { key: 'Enter' });
         await wrapper.get('[data-testid="open-templates-editor"]').trigger('click');
         await wrapper
             .get('[data-testid="cockpit-quick-generate-save-template"]')
@@ -172,6 +183,7 @@ describe('Quick Generate saved templates', () => {
             include_amount: true,
             include_purpose: true,
         });
+        expect(payload.instructions.feedback.mobile).toBe('+639175550123');
         expect(payload.instructions.metadata.custom.cockpit).not.toHaveProperty(
             'recipient_reference',
         );
