@@ -191,6 +191,15 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
             app(IssuerInvoiceDrafts::class)->bind($request->user(), $invoiceDraft, $key);
         }
 
+        if (! $publicAutoGenerate && ! (bool) config('x-change.reserve_transfer.enabled', false)
+            && $request->user() instanceof Model
+            && app(ProviderRuntimeSettingsResolverContract::class)->provider() === 'netbank'
+            && ! in_array(data_get($payload, 'voucher_type'), ['payable', 'settlement'], true)
+            && FundingDestinationPreference::query()->whereMorphedTo('owner', $request->user())
+                ->where('provider_code', 'netbank')->where('mode', 'dedicated')->exists()) {
+            throw ValidationException::withMessages(['submission' => ['Issuance from the selected account is not yet available.']]);
+        }
+
         $pricingPreflight = $this->pricingPreflight($payload, $estimatePayCodeCost);
         $fundingPreflight = $this->fundingPreflight($request, $balanceOverview);
 

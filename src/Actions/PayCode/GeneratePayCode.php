@@ -39,6 +39,7 @@ use LBHurtado\XChange\Services\Configuration\InstructionCapabilityIssuanceGuard;
 use LBHurtado\XChange\Services\Funding\PreparePayCodeAccountFundingIssuance;
 use LBHurtado\XChange\Services\InstructionRevenueAllocatorService;
 use LBHurtado\XChange\Services\PayCodeIssuanceTransaction;
+use LBHurtado\XChange\Services\Reserve\RequireReserveBackedIssuance;
 use LBHurtado\XChange\Services\ResumeProviderProvisioningFromOnboarding;
 use LBHurtado\XChange\Services\Treasury\PreparePayCodeTreasuryIssuance;
 use LBHurtado\XChange\Services\Treasury\TreasuryCompatibilityLedgerSynchronizer;
@@ -182,6 +183,9 @@ class GeneratePayCode
                 ),
             ],
         );
+
+        app(RequireReserveBackedIssuance::class)
+            ->assertOrdinaryIssuanceAllowed($input, $funding);
 
         if (isset($input['fee_bearer']) && ! $this->shouldAllocateLocalRevenue($funding->authority)) {
             throw new RuntimeException('Explicit fee bearers require Treasury commercial posting.');

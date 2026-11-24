@@ -18,6 +18,7 @@ use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Data\ProviderReadinessData;
 use LBHurtado\XChange\Data\ProvisioningFlowDescriptorData;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
+use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Exceptions\RiderStampArtworkUnavailable;
@@ -468,3 +469,26 @@ it('throws provisioning required when issuer provider wallet is missing', functi
     expect(fn () => $action->handle($input))
         ->toThrow(ProviderProvisioningRequired::class, 'Pay Code issuance requires provider provisioning before the voucher can be created.');
 });
+
+it('never issues a dedicated-account disbursement through the ordinary issuance action', function (bool $reserveEnabled): void {
+    config()->set('x-change.reserve_transfer.enabled', $reserveEnabled);
+    $issuer = new User;
+    $issuer->id = 1;
+    $issuer->name = 'Issuer';
+    $input = ['cash' => ['amount' => 10.0, 'currency' => 'PHP']];
+    $users = Mockery::mock(UserResolverContract::class);
+    $users->shouldReceive('resolve')->andReturn($issuer);
+    $wallets = Mockery::mock(WalletAccessContract::class);
+    $wallets->shouldReceive('resolveForUser')->andReturn((object) ['id' => 1]);
+    $estimate = Mockery::mock(EstimatePayCodeCost::class);
+    $estimate->shouldReceive('handle')->andReturn(new PricingEstimateData(currency: 'PHP', total: 0, customer_charge_minor: 0));
+    $issuance = Mockery::mock(PayCodeIssuanceContract::class);
+    $issuance->shouldNotReceive('issue');
+    $funding = Mockery::mock(ProviderFundingPolicyContract::class);
+    $funding->shouldReceive('assertCanIssue')->andReturn(FundingDecisionData::allowed('local_ledger', 10000, 1000, meta: ['assigned_bank_account_link_id' => 12]));
+    $splash = Mockery::mock(RiderSplashArtworkSnapshotterContract::class);
+    $splash->shouldReceive('prepare')->andReturnUsing(fn (array $input): array => $input);
+    $action = new GeneratePayCode($users, $wallets, $estimate, $issuance, Mockery::mock(InstructionRevenueAllocatorService::class), funding: $funding, splashArtwork: $splash);
+
+    expect(fn () => $action->handle($input))->toThrow(PayCodeIssuanceFailed::class, 'reserve-backed issuance flow');
+})->with([false, true]);

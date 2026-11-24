@@ -1307,3 +1307,19 @@ it('releases the selected account reservation after independently verified rejec
         ->and(app(TreasuryAccountBalanceReadModel::class)->connectionBalanceMinor($owner, 'netbank', 'netbank-primary', 'PHP'))->toBe(1000)
         ->and($advance->advance($transfer, $owner, $provider)->status)->toBe('released');
 });
+
+it('blocks dedicated-account disbursement while reserve issuance is disabled before creating funding orders', function (): void {
+    [$owner, $assignment] = setupReserveHoldFixture();
+    FundingDestinationPreference::query()->create([
+        'owner_type' => $owner->getMorphClass(), 'owner_id' => $owner->id, 'provider_code' => 'netbank',
+        'mode' => 'dedicated', 'provider_account_link_id' => $assignment->provider_account_link_id,
+    ]);
+    config()->set('x-change.reserve_transfer.enabled', false);
+    config()->set('x-change.issuance_funding.on_demand.enabled', true);
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+
+    $this->withHeader('Idempotency-Key', 'disabled-reserve-fixture')
+        ->postJson(route('x-change.cockpit.quick-generate.store'), validPayCodePayload(10))
+        ->assertUnprocessable()->assertJsonValidationErrors('submission');
+    expect(ReserveTransfer::query()->count())->toBe(0);
+});
