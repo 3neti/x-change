@@ -25,6 +25,7 @@ final class ReserveTransfer extends Model
             'amount_minor' => 'integer',
             'fee_minor' => 'integer',
             'voucher_id' => 'integer',
+            'funding_order_id' => 'integer',
             'bank_account_link_id' => 'integer',
             'held_at' => 'immutable_datetime',
             'submitted_at' => 'immutable_datetime',

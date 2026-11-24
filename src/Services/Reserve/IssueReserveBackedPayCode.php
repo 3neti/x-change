@@ -64,6 +64,7 @@ final readonly class IssueReserveBackedPayCode
             if ($locked->status !== 'treasury_posted' || $locked->voucher_id !== null || ! $locked->treasury_posted_at) {
                 throw new RuntimeException('The reserve is not ready for Pay Code issuance.');
             }
+            app(ReserveFundingOrderLink::class)->assertActive($locked);
             if (! $this->lifecycle->lockAndIsActive($owner)) {
                 throw new RuntimeException('The account is suspended.');
             }
@@ -142,6 +143,7 @@ final readonly class IssueReserveBackedPayCode
                 meta: ['provider' => $locked->provider, 'topology' => 'ledger_pooled']);
             $this->synchronizer->reconcileAfterIssuance($owner, $this->wallets->resolveForUser($owner), $funding);
             $this->journal->recordIssuance($locked);
+            app(ReserveFundingOrderLink::class)->complete($locked->refresh());
 
             return $voucher;
         }, attempts: 3);

@@ -80,6 +80,7 @@ final class DurableReserveTransfer
             $this->assertFrozen($locked);
             $this->assertHold($locked);
             app(ReserveIssuanceSnapshot::class)->assertFeeHold($locked);
+            app(ReserveFundingOrderLink::class)->assertActive($locked);
             $locked->forceFill(['status' => 'submitting', 'submitted_at' => now()])->save();
 
             return $locked;

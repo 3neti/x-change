@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Reserve;
 
 use Carbon\CarbonImmutable;
+use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Models\ReserveTransfer;
 use LBHurtado\XJournal\Data\ExecutionActorData;
 use LBHurtado\XJournal\Data\ExecutionJournalEntryData;
@@ -29,6 +30,37 @@ final readonly class ReserveTransferJournal
             payload: ['provider' => $transfer->provider, 'source_treasury_connection' => $transfer->source_treasury_connection],
             money: new ExecutionMoneyData(currency: $transfer->currency, minorAmount: $transfer->amount_minor),
             metadata: ['schema' => 'x-change.reserve-transfer-hold.v1', 'source' => 'treasury_operations'],
+        ));
+    }
+
+    public function recordFundingOrderLink(ReserveTransfer $transfer, PayCodeIssuanceFundingOrder $order): void
+    {
+        $this->recorder->record(new ExecutionJournalEntryData(
+            eventType: 'reserve_transfer.funding_order_linked', occurredAt: CarbonImmutable::now(),
+            actor: new ExecutionActorData(id: 'x-change', type: 'system'),
+            subject: new ExecutionSubjectData(id: (string) $transfer->getKey(), type: 'reserve_transfer', display: $transfer->reference),
+            references: new ExecutionReferenceData(correlationId: 'reserve-transfer:'.$transfer->reference,
+                executionId: (string) $transfer->getKey(), metadata: ['funding_order_reference' => $order->reference]),
+            idempotencyKey: 'x-change:reserve-transfer:funding-order-linked:'.$transfer->getKey(),
+            payload: ['funding_order_reference' => $order->reference, 'provider' => $transfer->provider],
+            money: new ExecutionMoneyData(currency: $transfer->currency, minorAmount: $transfer->amount_minor),
+            metadata: ['schema' => 'x-change.reserve-transfer-funding-order-link.v1'],
+        ));
+    }
+
+    public function recordPaidOrderRejection(ReserveTransfer $transfer, PayCodeIssuanceFundingOrder $order): void
+    {
+        $this->recorder->record(new ExecutionJournalEntryData(
+            eventType: 'reserve_transfer.funded_order_rejected', occurredAt: CarbonImmutable::now(),
+            actor: new ExecutionActorData(id: 'netbank', type: 'settlement_provider'),
+            subject: new ExecutionSubjectData(id: (string) $transfer->getKey(), type: 'reserve_transfer', display: $transfer->reference),
+            references: new ExecutionReferenceData(correlationId: 'reserve-transfer:'.$transfer->reference,
+                executionId: (string) $transfer->getKey(), externalReference: $transfer->provider_transaction_id,
+                metadata: ['funding_order_reference' => $order->reference]),
+            idempotencyKey: 'x-change:reserve-transfer:funded-order-rejected:'.$transfer->getKey(),
+            payload: ['funding_order_reference' => $order->reference, 'funds_remain_held' => true],
+            money: new ExecutionMoneyData(currency: $transfer->currency, minorAmount: $transfer->amount_minor),
+            metadata: ['schema' => 'x-change.reserve-transfer-funded-order-rejection.v1'],
         ));
     }
 

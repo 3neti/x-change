@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Reserve;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Contracts\AccountTransferProvider;
 use LBHurtado\XChange\Models\ReserveTransfer;
 use RuntimeException;
@@ -43,6 +44,15 @@ final readonly class AdvanceReserveBackedIssuance
             $current = $this->transfers->check($current, $provider);
         }
         if ($current->status === 'rejected') {
+            if ($current->funding_order_id !== null) {
+                return DB::transaction(function () use ($current): ReserveTransfer {
+                    $locked = ReserveTransfer::query()->lockForUpdate()->findOrFail($current->getKey());
+                    app(ReserveFundingOrderLink::class)->markRejected($locked);
+
+                    return $locked;
+                });
+            }
+
             return $this->release->release($current);
         }
         if ($current->status === 'provider_settled') {

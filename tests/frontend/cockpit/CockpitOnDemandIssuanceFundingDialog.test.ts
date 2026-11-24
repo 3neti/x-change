@@ -6,6 +6,22 @@ import CockpitOnDemandIssuanceFundingDialog from "../../../resources/js/cockpit/
 import { projection } from "./issuanceProjection";
 
 describe("CockpitOnDemandIssuanceFundingDialog", () => {
+  it("shows reserve review for a verified order without requesting payment again", () => {
+    const order = structuredClone(projection);
+    order.status = "issuing";
+    order.order.status = "issuing";
+    order.order.receipt.verified_at = "2026-11-24T00:00:00+08:00";
+    order.order.can_cancel = false;
+    order.lifecycle.current = "attention";
+    order.lifecycle.message = "Payment verified. Issuance needs review; do not pay again.";
+    order.retry.eligible = false;
+    const wrapper = mount(CockpitOnDemandIssuanceFundingDialog, { props: { open: true, projection: order }, attachTo: document.body });
+    expect(document.body.textContent).toContain("Payment received — issuance needs attention");
+    expect(document.body.textContent).toContain("Do not pay again");
+    expect(document.querySelector('[data-testid="on-demand-fixed-qr-ph"]')).toBeNull();
+    wrapper.unmount();
+  });
+
   it("explains the missing Client Funds without requesting the order payment again", () => {
     const order = structuredClone(projection);
     order.status = "issuance_attention";

@@ -51,6 +51,7 @@ final readonly class ReserveTransferTreasuryPosting
                 || ! is_int($locked->bank_account_link_id) || ! ($owner = $locked->owner) instanceof Model) {
                 throw new RuntimeException('A verified bank settlement and frozen account are required.');
             }
+            app(ReserveFundingOrderLink::class)->assertActive($locked);
             $this->transfers->assertFrozen($locked);
             $this->transfers->assertHold($locked);
             app(ReserveIssuanceSnapshot::class)->assertFeeHold($locked);

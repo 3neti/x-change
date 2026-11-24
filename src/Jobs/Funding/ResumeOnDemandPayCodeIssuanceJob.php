@@ -23,13 +23,17 @@ use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Enums\IssuanceBatchStatus;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Jobs\Payment\QueueIssuedPayCodeSmsJob;
+use LBHurtado\XChange\Jobs\Reserve\AdvanceReserveIssuanceJob;
 use LBHurtado\XChange\Models\Checkout;
 use LBHurtado\XChange\Models\IssuanceBatch;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
+use LBHurtado\XChange\Models\ReserveTransfer;
 use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
 use LBHurtado\XChange\Services\Banking\AssignedFundingTreasuryConnection;
 use LBHurtado\XChange\Services\Funding\SettlementIssuanceRecoveryAssessment;
 use LBHurtado\XChange\Services\PartnerApi\PartnerIssuanceReservationService;
+use LBHurtado\XChange\Services\Reserve\PrepareReserveBackedIssuance;
+use LBHurtado\XChange\Services\Reserve\ReserveTransferJournal;
 use LBHurtado\XChange\Services\Treasury\TreasuryAccountBalanceReadModel;
 use RuntimeException;
 use Throwable;
@@ -82,6 +86,11 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
                 ->findOrFail($this->fundingOrderId);
 
             if ($order->status === PayCodeIssuanceFundingOrderStatus::Issued) {
+                return;
+            }
+
+            if ($order->status === PayCodeIssuanceFundingOrderStatus::Issuing
+                && ReserveTransfer::query()->where('funding_order_id', $order->getKey())->exists()) {
                 return;
             }
 
@@ -175,6 +184,40 @@ final class ResumeOnDemandPayCodeIssuanceJob implements ShouldBeUnique, ShouldQu
                     $availableMinor === null ? 'unavailable' : (string) $availableMinor,
                     $requiredMinor,
                 ));
+            }
+
+            if ($assignedConnection !== null && ! in_array(data_get($instructions, 'voucher_type'), ['payable', 'settlement'], true)) {
+                if (! (bool) config('x-change.reserve_transfer.enabled', false)) {
+                    throw new RuntimeException('Reserve-backed issuance is unavailable; the verified payment remains held.');
+                }
+                if (data_get($order->metadata, 'issuance_batch_reference') !== null
+                    || data_get($instructions, 'metadata.issuance_batch_reference') !== null
+                    || (int) data_get($instructions, 'count', 1) !== 1) {
+                    throw new RuntimeException('A dedicated-account funded order requires a single reserve-backed Pay Code.');
+                }
+                $accountLinkId = data_get($order->metadata, 'funding_source.account_link_id');
+                $amount = data_get($instructions, 'cash.amount');
+                if (! is_int($accountLinkId) || $accountLinkId <= 0 || ! is_numeric($amount)
+                    || (float) $amount <= 0 || abs((float) $amount * 100 - round((float) $amount * 100)) > 0.000001) {
+                    throw new RuntimeException('The frozen funding account or Pay Code amount is invalid.');
+                }
+                $reserve = app(PrepareReserveBackedIssuance::class)->prepareSelected(
+                    $issuer, $accountLinkId, (int) round((float) $amount * 100), $order->currency,
+                    'funded-order:'.$order->reference, $instructions,
+                );
+                if ($reserve->source_treasury_connection !== $order->connection_reference
+                    || $reserve->amount_minor + $reserve->fee_minor !== $order->required_amount_minor
+                    || ($reserve->funding_order_id !== null && $reserve->funding_order_id !== $order->getKey())) {
+                    throw new RuntimeException('The reserve does not match the frozen paid order.');
+                }
+                $reserve->forceFill(['funding_order_id' => $order->getKey()])->save();
+                $metadata = (array) $order->metadata;
+                data_set($metadata, 'reserve_transfer_reference', $reserve->reference);
+                $order->forceFill(['metadata' => $metadata])->saveQuietly();
+                app(ReserveTransferJournal::class)->recordFundingOrderLink($reserve, $order);
+                DB::afterCommit(static fn () => AdvanceReserveIssuanceJob::dispatch($reserve->getKey()));
+
+                return;
             }
 
             $batchReference = data_get($order->metadata, 'issuance_batch_reference')
