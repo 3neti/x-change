@@ -19,6 +19,7 @@ use LBHurtado\PaymentGateway\Funding\NetbankFundingApiClient;
 use LBHurtado\PaymentGateway\Funding\NetbankFundingProviderAdapter;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
+use LBHurtado\Wallet\Treasury\Models\TreasuryAllocation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\XChange\Actions\Banking\AssignNetbankAccount;
@@ -436,6 +437,155 @@ it('allocates verified funding only to the assigned account Treasury connection'
     $assignment->forceFill(['treasury_connection_reference' => null])->save();
     expect(app(SelectedAccountClientFunds::class)->forOwner($owner))
         ->toMatchArray(['mode' => 'unavailable', 'amount_minor' => null]);
+});
+
+it('preserves the paid order and its funding hold when reserve-backed recovery is not yet connected', function () {
+    Queue::fake();
+    Http::preventStrayRequests();
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.commercial.enabled', true);
+    config()->set('x-change.commercial.legal_trace.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.commercial.legal_trace.profile_version', 'test-v1');
+    app(ProvisionCommercialBaselines::class)->provision('commissioning-manifest:personal-on-demand');
+    config()->set('x-change.funding.providers.netbank.enabled', true);
+    config()->set('x-change.funding.dedicated_netbank_vca_enabled', true);
+    config()->set('x-change.funding.dedicated_netbank_direct_qr_enabled', true);
+    config()->set('x-change.issuance_funding.on_demand.assigned_netbank_enabled', true);
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = bankTreasuryConfiguration('inventory:personal', 'resource:personal');
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([TreasuryProviderConnectionCatalog::class, TreasuryPreflightService::class,
+        TreasuryProvisioningService::class, TreasuryAccountPortfolioProvisioningContract::class] as $abstract) {
+        app()->forgetInstance($abstract);
+    }
+    $owner = actingAsTestUser(0);
+    $assignment = app(AssignNetbankAccount::class)->handle($owner, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    app(AssignedBankTreasuryConnection::class)->bind($owner, $assignment->id, 'netbank-personal');
+    $assignment->providerAccountLink->forceFill([
+        'status' => 'ready', 'ready_at' => now(), 'capabilities' => ['funding', 'disbursement'],
+        'metadata' => ['funding_assignment' => ['scope' => 'fresh_intents_only', 'fresh_since' => now()->subMinute()->toIso8601String()]],
+    ])->save();
+    FundingDestinationPreference::query()->create([
+        'owner_type' => $owner::class, 'owner_id' => $owner->getKey(), 'provider_code' => 'netbank',
+        'mode' => 'dedicated', 'provider_account_link_id' => $assignment->provider_account_link_id,
+    ]);
+    $settings = Mockery::mock(ProviderRuntimeSettingsResolverContract::class);
+    $settings->shouldReceive('provider')->andReturn('netbank');
+    $settings->shouldReceive('topology')->andReturn('ledger_pooled');
+    $settings->shouldReceive('isEnabled')->andReturn(true);
+    app()->instance(ProviderRuntimeSettingsResolverContract::class, $settings);
+    $wallet = $owner->wallet()->where('slug', 'platform')->firstOrFail();
+    $destination = new FundingDestinationData(
+        provider: 'netbank', mode: 'dedicated', destinationType: 'bank_account', accountReference: 'wallet:'.$wallet->uuid,
+        displayReference: 'Personal', fingerprint: hash('sha256', 'personal-destination'), verificationStatus: 'routing_configured',
+        bankAccountNumber: '991100001234', bankAccountName: 'Example', routingAlias: '54321', metadata: [
+            'assigned_bank_account_link_id' => $assignment->provider_account_link_id,
+            'netbank_instruction_mode' => 'direct_qr', 'treasury_connection_reference' => 'netbank-personal',
+            'treasury_inventory_reference' => 'inventory:personal', 'treasury_resource_reference' => 'resource:personal',
+        ],
+    );
+    $resolver = Mockery::mock(FundingDestinationResolverContract::class);
+    $resolver->shouldReceive('resolve')->twice()->andReturn($destination);
+    app()->instance(FundingDestinationResolverContract::class, $resolver);
+    $adapter = new class extends FakeFundingProviderAdapter implements DirectQrFundingInstructionIssuer
+    {
+        public function createDirectQrFundingInstructions(FundingInstructionRequestData $request): FundingInstructionsData
+        {
+            $address = $request->destination->routingAlias.$request->metadata['reserved_vca_reference'];
+
+            return new FundingInstructionsData(
+                provider: 'netbank', providerReference: $address, amountMinor: $request->amountMinor,
+                currency: $request->currency, fundingAddress: $address,
+                qrCode: new FundingQrCodeData(
+                    mimeType: 'image/png', base64Payload: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLttAAAAABJRU5ErkJggg==', qrMode: 'dynamic',
+                    transactionType: 'p2m', embeddedAmount: true, providerGenerated: true,
+                ),
+            );
+        }
+    };
+    app()->instance(FundingProviderAdapterRegistry::class,
+        new FundingProviderAdapterRegistry([$adapter]));
+    app()->instance(ReserveNetbankVca::class,
+        new class extends ReserveNetbankVca
+        {
+            protected function nextReference(): string
+            {
+                return '7654321';
+            }
+        });
+    $instructions = validPayCodePayload(25);
+    data_set($instructions, 'inputs.fields', []);
+    $pricing = app(EstimatePayCodeCost::class)->handle($instructions);
+    $assignment->providerAccountLink->forceFill(['capabilities' => ['funding']])->save();
+    expect(fn () => app(PrepareOnDemandPayCodeIssuance::class)->handle(
+        $owner, $instructions, $pricing, 'unready-personal-on-demand', OnDemandIssuanceFundingBasis::FullAmount,
+    ))->toThrow(FundingDestinationUnavailable::class);
+    expect(PayCodeIssuanceFundingOrder::query()->count())->toBe(0);
+    $assignment->providerAccountLink->forceFill(['capabilities' => ['funding', 'disbursement']])->save();
+    $order = app(PrepareOnDemandPayCodeIssuance::class)->handle(
+        $owner, $instructions, $pricing, 'personal-on-demand', OnDemandIssuanceFundingBasis::FullAmount,
+    );
+    expect($order->connection_reference)->toBe('netbank-personal')
+        ->and(data_get($order->metadata, 'funding_source.account_link_id'))->toBe($assignment->provider_account_link_id)
+        ->and($order->fundingIntent->funding_address_ciphertext)->toBe('543217654321')
+        ->and(data_get($order->fundingIntent->instructions_ciphertext, 'qr_code.embedded_amount'))->toBeTrue()
+        ->and(data_get($order->fundingIntent->destination_snapshot_ciphertext, 'metadata.treasury_connection_reference'))->toBe('netbank-personal');
+    $presented = app(OnDemandIssuanceFundingOrderPresenter::class)->present($order);
+    expect(data_get($presented, 'funding_selector.qr_ph.fixed_amount'))->toBeTrue()
+        ->and(data_get($presented, 'funding_selector.qr_ph.amount_minor'))->toBe($order->expected_payment_minor)
+        ->and(data_get($presented, 'funding_selector.bank_transfer.instructions.funding_address'))->toBe('543217654321');
+    FundingDestinationPreference::query()->whereMorphedTo('owner', $owner)->update(['mode' => 'shared', 'provider_account_link_id' => null]);
+    $replay = app(PrepareOnDemandPayCodeIssuance::class)->handle(
+        $owner, $instructions, $pricing, 'personal-on-demand', OnDemandIssuanceFundingBasis::FullAmount,
+    );
+    expect($replay->is($order))->toBeTrue()
+        ->and($replay->connection_reference)->toBe('netbank-personal');
+    $intent = $order->fundingIntent;
+    $adapter->fundingObservation = new ProviderFundingObservationData(
+        provider: 'netbank', providerTransactionId: 'personal-on-demand-settlement',
+        grossAmountMinor: $intent->expected_amount_minor, feeAmountMinor: 0,
+        netAmountMinor: $intent->expected_amount_minor, currency: 'PHP', providerStatus: 'settled',
+        verificationSource: 'netbank-fixture', payloadHash: hash('sha256', 'personal-on-demand-settlement'),
+        fundingAddress: 'sha256:'.hash('sha256', $intent->funding_address_ciphertext),
+        providerAccountReference: 'sha256:'.hash('sha256', $intent->funding_address_ciphertext),
+        occurredAt: now()->toDateTimeImmutable(), settledAt: now()->toDateTimeImmutable(),
+        metadata: ['destination_verified' => true, 'exact_vca_verified' => true],
+    );
+    $verified = app(VerifyFundingIntent::class)->handle(
+        $intent, new FundingIntentVerificationData(
+            trigger: FundingVerificationTrigger::Operator, actorId: (string) $owner->getKey(),
+        ),
+    );
+    expect($verified->status)->toBe(FundingIntentStatus::Verified)
+        ->and($adapter->lastVerification->allowDestinationHistoryFallback)->toBeFalse();
+    $observation = ProviderFundingObservation::query()->findOrFail($verified->matched_observation_id);
+    $observationMetadata = $observation->metadata;
+    $observation->forceFill(['metadata' => ['destination_verified' => true]])->saveQuietly();
+    expect(fn () => app(SettleVerifiedFundingIntent::class)->handle($verified))
+        ->toThrow(FundingSettlementDenied::class, 'exact dedicated funding VCA');
+    $observation->forceFill(['metadata' => $observationMetadata])->saveQuietly();
+    $settlement = app(SettleVerifiedFundingIntent::class)->handle($verified);
+    expect($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::Funded)
+        ->and($order->fundingIntent->refresh()->status)->toBe(FundingIntentStatus::Settled)
+        ->and($order->connection_reference)->toBe('netbank-personal');
+    $repeated = app(SettleVerifiedFundingIntent::class)->handle($verified->refresh());
+    expect($repeated->is($settlement))->toBeTrue();
+    $readiness = Mockery::mock(CheckProviderSourceAccountReadiness::class);
+    $readiness->shouldReceive('handle')->withAnyArgs()->andReturn([
+        'ready' => true, 'checked' => true, 'currency' => 'PHP', 'available_balance_minor' => 100000,
+    ]);
+    app()->instance(CheckProviderSourceAccountReadiness::class, $readiness);
+    $job = new ResumeOnDemandPayCodeIssuanceJob($order->getKey());
+    expect(fn () => app()->call([$job, 'handle']))
+        ->toThrow(PayCodeIssuanceFailed::class, 'reserve-backed issuance flow');
+    expect($order->refresh()->status)->toBe(PayCodeIssuanceFundingOrderStatus::Funded)
+        ->and($order->voucher_id)->toBeNull()
+        ->and($order->treasury_hold_reference)->not->toBeNull()
+        ->and(TreasuryAllocation::query()->where('allocation_reference', $order->treasury_hold_reference)->sole()->balance_minor)->toBe($order->required_amount_minor)
+        ->and($order->fundingIntent->refresh()->status)->toBe(FundingIntentStatus::Settled)
+        ->and(FundingSettlement::query()->where('funding_intent_id', $intent->getKey())->count())->toBe(1);
 });
 
 it('issues a real Pay Code from verified personal on-demand funding after the default changes', function () {
