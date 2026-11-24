@@ -1378,7 +1378,7 @@ it('continues a recorded funded order for a suspended issuer', function (): void
     expect($result->voucher_id)->not->toBeNull();
 });
 
-it('freezes the assigned payout source inside the issuance transaction', function (): void {
+it('freezes the assigned account inside a payable issuance transaction', function (): void {
     $issuer = actingAsTestUser(1_000_000);
     $assignment = app(AssignNetbankAccount::class)->handle($issuer, [
         'account_number' => '991100001234', 'account_name' => 'Example',
@@ -1403,14 +1403,14 @@ it('freezes the assigned payout source inside the issuance transaction', functio
     ));
     app()->instance(ProviderFundingPolicyContract::class, $policy);
 
-    $result = app(GeneratePayCode::class)->handle(array_merge(validPayCodePayload(), ['issuer_id' => $issuer->id]));
+    $result = app(GeneratePayCode::class)->handle(array_merge(validPayCodePayload(), ['issuer_id' => $issuer->id, 'voucher_type' => 'payable']));
     $voucher = Voucher::query()->findOrFail($result->voucher_id);
     $source = app(VoucherBankSourceSnapshot::class)->forVoucher($voucher);
     expect($source['account_link_id'])->toBe($assignment->provider_account_link_id)
         ->and($source['account_number'])->toBe('991100001234');
 });
 
-it('rolls back issuance when the assigned payout source cannot be frozen', function (): void {
+it('rolls back payable issuance when the assigned account cannot be frozen', function (): void {
     $issuer = actingAsTestUser(1_000_000);
     $before = Voucher::query()->count();
     $policy = Mockery::mock(ProviderFundingPolicyContract::class);
@@ -1420,12 +1420,12 @@ it('rolls back issuance when the assigned payout source cannot be frozen', funct
     ));
     app()->instance(ProviderFundingPolicyContract::class, $policy);
 
-    expect(fn () => app(GeneratePayCode::class)->handle(array_merge(validPayCodePayload(), ['issuer_id' => $issuer->id])))
+    expect(fn () => app(GeneratePayCode::class)->handle(array_merge(validPayCodePayload(), ['issuer_id' => $issuer->id, 'voucher_type' => 'payable'])))
         ->toThrow(RuntimeException::class, 'payout source is unavailable');
     expect(Voucher::query()->count())->toBe($before);
 });
 
-it('charges fees and reserves principal on the frozen assigned account connection', function (int $paidMinor, ?string $payerMobile, bool $multiple): void {
+it('keeps verified personal funding isolated when ordinary disbursement is blocked', function (int $paidMinor, ?string $payerMobile, bool $multiple): void {
     Http::preventStrayRequests();
     $issuer = actingAsTestUser(0);
     enableNetbankTreasuryForTests();
@@ -1564,16 +1564,22 @@ it('charges fees and reserves principal on the frozen assigned account connectio
         'feedback' => ['email' => null, 'mobile' => null, 'webhook' => null],
     ]);
     $payload['inputs']['fields'] = [];
-    $result = app(GeneratePayCode::class)->handle($payload);
-    $voucher = Voucher::query()->findOrFail($result->voucher_id);
-    $positions = TreasuryPosition::query()->whereMorphedTo('principal', $issuer)->where('connection_reference', 'netbank-personal')->get();
-    $client = $positions->first(fn ($position) => $position->purpose === TreasuryPositionPurpose::ClientFunds);
-    $reserve = $positions->first(fn ($position) => $position->purpose === TreasuryPositionPurpose::PayCodeReserve);
-    expect($client)->not->toBeNull()->and($reserve)->not->toBeNull()
-        ->and(Wallet::query()->findOrFail($reserve->internal_ledger_id)->balanceInt)->toBe(2500)
-        ->and(Wallet::query()->findOrFail($client->internal_ledger_id)->balanceInt)
-        ->toBe($totalPaidMinor - (int) round(($result->cost->account_debit ?? 25 + $result->cost->total) * 100))
-        ->and(data_get($voucher->metadata, 'treasury.pay_code_reservation.connection_reference'))->toBe('netbank-personal');
+    $voucherCount = Voucher::query()->count();
+    $personalInventory = TreasuryInventory::query()->where('inventory_reference', 'inventory:personal')->sole();
+    $personalPositions = TreasuryPosition::query()->whereMorphedTo('principal', $issuer)
+        ->where('connection_reference', 'netbank-personal')->get();
+    $client = $personalPositions->first(fn ($position) => $position->purpose === TreasuryPositionPurpose::ClientFunds);
+    expect($client)->not->toBeNull();
+    $clientBalanceBefore = Wallet::query()->findOrFail($client->internal_ledger_id)->balanceInt;
+    $reserve = $personalPositions->first(fn ($position) => $position->purpose === TreasuryPositionPurpose::PayCodeReserve);
+    $reserveBalanceBefore = Wallet::query()->findOrFail($reserve->internal_ledger_id)->balanceInt;
+
+    expect(fn () => app(GeneratePayCode::class)->handle($payload))
+        ->toThrow(PayCodeIssuanceFailed::class, 'requires the reserve-backed issuance flow');
+    expect(Voucher::query()->count())->toBe($voucherCount)
+        ->and($personalInventory->fresh()->balance_minor)->toBe($totalPaidMinor)
+        ->and(Wallet::query()->findOrFail($client->internal_ledger_id)->balanceInt)->toBe($clientBalanceBefore)
+        ->and(Wallet::query()->findOrFail($reserve->internal_ledger_id)->balanceInt)->toBe($reserveBalanceBefore);
 
     FundingDestinationPreference::query()->whereMorphedTo('owner', $issuer)
         ->where('provider_code', 'netbank')->firstOrFail()
@@ -1581,28 +1587,6 @@ it('charges fees and reserves principal on the frozen assigned account connectio
     expect(fn () => app(ProviderFundingPolicyContract::class)->assertCanIssue($issuer, $wallet, 1, [
         'provider' => 'netbank', 'currency' => 'PHP',
     ]))->toThrow(InsufficientWalletBalance::class);
-    $provider = fakePayoutProvider()
-        ->willReturnPendingResult(transactionId: 'fixture-assigned-claim', provider: 'netbank')
-        ->willResolveCheckStatusAsSuccessful(transactionId: 'fixture-assigned-claim', provider: 'netbank');
-    $claim = app(SubmitPayCodeClaim::class)->handle($voucher->refresh(), [
-        'mobile' => '09173011987', 'recipient_country' => 'PH',
-        'bank_account' => ['bank_code' => 'GXCHPHM2XXX', 'account_number' => '09173011987'],
-        '_meta' => ['idempotency_key' => 'assigned-source-claim'],
-    ]);
-    expect($claim->status)->toBe('pending_review')
-        ->and($provider->lastRequest?->source_account?->account_number)->toBe('991100001234')
-        ->and(TreasuryInventory::query()->where('inventory_reference', 'inventory:personal')->sole()->balance_minor)->toBe($totalPaidMinor);
-    $this->artisan('xchange:reconcile:pending', ['--json' => true])->assertSuccessful();
-    $this->artisan('xchange:reconcile:pending', ['--json' => true])->assertSuccessful();
-    expect($provider->disburseCallCount)->toBe(1)
-        ->and($provider->checkStatusCallCount)->toBe(1)
-        ->and(DisbursementReconciliation::query()->where('voucher_id', $voucher->id)->sole()->status)->toBe('succeeded')
-        ->and(ExecutionJournalEntry::query()->where('event_type', 'pay_code.disbursement.settled')->where('subject_id', (string) $voucher->id)->count())->toBe(1)
-        ->and($provider->lastRequest?->source_account?->account_number)->toBe('991100001234')
-        ->and($provider->lastRequest?->source_account?->customer_id)->toBe('1234')
-        ->and(TreasuryInventory::query()->where('inventory_reference', 'inventory:personal')->sole()->balance_minor)->toBe($totalPaidMinor - 2500)
-        ->and(TreasuryInventory::query()->where('inventory_reference', 'inventory:netbank:vca-cash')->exists())->toBeFalse();
-
     recognizeAccountingInventoryForTest(10000, 'shared-after-personal');
     fundTestUserClientFunds($issuer, 10000);
     $providerReadiness->shouldReceive('handle')->once()->with(Mockery::type('int'), 'netbank')
@@ -1610,7 +1594,8 @@ it('charges fees and reserves principal on the frozen assigned account connectio
     $shared = app(GeneratePayCode::class)->handle($payload);
     $sharedVoucher = Voucher::query()->findOrFail($shared->voucher_id);
     expect(data_get($sharedVoucher->metadata, 'treasury.pay_code_reservation.connection_reference'))->toBe('netbank-primary')
-        ->and(TreasuryInventory::query()->where('inventory_reference', 'inventory:personal')->sole()->balance_minor)->toBe($totalPaidMinor - 2500);
+        ->and($personalInventory->fresh()->balance_minor)->toBe($totalPaidMinor)
+        ->and(Wallet::query()->findOrFail($client->internal_ledger_id)->balanceInt)->toBe($clientBalanceBefore);
 })->with([
     'matching amount with reported mobile' => [10000, '09179999999', false],
     'different amount with no mobile' => [12000, null, false],
