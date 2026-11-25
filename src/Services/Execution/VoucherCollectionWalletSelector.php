@@ -10,6 +10,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\XChange\Contracts\VoucherCollectionWalletResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
+use LBHurtado\XChange\Exceptions\VoucherRecipientUnavailable;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use RuntimeException;
 
@@ -24,7 +25,7 @@ final readonly class VoucherCollectionWalletSelector
         private ValueFlowPayoutService $payouts,
     ) {}
 
-    public function resolve(Voucher $voucher, string $provider, string $currency): Wallet
+    public function resolve(Voucher $voucher, string $provider, string $currency, ?string $connectionReference = null): Wallet
     {
         $destination = $this->flows->destination($voucher);
 
@@ -34,7 +35,8 @@ final readonly class VoucherCollectionWalletSelector
 
         $connections = collect($this->connections->active())
             ->filter(static fn ($connection): bool => $connection->provider === strtolower($provider)
-                && $connection->currency === strtoupper($currency))
+                && $connection->currency === strtoupper($currency)
+                && ($connectionReference === null || $connection->reference === $connectionReference))
             ->values();
 
         if ($connections->count() !== 1) {
@@ -66,7 +68,7 @@ final readonly class VoucherCollectionWalletSelector
             : null;
 
         if (! $wallet instanceof Wallet) {
-            throw new RuntimeException('The value flow collection destination has no Account wallet.');
+            throw new VoucherRecipientUnavailable('The value flow collection destination has no Account wallet.');
         }
 
         return $wallet;

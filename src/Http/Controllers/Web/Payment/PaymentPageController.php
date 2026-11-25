@@ -150,7 +150,7 @@ class PaymentPageController extends Controller
                     && $providerEnabled
                     && $repaymentReady
                     && $documentsReady
-                    && $attempt?->status !== PaymentAttemptStatus::Verified
+                    && ! in_array($attempt?->status, [PaymentAttemptStatus::Verified, PaymentAttemptStatus::CreditedToClientFunds], true)
                     && ($display === null || ($display->ended_at === null && ! $display->expires_at->isPast() && $displays->intakeReady($display, $voucher)))
                     && ! $collection->is_fully_collected,
                 'poll_interval_ms' => max(1000, (int) config('x-change.payment.attempts.ui_refresh_interval_milliseconds', 5000)),

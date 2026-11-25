@@ -76,7 +76,7 @@ const terminal = computed(() =>
   ["issued", "cancelled", "expired"].includes(current.value?.status ?? ""),
 );
 const needsAttention = computed(
-  () => current.value?.status === "issuance_attention",
+  () => current.value?.status === "issuance_attention" || current.value?.lifecycle.current === "attention",
 );
 const additionalClientFunds = computed(() => {
   const minor = current.value?.retry.additional_client_funds_minor;

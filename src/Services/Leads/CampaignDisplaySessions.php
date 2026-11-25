@@ -139,7 +139,7 @@ final readonly class CampaignDisplaySessions
             $status = match ($attempt->status) {
                 PaymentAttemptStatus::Settled => 'paid',
                 PaymentAttemptStatus::Verified => 'completing',
-                PaymentAttemptStatus::Suspense => 'review',
+                PaymentAttemptStatus::Suspense, PaymentAttemptStatus::CreditedToClientFunds => 'review',
                 PaymentAttemptStatus::Expired, PaymentAttemptStatus::Cancelled => 'expired',
                 default => 'awaiting_payment',
             };

@@ -19,15 +19,20 @@ use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
 use LBHurtado\EmiCore\Exceptions\ProviderFundingNotObserved;
 use LBHurtado\EmiCore\Exceptions\ProviderFundingVerificationIndeterminate;
 use LBHurtado\XChange\Actions\Operations\RecordExternalJobFailure;
+use LBHurtado\XChange\Actions\Payment\CreditAssignedPaymentFallback;
 use LBHurtado\XChange\Actions\Payment\SettleAdditionalQrPayment;
+use LBHurtado\XChange\Actions\Payment\TransitionPaymentAttempt;
 use LBHurtado\XChange\Actions\Payment\VerifyPaymentAttempt;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
+use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Exceptions\LatePaymentRequiresReview;
 use LBHurtado\XChange\Models\ObservedPaymentTransaction;
+use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Queue\Concerns\HasSafeQueueTags;
 use LBHurtado\XChange\Queue\Concerns\ProviderVerificationRetryPolicy;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
+use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use Throwable;
 
@@ -100,8 +105,57 @@ final class VerifyAdditionalQrPaymentJob implements ShouldBeUnique, ShouldQueue
             return;
         }
         try {
+            $credited = DB::transaction(function () use ($attempt, $transaction, $observation): bool {
+                $locked = PaymentAttempt::query()->with('voucher')->lockForUpdate()->findOrFail($attempt->getKey());
+                if (data_get($locked->destination_snapshot_ciphertext, 'mode') !== 'dedicated'
+                    || $locked->expires_at === null || $locked->expires_at->isPast()
+                    || $transaction->provider_code !== $observation->provider_code
+                    || $transaction->provider_transaction_id_ciphertext !== $observation->provider_transaction_id
+                    || $transaction->amount_minor !== $observation->gross_amount_minor
+                    || $transaction->currency !== $observation->currency
+                    || $observation->provider_status !== 'settled' || $observation->settled_at === null
+                    || $observation->gross_amount_minor <= 0 || $observation->net_amount_minor <= 0
+                    || $observation->net_amount_minor > $observation->gross_amount_minor
+                    || data_get($observation->metadata, 'destination_verified') !== true
+                    || $locked->funding_address_ciphertext === null
+                    || ! hash_equals('sha256:'.hash('sha256', $locked->funding_address_ciphertext), (string) $observation->funding_address)
+                    || $locked->instructions_created_at === null || $observation->occurred_at === null
+                    || $observation->occurred_at->lessThan($locked->instructions_created_at)
+                    || $observation->occurred_at->greaterThan($locked->expires_at)) {
+                    return false;
+                }
+                $firstMismatch = in_array($locked->status, [PaymentAttemptStatus::AwaitingPayment, PaymentAttemptStatus::Verifying], true)
+                    && ($observation->gross_amount_minor !== $locked->expected_amount_minor
+                        || $observation->net_amount_minor !== $locked->expected_amount_minor);
+                $remaining = app(VoucherCollectionProgressService::class)->compute($locked->voucher)->remaining_to_collect_minor;
+                $completed = $locked->status === PaymentAttemptStatus::CreditedToClientFunds
+                    || ($locked->status === PaymentAttemptStatus::Settled && ($remaining <= 0
+                        || $observation->gross_amount_minor !== $locked->expected_amount_minor
+                        || $observation->net_amount_minor !== $locked->expected_amount_minor
+                        || $observation->gross_amount_minor > $remaining));
+                if (! $firstMismatch && ! $completed) {
+                    return false;
+                }
+                $intent = app(CreditAssignedPaymentFallback::class)->handle($locked, $observation);
+                if ($firstMismatch) {
+                    app(TransitionPaymentAttempt::class)->handle($locked, PaymentAttemptStatus::CreditedToClientFunds,
+                        'payment_credited_to_client_funds', PaymentVerificationTrigger::Schedule,
+                        ['matched_observation_id' => $observation->getKey(),
+                            'provider_transaction_id' => $observation->provider_transaction_id, 'last_checked_at' => now()],
+                        ['funding_intent_reference' => $intent->reference]);
+                }
+
+                return true;
+            }, 5);
+            if ($credited) {
+                return;
+            }
             if ($attempt->status !== PaymentAttemptStatus::Settled) {
                 $attempt = $verify->handleSpecificObservation($attempt, $transaction, $observation);
+                if ($attempt->status === PaymentAttemptStatus::CreditedToClientFunds
+                    && (int) $attempt->matched_observation_id === (int) $observation->getKey()) {
+                    return;
+                }
                 if ($attempt->status !== PaymentAttemptStatus::Settled) {
                     throw new LatePaymentRequiresReview('The first payment requires review.');
                 }

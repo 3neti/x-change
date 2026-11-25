@@ -4,6 +4,7 @@ import { Link } from "@inertiajs/vue3";
 import { Landmark } from "lucide-vue-next";
 import { computed, nextTick, ref } from "vue";
 import { index as fundingIndex } from "@/routes/x-change/cockpit/funding";
+import { index as accountsIndex } from "@/routes/x-change/cockpit/accounts";
 import CockpitGenerateActionPanel from "../components/CockpitGenerateActionPanel.vue";
 import CockpitIssuanceBoundaryPanel from "../components/CockpitIssuanceBoundaryPanel.vue";
 import CockpitPricingFundingSummary from "../components/CockpitPricingFundingSummary.vue";
@@ -155,9 +156,7 @@ function restoreLlmAfterIssuanceFlow(): void {
 }
 
 const clientFundsMinor = computed<number | null>(() => {
-  const amount = props.cockpit_header_read_model?.balances?.find(
-    (balance) => balance.key === "internal",
-  )?.amount_minor;
+  const amount = props.selected_account_funds?.amount_minor;
 
   return typeof amount === "number" && Number.isFinite(amount)
     ? Math.round(amount)
@@ -1239,6 +1238,10 @@ function stringValue(value: unknown): string | null {
       class="space-y-4 px-4 md:px-0"
       data-testid="cockpit-quick-generate-shell"
     >
+      <div v-if="!publicAutoGenerate && props.issuance_bank_account" class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-950" data-testid="issuance-bank-account">
+        <span><span class="text-slate-500">Issuing from </span><strong>{{ props.issuance_bank_account.name }}</strong><span v-if="props.issuance_bank_account.number"> · {{ props.issuance_bank_account.number }}</span></span>
+        <Link :href="accountsIndex()" class="font-semibold text-sky-700 dark:text-sky-300">Manage accounts</Link>
+      </div>
       <header
         v-if="!publicAutoGenerate"
         class="hidden items-start justify-between gap-4 px-1 md:flex"
@@ -1322,6 +1325,7 @@ function stringValue(value: unknown): string | null {
           :instruction-capabilities="props.instruction_capabilities ?? {}"
           :settlement-rail-capabilities="props.settlement_rail_capabilities"
           :active-on-demand-funding-order="props.active_on_demand_funding_order"
+          :reserve-issuance-index-url="props.reserve_issuance_index_url"
           :on-demand-issuance-policy="props.on_demand_issuance_policy"
           :public-mode="publicAutoGenerate"
           :public-prefill="props.public_prefill"

@@ -14,6 +14,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Services\Banking\RecoveryPayoutSourceGuard;
 use LBHurtado\XChange\Services\PayoutResultAudit;
 use RuntimeException;
 
@@ -51,7 +52,12 @@ final readonly class RetryFailedPayCodeDisbursement
                 ->firstOrFail();
 
             $this->assertRetryable($voucher, $reconciliation);
+            app(RecoveryPayoutSourceGuard::class)->assertMatches($voucher, $reconciliation);
             $requestData = (array) $reconciliation->raw_request;
+            unset($requestData['source_account']);
+            if (is_array($reconciliation->bank_source_snapshot)) {
+                $requestData['source_account'] = $reconciliation->bank_source_snapshot;
+            }
             $snapshot = $reconciliation->payout_identity_snapshot;
             if (is_array($snapshot)) {
                 foreach (['sender', 'recipient'] as $role) {

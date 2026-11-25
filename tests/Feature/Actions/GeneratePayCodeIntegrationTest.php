@@ -4,8 +4,17 @@ declare(strict_types=1);
 
 use Bavix\Wallet\Models\Wallet;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\EmiCore\Contracts\DirectQrFundingInstructionIssuer;
+use LBHurtado\EmiCore\Contracts\SpecificIncomingPaymentVerifier;
+use LBHurtado\EmiCore\Data\Funding\FundingInstructionRequestData;
+use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
+use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
+use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
+use LBHurtado\EmiCore\Data\Funding\ProviderPayerIdentityData;
+use LBHurtado\EmiCore\Exceptions\ProviderFundingVerificationIndeterminate;
 use LBHurtado\Voucher\Data\VoucherOperationalSummaryData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\Services\VoucherSlicePlanFactory;
@@ -15,10 +24,17 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
+use LBHurtado\XChange\Actions\Banking\AssignNetbankAccount;
+use LBHurtado\XChange\Actions\Banking\SelectDefaultBankingAccount;
 use LBHurtado\XChange\Actions\Commercial\ApprovePartnerCommissionPayout;
 use LBHurtado\XChange\Actions\Commercial\RequestPartnerCommissionPayout;
 use LBHurtado\XChange\Actions\Commercial\SettleCommercialProviderCost;
 use LBHurtado\XChange\Actions\Commercial\SettlePartnerCommissionPayout;
+use LBHurtado\XChange\Actions\Funding\CreateFundingIntent;
+use LBHurtado\XChange\Actions\Funding\IssueFundingInstructions;
+use LBHurtado\XChange\Actions\Funding\MonitorDirectFundingExceptions;
+use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
+use LBHurtado\XChange\Actions\Funding\VerifyFundingIntent;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Actions\Payment\CompleteVoucherCollection;
 use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
@@ -34,12 +50,17 @@ use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Data\Commercial\PartnerCommissionPayoutEvidenceData;
 use LBHurtado\XChange\Data\Commercial\ProviderCostEvidenceData;
 use LBHurtado\XChange\Data\DebitData;
+use LBHurtado\XChange\Data\Funding\CreateFundingIntentData;
+use LBHurtado\XChange\Data\Funding\FundingIntentVerificationData;
 use LBHurtado\XChange\Data\FundingDecisionData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Data\Payment\ConfirmedVoucherCollectionData;
+use LBHurtado\XChange\Data\Payment\ObservedPaymentTransactionData;
 use LBHurtado\XChange\Enums\CommercialActivationAuthority;
 use LBHurtado\XChange\Enums\CommercialBillableEventStatus;
 use LBHurtado\XChange\Enums\CommercialOfferingOrigin;
+use LBHurtado\XChange\Enums\FundingIntentStatus;
+use LBHurtado\XChange\Enums\FundingVerificationTrigger;
 use LBHurtado\XChange\Exceptions\CommercialSaleConflict;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
@@ -49,9 +70,14 @@ use LBHurtado\XChange\Models\CommercialOfferingActivation;
 use LBHurtado\XChange\Models\CommercialProviderCostSettlement;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Models\FundingDestinationPreference;
+use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\PartnerCommissionPayout;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Services\Accounts\AccountLifecycle;
+use LBHurtado\XChange\Services\Banking\AssignedBankTreasuryConnection;
+use LBHurtado\XChange\Services\Banking\VoucherBankSourceSnapshot;
+use LBHurtado\XChange\Services\CheckProviderSourceAccountReadiness;
 use LBHurtado\XChange\Services\Commercial\ActivateCommercialComponentEconomics;
 use LBHurtado\XChange\Services\Commercial\ActivateCommercialRecipientDesignation;
 use LBHurtado\XChange\Services\Commercial\CommercialComponentEconomicsManifestCompiler;
@@ -59,9 +85,16 @@ use LBHurtado\XChange\Services\Commercial\CommercialControlReadModel;
 use LBHurtado\XChange\Services\Commercial\PersistCommercialComponentEconomicsManifest;
 use LBHurtado\XChange\Services\Commercial\ProvisionCommercialBaselines;
 use LBHurtado\XChange\Services\Execution\ValueFlowPayoutService;
+use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
+use LBHurtado\XChange\Services\Funding\ReserveNetbankVca;
 use LBHurtado\XChange\Services\Payment\PaymentReceiptReadModel;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
+use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
+use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
+use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
 use LBHurtado\XChange\Services\XRay\VoucherXRayProjectionBuilder;
+use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
+use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XCommerce\Data\CommercialComponentEconomicsSetData;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
@@ -1344,3 +1377,227 @@ it('continues a recorded funded order for a suspended issuer', function (): void
     $result = app(GeneratePayCode::class)->handleFunded($payload, $order);
     expect($result->voucher_id)->not->toBeNull();
 });
+
+it('freezes the assigned account inside a payable issuance transaction', function (): void {
+    $issuer = actingAsTestUser(1_000_000);
+    $assignment = app(AssignNetbankAccount::class)->handle($issuer, [
+        'account_number' => '991100001234', 'account_name' => 'Example',
+        'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $assignment->providerAccountLink->forceFill([
+        'status' => 'ready', 'ready_at' => now(), 'capabilities' => ['disbursement'],
+    ])->save();
+    app()->instance(TreasuryProviderConnectionCatalog::class,
+        new TreasuryProviderConnectionCatalog([
+            'personal' => [
+                'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+                'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+                'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+            ],
+        ]));
+    app(AssignedBankTreasuryConnection::class)->bind($issuer, $assignment->id, 'personal');
+    $policy = Mockery::mock(ProviderFundingPolicyContract::class);
+    $policy->shouldReceive('assertCanIssue')->once()->andReturn(FundingDecisionData::allowed(
+        authority: 'manual', availableMinor: 1_000_000, requiredMinor: 10_000, currency: 'PHP',
+        meta: ['provider' => 'netbank', 'assigned_bank_account_link_id' => $assignment->provider_account_link_id],
+    ));
+    app()->instance(ProviderFundingPolicyContract::class, $policy);
+
+    $result = app(GeneratePayCode::class)->handle(array_merge(validPayCodePayload(), ['issuer_id' => $issuer->id, 'voucher_type' => 'payable']));
+    $voucher = Voucher::query()->findOrFail($result->voucher_id);
+    $source = app(VoucherBankSourceSnapshot::class)->forVoucher($voucher);
+    expect($source['account_link_id'])->toBe($assignment->provider_account_link_id)
+        ->and($source['account_number'])->toBe('991100001234');
+});
+
+it('rolls back payable issuance when the assigned account cannot be frozen', function (): void {
+    $issuer = actingAsTestUser(1_000_000);
+    $before = Voucher::query()->count();
+    $policy = Mockery::mock(ProviderFundingPolicyContract::class);
+    $policy->shouldReceive('assertCanIssue')->once()->andReturn(FundingDecisionData::allowed(
+        authority: 'manual', availableMinor: 1_000_000, requiredMinor: 10_000, currency: 'PHP',
+        meta: ['provider' => 'netbank', 'assigned_bank_account_link_id' => 999999],
+    ));
+    app()->instance(ProviderFundingPolicyContract::class, $policy);
+
+    expect(fn () => app(GeneratePayCode::class)->handle(array_merge(validPayCodePayload(), ['issuer_id' => $issuer->id, 'voucher_type' => 'payable'])))
+        ->toThrow(RuntimeException::class, 'payout source is unavailable');
+    expect(Voucher::query()->count())->toBe($before);
+});
+
+it('keeps verified personal funding isolated when ordinary disbursement is blocked', function (int $paidMinor, ?string $payerMobile, bool $multiple): void {
+    Http::preventStrayRequests();
+    $issuer = actingAsTestUser(0);
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.commercial.enabled', true);
+    config()->set('x-change.provider_runtime.default_provider', 'netbank');
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ];
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([
+        TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+    ] as $abstract) {
+        app()->forgetInstance($abstract);
+    }
+    $assignment = app(AssignNetbankAccount::class)->handle($issuer, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    $assignment->providerAccountLink->forceFill([
+        'status' => 'ready', 'ready_at' => now(), 'capabilities' => ['funding', 'disbursement'],
+    ])->save();
+    app(AssignedBankTreasuryConnection::class)->bind($issuer, $assignment->id, 'netbank-personal');
+    $assignment->providerAccountLink->forceFill(['metadata' => ['funding_assignment' => [
+        'scope' => 'fresh_intents_only', 'fresh_since' => now()->subMinute()->toIso8601String(),
+    ]]])->save();
+    $snapshot = [
+        'provider' => 'netbank', 'mode' => 'dedicated', 'bankAccountNumber' => '991100001234',
+        'destinationType' => 'bank_account', 'displayReference' => 'Fixture account', 'fingerprint' => hash('sha256', 'fixture-account'),
+        'verificationStatus' => 'routing_configured', 'bankAccountName' => 'Example', 'routingAlias' => '54321',
+        'metadata' => [
+            'assigned_bank_account_link_id' => $assignment->provider_account_link_id,
+            'netbank_instruction_mode' => 'direct_qr',
+            'treasury_connection_reference' => 'netbank-personal', 'treasury_inventory_reference' => 'inventory:personal',
+            'treasury_resource_reference' => 'resource:personal',
+        ],
+    ];
+    $wallet = $issuer->wallet()->where('slug', 'platform')->firstOrFail();
+    $snapshot['accountReference'] = 'wallet:'.$wallet->uuid;
+    config()->set('x-change.funding.providers.netbank.enabled', true);
+    config()->set('x-change.funding.dedicated_netbank_vca_enabled', true);
+    config()->set('x-change.funding.dedicated_netbank_direct_qr_enabled', true);
+    $adapter = new class extends FakeFundingProviderAdapter implements DirectQrFundingInstructionIssuer, SpecificIncomingPaymentVerifier
+    {
+        public ?string $reportedMobile = null;
+
+        public function createDirectQrFundingInstructions(FundingInstructionRequestData $request): FundingInstructionsData
+        {
+            return $this->createFundingInstructions($request);
+        }
+
+        public function verifyIncomingPayment(FundingVerificationData $verification, string $providerTransactionId): ProviderFundingObservationData
+        {
+            return new ProviderFundingObservationData(
+                provider: 'netbank', providerTransactionId: $providerTransactionId, grossAmountMinor: 10000,
+                feeAmountMinor: 0, netAmountMinor: 10000, currency: 'PHP', providerStatus: 'settled',
+                verificationSource: 'fixture', payloadHash: hash('sha256', $providerTransactionId),
+                occurredAt: now()->toDateTimeImmutable(), settledAt: now()->toDateTimeImmutable(),
+                metadata: ['destination_verified' => true],
+                payerIdentity: new ProviderPayerIdentityData(mobile: $this->reportedMobile, providerVerified: false, name: 'Reported payer'),
+            );
+        }
+    };
+    $adapter->reportedMobile = $payerMobile;
+    if ($multiple) {
+        $adapter->incomingPayments = [
+            new ObservedPaymentTransactionData('fixture-a', 10000, 'PHP', 'settled', now()),
+            new ObservedPaymentTransactionData('fixture-extra-funding', 10000, 'PHP', 'settled', now()),
+        ];
+        $adapter->fundingVerificationResolver = fn () => throw new ProviderFundingVerificationIndeterminate('Multiple payments');
+    }
+    $adapter->instructions = new FundingInstructionsData(
+        provider: 'netbank', providerReference: '543210000001', amountMinor: 10000, currency: 'PHP', fundingAddress: '543210000001',
+    );
+    $adapter->fundingObservation = new ProviderFundingObservationData(
+        provider: 'netbank', providerTransactionId: 'fixture-personal-funding', grossAmountMinor: $paidMinor,
+        feeAmountMinor: 0, netAmountMinor: $paidMinor, currency: 'PHP', providerStatus: 'settled',
+        verificationSource: 'fixture', payloadHash: hash('sha256', 'fixture'), requestId: '543210000001',
+        fundingAddress: '543210000001', occurredAt: new DateTimeImmutable, settledAt: new DateTimeImmutable,
+        metadata: ['destination_verified' => true],
+        payerIdentity: new ProviderPayerIdentityData(mobile: $payerMobile, providerVerified: false, name: 'Reported payer'),
+    );
+    app()->instance(FakeFundingProviderAdapter::class, $adapter);
+    app()->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
+    app()->forgetInstance(FundingProviderAdapterRegistry::class);
+    app()->instance(ReserveNetbankVca::class, new class extends ReserveNetbankVca
+    {
+        protected function nextReference(): string
+        {
+            return '0000001';
+        }
+    });
+    $intent = app(CreateFundingIntent::class)->handle(new CreateFundingIntentData(
+        accountReference: 'wallet:'.$wallet->uuid, provider: 'netbank', expectedAmountMinor: 10000, currency: 'PHP',
+        idempotencyKey: 'fixture-personal-key', actorType: 'test', actorId: 'fixture',
+        expiresAt: new DateTimeImmutable('+30 minutes'), destination: FundingDestinationSnapshot::toData($snapshot),
+    ));
+    $intent = app(IssueFundingInstructions::class)->handle($intent, 'test', 'fixture');
+    expect(data_get($intent->metadata, 'direct_qr_monitor'))->toBeTrue();
+    $intent = app(VerifyFundingIntent::class)->handle($intent,
+        new FundingIntentVerificationData(FundingVerificationTrigger::Operator, 'fixture'));
+    expect($intent->status)->toBe(FundingIntentStatus::Verified);
+    $settler = app(SettleVerifiedFundingIntent::class);
+    $fundingSettlement = $settler->handle($intent);
+    expect($settler->handle($intent->refresh())->id)->toBe($fundingSettlement->id)
+        ->and($fundingSettlement->treasury_inventory_reference)->toBe('inventory:personal')
+        ->and(data_get($fundingSettlement->metadata, 'attribution_policy'))->toBe('assigned_account_client_funds')
+        ->and(data_get($fundingSettlement->metadata, 'requested_amount_matches'))->toBe($paidMinor === 10000)
+        ->and(data_get($fundingSettlement->metadata, 'payer_identity_matched'))->toBeFalse();
+    $adapter->incomingPayments = [new ObservedPaymentTransactionData(
+        'fixture-extra-funding', 10000, 'PHP', 'settled',
+    )];
+    app(MonitorDirectFundingExceptions::class)->handle($intent->refresh());
+    app(MonitorDirectFundingExceptions::class)->handle($intent->refresh());
+    $totalPaidMinor = $paidMinor + 10000;
+    expect($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
+        ->and($intent->suspenseCases()->count())->toBe(0)
+        ->and(FundingSettlement::query()->count())->toBe(2)
+        ->and(TreasuryInventory::query()->where('inventory_reference', 'inventory:personal')->sole()->balance_minor)->toBe($totalPaidMinor);
+    app(SelectDefaultBankingAccount::class)->handle($issuer, $assignment->id);
+    $providerReadiness = Mockery::mock(CheckProviderSourceAccountReadiness::class);
+    $providerReadiness->shouldReceive('handle')->once()->with(Mockery::on(fn (int $amount): bool => $amount > 2500), 'netbank', '991100001234')
+        ->andReturn(['ready' => true, 'checked' => true, 'currency' => 'PHP', 'available_balance_minor' => 10000]);
+    app()->instance(CheckProviderSourceAccountReadiness::class, $providerReadiness);
+    app()->forgetInstance(ProviderFundingPolicyContract::class);
+    expect(fn () => app(ProviderFundingPolicyContract::class)->assertCanIssue($issuer, $wallet, 220.01, [
+        'provider' => 'netbank', 'currency' => 'PHP',
+    ]))->toThrow(InsufficientWalletBalance::class, 'client funds');
+    $payload = validPayCodePayload(25, 'INSTAPAY', [
+        'provider' => 'netbank', 'issuer_id' => $issuer->id,
+        'feedback' => ['email' => null, 'mobile' => null, 'webhook' => null],
+    ]);
+    $payload['inputs']['fields'] = [];
+    $voucherCount = Voucher::query()->count();
+    $personalInventory = TreasuryInventory::query()->where('inventory_reference', 'inventory:personal')->sole();
+    $personalPositions = TreasuryPosition::query()->whereMorphedTo('principal', $issuer)
+        ->where('connection_reference', 'netbank-personal')->get();
+    $client = $personalPositions->first(fn ($position) => $position->purpose === TreasuryPositionPurpose::ClientFunds);
+    expect($client)->not->toBeNull();
+    $clientBalanceBefore = Wallet::query()->findOrFail($client->internal_ledger_id)->balanceInt;
+    $reserve = $personalPositions->first(fn ($position) => $position->purpose === TreasuryPositionPurpose::PayCodeReserve);
+    $reserveBalanceBefore = Wallet::query()->findOrFail($reserve->internal_ledger_id)->balanceInt;
+
+    expect(fn () => app(GeneratePayCode::class)->handle($payload))
+        ->toThrow(PayCodeIssuanceFailed::class, 'requires the reserve-backed issuance flow');
+    expect(Voucher::query()->count())->toBe($voucherCount)
+        ->and($personalInventory->fresh()->balance_minor)->toBe($totalPaidMinor)
+        ->and(Wallet::query()->findOrFail($client->internal_ledger_id)->balanceInt)->toBe($clientBalanceBefore)
+        ->and(Wallet::query()->findOrFail($reserve->internal_ledger_id)->balanceInt)->toBe($reserveBalanceBefore);
+
+    FundingDestinationPreference::query()->whereMorphedTo('owner', $issuer)
+        ->where('provider_code', 'netbank')->firstOrFail()
+        ->forceFill(['mode' => 'shared', 'provider_account_link_id' => null])->save();
+    expect(fn () => app(ProviderFundingPolicyContract::class)->assertCanIssue($issuer, $wallet, 1, [
+        'provider' => 'netbank', 'currency' => 'PHP',
+    ]))->toThrow(InsufficientWalletBalance::class);
+    recognizeAccountingInventoryForTest(10000, 'shared-after-personal');
+    fundTestUserClientFunds($issuer, 10000);
+    $providerReadiness->shouldReceive('handle')->once()->with(Mockery::type('int'), 'netbank')
+        ->andReturn(['ready' => true, 'checked' => true, 'currency' => 'PHP', 'available_balance_minor' => 10000]);
+    $shared = app(GeneratePayCode::class)->handle($payload);
+    $sharedVoucher = Voucher::query()->findOrFail($shared->voucher_id);
+    expect(data_get($sharedVoucher->metadata, 'treasury.pay_code_reservation.connection_reference'))->toBe('netbank-primary')
+        ->and($personalInventory->fresh()->balance_minor)->toBe($totalPaidMinor)
+        ->and(Wallet::query()->findOrFail($client->internal_ledger_id)->balanceInt)->toBe($clientBalanceBefore);
+})->with([
+    'matching amount with reported mobile' => [10000, '09179999999', false],
+    'different amount with no mobile' => [12000, null, false],
+    'multiple payments before verification' => [10000, '09179999999', true],
+]);

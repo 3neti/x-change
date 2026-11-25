@@ -15,6 +15,7 @@ use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Models\Checkout;
 use LBHurtado\XChange\Models\IssuanceBatch;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
+use LBHurtado\XChange\Models\ReserveTransfer;
 use LBHurtado\XChange\Services\QrArtifactFactory;
 use LBHurtado\XChange\Services\Stamp\StampProviderIdentity;
 use Throwable;
@@ -240,6 +241,12 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
                 'issuance_attention' => 'attention',
                 default => 'awaiting_payment',
             };
+        $reserveNeedsReview = $order->status === PayCodeIssuanceFundingOrderStatus::Issuing
+            && ReserveTransfer::query()->where('funding_order_id', $order->getKey())
+                ->whereIn('status', ['uncertain', 'review_required'])->exists();
+        if ($reserveNeedsReview) {
+            $current = 'attention';
+        }
         $latestIntentEvent = $order->fundingIntent?->events->last()?->event_type;
         $verificationUnavailable = $latestIntentEvent === 'provider_verification_unavailable';
 
@@ -249,7 +256,9 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
         return [
             'current' => $current,
             'verification_unavailable' => $verificationUnavailable,
-            'message' => $verificationUnavailable
+            'message' => $reserveNeedsReview
+                ? 'Payment verified. Issuance needs review; do not pay again.'
+                : ($verificationUnavailable
                 ? 'Verification is temporarily unavailable. You do not need to pay again.'
                 : match ($current) {
                     'checking_payment' => 'Payment is not visible yet. You do not need to pay again.',
@@ -266,7 +275,7 @@ final readonly class OnDemandIssuanceFundingOrderPresenter
                         : 'This order expired. Do not pay these instructions. No Pay Code was issued.',
                     'attention' => 'This funding order needs attention. Do not make another payment.',
                     default => 'Pay the exact amount once. We will check for it automatically.',
-                },
+                }),
             'steps' => collect([
                 ['key' => 'awaiting_payment', 'label' => 'Awaiting payment'],
                 ['key' => 'checking_payment', 'label' => 'Checking payment'],

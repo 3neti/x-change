@@ -386,6 +386,8 @@ describe('Cockpit shell layout baseline', () => {
         const strip = wrapper.find('[data-testid="cockpit-balance-strip"]');
 
         expect(labelRows).toHaveLength(3);
+        expect(labelRows[0].text()).toBe('Client Funds (all accounts)');
+        expect(wrapper.findAll('[data-testid="cockpit-balance-metric"]')[0].attributes('aria-label')).toContain('Client Funds (all accounts)');
         expect(valueRows).toHaveLength(3);
         expect(hud.classes()).toContain('max-w-full');
         expect(hud.classes()).toContain('min-w-0');

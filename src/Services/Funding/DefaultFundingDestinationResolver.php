@@ -11,8 +11,14 @@ use LBHurtado\EmiCore\Data\Funding\ProviderFundingDestinationLinkData;
 use LBHurtado\EmiCore\Exceptions\ProviderFundingDestinationUnavailable;
 use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Exceptions\FundingDestinationUnavailable;
+use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
+use LBHurtado\XChange\Models\BankAccountAssignment;
 use LBHurtado\XChange\Models\FundingDestinationPreference;
 use LBHurtado\XChange\Models\ProviderAccountLink;
+use LBHurtado\XChange\Services\Banking\AssignedBankTreasuryConnection;
+use LBHurtado\XChange\Services\Banking\AssignedFundingTreasuryConnection;
+use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
+use RuntimeException;
 
 class DefaultFundingDestinationResolver implements FundingDestinationResolverContract
 {
@@ -49,6 +55,12 @@ class DefaultFundingDestinationResolver implements FundingDestinationResolverCon
             );
         }
 
+        $assignment = BankAccountAssignment::query()->whereMorphedTo('owner', $owner)
+            ->where('provider_account_link_id', $link->getKey())->first();
+        if ($assignment !== null && ! in_array('funding', $link->capabilities ?? [], true)) {
+            throw new FundingDestinationUnavailable('The selected account is not ready for funding.');
+        }
+
         try {
             $destination = $this->providerResolver($provider)->dedicatedFundingDestination(
                 new ProviderFundingDestinationLinkData(
@@ -62,7 +74,41 @@ class DefaultFundingDestinationResolver implements FundingDestinationResolverCon
                 $accountReference,
             );
 
-            return $this->validateDestination($destination, $provider, $accountReference, 'dedicated');
+            $destination = $this->validateDestination($destination, $provider, $accountReference, 'dedicated');
+            if ($assignment !== null) {
+                if ($provider === 'netbank') {
+                    $details = $assignment->details_ciphertext;
+                    $providerNumber = is_array($details) ? ($details['provider_account_number'] ?? $details['account_number'] ?? null) : null;
+                    $identity = is_array($details) ? ($details['account_number'] ?? null) : null;
+                    if (! is_string($providerNumber) || ! is_string($identity)
+                        || preg_replace('/\D+/', '', $providerNumber) !== $identity
+                        || preg_replace('/\D+/', '', (string) $destination->bankAccountNumber) !== $identity) {
+                        throw new FundingDestinationUnavailable('The selected account funding details are inconsistent.');
+                    }
+                    $destination->bankAccountNumber = $providerNumber;
+                }
+                try {
+                    $connection = app(AssignedBankTreasuryConnection::class)->resolve($owner, (int) $link->getKey());
+                } catch (RuntimeException $exception) {
+                    throw new FundingDestinationUnavailable('The selected account Treasury connection is unavailable.', previous: $exception);
+                }
+                $destination->metadata = array_merge($destination->metadata, [
+                    'assigned_bank_account_link_id' => (int) $link->getKey(),
+                    'netbank_instruction_mode' => data_get($link->metadata, 'funding_assignment.instruction_mode', 'registered_vca'),
+                    'treasury_connection_reference' => $connection->reference,
+                    'treasury_inventory_reference' => $connection->inventoryReference,
+                    'treasury_resource_reference' => $connection->settlementResourceReference,
+                ]);
+                try {
+                    app(AssignedFundingTreasuryConnection::class)->resolve(
+                        $owner, $provider, $connection->currency, FundingDestinationSnapshot::fromData($destination),
+                    );
+                } catch (FundingSettlementDenied $exception) {
+                    throw new FundingDestinationUnavailable('The selected account funding details are inconsistent.', previous: $exception);
+                }
+            }
+
+            return $destination;
         } catch (ProviderFundingDestinationUnavailable $exception) {
             throw new FundingDestinationUnavailable($exception->getMessage(), previous: $exception);
         }

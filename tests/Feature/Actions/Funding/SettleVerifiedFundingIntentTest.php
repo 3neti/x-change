@@ -12,6 +12,7 @@ use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasurySettlementResource;
+use LBHurtado\XChange\Actions\Banking\AssignNetbankAccount;
 use LBHurtado\XChange\Actions\Funding\ApproveFundingReconciliation;
 use LBHurtado\XChange\Actions\Funding\OpenFundingSuspenseCase;
 use LBHurtado\XChange\Actions\Funding\RequestFundingReconciliation;
@@ -19,11 +20,15 @@ use LBHurtado\XChange\Actions\Funding\ReverseSettledFundingIntent;
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Actions\Funding\TransitionFundingIntent;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
+use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Data\Funding\FundingIntentTransitionData;
 use LBHurtado\XChange\Data\Treasury\VerifiedTreasuryFundingAllocationData;
+use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\FundingReconciliationAction;
+use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
+use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Models\FundingAccountHold;
@@ -33,6 +38,12 @@ use LBHurtado\XChange\Models\FundingRecovery;
 use LBHurtado\XChange\Models\FundingRecoveryPayment;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\FundingSuspenseCase;
+use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
+use LBHurtado\XChange\Services\Banking\AssignedBankTreasuryConnection;
+use LBHurtado\XChange\Services\Treasury\TreasuryAccountBalanceReadModel;
+use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
+use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
+use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
 
 beforeEach(function () {
     enableNetbankTreasuryForTests();
@@ -433,3 +444,136 @@ function providerFundingReversalObservation(
         'metadata' => ['destination_verified' => true],
     ], $overrides));
 }
+
+it('rejects a shared funding order frozen to another bank account', function () {
+    config()->set('payment-gateway.netbank.funding.corporate_account_number', '113-001-00001-9');
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $intent = verifiedFundingIntentForSettlement($wallet, providerFundingObservationForSettlement());
+    $intent->forceFill(['destination_snapshot_ciphertext' => [
+        'provider' => 'netbank', 'mode' => 'shared', 'bankAccountNumber' => '113-001-00006-8',
+    ]])->saveQuietly();
+
+    expect(fn () => app(SettleVerifiedFundingIntent::class)->handle($intent))
+        ->toThrow(FundingSettlementDenied::class, 'does not match the current shared bank account');
+    expect(FundingSettlement::query()->count())->toBe(0)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(0);
+});
+
+it('does not credit a dedicated NetBank deposit to shared Treasury inventory', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $observation = providerFundingObservationForSettlement();
+    $intent = verifiedFundingIntentForSettlement($wallet, $observation);
+    $intent->forceFill(['destination_snapshot_ciphertext' => [
+        'provider' => 'netbank', 'mode' => 'dedicated', 'bankAccountNumber' => '991100001234', 'routingAlias' => '54321',
+    ]])->saveQuietly();
+
+    expect(fn () => app(SettleVerifiedFundingIntent::class)->handle($intent))
+        ->toThrow(FundingSettlementDenied::class, 'no valid account binding');
+    expect($intent->refresh()->status)->toBe(FundingIntentStatus::Verified)
+        ->and(FundingSettlement::query()->count())->toBe(0)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(0)
+        ->and(TreasuryPositionOperation::query()->count())->toBe(0);
+});
+
+it('settles verified dedicated funding against the frozen account Treasury only once', function () {
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ];
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([
+        TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+        SettleVerifiedFundingIntent::class,
+    ] as $abstract) {
+        app()->forgetInstance($abstract);
+    }
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $assignment = app(AssignNetbankAccount::class)->handle($user, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    app(AssignedBankTreasuryConnection::class)->bind($user, $assignment->id, 'netbank-personal');
+    $observation = providerFundingObservationForSettlement();
+    $intent = verifiedFundingIntentForSettlement($wallet, $observation);
+    $intent->forceFill(['destination_snapshot_ciphertext' => [
+        'provider' => 'netbank', 'mode' => 'dedicated', 'bankAccountNumber' => '991100001234', 'routingAlias' => '54321',
+        'metadata' => [
+            'assigned_bank_account_link_id' => $assignment->provider_account_link_id,
+            'treasury_connection_reference' => 'netbank-personal', 'treasury_inventory_reference' => 'inventory:personal',
+            'treasury_resource_reference' => 'resource:personal',
+        ],
+    ]])->saveQuietly();
+
+    $first = app(SettleVerifiedFundingIntent::class)->handle($intent);
+    $second = app(SettleVerifiedFundingIntent::class)->handle($intent->refresh());
+    $balances = app(TreasuryAccountBalanceReadModel::class);
+    expect($first->is($second))->toBeTrue()
+        ->and($first->treasury_inventory_reference)->toBe('inventory:personal')
+        ->and($balances->connectionBalanceMinor($user, 'netbank', 'netbank-personal', 'PHP'))->toBe(24_950)
+        ->and($balances->connectionBalanceMinor($user, 'netbank', 'netbank-primary', 'PHP'))->toBeNull()
+        ->and(TreasuryInventory::query()->where('inventory_reference', 'inventory:personal')->sole()->balance_minor)->toBe(24_950)
+        ->and(FundingSettlement::query()->count())->toBe(1);
+});
+
+it('rejects a dedicated on-demand payment whose order points to another Treasury', function () {
+    $connections = config('x-change.treasury.connections');
+    $connections['netbank-personal'] = [
+        'provider' => 'netbank', 'mode' => 'required', 'currency' => 'PHP',
+        'inventory_reference' => 'inventory:personal', 'settlement_resource_reference' => 'resource:personal',
+        'settlement_resource_type' => 'cash_at_bank', 'custody_mode' => 'provider_projection',
+    ];
+    config()->set('x-change.treasury.connections', $connections);
+    foreach ([
+        TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+        SettleVerifiedFundingIntent::class,
+    ] as $abstract) {
+        app()->forgetInstance($abstract);
+    }
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $assignment = app(AssignNetbankAccount::class)->handle($user, [
+        'account_number' => '991100001234', 'account_name' => 'Example', 'customer_id' => '1234', 'vca_alias' => '54321',
+    ]);
+    app(AssignedBankTreasuryConnection::class)->bind($user, $assignment->id, 'netbank-personal');
+    $observation = providerFundingObservationForSettlement();
+    $intent = verifiedFundingIntentForSettlement($wallet, $observation);
+    $intent->forceFill(['destination_snapshot_ciphertext' => [
+        'provider' => 'netbank', 'mode' => 'dedicated', 'bankAccountNumber' => '991100001234', 'routingAlias' => '54321',
+        'metadata' => [
+            'assigned_bank_account_link_id' => $assignment->provider_account_link_id,
+            'treasury_connection_reference' => 'netbank-personal', 'treasury_inventory_reference' => 'inventory:personal',
+            'treasury_resource_reference' => 'resource:personal',
+        ],
+    ]])->saveQuietly();
+
+    $intent->forceFill(['purpose' => FundingIntentPurpose::OnDemandIssuance])->saveQuietly();
+    PayCodeIssuanceFundingOrder::query()->create([
+        'funding_intent_id' => $intent->getKey(), 'account_reference' => 'wallet:'.$wallet->uuid,
+        'issuer_type' => $user::class, 'issuer_id' => (string) $user->getKey(),
+        'provider' => 'netbank', 'connection_reference' => 'netbank-primary',
+        'funding_basis' => OnDemandIssuanceFundingBasis::FullAmount,
+        'instructions_ciphertext' => [], 'instructions_fingerprint' => str_repeat('a', 64),
+        'pricing_snapshot_ciphertext' => [], 'pricing_fingerprint' => str_repeat('b', 64),
+        'required_amount_minor' => 25000, 'reserved_client_funds_minor' => 0,
+        'on_demand_amount_minor' => 25000, 'reconciliation_adjustment_minor' => 0,
+        'expected_payment_minor' => 25000, 'currency' => 'PHP',
+        'status' => PayCodeIssuanceFundingOrderStatus::AwaitingPayment,
+        'version' => 1, 'idempotency_key_hash' => hash('sha256', 'personal-order-mismatch'),
+        'idempotency_fingerprint' => hash('sha256', 'personal-order-mismatch-fingerprint'), 'expires_at' => now()->addMinutes(30),
+    ]);
+    expect(fn () => app(SettleVerifiedFundingIntent::class)->handle($intent))
+        ->toThrow(FundingSettlementDenied::class, 'Treasury connection does not match')
+        ->and(FundingSettlement::query()->where('funding_intent_id', $intent->getKey())->count())->toBe(0);
+});

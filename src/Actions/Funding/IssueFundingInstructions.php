@@ -5,19 +5,27 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Actions\Funding;
 
 use DateTimeImmutable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use LBHurtado\EmiCore\Contracts\DirectQrFundingInstructionIssuer;
 use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionRequestData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
+use LBHurtado\XChange\Contracts\BankingAccountSelectorContract;
+use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Enums\FundingIntentPurpose;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
+use LBHurtado\XChange\Exceptions\FundingDestinationUnavailable;
 use LBHurtado\XChange\Exceptions\FundingIntentTransitionDenied;
 use LBHurtado\XChange\Models\FundingIntent;
+use LBHurtado\XChange\Services\Banking\AssignedFundingTreasuryConnection;
+use LBHurtado\XChange\Services\Funding\FreshFundingBoundary;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\OnDemandFundingInstructionIssuer;
+use LBHurtado\XChange\Services\Funding\ReserveNetbankVca;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use LogicException;
 
@@ -55,10 +63,25 @@ class IssueFundingInstructions
             return $current->load('events');
         }
 
+        $dedicated = $current->provider_code === 'netbank'
+            && data_get($current->destination_snapshot_ciphertext, 'mode') === 'dedicated';
+        if ($dedicated && (! (bool) config('x-change.funding.dedicated_netbank_vca_enabled', false)
+            || ($current->purpose === FundingIntentPurpose::OnDemandIssuance
+                && ! (bool) config('x-change.issuance_funding.on_demand.assigned_netbank_enabled', false)))) {
+            throw new FundingDestinationUnavailable('Funding to this NetBank account is not available yet.');
+        }
+
+        $mode = $dedicated ? data_get($current->destination_snapshot_ciphertext, 'metadata.netbank_instruction_mode', 'registered_vca') : 'registered_vca';
+        if (! in_array($mode, ['registered_vca', 'direct_qr'], true)
+            || ($mode === 'direct_qr' && ! (bool) config('x-change.funding.dedicated_netbank_direct_qr_enabled', false))) {
+            throw new FundingDestinationUnavailable('The selected account funding mode is unavailable.');
+        }
+
         if ($current->status !== FundingIntentStatus::PendingInstructions) {
             throw FundingIntentTransitionDenied::from($current->status, FundingIntentStatus::AwaitingFunds);
         }
 
+        $reservedAddress = $dedicated ? $this->reserveDedicatedAddress($current) : null;
         $request = new FundingInstructionRequestData(
             provider: $current->provider_code,
             fundingReference: $current->reference,
@@ -70,18 +93,37 @@ class IssueFundingInstructions
                 : DateTimeImmutable::createFromInterface($current->expires_at),
             metadata: [
                 'funding_intent_reference' => $current->reference,
+                ...($reservedAddress === null ? [] : ['reserved_vca_reference' => substr($reservedAddress, 5)]),
             ],
             destination: $this->destination($current),
         );
-        $instructions = $current->purpose === FundingIntentPurpose::OnDemandIssuance
-            ? $this->onDemandInstructions->create($current, $request)
-            : $this->providers
-                ->for($current->provider_code)
-                ->createFundingInstructions($request);
+        if ($current->purpose === FundingIntentPurpose::OnDemandIssuance && $dedicated) {
+            $adapter = $this->providers->for($current->provider_code);
+            if ($mode !== 'direct_qr' || ! $adapter instanceof DirectQrFundingInstructionIssuer) {
+                throw new FundingDestinationUnavailable('The selected provider cannot create direct QR instructions.');
+            }
+            $instructions = $adapter->createDirectQrFundingInstructions($request);
+        } elseif ($current->purpose === FundingIntentPurpose::OnDemandIssuance) {
+            $instructions = $this->onDemandInstructions->create($current, $request);
+        } else {
+            $adapter = $this->providers->for($current->provider_code);
+            if ($mode === 'direct_qr') {
+                if (! $adapter instanceof DirectQrFundingInstructionIssuer) {
+                    throw new FundingDestinationUnavailable('The selected provider cannot create direct QR instructions.');
+                }
+                $instructions = $adapter->createDirectQrFundingInstructions($request);
+            } else {
+                $instructions = $adapter->createFundingInstructions($request);
+            }
+        }
 
         $this->assertInstructionsMatch($current, $instructions);
+        if ($reservedAddress !== null && (! hash_equals($reservedAddress, (string) $instructions->fundingAddress)
+            || ! hash_equals($reservedAddress, $instructions->providerReference))) {
+            throw new InvalidArgumentException('The provider returned a different funding address than the reserved address.');
+        }
 
-        return DB::transaction(function () use ($current, $instructions, $actorType, $actorId): FundingIntent {
+        return DB::transaction(function () use ($current, $instructions, $actorType, $actorId, $mode): FundingIntent {
             $locked = FundingIntent::query()->lockForUpdate()->findOrFail($current->getKey());
 
             if ($locked->status === FundingIntentStatus::AwaitingFunds) {
@@ -100,6 +142,7 @@ class IssueFundingInstructions
 
             $locked->forceFill([
                 'status' => FundingIntentStatus::AwaitingFunds,
+                'metadata' => [...($locked->metadata ?? []), 'direct_qr_monitor' => $mode === 'direct_qr'],
                 'version' => $nextVersion,
                 'provider_reference' => 'sha256:'.$providerReferenceHash,
                 'provider_request_id' => $instructions->providerReference,
@@ -128,6 +171,22 @@ class IssueFundingInstructions
 
             return $locked->refresh()->load('events');
         }, 3);
+    }
+
+    private function reserveDedicatedAddress(FundingIntent $intent): string
+    {
+        $snapshot = $intent->destination_snapshot_ciphertext;
+        $holder = data_get(app(FundingAccountCreditContract::class)->resolve($intent->account_reference), 'holder');
+        $linkId = data_get($snapshot, 'metadata.assigned_bank_account_link_id');
+        $alias = data_get($snapshot, 'routingAlias');
+        if (! $holder instanceof Model || ! is_array($snapshot) || ! is_int($linkId) || ! is_string($alias)) {
+            throw new FundingDestinationUnavailable('The selected funding account details are unavailable.');
+        }
+        app(BankingAccountSelectorContract::class)->select($holder, 'netbank', 'funding', $linkId);
+        app(FreshFundingBoundary::class)->assertEligible($intent);
+        app(AssignedFundingTreasuryConnection::class)->resolve($holder, 'netbank', $intent->currency, $snapshot);
+
+        return app(ReserveNetbankVca::class)->reserve($intent, $alias);
     }
 
     private function assertInstructionsMatch(

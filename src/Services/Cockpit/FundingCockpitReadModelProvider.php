@@ -15,6 +15,7 @@ use LBHurtado\XChange\Data\Cockpit\CockpitFundingReadModelData;
 use LBHurtado\XChange\Enums\AccountFundingReceiptStatus;
 use LBHurtado\XChange\Enums\FundingReconciliationAction;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
+use LBHurtado\XChange\Models\BankAccountAssignment;
 use LBHurtado\XChange\Models\FundingAccountHold;
 use LBHurtado\XChange\Models\FundingDestinationPreference;
 use LBHurtado\XChange\Models\FundingIntent;
@@ -194,20 +195,21 @@ class FundingCockpitReadModelProvider
             ->where('owner_id', $actorId)
             ->get()
             ->keyBy('provider_code');
+        $assignments = BankAccountAssignment::query()->where('owner_type', $actorType)
+            ->where('owner_id', $actorId)->get()->keyBy('provider_account_link_id');
 
         return collect((array) config('x-change.funding.providers', []))
             ->filter(fn (mixed $provider): bool => is_array($provider))
-            ->map(function (array $provider, string $code) use ($preferences): array {
+            ->map(function (array $provider, string $code) use ($preferences, $assignments): array {
                 $enabled = ($provider['enabled'] ?? false) === true;
                 $simulationOnly = $code === self::SimulationProvider;
                 $preference = $preferences->get($code);
                 $mode = $preference?->mode ?? 'shared';
                 $link = $preference?->providerAccountLink;
+                $assignment = $link === null ? null : $assignments->get($link->getKey());
                 $dedicatedReady = $mode !== 'dedicated' || (
-                    $link?->isReady() === true
-                    && ($code === 'netbank'
-                        ? in_array($link->verification_status, ['verified', 'credential_supplied'], true)
-                        : $link->verification_status === 'ownership_verified')
+                    $code !== 'netbank' && $link?->isReady() === true
+                    && $link->verification_status === 'ownership_verified'
                 );
 
                 return [
@@ -231,13 +233,23 @@ class FundingCockpitReadModelProvider
                     'destination_reference' => $simulationOnly
                         ? 'Local simulated clearing'
                         : ($mode === 'dedicated'
-                            ? $link?->display_reference
-                            : 'Platform-managed'),
+                            ? ($assignment !== null
+                                ? (($assignment->details_ciphertext['account_name'] ?? '').' · '.($assignment->details_ciphertext['provider_account_number'] ?? $assignment->details_ciphertext['account_number'] ?? ''))
+                                : $link?->display_reference)
+                            : ($code === 'netbank' ? $this->sharedNetbankAccount() : 'Platform-managed')),
                     'simulation_only' => $simulationOnly,
                 ];
             })
             ->values()
             ->all();
+    }
+
+    private function sharedNetbankAccount(): string
+    {
+        $name = trim((string) config('payment-gateway.netbank.funding.corporate_account_name'));
+        $number = trim((string) config('payment-gateway.netbank.funding.corporate_account_number'));
+
+        return $number === '' ? 'Platform-managed' : implode(' · ', array_filter([$name, $number]));
     }
 
     /**

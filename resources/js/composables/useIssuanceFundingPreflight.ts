@@ -25,6 +25,7 @@ export type IssuanceFundingPreflight = {
         required_amount_minor?: number;
         reserved_client_funds_minor?: number;
         external_amount_minor?: number;
+        account_shortfall_minor?: number | null;
         execution?: 'direct' | 'payment_required' | string;
         reason?: string;
         [key: string]: unknown;

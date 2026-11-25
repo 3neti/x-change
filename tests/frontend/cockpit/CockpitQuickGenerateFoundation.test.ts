@@ -83,6 +83,16 @@ async function showStamp(wrapper: VueWrapper): Promise<void> {
 }
 
 describe('Cockpit Quick Generate foundation', () => {
+    it('shows the selected issuing bank account outside the Pay Code cards', () => {
+        const wrapper = mount(QuickGenerate, {
+            props: { issuance_bank_account: { name: 'Example Corp', number: '991100001234', mode: 'dedicated' } },
+        });
+        const account = wrapper.get('[data-testid="issuance-bank-account"]');
+        expect(account.text()).toContain('Example Corp');
+        expect(account.text()).toContain('991100001234');
+        expect(account.text()).toContain('Manage accounts');
+    });
+
     it('updates the Stamp expiration and requirements from the Order', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: { templates: cockpitQuickGenerateTemplates },
@@ -5098,6 +5108,7 @@ describe('Cockpit Quick Generate foundation', () => {
     it('renders the full Quick Generate page with active navigation and no side effects', async () => {
         const wrapper = mount(QuickGenerate, {
             props: {
+                selected_account_funds: { mode: 'dedicated', amount_minor: 0 },
                 cockpit_header_read_model: {
                     balances: [
                         {
@@ -5153,7 +5164,7 @@ describe('Cockpit Quick Generate foundation', () => {
             wrapper
                 .getComponent(CockpitQuickGenerateSubmitPanel)
                 .props('clientFundsMinor'),
-        ).toBe(5650);
+        ).toBe(0);
         const essentialsCanvas = wrapper.find(
             '[data-testid="cockpit-quick-generate-essentials-canvas"]',
         );
@@ -5550,4 +5561,50 @@ it('restores a pinned Stamp appearance, explicitly upgrades by card, and resets 
     expect(payload.rider.stamp.design_version).toBe(7);
     expect(payload.metadata.custom.stamp_presentation.options).toMatchObject({ crop: 'center', preset: 'transparent', darkening: 0 });
     wrapper.unmount();
+});
+
+describe('reserve-backed quick generate', () => {
+    it('shows a pending request instead of reporting a Pay Code issued', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({
+            schema: 'x-change.cockpit.reserve-issuance.v1', reference: 'rsv-test', status: 'processing',
+            amount_minor: 9950, currency: 'PHP', pay_code: null, status_url: '/reserve/status', detail_url: null,
+        }) }));
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: {
+            templates: cockpitQuickGenerateTemplates,
+            draftContract: { template_key: 'money-changer', amount: '25', currency: 'PHP', recipient_reference: '', purpose: '' },
+            mutationContract: { runtime_enabled: true, route: 'x-change.cockpit.quick-generate.store', route_url: '/x/cockpit/quick-generate', allowed_methods: ['GET', 'POST'] },
+        } });
+        await wrapper.find('[data-testid="cockpit-quick-generate-submit-amount"]').setValue('99.50');
+        await wrapper.find('[data-testid="cockpit-quick-generate-submit-recipient"]').setValue('09173011987');
+        await wrapper.find('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
+        await flushPromises();
+        expect(wrapper.get('[data-testid="reserve-issuance-progress"]').text()).toContain('being prepared');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-submit-button"]').attributes('disabled')).toBeDefined();
+    });
+});
+
+describe('quick generate retry safety', () => {
+    it('reuses the issuance key when the response is lost and the request is retried', async () => {
+        const fetchMock = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ ok: true, json: async () => ({
+            schema: 'x-change.cockpit.reserve-issuance.v1', reference: 'rsv-test', status: 'processing',
+            amount_minor: 9950, currency: 'PHP', pay_code: null, status_url: '/reserve/status', detail_url: null,
+        }) });
+        vi.stubGlobal('fetch', fetchMock);
+        let counter = 0;
+        vi.stubGlobal('crypto', { randomUUID: () => `issuance-${++counter}` });
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: {
+            templates: cockpitQuickGenerateTemplates,
+            draftContract: { template_key: 'money-changer', amount: '25', currency: 'PHP', recipient_reference: '', purpose: '' },
+            mutationContract: { runtime_enabled: true, route: 'x-change.cockpit.quick-generate.store', route_url: '/x/cockpit/quick-generate', allowed_methods: ['GET', 'POST'] },
+        } });
+        await wrapper.find('[data-testid="cockpit-quick-generate-submit-amount"]').setValue('99.50');
+        await wrapper.find('[data-testid="cockpit-quick-generate-submit-recipient"]').setValue('09173011987');
+        await wrapper.find('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
+        await flushPromises();
+        await wrapper.find('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
+        await flushPromises();
+        const issuanceCalls = fetchMock.mock.calls.filter(([url]) => url === '/x/cockpit/quick-generate');
+        expect(issuanceCalls).toHaveLength(2);
+        expect(issuanceCalls[0][1].headers['Idempotency-Key']).toBe(issuanceCalls[1][1].headers['Idempotency-Key']);
+    });
 });

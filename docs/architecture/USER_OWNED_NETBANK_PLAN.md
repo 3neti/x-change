@@ -1,0 +1,45 @@
+# User-owned NetBank accounts: implementation plan
+
+Status (2026-11-23): local account assignment, account-specific funding, payable collection, issuance and a durable DIRECT reserve-transfer flow have been implemented in the integration worktree. Fixture coverage and local commissioning remain to be completed; the full package suite has not passed. A separate authorized live DIRECT transfer settled, but did not exercise integrated issuance or post reserve accounting. Earlier rollout and acceptance notes in this document describe historical planning and must be read alongside the current compass. No Cloud release is authorized by this plan.
+
+The next milestone is reserve-funded issuance: for applicable disbursement obligations, transfer and confirm backing in the platform-controlled reserve before activating a Pay Code. Keep the feature disabled until the acceptance gates below pass. Existing issued Pay Codes retain their frozen routes; do not migrate historical commercial activity by implication. The companion [compass](USER_OWNED_NETBANK_COMPASS.md) governs implementation and acceptance.
+
+1. Extend the existing account-link and preference mechanisms to support multiple personal accounts, account name, normalized account number, customer ID, VCA alias, and an explicit default. Enforce exclusive ownership at the database boundary, including concurrent requests and existing-data migration. Keep the shared account platform-owned.
+2. Separate administrator assignment, provider operation readiness and default selection. For NetBank, authorized administrator assignment is sufficient; other providers may require ownership verification. A personal account may become the default only after applicable readiness checks pass. Fail closed when a selected personal account is unavailable; never switch it silently to shared funding or settlement.
+3. Route funding, payable collection and issuance through the selected account where the provider supports each operation. Snapshot account identity and routing on each transaction. Preserve existing behavior for users without a personal account.
+4. Make provider balance checks and internal client-funds accounting account-specific. Maintain idempotent reconciliation and prevent spending against another account's funds. Do not convert provider evidence into a credit without a verified, unique transaction and the established reconciliation process.
+5. Show the full account name and number on authorized account management, funding and issuance screens. Identify personal and shared accounts clearly, and report operation-specific readiness.
+6. Add feature and frontend coverage for ownership, uniqueness, selection, routing, snapshots, reconciliation and failure cases. Extend the sandbox lifecycle runner with fixture-backed account linking, funding, issuance and reconciliation; compare internal and provider wallet balances before and after, without live transfers.
+7. Inspect the existing PHP 33 NetBank transaction and its relationship to the second account read-only. Distinguish evidence confirmed by NetBank from fixture results. Wire the package into a safe local sandbox and verify its screens. Cloud deployment is outside this plan.
+
+Implementation must first determine whether the existing provider API credentials authorize per-account source balance checks and disbursements, and whether the current wallet/treasury model can represent account-specific backing. Unsupported operations must remain unavailable rather than use a system source account.
+
+## DIRECT reserve-funded issuance: next milestone
+
+### Provider assumptions and evidence
+
+NetBank confirmed that the existing credentials can initiate DIRECT transfers between the nominated accounts, with no minimum and no charge for NetBank-to-NetBank transfers. NetBank confirmed PHP minor units: `10000` represents PHP 100.00. Idempotency keys must contain 8–36 characters. An initial request with an overlong key was rejected at the API level and created no transaction. A separate authorized PHP 100 request with a valid key settled as provider transaction 489665712; the owner confirmed its source and destination entries. This out-of-band commissioning transfer was journaled but did not automatically post application Treasury accounting. UAT is deferred.
+
+### Package responsibilities and flow
+
+1. In `emi-core`, define provider-neutral account-transfer, idempotency and status-result contracts. In `emi-netbank`, implement DIRECT request construction and authoritative transaction lookup using the selected source and configured reserve destination. Preserve existing payout callers.
+2. In `x-change`, freeze the selected personal source, reserve destination, amount, currency, obligation and durable transfer identity. Calculate the applicable Pay Code principal and fees separately: move only the amount required by the agreed funding policy, and allocate any fees separately; payable collection is not automatically a disbursement reserve obligation.
+3. Check account-specific available Client Funds, provider readiness and applicable bank limits. Start one durable DIRECT transfer, persist its idempotency key before submission, and confirm the same transfer through the provider. Only after authoritative settlement and treasury recognition may an applicable Pay Code be issued or activated. Reserve assets and obligations per owner and Pay Code without double counting.
+4. Keep pending and uncertain transfers unavailable for another transfer or an active Pay Code. Retry only under NetBank's documented idempotency procedure with the original key and identical request; otherwise reconcile or escalate. Preserve confirmed funds through issuance failure and resume idempotently. Model terminal rejection, cancellation and return-of-funds paths explicitly.
+5. At claim, pay from the frozen reserve source and reconcile the obligation and provider outcome. Keep legacy Pay Codes on their existing frozen route. Do not automatically move or rewrite pre-existing transactions or obligations.
+6. Keep externally initiated deposits and balance synchronization separate: a bank balance or unexplained surplus alone does not authorize a Client Funds credit. Reconcile uniquely identified settled transactions using the established rules, with notifications and exception review.
+
+### Tests and release gates
+
+- Cover provider fixtures and the lifecycle runner for success, fee accounting, insufficient funds, pending, rejected, timeout, lost response, safe replay, concurrent requests, duplicate evidence, issuance failure, cancellation, payout and reconciliation, including per-user isolation and before/after balances.
+- UAT is deferred. Reconcile the already-settled PHP 100 commissioning transfer using verified provider evidence and the appropriate source and destination Treasury records, without duplicate posting; preserve its distinction from a Pay Code reserve. Capture the settled transfer, source debit, destination credit and x-journal evidence. Verify retry and duplicate handling in fixtures and use the provider's documented idempotency procedure for any actual uncertainty; do not create a second transfer to test duplicates. If the bank evidence differs from the assumptions or remains ambiguous, leave the feature disabled and investigate. Any live transfer requires authorization covering its amount, source and destination.
+- Test `emi-core`, `emi-netbank` and `x-change` together. Release the EMI packages before releasing the x-change version that depends on their new contracts. Wire the hosts, deploy testing and verify operations before requesting the explicit payout deployment approval required by the release policy.
+- The reserve feature remains disabled until the fixture-backed tests and nominal live-transfer acceptance checks pass. Publishing foundation changes alone must not enable user-owned reserve-funded issuance or imply DIRECT escrow is operational.
+
+## Immediate integration work (2026-11-23)
+
+1. Enforce NetBank's 8–36 character idempotency-key constraint at the provider boundary with an appropriately named constant; preserve frozen keys for retries and explicitly handle any incompatible existing transfers. Add contract and failure tests.
+2. Investigate and reconcile the PHP 100 commissioning transfer once against its correct Treasury connections; establish the correct accounting before any posting and do not invent a Pay Code obligation.
+3. Run the fixture-backed lifecycle and full package suite, including pending, uncertain, retries, account isolation and reconciliation; address failures and document resource constraints.
+4. Commission local workers, scheduler, account readiness and recovery safeguards. Verify issuance only after settlement and redemption through its frozen platform source.
+5. Review results and keep release and Cloud deployment separate from this local work.

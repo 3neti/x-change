@@ -13,6 +13,7 @@ use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiCore\Data\PayoutPartyData;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
 use LBHurtado\EmiCore\Data\PayoutResultData;
+use LBHurtado\EmiCore\Data\PayoutSourceAccountData;
 use LBHurtado\EmiCore\Enums\SettlementRail;
 use LBHurtado\MoneyIssuer\Contracts\MoneyIssuerDirectoryContract;
 use LBHurtado\Voucher\Models\Voucher;
@@ -23,6 +24,7 @@ use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\PayoutDestinationRevision;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\Banking\RecoveryPayoutSourceGuard;
 use LBHurtado\XChange\Services\PayoutResultAudit;
 use LBHurtado\XChange\Services\Treasury\PayCodePayoutCorrectionJournal;
 use RuntimeException;
@@ -62,6 +64,7 @@ final readonly class RefurbishRejectedPayCodePayout
             $voucher = $voucher->fresh();
             $this->assertAuthorized($voucher, $requestedBy);
             [$claim, $rejection] = $this->recoveryContext($voucher);
+            app(RecoveryPayoutSourceGuard::class)->assertMatches($voucher, $rejection);
             $rail = (string) $rejection->settlement_rail;
             $settlementRail = SettlementRail::tryFrom(strtoupper($rail));
             $institution = $settlementRail !== null
@@ -157,6 +160,7 @@ final readonly class RefurbishRejectedPayCodePayout
                         'attempted_at' => now(),
                         'needs_review' => false,
                         'payout_identity_snapshot' => $rejection->payout_identity_snapshot,
+                        'bank_source_snapshot' => $rejection->bank_source_snapshot,
                         'raw_request' => [
                             'reference' => $request->reference,
                             'amount' => $request->amount,
@@ -338,6 +342,9 @@ final readonly class RefurbishRejectedPayCodePayout
             ],
             sender: is_array(data_get($snapshot, 'sender')) ? PayoutPartyData::from($snapshot['sender']) : null,
             recipient: is_array(data_get($snapshot, 'recipient')) ? PayoutPartyData::from($snapshot['recipient']) : null,
+            source_account: is_array($rejection->bank_source_snapshot)
+                ? PayoutSourceAccountData::from($rejection->bank_source_snapshot)
+                : null,
         );
     }
 

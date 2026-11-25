@@ -1,5 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
+import { ref } from 'vue';
+import { balanceVisibilityKey } from '../../../resources/js/cockpit/balanceVisibility';
 import CockpitQuickGenerateSubmitPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateSubmitPanel.vue';
 import { cockpitQuickGenerateTemplates } from '../../../resources/js/cockpit/quickGenerateDefaults';
 
@@ -12,7 +14,7 @@ vi.mock('@/composables/useIssuanceFundingPreflight', async () => {
     const { ref } = await import('vue');
     return {
         useIssuanceFundingPreflight: () => ({
-            preflight: ref({ funding: { available_client_funds_minor: 9876543, external_amount_minor: 500, execution: 'payment_required' } }),
+            preflight: ref({ funding: { available_client_funds_minor: 9876543, external_amount_minor: 500, account_shortfall_minor: 500, execution: 'payment_required' } }),
             preflighting: ref(false),
             preflightError: ref(null),
             refreshPreflight: vi.fn(),
@@ -21,6 +23,19 @@ vi.mock('@/composables/useIssuanceFundingPreflight', async () => {
 });
 
 describe('Order funding privacy', () => {
+    it('reveals the selected account balance only when the shared control is enabled', async () => {
+        const visible = ref(false);
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates }, global: { provide: { [balanceVisibilityKey as symbol]: visible } } });
+        const summary = wrapper.get('[data-testid="cockpit-funding-summary"]');
+        expect(summary.text()).not.toContain('98,765.43');
+        visible.value = true;
+        await wrapper.vm.$nextTick();
+        expect(summary.text()).toContain('98,765.43');
+        visible.value = false;
+        await wrapper.vm.$nextTick();
+        expect(summary.text()).not.toContain('98,765.43');
+    });
+
     it('shows the additional funding without exposing the balance hidden by the header', () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, { props: { templates: cockpitQuickGenerateTemplates } });
         const summary = wrapper.get('[data-testid="cockpit-funding-summary"]');

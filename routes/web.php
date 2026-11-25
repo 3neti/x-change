@@ -26,6 +26,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountLifecycleContro
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountScenarioController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAuiDemonstrationPolicyOutcomeController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitBankAccountController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignApprovalDeliveryController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignDisplaySessionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitCampaignEndpointController;
@@ -127,6 +128,9 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateFundingPr
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateInterpretController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateMutationRouteShellController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGeneratePageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitReserveIssuanceIndexController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitReserveIssuanceRecoveryController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitReserveIssuanceStatusController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitReviewedFundingPayCodeClaimController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitRiderArtworkPreviewController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitRiderLibraryForgetController;
@@ -847,6 +851,10 @@ Route::prefix('x')->middleware([
         )->middleware((array) config('x-change.cockpit.account_scenario.middleware', []))
             ->name('x-change.cockpit.accounts.scenarios.funding-destinations.store');
         Route::middleware((array) config('x-change.cockpit.account_mutation_middleware', []))->group(function (): void {
+            Route::post('accounts/bank-accounts', [CockpitBankAccountController::class, 'store'])
+                ->name('x-change.cockpit.accounts.bank-accounts.store');
+            Route::patch('accounts/bank-accounts/{assignment}', [CockpitBankAccountController::class, 'update'])
+                ->whereNumber('assignment')->name('x-change.cockpit.accounts.bank-accounts.update');
             Route::patch(
                 'accounts/providers/{provider}/funding-destination',
                 CockpitFundingDestinationController::class,
@@ -984,6 +992,15 @@ Route::prefix('x')->middleware([
             ->middleware('throttle:3,1')
             ->name('x-change.cockpit.instance-keepsakes.download');
         Route::post('quick-generate', CockpitQuickGenerateMutationRouteShellController::class)->middleware(JournalIssuanceAttempt::class)->name('x-change.cockpit.quick-generate.store');
+        Route::get('quick-generate/reserve-issuances', CockpitReserveIssuanceIndexController::class)
+            ->middleware('throttle:60,1,quick-generate-reserve-index:')
+            ->name('x-change.cockpit.quick-generate.reserve-issuances.index');
+        Route::post('quick-generate/reserve-issuances/{reference}/recover', CockpitReserveIssuanceRecoveryController::class)
+            ->middleware('throttle:6,1,quick-generate-reserve-recovery:')
+            ->name('x-change.cockpit.quick-generate.reserve-issuances.recover');
+        Route::get('quick-generate/reserve-issuances/{reference}', CockpitReserveIssuanceStatusController::class)
+            ->middleware('throttle:60,1,quick-generate-reserve-status:')
+            ->name('x-change.cockpit.quick-generate.reserve-issuances.show');
         Route::post('quick-generate/invoice-drafts', CockpitIssuerInvoiceDraftController::class)
             ->middleware('throttle:12,1')->name('x-change.cockpit.quick-generate.invoice-drafts.store');
         Route::get(

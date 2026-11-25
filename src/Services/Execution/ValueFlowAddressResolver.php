@@ -14,6 +14,7 @@ use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\XChange\Contracts\PayoutDestinationValidatorContract;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Data\Disbursement\PayoutDestinationValidationData;
+use LBHurtado\XChange\Exceptions\VoucherRecipientUnavailable;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use RuntimeException;
 
@@ -63,7 +64,7 @@ final readonly class ValueFlowAddressResolver
             ->get();
 
         if ($owners->count() !== 1) {
-            throw new RuntimeException('The account mobile must identify exactly one principal.');
+            throw new VoucherRecipientUnavailable('The account mobile must identify exactly one principal.');
         }
 
         $positions = array_values(array_filter(
@@ -75,7 +76,7 @@ final readonly class ValueFlowAddressResolver
         ));
 
         if (count($positions) !== 1) {
-            throw new RuntimeException('The account must have exactly one active Client Funds position for this connection and currency.');
+            throw new VoucherRecipientUnavailable('The account must have exactly one active Client Funds position for this connection and currency.');
         }
 
         return $positions[0];

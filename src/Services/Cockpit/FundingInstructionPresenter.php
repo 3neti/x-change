@@ -53,7 +53,8 @@ class FundingInstructionPresenter
     {
         $snapshot = $intent->destination_snapshot_ciphertext;
 
-        if ($intent->purpose !== FundingIntentPurpose::OnDemandIssuance || ! is_array($snapshot)) {
+        if ($intent->purpose !== FundingIntentPurpose::OnDemandIssuance || ! is_array($snapshot)
+            || data_get($snapshot, 'mode') === 'dedicated') {
             return null;
         }
 

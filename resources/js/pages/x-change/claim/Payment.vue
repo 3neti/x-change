@@ -938,7 +938,14 @@ function printReceipt(): void {
                             }}</Badge>
                         </div>
                         <div
-                            v-if="
+                            v-if="payment.attempt.status === 'credited_to_client_funds'"
+                            class="rounded-lg border border-amber-500/25 bg-amber-500/10 px-4 py-5 text-center text-sm text-foreground"
+                            data-testid="payer-fallback-credit"
+                        >
+                            Your payment was credited to the issuer’s Client Funds. It was not applied to this Pay Code. Please contact the issuer; do not pay again.
+                        </div>
+                        <div
+                            v-else-if="
                                 payment.attempt.status === 'expired' ||
                                 payment.attempt.status === 'suspense'
                             "

@@ -462,6 +462,22 @@ export type CockpitDepositorAccountOverview = {
 
 export type CockpitAccountsPageProps = CockpitHeaderPageProps & {
   account_overview: CockpitDepositorAccountOverview;
+  can_assign_bank_accounts: boolean;
+  personal_netbank_funding_enabled?: boolean;
+  personal_netbank_fresh_commissioning_available?: boolean;
+  treasury_connections?: string[];
+  bank_accounts: Array<{
+    owner_id?: string | null;
+    is_owner?: boolean;
+    id: number;
+    provider: string;
+    nickname: string | null;
+    account_name: string;
+    account_number: string;
+    is_default: boolean;
+    funding_ready: boolean;
+    disbursement_ready: boolean;
+  }>;
 };
 
 export type CockpitAccountScenarioFact = {
@@ -1071,6 +1087,7 @@ export type CockpitPayCodeFundingPreview = {
 };
 
 export type CockpitFundingPageProps = CockpitHeaderPageProps & {
+  selected_account_funds?: { mode: string; amount_minor: number | null };
   funding_read_model: CockpitFundingReadModel;
   funding_requests?: CockpitFundingRequestReadModel;
   funding_method_selector?: CockpitFundingMethodSelectorReadModel;
@@ -1841,6 +1858,8 @@ export type CockpitCollectionDestination = {
 };
 
 export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
+  selected_account_funds?: { mode: string; amount_minor: number | null };
+  issuance_bank_account?: { name: string; number: string; mode: "shared" | "dedicated" | "unavailable" } | null;
   invoice_draft_url?: string;
   v2_event_catalog?: Record<string, { label: string; stage: string; workflows: string[]; requires_destination?: boolean }>;
   stored_value_collect_url?: string;
@@ -1899,6 +1918,7 @@ export type CockpitQuickGeneratePageProps = CockpitHeaderPageProps & {
   settlement_rail_capabilities?: CockpitSettlementRailCapabilities;
   pos_voucher?: CockpitVoucherReadModel | null;
   active_on_demand_funding_order?: CockpitOnDemandIssuanceFundingProjection | null;
+  reserve_issuance_index_url?: string | null;
   on_demand_issuance_policy?: {
     enabled: boolean;
     basis: "full_amount" | "shortfall";

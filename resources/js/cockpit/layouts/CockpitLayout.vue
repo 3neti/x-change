@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { useEcho } from '@laravel/echo-vue';
-import { computed, onUnmounted } from 'vue';
+import { computed, onUnmounted, provide, ref } from 'vue';
+import { balanceVisibilityKey } from '../balanceVisibility';
 import CockpitGlobalHeader from '../components/CockpitGlobalHeader.vue';
 import CockpitClaimEntryLauncher from '../components/CockpitClaimEntryLauncher.vue';
 import CockpitMobileTabBar from '../components/CockpitMobileTabBar.vue';
@@ -11,6 +12,8 @@ import type {
     CockpitEntryNotice,
     CockpitHeaderReadModel,
 } from '../types';
+
+provide(balanceVisibilityKey, ref(false));
 
 const props = withDefaults(
     defineProps<{

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Console\Commands\Funding;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 use LBHurtado\XChange\Actions\Funding\TransitionFundingIntent;
@@ -18,7 +19,8 @@ class VerifyOpenFundingIntentsCommand extends Command
 {
     protected $signature = 'xchange:funding:verify-open
         {--provider=netbank : Funding provider code}
-        {--limit= : Maximum intents to inspect in this run}';
+        {--limit= : Maximum intents to inspect in this run}
+        {--assigned-on-demand-since= : Restrict to assigned on-demand orders created at or after this UTC timestamp}';
 
     protected $description = 'Queue authoritative provider verification for open Funding Intents';
 
@@ -38,6 +40,24 @@ class VerifyOpenFundingIntentsCommand extends Command
             return self::SUCCESS;
         }
 
+        $since = $this->option('assigned-on-demand-since');
+        $assignedSince = null;
+        if ($since !== null) {
+            try {
+                if (! is_string($since) || preg_match('/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\z/', $since) !== 1) {
+                    throw new \InvalidArgumentException;
+                }
+                $assignedSince = CarbonImmutable::createFromFormat('!Y-m-d\TH:i:s\Z', $since, 'UTC');
+                if ($assignedSince === false || $assignedSince->format('Y-m-d\TH:i:s\Z') !== $since) {
+                    throw new \InvalidArgumentException;
+                }
+            } catch (\Throwable) {
+                $this->components->error('The assigned on-demand cutoff must be a valid UTC timestamp.');
+
+                return self::INVALID;
+            }
+        }
+
         $configuredLimit = max(
             1,
             (int) config('x-change.funding.scheduled_verification_batch_size', 100),
@@ -53,7 +73,7 @@ class VerifyOpenFundingIntentsCommand extends Command
         $queued = 0;
         $expired = 0;
 
-        $this->eligibleIntents($providerCode, $limit)
+        $this->eligibleIntents($providerCode, $limit, $assignedSince)
             ->each(function (FundingIntent $intent) use (
                 $graceSeconds,
                 $providerCode,
@@ -113,22 +133,33 @@ class VerifyOpenFundingIntentsCommand extends Command
     /**
      * @return Builder<FundingIntent>
      */
-    private function eligibleIntents(string $providerCode, int $limit): Builder
+    private function eligibleIntents(string $providerCode, int $limit, ?CarbonImmutable $assignedSince): Builder
     {
         $lateBoundary = now()->subDays(max(0, (int) config('x-change.funding.issuance_late_reconciliation_days', 7)));
 
         return FundingIntent::query()
             ->where('provider_code', $providerCode)
-            ->whereNotNull('expires_at')
+            ->when($assignedSince !== null, function (Builder $query) use ($assignedSince): void {
+                $query->where('purpose', FundingIntentPurpose::OnDemandIssuance)
+                    ->where('created_at', '>=', $assignedSince)
+                    ->whereHas('issuanceFundingOrder', fn (Builder $order) => $order
+                        ->where('metadata->funding_source->mode', 'dedicated'));
+            })
             ->where(function (Builder $builder) use ($lateBoundary): void {
-                $builder->whereIn('status', [
-                    FundingIntentStatus::AwaitingFunds,
-                    FundingIntentStatus::EvidenceReceived,
-                    FundingIntentStatus::Verifying,
-                    FundingIntentStatus::Verified,
-                ])->orWhere(function (Builder $pending): void {
+                $builder->where(function (Builder $active): void {
+                    $active->whereNotNull('expires_at')->whereIn('status', [
+                        FundingIntentStatus::AwaitingFunds,
+                        FundingIntentStatus::EvidenceReceived,
+                        FundingIntentStatus::Verifying,
+                        FundingIntentStatus::Verified,
+                    ]);
+                })->orWhere(function (Builder $pending): void {
                     $pending->where('status', FundingIntentStatus::PendingInstructions)
                         ->where('expires_at', '<=', now());
+                })->orWhere(function (Builder $direct): void {
+                    $direct->whereIn('status', [FundingIntentStatus::Expired, FundingIntentStatus::Cancelled, FundingIntentStatus::Settled, FundingIntentStatus::Suspense, FundingIntentStatus::Reversed])
+                        ->where('metadata->direct_qr_monitor', true)
+                        ->whereNotNull('instructions_created_at');
                 })->orWhere(function (Builder $late) use ($lateBoundary): void {
                     $late->whereIn('status', [FundingIntentStatus::Expired, FundingIntentStatus::Cancelled])
                         ->where('purpose', FundingIntentPurpose::OnDemandIssuance)
@@ -150,7 +181,7 @@ class VerifyOpenFundingIntentsCommand extends Command
             return false;
         }
 
-        if (in_array($intent->status, [FundingIntentStatus::Expired, FundingIntentStatus::Cancelled], true)) {
+        if (in_array($intent->status, [FundingIntentStatus::Expired, FundingIntentStatus::Cancelled, FundingIntentStatus::Settled, FundingIntentStatus::Suspense, FundingIntentStatus::Reversed], true)) {
             return false;
         }
 

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiCore\Data\PayoutPartyData;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
+use LBHurtado\EmiCore\Data\PayoutSourceAccountData;
 use LBHurtado\EmiCore\Enums\PayoutStatus;
 use LBHurtado\EmiCore\Services\PayoutLocalityResolver;
 use LBHurtado\Voucher\Models\Voucher;
@@ -29,8 +30,11 @@ use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\SettlementRailCapabilityRegistryContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
+use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Jobs\SubmitValueFlowPayout;
+use LBHurtado\XChange\Models\BankAccountAssignment;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Services\Banking\VoucherBankSourceSnapshot;
 use LBHurtado\XChange\Services\DisbursementRejectionTrustService;
 use LBHurtado\XChange\Services\PayoutProviderIdentityMatcher;
 use LBHurtado\XChange\Services\Settlement\V2EvidenceEventJournal;
@@ -85,6 +89,18 @@ final readonly class ValueFlowPayoutService
         $address = $this->flows->destination($voucher);
         $destination = $this->addresses->instapayDestination($address ?? '');
         $connection = collect($this->connections->active([$source->connectionReference]))->sole();
+        $bankSource = app(VoucherBankSourceSnapshot::class)->forVoucher($voucher);
+        if ($bankSource === null && BankAccountAssignment::query()->where('treasury_connection_reference', $source->connectionReference)->exists()) {
+            throw new RuntimeException('The Pay Code has no frozen source for its assigned bank account.');
+        }
+        if (is_array($bankSource) && (! $voucher->owner instanceof Model
+            || $source->principalReference !== app(TreasuryPrincipalReferenceResolverContract::class)->resolve($voucher->owner)
+            || ($bankSource['provider'] ?? null) !== $connection->provider
+            || ($bankSource['treasury_connection_reference'] ?? null) !== $connection->reference
+            || ($bankSource['treasury_inventory_reference'] ?? null) !== $connection->inventoryReference
+            || ($bankSource['treasury_resource_reference'] ?? null) !== $connection->settlementResourceReference)) {
+            throw new RuntimeException('The payout Treasury connection does not match the frozen Pay Code source.');
+        }
         if ($connection->currency !== $source->currency || $connection->provider !== $this->runtime->provider()) {
             throw new RuntimeException('The value flow payout provider must match the funding connection.');
         }
@@ -95,6 +111,9 @@ final readonly class ValueFlowPayoutService
             ->where('voucher_id', $voucher->getKey())->where('claim_type', 'value_flow')
             ->where('provider_reference', $reference)->first();
         if ($existing !== null) {
+            if ($existing->bank_source_snapshot !== $bankSource) {
+                throw new RuntimeException('Value flow payout source conflicts with the frozen Pay Code source.');
+            }
             if (! hash_equals((string) data_get($existing->meta, 'fingerprint'), $fingerprint)) {
                 throw new RuntimeException('Value flow payout identity conflicts with its original instruction.');
             }
@@ -127,6 +146,7 @@ final readonly class ValueFlowPayoutService
             'account_number_masked' => str_repeat('*', max(0, strlen($destination->accountNumber) - 4)).substr($destination->accountNumber, -4),
             'settlement_rail' => 'INSTAPAY', 'status' => 'intent', 'internal_status' => 'reserved',
             'attempt_count' => 0,
+            'bank_source_snapshot' => $bankSource,
             'meta' => [
                 'flow' => 'value_flow', 'identity' => $identity, 'fingerprint' => $fingerprint,
                 'account_ciphertext' => Crypt::encryptString($destination->accountNumber),
@@ -175,6 +195,9 @@ final readonly class ValueFlowPayoutService
                 external_id: (string) $row->voucher_id, external_code: $row->voucher_code,
                 sender: is_array(data_get($snapshot, 'sender')) ? PayoutPartyData::from($snapshot['sender']) : null,
                 recipient: is_array(data_get($snapshot, 'recipient')) ? PayoutPartyData::from($snapshot['recipient']) : null,
+                source_account: is_array($row->bank_source_snapshot)
+                    ? PayoutSourceAccountData::from($row->bank_source_snapshot)
+                    : null,
             );
             $this->rails->assertSupports($request);
             $meta = $row->meta;
@@ -309,7 +332,7 @@ final readonly class ValueFlowPayoutService
             }
             $retryMeta = $retry->meta;
             $retryMeta['recovery'] = ['original_payout_id' => $original->id, 'evidence_reference' => $evidenceReference, 'operator_reference' => $operatorReference];
-            $retry->forceFill(['meta' => $retryMeta, 'payout_identity_snapshot' => $original->payout_identity_snapshot])->save();
+            $retry->forceFill(['meta' => $retryMeta, 'payout_identity_snapshot' => $original->payout_identity_snapshot, 'bank_source_snapshot' => $original->bank_source_snapshot])->save();
             $meta['recovery_retry'] = ['payout_id' => $retry->id, 'evidence_reference' => $evidenceReference, 'operator_reference' => $operatorReference];
             $original->forceFill(['internal_status' => 'recovery_retried', 'meta' => $meta])->save();
 

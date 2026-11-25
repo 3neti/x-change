@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Actions\Payment;
 
 use DateTimeImmutable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -14,11 +15,15 @@ use LBHurtado\EmiCore\Contracts\ProviderFundingConfigurationFailure;
 use LBHurtado\EmiCore\Contracts\ProviderFundingRequestFailure;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionRequestData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
+use LBHurtado\XChange\Contracts\BankingAccountSelectorContract;
 use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Models\PaymentAttempt;
+use LBHurtado\XChange\Services\Banking\AssignedFundingTreasuryConnection;
+use LBHurtado\XChange\Services\Funding\FreshFundingBoundary;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\FundingQrMerchantProfileResolver;
+use LBHurtado\XChange\Services\Funding\ReserveNetbankVca;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use LBHurtado\XChange\Support\Funding\FundingMerchantSnapshot;
 use LogicException;
@@ -58,10 +63,43 @@ class IssuePaymentInstructions
 
         try {
             $merchant = $this->merchantProfiles->resolve($current->voucher->owner);
-            $destination = $this->destinations->shared(
-                $current->provider_code,
-                'voucher:'.$current->voucher_id,
-            );
+            $destination = is_array($current->destination_snapshot_ciphertext)
+                ? FundingDestinationSnapshot::toData($current->destination_snapshot_ciphertext)
+                : ($current->provider_code === 'netbank'
+                    ? $this->destinations->resolve($current->voucher->owner, $current->provider_code, 'voucher:'.$current->voucher_id)
+                    : $this->destinations->shared($current->provider_code, 'voucher:'.$current->voucher_id));
+            $reservedAddress = null;
+            if ($current->provider_code === 'netbank' && $destination->mode === 'dedicated') {
+                if (! (bool) config('x-change.payment.attempts.assigned_netbank_payables_enabled', false)
+                    || ! (bool) config('x-change.funding.dedicated_netbank_direct_qr_enabled', false)
+                    || data_get($destination->metadata, 'netbank_instruction_mode') !== 'direct_qr') {
+                    throw new LogicException('Payable QR payments to assigned NetBank accounts are not yet available.');
+                }
+                $owner = $current->voucher->owner;
+                $snapshot = FundingDestinationSnapshot::fromData($destination);
+                $linkId = data_get($snapshot, 'metadata.assigned_bank_account_link_id');
+                if (! $owner instanceof Model || ! is_int($linkId) || ! is_string($destination->routingAlias)) {
+                    throw new LogicException('The selected funding account details are unavailable.');
+                }
+                app(BankingAccountSelectorContract::class)->select($owner, 'netbank', 'funding', $linkId);
+                app(AssignedFundingTreasuryConnection::class)->resolve($owner, 'netbank', $current->currency, $snapshot);
+                $current = DB::transaction(function () use ($current, $snapshot, $destination): PaymentAttempt {
+                    $locked = PaymentAttempt::query()->lockForUpdate()->findOrFail($current->getKey());
+                    if ($locked->status !== PaymentAttemptStatus::PendingInstructions) {
+                        throw new LogicException('Payment instructions cannot be issued from the current state.');
+                    }
+                    if ($locked->destination_snapshot_ciphertext === null) {
+                        $locked->forceFill(['destination_snapshot_ciphertext' => $snapshot,
+                            'destination_fingerprint' => $destination->fingerprint])->saveQuietly();
+                    } elseif ($locked->destination_snapshot_ciphertext !== $snapshot) {
+                        throw new LogicException('The frozen payment destination has changed.');
+                    }
+
+                    return $locked;
+                }, 3);
+                app(FreshFundingBoundary::class)->assertPaymentAttemptEligible($current);
+                $reservedAddress = app(ReserveNetbankVca::class)->reservePaymentAttempt($current, $destination->routingAlias);
+            }
 
             $request = new FundingInstructionRequestData(
                 provider: $current->provider_code,
@@ -76,6 +114,7 @@ class IssuePaymentInstructions
                     'purpose' => 'voucher_payment',
                     'payment_attempt_reference' => $current->reference,
                     'voucher_code' => (string) $current->voucher->code,
+                    ...($reservedAddress === null ? [] : ['reserved_vca_reference' => substr($reservedAddress, 5)]),
                 ],
                 destination: $destination,
                 merchant: $merchant,
@@ -87,11 +126,18 @@ class IssuePaymentInstructions
              * QR embeds the exact amount, while settlement remains governed by
              * authoritative provider-history verification.
              */
+            if ($reservedAddress !== null && ! $provider instanceof DirectQrFundingInstructionIssuer) {
+                throw new LogicException('The selected provider cannot create direct QR instructions.');
+            }
             $instructions = $provider instanceof DirectQrFundingInstructionIssuer
                 ? $provider->createDirectQrFundingInstructions($request)
                 : $provider->createFundingInstructions($request);
 
             $this->assertInstructionsMatch($current, $instructions);
+            if ($reservedAddress !== null && (! hash_equals($reservedAddress, (string) $instructions->fundingAddress)
+                || ! hash_equals($reservedAddress, $instructions->providerReference))) {
+                throw new InvalidArgumentException('The provider returned a different funding address than the reserved address.');
+            }
         } catch (Throwable $exception) {
             report($exception);
             $this->recordInstructionFailure(

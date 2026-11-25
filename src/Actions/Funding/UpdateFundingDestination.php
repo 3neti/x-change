@@ -13,6 +13,9 @@ use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Exceptions\FundingProviderUnavailable;
 use LBHurtado\XChange\Models\FundingDestinationPreference;
 use LBHurtado\XChange\Models\ProviderAccountLink;
+use LBHurtado\XChange\Services\Banking\BankAccountIdentityRegistry;
+use LBHurtado\XChange\Services\Banking\NetbankAccountAssignmentPreflight;
+use LBHurtado\XChange\Services\Banking\SynchronizeNetbankAccountIdentities;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\LinkExistingPaynamicsWallet;
 
@@ -22,6 +25,9 @@ class UpdateFundingDestination
         private readonly LinkExistingPaynamicsWallet $paynamics,
         private readonly AuditLoggerContract $audit,
         private readonly FundingProviderAdapterRegistry $providers,
+        private readonly BankAccountIdentityRegistry $identities,
+        private readonly NetbankAccountAssignmentPreflight $preflight,
+        private readonly SynchronizeNetbankAccountIdentities $synchronizeIdentities,
     ) {}
 
     /**
@@ -36,11 +42,21 @@ class UpdateFundingDestination
             return $this->selectShared($owner, $provider);
         }
 
-        $link = $provider === 'paynamics_constellation'
-            ? $this->connectPaynamics($owner, $data)
-            : $this->connectConfiguredProvider($owner, $provider, $data);
+        return DB::transaction(function () use ($owner, $provider, $data): FundingDestinationPreference {
+            if ($provider === 'netbank') {
+                $this->synchronizeIdentities->synchronize();
+                $number = preg_replace('/\D+/', '', (string) data_get($data, 'account_number'));
+                $shared = preg_replace('/\D+/', '', (string) config('payment-gateway.netbank.funding.corporate_account_number'));
+                if ($shared !== '' && $shared === $number) {
+                    throw ValidationException::withMessages(['account_number' => 'The platform shared account cannot be assigned.']);
+                }
+                $this->identities->claim($owner, $provider, $number);
+                $this->preflight->assertAliasAssignable((string) data_get($data, 'vca_alias'), $number);
+            }
 
-        return DB::transaction(function () use ($owner, $provider, $link): FundingDestinationPreference {
+            $link = $provider === 'paynamics_constellation'
+                ? $this->connectPaynamics($owner, $data)
+                : $this->connectConfiguredProvider($owner, $provider, $data);
             $preference = $this->preference($owner, $provider);
             $preference->forceFill([
                 'mode' => 'dedicated',

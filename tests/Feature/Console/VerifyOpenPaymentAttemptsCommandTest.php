@@ -261,3 +261,27 @@ it('keeps rate-limited provider checks retryable without hiding repeated excepti
             ->and($payload['maxExceptions'])->toBe(5);
     }
 });
+
+it('restricts both payment monitors to attempts created after the commissioning cutoff', function (): void {
+    $old = scheduledPaymentAttempt();
+    $fresh = scheduledPaymentAttempt();
+    PaymentAttempt::query()->whereKey($old->getKey())->update(['created_at' => now()->subDay(), 'instructions_created_at' => now()->subDay()]);
+    PaymentAttempt::query()->whereKey($fresh->getKey())->update(['instructions_created_at' => now()]);
+    $options = ['--created-since' => now()->subHour()->utc()->format('Y-m-d\TH:i:s\Z')];
+
+    $this->artisan('xchange:payments:verify-open', $options)->assertSuccessful();
+    $this->artisan('xchange:payments:monitor-open', $options)->assertSuccessful();
+
+    Queue::assertPushed(VerifyPaymentAttemptJob::class, 1);
+    Queue::assertPushed(VerifyPaymentAttemptJob::class, fn (VerifyPaymentAttemptJob $job): bool => $job->paymentAttemptId === $fresh->getKey());
+    Queue::assertPushed(MonitorPaymentAttemptJob::class, 1);
+    Queue::assertPushed(MonitorPaymentAttemptJob::class, fn (MonitorPaymentAttemptJob $job): bool => $job->paymentAttemptId === $fresh->getKey());
+});
+
+it('rejects an invalid commissioning cutoff without dispatching payment jobs', function (): void {
+    scheduledPaymentAttempt();
+    $this->artisan('xchange:payments:verify-open', ['--created-since' => 'invalid'])->assertExitCode(2);
+    $this->artisan('xchange:payments:monitor-open', ['--created-since' => 'invalid'])->assertExitCode(2);
+    Queue::assertNotPushed(VerifyPaymentAttemptJob::class);
+    Queue::assertNotPushed(MonitorPaymentAttemptJob::class);
+});

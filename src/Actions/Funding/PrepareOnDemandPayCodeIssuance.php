@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryHoldOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryHoldPlacementData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
+use LBHurtado\XChange\Contracts\BankingAccountSelectorContract;
 use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
@@ -21,8 +22,11 @@ use LBHurtado\XChange\Enums\OnDemandIssuanceFundingBasis;
 use LBHurtado\XChange\Enums\PayCodeIssuanceFundingOrderStatus;
 use LBHurtado\XChange\Exceptions\FundingIntentConflict;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
+use LBHurtado\XChange\Models\BankAccountAssignment;
+use LBHurtado\XChange\Models\FundingDestinationPreference;
 use LBHurtado\XChange\Models\PayCodeIssuanceFundingOrder;
 use LBHurtado\XChange\Services\Accounts\AccountLifecycle;
+use LBHurtado\XChange\Services\Banking\SelectedAccountClientFunds;
 use LBHurtado\XChange\Services\Commercial\CommercialCustomerChargingGuard;
 use LBHurtado\XChange\Services\Funding\OnDemandIssuanceFundingRequirement;
 use LBHurtado\XChange\Services\PartnerApi\PartnerIssuanceReservationService;
@@ -56,9 +60,45 @@ final readonly class PrepareOnDemandPayCodeIssuance
         ?OnDemandIssuanceFundingBasis $fundingBasis = null,
         bool $requirePayerIdentityMatch = false,
     ): PayCodeIssuanceFundingOrder {
+        $instructionsFingerprint = $this->fingerprint($instructions);
+        $pricingSnapshot = $pricing->toArray();
+        $pricingFingerprint = $this->fingerprint($pricingSnapshot);
+        $idempotencyKeyHash = hash('sha256', implode("\0", [
+            $issuer::class,
+            (string) $issuer->getKey(),
+            trim($idempotencyKey),
+        ]));
+        $existing = PayCodeIssuanceFundingOrder::query()
+            ->where('idempotency_key_hash', $idempotencyKeyHash)
+            ->first();
+
+        if ($existing instanceof PayCodeIssuanceFundingOrder) {
+            $basis = $fundingBasis ?? $existing->funding_basis;
+            $requiredAmountMinor = $existing->required_amount_minor;
+            $idempotencyFingerprint = hash('sha256', implode('|', [
+                $instructionsFingerprint,
+                $pricingFingerprint,
+                $basis->value,
+                (string) $requiredAmountMinor,
+            ]));
+            if (! hash_equals($existing->idempotency_fingerprint, $idempotencyFingerprint)) {
+                throw FundingIntentConflict::idempotency();
+            }
+
+            return $existing->load(['fundingIntent', 'events']);
+        }
+
+        $selectedAccountFunds = app(SelectedAccountClientFunds::class)->forOwner($issuer);
+        if ($selectedAccountFunds['mode'] === 'unavailable'
+            || ($selectedAccountFunds['mode'] === 'dedicated'
+                && ! (bool) config('x-change.issuance_funding.on_demand.assigned_netbank_enabled', false))) {
+            throw new RuntimeException('On-demand funding for the selected bank account is not yet available.');
+        }
+        $selectedBalance = $selectedAccountFunds['mode'] === 'dedicated'
+            ? $selectedAccountFunds['amount_minor'] : null;
         $requirement = $fundingBasis === null
-            ? $this->requirements->for($issuer, $pricing)
-            : $this->requirements->forBasis($issuer, $pricing, $fundingBasis);
+            ? $this->requirements->for($issuer, $pricing, $selectedBalance)
+            : $this->requirements->forBasis($issuer, $pricing, $fundingBasis, $selectedBalance);
         $requiredAmountMinor = $requirement->requiredAmountMinor;
         if ($requiredAmountMinor === 0) {
             throw new RuntimeException('A funding order requires a positive authoritative amount.');
@@ -78,14 +118,6 @@ final readonly class PrepareOnDemandPayCodeIssuance
         $basis = $requirement->basis;
         $reservedClientFundsMinor = $requirement->reservedClientFundsMinor;
         $onDemandAmountMinor = $requirement->externalAmountMinor;
-        $instructionsFingerprint = $this->fingerprint($instructions);
-        $pricingSnapshot = $pricing->toArray();
-        $pricingFingerprint = $this->fingerprint($pricingSnapshot);
-        $idempotencyKeyHash = hash('sha256', implode("\0", [
-            $issuer::class,
-            (string) $issuer->getKey(),
-            trim($idempotencyKey),
-        ]));
         $idempotencyFingerprint = hash('sha256', implode('|', [
             $instructionsFingerprint,
             $pricingFingerprint,
@@ -97,16 +129,29 @@ final readonly class PrepareOnDemandPayCodeIssuance
             1800,
         ));
 
-        $existing = PayCodeIssuanceFundingOrder::query()
-            ->where('idempotency_key_hash', $idempotencyKeyHash)
-            ->first();
-
-        if ($existing instanceof PayCodeIssuanceFundingOrder) {
-            if (! hash_equals($existing->idempotency_fingerprint, $idempotencyFingerprint)) {
-                throw FundingIntentConflict::idempotency();
+        $destination = null;
+        if ($selectedAccountFunds['mode'] === 'dedicated') {
+            if ($provider !== 'netbank' || $onDemandAmountMinor <= 0) {
+                throw new RuntimeException('The selected account cannot use this on-demand funding path.');
             }
-
-            return $existing->load(['fundingIntent', 'events']);
+            $destination = $this->destinations->resolve($issuer, $provider, $accountReference);
+            $linkId = $selectedAccountFunds['account_link_id'];
+            $connectionReference = $selectedAccountFunds['connection_reference'];
+            if ($destination->mode !== 'dedicated'
+                || data_get($destination->metadata, 'assigned_bank_account_link_id') !== $linkId
+                || data_get($destination->metadata, 'treasury_connection_reference') !== $connectionReference
+                || data_get($destination->metadata, 'netbank_instruction_mode') !== 'direct_qr') {
+                throw new RuntimeException('The selected account funding destination changed or is unavailable.');
+            }
+            app(BankingAccountSelectorContract::class)->select($issuer, $provider, 'disbursement', $linkId);
+            $assignment = BankAccountAssignment::query()->whereMorphedTo('owner', $issuer)
+                ->where('provider_account_link_id', $linkId)->first();
+            $customerId = data_get($assignment?->details_ciphertext, 'customer_id');
+            if (! is_string($customerId) || $customerId === '') {
+                throw new RuntimeException('The selected account customer ID is unavailable.');
+            }
+            $destination->metadata['on_demand_customer_id'] = $customerId;
+            $destination->metadata['require_exact_vca'] = true;
         }
 
         abort_unless(app(AccountLifecycle::class)->isActive($issuer), 403, 'The account is suspended.');
@@ -130,7 +175,17 @@ final readonly class PrepareOnDemandPayCodeIssuance
             $idempotencyKeyHash,
             $idempotencyFingerprint,
             $expiresAt,
+            $destination,
+            $selectedAccountFunds,
         ): PayCodeIssuanceFundingOrder {
+            if ($destination !== null) {
+                $preference = FundingDestinationPreference::query()->whereMorphedTo('owner', $issuer)
+                    ->where('provider_code', 'netbank')->lockForUpdate()->first();
+                if ($preference?->mode !== 'dedicated'
+                    || (int) $preference->provider_account_link_id !== $selectedAccountFunds['account_link_id']) {
+                    throw new RuntimeException('The selected account changed while preparing the order.');
+                }
+            }
             abort_unless(app(AccountLifecycle::class)->lockAndIsActive($issuer), 403, 'The account is suspended.');
             $order = PayCodeIssuanceFundingOrder::query()->create([
                 'account_reference' => $accountReference,
@@ -159,7 +214,13 @@ final readonly class PrepareOnDemandPayCodeIssuance
                 'expires_at' => $expiresAt,
                 'metadata' => [
                     'source' => data_get($instructions, '_meta.source', 'cockpit.quick-generate'),
-                    'bank_transfer_primary' => true,
+                    'bank_transfer_primary' => $destination === null,
+                    ...($destination === null ? [] : ['funding_source' => [
+                        'mode' => 'dedicated',
+                        'account_link_id' => $selectedAccountFunds['account_link_id'],
+                        'connection_reference' => $connectionReference,
+                        'destination_fingerprint' => $destination->fingerprint,
+                    ]]),
                 ],
             ]);
             $reservationId = data_get($instructions, '_meta.partner_issuance_reservation_id');
@@ -220,7 +281,7 @@ final readonly class PrepareOnDemandPayCodeIssuance
                     'connection_reference' => $connectionReference,
                     'payer_identity_match_required' => $requirePayerIdentityMatch,
                 ],
-                destination: $this->destinations->resolve($issuer, $provider, $accountReference),
+                destination: $destination ?? $this->destinations->resolve($issuer, $provider, $accountReference),
                 purpose: FundingIntentPurpose::OnDemandIssuance,
             ));
             $order->forceFill(['funding_intent_id' => $intent->getKey()])->saveQuietly();

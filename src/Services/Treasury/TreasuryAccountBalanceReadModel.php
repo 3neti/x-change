@@ -36,6 +36,28 @@ final class TreasuryAccountBalanceReadModel implements AccountBalanceReadModelCo
         return $this->sum($owner, $currency, mb_strtolower(trim($provider)));
     }
 
+    public function connectionBalanceMinor(Model $owner, string $provider, string $connectionReference, string $currency): ?int
+    {
+        $provider = mb_strtolower(trim($provider));
+        $currency = mb_strtoupper(trim($currency));
+        $connectionReference = trim($connectionReference);
+        if ($connectionReference === '') {
+            return null;
+        }
+        $positions = array_values(array_filter(
+            $this->positions->forPrincipal($this->principalReferences->resolve($owner)),
+            static fn (TreasuryPositionData $position): bool => $position->status === 'active'
+                && $position->purpose === TreasuryPositionPurpose::ClientFunds
+                && $position->provider === $provider && $position->currency === $currency
+                && $position->connectionReference === $connectionReference,
+        ));
+
+        return $positions === [] ? null : array_sum(array_map(
+            static fn (TreasuryPositionData $position): int => $position->balanceMinor,
+            $positions,
+        ));
+    }
+
     public function forget(Model $owner, string $currency, ?string $provider = null): void
     {
         $currency = mb_strtoupper(trim($currency));

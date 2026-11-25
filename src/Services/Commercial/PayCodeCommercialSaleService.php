@@ -57,6 +57,7 @@ class PayCodeCommercialSaleService
         array $issued,
         string $provider,
         ?PricingEstimateData $acceptedEstimate = null,
+        ?string $connectionReference = null,
     ): array {
         $voucherId = (int) ($issued['voucher_id'] ?? 0);
         $code = trim((string) ($issued['code'] ?? ''));
@@ -67,7 +68,7 @@ class PayCodeCommercialSaleService
 
         $instructions = VoucherInstructionsData::from($input);
         $currency = mb_strtoupper((string) ($issued['currency'] ?? data_get($input, 'cash.currency', 'PHP')));
-        $connection = $this->connection($provider, $currency);
+        $connection = $this->connection($provider, $currency, $connectionReference);
         $accountPortfolio = $this->accountPortfolios->provision($issuer, [$connection->reference]);
         $systemPortfolio = $this->systemPortfolio->provision([$connection->reference]);
         $buyerReference = $this->principalReferences->resolve($issuer);
@@ -223,12 +224,13 @@ class PayCodeCommercialSaleService
         };
     }
 
-    private function connection(string $provider, string $currency): TreasuryProviderConnectionData
+    private function connection(string $provider, string $currency, ?string $connectionReference = null): TreasuryProviderConnectionData
     {
         $matches = array_values(array_filter(
             $this->connections->active(),
             static fn ($connection): bool => $connection->provider === mb_strtolower(trim($provider))
-                && $connection->currency === $currency,
+                && $connection->currency === $currency
+                && ($connectionReference === null || $connection->reference === $connectionReference),
         ));
 
         if (count($matches) !== 1) {

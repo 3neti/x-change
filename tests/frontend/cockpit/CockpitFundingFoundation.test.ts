@@ -626,6 +626,7 @@ describe('Cockpit Funding foundation', () => {
         vi.stubGlobal('fetch', fetch);
         const wrapper = mount(Funding, {
             props: {
+                selected_account_funds: { mode: 'dedicated', amount_minor: 0 },
                 cockpit_header_read_model: cockpitHeaderReadModel,
                 funding_read_model: fundingReadModel,
                 standing_funding_address: standingFundingAvailability,
@@ -636,6 +637,8 @@ describe('Cockpit Funding foundation', () => {
         await flushPromises();
 
         expect(fetch).not.toHaveBeenCalled();
+        expect(wrapper.get('[data-testid="funding-selected-account"]').text()).toContain('Platform shared NetBank account');
+        expect(wrapper.get('[data-testid="funding-selected-account"] a').attributes('href')).toBe('/x/cockpit/accounts');
         expect(
             wrapper
                 .get('[data-testid="open-standing-funding-address"]')
@@ -669,8 +672,9 @@ describe('Cockpit Funding foundation', () => {
         const summaryCards = wrapper
             .get('[data-testid="cockpit-funding-summary-strip"]')
             .findAll('article');
+        expect(summaryCards[0].text()).toContain('The top bar shows all accounts combined.');
         expect(summaryCards.map((card) => card.text())).toEqual([
-            expect.stringContaining('Client Funds₱20,000.00'),
+            expect.stringContaining('This bank account₱0.00'),
             expect.stringContaining('Outstanding Pay Codes₱4,950.00'),
             expect.stringContaining('Awaiting Funds1'),
             expect.stringContaining('Settled Funding₱24,950.00'),
@@ -983,6 +987,7 @@ describe('Cockpit Funding foundation', () => {
             expect.objectContaining({
                 only: [
                     'cockpit_header_read_model',
+                    'selected_account_funds',
                     'funding_read_model',
                     'funding_requests',
                     'funding_activity',
@@ -1692,6 +1697,7 @@ describe('Cockpit Funding foundation', () => {
         expect(routerReloadMock).toHaveBeenCalledWith(expect.objectContaining({
             only: [
                 'cockpit_header_read_model',
+                'selected_account_funds',
                 'funding_read_model',
                 'funding_requests',
                 'funding_activity',
@@ -1908,6 +1914,7 @@ describe('Cockpit Funding foundation', () => {
         expect(routerReloadMock).toHaveBeenCalledWith(expect.objectContaining({
             only: [
                 'cockpit_header_read_model',
+                'selected_account_funds',
                 'funding_read_model',
                 'funding_requests',
                 'funding_activity',
@@ -2044,7 +2051,7 @@ describe('Cockpit Funding foundation', () => {
             wrapper
                 .get('[data-testid="cockpit-funding-summary-client-funds"]')
                 .text(),
-        ).toContain('—');
+        ).toContain('Not available');
         expect(
             wrapper
                 .get(
@@ -2186,6 +2193,7 @@ describe('Cockpit Funding foundation', () => {
         expect(routerReloadMock).toHaveBeenCalledWith(expect.objectContaining({
             only: [
                 'cockpit_header_read_model',
+                'selected_account_funds',
                 'funding_read_model',
                 'funding_requests',
                 'funding_activity',

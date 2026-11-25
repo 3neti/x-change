@@ -414,6 +414,10 @@ export default defineConfig({
           import.meta.dirname,
           "tests/frontend/stubs/funding-destination-route.ts",
         ),
+      "@/routes/x-change/cockpit/accounts/bank-accounts": path.resolve(
+        import.meta.dirname,
+        "tests/frontend/stubs/bank-account-routes.ts",
+      ),
       "@/routes/x-change/cockpit/accounts/funding-qr-merchant-profile":
         path.resolve(
           import.meta.dirname,
