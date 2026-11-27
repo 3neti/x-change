@@ -73,7 +73,7 @@ final readonly class ConfigureAssignedBankAccount
     /** @param list<string> $knownAddresses */
     public function enableFreshFunding(BankAccountAssignment $assignment, Model $actor, array $knownAddresses, bool $soleWriterConfirmed): void
     {
-        if (! app()->environment(['local', 'testing']) || ! $soleWriterConfirmed
+        if (! $this->freshFundingCommissioningAvailable() || ! $soleWriterConfirmed
             || ! (bool) config('x-change.funding.dedicated_netbank_vca_enabled', false)) {
             throw ValidationException::withMessages(['account' => 'Fresh funding commissioning is unavailable.']);
         }
@@ -92,6 +92,12 @@ final readonly class ConfigureAssignedBankAccount
             }
             $this->configureFunding($assignment, $actor, 'fresh_intents_only');
         }, attempts: 3);
+    }
+
+    private function freshFundingCommissioningAvailable(): bool
+    {
+        return app()->environment(['local', 'testing'])
+            || (app()->isProduction() && (bool) config('x-change.funding.dedicated_netbank_production_fresh_commissioning_enabled', false));
     }
 
     private function configureFunding(BankAccountAssignment $assignment, Model $actor, string $basis): void

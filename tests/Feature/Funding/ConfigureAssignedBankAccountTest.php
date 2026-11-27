@@ -159,6 +159,29 @@ it('commissions only fresh funding for an assigned account without claiming hist
         ->and($this->fakeAuditLogger()->events('funding.assigned_account.enabled'))->toHaveCount(1);
 });
 
+it('requires an explicit production switch before commissioning fresh funding', function () {
+    [$owner, $assignment, $binding] = configuredAssignedAccountFixture();
+    $binding->bind($owner, $assignment->id, 'personal');
+    config()->set('x-change.funding.dedicated_netbank_vca_enabled', true);
+    $action = new ConfigureAssignedBankAccount($binding, Mockery::mock(CheckProviderSourceAccountReadiness::class));
+    $originalEnvironment = app()->environment();
+
+    try {
+        app()->detectEnvironment(static fn (): string => 'production');
+
+        expect(fn () => $action->enableFreshFunding($assignment, $owner, ['543210000001'], true))
+            ->toThrow(ValidationException::class, 'Fresh funding commissioning is unavailable.');
+
+        config()->set('x-change.funding.dedicated_netbank_production_fresh_commissioning_enabled', true);
+        $action->enableFreshFunding($assignment, $owner, ['543210000001'], true);
+    } finally {
+        app()->detectEnvironment(static fn (): string => $originalEnvironment);
+    }
+
+    expect($assignment->fresh()->providerAccountLink->capabilities)->toContain('funding')
+        ->and(data_get($assignment->fresh()->providerAccountLink->metadata, 'funding_assignment.scope'))->toBe('fresh_intents_only');
+});
+
 it('does not commission fresh funding without sole-writer confirmation or with a different alias', function () {
     [$owner, $assignment, $binding] = configuredAssignedAccountFixture();
     $binding->bind($owner, $assignment->id, 'personal');
