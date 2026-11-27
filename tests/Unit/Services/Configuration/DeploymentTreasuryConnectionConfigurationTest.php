@@ -26,6 +26,36 @@ it('activates only connections selected by the explicit profile', function (): v
         ->and($resolved['paynamics-primary']['mode'])->toBe('disabled');
 });
 
+it('retains the declared mode for an additional dedicated connection', function (): void {
+    config()->set('x-change.deployment.profile', 'netbank');
+    config()->set('x-change.treasury.connections', [
+        'netbank-dedicated-secondary' => [
+            'provider' => 'netbank',
+            'mode' => 'required',
+            'currency' => 'PHP',
+            'decimal_places' => 2,
+            'inventory_reference' => 'inventory:netbank:dedicated:secondary',
+            'settlement_resource_reference' => 'resource:netbank:dedicated:secondary',
+            'settlement_resource_type' => 'cash_at_bank',
+            'custody_mode' => 'provider_projection',
+            'required_capabilities' => ['readiness_probe', 'balance_read'],
+        ],
+    ]);
+    $connections = new DeploymentConnectionCatalog([
+        treasuryConnectionContributor('netbank', 'netbank-primary'),
+    ]);
+
+    $resolved = (new DeploymentTreasuryConnectionConfiguration(
+        $connections,
+        new DeploymentProfileCatalog($connections),
+    ))->resolve();
+
+    expect($resolved['netbank-primary']['mode'])->toBe('required')
+        ->and($resolved['netbank-dedicated-secondary']['mode'])->toBe('required')
+        ->and($resolved['netbank-dedicated-secondary']['inventory_reference'])
+        ->toBe('inventory:netbank:dedicated:secondary');
+});
+
 function treasuryConnectionContributor(string $provider, string $reference): DeploymentConnectionContributor
 {
     return new class($provider, $reference) implements DeploymentConnectionContributor
