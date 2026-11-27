@@ -27,9 +27,11 @@ use LBHurtado\XChange\Models\StandingFundingAddressBindingHead;
 use LBHurtado\XChange\Models\StandingFundingAddressBindingRevision;
 use LBHurtado\XChange\Services\Banking\AssignedFundingTreasuryConnection;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressBindingResolver;
+use LBHurtado\XChange\Services\Funding\StandingFundingLedgerWatermark;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressProviderRegistry;
 use LBHurtado\XChange\Services\Funding\StandingFundingQrArtifactStore;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
+use Throwable;
 
 final class ProvisionStandingFundingAddress
 {
@@ -41,6 +43,7 @@ final class ProvisionStandingFundingAddress
         private readonly AuditLoggerContract $audit,
         private readonly CorrectOrphanedStandingFundingAddressBinding $bindingCorrection,
         private readonly StandingFundingAddressBindingResolver $bindings,
+        private readonly StandingFundingLedgerWatermark $watermark,
     ) {}
 
     public function handle(
@@ -336,6 +339,32 @@ final class ProvisionStandingFundingAddress
         }
 
         $address = $provisioned->address;
+
+        if ($dedicatedNetbank && $recognitionMode === FundingRecognitionMode::Automatic) {
+            try {
+                $this->watermark->capture($address);
+            } catch (Throwable $exception) {
+                $metadata = $address->metadata ?? [];
+                $metadata['ledger_watermark'] = [
+                    'status' => 'unavailable',
+                    'failed_at' => now()->toRfc3339String(),
+                ];
+                $address->forceFill([
+                    'status' => FundingAddressStatus::Suspended,
+                    'suspended_at' => now(),
+                    'metadata' => $metadata,
+                ])->saveQuietly();
+                $this->audit->log('funding.standing_address.watermark_unavailable', [
+                    'standing_funding_address_reference' => $address->reference,
+                    'provider' => $provider,
+                    'failure_type' => $exception::class,
+                ]);
+
+                throw new FundingDestinationUnavailable(
+                    'NetBank history could not establish a safe funding boundary. Try again after the provider check is available.',
+                );
+            }
+        }
 
         $this->audit->log('funding.standing_address.provisioned', [
             'standing_funding_address_reference' => $address->reference,

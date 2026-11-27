@@ -185,6 +185,7 @@ return [
     'reserve_transfer' => [
         'enabled' => (bool) env('XCHANGE_RESERVE_TRANSFER_ENABLED', false),
         'live_submission_enabled' => (bool) env('XCHANGE_RESERVE_LIVE_SUBMISSION_ENABLED', false),
+        'returns_enabled' => (bool) env('XCHANGE_RESERVE_TRANSFER_RETURNS_ENABLED', false),
         'queue' => env('XCHANGE_RESERVE_TRANSFER_QUEUE', 'x-change-issuance'),
         'provider_class' => env('XCHANGE_RESERVE_TRANSFER_PROVIDER_CLASS'),
         'destination_bank_code' => env('XCHANGE_RESERVE_DESTINATION_BANK_CODE'),

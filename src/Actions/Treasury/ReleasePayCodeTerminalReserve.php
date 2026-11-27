@@ -17,6 +17,7 @@ use LBHurtado\XChange\Models\StoredValueHolderBinding;
 use LBHurtado\XChange\Services\Treasury\PayCodeFundingPrincipalResolver;
 use LBHurtado\XChange\Services\Treasury\PayCodeTerminalReleaseJournal;
 use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
+use LBHurtado\XChange\Jobs\Reserve\PrepareReserveReturnJob;
 
 final readonly class ReleasePayCodeTerminalReserve
 {
@@ -176,12 +177,17 @@ final readonly class ReleasePayCodeTerminalReserve
         $reservationOperationReference = $this->nullableString(
             data_get($reservation, 'operation_reference'),
         );
+        $reserveTransferReference = $this->nullableString(
+            data_get($reservation, 'reserve_transfer_reference'),
+        );
 
         DB::afterCommit(function () use (
             $owner,
             $reservationOperationReference,
+            $reserveTransferReference,
             $result,
             $voucher,
+            $reason,
         ): void {
             $this->journal->record(
                 $voucher,
@@ -196,6 +202,10 @@ final readonly class ReleasePayCodeTerminalReserve
                 now()->toIso8601String(),
                 'pay_code_reserve_released',
             );
+            if ($reserveTransferReference !== null
+                && (bool) config('x-change.reserve_transfer.returns_enabled', false)) {
+                PrepareReserveReturnJob::dispatch((int) $voucher->getKey(), $reason);
+            }
         });
 
         return $result;

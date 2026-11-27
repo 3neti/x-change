@@ -10,11 +10,13 @@ use LBHurtado\XChange\Enums\AccountFundingReceiptStatus;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\FundingSuspenseCase;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use LBHurtado\XChange\Services\Funding\StandingFundingLedgerWatermark;
 
 final class IgnorePreActivationFundingReceipts
 {
     public function __construct(
         private readonly AuditLoggerContract $audit,
+        private readonly StandingFundingLedgerWatermark $watermark,
     ) {}
 
     public function handle(StandingFundingAddress $address): int
@@ -41,7 +43,11 @@ final class IgnorePreActivationFundingReceipts
                 ->filter(fn (AccountFundingReceipt $receipt): bool => $receipt
                     ->providerFundingObservation
                     ?->occurredAtInstant()
-                    ?->lessThan($lockedAddress->activated_at) === true);
+                    ?->lessThan($lockedAddress->activated_at) === true
+                    && ! $this->watermark->permitsTimestampAnomaly(
+                        $lockedAddress,
+                        $receipt->providerFundingObservation,
+                    ));
 
             foreach ($receipts as $receipt) {
                 $metadata = $receipt->metadata ?? [];

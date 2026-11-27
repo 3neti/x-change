@@ -45,7 +45,7 @@ final class DurableReserveTransfer
                 'idempotency_hash' => $idempotencyHash, 'request_fingerprint' => $fingerprint,
                 'request_ciphertext' => $payload, 'source_treasury_connection' => $sourceConnection,
                 'reserve_treasury_connection' => $reserveConnection, 'amount_minor' => $request->amountMinor,
-                'currency' => $request->currency, 'status' => 'prepared',
+                'currency' => $request->currency, 'transfer_kind' => 'issuance', 'status' => 'prepared',
             ]);
         }, attempts: 3);
     }
@@ -79,8 +79,7 @@ final class DurableReserveTransfer
             }
             $this->assertFrozen($locked);
             $this->assertHold($locked);
-            app(ReserveIssuanceSnapshot::class)->assertFeeHold($locked);
-            app(ReserveFundingOrderLink::class)->assertActive($locked);
+            $this->assertOperationalGuards($locked);
             $locked->forceFill(['status' => 'submitting', 'submitted_at' => now()])->save();
 
             return $locked;
@@ -129,7 +128,7 @@ final class DurableReserveTransfer
             }
             $this->assertFrozen($locked);
             $this->assertHold($locked);
-            app(ReserveIssuanceSnapshot::class)->assertFeeHold($locked);
+            $this->assertOperationalGuards($locked);
             $locked->forceFill(['status' => 'uncertain'])->save();
             app(ReserveTransferJournal::class)->recordInterruptedSubmission($locked);
 
@@ -159,7 +158,7 @@ final class DurableReserveTransfer
             }
             $this->assertFrozen($locked);
             $this->assertHold($locked);
-            app(ReserveIssuanceSnapshot::class)->assertFeeHold($locked);
+            $this->assertOperationalGuards($locked);
             if ($result->status === AccountTransferStatus::Settled) {
                 $evidence = $result->evidence;
                 $request = AccountTransferRequestData::from($locked->request_ciphertext);
@@ -233,5 +232,15 @@ final class DurableReserveTransfer
             || (string) $destination->principal_id !== (string) $transfer->owner_id) {
             throw new RuntimeException('The frozen Treasury hold is invalid.');
         }
+    }
+
+    private function assertOperationalGuards(ReserveTransfer $transfer): void
+    {
+        if ($transfer->transfer_kind !== 'issuance') {
+            return;
+        }
+
+        app(ReserveIssuanceSnapshot::class)->assertFeeHold($transfer);
+        app(ReserveFundingOrderLink::class)->assertActive($transfer);
     }
 }

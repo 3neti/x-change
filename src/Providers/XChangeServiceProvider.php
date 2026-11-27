@@ -153,6 +153,7 @@ use LBHurtado\XChange\Console\Commands\Funding\ProcessStandingFundingRuntimeOutb
 use LBHurtado\XChange\Console\Commands\Funding\PromoteStandingFundingRuntimeCommand;
 use LBHurtado\XChange\Console\Commands\Funding\QuarantineStandingFundingAddressCommand;
 use LBHurtado\XChange\Console\Commands\Funding\ReconcileAmbiguousStandingFundingCommand;
+use LBHurtado\XChange\Console\Commands\Funding\ReconcileDedicatedNetbankFundingReceiptCommand;
 use LBHurtado\XChange\Console\Commands\Funding\ReleaseStandingFundingStaleLeaseCommand;
 use LBHurtado\XChange\Console\Commands\Funding\RepairStandingFundingAddressBindingEffectiveAtCommand;
 use LBHurtado\XChange\Console\Commands\Funding\ResumeStandingFundingCanaryCommand;
@@ -1950,6 +1951,7 @@ class XChangeServiceProvider extends ServiceProvider
                 QuarantineStandingFundingAddressCommand::class,
                 ReleaseStandingFundingStaleLeaseCommand::class,
                 ReconcileAmbiguousStandingFundingCommand::class,
+                ReconcileDedicatedNetbankFundingReceiptCommand::class,
                 RetryStandingFundingAddressCommand::class,
                 ReplaySettledPaymentPipelineCommand::class,
                 ProcessStandingFundingRuntimeOutboxCommand::class,

@@ -1,5 +1,30 @@
 # User-owned NetBank accounts compass
 
+## Dedicated automatic funding and shared escrow (2026-11-28)
+
+### Current decision
+
+For a commissioned user-owned NetBank account, provider transaction identity is the funding boundary. The initial provider history is stored as a ledger watermark. An unseen, settled PHP transaction can be recognized despite a provider timestamp anomaly only after that watermark exists. The provider timestamp is retained and journaled as audit evidence; it is never rewritten to make an old record appear new. Shared-account funding stays strict: unclear attribution remains in review.
+
+The PHP 75 reconciliation is deliberately narrow: NetBank transaction `496143170`, amount PHP 75.00, the commissioned dedicated address, the frozen account binding and recorded payment evidence must agree. The evidence reference is hashed in application metadata. This correction does not authorize a general pre-activation exception.
+
+### Escrow invariant
+
+```text
+dedicated NetBank funding -> owner Client Funds -> settled DIRECT -> shared escrow
+shared escrow -> frozen payout source -> claim / retry payout
+shared escrow -> settled reverse DIRECT -> originating dedicated account on cancellation or expiry
+```
+
+No Client Funds position may exceed the fresh available balance of its own assigned bank account. No transfer or return is Treasury-posted before independent provider settlement evidence matches its frozen source, destination, amount, currency, reference and zero-fee DIRECT expectation. An uncertain result is retried only with the original idempotency key and never creates another bank request.
+
+### Acceptance gates
+
+- Confirm provider-led baseline capture, normal and timestamp-skewed recognition, duplicate transaction rejection and scoped PHP 75 reconciliation with fixtures.
+- Confirm funding → dedicated Client Funds → shared escrow → frozen shared payout; separately confirm funding → shared escrow → terminal reverse return, pending/uncertain recovery and account isolation.
+- Commission workers, scheduler, provider balance freshness and reconciliation visibility locally before enabling any live switch.
+- Release package-first, validate a clean local host, then testing. Payout deployment requires separate explicit approval after the testing smoke checks.
+
 ## Current DIRECT reserve decision (2026-11-22)
 
 NetBank support confirmed that the existing shared API credentials are authorized to initiate DIRECT transfers between the nominated NetBank corporate accounts and reported no minimum. This is provider guidance, not evidence of a completed DIRECT transfer. Its amount response (omit the decimal point) does not explicitly choose between `10` and `1000` for PHP 10.00, and its answer did not explicitly address fees. By user decision, proceed on the working assumptions of integer PHP minor units (`1000` for PHP 10.00) and no DIRECT fee for these accounts; UAT is deferred. After fixture-backed tests pass, use one specifically authorized nominal live transfer to check the actual amount and fee. Resolve uncertainty before submission if the assumed encoding could exceed the authorized peso amount. If provider evidence differs or is ambiguous, stop and revise the policy.

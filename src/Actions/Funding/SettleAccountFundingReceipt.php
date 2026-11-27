@@ -24,6 +24,7 @@ use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Models\StandingFundingAddressBindingRevision;
 use LBHurtado\XChange\Services\Banking\AssignedFundingTreasuryConnection;
 use LBHurtado\XChange\Services\Funding\StandingFundingRecognitionPolicy;
+use LBHurtado\XChange\Services\Funding\StandingFundingLedgerWatermark;
 use LBHurtado\XChange\Services\Treasury\TreasuryInventoryRegistrationService;
 use Throwable;
 
@@ -36,6 +37,7 @@ final class SettleAccountFundingReceipt
         private readonly AuditLoggerContract $audit,
         private readonly StandingFundingRecognitionPolicy $recognitionPolicy,
         private readonly RecordSettledPayment $settledPayments,
+        private readonly StandingFundingLedgerWatermark $watermark,
     ) {}
 
     public function handle(AccountFundingReceipt $receipt): AccountFundingReceipt
@@ -239,9 +241,7 @@ final class SettleAccountFundingReceipt
             && $observation->fee_amount_minor === $receipt->fee_amount_minor
             && $observation->net_amount_minor === $receipt->net_amount_minor
             && $observation->net_amount_minor > 0
-            && $observation->occurredAtInstant() !== null
-            && $address->activated_at !== null
-            && $observation->occurredAtInstant()->greaterThanOrEqualTo($address->activated_at)
+            && $this->occurrenceMatchesActivationBoundary($address, $receipt, $observation)
             && $observation->funding_address === 'sha256:'.$address->funding_address_hash
             && data_get($observation->metadata, 'destination_verified') === true;
 
@@ -250,6 +250,24 @@ final class SettleAccountFundingReceipt
                 'authoritative provider evidence does not match the Standing Funding Address',
             );
         }
+    }
+
+    private function occurrenceMatchesActivationBoundary(
+        StandingFundingAddress $address,
+        AccountFundingReceipt $receipt,
+        ProviderFundingObservation $observation,
+    ): bool {
+        $occurredAt = $observation->occurredAtInstant();
+
+        if ($occurredAt === null || $address->activated_at === null) {
+            return false;
+        }
+        if ($occurredAt->greaterThanOrEqualTo($address->activated_at)) {
+            return true;
+        }
+
+        return data_get($receipt->metadata, 'ledger_watermark_timestamp_anomaly_accepted') === true
+            && $this->watermark->permitsTimestampAnomaly($address, $observation);
     }
 
     private function receiptBindingMatches(
