@@ -51,7 +51,7 @@ const headerReadModel = {
 };
 
 describe("Cockpit depositor Account", () => {
-  it("offers the fresh-start control only when the local commissioning capability is supplied", async () => {
+  it("offers the fresh-start control only when the commissioning capability is supplied", async () => {
     const base = {
       account_overview: accountOverview, cockpit_header_read_model: headerReadModel,
       can_manage_bank_accounts: true, can_configure_bank_accounts: true, personal_netbank_funding_enabled: true,
@@ -60,7 +60,7 @@ describe("Cockpit depositor Account", () => {
     };
     const wrapper = mount(Accounts, { props: { ...base, personal_netbank_fresh_commissioning_available: true } });
     await wrapper.findAll("button").find((button) => button.text() === "Set up funding")!.trigger("click");
-    expect(wrapper.text()).toContain("Local test: new funding requests only");
+    expect(wrapper.text()).toContain("New funding requests only");
     expect(wrapper.text()).toContain("Previous");
     expect(wrapper.text()).toContain("only system generating");
     const restricted = mount(Accounts, { props: { ...base, personal_netbank_fresh_commissioning_available: false } });

@@ -1329,6 +1329,8 @@ return [
     'funding' => [
         // Remains disabled until the account's historical VCA namespace is reconciled.
         'dedicated_netbank_vca_enabled' => (bool) env('XCHANGE_DEDICATED_NETBANK_VCA_ENABLED', false),
+        // Production use requires an explicit, separate commissioning decision.
+        'dedicated_netbank_production_fresh_commissioning_enabled' => (bool) env('XCHANGE_DEDICATED_NETBANK_PRODUCTION_FRESH_COMMISSIONING_ENABLED', false),
         'dedicated_netbank_standing_enabled' => (bool) env('XCHANGE_DEDICATED_NETBANK_STANDING_ENABLED', false),
         // Disabled until direct-QR exception monitoring is commissioned.
         'dedicated_netbank_direct_qr_enabled' => (bool) env('XCHANGE_DEDICATED_NETBANK_DIRECT_QR_ENABLED', false),

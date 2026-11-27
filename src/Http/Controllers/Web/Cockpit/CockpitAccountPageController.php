@@ -55,8 +55,7 @@ class CockpitAccountPageController extends Controller
             'can_manage_bank_accounts' => $canManage,
             'can_configure_bank_accounts' => $canConfigure,
             'personal_netbank_funding_enabled' => $canConfigure && (bool) config('x-change.funding.dedicated_netbank_vca_enabled', false),
-            'personal_netbank_fresh_commissioning_available' => $canConfigure && app()->environment(['local', 'testing'])
-                && (bool) config('x-change.funding.dedicated_netbank_vca_enabled', false),
+            'personal_netbank_fresh_commissioning_available' => $canConfigure && $this->freshFundingCommissioningAvailable(),
             'treasury_connections' => $canConfigure ? $this->availableTreasuryConnections() : [],
         ]);
     }
@@ -76,6 +75,13 @@ class CockpitAccountPageController extends Controller
         } catch (\Throwable) {
             return [];
         }
+    }
+
+    private function freshFundingCommissioningAvailable(): bool
+    {
+        return (bool) config('x-change.funding.dedicated_netbank_vca_enabled', false)
+            && (app()->environment(['local', 'testing'])
+                || (app()->isProduction() && (bool) config('x-change.funding.dedicated_netbank_production_fresh_commissioning_enabled', false)));
     }
 
     /** @return list<array<string, mixed>> */
