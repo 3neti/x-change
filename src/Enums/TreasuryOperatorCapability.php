@@ -22,4 +22,7 @@ enum TreasuryOperatorCapability: string
     case RequestFundingBindings = 'treasury.funding_bindings.request';
     case ApproveFundingBindings = 'treasury.funding_bindings.approve';
     case ExecuteFundingBindings = 'treasury.funding_bindings.execute';
+    case ViewBankAccounts = 'treasury.bank_accounts.view';
+    case ManageBankAccounts = 'treasury.bank_accounts.manage';
+    case ConfigureBankAccounts = 'treasury.bank_accounts.configure';
 }

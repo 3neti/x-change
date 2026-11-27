@@ -105,3 +105,32 @@ it('grants Treasury maker and checker authority only to separate named humans', 
         ->where('authorization_reference', 'like', 'deployment-control:invalid-funding-binding-role%')
         ->exists())->toBeFalse();
 });
+
+it('grants scoped bank-account administration authority without payment execution authority', function (): void {
+    enableNetbankTreasuryForTests();
+    $administrator = User::query()->create([
+        'name' => 'Bank Account Administrator',
+        'email' => 'bank-account-administrator@example.test',
+        'password' => 'password',
+    ]);
+
+    $this->artisan('x-change:treasury:authorize-operator', [
+        'operator' => $administrator->email,
+        '--column' => 'email',
+        '--capability' => [
+            TreasuryOperatorCapability::ViewBankAccounts->value,
+            TreasuryOperatorCapability::ManageBankAccounts->value,
+            TreasuryOperatorCapability::ConfigureBankAccounts->value,
+        ],
+        '--authorization-reference' => 'commissioning:bank-account-administration',
+    ])->assertSuccessful();
+
+    expect(TreasuryOperatorAuthorization::query()
+        ->where('operator_id', $administrator->getKey())
+        ->pluck('capability')->all())
+        ->toBe([
+            TreasuryOperatorCapability::ViewBankAccounts->value,
+            TreasuryOperatorCapability::ManageBankAccounts->value,
+            TreasuryOperatorCapability::ConfigureBankAccounts->value,
+        ]);
+});

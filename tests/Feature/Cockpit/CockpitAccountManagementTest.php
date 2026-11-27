@@ -8,11 +8,13 @@ use LBHurtado\Merchant\Contracts\MerchantProfileRepositoryContract;
 use LBHurtado\XChange\Actions\Banking\AssignNetbankAccount;
 use LBHurtado\XChange\Actions\Funding\UpdateFundingDestination;
 use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
+use LBHurtado\XChange\Enums\TreasuryOperatorCapability;
 use LBHurtado\XChange\Exceptions\FundingDestinationUnavailable;
 use LBHurtado\XChange\Models\BankAccountAssignment;
 use LBHurtado\XChange\Models\FundingDestinationPreference;
 use LBHurtado\XChange\Models\ProviderAccountLink;
 use LBHurtado\XChange\Services\Banking\AssignedBankTreasuryConnection;
+use LBHurtado\XChange\Models\TreasuryOperatorAuthorization;
 use LBHurtado\XChange\Services\CheckProviderSourceAccountReadiness;
 use LBHurtado\XChange\Services\Funding\DefaultFundingDestinationResolver;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
@@ -69,6 +71,98 @@ it('allows only an authorized administrator to assign a NetBank account', functi
     $this->actingAs($actor)->withSession(['auth.password_confirmed_at' => time()])
         ->post(route('x-change.cockpit.accounts.bank-accounts.store'), $data)->assertRedirect();
     expect(BankAccountAssignment::query()->sole()->owner->is($owner))->toBeTrue();
+});
+
+it('allows a delegated human bank-account manager to add a pending account without granting configuration authority', function () {
+    enableNetbankTreasuryForTests();
+    $administrator = actingAsTestUser();
+    $administrator->forceFill(['email_verified_at' => now()])->save();
+    $owner = actingAsTestUser();
+    $owner->forceFill(['email_verified_at' => now()])->save();
+    TreasuryOperatorAuthorization::query()->create([
+        'operator_type' => $administrator->getMorphClass(),
+        'operator_id' => $administrator->getKey(),
+        'capability' => TreasuryOperatorCapability::ManageBankAccounts->value,
+        'authorization_reference' => 'test:bank-account-manager',
+        'valid_from' => now(),
+    ]);
+
+    $this->actingAs($administrator)->withSession(['auth.password_confirmed_at' => time()])
+        ->post(route('x-change.cockpit.accounts.bank-accounts.store'), [
+            'owner_id' => $owner->getKey(),
+            'account_number' => '991100001234',
+            'account_name' => 'Example',
+            'customer_id' => '1234',
+            'vca_alias' => '54321',
+        ])->assertRedirect()
+        ->assertSessionHas('funding_account_notice', 'Bank account added. Readiness checks are pending.');
+
+    expect(BankAccountAssignment::query()->sole()->owner->is($owner))->toBeTrue();
+});
+
+it('forbids a bank-account viewer from adding or configuring accounts', function () {
+    enableNetbankTreasuryForTests();
+    $viewer = actingAsTestUser();
+    $viewer->forceFill(['email_verified_at' => now()])->save();
+    $owner = actingAsTestUser();
+    $owner->forceFill(['email_verified_at' => now()])->save();
+    TreasuryOperatorAuthorization::query()->create([
+        'operator_type' => $viewer->getMorphClass(),
+        'operator_id' => $viewer->getKey(),
+        'capability' => TreasuryOperatorCapability::ViewBankAccounts->value,
+        'authorization_reference' => 'test:bank-account-viewer',
+        'valid_from' => now(),
+    ]);
+
+    $this->actingAs($viewer)->withSession(['auth.password_confirmed_at' => time()])
+        ->post(route('x-change.cockpit.accounts.bank-accounts.store'), [
+            'owner_id' => $owner->getKey(),
+            'account_number' => '991100001234',
+            'account_name' => 'Example',
+            'customer_id' => '1234',
+            'vca_alias' => '54321',
+        ])->assertForbidden();
+
+    expect(BankAccountAssignment::query()->count())->toBe(0);
+
+    $assignment = app(AssignNetbankAccount::class)->handle($owner, [
+        'account_number' => '991100001234',
+        'account_name' => 'Example',
+        'customer_id' => '1234',
+        'vca_alias' => '54321',
+    ]);
+
+    $this->actingAs($viewer)->withSession(['auth.password_confirmed_at' => time()])
+        ->patch(route('x-change.cockpit.accounts.bank-accounts.update', $assignment), [
+            'action' => 'configure',
+            'treasury_connection' => 'personal',
+            'disbursement_confirmed' => true,
+        ])->assertForbidden();
+});
+
+it('exposes delegated account-management permissions independently in the Cockpit page', function () {
+    enableNetbankTreasuryForTests();
+    $administrator = actingAsTestUser();
+    $administrator->forceFill(['email_verified_at' => now()])->save();
+    foreach ([
+        TreasuryOperatorCapability::ViewBankAccounts,
+        TreasuryOperatorCapability::ManageBankAccounts,
+    ] as $capability) {
+        TreasuryOperatorAuthorization::query()->create([
+            'operator_type' => $administrator->getMorphClass(),
+            'operator_id' => $administrator->getKey(),
+            'capability' => $capability->value,
+            'authorization_reference' => 'test:bank-account-administrator:'.$capability->value,
+            'valid_from' => now(),
+        ]);
+    }
+
+    $this->actingAs($administrator)->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.accounts.index'))
+        ->assertOk()
+        ->assertJsonPath('props.can_view_bank_accounts', true)
+        ->assertJsonPath('props.can_manage_bank_accounts', true)
+        ->assertJsonPath('props.can_configure_bank_accounts', false);
 });
 
 it('does not let a user select another user’s account as default', function () {
