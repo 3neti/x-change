@@ -303,6 +303,15 @@ return [
                     'treasury.reconciliation.execute',
                 ],
             ],
+            'treasury_bank_account_administrator' => [
+                'label' => 'Treasury Bank Account Administrator',
+                'description' => 'Manages bank-account connections and readiness without becoming the non-interactive System Principal or receiving payout execution authority.',
+                'capabilities' => [
+                    'treasury.bank_accounts.view',
+                    'treasury.bank_accounts.manage',
+                    'treasury.bank_accounts.configure',
+                ],
+            ],
             'api_partner_administrator' => [
                 'label' => 'API Partner Administrator',
                 'description' => 'Manages governed machine clients and sandbox access.',
@@ -346,6 +355,7 @@ return [
             ['key' => 'commercial-checker', 'label' => 'Commercial Checker', 'profile' => 'commercial_checker', 'required' => true],
             ['key' => 'treasury-maker', 'label' => 'Treasury Maker', 'profile' => 'treasury_maker', 'required' => true],
             ['key' => 'treasury-checker', 'label' => 'Treasury Checker', 'profile' => 'treasury_checker', 'required' => true],
+            ['key' => 'treasury-bank-account-administrator', 'label' => 'Treasury Bank Account Administrator', 'profile' => 'treasury_bank_account_administrator', 'required' => false],
             ['key' => 'api-partner-administrator', 'label' => 'API Partner Administrator', 'profile' => 'api_partner_administrator', 'required' => false],
             ['key' => 'api-production-maker', 'label' => 'API Production Maker', 'profile' => 'api_production_maker', 'required' => false],
             ['key' => 'api-production-checker', 'label' => 'API Production Checker', 'profile' => 'api_production_checker', 'required' => false],

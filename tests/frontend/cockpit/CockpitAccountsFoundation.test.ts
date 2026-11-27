@@ -54,7 +54,7 @@ describe("Cockpit depositor Account", () => {
   it("offers the fresh-start control only when the local commissioning capability is supplied", async () => {
     const base = {
       account_overview: accountOverview, cockpit_header_read_model: headerReadModel,
-      can_assign_bank_accounts: true, personal_netbank_funding_enabled: true,
+      can_manage_bank_accounts: true, can_configure_bank_accounts: true, personal_netbank_funding_enabled: true,
       bank_accounts: [{ id: 1, provider: "netbank", nickname: "Test", account_name: "Example Corp",
         account_number: "991100001234", is_default: false, funding_ready: false, disbursement_ready: false }],
     };
@@ -73,7 +73,7 @@ describe("Cockpit depositor Account", () => {
       props: {
         account_overview: accountOverview,
         bank_accounts: [],
-        can_assign_bank_accounts: false,
+        can_manage_bank_accounts: false, can_configure_bank_accounts: false,
         cockpit_header_read_model: headerReadModel,
       },
     });
@@ -102,7 +102,7 @@ describe("Cockpit depositor Account", () => {
       props: {
         account_overview: accountOverview,
         bank_accounts: [],
-        can_assign_bank_accounts: false,
+        can_manage_bank_accounts: false, can_configure_bank_accounts: false,
         cockpit_header_read_model: headerReadModel,
       },
     });
@@ -119,7 +119,7 @@ describe("Cockpit depositor Account", () => {
     const wrapper = mount(Accounts, {
       props: {
         account_overview: accountOverview,
-        can_assign_bank_accounts: false,
+        can_manage_bank_accounts: false, can_configure_bank_accounts: false,
         cockpit_header_read_model: headerReadModel,
         bank_accounts: [{
           id: 1, provider: "netbank", nickname: "Payroll", account_name: "Example Corp",
@@ -133,8 +133,8 @@ describe("Cockpit depositor Account", () => {
     expect(wrapper.text()).toContain("991100001234");
     expect(wrapper.text()).toContain("Funding: Ready");
     expect(wrapper.text()).toContain("Issuance: Not ready");
-    expect(wrapper.text()).toContain("Ask your administrator to finish setting up issuance for this account.");
-    expect(wrapper.text()).not.toContain("Ask your administrator to finish setting up funding for this account.");
+    expect(wrapper.text()).toContain("Ask your Treasury administrator to finish setting up issuance for this account.");
+    expect(wrapper.text()).not.toContain("Ask your Treasury administrator to finish setting up funding for this account.");
   });
 
   it("lets an administrator set up issuance for a connected account", async () => {
@@ -143,7 +143,7 @@ describe("Cockpit depositor Account", () => {
         account_overview: accountOverview,
         cockpit_header_read_model: headerReadModel,
         treasury_connections: ["personal"],
-        can_assign_bank_accounts: true,
+        can_manage_bank_accounts: true, can_configure_bank_accounts: true,
         bank_accounts: [{ id: 1, provider: "netbank", nickname: "Payroll", account_name: "Example Corp",
           account_number: "991100001234", is_default: false, funding_ready: false, disbursement_ready: false }],
       },
@@ -158,7 +158,7 @@ describe("Cockpit depositor Account", () => {
     const props = {
       account_overview: accountOverview,
       cockpit_header_read_model: headerReadModel,
-      can_assign_bank_accounts: true,
+      can_manage_bank_accounts: true, can_configure_bank_accounts: true,
       personal_netbank_funding_enabled: true,
       bank_accounts: [{ id: 1, provider: "netbank", nickname: "Payroll", account_name: "Example Corp",
         account_number: "991100001234", is_default: false, funding_ready: false, disbursement_ready: true }],
@@ -173,7 +173,7 @@ describe("Cockpit depositor Account", () => {
   it("lets an administrator configure another user's account without changing their default", () => {
     const wrapper = mount(Accounts, { props: {
       account_overview: accountOverview, cockpit_header_read_model: headerReadModel,
-      can_assign_bank_accounts: true, personal_netbank_funding_enabled: true,
+      can_manage_bank_accounts: true, can_configure_bank_accounts: true, personal_netbank_funding_enabled: true,
       bank_accounts: [{ id: 1, owner_id: "42", is_owner: false, provider: "netbank", nickname: null,
         account_name: "Example Corp", account_number: "991100001234", is_default: false,
         funding_ready: false, disbursement_ready: true }],
@@ -190,7 +190,7 @@ describe("Cockpit depositor Account", () => {
         account_overview: accountOverview,
         cockpit_header_read_model: headerReadModel,
         bank_accounts: [],
-        can_assign_bank_accounts: true,
+        can_manage_bank_accounts: true, can_configure_bank_accounts: true,
       },
     });
 
@@ -199,5 +199,22 @@ describe("Cockpit depositor Account", () => {
     await button!.trigger("click");
     expect(wrapper.text()).toContain("Registered account name");
     expect(wrapper.text()).toContain("VCA alias");
+  });
+
+  it("keeps readiness controls hidden from an account manager without configuration authority", () => {
+    const wrapper = mount(Accounts, {
+      props: {
+        account_overview: accountOverview,
+        cockpit_header_read_model: headerReadModel,
+        can_manage_bank_accounts: true,
+        can_configure_bank_accounts: false,
+        bank_accounts: [{ id: 1, provider: "netbank", nickname: "Payroll", account_name: "Example Corp",
+          account_number: "991100001234", is_default: false, funding_ready: false, disbursement_ready: false }],
+      },
+    });
+
+    expect(wrapper.text()).toContain("Add account");
+    expect(wrapper.text()).not.toContain("Set up issuance");
+    expect(wrapper.text()).not.toContain("Set up funding");
   });
 });

@@ -186,9 +186,9 @@ function displayLabel(value: string): string {
       >
         <div class="flex items-center justify-between gap-3">
           <h2 class="text-base font-semibold text-slate-950 dark:text-white">Connected bank accounts</h2>
-          <button v-if="can_assign_bank_accounts" type="button" class="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white dark:bg-white dark:text-slate-900" @click="showAddAccount = !showAddAccount">{{ showAddAccount ? 'Cancel' : 'Add account' }}</button>
+          <button v-if="can_manage_bank_accounts" type="button" class="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white dark:bg-white dark:text-slate-900" @click="showAddAccount = !showAddAccount">{{ showAddAccount ? 'Cancel' : 'Add account' }}</button>
         </div>
-        <p v-if="!bank_accounts.length && !can_assign_bank_accounts" class="mt-3 text-sm text-slate-600 dark:text-slate-400">No personal bank accounts connected. Contact your administrator to add one.</p>
+        <p v-if="!bank_accounts.length && !can_manage_bank_accounts" class="mt-3 text-sm text-slate-600 dark:text-slate-400">No personal bank accounts connected. Contact your Treasury administrator to add one.</p>
         <form v-if="showAddAccount" class="mt-4 grid gap-3 sm:grid-cols-2" @submit.prevent="addBankAccount">
           <label class="text-sm">User ID (leave blank for your account)<input v-model="accountForm.owner_id" inputmode="numeric" class="mt-1 block w-full rounded-lg border border-slate-300 p-2 dark:bg-slate-900" /></label>
           <label class="text-sm">Nickname (optional)<input v-model="accountForm.nickname" class="mt-1 block w-full rounded-lg border border-slate-300 p-2 dark:bg-slate-900" /></label>
@@ -211,13 +211,13 @@ function displayLabel(value: string): string {
             <p class="mt-3 text-xs text-slate-500">
               Funding: {{ account.funding_ready ? 'Ready' : 'Not ready' }} · Issuance: {{ account.disbursement_ready ? 'Ready' : 'Not ready' }}
             </p>
-            <p v-if="!can_assign_bank_accounts && !account.funding_ready" class="mt-2 text-xs text-slate-600 dark:text-slate-400">Ask your administrator to finish setting up funding for this account.</p>
-            <p v-if="!can_assign_bank_accounts && !account.disbursement_ready" class="mt-2 text-xs text-slate-600 dark:text-slate-400">Ask your administrator to finish setting up issuance for this account.</p>
+            <p v-if="!can_configure_bank_accounts && !account.funding_ready" class="mt-2 text-xs text-slate-600 dark:text-slate-400">Ask your Treasury administrator to finish setting up funding for this account.</p>
+            <p v-if="!can_configure_bank_accounts && !account.disbursement_ready" class="mt-2 text-xs text-slate-600 dark:text-slate-400">Ask your Treasury administrator to finish setting up issuance for this account.</p>
             <button v-if="account.is_owner !== false && (account.funding_ready || account.disbursement_ready) && !account.is_default" type="button" :disabled="defaultForm.processing" class="mt-3 text-sm font-semibold text-sky-700 dark:text-sky-300" @click="selectDefaultAccount(account.id)">Set as default</button>
             <button v-if="account.is_owner !== false" type="button" class="mt-3 ml-3 text-sm font-semibold text-sky-700 dark:text-sky-300" @click="editNickname(account.id, account.nickname)">Edit nickname</button>
-            <button v-if="can_assign_bank_accounts && !account.disbursement_ready" type="button" class="mt-3 ml-3 text-sm font-semibold text-sky-700 dark:text-sky-300" @click="configuringAccount = configuringAccount === account.id ? null : account.id">Set up issuance</button>
-            <button v-if="can_assign_bank_accounts && personal_netbank_funding_enabled && !account.funding_ready" type="button" class="mt-3 ml-3 text-sm font-semibold text-sky-700 dark:text-sky-300" @click="toggleFundingSetup(account.id)">Set up funding</button>
-            <form v-if="can_assign_bank_accounts && personal_netbank_funding_enabled && fundingSetupAccount === account.id" class="mt-3 space-y-3" @submit.prevent="configureFunding(account.id)">
+            <button v-if="can_configure_bank_accounts && !account.disbursement_ready" type="button" class="mt-3 ml-3 text-sm font-semibold text-sky-700 dark:text-sky-300" @click="configuringAccount = configuringAccount === account.id ? null : account.id">Set up issuance</button>
+            <button v-if="can_configure_bank_accounts && personal_netbank_funding_enabled && !account.funding_ready" type="button" class="mt-3 ml-3 text-sm font-semibold text-sky-700 dark:text-sky-300" @click="toggleFundingSetup(account.id)">Set up funding</button>
+            <form v-if="can_configure_bank_accounts && personal_netbank_funding_enabled && fundingSetupAccount === account.id" class="mt-3 space-y-3" @submit.prevent="configureFunding(account.id)">
               <label class="flex gap-2 text-sm"><input v-model="fundingSetupForm.history_reviewed" type="checkbox" required /> I have reviewed and recorded previously used VCA references for this account.</label>
               <button type="submit" :disabled="fundingSetupForm.processing" class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Enable funding</button>
               <p v-if="Object.keys(fundingSetupForm.errors).length" role="alert" class="text-sm text-red-700">{{ Object.values(fundingSetupForm.errors)[0] }}</p>

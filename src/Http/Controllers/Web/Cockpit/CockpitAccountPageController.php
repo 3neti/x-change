@@ -10,11 +10,11 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
-use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Models\BankAccountAssignment;
 use LBHurtado\XChange\Models\FundingDestinationPreference;
 use LBHurtado\XChange\Services\Banking\AssignedBankTreasuryConnection;
+use LBHurtado\XChange\Services\Banking\BankAccountAdministrationAccess;
 use LBHurtado\XChange\Services\Cockpit\CockpitAccountReadModelProvider;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
@@ -26,7 +26,7 @@ class CockpitAccountPageController extends Controller
         private readonly CockpitReadOnlyPageProps $props,
         private readonly CockpitAccountReadModelProvider $accounts,
         private readonly WalletAccessContract $wallets,
-        private readonly CockpitTreasuryAccessContract $access,
+        private readonly BankAccountAdministrationAccess $access,
     ) {}
 
     /**
@@ -43,13 +43,17 @@ class CockpitAccountPageController extends Controller
         $wallet = $this->wallets->resolveForUser($owner);
         $accountReference = $this->accountReference($wallet);
         Inertia::encryptHistory();
-        $canConfigure = $this->access->canManageTreasuryReconciliation($owner);
+        $canViewAll = $this->access->canViewAll($owner);
+        $canManage = $this->access->canManage($owner);
+        $canConfigure = $this->access->canConfigure($owner);
 
         return Inertia::render('x-change/cockpit/Accounts', [
             ...$this->props->toArray(includeReadModel: false),
             'account_overview' => $this->accounts->forDepositor($owner, $accountReference),
-            'bank_accounts' => $this->bankAccounts($owner, $canConfigure),
-            'can_assign_bank_accounts' => $canConfigure,
+            'bank_accounts' => $this->bankAccounts($owner, $canViewAll),
+            'can_view_bank_accounts' => $canViewAll,
+            'can_manage_bank_accounts' => $canManage,
+            'can_configure_bank_accounts' => $canConfigure,
             'personal_netbank_funding_enabled' => $canConfigure && (bool) config('x-change.funding.dedicated_netbank_vca_enabled', false),
             'personal_netbank_fresh_commissioning_available' => $canConfigure && app()->environment(['local', 'testing'])
                 && (bool) config('x-change.funding.dedicated_netbank_vca_enabled', false),

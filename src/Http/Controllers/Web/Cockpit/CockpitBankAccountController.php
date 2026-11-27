@@ -11,14 +11,14 @@ use Illuminate\Routing\Controller;
 use LBHurtado\XChange\Actions\Banking\AssignNetbankAccount;
 use LBHurtado\XChange\Actions\Banking\ConfigureAssignedBankAccount;
 use LBHurtado\XChange\Actions\Banking\SelectDefaultBankingAccount;
-use LBHurtado\XChange\Contracts\CockpitTreasuryAccessContract;
 use LBHurtado\XChange\Models\BankAccountAssignment;
+use LBHurtado\XChange\Services\Banking\BankAccountAdministrationAccess;
 
 final class CockpitBankAccountController extends Controller
 {
-    public function store(Request $request, CockpitTreasuryAccessContract $access, AssignNetbankAccount $assign): RedirectResponse
+    public function store(Request $request, BankAccountAdministrationAccess $access, AssignNetbankAccount $assign): RedirectResponse
     {
-        abort_unless($access->canManageTreasuryReconciliation($request->user()), 403);
+        abort_unless($access->canManage($request->user()), 403);
         $data = $request->validate([
             'owner_id' => ['nullable', 'integer', 'min:1'],
             'account_number' => ['required', 'string', 'max:48'],
@@ -35,7 +35,7 @@ final class CockpitBankAccountController extends Controller
         return back()->with('funding_account_notice', 'Bank account added. Readiness checks are pending.');
     }
 
-    public function update(Request $request, int $assignment, SelectDefaultBankingAccount $select, CockpitTreasuryAccessContract $access, ConfigureAssignedBankAccount $configure): RedirectResponse
+    public function update(Request $request, int $assignment, SelectDefaultBankingAccount $select, BankAccountAdministrationAccess $access, ConfigureAssignedBankAccount $configure): RedirectResponse
     {
         $data = $request->validate([
             'action' => ['nullable', 'in:rename,default,configure,configure_funding,configure_fresh_funding'],
@@ -48,21 +48,21 @@ final class CockpitBankAccountController extends Controller
             'nickname' => ['nullable', 'string', 'max:191'],
         ]);
         if (($data['action'] ?? 'default') === 'configure') {
-            abort_unless($access->canManageTreasuryReconciliation($request->user()) && $request->user() instanceof Model, 403);
+            abort_unless($access->canConfigure($request->user()) && $request->user() instanceof Model, 403);
             $record = BankAccountAssignment::query()->findOrFail($assignment);
             $configure->handle($record, $data['treasury_connection'], $request->user());
 
             return back()->with('funding_account_notice', 'Bank account configured for issuance.');
         }
         if (($data['action'] ?? 'default') === 'configure_fresh_funding') {
-            abort_unless($access->canManageTreasuryReconciliation($request->user()) && $request->user() instanceof Model, 403);
+            abort_unless($access->canConfigure($request->user()) && $request->user() instanceof Model, 403);
             $record = BankAccountAssignment::query()->findOrFail($assignment);
             $configure->enableFreshFunding($record, $request->user(), $data['known_vcas'], true);
 
             return back()->with('funding_account_notice', 'Bank account configured for new funding requests.');
         }
         if (($data['action'] ?? 'default') === 'configure_funding') {
-            abort_unless($access->canManageTreasuryReconciliation($request->user()) && $request->user() instanceof Model, 403);
+            abort_unless($access->canConfigure($request->user()) && $request->user() instanceof Model, 403);
             $record = BankAccountAssignment::query()->findOrFail($assignment);
             $configure->enableFunding($record, $request->user(), true);
 

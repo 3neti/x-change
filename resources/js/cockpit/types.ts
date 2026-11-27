@@ -462,7 +462,9 @@ export type CockpitDepositorAccountOverview = {
 
 export type CockpitAccountsPageProps = CockpitHeaderPageProps & {
   account_overview: CockpitDepositorAccountOverview;
-  can_assign_bank_accounts: boolean;
+  can_view_bank_accounts?: boolean;
+  can_manage_bank_accounts?: boolean;
+  can_configure_bank_accounts?: boolean;
   personal_netbank_funding_enabled?: boolean;
   personal_netbank_fresh_commissioning_available?: boolean;
   treasury_connections?: string[];
