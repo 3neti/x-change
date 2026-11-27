@@ -225,9 +225,10 @@ function displayLabel(value: string): string {
             <form v-if="personal_netbank_fresh_commissioning_available && fundingSetupAccount === account.id" class="mt-4 space-y-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700" @submit.prevent="configureFreshFunding(account.id)">
               <p class="text-sm font-semibold">New funding requests only</p>
               <p class="text-sm text-slate-600 dark:text-slate-400">Previously received payments and standing addresses remain separate and are not reconciled by this setup.</p>
-              <label class="block text-sm">Previously generated 12-digit VCAs, separated by spaces or commas
+              <label class="block text-sm">Previously generated NetBank VCAs (12 or 16 digits), separated by spaces or commas
                 <textarea v-model="freshFundingForm.known_vcas" required class="mt-1 block w-full rounded-lg border border-slate-300 p-2 dark:bg-slate-900" />
               </label>
+              <p class="text-xs text-slate-600 dark:text-slate-400">New addresses use the 12-digit alias-and-reference format. Historical mobile-referenced addresses have 16 digits.</p>
               <label class="flex gap-2 text-sm"><input v-model="freshFundingForm.sole_writer_confirmed" type="checkbox" required /> This is the only system generating new seven-digit references for this alias.</label>
               <button type="submit" :disabled="freshFundingForm.processing" class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Enable new funding</button>
               <p v-if="Object.keys(freshFundingForm.errors).length" role="alert" class="text-sm text-red-700">{{ Object.values(freshFundingForm.errors)[0] }}</p>

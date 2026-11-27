@@ -13,6 +13,7 @@ use LBHurtado\XChange\Actions\Banking\ConfigureAssignedBankAccount;
 use LBHurtado\XChange\Actions\Banking\SelectDefaultBankingAccount;
 use LBHurtado\XChange\Models\BankAccountAssignment;
 use LBHurtado\XChange\Services\Banking\BankAccountAdministrationAccess;
+use LBHurtado\XChange\Services\Funding\ReserveNetbankVca;
 
 final class CockpitBankAccountController extends Controller
 {
@@ -41,7 +42,7 @@ final class CockpitBankAccountController extends Controller
             'action' => ['nullable', 'in:rename,default,configure,configure_funding,configure_fresh_funding'],
             'sole_writer_confirmed' => ['accepted_if:action,configure_fresh_funding'],
             'known_vcas' => ['required_if:action,configure_fresh_funding', 'array'],
-            'known_vcas.*' => ['required', 'string', 'regex:/\A[0-9]{12}\z/'],
+            'known_vcas.*' => ['required', 'string', 'regex:'.ReserveNetbankVca::HistoricalAddressPattern],
             'treasury_connection' => ['required_if:action,configure', 'string', 'max:191'],
             'disbursement_confirmed' => ['accepted_if:action,configure'],
             'history_reviewed' => ['accepted_if:action,configure_funding'],

@@ -585,9 +585,14 @@ it('restricts fresh funding commissioning to treasury administrators', function 
     app()->instance(CockpitTreasuryAccessContract::class, $access);
     $url = route('x-change.cockpit.accounts.bank-accounts.update', $assignment->id);
     $session = ['auth.password_confirmed_at' => time()];
-    $data = ['action' => 'configure_fresh_funding', 'sole_writer_confirmed' => true, 'known_vcas' => ['543210000001']];
+    $data = ['action' => 'configure_fresh_funding', 'sole_writer_confirmed' => true, 'known_vcas' => ['543210000001', '5432109173011987']];
 
+    $this->actingAs($owner)->withSession($session)->patch($url, [
+        ...$data,
+        'known_vcas' => ['543210917301198'],
+    ])->assertSessionHasErrors('known_vcas.0');
     $this->actingAs($owner)->withSession($session)->patch($url, $data)->assertForbidden();
     $this->actingAs($owner)->withSession($session)->patch($url, $data)->assertRedirect();
     expect(data_get($assignment->fresh()->providerAccountLink->metadata, 'funding_assignment.scope'))->toBe('fresh_intents_only');
+    expect(DB::table('xchange_funding_vca_reservations')->count())->toBe(2);
 });
