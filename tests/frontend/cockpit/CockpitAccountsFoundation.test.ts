@@ -61,6 +61,7 @@ describe("Cockpit depositor Account", () => {
     const wrapper = mount(Accounts, { props: { ...base, personal_netbank_fresh_commissioning_available: true } });
     await wrapper.findAll("button").find((button) => button.text() === "Set up funding")!.trigger("click");
     expect(wrapper.text()).toContain("New funding requests only");
+    expect(wrapper.text()).toContain("12 or 16 digits");
     expect(wrapper.text()).toContain("Previous");
     expect(wrapper.text()).toContain("only system generating");
     const restricted = mount(Accounts, { props: { ...base, personal_netbank_fresh_commissioning_available: false } });

@@ -85,7 +85,7 @@ final readonly class ConfigureAssignedBankAccount
                 throw ValidationException::withMessages(['account' => 'The assigned account alias is invalid.']);
             }
             foreach ($knownAddresses as $address) {
-                if (! is_string($address) || ! preg_match('/\A[0-9]{12}\z/', $address) || ! str_starts_with($address, $alias)) {
+                if (! is_string($address) || ! preg_match(ReserveNetbankVca::HistoricalAddressPattern, $address) || ! str_starts_with($address, $alias)) {
                     throw ValidationException::withMessages(['account' => 'A known funding address does not match the account alias.']);
                 }
                 app(ReserveNetbankVca::class)->recordHistoricalAddress($address);

@@ -14,10 +14,17 @@ use RuntimeException;
 
 class ReserveNetbankVca
 {
+    /**
+     * NetBank's current format is five-digit alias plus a seven-digit reference.
+     * Historical mobile-referenced collection addresses contain an eleven-digit
+     * reference, so they remain valid reservations for collision prevention.
+     */
+    public const HistoricalAddressPattern = '/\A(?:[0-9]{12}|[0-9]{16})\z/';
+
     public function recordHistoricalAddress(string $address): void
     {
-        if (! preg_match('/\A[0-9]{12}\z/', $address)) {
-            throw new InvalidArgumentException('A historical NetBank VCA must contain twelve digits.');
+        if (! preg_match(self::HistoricalAddressPattern, $address)) {
+            throw new InvalidArgumentException('A historical NetBank VCA must contain twelve or sixteen digits.');
         }
 
         DB::transaction(function () use ($address): void {
