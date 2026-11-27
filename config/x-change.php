@@ -61,6 +61,7 @@ use LBHurtado\XChange\Services\ConfigMinimumWithdrawalPolicyResolver;
 use LBHurtado\XChange\Services\ConfigProviderRuntimeSettingsResolver;
 use LBHurtado\XChange\Services\ConfigProviderTopologyResolver;
 use LBHurtado\XChange\Services\ConfigSettlementRailCapabilityRegistry;
+use LBHurtado\XChange\Services\Configuration\AdditionalTreasuryConnectionConfiguration;
 use LBHurtado\XChange\Services\ContextUserResolver;
 use LBHurtado\XChange\Services\DefaultClaimExecutionFactory;
 use LBHurtado\XChange\Services\DefaultDisbursementReconciliationService;
@@ -173,6 +174,11 @@ $defaultDeploymentRuntimeTier = match ((string) env('APP_ENV', 'production')) {
     'staging' => 'staging',
     default => 'production',
 };
+
+$additionalTreasuryConnections = AdditionalTreasuryConnectionConfiguration::decode(
+    env('XCHANGE_TREASURY_ADDITIONAL_CONNECTIONS_JSON'),
+    ['netbank-primary', 'paynamics-primary'],
+);
 
 return [
 
@@ -1245,6 +1251,7 @@ return [
                     'funding_instruction_issue',
                 ],
             ],
+            ...$additionalTreasuryConnections,
         ],
         'provider_attribution_audit' => [
             'max_bytes' => 10 * 1024 * 1024,
