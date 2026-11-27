@@ -37,6 +37,12 @@ final class AdvanceReserveReturnJob implements ShouldBeUnique, ShouldQueue
         return 'reserve-return:'.$this->transferId;
     }
 
+    /** @return list<string> */
+    public function tags(): array
+    {
+        return ['package:x-change', 'lane:issuance', 'job:AdvanceReserveReturnJob'];
+    }
+
     public function handle(AdvanceReserveReturn $advance, DurableReserveTransfer $transfers): void
     {
         if (! (bool) config('x-change.reserve_transfer.returns_enabled', false)) {

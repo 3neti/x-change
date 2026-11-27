@@ -35,6 +35,12 @@ final class PrepareReserveReturnJob implements ShouldBeUnique, ShouldQueue
         return 'reserve-return-prepare:'.$this->voucherId.':'.$this->terminalReason;
     }
 
+    /** @return list<string> */
+    public function tags(): array
+    {
+        return ['package:x-change', 'lane:issuance', 'job:PrepareReserveReturnJob'];
+    }
+
     public function handle(PrepareReserveReturn $returns): void
     {
         if (! (bool) config('x-change.reserve_transfer.returns_enabled', false)) {

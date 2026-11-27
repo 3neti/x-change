@@ -27,6 +27,8 @@ use LBHurtado\XChange\Jobs\Payment\VerifyPaymentAttemptJob;
 use LBHurtado\XChange\Jobs\Provisioning\DeliverProvisioningOfferJob;
 use LBHurtado\XChange\Jobs\Redemption\DispatchVoucherRedemptionFeedbackJob;
 use LBHurtado\XChange\Jobs\Reserve\AdvanceReserveIssuanceJob;
+use LBHurtado\XChange\Jobs\Reserve\AdvanceReserveReturnJob;
+use LBHurtado\XChange\Jobs\Reserve\PrepareReserveReturnJob;
 use LBHurtado\XChange\Jobs\SubmitValueFlowPayout;
 
 return [
@@ -139,11 +141,17 @@ return [
                 AdvanceReserveIssuanceJob::class => [
                     'configuration_key' => 'x-change.reserve_transfer.queue',
                 ],
+                AdvanceReserveReturnJob::class => [
+                    'configuration_key' => 'x-change.reserve_transfer.queue',
+                ],
                 LinkSettledCheckoutContactJob::class => [
                     'configuration_key' => 'x-change.issuance_funding.on_demand.queue',
                 ],
                 ResumeOnDemandPayCodeIssuanceJob::class => [
                     'configuration_key' => 'x-change.issuance_funding.on_demand.queue',
+                ],
+                PrepareReserveReturnJob::class => [
+                    'configuration_key' => 'x-change.reserve_transfer.queue',
                 ],
             ],
         ],
