@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 final class ReserveTransfer extends Model
@@ -38,5 +39,10 @@ final class ReserveTransfer extends Model
     public function owner(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public function originReserveTransfer(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'origin_reserve_transfer_id');
     }
 }

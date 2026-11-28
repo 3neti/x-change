@@ -135,4 +135,9 @@ class StandingFundingAddress extends Model
             'standing_funding_address_id',
         );
     }
+
+    public function ledgerWatermarks(): HasMany
+    {
+        return $this->hasMany(StandingFundingAddressWatermark::class);
+    }
 }

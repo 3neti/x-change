@@ -27,6 +27,7 @@ use LBHurtado\XChange\Actions\Funding\InspectStandingFundingAddressBindingMigrat
 use LBHurtado\XChange\Actions\Funding\OpenFundingSuspenseCase;
 use LBHurtado\XChange\Actions\Funding\ProvisionStandingFundingAddress;
 use LBHurtado\XChange\Actions\Funding\RepairStandingFundingAddressBindingEffectiveAt;
+use LBHurtado\XChange\Actions\Funding\ReconcileDedicatedNetbankFundingReceipt;
 use LBHurtado\XChange\Actions\Funding\RequestStandingFundingAddressBindingMigration;
 use LBHurtado\XChange\Actions\Funding\SyncStandingFundingAddress;
 use LBHurtado\XChange\Actions\Leads\CreateLeadCampaign;
@@ -1816,6 +1817,11 @@ it('keeps shared and dedicated standing addresses separate for the same wallet',
         ->toThrow(FundingDestinationUnavailable::class, 'different funding account');
     expect(StandingFundingAddress::query()->count())->toBe(1);
     $provider->counterZeroAddress = '5432112345678901';
+    $provider->observations = [standingFundingObservation(
+        '5432112345678901',
+        'already-settled-before-commissioning',
+        occurredAt: now()->subDay()->toDateTimeImmutable(),
+    )];
     $personal = $action->handle($user, $reference, 'netbank', FundingAddressPurpose::AccountFunding, FundingRecognitionMode::Automatic, destination: $destination);
     $again = $action->handle($user, $reference, 'netbank', FundingAddressPurpose::AccountFunding, FundingRecognitionMode::Automatic, destination: $destination);
     expect($personal->address->is($shared->address))->toBeFalse()
@@ -1823,18 +1829,139 @@ it('keeps shared and dedicated standing addresses separate for the same wallet',
         ->and($personal->providerAddress->fundingAddress)->toBe('5432112345678901')
         ->and(data_get($personal->address->destination_snapshot_ciphertext, 'metadata.treasury_connection_reference'))->toBe('personal');
 
+    $metadata = $personal->address->metadata ?? [];
+    $metadata['ledger_watermark'] = ['status' => 'unavailable'];
+    $personal->address->forceFill(['metadata' => $metadata])->saveQuietly();
+    $provider->observations = [standingFundingObservation(
+        '5432112345678901',
+        'blocked-without-watermark',
+        occurredAt: $personal->address->activated_at->subMinute()->toDateTimeImmutable(),
+    )];
+    expect(app(SyncStandingFundingAddress::class)->handle($personal->address->refresh())->applied)->toBe(0)
+        ->and(AccountFundingReceipt::query()->count())->toBe(0);
+    $metadata['ledger_watermark'] = ['status' => 'captured'];
+    $personal->address->forceFill(['metadata' => $metadata])->saveQuietly();
+
     foreach ([TreasuryProvisioningService::class,
         TreasuryAccountPortfolioProvisioningContract::class,
         VerifiedTreasuryFundingAllocationContract::class] as $service) {
         app()->forgetInstance($service);
     }
-    $provider->observations = [standingFundingObservation('5432112345678901', 'personal-standing-fixture')];
+    $provider->observations = [
+        standingFundingObservation(
+            '5432112345678901',
+            'already-settled-before-commissioning',
+            occurredAt: now()->subDay()->toDateTimeImmutable(),
+        ),
+        standingFundingObservation(
+            '5432112345678901',
+            'personal-standing-fixture',
+            occurredAt: $personal->address->activated_at->subMinute()->toDateTimeImmutable(),
+        ),
+    ];
     $first = app(SyncStandingFundingAddress::class)->handle($personal->address);
     $second = app(SyncStandingFundingAddress::class)->handle($personal->address->refresh());
     expect($first->applied)->toBe(1)->and($second->applied)->toBe(0)
         ->and(AccountFundingReceipt::query()->sole()->treasury_inventory_reference)->toBe('inventory:personal')
+        ->and(data_get(AccountFundingReceipt::query()->sole()->metadata, 'ledger_watermark_timestamp_anomaly_accepted'))->toBeTrue()
+        ->and($personal->address->ledgerWatermarks()->count())->toBe(1)
         ->and(TreasuryInventory::query()->where('inventory_reference', 'inventory:personal')->sole()->balance_minor)->toBe(24_950)
         ->and(app(TreasuryAccountBalanceReadModel::class)->connectionBalanceMinor($user, 'netbank', 'personal', 'PHP'))->toBe(24_950)
         ->and(app(TreasuryAccountBalanceReadModel::class)->connectionBalanceMinor($user, 'netbank', 'netbank-primary', 'PHP'))->toBeNull()
         ->and(TreasuryInventory::query()->where('inventory_reference', 'inventory:netbank:vca-cash')->exists())->toBeFalse();
+});
+
+it('reconciles the scoped dedicated NetBank receipt once despite a provider timestamp anomaly', function (): void {
+    config()->set('x-change.funding.dedicated_netbank_standing_enabled', true);
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $provider = new StandingFundingAddressProviderFake;
+    $provider->counterZeroAddress = '8962809173011987';
+    bindStandingFundingProvider($provider);
+    $assignment = app(AssignNetbankAccount::class)->handle($user, [
+        'account_number' => '113-001-00006-8',
+        'account_name' => 'Intel-soln Philippines Inc.',
+        'customer_id' => '2720777',
+        'vca_alias' => '89628',
+    ]);
+    $assignment->providerAccountLink->forceFill([
+        'status' => 'ready',
+        'ready_at' => now(),
+        'capabilities' => ['funding'],
+    ])->save();
+    app()->instance(TreasuryProviderConnectionCatalog::class, new TreasuryProviderConnectionCatalog([
+        'personal' => [
+            'provider' => 'netbank',
+            'mode' => 'required',
+            'currency' => 'PHP',
+            'inventory_reference' => 'inventory:intel-soln-00006-8',
+            'settlement_resource_reference' => 'resource:intel-soln-00006-8',
+            'settlement_resource_type' => 'cash_at_bank',
+            'custody_mode' => 'provider_projection',
+        ],
+    ]));
+    app(AssignedBankTreasuryConnection::class)->bind($user, $assignment->id, 'personal');
+    foreach ([
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+    ] as $service) {
+        app()->forgetInstance($service);
+    }
+    $destination = new FundingDestinationData(
+        provider: 'netbank',
+        mode: 'dedicated',
+        destinationType: 'bank_account',
+        accountReference: 'wallet:'.$wallet->uuid,
+        displayReference: 'Intel-soln Philippines Inc. · 113-001-00006-8',
+        fingerprint: hash('sha256', 'intel-soln-00006-8'),
+        verificationStatus: 'routing_configured',
+        bankAccountNumber: '113-001-00006-8',
+        bankAccountName: 'Intel-soln Philippines Inc.',
+        routingAlias: '89628',
+        metadata: [
+            'assigned_bank_account_link_id' => $assignment->provider_account_link_id,
+            'treasury_connection_reference' => 'personal',
+            'treasury_inventory_reference' => 'inventory:intel-soln-00006-8',
+            'treasury_resource_reference' => 'resource:intel-soln-00006-8',
+        ],
+    );
+    $address = app(ProvisionStandingFundingAddress::class)->handle(
+        $user,
+        'wallet:'.$wallet->uuid,
+        'netbank',
+        FundingAddressPurpose::AccountFunding,
+        FundingRecognitionMode::Automatic,
+        destination: $destination,
+    )->address;
+    $provider->observations = [standingFundingObservation(
+        '8962809173011987',
+        '496143170',
+        grossAmountMinor: 7_500,
+        feeAmountMinor: 0,
+        netAmountMinor: 7_500,
+        occurredAt: $address->activated_at->subDay()->toDateTimeImmutable(),
+    )];
+
+    $first = app(ReconcileDedicatedNetbankFundingReceipt::class)->handle(
+        $address,
+        '496143170',
+        7_500,
+        'maya-payment:871256C6EDA9',
+    );
+    $second = app(ReconcileDedicatedNetbankFundingReceipt::class)->handle(
+        $address,
+        '496143170',
+        7_500,
+        'maya-payment:871256C6EDA9',
+    );
+
+    expect($first->id)->toBe($second->id)
+        ->and($first->status)->toBe(AccountFundingReceiptStatus::Settled)
+        ->and($first->net_amount_minor)->toBe(7_500)
+        ->and(data_get($first->metadata, 'ledger_watermark_timestamp_anomaly_accepted'))->toBeTrue()
+        ->and(data_get($address->fresh()->metadata, 'scoped_reconciliation.payer_evidence_reference_hash'))
+        ->toBe(hash('sha256', 'maya-payment:871256C6EDA9'))
+        ->and(AccountFundingReceipt::query()->where('provider_transaction_key', hash('sha256', "netbank\0".'496143170'))->count())
+        ->toBe(1);
 });

@@ -7,6 +7,7 @@ use Bavix\Wallet\Exceptions\InsufficientFunds;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Contracts\AccountTransferProvider;
 use LBHurtado\EmiCore\Contracts\IdempotentAccountTransferProvider;
@@ -27,6 +28,7 @@ use LBHurtado\XChange\Actions\Banking\AssignNetbankAccount;
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
+use LBHurtado\XChange\Actions\Treasury\ReleasePayCodeTerminalReserve;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
@@ -35,6 +37,7 @@ use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Exceptions\CommercialPricingChanged;
 use LBHurtado\XChange\Exceptions\FundingDestinationUnavailable;
 use LBHurtado\XChange\Jobs\Reserve\AdvanceReserveIssuanceJob;
+use LBHurtado\XChange\Jobs\Reserve\PrepareReserveReturnJob;
 use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Models\FundingDestinationPreference;
 use LBHurtado\XChange\Models\FundingIntent;
@@ -46,6 +49,7 @@ use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\Configuration\InstructionCapabilityReadinessRegistry;
 use LBHurtado\XChange\Services\Reserve\AdvanceReserveBackedIssuance;
 use LBHurtado\XChange\Services\Reserve\BuildReserveTransferRequest;
+use LBHurtado\XChange\Services\Reserve\BuildReserveReturnRequest;
 use LBHurtado\XChange\Services\Reserve\DurableReserveTransfer;
 use LBHurtado\XChange\Services\Reserve\IssueReserveBackedPayCode;
 use LBHurtado\XChange\Services\Reserve\PrepareReserveBackedIssuance;
@@ -53,6 +57,8 @@ use LBHurtado\XChange\Services\Reserve\ReserveIssuanceSnapshot;
 use LBHurtado\XChange\Services\Reserve\ReserveTransferHold;
 use LBHurtado\XChange\Services\Reserve\ReserveTransferRelease;
 use LBHurtado\XChange\Services\Reserve\ReserveTransferTreasuryPosting;
+use LBHurtado\XChange\Services\Reserve\PrepareReserveReturn;
+use LBHurtado\XChange\Services\Reserve\ReserveReturnTreasuryPosting;
 use LBHurtado\XChange\Services\Treasury\TreasuryAccountBalanceReadModel;
 use LBHurtado\XChange\Services\Treasury\TreasuryConfigurationValidator;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
@@ -701,6 +707,73 @@ it('issues exactly one Pay Code from a posted reserve using the real issuance se
     $source = app(VoucherBankSourceSnapshot::class)->forVoucher($voucher);
     expect($source['account_number'])->toBe('222-222-22222-2')->and($source['customer_id'])->toBe('9876');
     expect(app(TreasuryAccountBalanceReadModel::class)->connectionBalanceMinor($owner, 'netbank', 'netbank-primary', 'PHP'))->toBe(0);
+});
+
+it('returns cancelled dedicated-account escrow to its frozen originating account exactly once', function (): void {
+    config()->set('x-change.reserve_transfer.returns_enabled', false);
+    [$owner, $posted] = postedReserveForIssuance();
+    $voucher = app(IssueReserveBackedPayCode::class)->issue($posted, $owner);
+    config()->set('payment-gateway.netbank.funding.corporate_account_name', 'Platform Reserve');
+    config()->set('x-change.reserve_transfer.destination_bank_code', 'NETBANK');
+    $request = app(BuildReserveReturnRequest::class)->build($posted->refresh(), 'cancelled')['request'];
+
+    expect($request->sourceAccountNumber)->toBe('222-222-22222-2')
+        ->and($request->sourceCustomerId)->toBe('9876')
+        ->and($request->destinationAccountNumber)->toBe('111-111-11111-1')
+        ->and($request->amountMinor)->toBe(1000)
+        ->and($request->reference)->toStartWith('rrn-')
+        ->and(mb_strlen($request->idempotencyKey))->toBeLessThanOrEqual(36);
+
+    app(ReleasePayCodeTerminalReserve::class)->handle($voucher, 'cancelled');
+    $return = app(PrepareReserveReturn::class)->prepare($voucher->fresh(), 'cancelled');
+    expect($return)->not->toBeNull()->and($return->transfer_kind)->toBe('return')->and($return->status)->toBe('held');
+
+    $provider = Mockery::mock(AccountTransferProvider::class);
+    $provider->shouldReceive('providerCode')->andReturn('netbank');
+    $provider->shouldReceive('submit')->once()->with(Mockery::on(
+        fn (AccountTransferRequestData $submitted): bool => $submitted->reference === $return->reference
+            && $submitted->sourceAccountNumber === '222-222-22222-2'
+            && $submitted->destinationAccountNumber === '111-111-11111-1',
+    ))->andReturn(new AccountTransferResultData(AccountTransferStatus::Pending, 'bank-return-1'));
+    $provider->shouldReceive('checkStatus')->once()->with('bank-return-1')->andReturn(
+        new AccountTransferResultData(
+            AccountTransferStatus::Settled,
+            'bank-return-1',
+            new AccountTransferEvidenceData(
+                $return->reference,
+                '222-222-22222-2',
+                '111-111-11111-1',
+                '9876',
+                1000,
+                'PHP',
+                'DIRECT',
+                0,
+            ),
+        ),
+    );
+    $transfers = app(DurableReserveTransfer::class);
+    $pending = $transfers->submit($return, $provider);
+    $settled = $transfers->check($pending, $provider);
+    $returned = app(ReserveReturnTreasuryPosting::class)->post($settled);
+
+    expect($returned->status)->toBe('returned')
+        ->and(app(PrepareReserveReturn::class)->prepare($voucher->fresh(), 'cancelled')->id)->toBe($returned->id)
+        ->and(app(TreasuryAccountBalanceReadModel::class)->connectionBalanceMinor($owner, 'netbank', 'netbank-primary', 'PHP'))->toBe(1000)
+        ->and(app(TreasuryAccountBalanceReadModel::class)->connectionBalanceMinor($owner, 'netbank', 'netbank-reserve', 'PHP'))->toBe(0)
+        ->and(TreasuryInventory::query()->where('inventory_reference', 'inventory:netbank:vca-cash')->value('balance_minor'))->toBe(1000)
+        ->and(TreasuryInventory::query()->where('inventory_reference', 'inventory:reserve')->value('balance_minor'))->toBe(0);
+});
+
+it('queues a terminal return only for a reserve-backed Pay Code when the feature is enabled', function (): void {
+    Queue::fake();
+    config()->set('x-change.reserve_transfer.returns_enabled', true);
+    [$owner, $posted] = postedReserveForIssuance();
+    $voucher = app(IssueReserveBackedPayCode::class)->issue($posted, $owner);
+
+    app(ReleasePayCodeTerminalReserve::class)->handle($voucher, 'cancelled');
+
+    Queue::assertPushed(PrepareReserveReturnJob::class, fn (PrepareReserveReturnJob $job): bool => $job->voucherId === $voucher->id
+        && $job->terminalReason === 'cancelled');
 });
 
 it('rolls back issuance and the wallet projection if the issuance journal fails', function (): void {

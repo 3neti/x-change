@@ -25,6 +25,7 @@ use LBHurtado\XChange\Models\CampaignPaymentQrBinding;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressBindingResolver;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressProviderRegistry;
+use LBHurtado\XChange\Services\Funding\StandingFundingLedgerWatermark;
 use LBHurtado\XChange\Services\Funding\StandingFundingRecognitionPolicy;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 
@@ -44,6 +45,7 @@ final class SyncStandingFundingAddress
         private readonly StandingFundingAddressBindingResolver $bindings,
         private readonly InspectCampaignPaymentEvidence $inspectCampaignPaymentEvidence,
         private readonly RecognizeQualifyingCampaignPayment $recognizeCampaignPayment,
+        private readonly StandingFundingLedgerWatermark $watermark,
     ) {}
 
     public function handle(
@@ -99,14 +101,17 @@ final class SyncStandingFundingAddress
         ];
 
         foreach ($observations as $data) {
+            // Shared addresses retain their original timestamp boundary. A dedicated
+            // automatic address may inspect an older timestamp only after its
+            // provider-led transaction watermark has been captured.
             if ($data->occurredAt !== null
                 && $address->activated_at !== null
-                && $data->occurredAt < $address->activated_at) {
+                && $data->occurredAt < $address->activated_at
+                && ! $this->watermark->isDedicatedAutomatic($address)) {
                 $counts['pre_activation_ignored']++;
 
                 continue;
             }
-
             $observation = $this->recordObservation->handle($data);
             $classified = $this->classify->handle($observation);
 
@@ -154,8 +159,40 @@ final class SyncStandingFundingAddress
                 continue;
             }
 
+            if ($this->watermark->isBaselined($classified, $observation)) {
+                $counts['pre_activation_ignored']++;
+
+                continue;
+            }
+
+            $timestampAnomalyAccepted = $this->watermark->permitsTimestampAnomaly(
+                $classified,
+                $observation,
+            ) && $classified->activated_at !== null
+                && $observation->occurredAtInstant()?->lessThan($classified->activated_at) === true;
+
+            if ($timestampAnomalyAccepted) {
+                $this->audit->log('funding.standing_address.timestamp_anomaly_accepted', [
+                    'standing_funding_address_reference' => $classified->reference,
+                    'provider' => $observation->provider_code,
+                    'provider_transaction_id' => $observation->provider_transaction_id,
+                    'provider_occurred_at' => $observation->occurredAtInstant()?->toRfc3339String(),
+                    'activated_at' => $classified->activated_at?->toRfc3339String(),
+                ]);
+            }
+
+            if ($classified->activated_at !== null
+                && $observation->occurredAtInstant()?->lessThan($classified->activated_at) === true
+                && ! $timestampAnomalyAccepted) {
+                $counts['pre_activation_ignored']++;
+
+                continue;
+            }
+
             try {
-                $binding = $this->bindings->at($classified, $observation->occurredAtInstant());
+                $binding = $timestampAnomalyAccepted
+                    ? $this->watermark->binding($classified)
+                    : $this->bindings->at($classified, $observation->occurredAtInstant());
             } catch (StandingFundingAddressBindingTimeUnavailable) {
                 $this->openSuspense->handle(
                     provider: $observation->provider_code,
@@ -169,7 +206,7 @@ final class SyncStandingFundingAddress
             }
 
             $receipt = $this->correctNormalization->handle($classified, $observation)
-                ?? $this->recordReceipt($classified, $observation, $binding);
+                ?? $this->recordReceipt($classified, $observation, $binding, $timestampAnomalyAccepted);
             $wasSettled = $receipt->status === AccountFundingReceiptStatus::Settled;
 
             if ($receipt->status === AccountFundingReceiptStatus::Ready) {
@@ -223,8 +260,9 @@ final class SyncStandingFundingAddress
         StandingFundingAddress $address,
         ProviderFundingObservation $observation,
         StandingFundingAddressBindingData $binding,
+        bool $timestampAnomalyAccepted,
     ): AccountFundingReceipt {
-        return DB::transaction(function () use ($address, $observation, $binding): AccountFundingReceipt {
+        return DB::transaction(function () use ($address, $observation, $binding, $timestampAnomalyAccepted): AccountFundingReceipt {
             $transactionKey = hash('sha256', implode("\0", [
                 $observation->provider_code,
                 $observation->provider_transaction_id,
@@ -283,7 +321,10 @@ final class SyncStandingFundingAddress
                 'net_amount_minor' => $observation->net_amount_minor,
                 'currency' => $observation->currency,
                 'observed_at' => $observation->occurred_at ?? now(),
-                'metadata' => ['verification_source' => $observation->verification_source],
+                'metadata' => [
+                    'verification_source' => $observation->verification_source,
+                    'ledger_watermark_timestamp_anomaly_accepted' => $timestampAnomalyAccepted,
+                ],
             ]);
 
             if ($this->evidenceChanged($receipt, $observation)) {
@@ -309,6 +350,7 @@ final class SyncStandingFundingAddress
             $receipt->metadata = array_merge($receipt->metadata ?? [], [
                 'provider_status_at_recognition' => $observation->provider_status,
                 'provisional_recognition' => $this->recognitionPolicy->isProvisional($observation),
+                'ledger_watermark_timestamp_anomaly_accepted' => $timestampAnomalyAccepted,
             ]);
             $receipt->status = match ($address->recognition_mode) {
                 FundingRecognitionMode::ObserveOnly => AccountFundingReceiptStatus::Observed,

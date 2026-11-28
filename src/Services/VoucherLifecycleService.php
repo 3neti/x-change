@@ -221,6 +221,9 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
 
             $label = $terminalReason === 'cancelled' ? 'cancelled' : 'expired';
 
+            $returnQueued = (bool) config('x-change.reserve_transfer.returns_enabled', false)
+                && is_string(data_get($metadata, 'treasury.pay_code_reservation.reserve_transfer_reference'));
+
             return [
                 'voucher_id' => $locked->id,
                 'code' => $locked->code,
@@ -228,7 +231,9 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
                 $label => true,
                 'reason' => $reason,
                 'treasury_release' => $release->toArray(),
-                'messages' => ["Pay Code {$label}. Reserved principal returned to Client Funds."],
+                'messages' => [$returnQueued
+                    ? "Pay Code {$label}. Escrow return to the originating bank account is being processed."
+                    : "Pay Code {$label}. Reserved principal returned to Client Funds."],
             ];
         }, attempts: 5);
     }
