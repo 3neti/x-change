@@ -213,7 +213,12 @@ final class SyncStandingFundingAddress
                 try {
                     $receipt = $this->settle->handle($receipt);
                 } catch (FundingSettlementDenied $exception) {
-                    $receipt = $this->suspendReceipt($receipt, 'settlement_guard_denied', $observation);
+                    $receipt = $this->suspendReceipt(
+                        $receipt,
+                        'settlement_guard_denied',
+                        $observation,
+                        ['settlement_guard_message' => $exception->getMessage()],
+                    );
                 }
             }
 
@@ -410,11 +415,13 @@ final class SyncStandingFundingAddress
         AccountFundingReceipt $receipt,
         string $reason,
         ProviderFundingObservation $observation,
+        array $metadata = [],
     ): AccountFundingReceipt {
         $receipt->provider_funding_observation_id = $observation->getKey();
         $receipt->status = AccountFundingReceiptStatus::Suspense;
         $receipt->suspense_reason = $reason;
         $receipt->suspense_at = now();
+        $receipt->metadata = array_merge($receipt->metadata ?? [], $metadata);
         $receipt->saveQuietly();
 
         $this->openSuspense->handle(

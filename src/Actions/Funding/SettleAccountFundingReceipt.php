@@ -84,6 +84,9 @@ final class SettleAccountFundingReceipt
                     $holder, $locked->provider_code, $locked->currency, $destination,
                 );
             }
+            $fundingDestinationMetadata = is_array($destination)
+                ? ['funding_destination_snapshot' => $destination]
+                : [];
             $this->assertDailyLimit($address, $locked);
             $treasury = $dedicatedConnection === null ? $this->treasuryConfiguration($locked->provider_code) : [
                 'inventory_reference' => $dedicatedConnection->inventoryReference,
@@ -121,7 +124,7 @@ final class SettleAccountFundingReceipt
                 externalReference: $locked->provider_code.':'.$observation->provider_transaction_id,
                 metadata: [
                     'provider_transaction_id' => $observation->provider_transaction_id,
-                    ...($dedicatedConnection === null ? [] : ['funding_destination_snapshot' => $destination]),
+                    ...$fundingDestinationMetadata,
                     'gross_amount_minor' => $locked->gross_amount_minor,
                     'fee_amount_minor' => $locked->fee_amount_minor,
                 ],
@@ -137,7 +140,7 @@ final class SettleAccountFundingReceipt
                     'source' => 'verified_provider_funding',
                     'provider' => $locked->provider_code,
                     'provider_transaction_id' => $observation->provider_transaction_id,
-                    ...($dedicatedConnection === null ? [] : ['funding_destination_snapshot' => $destination]),
+                    ...$fundingDestinationMetadata,
                 ],
             );
 
