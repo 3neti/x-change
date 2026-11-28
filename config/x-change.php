@@ -1392,6 +1392,24 @@ return [
                     'XCHANGE_FUNDING_BANK_TRANSFER_PROVIDER_HISTORY_ENABLED',
                     true,
                 ),
+                'reconciliation_lock_seconds' => max(
+                    1,
+                    (int) env(
+                        'XCHANGE_FUNDING_BANK_TRANSFER_RECONCILIATION_LOCK_SECONDS',
+                        120,
+                    ),
+                ),
+                'scheduled_reconciliation_enabled' => (bool) env(
+                    'XCHANGE_FUNDING_BANK_TRANSFER_SCHEDULED_RECONCILIATION_ENABLED',
+                    true,
+                ),
+                'scheduled_reconciliation_batch_size' => max(
+                    1,
+                    (int) env(
+                        'XCHANGE_FUNDING_BANK_TRANSFER_SCHEDULED_RECONCILIATION_BATCH_SIZE',
+                        100,
+                    ),
+                ),
                 'minimum_requested_amount_minor' => max(
                     1,
                     (int) env(

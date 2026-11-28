@@ -153,6 +153,7 @@ use LBHurtado\XChange\Console\Commands\Funding\ProcessStandingFundingRuntimeOutb
 use LBHurtado\XChange\Console\Commands\Funding\PromoteStandingFundingRuntimeCommand;
 use LBHurtado\XChange\Console\Commands\Funding\QuarantineStandingFundingAddressCommand;
 use LBHurtado\XChange\Console\Commands\Funding\ReconcileAmbiguousStandingFundingCommand;
+use LBHurtado\XChange\Console\Commands\Funding\ReconcileOpenBankTransferFundingRequestsCommand;
 use LBHurtado\XChange\Console\Commands\Funding\ReconcileDedicatedNetbankFundingReceiptCommand;
 use LBHurtado\XChange\Console\Commands\Funding\ReleaseStandingFundingStaleLeaseCommand;
 use LBHurtado\XChange\Console\Commands\Funding\RepairStandingFundingAddressBindingEffectiveAtCommand;
@@ -1936,6 +1937,7 @@ class XChangeServiceProvider extends ServiceProvider
                 MigrateStandingFundingAddressBindingCommand::class,
                 VerifyFundingRequestBackingCommand::class,
                 VerifyOpenFundingIntentsCommand::class,
+                ReconcileOpenBankTransferFundingRequestsCommand::class,
                 VerifyOpenPaymentAttemptsCommand::class,
                 MonitorOpenPaymentAttemptsCommand::class,
                 ResumeVerifiedPaymentAttemptsCommand::class,
@@ -2461,6 +2463,28 @@ class XChangeServiceProvider extends ServiceProvider
                 $schedule
                     ->command("xchange:funding:verify-open --provider=netbank --limit={$batchSize}")
                     ->name('xchange:funding:verify-open:netbank')
+                    ->everyMinute()
+                    ->onOneServer()
+                    ->withoutOverlapping(5);
+            });
+        }
+
+        if ((bool) config(
+            'x-change.funding.requests.bank_transfer.scheduled_reconciliation_enabled',
+            true,
+        )) {
+            $batchSize = max(
+                1,
+                (int) config(
+                    'x-change.funding.requests.bank_transfer.scheduled_reconciliation_batch_size',
+                    100,
+                ),
+            );
+
+            $this->callAfterResolving(Schedule::class, function (Schedule $schedule) use ($batchSize): void {
+                $schedule
+                    ->command("xchange:funding:reconcile-bank-transfers --limit={$batchSize}")
+                    ->name('xchange:funding:reconcile-bank-transfers')
                     ->everyMinute()
                     ->onOneServer()
                     ->withoutOverlapping(5);

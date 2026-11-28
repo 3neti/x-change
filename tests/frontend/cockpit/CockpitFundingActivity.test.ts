@@ -93,7 +93,7 @@ describe("Cockpit Funding Activity", () => {
     expect(wrapper.text()).toContain("QR Ph");
     expect(wrapper.text()).toContain("Bank Transfer");
     expect(wrapper.text()).toContain("Recognized");
-    expect(wrapper.text()).toContain("Awaiting payment");
+    expect(wrapper.text()).toContain("Checking NetBank automatically");
     expect(wrapper.text()).toContain("FUND-672P");
   });
 

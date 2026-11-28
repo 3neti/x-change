@@ -72,6 +72,14 @@ function displayTime(value?: string | null): string {
   return formatRelativeTime(value, Date.now()) ?? "—";
 }
 
+function displayStatusLabel(item: CockpitFundingActivityItem): string {
+  if (item.method === "bank_transfer" && item.status === "awaiting_payment") {
+    return "Checking NetBank automatically";
+  }
+
+  return item.status_label;
+}
+
 function actionLabel(
   item: CockpitFundingActivityItem,
   action: CockpitFundingActivityItem["action_keys"][number],
@@ -196,7 +204,7 @@ function performAction(
                   class="inline-flex rounded-full px-2.5 py-1 text-[0.65rem] font-semibold uppercase"
                   :class="statusTone(item.status)"
                 >
-                  {{ item.status_label }}
+                  {{ displayStatusLabel(item) }}
                 </span>
               </td>
               <td class="px-4 py-3 text-slate-600 dark:text-slate-300">
@@ -261,7 +269,7 @@ function performAction(
               :class="statusTone(item.status)"
               :data-testid="`funding-activity-mobile-status-${item.key}`"
             >
-              {{ item.status_label }}
+              {{ displayStatusLabel(item) }}
             </span>
           </div>
           <div
