@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "bf7eef9f3168734e5d25e4fb6fa0a225",
+    "content-hash": "562cdd7c4309a903deca33d11b5b76f2",
     "packages": [
         {
             "name": "3neti/cash",
@@ -127,16 +127,16 @@
         },
         {
             "name": "3neti/emi-core",
-            "version": "v2.4.0",
+            "version": "v2.5.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/emi-core.git",
-                "reference": "ff7572d169496df6dcffd8e61375fb0fa6b924fc"
+                "reference": "5c3e7d2d9439692e0c5e777daf023ba2d414fc6f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/emi-core/zipball/ff7572d169496df6dcffd8e61375fb0fa6b924fc",
-                "reference": "ff7572d169496df6dcffd8e61375fb0fa6b924fc",
+                "url": "https://api.github.com/repos/3neti/emi-core/zipball/5c3e7d2d9439692e0c5e777daf023ba2d414fc6f",
+                "reference": "5c3e7d2d9439692e0c5e777daf023ba2d414fc6f",
                 "shasum": ""
             },
             "require": {
@@ -176,31 +176,32 @@
             "description": "Provider-agnostic EMI domain: contracts, enums, models, DTOs, events",
             "support": {
                 "issues": "https://github.com/3neti/emi-core/issues",
-                "source": "https://github.com/3neti/emi-core/tree/v2.4.0"
+                "source": "https://github.com/3neti/emi-core/tree/v2.5.0"
             },
-            "time": "2026-11-24T07:51:32+00:00"
+            "time": "2026-11-27T23:45:00+00:00"
         },
         {
             "name": "3neti/emi-netbank",
-            "version": "v2.7.0",
+            "version": "v2.8.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/emi-netbank.git",
-                "reference": "959d058f1bda915bde7cb492fdb802d82a28750a"
+                "reference": "ac900120b8f635bd21e6071feda8db19aafd3ff5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/emi-netbank/zipball/959d058f1bda915bde7cb492fdb802d82a28750a",
-                "reference": "959d058f1bda915bde7cb492fdb802d82a28750a",
+                "url": "https://api.github.com/repos/3neti/emi-netbank/zipball/ac900120b8f635bd21e6071feda8db19aafd3ff5",
+                "reference": "ac900120b8f635bd21e6071feda8db19aafd3ff5",
                 "shasum": ""
             },
             "require": {
-                "3neti/emi-core": "^2.4.0",
+                "3neti/emi-core": "^2.5.0",
                 "3neti/laravel-model-channel": "^1.1",
                 "3neti/merchant": "^1.2",
                 "3neti/money-issuer": "^1.1",
                 "3neti/wallet": "^1.0 || ^2.0@beta",
                 "brick/money": "^0.10.1",
+                "khanamiryan/qrcode-detector-decoder": "^2.0",
                 "laravel/sanctum": "^4.0",
                 "league/omnipay": "^3.2",
                 "lorisleiva/laravel-actions": "^2.9",
@@ -244,9 +245,9 @@
             "description": "NetBank EMI provider adapter for emi-core",
             "support": {
                 "issues": "https://github.com/3neti/emi-netbank/issues",
-                "source": "https://github.com/3neti/emi-netbank/tree/v2.7.0"
+                "source": "https://github.com/3neti/emi-netbank/tree/v2.8.1"
             },
-            "time": "2026-11-24T09:04:44+00:00"
+            "time": "2026-11-28T09:52:04+00:00"
         },
         {
             "name": "3neti/emi-paynamics",
@@ -4454,6 +4455,64 @@
                 }
             ],
             "time": "2022-05-21T17:30:32+00:00"
+        },
+        {
+            "name": "khanamiryan/qrcode-detector-decoder",
+            "version": "2.0.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/khanamiryan/php-qrcode-detector-decoder.git",
+                "reference": "17c570bb39f641cc1c4c41a46177ac491393a01d"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/khanamiryan/php-qrcode-detector-decoder/zipball/17c570bb39f641cc1c4c41a46177ac491393a01d",
+                "reference": "17c570bb39f641cc1c4c41a46177ac491393a01d",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.1"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^7.5 | ^8.0 | ^9.0",
+                "rector/rector": "^1.0.4",
+                "symplify/easy-coding-standard": "^11.0",
+                "vimeo/psalm": "^4.24"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "lib/Common/customFunctions.php"
+                ],
+                "psr-4": {
+                    "Zxing\\": "lib/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT",
+                "Apache-2.0"
+            ],
+            "authors": [
+                {
+                    "name": "Ashot Khanamiryan",
+                    "email": "a.khanamiryan@gmail.com",
+                    "homepage": "https://github.com/khanamiryan",
+                    "role": "Developer"
+                }
+            ],
+            "description": "QR code decoder / reader",
+            "homepage": "https://github.com/khanamiryan/php-qrcode-detector-decoder/",
+            "keywords": [
+                "barcode",
+                "qr",
+                "zxing"
+            ],
+            "support": {
+                "issues": "https://github.com/khanamiryan/php-qrcode-detector-decoder/issues",
+                "source": "https://github.com/khanamiryan/php-qrcode-detector-decoder/tree/2.0.3"
+            },
+            "time": "2025-06-10T08:44:02+00:00"
         },
         {
             "name": "laravel/framework",
@@ -14019,64 +14078,6 @@
                 "source": "https://github.com/Jean85/pretty-package-versions/tree/2.1.1"
             },
             "time": "2025-03-19T14:43:43+00:00"
-        },
-        {
-            "name": "khanamiryan/qrcode-detector-decoder",
-            "version": "2.0.3",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/khanamiryan/php-qrcode-detector-decoder.git",
-                "reference": "17c570bb39f641cc1c4c41a46177ac491393a01d"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/khanamiryan/php-qrcode-detector-decoder/zipball/17c570bb39f641cc1c4c41a46177ac491393a01d",
-                "reference": "17c570bb39f641cc1c4c41a46177ac491393a01d",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=8.1"
-            },
-            "require-dev": {
-                "phpunit/phpunit": "^7.5 | ^8.0 | ^9.0",
-                "rector/rector": "^1.0.4",
-                "symplify/easy-coding-standard": "^11.0",
-                "vimeo/psalm": "^4.24"
-            },
-            "type": "library",
-            "autoload": {
-                "files": [
-                    "lib/Common/customFunctions.php"
-                ],
-                "psr-4": {
-                    "Zxing\\": "lib/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT",
-                "Apache-2.0"
-            ],
-            "authors": [
-                {
-                    "name": "Ashot Khanamiryan",
-                    "email": "a.khanamiryan@gmail.com",
-                    "homepage": "https://github.com/khanamiryan",
-                    "role": "Developer"
-                }
-            ],
-            "description": "QR code decoder / reader",
-            "homepage": "https://github.com/khanamiryan/php-qrcode-detector-decoder/",
-            "keywords": [
-                "barcode",
-                "qr",
-                "zxing"
-            ],
-            "support": {
-                "issues": "https://github.com/khanamiryan/php-qrcode-detector-decoder/issues",
-                "source": "https://github.com/khanamiryan/php-qrcode-detector-decoder/tree/2.0.3"
-            },
-            "time": "2025-06-10T08:44:02+00:00"
         },
         {
             "name": "laravel/pail",
