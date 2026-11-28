@@ -11,6 +11,7 @@ use LBHurtado\XChange\Jobs\Checkout\LinkSettledCheckoutContactJob;
 use LBHurtado\XChange\Jobs\Commercial\ReconcilePartnerCommissionPayoutBatchJob;
 use LBHurtado\XChange\Jobs\Feedback\DeliverQueuedFeedbackSmsJob;
 use LBHurtado\XChange\Jobs\Funding\PayApprovedFundingRequestJob;
+use LBHurtado\XChange\Jobs\Funding\ReconcileBankTransferFundingRequestJob;
 use LBHurtado\XChange\Jobs\Funding\ResumeOnDemandPayCodeIssuanceJob;
 use LBHurtado\XChange\Jobs\Funding\SyncStandingFundingAddressJob;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingIntentJob;
@@ -55,6 +56,7 @@ return [
                     'configuration_key' => 'x-change.commercial.operations.queue',
                 ],
                 PayApprovedFundingRequestJob::class => [],
+                ReconcileBankTransferFundingRequestJob::class => [],
                 SyncStandingFundingAddressJob::class => [],
                 VerifyFundingIntentJob::class => [],
                 VerifyFundingWebhookReceiptJob::class => [],
