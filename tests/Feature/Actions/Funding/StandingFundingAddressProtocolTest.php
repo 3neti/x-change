@@ -694,6 +694,69 @@ it('can enforce the configured automatic mode for an existing observe-only addre
         ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(2);
 });
 
+it('credits a shared funding address when another NetBank Treasury connection is active', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    configureSharedCampaignPaymentDestination();
+    app()->instance(TreasuryProviderConnectionCatalog::class, new TreasuryProviderConnectionCatalog([
+        'netbank-primary' => [
+            'provider' => 'netbank',
+            'mode' => 'required',
+            'currency' => 'PHP',
+            'inventory_reference' => 'inventory:netbank:vca-cash',
+            'settlement_resource_reference' => 'resource:netbank:corporate-vca',
+            'settlement_resource_type' => 'cash_at_bank',
+            'custody_mode' => 'provider_projection',
+        ],
+        'personal-netbank' => [
+            'provider' => 'netbank',
+            'mode' => 'required',
+            'currency' => 'PHP',
+            'inventory_reference' => 'inventory:netbank:personal',
+            'settlement_resource_reference' => 'resource:netbank:personal',
+            'settlement_resource_type' => 'cash_at_bank',
+            'custody_mode' => 'provider_projection',
+        ],
+    ]));
+    foreach ([
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+    ] as $service) {
+        app()->forgetInstance($service);
+    }
+    $destination = new FundingDestinationData(
+        provider: 'netbank',
+        mode: 'shared',
+        destinationType: 'bank_account',
+        accountReference: 'wallet:'.$wallet->uuid,
+        displayReference: 'X-Change Test · 113-001-00001-9',
+        fingerprint: hash('sha256', 'shared-netbank-primary'),
+        verificationStatus: 'configured',
+        bankAccountNumber: '113-001-00001-9',
+        bankAccountName: 'X-Change Test',
+        routingAlias: '91500',
+    );
+    $address = app(ProvisionStandingFundingAddress::class)->handle(
+        owner: $user,
+        accountReference: 'wallet:'.$wallet->uuid,
+        provider: 'netbank',
+        purpose: FundingAddressPurpose::AccountFunding,
+        recognitionMode: FundingRecognitionMode::Automatic,
+        destination: $destination,
+    )->address;
+    $provider->observations = [standingFundingObservation($provider->fundingAddress)];
+
+    $result = app(SyncStandingFundingAddress::class)->handle($address);
+
+    expect($result->applied)->toBe(1)
+        ->and(AccountFundingReceipt::query()->sole()->status)
+        ->toBe(AccountFundingReceiptStatus::Settled)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(24_950);
+});
+
 it('refuses recognition when a receipt no longer points to its bound Account', function () {
     $user = actingAsTestUser(0);
     $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
