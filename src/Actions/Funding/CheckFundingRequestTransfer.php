@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Actions\Funding;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
 use LBHurtado\EmiCore\Contracts\ProviderFundingHistoryRequestFactory;
@@ -42,6 +43,28 @@ final readonly class CheckFundingRequestTransfer
     ) {}
 
     public function handle(FundingRequest $fundingRequest): FundingTransferCheckResultData
+    {
+        $lock = Cache::lock(
+            'x-change:funding-request:provider-check:'.$fundingRequest->getKey(),
+            max(1, (int) config('x-change.funding.requests.bank_transfer.reconciliation_lock_seconds', 120)),
+        );
+
+        if (! $lock->get()) {
+            return new FundingTransferCheckResultData(
+                status: 'checking_in_progress',
+                message: 'A NetBank check is already in progress.',
+                credited: false,
+            );
+        }
+
+        try {
+            return $this->check($fundingRequest);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    private function check(FundingRequest $fundingRequest): FundingTransferCheckResultData
     {
         $request = $fundingRequest->fresh([
             'voucher',

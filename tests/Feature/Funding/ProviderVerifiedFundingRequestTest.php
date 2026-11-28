@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Queue;
 use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
@@ -19,6 +21,7 @@ use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Events\FundingRequestChanged;
 use LBHurtado\XChange\Models\FundingRequestTransferMatch;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Jobs\Funding\ReconcileBankTransferFundingRequestJob;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 use LBHurtado\XChange\Tests\Fakes\User;
@@ -82,6 +85,73 @@ it('queries the provider history adapter before matching and crediting', functio
         ->toBe(1_737);
 
     $this->travelBack();
+});
+
+it('queues active Bank Transfer requests for scheduled recovery', function () {
+    $this->travelTo(new DateTimeImmutable('2026-07-27T21:15:00+08:00'));
+    enableNetbankTreasuryForTests();
+    Queue::fake();
+    $requester = actingAsTestUser(0);
+    config()->set(
+        'x-change.funding.requests.bank_transfer.reserved_amounts.enabled',
+        true,
+    );
+
+    $request = app(CreateFundingRequest::class)->handle(
+        new CreateFundingRequestData(
+            accountReference: 'wallet:'.$requester->wallet->uuid,
+            requesterType: $requester::class,
+            requesterId: (string) $requester->getKey(),
+            fundingType: FundingRequestType::BankTransfer,
+            requestedValueMinor: 10_000,
+            currency: 'PHP',
+            description: 'Scheduled Bank Transfer recovery.',
+            idempotencyKey: 'scheduled-bank-transfer-recovery-10000',
+            transferWindow: FundingTransferWindow::Recent,
+        ),
+    );
+
+    $this->artisan('xchange:funding:reconcile-bank-transfers --limit=10')
+        ->assertSuccessful();
+
+    Queue::assertPushed(
+        ReconcileBankTransferFundingRequestJob::class,
+        fn (ReconcileBankTransferFundingRequestJob $job): bool => $job->fundingRequestId === (int) $request->getKey(),
+    );
+
+    $this->travelBack();
+});
+
+it('does not run a concurrent Bank Transfer provider check', function () {
+    enableNetbankTreasuryForTests();
+    $requester = actingAsTestUser(0);
+    $request = app(CreateFundingRequest::class)->handle(
+        new CreateFundingRequestData(
+            accountReference: 'wallet:'.$requester->wallet->uuid,
+            requesterType: $requester::class,
+            requesterId: (string) $requester->getKey(),
+            fundingType: FundingRequestType::BankTransfer,
+            requestedValueMinor: 10_000,
+            currency: 'PHP',
+            description: 'Concurrent Bank Transfer provider check.',
+            idempotencyKey: 'concurrent-bank-transfer-check-10000',
+            transferWindow: FundingTransferWindow::Recent,
+        ),
+    );
+    $lock = Cache::lock(
+        'x-change:funding-request:provider-check:'.$request->getKey(),
+        120,
+    );
+    expect($lock->get())->toBeTrue();
+
+    try {
+        $result = app(CheckFundingRequestTransfer::class)->handle($request);
+
+        expect($result->status)->toBe('checking_in_progress')
+            ->and($result->credited)->toBeFalse();
+    } finally {
+        $lock->release();
+    }
 });
 
 it('matches UTC provider observations while the application uses Manila time', function () {
